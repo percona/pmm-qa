@@ -3,7 +3,8 @@ import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { expect } from '@playwright/test';
+import { HaFailoverProbe, HaStatusResponse } from '@interfaces/ha';
+import { APIRequestContext, expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
 const pmmManagedLog = '/srv/logs/pmm-managed.log';
@@ -11,7 +12,7 @@ const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 /** The `pmm-ha` chart default. */
-const defaultReplicas = 3;
+export const defaultReplicas = 3;
 
 /**
  * PMM HA leadership asked of each pod directly, so tests can assert the UI and
@@ -43,11 +44,95 @@ export default class HaClusterHelper {
       })
       .toEqual(replicas);
 
-    // Ready pods, and even an elected leader, are not yet reachable: HAProxy has
-    // to re-run its health check and re-point first.
-    await expect(async () => {
-      expect(await haApi.getStatus()).toEqual('Enabled');
-    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    await this.waitForApiServing(haApi);
+  };
+
+  /** Restarts the current leader and returns the pod that takes over, once the API serves again. */
+  failoverLeader = async (haApi: HaApi, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<string> => {
+    const initialLeader = await this.waitForLeaderChange(undefined, timeout);
+
+    this.k8sHelper.deletePod(initialLeader).assertSuccess();
+
+    const newLeader = await this.waitForLeaderChange(initialLeader, timeout);
+
+    await this.waitForApiServing(haApi);
+
+    return newLeader;
+  };
+
+  /**
+   * {@link failoverLeader} while polling `path` through HAProxy, which is the only way to
+   * tell a brief election gap from the public URL actually going down. Reports the longest
+   * unbroken stretch of 5xx or connection errors.
+   */
+  failoverLeaderWhileProbing = async (
+    haApi: HaApi,
+    request: APIRequestContext,
+    path: string,
+  ): Promise<HaFailoverProbe> => {
+    let probing = true;
+    let longestOutage = 0;
+    let failures = 0;
+    let probes = 0;
+    // Measured from the last good response, not from the first failed probe: anchoring
+    // on the failure makes an isolated one measure zero, which reads as "no outage"
+    // next to a non-zero failure count.
+    let lastServedAt = Date.now();
+    // Back-to-back, with no sleep between requests: a sampled probe can only ever
+    // bound an outage by its own interval, so "the UI never went down" is not a
+    // claim a 1s poll is entitled to make. Each request costs milliseconds, which
+    // is the rate limit.
+    const probe = (async () => {
+      while (probing) {
+        const served = await request
+          .get(path, { failOnStatusCode: false, maxRedirects: 0, timeout: Timeouts.TEN_SECONDS })
+          .then((response) => response.status() < 500)
+          .catch(() => false);
+
+        probes++;
+
+        if (served) {
+          lastServedAt = Date.now();
+        } else {
+          failures++;
+          longestOutage = Math.max(longestOutage, Date.now() - lastServedAt);
+        }
+      }
+    })();
+    const newLeader = await this.failoverLeader(haApi);
+
+    probing = false;
+    await probe;
+
+    return { failures, longestOutage, newLeader, probes };
+  };
+
+  /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */
+  grafanaDatabaseEnv = (podName: string): Record<string, string> => {
+    const { stdout } = this.k8sHelper.execInPod(podName, 'env', { silent: true });
+    const variables = stdout
+      .split('\n')
+      .map((line) => /^(GF_DATABASE_[A-Z_]+)=(.*)$/.exec(line))
+      .filter((match) => match !== null)
+      .map((match) => [match[1], match[2].trim()]);
+
+    if (variables.length === 0) {
+      throw new Error(`Pod "${podName}" exports no GF_DATABASE_* variables`);
+    }
+
+    return Object.fromEntries(variables);
+  };
+
+  /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
+  haStatusFromPod = (podName: string): string => {
+    const password = process.env.ADMIN_PASSWORD ?? 'admin';
+    const { stdout } = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk -u admin:${password} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      { silent: true },
+    );
+
+    return (JSON.parse(stdout) as HaStatusResponse).status;
   };
 
   /**
@@ -94,6 +179,16 @@ export default class HaClusterHelper {
     }
 
     return names[0];
+  };
+
+  /**
+   * Ready pods, and even an elected leader, are not yet reachable: HAProxy has to
+   * re-run its health check and re-point first.
+   */
+  waitForApiServing = async (haApi: HaApi, timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<void> => {
+    await expect(async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 
   /**

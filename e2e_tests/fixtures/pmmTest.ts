@@ -25,6 +25,7 @@ import SettingsPage from '@pages/ha/settings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import DataSourcesPage from '@pages/dataSources.page';
 import ServerApi from '@api/server.api';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
@@ -35,6 +36,7 @@ const pmmTest = base.extend<{
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
+  dataSourcesPage: DataSourcesPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
   highAvailabilityPage: HighAvailabilityPage;
@@ -105,6 +107,7 @@ const pmmTest = base.extend<{
 
     await use(dashboardPage);
   },
+  dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);

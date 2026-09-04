@@ -2,7 +2,15 @@ import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
+import {
+  KubernetesPod,
+  KubernetesPodResource,
+  KubernetesResourceList,
+  KubernetesRoute,
+  KubernetesRouteResource,
+  KubernetesService,
+  KubernetesServiceResource,
+} from '@interfaces/kubernetes';
 import { Timeouts } from '@helpers/timeouts';
 
 interface ExecInPodOptions {
@@ -93,12 +101,46 @@ export default class K8sHelper {
     });
   };
 
+  /**
+   * OpenShift Routes, empty on a cluster that has no such resource type - on ROSA
+   * a Route, not a cloud load balancer, is what publishes a service externally.
+   */
+  getRoutes = (labelSelector = ''): KubernetesRoute[] => {
+    const selector = labelSelector ? ` --selector=${labelSelector}` : '';
+    const result = this.execSilent(`get routes.route.openshift.io${selector} --output=json`);
+
+    if (result.code !== 0) return [];
+
+    const routeList = JSON.parse(result.stdout) as KubernetesResourceList<KubernetesRouteResource>;
+
+    return routeList.items.map((item) => ({
+      host: item.spec?.host ?? '',
+      name: item.metadata.name,
+      serviceName: item.spec?.to?.name ?? '',
+    }));
+  };
+
   getSecretValue = (secretName: string, key: string): string => {
     const encoded = this.execSilent(`get secret ${secretName} --output=jsonpath={.data.${key}}`)
       .assertSuccess()
       .stdout.trim();
 
     return encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
+  };
+
+  /** Services with their externally reachable addresses, so a test can tell which one fronts the public URL. */
+  getServices = (labelSelector = ''): KubernetesService[] => {
+    const selector = labelSelector ? ` --selector=${labelSelector}` : '';
+    const result = this.execSilent(`get services${selector} --output=json`).assertSuccess();
+    const serviceList = JSON.parse(result.stdout) as KubernetesResourceList<KubernetesServiceResource>;
+
+    return serviceList.items.map((item) => ({
+      loadBalancerAddresses: (item.status?.loadBalancer?.ingress ?? [])
+        .flatMap((ingress) => [ingress.hostname, ingress.ip])
+        .filter((address): address is string => Boolean(address)),
+      name: item.metadata.name,
+      type: item.spec?.type ?? 'ClusterIP',
+    }));
   };
 
   /** @param labelSelector `-l` selector; empty means every StatefulSet */

@@ -12,6 +12,8 @@ import apiEndpoints from '@helpers/apiEndpoints';
  */
 export default class HaApi {
   static readonly leaderStatusMetric = 'pmm_ha_leader_status';
+  static readonly raftTermMetric = 'pmm_ha_raft_term';
+  static readonly upMetric = 'pmm_ha_up';
   private prometheusApi: PrometheusApi;
 
   constructor(private request: APIRequestContext) {
@@ -47,15 +49,25 @@ export default class HaApi {
     return ((await response.json()) as HaNodesResponse).nodes ?? [];
   };
 
-  /** Sorted to compare with {@link getNodeNames}. */
-  getNodesFromMetrics = async (): Promise<string[]> => {
-    const samples = await this.prometheusApi.instantQuery(HaApi.leaderStatusMetric);
+  /** Sorted node ids exporting `metric`, to compare with {@link getNodeNames}. */
+  getNodesFromMetric = async (metric: string): Promise<string[]> => {
+    const samples = await this.prometheusApi.instantQuery(metric);
 
     return samples
       .map((sample) => sample.metric.node_id)
       .filter(Boolean)
       .sort();
   };
+
+  /**
+   * Per-node Raft term changes over `window`. A rolling window, so a count is only
+   * ever a lower bound on the changes a node has seen - older ones age out of it.
+   */
+  getRaftTermChanges = async (window = '15m'): Promise<Record<string, number>> =>
+    await this.getByNode(`changes(${HaApi.raftTermMetric}[${window}])`);
+
+  /** Per-node Raft term. Monotonic per node, and every election raises it. */
+  getRaftTerms = async (): Promise<Record<string, number>> => await this.getByNode(HaApi.raftTermMetric);
 
   getStatus = async (): Promise<string> => {
     const response = await this.request.get(apiEndpoints.ha.status, {
@@ -69,6 +81,10 @@ export default class HaApi {
 
     return ((await response.json()) as HaStatusResponse).status;
   };
+
+  /** Live nodes carrying a Raft vote; below the replica count the cluster cannot hold quorum. */
+  getVoterCount = async (): Promise<number | undefined> =>
+    await this.prometheusApi.instantQueryValue(`count(${HaApi.upMetric}{role="voter"} == 1)`);
 
   /**
    * Metrics trail a failover by a scrape, and HAProxy 5xxs until it re-points at
@@ -106,4 +122,29 @@ export default class HaApi {
       ).toEqual(expected);
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
+
+  /** Per-node Raft term, once every node in `nodes` reports one - a usable baseline. */
+  waitForRaftTerms = async (
+    nodes: string[],
+    timeout: Timeouts = Timeouts.FIVE_MINUTES,
+  ): Promise<Record<string, number>> => {
+    let terms: Record<string, number> = {};
+
+    await expect(async () => {
+      terms = await this.getRaftTerms();
+
+      expect(Object.keys(terms).sort(), `Every node must report ${HaApi.raftTermMetric}`).toEqual(nodes);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+
+    return terms;
+  };
+
+  /** Keyed by node id, not positional: a node whose series drops out cannot shift the rest. */
+  private getByNode = async (query: string): Promise<Record<string, number>> =>
+    Object.fromEntries(
+      (await this.prometheusApi.instantQuery(query)).map((sample) => [
+        sample.metric.node_id,
+        Number(sample.value[1]),
+      ]),
+    );
 }
