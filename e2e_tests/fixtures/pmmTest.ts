@@ -22,6 +22,7 @@ import HaClusterHelper from '@helpers/haCluster.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
+import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
@@ -52,6 +53,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  serverAdminSettingsPage: ServerAdminSettingsPage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -156,6 +158,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   tour: async ({ page }, use) => {
