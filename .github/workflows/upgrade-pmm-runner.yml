@@ -138,7 +138,6 @@ jobs:
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
           echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
           
-          echo "CLIENT_REPOSITORY=testing" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
           ver="${RC_VERSION##*:}"
           ver="${ver%-rc*}"
@@ -272,7 +271,6 @@ jobs:
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:
-          CLIENT_REPOSITORY: ${{ steps.resolve.outputs.CLIENT_REPOSITORY }}
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
@@ -285,6 +283,11 @@ jobs:
                 docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
                 docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
               else
+                if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
+                  export CLIENT_REPOSITORY=experimental
+                else
+                  export CLIENT_REPOSITORY=testing
+                fi
                 echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
