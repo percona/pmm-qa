@@ -183,7 +183,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess()
       .outContains('- enabled expose exporter');
     // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+    await page.waitForTimeout(Timeouts.ONE_MINUTE);
     await cliHelper
       .execSilent(
         `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
