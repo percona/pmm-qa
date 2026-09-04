@@ -7,12 +7,12 @@ free-form prose gets bounced back at refinement, however good the evidence is.
 Two rules cover most of it:
 
 - **Use the issue type's template headings verbatim, in order, none dropped.**
-  A section with nothing to say gets an explicit `None` / `Not known` / `N/A`,
-  never silent omission — a missing heading reads as "not investigated", an
-  explicit `None known` reads as "checked, there isn't one".
+  A section with nothing to say gets an explicit `None known.` — that exact
+  string, never silent omission and never a synonym. A missing heading reads as
+  "not investigated"; `None known.` reads as "checked, there isn't one".
 - **Everything the reporter owns gets filled in.** For a Bug that is Steps to
   reproduce, Actual result, Expected result, User impact and Details. Workaround
-  is the Eng team's, but say `None known` if you didn't find one. Story Points,
+  is the Eng team's, but say `None known.` if you didn't find one. Story Points,
   QA Estimation, Fix/Planned version and Sprint belong to refinement — leave
   them empty.
 
@@ -116,23 +116,31 @@ h2. Out of scope
 h2. Details
 ```
 
-### 👜 Epic
+### ◻️ QA Automation
+
+The team has no fixed template for this type — real tickets range from
+`h2. Objective` to a bare paragraph. Use the shape the recent ones settled on,
+and name the case being automated so it can be traced back:
 
 ```
-h2. Problem description
+h2. Objective
 
-h2. Idea(s) to solve the problem
+<what coverage is missing and why it is worth automating — the bug it would
+have caught, or the manual case being retired>
 
-h2. Roadmap item link
+h2. Scope
 
-h2. Suggested implementation / options
+* <PMM-Txxxx / behaviour to assert, one bullet each>
 
-h2. Design / UI / UX (if applicable)
+h2. Location
 
-h2. Out of scope
+<spec path and @tag the test will live under>
 
 h2. Details
 ```
+
+Epic is not templated here — agents never file one; the team page owns that
+shape.
 
 ## Summary line
 
@@ -225,6 +233,8 @@ h2. Details
 
 * PMM Server {{perconalab/pmm-server:3.9.1-rc}} (3.9.1), PMM Client {{pmm3-rc}}
 * Reproduced on a throwaway Linode VM, single-server Docker, 3/3 attempts
+* *Worked in 3.8.1*: the same MySQL 8.4 instance registers and reports normally
+  against {{percona/pmm-server:3.8.1}} on the same VM - hence Regression Issue
 * Control: MySQL 8.0 on the same server registers and reports normally
 * CI run: <url>
 * Suspected upstream change: [percona/pmm#NNNN|https://github.com/percona/pmm/pull/NNNN]

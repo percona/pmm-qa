@@ -129,8 +129,8 @@ J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
 # create — a new PMM issue (project is forced to PMM). issuetype + summary
 # required; description optional. On a Bug the relay auto-sets Found by
 # Automation (customfield_10059) = Yes unless you pass it yourself.
-# Description + fields MUST follow references/ticket-templates.md (wiki markup,
-# team headings, components + priority) — see the worked example there.
+# Description + fields: follow references/ticket-templates.md.
+DESC="${DESC:?build the description from the issue type's template in references/ticket-templates.md}"
 J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "$DESC" \
       '{issuetype:"Bug", summary:$s, description:$d,
         fields:{priority:{name:"Medium"}, components:[{name:"Backend"}],
