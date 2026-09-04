@@ -122,7 +122,7 @@ jobs:
             TARBALL_URL="${{ matrix.version }}"
             echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
           elif [ "${{ matrix.version }}" == "pmm3-rc" ]; then
-            echo "pmm3-rc is a special dev tag and version: $DEV_LATEST_VERSION"
+            echo "pmm3-rc is a special dev tag and version: $ver"
             TARBALL_URL="pmm3-rc"
             echo "CLIENT_VERSION=$ver" >> "$GITHUB_ENV"
           else
