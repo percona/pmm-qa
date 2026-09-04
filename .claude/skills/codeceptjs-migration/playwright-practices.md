@@ -53,7 +53,8 @@ Assertions auto-wait and retry; manual predicates do not.
 - Never a hand-rolled polling loop. Use `expect.poll(fn, { message, timeout })`.
 - `await expect(x).toHaveCount(n)`, not `expect(await x.count()).toBe(n)`.
 - `toBeHidden()` when absence is meant; `not.toBeVisible()` only when the distinction matters.
-- Attach a message to every non-locator assertion: `expect(value, 'why this must hold').toBe(...)`.
+- A **locator-derived** value awaited into a variable and then asserted samples once and never retries - `const t = await x.textContent(); expect(t).toBe(...)` is the same defect as `expect(await x.isVisible())`, just spread over two lines. Use the web-first matcher, or `expect.poll` when the value must be computed.
+- Attach a message to every non-locator assertion: `expect(value, 'why this must hold').toBe(...)`. Bare `expect` is correct there - API status, CLI stdout, parsed files have nothing to retry against.
 - `waitForTimeout` is an ESLint error and stays one.
 - `locator.waitFor({ state })` only as a genuine precondition, never in place of an assertion.
 - Assertions stay in test bodies. Helpers return values; they do not assert.

@@ -37,9 +37,11 @@ Legacy remote-instance tests route from `client_container` to a database through
 `I.seeTextEquals(text,locator)`->`await expect(locator).toHaveText(text)`.
 `I.dontSeeElement(locator)`->`await expect(locator).toBeHidden()`.
 `I.waitForVisible(locator,seconds)`->`await expect(locator).toBeVisible({ timeout })`.
+`I.waitForElement(locator,seconds)`->`await expect(locator).toBeVisible({ timeout })`;OmitEntirelyWhenTheSameStepAlreadyActedOnThatLocator-AWaitAfter`clear()`/`fill()`CanNeverWait.
+`I.wait(N)`->FindTheRealCompletionSignalFirst:ANetworkResponse(`page.waitForResponse`,see`e2e_tests/tests/ha/advancedSettings.test.ts:21-27`),AStateChange,OrALabelChange.OnlyWhenNoSignalExistsKeepAFixedPauseInAPOM/HelperWithThe`no-wait-for-timeout`SuppressionAndNameTheSignalsRuledOut.TwoTrapsThatLookLikeSignalsAndAreNot:AfterASaveTheInputStillHoldsTheTypedValue,SoAssertingItProvesNothing;AndASubmitButtonIsDisabledBothWhileSavingAndWhenTheFormIsPristineAfterASuccessfulSave,So`toBeEnabled`IsNotASettleSignal-TheLabelReturningFrom'Applying...'Is.
 `I.waitForText(text,seconds,locator)`->`await expect(locator).toContainText(text,{ timeout })`.
 `I.seeNumberOfElements(locator,n)`->`await expect(locator).toHaveCount(n)`.
-`I.grabTextFrom(locator)`->`await locator.textContent()`.
+`I.grabTextFrom(locator)`->`await locator.textContent()`;WhenTheGrabbedValueFeedsAnAssertion,LandItOn`toHaveText`/`toHaveAttribute`/`toHaveJSProperty`Instead-AGrabbedVariableDoesNotRetry.
 `I.grabTextFromAll(locator)`->`await locator.allTextContents()`.
 `I.grabAttributeFrom(locator,attr)`->`await locator.getAttribute(attr)`.
 `I.seeAttributesOnElements(locator,{ attr: val })`->`await expect(locator).toHaveAttribute(attr,val)`.
@@ -111,6 +113,16 @@ pmmTest.skip(
 ```
 
 This is the only recognized Playwright skip policy in this repo. If the source `xScenario` reason does not fit this pattern, stop and report the gap instead of inventing a different mechanism.
+
+The TODO is required only for this unconditional form, where it names the ticket that would reactivate the test. `check-migration-conventions.sh` enforces that pairing and additionally requires the TODO to reference a ticket - free text does not satisfy it.
+
+### A source scenario that returns early
+
+A scenario guarded by a runtime early `return` is not a skip in the source, but it reports a **pass** while asserting nothing, and no check in this skill can see it: `playwright/expect-expect` is satisfied by a test that merely contains an `expect` lexically, whether or not execution reaches it.
+
+Do not translate it to an inline conditional `pmmTest.skip(condition, reason)`. `e2e_tests/eslint.config.mjs` sets `playwright/no-skipped-test` to `error` for `**/*.test.ts` with `allowConditional` left at `false`, and there are zero `pmmTest.skip` calls anywhere under `e2e_tests/tests/` - so the inline form only lints by suppressing the rule.
+
+The established mechanism is the fixture layer: an auto fixture calling `testInfo.skip(condition, reason)`, as `versionGate` does at `e2e_tests/fixtures/pmmTest.ts:184`. Port a source guard by extending that fixture, or adding one beside it when the condition is not a version. Only if that is genuinely impossible does a suppressed inline skip apply, and then say in the handoff why the fixture route was ruled out.
 
 ## ESLintSuppressions
 
