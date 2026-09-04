@@ -8,7 +8,6 @@ class ExplorePage {
       dataSourcePicker: locate('//input[@id="data-source-picker"]'),
       sqlEditorButton: locate('//label[text()="SQL Editor"]//parent::*[@data-testid="data-testid radio-button"]'),
       sqlBuilder: locate('//textarea'),
-      sqlBuilderText: locate('//div[contains(@class, "view-line")]//span[normalize-space(text()) != ""]'),
       runQueryButton: locate('//span[text()="Run Query"]//parent::button'),
       resultRow: locate('//div[@role="row"]'),
 

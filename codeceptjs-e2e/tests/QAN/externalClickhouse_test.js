@@ -54,15 +54,10 @@ Scenario('PMM-T2020 - Verify external clickhouse as datasource on explore page @
   explorePage.selectDataSource('ClickHouse');
   I.waitForVisible(explorePage.elements.sqlEditorButton, 30);
   I.click(explorePage.elements.sqlEditorButton);
-  // The editor is Monaco, seeded with the datasource's skeleton query: clearField/fillField
-  // race that seeding and leave the skeleton and the typed query interleaved.
-  I.waitForVisible(explorePage.elements.sqlBuilderText, 30);
-  I.click(explorePage.elements.sqlBuilder);
-  I.pressKey(['Control', 'a']);
-  I.pressKey('Delete');
-  I.type('SELECT * FROM pmm.metrics LIMIT 10');
+  I.clearField(explorePage.elements.sqlBuilder);
+  I.fillField(explorePage.elements.sqlBuilder, 'SELECT * FROM pmm.metrics LIMIT 10;');
   I.click(explorePage.elements.runQueryButton);
-  I.waitForVisible(explorePage.elements.resultRow, 30);
+  I.waitForVisible(explorePage.elements.resultRow, 10);
   I.dontSee(explorePage.messages.authError);
 });
 
