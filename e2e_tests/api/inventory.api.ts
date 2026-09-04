@@ -6,6 +6,15 @@ import apiEndpoints from '@helpers/apiEndpoints';
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
 
+  getAgentById = async (agentId: string) => {
+    const { services } = await this.getServices();
+    const agent = services.flatMap((service) => service.agents).find((agent) => agent.agent_id === agentId);
+
+    if (!agent) throw new Error(`Agent with id ${agentId} is not present`);
+
+    return agent;
+  };
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>

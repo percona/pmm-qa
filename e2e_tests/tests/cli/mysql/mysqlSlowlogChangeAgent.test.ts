@@ -238,14 +238,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent disable collectors @ps-slowlog-integration',
-    async ({ cliHelper }) => {
+    'PMM-T9993 - Verify Change agent disable collectors @ps-integration',
+    async ({ api, cliHelper }) => {
+      const collectorsToDisable = ['stat_statements', 'locks'];
+
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
         )
         .assertSuccess()
-        .outContains('- updated disabled collectors: [stat_statements locks]');
+        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+
+      expect(
+        agent.disabled_collectors,
+        'Disabled collectors were not persisted on the mysqld_exporter agent',
+      ).toEqual(collectorsToDisable);
     },
   );
 

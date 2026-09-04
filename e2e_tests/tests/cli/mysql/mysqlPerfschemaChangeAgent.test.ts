@@ -223,14 +223,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('Running');
   });
 
-  pmmTest('PMM-T1009 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
-      )
-      .assertSuccess()
-      .outContains('- updated disabled collectors: [stat_statements locks]');
-  });
+  pmmTest(
+    'PMM-T1009 - Verify Change agent disable collectors @ps-integration',
+    async ({ api, cliHelper }) => {
+      const collectorsToDisable = ['stat_statements', 'locks'];
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
+        )
+        .assertSuccess()
+        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+
+      expect(
+        agent.disabled_collectors,
+        'Disabled collectors were not persisted on the mysqld_exporter agent',
+      ).toEqual(collectorsToDisable);
+    },
+  );
 
   pmmTest(
     'PMM-T1010 - Verify Change agent tls @ps-integration',
