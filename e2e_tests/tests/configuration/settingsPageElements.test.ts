@@ -95,19 +95,6 @@ pmmTest('Verify Advanced Section Elements @settings @grafana-pr', async ({ page,
   });
 });
 
-// TODO: Remove the skip after https://jira.percona.com/browse/PMM-5791
-// eslint-disable-next-line playwright/no-skipped-test -- PMM-T227 is intentionally skipped until PMM-5791 is fixed.
-pmmTest.skip(
-  'PMM-T227 - Open PMM Settings page and verify DATA_RETENTION value is set to 2 days @settings',
-  async ({ page, settingsPage }) => {
-    await page.goto(settingsPage.url);
-    await settingsPage.waitForPageLoaded();
-    await expect(settingsPage.inputs.dataRetention).toHaveValue('2', {
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
-  },
-);
-
 pmmTest(
   'PMM-T1866 - Verify if public address has an port assigned and following UI/API requests dont error @settings',
   async ({ page, settingsPage }) => {
