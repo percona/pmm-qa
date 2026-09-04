@@ -135,7 +135,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${nodeExporterId} --debug --trace --json`,
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --debug --trace --json`,
         )
         .assertSuccess();
     },
@@ -289,8 +289,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .toEqual([]);
     },
   );
-  /*
-  pmmTesst(
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @node-exporter-integration',
     async ({ cliHelper }) => {
       let commands = [
@@ -300,10 +300,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
+        `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --pmm-agent-listen-port=7778`,
       ];
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
     },
-  );*/
+  );
 });
