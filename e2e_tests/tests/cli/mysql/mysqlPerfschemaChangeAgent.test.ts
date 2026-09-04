@@ -326,4 +326,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @proxysql-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+      const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
+        )
+        .outContains('certificate signed by unknown authority');
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        )
+        .assertSuccess()
+        .outContains('Mysqld Exporter agent configuration updated');
+    },
+  );
 });
