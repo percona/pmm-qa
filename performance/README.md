@@ -14,6 +14,7 @@ Root password and SSH keys are read from the environment. Do not hardcode them:
 | `PMM_PERF_SSH_PUBKEY` | create | SSH public key authorized on the VMs |
 | `PMM_SERVER_PASSWORD` | create | PMM server admin password |
 | `PMM_PERF_SSH_KEY` | inventory | local private key path (default `~/.ssh/id_rsa`) |
+| `PMM_PERF_TAG` | teardown | tag to delete (default `pmm-qa-perf`); only `pmm-qa-perf` or `pmm-qa-perf-run:<id>` accepted |
 
 `linode-cli` must be configured with its own API token (`linode-cli configure`).
 
@@ -29,9 +30,10 @@ export PERF_RUN_ID=myrun-01           # optional; defaults to a UTC timestamp
 ```
 
 Each VM is labelled `sp_fb_<i>_<dbtype>_<metrics_mode>_<PERF_RUN_ID>` and tagged
-`pmm-qa-ephemeral`, `pmm-qa-perf`, and `pmm-qa-perf-run:<PERF_RUN_ID>`. The
-create step prints the exact `PERF_RUN_ID` and the inventory/teardown commands
-for that batch.
+`pmm-qa-perf` and `pmm-qa-perf-run:<PERF_RUN_ID>`. The create step prints the
+`PERF_RUN_ID` and the inventory/teardown commands up front, and tears the batch
+down automatically if provisioning fails partway (nothing reaps stray instances,
+so a partial batch would otherwise bill).
 
 ## Inventory + upgrade (one batch)
 

@@ -5,8 +5,8 @@
   remote_user: root
 
   vars:
-    repo: "{{ lookup('vars', 'extra_repo', default=lookup('env', 'install_repo') | default('testing', true)) }}"
-    version: "{{ lookup('vars', 'extra_version', default=lookup('env', 'version') | default('3.7.0', true)) }}"
+    repo: "{{ lookup('env', 'install_repo') | default('testing', true) }}"
+    version: "{{ lookup('env', 'version') | default('3.7.0', true) }}"
 
   tasks:
     - name: Copy upgrade script

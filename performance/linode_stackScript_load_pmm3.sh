@@ -49,6 +49,20 @@ esac
 command -v linode-cli >/dev/null || { echo "linode-cli is required" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
+# Print the batch id and its teardown before provisioning, so a failure partway
+# through the loop still leaves the operator the id needed to clean up.
+echo "provisioning batch PERF_RUN_ID=${PERF_RUN_ID} (${INSTANCES} ${DBTYPE} client(s))"
+echo "inventory:  PERF_RUN_ID=${PERF_RUN_ID} ./prepare_ansible_client_inventory.sh"
+echo "teardown:   PMM_PERF_TAG=pmm-qa-perf-run:${PERF_RUN_ID} ./teardown_perf_linodes.sh"
+
+# Nothing reaps stray Linode instances automatically, so a mid-loop failure would
+# leak billing VMs -- tear this batch down on any error instead.
+cleanup_on_err() {
+  echo "provisioning failed -- tearing down batch pmm-qa-perf-run:${PERF_RUN_ID}" >&2
+  PMM_PERF_TAG="pmm-qa-perf-run:${PERF_RUN_ID}" bash "$(dirname "$0")/teardown_perf_linodes.sh" || true
+}
+trap cleanup_on_err ERR
+
 for i in $(seq 1 "$INSTANCES"); do
   hostname="${hostprefix}_${METRICS_MODE}_${i}"
   label="sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_${PERF_RUN_ID}"
@@ -68,13 +82,11 @@ for i in $(seq 1 "$INSTANCES"); do
     --stackscript_data "$ssdata" \
     --root_pass "$LINODE_ROOT_PASS" \
     --region "$LINODE_REGION" \
-    --tags pmm-qa-ephemeral \
     --tags pmm-qa-perf \
     --tags "pmm-qa-perf-run:${PERF_RUN_ID}" \
     --authorized_keys "$PMM_PERF_SSH_PUBKEY"
-  sleep 15
+  sleep 15   # pace Linode API / StackScript provisioning to avoid rate-limit errors
 done
 
+trap - ERR
 echo "created ${INSTANCES} ${DBTYPE} client(s) as batch PERF_RUN_ID=${PERF_RUN_ID}"
-echo "inventory:  PERF_RUN_ID=${PERF_RUN_ID} ./prepare_ansible_client_inventory.sh"
-echo "teardown:   PMM_PERF_TAG=pmm-qa-perf-run:${PERF_RUN_ID} ./teardown_perf_linodes.sh"

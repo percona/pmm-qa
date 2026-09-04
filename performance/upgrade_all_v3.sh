@@ -8,7 +8,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --version) version="$2"; shift 2 ;;
     --repo)    repo="$2"; shift 2 ;;
-    *) shift ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 version="${version:-3.7.0}"
@@ -24,9 +24,13 @@ for c in "${containers[@]}"; do
   docker exec "$c" apt-get update
   docker exec "$c" sh -c 'cp /usr/local/percona/pmm/config/pmm-agent.yaml /tmp/pmm-agent.yaml.old'
 
-  if ! docker exec --env DEBIAN_FRONTEND=noninteractive "$c" apt-get install -y "pmm-client=${version}*"; then
-    echo "ERROR: pmm-client=${version}* is not available on ${c}" >&2; exit 1
+  # apt's `=<version>` is an exact match (no glob), so resolve the concrete
+  # published build whose version begins with the requested one, newest first.
+  full_ver="$(docker exec "$c" apt-cache madison pmm-client 2>/dev/null | awk -F'|' -v v="$version" '{gsub(/ /,"",$2)} $2 ~ ("^" v) {print $2; exit}')"
+  if [ -z "$full_ver" ]; then
+    echo "ERROR: no pmm-client version matching ${version} in repo ${repo} on ${c}" >&2; exit 1
   fi
+  docker exec --env DEBIAN_FRONTEND=noninteractive "$c" apt-get install -y "pmm-client=${full_ver}"
 
   docker exec "$c" pkill -f pmm-agent || true
   docker exec "$c" sh -c 'cp /tmp/pmm-agent.yaml.old /usr/local/percona/pmm/config/pmm-agent.yaml'
