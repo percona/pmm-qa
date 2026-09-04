@@ -66,6 +66,14 @@ jobs:
           RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
+          DEV_LATEST_VERSION=$(curl https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
+          echo "dev latest version: $DEV_LATEST_VERSION"
+          echo "DEV_LATEST_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_OUTPUT"
+          export DOCKER_TAGS
+          for item in "${VERSIONS[@]}"; do
+            DOCKER_TAGS+=("percona/pmm-server:$item")
+          done
+          echo $DOCKER_TAGS
 
   upgrade-docker:
     needs: prepare
