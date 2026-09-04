@@ -42,7 +42,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9991 - Verify Change agent username and password @ps-integration',
+    'PMM-T1001 - Verify Change agent username and password @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
@@ -68,7 +68,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T99922 - Verify Change agent custom labels @ps-integration',
+    'PMM-T1002 - Verify Change agent custom labels @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
       const commands = [
@@ -89,7 +89,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent log level @ps-integration',
+    'PMM-T1003 - Verify Change agent log level @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
@@ -109,7 +109,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T9993 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
+  pmmTest('PMM-T1004 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
     const commands = [
       `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
       `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --debug --trace --json`,
@@ -119,7 +119,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @ps-integration',
+    'PMM-T1005 - Verify Change agent enable true/false @ps-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -153,7 +153,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T9996 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
+  pmmTest('PMM-T1006 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
     cliHelper.execSilent(
       `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
     );
@@ -170,7 +170,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     expect(metrics).toContain('mysql_up');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
+  pmmTest('PMM-T1007 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
@@ -192,7 +192,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('mysql_up');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
+  pmmTest('PMM-T1008 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
@@ -223,7 +223,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('Running');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
+  pmmTest('PMM-T1009 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
     await cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
@@ -233,7 +233,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9994 - Verify Change agent tls @ps-integration',
+    'PMM-T1010 - Verify Change agent tls @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
@@ -277,7 +277,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T9993 - Verify Change agent pmm agent listen port @ps-integration', async ({ cliHelper }) => {
+  pmmTest('PMM-T1011 - Verify Change agent pmm agent listen port @ps-integration', async ({ cliHelper }) => {
     let commands = [
       `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
       `docker restart ${containerName}`,
