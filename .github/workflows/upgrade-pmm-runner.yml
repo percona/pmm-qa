@@ -117,13 +117,6 @@ jobs:
           elif [ "${{ matrix.version }}" == "3-dev-latest" ]; then
             echo "3-dev-latest is a special dev tag"
             TARBALL_URL="3-dev-latest"
-  
-            # verify it exists before committing to it
-            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
-            if [ "$code" != "200" ]; then
-              echo "ERROR: 3-dev-latest tarball not found (HTTP $code): url: ${TARBALL_URL}"
-              exit 1
-            fi
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
