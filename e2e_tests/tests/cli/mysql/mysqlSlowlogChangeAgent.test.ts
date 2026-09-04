@@ -277,6 +277,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
+
+  pmmTest(
     'PMM-T9997 - Verify Change agent tablestats group table limit @ps-slowlog-integration',
     async ({ api, cliHelper }) => {
       const tablestatsGroupTableLimit = 2_000;
