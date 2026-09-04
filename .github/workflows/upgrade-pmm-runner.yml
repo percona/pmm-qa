@@ -69,7 +69,7 @@ jobs:
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
           echo "CLIENT versions: $VERSIONS"
           echo "UI versions:     $UI_VERSIONS"
-          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
 
