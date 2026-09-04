@@ -154,7 +154,7 @@ jobs:
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
-            --volume pmm-volume:/srv --name pmm-server "percona/pmm-server:${{ matrix.version }}"
+            --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
           # TODO: watchtower + platform-dev env vars only needed for UI-triggered updates.
 
