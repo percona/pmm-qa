@@ -83,9 +83,6 @@ exports.config = {
       serverId: process.env.MAILOSAUR_SERVER_ID || 'id',
       timeout: 15000,
     },
-    DbHelper: {
-      require: 'codeceptjs-dbhelper',
-    },
     ChaiWrapper: {
       require: 'codeceptjs-chai',
     },
@@ -115,9 +112,6 @@ exports.config = {
       strategy: 'css',
       attribute: 'data-testid',
       showActual: false,
-    },
-    tryTo: {
-      enabled: true,
     },
   },
   mocha: {

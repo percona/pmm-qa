@@ -3,6 +3,7 @@
  * All tests with changing password must use UI login: {@code loginPage.login();}
  * to keep logout, re-login and restore admin password working.
  */
+const { tryTo } = require('codeceptjs/effects');
 
 Feature('PMM User Profile tests');
 
@@ -10,7 +11,6 @@ const INITIAL_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const NEW_ADMIN_PASSWORD = 'admin1';
 
 After(async ({ I, profileAPI }) => {
-  // eslint-disable-next-line no-undef
   await tryTo(async () => {
     I.Authorize();
     await profileAPI.changePassword('admin', process.env.ADMIN_PASSWORD, INITIAL_ADMIN_PASSWORD);
