@@ -218,6 +218,12 @@ jobs:
           git fetch origin "$PMM_QA_BRANCH"
           git checkout FETCH_HEAD
 
+      - name: Prepare dependencies for upgrade branch
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
