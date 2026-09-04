@@ -116,9 +116,6 @@ exports.config = {
       attribute: 'data-testid',
       showActual: false,
     },
-    tryTo: {
-      enabled: true,
-    },
   },
   mocha: {
     reporterOptions: {
