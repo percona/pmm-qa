@@ -130,76 +130,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  // eslint-disable-next-line playwright/no-commented-out-tests -- Temporary test
-  /*
-  pmsmTest(
+  pmmTest(
     'PMM-T9993 - Verify Change agent debug, trace and json @node-exporter-integration',
     async ({ cliHelper }) => {
-      const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${nodeExporterId} --debug --trace --json`,
+        )
+        .assertSuccess();
     },
   );
 
-  pmmTest(
-    'PMM-T9994 - Verify Change agent tls @node-exporter-integration',
-    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
-
-      cliHelper.createTlsCertificates(containerName);
-
-      let commands = [
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
-        `docker exec ${containerName} chown -R postgres:postgres /certs`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      fs.writeFileSync(
-        '/tmp/ssl.conf',
-        `ssl = on\nssl_cert_file = '/certs/${containerName}.crt'\nssl_key_file = '/certs/${containerName}.key'\n`,
-      );
-
-      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
-
-      const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
-      const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
-        hostssl      all             all             ::1/128         scram-sha-256
-        hostssl      all             all             0.0.0.0/0       scram-sha-256
-        hostssl      all             all             ::/0            scram-sha-256
-      `;
-
-      fs.writeFileSync('/tmp/hba.conf', hbaLines);
-      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
-      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
-      cliHelper.execSilent(
-        `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
-      );
-
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceMonitoring(serviceName, 'Failed', Timeouts.ONE_MINUTE);
-
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command));
-      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
-    },
-  );
-*/
   pmmTest(
     'PMM-T9995 - Verify Change agent enable true/false @node-exporter-integration',
     async ({ cliHelper, page }) => {
