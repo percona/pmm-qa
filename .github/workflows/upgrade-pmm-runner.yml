@@ -240,6 +240,7 @@ jobs:
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:
           CLIENT_REPOSITORY: ${{ steps.resolve.outputs.CLIENT_REPOSITORY }}
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
             echo "== upgrading client in $c =="
@@ -265,9 +266,19 @@ jobs:
               rm -f "$log"
               exit $status
             fi
-              docker exec "$c" pmm-admin --version
-              version=$(docker exec "$c" pmm-admin --version 2>&1 | head -1)
-              echo "== upgrade succeeded in $c == ($version)"
+              UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '2p')
+              CLIENT_UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '3p')
+              if [[ "$UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
+                echo "OK: version contains $PMM_SERVER_LATEST ($UPGRADE_VERSION)"
+              else
+                echo "FAIL: expected $PMM_SERVER_LATEST, got $UPGRADE_VERSION"
+              fi
+              if [[ "$CLIENT_UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
+                echo "OK: version contains $PMM_SERVER_LATEST ($CLIENT_UPGRADE_VERSION)"
+              else
+                echo "FAIL: expected $PMM_SERVER_LATEST, got $CLIENT_UPGRADE_VERSION"
+              fi
+              echo "== upgrade succeeded in $c == ($CLIENT_UPGRADE_VERSION)"
             rm -f "$log"
           done
 
