@@ -51,20 +51,26 @@ pages() {  # $1 = path (may contain ?query); prints each .data[] as compact JSON
 clusters="$(pages /lke/clusters)"
 live_cluster_ids="$(printf '%s' "$clusters" | jq -r '.id' | sort -u)"
 
-# Collect every live cluster's PV names into a keep-set. FAIL-SAFE: any unreadable
-# cluster leaves xref_ok=0, which skips the whole volume sweep below.
-livepv=""; xref_ok=1
+# Collect every live cluster's volumes into a keep-set, keyed by Linode volume ID
+# (exact) -- the linodebs CSI driver caps its volume LABEL at 32 chars, so a label
+# is a truncated form of the 40-char PV name and must NOT be string-matched. The PV
+# carries the true id in spec.csi.volumeHandle ("<id>-<label>"); take the leading
+# id. Also keep PV names as a secondary signal (union only ever keeps MORE, never
+# deletes more). FAIL-SAFE: any unreadable cluster leaves xref_ok=0, which skips
+# the whole volume sweep below.
+liveids=""; livepv=""; xref_ok=1
 if command -v kubectl >/dev/null 2>&1 && command -v linode-cli >/dev/null 2>&1; then
   for cid in $live_cluster_ids; do
     [ -n "$cid" ] || continue
     kc="$(linode-cli lke kubeconfig-view "$cid" --json 2>/dev/null | jq -r '.[0].kubeconfig // empty' 2>/dev/null | base64 -d 2>/dev/null || true)"
     if [ -z "$kc" ]; then echo "prune-lke-orphans: cluster $cid kubeconfig unreadable -> volume sweep skipped" >&2; xref_ok=0; break; fi
     kf="$(mktemp)"; printf '%s' "$kc" >"$kf"
-    if ! pvs="$(KUBECONFIG="$kf" kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)"; then
+    if ! pvjson="$(KUBECONFIG="$kf" kubectl get pv -o json 2>/dev/null)"; then
       rm -f "$kf"; echo "prune-lke-orphans: cluster $cid PV list failed -> volume sweep skipped" >&2; xref_ok=0; break
     fi
     rm -f "$kf"
-    livepv+="$pvs"$'\n'
+    liveids+="$(printf '%s' "$pvjson" | jq -r '.items[]?.spec.csi.volumeHandle // empty' | sed -n 's/^\([0-9]\{1,\}\).*/\1/p')"$'\n'
+    livepv+="$(printf '%s' "$pvjson" | jq -r '.items[]?.metadata.name // empty')"$'\n'
   done
 else
   echo "prune-lke-orphans: kubectl/linode-cli not available -> volume sweep skipped" >&2; xref_ok=0
@@ -80,7 +86,8 @@ if [ "$xref_ok" -eq 1 ]; then
     [ "$lid" = "null" ] || continue                         # attached -> in use, never
     cs="$(date -d "$created" +%s 2>/dev/null || echo 0)"
     [ "$cs" -gt 0 ] && [ $(( (now - cs) / 60 )) -ge "$GRACE_MIN" ] || continue   # too young / unknown age -> keep
-    grep -qx "$label" <<<"$livepv" && continue              # a live cluster still holds this PV -> keep
+    grep -qx "$id" <<<"$liveids" && continue                # a live cluster holds this volume (by id) -> keep
+    grep -qx "$label" <<<"$livepv" && continue              # ... or by PV name (belt-and-suspenders) -> keep
     if [ "$DRY" -eq 1 ]; then echo "would delete volume $id ($label) [no live cluster refs it]"; vol=$((vol + 1)); continue; fi
     if "${CURL[@]}" -o /dev/null -X DELETE "$BASE/volumes/$id"; then
       echo "deleted volume $id ($label)"; vol=$((vol + 1))
