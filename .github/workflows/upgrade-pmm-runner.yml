@@ -36,6 +36,7 @@ jobs:
       ui_versions: ${{ steps.set.outputs.ui_versions }}
       rc_version:  ${{ steps.set.outputs.rc_version }}
       matrix:  ${{ steps.set.outputs.matrix }}
+      DEV_LATEST_VERSION: ${{ steps.set.outputs.DEV_LATEST_VERSION }}
     steps:
       - name: Compute version range (latest -> 5 minors back)
         id: set
