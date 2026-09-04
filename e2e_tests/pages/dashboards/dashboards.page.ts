@@ -7,6 +7,7 @@ import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
+import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
@@ -29,23 +30,12 @@ export default class Dashboards extends BasePage {
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
+  readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  builders = {
-    panelByExactName: (panelName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
-    panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
-    panelHeaderByName: (panelName: string) =>
-      this.builders.panelByExactName(panelName).getByTestId('header-container'),
-    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
-    panelMenuItemByName: (menuItemName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-  };
-  buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
-    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
-  };
   elements = {
+    annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
+    // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
+    annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
@@ -61,6 +51,23 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+  };
+  builders = {
+    annotationTagText: (tagValue: string) =>
+      this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
+    panelByName: (panelName: string) =>
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelHeaderByName: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
+    panelMenuItemByName: (menuItemName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+  };
+  buttons = {
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   inputs = {};
   messages = {};
@@ -95,6 +102,39 @@ export default class Dashboards extends BasePage {
     }
 
     return Array.from(collected);
+  };
+
+  hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    // Markers are unlabelled, so the tooltip is the only way to tell them apart.
+    // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
+    const tooltipTitle = this.elements.annotationTooltip
+      .getByText(annotationTitle, { exact: true })
+      .or(this.elements.annotationTooltip.getByText(`${annotationTitle} (`));
+    const deadline = Date.now() + timeout;
+
+    await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
+      await this.elements.annotationMarkers.first().waitFor({ state: 'visible', timeout });
+
+      while (Date.now() < deadline) {
+        for (let i = 0; i < (await this.elements.annotationMarkers.count()); i++) {
+          if (Date.now() >= deadline) break;
+
+          try {
+            // Overlapping markers cover each other, so some cannot be hovered.
+            await this.elements.annotationMarkers.nth(i).hover({ timeout: Timeouts.THREE_SECONDS });
+            await tooltipTitle.waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+
+            return;
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      throw new Error(
+        `No annotation marker on ${this.page.url()} showed an annotation titled "${annotationTitle}"`,
+      );
+    });
   };
 
   loadAllPanels = async () => {
