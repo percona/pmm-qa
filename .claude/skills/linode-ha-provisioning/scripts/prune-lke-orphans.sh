@@ -4,30 +4,34 @@
 # nodes but does NOT cascade to the CSI-provisioned volumes or the CCM-provisioned
 # NodeBalancer, so they orphan and bill for weeks (the dominant HA cost leak).
 #
-# Deletion is by POSITIVE ATTRIBUTION -- a candidate must be provably ours AND
-# provably belong to a cluster that no longer exists. "Unattached" is NOT used as
-# a proxy for "orphaned": a live cluster's CSI volume is unattached during
-# provisioning (Immediate binding) and during failover, and every LKE volume on
-# the account is named pvc-*, so an unattached-pvc rule would delete live and
-# other-owner data. Instead:
-#   * Volumes: create-lke stamps each of its volumes with pmm-qa-run:<id> (the
-#     same tag the cluster carries). Delete a volume only when it has a
-#     pmm-qa-run:<id> tag whose run has NO live cluster -- so a live cluster's
-#     volumes (its run is still listed) and untagged/other-owner volumes are
-#     never touched.
+# Deletion is by PROOF OF NON-USE, not by ownership tags -- so it also reaps
+# volumes from provisioning paths that never tag (e.g. an external load-test
+# script), which a tag-only rule leaked forever:
+#
+#   * Volumes: delete a pvc-* volume only when it is (1) unattached, (2) not
+#     referenced by ANY live LKE cluster's PVs, and (3) older than a grace window.
+#     "Unattached" alone is NOT enough -- a live cluster's volume is unattached
+#     during provisioning (Immediate binding) and failover -- so every live
+#     cluster's PV names are collected first and used as a keep-set. FAIL-SAFE: if
+#     any live cluster's kubeconfig or PV list cannot be read, the whole volume
+#     sweep is skipped (delete nothing) rather than risk deleting a live volume we
+#     could not verify. The grace window covers the brief race where a volume
+#     exists before its PV registers.
 #   * NodeBalancers: attributed by their immutable lke<clusterid>- label, deleted
 #     only when the cluster is gone AND no backend node is up (see the loop).
-# If a volume was never tagged (tagging is best-effort), it is left alone -- the
-# failure mode is a leak (recoverable by hand), never a wrong delete.
 #
-# Requires the token to carry Volumes and NodeBalancers Read/Write (plus LKE Read).
-# API-only (curl+jq); no cluster access needed.
+# Requires the token to carry Volumes, NodeBalancers and Kubernetes(LKE) R/W, and
+# `kubectl`, `linode-cli`, `jq`, `curl` on PATH (the volume cross-reference reads
+# each live cluster). Without kubectl/linode-cli the volume sweep is skipped.
 #
 #   LINODE_TOKEN=... prune-lke-orphans.sh            # delete orphans
 #   LINODE_TOKEN=... prune-lke-orphans.sh --dry-run  # list them, delete nothing
+#   PRUNE_GRACE_MIN=60  (default) -- never touch a volume younger than this
 set -euo pipefail
 : "${LINODE_TOKEN:?LINODE_TOKEN must be set}"
+export LINODE_CLI_TOKEN="$LINODE_TOKEN"   # linode-cli lke kubeconfig-view
 DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
+GRACE_MIN="${PRUNE_GRACE_MIN:-60}"
 
 BASE="https://api.linode.com/v4"
 CURL=(curl -fsS --connect-timeout 10 --max-time 30 -H "Authorization: Bearer $LINODE_TOKEN")
@@ -45,22 +49,44 @@ pages() {  # $1 = path (may contain ?query); prints each .data[] as compact JSON
 }
 
 clusters="$(pages /lke/clusters)"
-live_runs="$(printf '%s' "$clusters" | jq -r '.tags[]? | select(startswith("pmm-qa-run:"))' | sort -u)"
 live_cluster_ids="$(printf '%s' "$clusters" | jq -r '.id' | sort -u)"
 
+# Collect every live cluster's PV names into a keep-set. FAIL-SAFE: any unreadable
+# cluster leaves xref_ok=0, which skips the whole volume sweep below.
+livepv=""; xref_ok=1
+if command -v kubectl >/dev/null 2>&1 && command -v linode-cli >/dev/null 2>&1; then
+  for cid in $live_cluster_ids; do
+    [ -n "$cid" ] || continue
+    kc="$(linode-cli lke kubeconfig-view "$cid" --json 2>/dev/null | jq -r '.[0].kubeconfig // empty' 2>/dev/null | base64 -d 2>/dev/null || true)"
+    if [ -z "$kc" ]; then echo "prune-lke-orphans: cluster $cid kubeconfig unreadable -> volume sweep skipped" >&2; xref_ok=0; break; fi
+    kf="$(mktemp)"; printf '%s' "$kc" >"$kf"
+    if ! pvs="$(KUBECONFIG="$kf" kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)"; then
+      rm -f "$kf"; echo "prune-lke-orphans: cluster $cid PV list failed -> volume sweep skipped" >&2; xref_ok=0; break
+    fi
+    rm -f "$kf"
+    livepv+="$pvs"$'\n'
+  done
+else
+  echo "prune-lke-orphans: kubectl/linode-cli not available -> volume sweep skipped" >&2; xref_ok=0
+fi
+
 vol=0 nb=0 fail=0
-# Volumes: ours (pmm-qa-run:<id> tag) AND run has no live cluster AND unattached.
-while IFS=$'\t' read -r id label run lid; do
-  [ -n "$id" ] || continue
-  [ "$lid" = "null" ] || continue                 # defence-in-depth: never an attached volume
-  grep -qx "$run" <<<"$live_runs" && continue     # its cluster is still live -> keep
-  if [ "$DRY" -eq 1 ]; then echo "would delete volume $id ($label) [$run]"; vol=$((vol + 1)); continue; fi
-  if "${CURL[@]}" -o /dev/null -X DELETE "$BASE/volumes/$id"; then
-    echo "deleted volume $id ($label) [$run]"; vol=$((vol + 1))
-  else echo "FAILED volume $id ($label)" >&2; fail=$((fail + 1)); fi
-done < <(pages /volumes | jq -r '
-  . as $v | ($v.tags[]? | select(startswith("pmm-qa-run:"))) as $t
-  | [$v.id, $v.label, $t, ($v.linode_id|tostring)] | @tsv')
+# Volumes: unattached pvc-* older than the grace window and referenced by no live
+# cluster. Skipped entirely unless every live cluster was read (fail-safe above).
+if [ "$xref_ok" -eq 1 ]; then
+  now="$(date +%s)"
+  while IFS=$'\t' read -r id label created lid; do
+    [ -n "$id" ] || continue
+    [ "$lid" = "null" ] || continue                         # attached -> in use, never
+    cs="$(date -d "$created" +%s 2>/dev/null || echo 0)"
+    [ "$cs" -gt 0 ] && [ $(( (now - cs) / 60 )) -ge "$GRACE_MIN" ] || continue   # too young / unknown age -> keep
+    grep -qx "$label" <<<"$livepv" && continue              # a live cluster still holds this PV -> keep
+    if [ "$DRY" -eq 1 ]; then echo "would delete volume $id ($label) [no live cluster refs it]"; vol=$((vol + 1)); continue; fi
+    if "${CURL[@]}" -o /dev/null -X DELETE "$BASE/volumes/$id"; then
+      echo "deleted volume $id ($label)"; vol=$((vol + 1))
+    else echo "FAILED volume $id ($label)" >&2; fail=$((fail + 1)); fi
+  done < <(pages /volumes | jq -r 'select(.label|startswith("pvc-")) | [.id, .label, .created, (.linode_id|tostring)] | @tsv')
+fi
 
 # NodeBalancers: the CCM strips custom tags, so attribute by the immutable
 # lke<clusterid>- label instead. Delete one only when its cluster is no longer
@@ -85,5 +111,5 @@ while IFS=$'\t' read -r id label; do
   else echo "FAILED nodebalancer $id ($label)" >&2; fail=$((fail + 1)); fi
 done < <(pages /nodebalancers | jq -r '[.id, .label] | @tsv')
 
-echo "prune-lke-orphans: volumes=$vol nodebalancers=$nb failed=$fail$([ "$DRY" -eq 1 ] && echo ' (dry-run)')"
+echo "prune-lke-orphans: volumes=$vol nodebalancers=$nb failed=$fail$([ "$DRY" -eq 1 ] && echo ' (dry-run)')$([ "$xref_ok" -eq 1 ] || echo ' (volume sweep skipped: a live cluster was unreadable)')"
 [ "$fail" -eq 0 ]
