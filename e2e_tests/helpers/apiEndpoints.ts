@@ -43,7 +43,6 @@ const apiEndpoints = {
     leaderHealthCheck: '/v1/server/leaderHealthCheck',
     logs: '/logs.zip',
     readyz: '/v1/server/readyz',
-    // Carries distribution_method; /v1/version above does not.
     serverVersion: '/v1/server/version',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
