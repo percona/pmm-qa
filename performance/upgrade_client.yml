@@ -1,7 +1,4 @@
 ---
-# Copies upgrade_all_v3.sh to each host and runs it as a monitored async job, so
-# the play only succeeds once the upgrade has actually finished (and fails if it
-# exits non-zero). Env overrides: install_repo, version.
 - hosts: all
   become: true
   become_method: sudo

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Upgrade the PMM client inside every running *client_container* Docker container
-# to a requested version/repo, then verify each one actually reports that version.
+# to a requested version/repo, then verify each one reports that version.
 set -Eeuo pipefail
 
 version="" repo=""
@@ -24,11 +24,8 @@ for c in "${containers[@]}"; do
   docker exec "$c" apt-get update
   docker exec "$c" sh -c 'cp /usr/local/percona/pmm/config/pmm-agent.yaml /tmp/pmm-agent.yaml.old'
 
-  # Pin the requested version; fall back to latest-in-repo (with a warning) only
-  # if that exact build isn't published.
   if ! docker exec "$c" bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y 'pmm-client=${version}*'"; then
-    echo "warning: pmm-client=${version}* unavailable on ${c}, installing latest from ${repo}" >&2
-    docker exec "$c" bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y pmm-client"
+    echo "ERROR: pmm-client=${version}* is not available on ${c}" >&2; exit 1
   fi
 
   docker exec "$c" pkill -f pmm-agent || true

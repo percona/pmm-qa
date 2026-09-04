@@ -7,8 +7,6 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-# Host-key verification stays ON by default so a hijacked host can't MITM the
-# root SSH session; override to False only for throwaway hosts you already trust.
 export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-True}"
 export version="$1"
 export install_repo="$2"

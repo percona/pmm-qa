@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
-# Delete the load-test client VMs that linode_stackScript_load_pmm3.sh creates.
-# Those instances bill until removed, so this is the teardown the create step
-# needs.
-#
-# It defaults to this harness's own pmm-qa-perf tag -- NOT the account-wide
-# pmm-qa-ephemeral tag, which the Terraform QA runner (terraform/linode-runner)
-# and LKE clusters (linode-ha-provisioning) also stamp. `linode-cli linodes list`
-# is account-wide, so defaulting to pmm-qa-ephemeral would delete someone else's
-# live instance mid-test. --dry-run lists matches and deletes nothing.
-#
-#   ./teardown_perf_linodes.sh --dry-run    # preview
-#   ./teardown_perf_linodes.sh              # delete every pmm-qa-perf instance
-#   PMM_PERF_TAG=pmm-qa-perf-run:20260904-120000 ./teardown_perf_linodes.sh  # one batch
+# Delete the load-test client VMs from linode_stackScript_load_pmm3.sh. Defaults to
+# this harness's pmm-qa-perf tag, never the account-wide pmm-qa-ephemeral (the
+# Terraform QA runner and LKE clusters carry that too, and linode-cli lists
+# account-wide). See README.md for usage.
 set -Eeuo pipefail
 
 DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
@@ -19,9 +10,8 @@ TAG="${PMM_PERF_TAG:-pmm-qa-perf}"
 command -v linode-cli >/dev/null || { echo "linode-cli is required" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
-# jq matches the tag as an exact array element -- a substring/word match would let
-# pmm-qa-perf also catch pmm-qa-perf-run:<id>. A linode-cli failure aborts via
-# set -e/pipefail rather than yielding an empty list that deletes nothing silently.
+# index() matches the tag as an exact array element, so pmm-qa-perf can't also
+# catch pmm-qa-perf-run:<id>; a linode-cli failure aborts via set -e/pipefail.
 rows="$(linode-cli linodes list --json | jq -r --arg tag "$TAG" '.[] | select(.tags | index($tag)) | [.id, .label] | @tsv')"
 
 n=0 fail=0

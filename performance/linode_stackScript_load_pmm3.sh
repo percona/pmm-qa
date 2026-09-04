@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 # Provision N Linode PMM client load-test VMs for one DB type via a Percona
-# StackScript. Every instance is tagged pmm-qa-ephemeral so its teardown
-# counterpart (teardown_perf_linodes.sh) can find and delete it -- these VMs bill
-# until removed, so nothing here creates an untagged, unattributable instance.
-#
-# Credentials come from the environment, never from source: the VM root password
-# and the authorized SSH key were previously hardcoded here and must stay out of
-# the repo.
+# StackScript. Each instance is tagged pmm-qa-perf-run:<PERF_RUN_ID> so its batch
+# can be found for inventory and teardown; credentials come from the environment.
 set -Eeuo pipefail
 
 usage() {
@@ -17,12 +12,14 @@ Usage: linode_stackScript_load_pmm3.sh <pmm_server_host> <client_version> <insta
 Required environment:
   LINODE_ROOT_PASS     root password for the provisioned VMs
   PMM_PERF_SSH_PUBKEY  SSH public key to authorize on the provisioned VMs
-  PMM_SERVER_PASSWORD  PMM server admin password (kept off this script's argv)
+  PMM_SERVER_PASSWORD  PMM server admin password (from env; still reaches
+                       linode-cli via --stackscript_data, so visible in ps)
 
 Optional environment:
   LINODE_REGION        default: us-east
   LINODE_TYPE          default: g6-standard-2
-  PERF_RUN_ID          groups this batch under tag pmm-qa-perf-run:<id>; default: UTC timestamp
+  PERF_RUN_ID          batch id, tagged pmm-qa-perf-run:<id> and put in the
+                       label so batches don't collide; default: UTC timestamp
 EOF
   exit 2
 }
@@ -54,8 +51,7 @@ command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
 for i in $(seq 1 "$INSTANCES"); do
   hostname="${hostprefix}_${METRICS_MODE}_${i}"
-  label="sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_test"
-  # jq builds the JSON so a value containing a quote or backslash can't break it.
+  label="sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_${PERF_RUN_ID}"
   ssdata="$(jq -nc \
     --arg hostname "$hostname" \
     --arg pmmserver "$PMM_SERVER_HOST" \
@@ -79,5 +75,6 @@ for i in $(seq 1 "$INSTANCES"); do
   sleep 15
 done
 
-echo "created ${INSTANCES} ${DBTYPE} client(s), tagged pmm-qa-ephemeral / pmm-qa-perf-run:${PERF_RUN_ID}"
-echo "tear them down with: ./teardown_perf_linodes.sh    (or --dry-run to preview)"
+echo "created ${INSTANCES} ${DBTYPE} client(s) as batch PERF_RUN_ID=${PERF_RUN_ID}"
+echo "inventory:  PERF_RUN_ID=${PERF_RUN_ID} ./prepare_ansible_client_inventory.sh"
+echo "teardown:   PMM_PERF_TAG=pmm-qa-perf-run:${PERF_RUN_ID} ./teardown_perf_linodes.sh"
