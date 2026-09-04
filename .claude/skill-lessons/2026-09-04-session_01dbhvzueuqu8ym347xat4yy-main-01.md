@@ -1,0 +1,6 @@
+# .claude/skills/linode-ha-provisioning/SKILL.md — validate an unmerged PR's script from the PR ref, not the working-tree path, and confirm its count against ground truth
+
+- Added: 2026-09-04
+- Applies to: all skills (validating an unmerged script change against a live/deployed environment); same root cause as the W36 entry on deploying from a possibly-stale checkout — Publish should merge them into one shared rule
+- Evidence: Dry-running `.claude/skills/linode-ha-provisioning/scripts/prune-lke-orphans.sh` from a deployed checkout sitting on `main` reported `volumes=0`; that path held the old merged code (`grep -c volumeHandle` = 0), not the PR under test. Re-running the exact PR code via `git show origin/<branch>:<path> > /tmp/x.sh` yielded `volumes=64`, and a raw `GET /v4/volumes` listing independently confirmed 66 unattached orphans (64 deletable, 2 correctly spared as live-cluster Released PVs).
+- Proposed change: To validate an unmerged change against a live environment, run it from the PR ref (`git show origin/<branch>:<path>`), never from a working-tree path that may be on `main`; fingerprint the code actually executed (grep a token unique to the new code) and confirm the tool's count against a raw ground-truth listing before trusting a zero/green result.
