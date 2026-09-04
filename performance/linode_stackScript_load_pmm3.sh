@@ -55,13 +55,19 @@ echo "provisioning batch PERF_RUN_ID=${PERF_RUN_ID} (${INSTANCES} ${DBTYPE} clie
 echo "inventory:  PERF_RUN_ID=${PERF_RUN_ID} ./prepare_ansible_client_inventory.sh"
 echo "teardown:   PMM_PERF_TAG=pmm-qa-perf-run:${PERF_RUN_ID} ./teardown_perf_linodes.sh"
 
-# Nothing reaps stray Linode instances automatically, so a mid-loop failure would
-# leak billing VMs -- tear this batch down on any error instead.
-cleanup_on_err() {
-  echo "provisioning failed -- tearing down batch pmm-qa-perf-run:${PERF_RUN_ID}" >&2
+# Nothing reaps stray Linode instances automatically, so an interrupted run would
+# leak billing VMs -- tear this batch down on any error. ERR covers a failed
+# command; the signal traps cover a CI cancel/timeout (SIGTERM/SIGINT), which does
+# NOT fire ERR. Best-effort: a hard SIGKILL still can't be trapped, so an
+# out-of-band tag-expiry reaper is the real backstop (see PR discussion).
+cleanup_on_fail() {
+  echo "provisioning interrupted -- tearing down batch pmm-qa-perf-run:${PERF_RUN_ID}" >&2
   PMM_PERF_TAG="pmm-qa-perf-run:${PERF_RUN_ID}" bash "$(dirname "$0")/teardown_perf_linodes.sh" || true
 }
-trap cleanup_on_err ERR
+trap cleanup_on_fail ERR
+trap 'cleanup_on_fail; exit 143' TERM
+trap 'cleanup_on_fail; exit 130' INT
+trap 'cleanup_on_fail; exit 129' HUP
 
 for i in $(seq 1 "$INSTANCES"); do
   hostname="${hostprefix}_${METRICS_MODE}_${i}"
@@ -88,5 +94,5 @@ for i in $(seq 1 "$INSTANCES"); do
   sleep 15   # pace Linode API / StackScript provisioning to avoid rate-limit errors
 done
 
-trap - ERR
+trap - ERR TERM INT HUP
 echo "created ${INSTANCES} ${DBTYPE} client(s) as batch PERF_RUN_ID=${PERF_RUN_ID}"
