@@ -42,7 +42,7 @@ n=0 fail=0
 while IFS=$'\t' read -r id label; do
   [ -n "$id" ] || continue
   if [ "$DRY" -eq 1 ]; then echo "would delete linode $id ($label)"; n=$((n + 1)); continue; fi
-  if linode-cli linodes delete "$id"; then
+  if linode-cli linodes delete "$id" </dev/null; then   # </dev/null: don't let it consume the row here-string
     echo "deleted linode $id ($label)"; n=$((n + 1))
   else
     echo "FAILED linode $id ($label)" >&2; fail=$((fail + 1))

@@ -3,7 +3,7 @@
 # pmm-qa-perf-run:<PERF_RUN_ID> tag (not by label, which is account-wide).
 set -Eeuo pipefail
 
-INVENTORY="inventory_client_container2"   # git-ignored; keep the name in sync with .gitignore
+INVENTORY="inventory_client_container2"
 : "${PERF_RUN_ID:?set PERF_RUN_ID to the batch you provisioned}"
 SSH_KEY="${PMM_PERF_SSH_KEY:-$HOME/.ssh/id_rsa}"
 RUN_TAG="pmm-qa-perf-run:${PERF_RUN_ID}"
