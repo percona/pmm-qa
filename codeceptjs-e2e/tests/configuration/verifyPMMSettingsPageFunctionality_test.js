@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { tryTo } = require('codeceptjs/effects');
 const { users } = require('../helper/constants');
 
 Feature('PMM Settings Functionality').retry(1);
@@ -285,10 +286,10 @@ Scenario.skip(
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(homePage.updatesModal.root, 30);
     I.click(homePage.updatesModal.closeIcon);
-    I.wait(2);
-    if ((await I.grabNumberOfVisibleElements(homePage.productTour.skipButton)) >= 1) {
+    await tryTo(() => {
+      I.waitForVisible(homePage.productTour.skipButton, 5);
       I.click(homePage.productTour.skipButton);
-    }
+    });
     I.click(pmmSettingsPage.fields.checkForUpdatesSwitch);
     I.click(pmmSettingsPage.fields.applyButton);
     I.refreshPage();
