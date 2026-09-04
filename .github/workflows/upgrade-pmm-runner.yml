@@ -99,6 +99,7 @@ jobs:
         shell: bash
         env:
           RC_VERSION: ${{ needs.prepare.outputs.rc_version }}
+          DEV_LATEST_VERSION: ${{ needs.prepare.outputs.DEV_LATEST_VERSION }}
         run: |
           echo "Version: ${{ matrix.version }}"
           echo "Docker Tag: ${{ matrix.docker_tag }}"
@@ -114,12 +115,15 @@ jobs:
           if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
             TARBALL_URL="${{ matrix.version }}"
+            echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
           elif [ "${{ matrix.version }}" == "3-dev-latest" ]; then
-            echo "3-dev-latest is a special dev tag"
+            echo "3-dev-latest is a special dev tag and version: $DEV_LATEST_VERSION"
             TARBALL_URL="3-dev-latest"
+            echo "CLIENT_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_ENV"
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
+            echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
 
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
@@ -132,7 +136,7 @@ jobs:
           # 3. assign the URL to CLIENT_VERSION for later steps
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
           echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
-          echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
+          
           echo "CLIENT_REPOSITORY=testing" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
           ver="${RC_VERSION##*:}"
