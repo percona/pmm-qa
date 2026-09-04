@@ -199,7 +199,7 @@ Scenario(
       assert.ok(response.data.metrics.query_time.cnt === query_cnt, `Expected Total Query Count Metrics to be same for query ${query} with id as ${queryid} found in clickhouse as ${response.data.metrics.query_time.cnt} while pgsm has value as ${query_cnt}`);
     }
   },
-).retry(2);
+);
 
 Data(filters).Scenario(
   'PMM-T1261 - Verify the "Command type" filter for Postgres @not-ui-pipeline @pgsm-pmm-integration',
@@ -250,7 +250,7 @@ Scenario(
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyMetricsExistence(dashboardPage.postgresqlInstanceSummaryDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
-    const logLocation = await I.verifyCommand(`docker exec ${container_name} find / -name pmm-agent.log`);
+    const logLocation = await I.verifyCommand(`docker exec ${container_name} find / -path /proc -prune -o -name pmm-agent.log -print`);
     const log = await I.verifyCommand(`docker exec ${container_name} cat ${logLocation}`);
 
     I.assertFalse(
@@ -385,7 +385,7 @@ Scenario.skip(
       assert.ok(response.data.metrics.query_time.cnt === query_cnt, `Expected Total Query Count Metrics to be same for query ${query} with id as ${queryid} found in clickhouse as ${response.data.metrics.query_time.cnt} while pgsm has value as ${query_cnt}`);
     }
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1063 - Verify Application Name with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
@@ -641,7 +641,7 @@ Scenario(
     await I.verifyCommand(`docker exec ${container_name} true > pmm-agent.log`);
     await I.verifyCommand(`docker exec ${container_name} pmm-admin list | grep "postgresql_pgstatmonitor_agent" | grep "Running"`);
     I.wait(defaultValue);
-    const logLocation = await I.verifyCommand(`docker exec ${container_name} find / -name pmm-agent.log`);
+    const logLocation = await I.verifyCommand(`docker exec ${container_name} find / -path /proc -prune -o -name pmm-agent.log -print`);
     let log = await I.verifyCommand(`docker exec ${container_name} tail -n100 ${logLocation}`);
 
     assert.ok(
@@ -711,7 +711,7 @@ Scenario(
     await pmmInventoryPage.openAgents(service_id);
     await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.QAN_PG_STAT_MONITOR, 'query_examples_disabled=true');
 
-    I.wait(120);
+    I.wait(90);
 
     const url = I.buildUrlWithParams(queryAnalyticsPage.url, {
       service_name: pgServiceName,
@@ -720,7 +720,7 @@ Scenario(
 
     I.amOnPage(url);
     queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.data.searchByValue('SELECT version()');
+    queryAnalyticsPage.data.searchByValue('SELECT pg_database_size($1)');
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.selectRow(1);
     queryAnalyticsPage.waitForLoaded();

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -6,48 +6,71 @@ import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
+import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
+import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
+import PostgresqlDashboards, { PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
+
+const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+// A viz legend entry reading "N/A" is a series name — a state timeline maps its
+// null state to that text — so it must not count as Grafana's own no-data indicator.
+const noDataMarkerXPath =
+  '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")][not(ancestor-or-self::*[starts-with(@data-testid, "data-testid VizLegend series")])]';
+const hasKnownNoDataMarker = (panelText: string) =>
+  panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
+  panelText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes('-');
 
 export default class Dashboards extends BasePage {
-  readonly home = new HomeDashboard();
+  readonly home = new HomeDashboard(this.page);
+  readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
+  readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
+  readonly pgsql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
+    collapseRowByName: (rowName: string) =>
+      this.grafanaIframe().locator(
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Collapse row"]`,
+      ),
+    expandRowByName: (rowName: string) =>
+      this.grafanaIframe().locator(
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
+      ),
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
-      this.builders.panelByName(panelName).getByTestId('header-container'),
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
   buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally download image button',
-    ),
-    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally generate image button',
-    ),
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
+    collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    noDataPanel: this.page.locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
-    ),
-    noDataPanelName: this.grafanaIframe().locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
-    ),
+    noDataPanel: this.page.locator(noDataMarkerXPath),
+    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
-      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
+      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
   };
   inputs = {};
@@ -55,15 +78,68 @@ export default class Dashboards extends BasePage {
 
   readonly panels = () => Panels(this.page);
 
-  loadAllPanels = async () => {
-    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+  collapseAllRows = async () => {
+    await this.waitForDashboardToLoad();
 
-    // Wait for the dashboard to be visible before proceeding.
-    await test.step('Wait for initial loading to finish', async () => {
-      await expectPanel(this.elements.refreshButton).toBeVisible();
-      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
-      await expectPanel(this.elements.loadingText).toHaveCount(0);
-    });
+    while ((await this.elements.collapseRow.count()) > 0) {
+      for (const element of await this.elements.collapseRow.all()) {
+        try {
+          await element.click({ timeout: Timeouts.ONE_SECOND });
+        } catch {
+          /* ignored */
+        }
+      }
+    }
+  };
+
+  collapseRow = async (rowName: string) => {
+    await this.changeRow(
+      this.builders.collapseRowByName(rowName),
+      `Collapsing of row: ${rowName} was not successful`,
+    );
+  };
+
+  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+    const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const itemCount = await this.elements.gridItems.count();
+
+    const visit = async (i: number) => {
+      const item = this.elements.gridItems.nth(i);
+      const previousScrollTop = await item.evaluate(getScrollTop);
+
+      await item.scrollIntoViewIfNeeded();
+
+      if ((await item.evaluate(getScrollTop)) !== previousScrollTop) {
+        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+        await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      }
+
+      await collect();
+    };
+
+    await collect();
+
+    for (let i = 0; i < itemCount; i++) {
+      await visit(i);
+    }
+
+    return Array.from(collected);
+  };
+
+  expandRow = async (rowName: string) => {
+    await this.changeRow(
+      this.builders.expandRowByName(rowName),
+      `Expanding of row: ${rowName} was not successful`,
+    );
+  };
+
+  loadAllPanels = async () => {
+    await this.waitForDashboardToLoad();
+
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
 
     // Expand rows if present and wait for content in each item.
     await test.step('Expand rows and load panel content', async () => {
@@ -71,12 +147,14 @@ export default class Dashboards extends BasePage {
         const item = this.elements.gridItems.nth(i);
 
         await item.scrollIntoViewIfNeeded();
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
 
         const expandButton = item.getByLabel('Expand row');
 
-        if (await expandButton.isVisible()) await expandButton.click();
-
-        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+          await expectPanel(expandButton).toBeHidden();
+        }
       }
     });
 
@@ -84,6 +162,13 @@ export default class Dashboards extends BasePage {
     await test.step('Wait for loading to finish', async () => {
       await expectPanel(this.elements.loadingBar).toHaveCount(0);
     });
+
+    if (this.page.url().includes('/pmm-qan/')) {
+      await test.step('Wait for QAN stats to finish loading', async () => {
+        await expectPanel(this.elements.qanGrid).toBeVisible();
+        await expectPanel(this.elements.qanTableLoading).toHaveCount(0);
+      });
+    }
   };
 
   openPanelMenu = async (panelName: string) => {
@@ -114,25 +199,18 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
-    let noDataPanels: string[] = [];
+    const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
-      missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+
+      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
       if (missingMetrics.length == 0) break;
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
-    }
-
-    if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders.panelByName(missingMetric).screenshot({
-          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
-      }
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
@@ -141,14 +219,36 @@ export default class Dashboards extends BasePage {
   verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
-    const expectedMetricsNames = expectedMetrics.map((e) => e.name);
+    const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
 
     await this.loadAllPanels();
 
-    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
-    const availableMetrics = await this.elements.panelName.allTextContents();
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+    const missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
 
-    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+    expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
+  };
+
+  verifyNamedPanelsHaveData = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.builders.panelByName(panelName).innerText();
+
+      expect(hasKnownNoDataMarker(panelText), `Panel ${panelName} should contain real data`).toBeFalsy();
+    }
+  };
+
+  verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.grafanaIframe()
+        .getByRole('region', { exact: true, name: panelName })
+        .innerText();
+
+      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+    }
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
@@ -194,6 +294,117 @@ export default class Dashboards extends BasePage {
         default:
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
+    }
+  };
+
+  verifyRowMetricsPresent = async (
+    rowName: string,
+    expectedMetrics: GrafanaPanel[],
+    serviceList?: GetService[],
+  ) => {
+    expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
+
+    const expectedMetricsNames = expectedMetrics.map((e) => e.name);
+
+    await this.elements.panelName.first().waitFor({ state: 'visible' });
+
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+
+    expect
+      .soft(
+        availableMetrics,
+        `Expected available metrics: \n${availableMetrics}\n for row ${rowName} to equal expected metrics: \n${expectedMetrics.map((metric) => metric.name).join(', ')}`,
+      )
+      .toEqual(expect.arrayContaining(expectedMetricsNames));
+  };
+
+  verifyRowPanelsHaveData = async (
+    rowName: string,
+    noDataMetrics: string[],
+    timeout: Timeouts = Timeouts.ONE_MINUTE,
+  ) => {
+    let missingMetrics: string[] = [];
+    const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
+
+    for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
+      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+
+      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
+
+      if (missingMetrics.length == 0) break;
+
+      //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
+      await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+    }
+
+    expect
+      .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
+      .toHaveLength(0);
+  };
+
+  verifyRowPanelValues = async (rowName: string, panels: GrafanaPanel[], serviceList?: GetService[]) => {
+    const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
+
+    for (const panel of panelList) {
+      switch (panel.type) {
+        case 'timeSeries':
+          await this.panels().timeSeries.verifyPanelData(panel.name);
+          break;
+        case 'stat':
+          await this.panels().stat.verifyPanelData(panel.name);
+          break;
+        case 'gauge':
+          await this.panels().gauge.verifyPanelData(panel.name);
+          break;
+        case 'barGauge':
+          await this.panels().barGauge.verifyPanelData(panel.name);
+          break;
+        case 'barTime':
+          await this.panels().barTime.verifyPanelData(panel.name);
+          break;
+        case 'polyStat':
+          await this.panels().polyStat.verifyPanelData(panel.name);
+          break;
+        case 'table':
+          await this.panels().table.verifyPanelData(panel.name);
+          break;
+        case 'text':
+          await this.panels().text.verifyPanelData(panel.name);
+          break;
+        case 'stateTime':
+          await this.panels().stateTime.verifyPanelData(panel.name);
+          break;
+        case 'summary':
+          await this.elements.summaryPanelText.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+          break;
+        case 'unknown':
+        case 'empty':
+          break;
+        default:
+          throw new Error(`Unsupported panel: ${panel.name}`);
+      }
+    }
+  };
+
+  waitForDashboardToLoad = async () => {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
+      await expectPanel(this.elements.loadingText).toHaveCount(0);
+    });
+  };
+
+  private changeRow = async (locator: Locator, error: string) => {
+    let iterator = 0;
+
+    if ((await locator.count()) == 0) throw new Error(`Locator: ${locator} is not visible`);
+
+    while ((await locator.count()) > 0) {
+      if (iterator++ == 5) throw new Error(error);
+
+      await locator.click();
     }
   };
 }

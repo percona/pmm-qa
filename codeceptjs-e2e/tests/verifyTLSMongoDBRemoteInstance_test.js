@@ -181,14 +181,14 @@ Data(instances).Scenario(
 
     const agent_id = await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mongodb_exporter | awk -F" " '{print $4}'`);
 
-    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/agent_type_mongodb_exporter/${agent_id}/ | grep caFile`);
-    await I.verifyCommand(`docker exec ${container} rm -r /usr/local/percona/pmm/tmp/agent_type_mongodb_exporter/`);
-    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/agent_type_mongodb_exporter/`, 'ls: cannot access \'/usr/local/percona/pmm/tmp/agent_type_mongodb_exporter\': No such file or directory', 'fail');
+    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/mongodb_exporter/${agent_id}/ | grep caFile`);
+    await I.verifyCommand(`docker exec ${container} rm -r /usr/local/percona/pmm/tmp/mongodb_exporter/`);
+    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/mongodb_exporter/`, 'ls: cannot access \'/usr/local/percona/pmm/tmp/mongodb_exporter\': No such file or directory', 'fail');
     await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mongodb_exporter | grep Running`);
     await I.verifyCommand(`docker exec ${container} pkill -f mongodb_exporter`);
     I.wait(10);
     await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mongodb_exporter | grep Running`);
-    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/agent_type_mongodb_exporter/${agent_id}/ | grep caFile`);
+    await I.verifyCommand(`docker exec ${container} ls -la /usr/local/percona/pmm/tmp/mongodb_exporter/${agent_id}/ | grep caFile`);
   },
 ).retry(1);
 

@@ -30,6 +30,9 @@ const remoteInstanceStatus = {
     pdpgsql_13_3: {
       enabled: true,
     },
+    pdpgsql_15: {
+      enabled: true,
+    },
     postgres_13_3_ssl: {
       enabled: false,
     },
@@ -138,7 +141,7 @@ module.exports = {
         clusterName: 'mysql_clstr',
       },
       ps_8_0: {
-        host: 'ps_pmm_8_4_1',
+        host: 'ps_pmm_8.0',
         port: '3307',
         username: 'msandbox',
         password: 'msandbox',
@@ -191,6 +194,14 @@ module.exports = {
     },
     postgresql: {
       pdpgsql_13_3: {
+        host: (PMM_SERVER_OVF_AMI_SETUP === 'true' ? SERVER_HOST : 'postgres'),
+        server_port: DB_CONFIG.POSTGRES_SERVER_PORT,
+        host_server_port: DB_CONFIG.POSTGRES_HOST_SERVER_PORT,
+        username: 'postgres',
+        password: 'pmm-^*&@agent-password',
+        clusterName: 'pgsql_clstr',
+      },
+      pdpgsql_15: {
         host: (PMM_SERVER_OVF_AMI_SETUP === 'true' ? SERVER_HOST : 'postgres'),
         server_port: DB_CONFIG.POSTGRES_SERVER_PORT,
         host_server_port: DB_CONFIG.POSTGRES_HOST_SERVER_PORT,
@@ -323,12 +334,6 @@ module.exports = {
         aws_secret_key: process.env.PMM_QA_AWS_ACCESS_KEY,
         port: '42001',
         username: 'pmm',
-        mysqlaurora2: {
-          address: process.env.PMM_QA_AURORA2_MYSQL_HOST,
-          password: process.env.PMM_QA_AURORA2_MYSQL_PASSWORD,
-          instance_id: 'pmm-qa-aurora2-mysql-instance-1',
-          cluster_name: 'mysqlaws_aurora2',
-        },
         mysqlaurora3: {
           username: process.env.PMM_QA_AURORA3_MYSQL_USER,
           address: process.env.PMM_QA_AURORA3_MYSQL_HOST,
@@ -533,7 +538,7 @@ module.exports = {
   services: {
     mysql: (remoteInstanceStatus.mysql.ps_5_7.enabled ? 'mysql_remote_new' : undefined),
     mongodb: (remoteInstanceStatus.mongodb.psmdb_4_2.enabled ? 'mongodb_remote_new' : undefined),
-    postgresql: (remoteInstanceStatus.postgresql.pdpgsql_13_3.enabled ? 'postgresql_remote_new' : undefined),
+    postgresql: (remoteInstanceStatus.postgresql.pdpgsql_15.enabled ? 'postgresql_remote_new' : undefined),
     proxysql: (remoteInstanceStatus.proxysql.proxysql_2_1_1.enabled ? 'proxysql_remote_new' : undefined),
     postgresGC: (remoteInstanceStatus.gc.gc_postgresql.enabled ? 'postgresql_GC_remote_new' : undefined),
     mysql_ssl: (remoteInstanceStatus.mysql.ms_8_0_ssl.enabled ? 'mysql_ssl_new' : undefined),

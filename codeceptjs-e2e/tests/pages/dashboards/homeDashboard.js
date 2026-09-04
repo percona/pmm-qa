@@ -4,12 +4,12 @@ class HomeDashboard {
   constructor() {
     this.url = 'graph/d/pmm-home/home-dashboard';
     this.panels = {
-      monitoredServicesPanelLocator: '//*[@data-testid="data-testid Panel header Monitored DB Services"]',
+      monitoredServicesPanelLocator: locate('[data-testid^="data-testid Panel header Monitored DB Services"] [class*="panel-content"] span'),
       monitoredServicesPanel: {
-        mysql: () => `(${this.panels.monitoredServicesPanelLocator}//span)[1]`,
-        mongodb: () => `(${this.panels.monitoredServicesPanelLocator}//span)[2]`,
-        pgsql: () => `(${this.panels.monitoredServicesPanelLocator}//span)[3]`,
-        proxysql: () => `(${this.panels.monitoredServicesPanelLocator}//span)[4]`,
+        mysql: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(1),
+        mongodb: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(2),
+        pgsql: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(3),
+        proxysql: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(4),
       },
       failedAdvisors: '//section[@data-testid="data-testid Panel header Failed advisors"]',
 
@@ -39,15 +39,17 @@ class HomeDashboard {
   }
 
   async verifyCountOfServices(mysql, mongodb, pgsql, proxysql) {
-    const countOfMysql = parseInt(await I.grabTextFrom(this.panels.monitoredServicesPanel.mysql()), 10);
-    const countOfMongoDb = parseInt(await I.grabTextFrom(this.panels.monitoredServicesPanel.mongodb()), 10);
-    const countOfPgSql = parseInt(await I.grabTextFrom(this.panels.monitoredServicesPanel.pgsql()), 10);
-    const countOfProxySql = parseInt(await I.grabTextFrom(this.panels.monitoredServicesPanel.proxysql()), 10);
+    const [
+      countOfMysql,
+      countOfMongoDb,
+      countOfPgSql,
+      countOfProxySql,
+    ] = await I.grabTextFromAll(this.panels.monitoredServicesPanelLocator);
 
-    I.assertEqual(mysql, countOfMysql, `Expected Count of Mysql Services: "${mysql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfMysql}"`);
-    I.assertEqual(mongodb, countOfMongoDb, `Expected Count of MongoDb Services: "${mongodb}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfMongoDb}"`);
-    I.assertEqual(pgsql, countOfPgSql, `Expected Count of PostgreSQL Services: "${pgsql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfPgSql}"`);
-    I.assertEqual(proxysql, countOfProxySql, `Expected Count of ProxySQL Services: "${proxysql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfProxySql}"`);
+    I.assertEqual(mysql, parseInt(countOfMysql, 10), `Expected Count of Mysql Services: "${mysql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfMysql}"`);
+    I.assertEqual(mongodb, parseInt(countOfMongoDb, 10), `Expected Count of MongoDb Services: "${mongodb}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfMongoDb}"`);
+    I.assertEqual(pgsql, parseInt(countOfPgSql, 10), `Expected Count of PostgreSQL Services: "${pgsql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfPgSql}"`);
+    I.assertEqual(proxysql, parseInt(countOfProxySql, 10), `Expected Count of ProxySQL Services: "${proxysql}" does not equal to count of services displayed on Monitored DB Services panel: "${countOfProxySql}"`);
   }
 }
 

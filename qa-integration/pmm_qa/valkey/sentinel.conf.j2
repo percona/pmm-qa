@@ -1,0 +1,24 @@
+# sentinel.conf
+bind 0.0.0.0
+
+port 26379
+
+# Monitor the master
+sentinel monitor valkey-primary valkey-primary 6379 {{ sentinel_quorum }}
+sentinel auth-user valkey-primary default
+sentinel auth-pass valkey-primary "{{ valkey_password }}"
+sentinel resolve-hostnames yes
+
+# Failover timeouts
+sentinel down-after-milliseconds valkey-primary 5000
+sentinel failover-timeout valkey-primary 10000
+sentinel parallel-syncs valkey-primary 1
+
+# Security
+protected-mode no
+
+# Logging
+loglevel notice
+logfile ""
+
+maxmemory 1gb

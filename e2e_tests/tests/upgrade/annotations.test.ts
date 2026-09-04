@@ -32,4 +32,18 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
       },
     );
   }
+
+  for (const service of services) {
+    pmmTest(
+      `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-upgrade`,
+      async ({ api }) => {
+        const annotations = await api.annotationsApi.getAnnotationsByTag(tag);
+
+        expect(
+          annotations.some((annotation) => annotation.text.includes(service.annotationName)),
+          `Annotation "${service.annotationName}" was not found post upgrade`,
+        ).toBeTruthy();
+      },
+    );
+  }
 });

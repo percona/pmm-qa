@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { SERVICE_TYPE } = require('../helper/constants');
 
-Feature('Integration tests for PSMDB & PMM');
+Feature('Integration tests for PSMDB & PMM').retry(2);
 
 Before(async ({ I }) => {
   await I.Authorize();
@@ -166,7 +166,7 @@ Scenario.skip(
 
     I.assertEqual(numberOfVisibleElements, 1, 'No of ARBITER elements for ReplicatSet are not as expected');
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1775 + PMM-T1888 - Verify Wrong Replication Lag by Set values if RS is PSA -( MongoDB Cluster Summary) @pmm-psmdb-arbiter-integration @not-ui-pipeline',
@@ -220,7 +220,7 @@ Scenario('PMM-T1889 - Verify Mongo replication lag graph shows correct info @pmm
   const graphName = 'Replication Lag';
 
   await I.verifyCommand(`sudo docker exec rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --eval "${testConfigFile}"`);
-  I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, { from: 'now-5m', refresh: '5s' }));
+  I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, { from: 'now-10m', refresh: '5s' }));
   dashboardPage.waitForDashboardOpened();
   I.click(dashboardPage.fields.reportTitle);
   await adminPage.performPageDown(5);

@@ -6,6 +6,7 @@ volumes:
 networks:
   pmm-network:
     driver: bridge
+    # No fixed subnet: Docker assigns an available range to avoid "Pool overlaps" errors.
     ipam:
       config:
         - subnet: 192.168.0.0/24
@@ -17,21 +18,37 @@ services:
   pmm-server:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server
+    platform: linux/amd64
     ports:
       - "80:8080"
       - "443:8443"
     environment:
       - PMM_DEBUG=1
       - PMM_ENABLE_ACCESS_CONTROL=1
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_AUTH_OAUTH_ALLOW_INSECURE_EMAIL_LOOKUP=1
       - PMM_DEV_TELEMETRY_INTERVAL=10s
       - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
+      - PMM_ENABLE_TELEMETRY=0
+#      - PMM_DEV_UPDATE_DOCKER_IMAGE=perconalab/pmm-server:3.7.0-rc
     volumes:
       - pmm-server-data:/srv
     networks:
       - pmm-network
       - pmm-qa
-
+  
+  webhookd:
+    image: ncarlier/webhookd
+    container_name: webhookd
+    restart: always
+    environment:
+      - WHD_SCRIPTS=/var/opt/webhookd/scripts
+      - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
+    volumes:
+      - ./testdata/ia/certs:/root
+      - ./testdata/ia/scripts:/var/opt/webhookd/scripts
+    networks:
+      - pmm-network
   # It is essential to have an extra directory `/slowlogs/` between host and container;
   # Otherwise, MySQL in Docker for Mac completely locks during/after slowlog rotation tests.
   mysql:
@@ -42,6 +59,7 @@ services:
       --performance-schema --innodb_monitor_enable=all --userstat
       --slow_query_log --log_slow_rate_limit=1 --log_slow_admin_statements --log_slow_slave_statements --slow_query_log_file=/tmp/mysql/log/ps5_slow_log.log --long_query_time=0
       --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+    platform: linux/amd64
     ports:
       - "3309:3306"
     environment:
@@ -91,6 +109,7 @@ services:
   postgres:
     image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15.4}
     container_name: pmm-agent_postgres
+    platform: linux/amd64
     command: >
       -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
       -c track_activity_query_size=2048

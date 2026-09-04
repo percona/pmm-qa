@@ -4,6 +4,7 @@ services:
   pmm-server-external-clickhouse:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server-external-clickhouse
+    platform: linux/amd64
     depends_on:
       external-clickhouse:
         condition: service_healthy
@@ -22,13 +23,24 @@ services:
       - PMM_ENABLE_TELEMETRY=0
       - PMM_CLICKHOUSE_PASSWORD=pmm_password
       - PMM_CLICKHOUSE_USER=pmm
+      - PMM_CLICKHOUSE_DATASOURCE_USER=grafana
+      - PMM_CLICKHOUSE_DATASOURCE_PASSWORD=grafana
       - PMM_CLICKHOUSE_DATABASE=pmm
       - PMM_CLICKHOUSE_ADDR=external-clickhouse:9000
       - PMM_ENABLE_INTERNAL_PG_QAN=1
+    # The image healthcheck gives up before a cold PMM Server answers readyz,
+    # which aborts `up` for the service_healthy dependents below.
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 60s
 
   pmm-client:
     image: perconalab/pmm-client:3-dev-latest
     container_name: pmm-client-clickhouse
+    platform: linux/amd64
     depends_on:
       pmm-server-external-clickhouse:
         condition: service_healthy
@@ -48,6 +60,7 @@ services:
 
   ps8:
     container_name: ps8
+    platform: linux/amd64
     image: percona:8
     command: --default-authentication-plugin=mysql_native_password
     restart: always
@@ -57,10 +70,20 @@ services:
   external-clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: external-clickhouse
+    platform: linux/amd64
     environment:
       - CLICKHOUSE_DB=pmm
       - CLICKHOUSE_USER=pmm
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - CLICKHOUSE_PASSWORD=pmm_password
+    volumes:
+      # Single files, not the directories: the image entrypoint writes its own
+      # users.d/default-user.xml on start and fails if that directory is read-only.
+      - ./clickhouse/config.d/access-control.xml:/etc/clickhouse-server/config.d/access-control.xml:ro
+      - ./clickhouse/users.d/datasource-user.xml:/etc/clickhouse-server/users.d/datasource-user.xml:ro
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:8123/ping || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

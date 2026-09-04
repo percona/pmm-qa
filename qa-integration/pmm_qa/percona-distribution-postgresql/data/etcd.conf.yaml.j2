@@ -1,0 +1,12 @@
+name: 'node{{item}}'
+data-dir: /var/lib/etcd
+initial-cluster-token: PostgreSQL_HA_Cluster_1
+initial-cluster-state: new
+
+listen-peer-urls: http://0.0.0.0:2380
+initial-advertise-peer-urls: http://pdpgsql_pmm_patroni_{{ pdpgsql_version }}_{{ item }}:2380
+
+listen-client-urls: http://0.0.0.0:2379
+advertise-client-urls: http://pdpgsql_pmm_patroni_{{ pdpgsql_version }}_{{ item }}:2379
+
+initial-cluster: node1=http://pdpgsql_pmm_patroni_{{ pdpgsql_version }}_1:2380,node2=http://pdpgsql_pmm_patroni_{{ pdpgsql_version }}_2:2380,node3=http://pdpgsql_pmm_patroni_{{ pdpgsql_version }}_3:2380

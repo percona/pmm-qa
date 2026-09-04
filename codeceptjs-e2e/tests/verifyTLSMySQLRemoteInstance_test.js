@@ -1,5 +1,5 @@
 const assert = require('assert');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const { SERVICE_TYPE, AGENT_NAMES } = require('./helper/constants');
 
 const { adminPage } = inject();
@@ -148,7 +148,7 @@ Scenario(
       adminPage.performPageDown(5);
       await dashboardPage.expandEachDashboardRow();
       adminPage.performPageUp(5);
-      await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+      await dashboardPage.verifyThereAreNoGraphsWithoutData(3);
     }
   },
 ).retry(4);
@@ -185,14 +185,14 @@ Data(instances).Scenario(
 
     const agent_id = await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mysqld_exporter | awk -F" " '{print $4}' | awk -F"/" '{print $3}'`);
 
-    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/agent_type_mysqld_exporter/${agent_id} | grep tls`);
-    await I.verifyCommand(`docker exec ${container} rm -r /usr/local/percona/pmm/tmp/agent_type_mysqld_exporter/`);
-    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/agent_type_mysqld_exporter/`, 'ls: cannot access \'/usr/local/percona/pmm/tmp/agent_type_mysqld_exporter\': No such file or directory', 'fail');
+    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/mysqld_exporter/${agent_id} | grep tls`);
+    await I.verifyCommand(`docker exec ${container} rm -r /usr/local/percona/pmm/tmp/mysqld_exporter/`);
+    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/mysqld_exporter/`, 'ls: cannot access \'/usr/local/percona/pmm/tmp/mysqld_exporter\': No such file or directory', 'fail');
     await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mysqld_exporter | grep Running`);
     await I.verifyCommand(`docker exec ${container} pkill -f mysqld_exporter`);
     I.wait(10);
     await I.verifyCommand(`docker exec ${container} pmm-admin list | grep mysqld_exporter | grep Running`);
-    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/agent_type_mysqld_exporter/${agent_id} | grep tls`);
+    await I.verifyCommand(`docker exec ${container} ls -R /usr/local/percona/pmm/tmp/mysqld_exporter/${agent_id} | grep tls`);
   },
 ).retry(1);
 
@@ -223,7 +223,7 @@ Data(maxQueryLengthInstances).Scenario(
       serviceType, version, container, maxQueryLength,
     } = current;
     let details;
-    const remoteServiceName = `MaxQueryLength_remote_${serviceName}_${faker.random.alphaNumeric(3)}`;
+    const remoteServiceName = `MaxQueryLength_remote_${serviceName}_${faker.string.alphanumeric(3)}`;
 
     if (serviceType === 'mysql_ssl') {
       details = {

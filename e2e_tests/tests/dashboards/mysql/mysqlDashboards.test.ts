@@ -1,5 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
+import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -9,9 +11,12 @@ const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
 
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
+    await api.grafanaApi.waitForMetric('haproxy_process_start_time_seconds', Timeouts.TWO_MINUTES);
     await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
+      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
+        from: 'now-1h',
+      }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
@@ -44,6 +49,7 @@ data(services).pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstancesCompare.url, {
         from: 'now-1h',
+        refresh: '5s',
         serviceName: service_name,
       }),
     );
@@ -74,7 +80,10 @@ data(services).pmmTest(
 pmmTest(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      '^ps_pmm_replication_.*_1(_\\d+)?$',
+      { replication_set: 'ps-async-replication' },
+    );
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlUserDetails.url, {
@@ -138,9 +147,12 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters('ps_pmm_replication_.*_2', {
-      replication_set: 'ps-async-replication',
-    });
+    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      '^ps_pmm_replication_.*_2(_\\d+)?$',
+      {
+        replication_set: 'ps-async-replication',
+      },
+    );
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {
@@ -148,6 +160,14 @@ pmmTest(
         serviceName: service.service_name,
       }),
     );
+    await dashboard.selectVariableValue('Environment', 'ps-replication-dev');
+
+    const services = await dashboard.getVariableValues('Service Name');
+
+    expect(services.length).toBeGreaterThan(0);
+    services.forEach((serviceName: string) => {
+      expect(serviceName).toContain('replication');
+    });
     await dashboard.verifyMetricsPresent(
       dashboard.mysql.mysqlReplicationSummary.metrics(service.service_name),
     );

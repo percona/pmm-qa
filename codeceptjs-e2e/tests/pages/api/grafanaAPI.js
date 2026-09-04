@@ -190,14 +190,14 @@ module.exports = {
     );
   },
 
-  async starDashboard(id) {
+  async starDashboard(uid) {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
 
-    const resp = await I.sendPostRequest(`graph/api/user/stars/dashboard/${id}`, {}, headers);
+    const resp = await I.sendPostRequest(`graph/api/user/stars/dashboard/uid/${uid}`, {}, headers);
 
     assert.ok(
       resp.status === 200,
-      `Failed to star dashboard with id '${id}' . Response message is ${resp.data.message}`,
+      `Failed to star dashboard with uid: '${uid}' . Response message is ${resp.data.message}`,
     );
   },
 
@@ -214,17 +214,17 @@ module.exports = {
     return resp.data;
   },
 
-  async setHomeDashboard(id) {
+  async setHomeDashboard(uid) {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
     const body = {
-      homeDashboardId: id,
+      homeDashboardUID: uid,
     };
 
     const resp = await I.sendPutRequest('graph/api/org/preferences', body, headers);
 
     assert.ok(
       resp.status === 200,
-      `Failed to set custom Home dashboard '${id}'. Response message is ${resp.data.message}`,
+      `Failed to set custom Home dashboard '${uid}'. Response message is ${resp.data.message}`,
     );
   },
 
@@ -525,6 +525,52 @@ module.exports = {
     );
 
     return response;
+  },
+
+  /**
+   * Fluent wait until an expression resolves at the 5-minute grid point that panels
+   * pinning `interval: 5m` are read at.
+   *
+   * Grafana aligns such a panel's range query onto the step's own grid, so on a
+   * `now-5m` range it is evaluated only at 300s wall-clock boundaries — the newest
+   * being the last one at or before `now`. A service whose first sample landed after
+   * that boundary has nothing to answer with (the datasource looks back 5 minutes
+   * from the boundary, i.e. to before the service existed) and the panel renders
+   * "No data" until the next boundary passes, however many samples arrived since.
+   * These dashboards do not auto-refresh either, so re-reading the rendered page
+   * cannot recover it — which is why a test can sit in the failure for its whole
+   * poll, and why whether it fails at all depends on where setup happened to fall
+   * against the 5-minute grid.
+   *
+   * Waits for that boundary to carry as many series as a query at `now` does, so a
+   * node or service that only just started being monitored is waited for rather
+   * than silently tolerated as an empty panel.
+   *
+   * @param   expression          PromQL expression, ex.: min(mysql_global_status_uptime)
+   * @param   timeOutInSeconds    time to wait for the evaluation point to catch up
+   * @param   stepInSeconds       panel step to align to
+   */
+  async waitForMetricAtDashboardStep(expression, timeOutInSeconds = 600, stepInSeconds = 300) {
+    const headers = { Authorization: `Basic ${await I.getAuth()}` };
+    const seriesCount = async (time) => {
+      const path = `prometheus/api/v1/query?query=${encodeURIComponent(expression)}${time ? `&time=${time}` : ''}`;
+      const response = await I.sendGetRequest(path, headers);
+
+      return response.data.data.result.length;
+    };
+
+    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve at the newest ${stepInSeconds}s boundary`);
+
+    await I.asyncWaitFor(async () => {
+      const expected = await seriesCount();
+
+      if (expected === 0) return false;
+
+      const newestBoundary = Math.floor(Date.now() / 1000 / stepInSeconds) * stepInSeconds;
+      const actual = await seriesCount(newestBoundary);
+
+      return actual >= expected;
+    }, timeOutInSeconds, `"${expression}" still resolves to fewer series at the newest ${stepInSeconds}s boundary than at "now"`);
   },
 
   async checkMetricAbsent(metricName, refineBy) {

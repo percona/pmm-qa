@@ -4,7 +4,7 @@ export default class PolyStatPanel extends PanelComponent {
   private elements = {
     polyStatPanelValue: (panelName: string) =>
       this.grafanaIframe().locator(
-        `//section[@data-testid="data-testid Panel header ${panelName}"]//*[contains(@class, "valueLabel")]`,
+        `//section[@data-testid="data-testid Panel header ${panelName}"]//*[contains(@class, "toplabel")]`,
       ),
   };
 

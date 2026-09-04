@@ -1,0 +1,222 @@
+---
+name: ha-e2e-tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_server_address:
+        description: 'Address of the remote PMM HA Server (OpenShift Route hostname, no scheme).'
+        type: string
+        required: true
+      admin_password:
+        description: 'PMM Server admin password.'
+        type: string
+        required: false
+        default: 'admin'
+      pmm_qa_branch:
+        description: 'Branch for the pmm-qa repository.'
+        type: string
+        required: false
+        default: 'main'
+      pmm_client_version:
+        description: 'Version of the pmm client used for testing.'
+        type: string
+        required: false
+        default: 'latest-tarball'
+      pmm_server_image:
+        description: 'PMM Server image the HA cluster was deployed from.'
+        type: string
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+      tags_for_tests:
+        description: 'Playwright --grep tag expression selecting the HA tests to run.'
+        type: string
+        required: false
+        default: '@pmm-ha'
+      setup_services:
+        description: 'Optional pmm-framework arguments to provision monitored DBs on this runner.'
+        type: string
+        required: false
+        default: ''
+      kubeconfig_artifact_url:
+        description: 'Jenkins artifact URL of the pmm3-ha-rosa kubeconfig (e.g. https://<jenkins>/job/pmm3-ha-rosa/123/artifact/kubeconfig). Leave empty to skip cluster access (UI tests only).'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  ha-tests:
+    name: "HA e2e tests: ${{ inputs.tags_for_tests }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    # The Jenkins API credentials below are environment-scoped, so the
+    # environment's protection rules are what gate who can reach the cluster.
+    environment: pmm-ha-staging
+    permissions:
+      contents: read
+    env:
+      ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
+      PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@pmm-ha' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      KUBECONFIG_ARTIFACT_URL: ${{ inputs.kubeconfig_artifact_url || '' }}
+      # Kept out of ./pmm-qa so the downloaded config can never be picked up by a
+      # checkout, a commit, or the report upload below.
+      KUBECONFIG: ${{ github.workspace }}/kubeconfig
+      PMM_K8S_NAMESPACE: pmm
+      WORKERS: 1
+
+    steps:
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Resolve PMM Server URLs
+        run: |
+          ADDR="${PMM_SERVER_ADDRESS}"
+          ADDR_NO_SCHEME=${ADDR#http://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${ADMIN_PASSWORD}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
+
+      - name: Sanity check remote PMM HA Server reachability
+        run: |
+          set -eu
+          for i in $(seq 1 60); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${SERVER_IP}/v1/server/readyz" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Remote PMM HA Server is ready"
+              exit 0
+            fi
+            echo "Attempt $i: PMM HA Server not ready (http=$code), sleeping 5s"
+            sleep 5
+          done
+          echo "Remote PMM HA Server did not become ready in time" >&2
+          exit 1
+
+      # ROSA has no equivalent of `aws eks update-kubeconfig`, so the kubeconfig
+      # is transported from the pmm3-ha-rosa build that created the cluster. It
+      # carries its own cluster-admin token, hence the strict file mode and the
+      # unconditional cleanup step at the end of the job.
+      - name: Download kubeconfig from the PMM HA Jenkins build
+        if: ${{ inputs.kubeconfig_artifact_url != '' }}
+        env:
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+        run: |
+          set -eu
+          umask 077
+          curl -fsSL --retry 3 --retry-delay 5 \
+            --user "${JENKINS_USER}:${JENKINS_API_TOKEN}" \
+            "${KUBECONFIG_ARTIFACT_URL}" \
+            --output "${KUBECONFIG}"
+          chmod 600 "${KUBECONFIG}"
+
+      - name: Verify cluster access
+        if: ${{ inputs.kubeconfig_artifact_url != '' }}
+        run: |
+          set -eu
+          kubectl config get-contexts
+          kubectl get nodes
+          kubectl get pods -n "${PMM_K8S_NAMESPACE}"
+
+      - name: Export path to qa-integration repo
+        working-directory: pmm-qa/qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
+
+      - name: Setup PMM-Client against remote PMM HA Server
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          retry_wait_seconds: '10'
+          max_attempts: 2
+          retry_on: 'any'
+          command: |
+            cd pmm-qa/qa-integration/pmm_qa
+            sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
+              --pmm_server_ip "${SERVER_IP}" \
+              --client_version "${PMM_CLIENT_VERSION}" \
+              --admin_password "${ADMIN_PASSWORD}" \
+              --use_metrics_mode no
+
+      - name: Run setup for E2E tests (start client services on this runner)
+        if: ${{ env.WIZARD_ARGS != '' }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 20
+          retry_wait_seconds: '10'
+          max_attempts: 2
+          retry_on: 'any'
+          command: |
+            cd pmm-qa/qa-integration/pmm_qa
+            mkdir -m 777 -p /tmp/backup_data || true
+            timeout -k 30 19m ./pmm-framework/pmm-framework \
+              --parallel \
+              --pmm-server-ip "${SERVER_IP}" \
+              --pmm-server-password "${ADMIN_PASSWORD}" \
+              --client-version "${PMM_CLIENT_VERSION}" \
+              ${WIZARD_ARGS}
+          on_retry_command: |
+            docker rm -f $(docker ps -a -q) || true
+            docker volume rm -f $(docker volume ls -q) || true
+            docker network rm -f $(docker network ls -q) || true
+
+      - name: Install playwright
+        working-directory: ./pmm-qa/e2e_tests/
+        run: |
+          npm ci
+          npx playwright install-deps
+          npx playwright install chromium
+
+      - name: 'Create report name'
+        if: always()
+        run: |
+          job_tag=$(echo "${TAGS_FOR_TESTS}" | sed -e "s/@//g" -e "s/|/-/g")
+          echo "REPORT_NAME=ha-${job_tag}" >> "$GITHUB_ENV"
+
+      - name: 'Run HA e2e tests: ${{ env.TAGS_FOR_TESTS }}'
+        working-directory: pmm-qa/e2e_tests/
+        run: npx playwright test --grep "${TAGS_FOR_TESTS}"
+
+      # Printed to the log rather than uploaded: workflow logs and artifacts are
+      # world-readable on a public repo, and `describe`/`logs` output is far more
+      # likely to carry cluster detail than the Playwright report is.
+      - name: Collect HA cluster diagnostics
+        if: ${{ failure() && inputs.kubeconfig_artifact_url != '' }}
+        continue-on-error: true
+        run: |
+          kubectl get pods -n "${PMM_K8S_NAMESPACE}" -o wide
+          kubectl get events -n "${PMM_K8S_NAMESPACE}" --sort-by=.lastTimestamp | tail -50
+          kubectl describe statefulset -n "${PMM_K8S_NAMESPACE}" || true
+
+      - name: Generate and Attach the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPORT_NAME }}
+          path: |
+            ./pmm-qa/e2e_tests/playwright-report
+            ./pmm-qa/e2e_tests/screenshots
+
+      - name: Remove downloaded kubeconfig
+        if: always()
+        run: rm -f "${KUBECONFIG}"

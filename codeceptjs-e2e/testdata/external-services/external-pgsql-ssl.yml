@@ -32,8 +32,11 @@
         - "{{ data_dir }}"
     - name: Stop containers if already running
       shell: |
-        docker rm -f external-postgres-ssl 
+        docker rm -f external-postgres
+        docker rm -f pmm-server-external-postgres
+        docker rm -f external-postgres-ssl
         docker rm -f pmm-server-external-postgres-ssl
+        docker volume rm pmm-server-external-pg
         docker volume rm pmm-server-external-pg-ssl
       ignore_errors: true
 
@@ -69,7 +72,9 @@
         creates: "{{ ssl_dir }}/server.csr"
 
     - name: Generate server certificate
-      shell: "openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile ./external-pgsql-ssl-config.cnf"
+      shell: >-
+        openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile
+        ./external-pgsql-ssl-config.cnf
       args:
         creates: "{{ ssl_dir }}/server.crt"
 
@@ -93,13 +98,13 @@
         path: "{{ item.path }}"
         owner: "{{ item.owner }}"
         group: "{{ item.owner }}"
-        mode: '0600'
+        mode: "{{ item.mode }}"
       loop:
-        - { path: "{{ ssl_dir }}/ca.crt", owner: "1000" }
-        - { path: "{{ ssl_dir }}/server.crt", owner: "26" }
-        - { path: "{{ ssl_dir }}/server.key", owner: "26" }
-        - { path: "{{ ssl_dir }}/client.key", owner: "1000" }
-        - { path: "{{ ssl_dir }}/client.crt", owner: "1000" }
+        - { path: "{{ ssl_dir }}/ca.crt", owner: "26", mode: "0644" }
+        - { path: "{{ ssl_dir }}/server.crt", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/server.key", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.key", owner: "1000", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.crt", owner: "1000", mode: "0600" }
       become: yes
 
     - name: Start external-postgres-ssl container
@@ -113,6 +118,7 @@
         -v {{ ssl_dir }}:/var/lib/postgresql/ssl
         {{ postgres_image }}
         postgres -c ssl=on
+        -c ssl_ca_file=/var/lib/postgresql/ssl/ca.crt
         -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt
         -c ssl_key_file=/var/lib/postgresql/ssl/server.key
         -c shared_preload_libraries=pg_stat_statements
@@ -174,5 +180,5 @@
       shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres-ssl
       register: pmm_server_health
       until: "'healthy' in pmm_server_health.stdout"
-      retries: 5
+      retries: 12
       delay: 5

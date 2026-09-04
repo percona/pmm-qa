@@ -1,0 +1,28 @@
+# Basic Valkey configuration for primary
+bind 0.0.0.0
+port 6379
+
+requirepass "{{ valkey_password }}"
+masterauth "{{ valkey_password }}"
+
+# Persistence
+save 900 1
+save 300 10
+save 60 10000
+
+# Replication
+replica-serve-stale-data yes
+replica-read-only yes
+repl-diskless-sync no
+repl-diskless-sync-delay 5
+
+# Security
+protected-mode no
+
+# Logging
+loglevel notice
+logfile ""
+
+# Memory management
+maxmemory-policy allkeys-lru
+maxmemory 1gb

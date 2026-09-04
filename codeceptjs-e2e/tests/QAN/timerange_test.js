@@ -1,7 +1,15 @@
 const moment = require('moment');
 const assert = require('assert');
 
-Feature('QAN timerange').retry(1);
+Feature('QAN timerange');
+
+const expectUrlTimeParamToMatch = (url, param, expectedDateTime, message) => {
+  const actualTime = new URL(url).searchParams.get(param);
+  const expectedTime = moment(expectedDateTime).utc().valueOf();
+  const actualTimeMs = moment(actualTime).isValid() ? moment(actualTime).utc().valueOf() : Number(actualTime);
+
+  assert.ok(Math.abs(actualTimeMs - expectedTime) < 1000, message);
+};
 
 Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
   await I.usePlaywrightTo('Grant Permissions', async ({ browserContext }) => {
@@ -201,8 +209,8 @@ Scenario(
 
     adminPage.verifySelectedTimeRange(from, to);
 
-    I.assertContain(secondUrl.split('from=')[1].replaceAll('%20', ' '), moment(from).utc().toISOString(), 'Second Url does not contain selected from date time');
-    I.assertContain(secondUrl.split('to=')[1].replaceAll('%20', ' '), moment(to).utc().toISOString(), 'Second Url does not contain selected to date time');
+    expectUrlTimeParamToMatch(secondUrl, 'from', from, 'Second Url does not contain selected from date time');
+    expectUrlTimeParamToMatch(secondUrl, 'to', to, 'Second Url does not contain selected to date time');
   },
 );
 
@@ -211,6 +219,8 @@ Scenario(
   async ({
     I, queryAnalyticsPage,
   }) => {
+    I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m', to: 'now-5m' }));
+    queryAnalyticsPage.waitForLoaded();
     await I.waitForVisible(queryAnalyticsPage.data.buttons.nextPage);
     await I.click(queryAnalyticsPage.data.buttons.nextPage);
     await queryAnalyticsPage.data.selectRow(2);
@@ -233,7 +243,7 @@ Scenario(
     assert.equal(queryText, queryTextAfter, 'Selected row query text is not the same after reload');
     await I.waitForElement(queryAnalyticsPage.data.buttons.close, 30);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan',

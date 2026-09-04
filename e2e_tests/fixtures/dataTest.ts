@@ -9,32 +9,38 @@ import pmmTest from './pmmTest';
 import AgentsPage from '@pages/inventory/agents.page';
 import HelpPage from '@pages/helpCenter.page';
 import ServicesPage from '@pages/inventory/services.page';
-import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
-import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
+import LeftNavigation from '@pages/navigation.page';
+import SettingsPage from '@pages/ha/settings.page';
+import MongoDBHelper from '@helpers/mongodb.helper';
+import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
+import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 
 interface pmmTestDataType {
-  page: Page;
+  settingsPage: SettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
+  mongoDbHelper: MongoDBHelper;
   api: Api;
-  queryAnalytics: QueryAnalyticsPage;
+  qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
-  themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   portalRemoval: PortalRemoval;
+  queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
+  leftNavigation: LeftNavigation;
+  realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  page: Page;
 }
 
 const data = <T>(rows: T[]) => ({
@@ -54,16 +60,19 @@ const data = <T>(rows: T[]) => ({
             dashboard,
             grafanaHelper,
             helpPage,
+            leftNavigation,
             mocks,
+            mongoDbHelper,
             nodesPage,
             page,
             portalRemoval,
+            qanStoredMetrics,
             queryAnalytics,
+            realTimeAnalyticsPage,
             servicesPage,
-            themePage,
+            settingsPage,
             tour,
             urlHelper,
-            welcomePage,
           },
           testInfo,
         ) => {
@@ -77,16 +86,19 @@ const data = <T>(rows: T[]) => ({
               dashboard,
               grafanaHelper,
               helpPage,
+              leftNavigation,
               mocks,
+              mongoDbHelper,
               nodesPage,
               page,
               portalRemoval,
+              qanStoredMetrics,
               queryAnalytics,
+              realTimeAnalyticsPage,
               servicesPage,
-              themePage,
+              settingsPage,
               tour,
               urlHelper,
-              welcomePage,
             },
             testInfo,
           );

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-Feature('QAN overview').retry(1);
+Feature('QAN overview');
 
 Before(async ({
   I, queryAnalyticsPage,
@@ -36,8 +36,9 @@ Scenario(
     queryAnalyticsPage.waitForLoaded();
     await adminPage.applyTimeRange('Last 12 hours');
     queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.data.searchByValue('query_plan');
+    queryAnalyticsPage.data.searchByValue('pgsm_t1 t1');
     queryAnalyticsPage.waitForLoaded();
+    I.waitForVisible(queryAnalyticsPage.data.elements.queryRowValue(1), 60);
     queryAnalyticsPage.data.mouseOverInfoIcon(1);
 
     const tooltipQueryId = await queryAnalyticsPage.data.getTooltipQueryId();
@@ -64,7 +65,7 @@ Scenario(
     queryAnalyticsPage.queryDetails.checkTab('Plan');
     await queryAnalyticsPage.queryDetails.checkPlanTabIsNotEmpty();
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T146 - Verify user is able to see  chart tooltip for time related metric  @qan',
@@ -303,7 +304,7 @@ Scenario(
 
     assert.ok(firstQueryText.startsWith(query), `The Searched Query text was: "${query}", don't match the result text in overview for 1st result: "${firstQueryText}"`);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T417 - Verify user is able to search by Database @qan',

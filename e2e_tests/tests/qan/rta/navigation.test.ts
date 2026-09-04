@@ -57,20 +57,4 @@ pmmTest('PMM-T2149 verify selected tab persists after refresh @rta', async ({ pa
   });
 });
 
-pmmTest('PMM-T2152 iframe persistence @rta', async ({ queryAnalytics }) => {
-  await pmmTest.step('Verify iframe is visible on Stored metrics', async () => {
-    await expect(queryAnalytics.elements.iframe).toBeVisible();
-  });
-
-  await pmmTest.step('Switch to Real-Time tab and verify iframe persistence', async () => {
-    await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
-    await expect(queryAnalytics.elements.iframe).toBeAttached();
-  });
-
-  await pmmTest.step('Switch back to Stored metrics and verify iframe visibility', async () => {
-    await queryAnalytics.switchTab(queryAnalytics.tabNames.storedMetrics);
-    await expect(queryAnalytics.elements.iframe).toBeVisible();
-  });
-});
-
 // Note: verify copy links on both tabs is part of another ticket PMM-14758

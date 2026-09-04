@@ -10,25 +10,10 @@ export default class GrafanaHelper {
     await this.page.setExtraHTTPHeaders({ Authorization: `Basic ${authToken}` });
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { password, user: username },
-    });
-    await this.page.goto('');
-    await this.page.reload();
-    await this.page.waitForURL('pmm-ui/help');
-
-    return this.page;
-  };
-
-  changePassword = async (oldPassword: string, newPassword: string) => {
-    const response = await this.page.request.put('graph/api/user/password', {
-      data: { confirmNew: newPassword, newPassword, oldPassword },
-      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
       ignoreHTTPSErrors: true,
     });
 
-    expect(
-      response.status(),
-      `Failed to change user account password! Response message is ${response.statusText()}`,
-    ).toEqual(200);
+    return this.page;
   };
 
   createCustomDashboard = async (
@@ -214,6 +199,17 @@ export default class GrafanaHelper {
       headers: { Authorization: `Basic ${authToken}` },
     });
 
+    expect(response.status(), `Create user ${username}`).toEqual(200);
+
+    return (await response.json()).id as number;
+  };
+
+  deleteUser = async (userId: number) => {
+    const authToken = GrafanaHelper.getToken();
+    const response = await this.page.request.delete(`graph/api/admin/users/${userId}`, {
+      headers: { Authorization: `Basic ${authToken}` },
+    });
+
     return response;
   };
 
@@ -276,6 +272,15 @@ export default class GrafanaHelper {
     return (await response.json()) as GrafanaUserSearchResponse;
   };
 
+  promoteToEditor = async (userId: number) => {
+    const response = await this.page.request.patch(`graph/api/org/users/${userId}`, {
+      data: { role: 'Editor' },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), 'Promote user to Editor').toEqual(200);
+  };
+
   setHomeDashboard = async (uid: string) => {
     const authToken = GrafanaHelper.getToken();
     const response = await this.page.request.put('graph/api/user/preferences', {
@@ -307,6 +312,22 @@ export default class GrafanaHelper {
 
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
-    await this.page.reload();
+    await this.page.context().clearCookies();
+    await this.page.goto('', { waitUntil: 'domcontentloaded' }).catch(() => {
+      /* PMM may redirect mid-load; we don't care about the cancel */
+    });
+  };
+
+  changePassword = async (oldPassword: string, newPassword: string) => {
+    const response = await this.page.request.put('graph/api/user/password', {
+      data: { confirmNew: newPassword, newPassword, oldPassword },
+      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
+      ignoreHTTPSErrors: true,
+    });
+
+    expect(
+      response.status(),
+      `Failed to change user account password! Response message is ${response.statusText()}`,
+    ).toEqual(200);
   };
 }

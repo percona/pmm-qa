@@ -4,6 +4,7 @@ services:
   pmm-server-encryption:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server-encryption
+    platform: linux/amd64
     ports:
       - '8082:8080'
       - '8445:8443'

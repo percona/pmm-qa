@@ -56,7 +56,7 @@ Data(instances).Scenario(
 
     assert(!out.includes('--auto-discover-databases'), 'postgres-exporter should not have flag "auto-discover-databases"');
   },
-).retry(2);
+);
 
 Data(instances).Scenario(
   'PMM-T2010 - Verify Dashboard for Aurora Postgres RDS added via UI @aws @instances',

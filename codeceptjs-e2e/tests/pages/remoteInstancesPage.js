@@ -140,12 +140,6 @@ module.exports = {
     'Replication Set': 'rds57-replication',
     Cluster: 'rds57-cluster',
   },
-  postgresql13rds: {
-    'Service Name': 'pmmqa-rds-pgsql13-4',
-    Environment: 'RDS PGSQL 13',
-    'Replication Set': 'pgsqlrds13-replication',
-    Cluster: 'pgsqlrds13-cluster',
-  },
   postgresql14rds: {
     'Service Name': 'pmm-qa-rds-pgsql-14',
     Environment: 'RDS PGSQL 14',
@@ -198,6 +192,10 @@ module.exports = {
     cluster: '$cluster-text-input',
     customLabels: '$custom_labels-textarea-input',
     database: '$database-text-input',
+    disableCollectors: '[data-testid*="disable_collectors-text-input"]',
+    disableCollectorsDescription: '[data-testid*="disable_collectors-field-label"] > span:nth-child(1)',
+    disableCollectorsError: '[data-testid*="disable_collectors-field-error-message"]',
+    disableCollectorsLabel: '[data-testid*="disable_collectors-field-label"] > span:first-child',
     disableQueryExamples: '$disable_query_examples-field-label',
     disableBasicMetrics: '//input[@id="input-disable_basic_metrics-id"]/following-sibling::*[2]',
     disableEnhancedMetrics: '//input[@id="input-disable_enhanced_metrics-id"]/following-sibling::*[2]',
@@ -524,7 +522,7 @@ module.exports = {
         break;
       case remoteInstancesHelper.services.postgresql:
         inputs = {
-          ...remoteInstancesHelper.remote_instance.postgresql.pdpgsql_13_3,
+          ...remoteInstancesHelper.remote_instance.postgresql.pdpgsql_15,
           ...this.potgresqlSettings,
         };
         port = getPortForNodeName(nodeName, inputs);
@@ -534,7 +532,7 @@ module.exports = {
         I.fillField(this.fields.password, inputs.password);
         adminPage.customClearField(this.fields.portNumber);
         I.fillField(this.fields.portNumber, port);
-        I.fillField(this.fields.serviceName, srviceName);
+        I.fillField(this.fields.serviceName, overrideServiceName || srviceName);
         I.fillField(this.fields.environment, inputs.environment);
         I.fillField(this.fields.cluster, inputs.cluster);
         break;
@@ -574,7 +572,7 @@ module.exports = {
         I.fillField(this.fields.hostName, host);
         I.fillField(this.fields.userName, inputs.username);
         I.fillField(this.fields.password, inputs.password);
-        I.fillField(this.fields.serviceName, srviceName);
+        I.fillField(this.fields.serviceName, overrideServiceName || srviceName);
         I.fillField(this.fields.environment, inputs.environment);
         I.fillField(this.fields.cluster, inputs.clusterName);
         break;
@@ -641,6 +639,10 @@ module.exports = {
 
     if (options.disableExamples) {
       I.click(this.fields.disableQueryExamples);
+    }
+
+    if (options.disableCollectors) {
+      I.fillField(this.fields.disableCollectors, options.disableCollectors);
     }
 
     await this.clickAddInstanceAndWaitForSuccess();

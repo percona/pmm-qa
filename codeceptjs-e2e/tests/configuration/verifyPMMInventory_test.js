@@ -54,12 +54,6 @@ if (remoteInstancesHelper.getInstanceStatus('azure').azure_postgresql.enabled) {
 const aws_instances = new DataTable(['service_name', 'password', 'instance_id', 'cluster_name']);
 
 aws_instances.add([
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.address,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.password,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.instance_id,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.cluster_name,
-]);
-aws_instances.add([
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.address,
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.password,
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.instance_id,
@@ -74,7 +68,7 @@ Before(async ({ I }) => {
 
 // Skipping temporarily because sorting is not yet implemented in new Inventory page (PMM 2.37.0)
 Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Services tab) @inventory @nightly',
+  'PMM-T371 - Verify sorting in Inventory page(Services tab) @inventory @nightly ',
   async ({ I, pmmInventoryPage }) => {
     I.amOnPage(pmmInventoryPage.url);
     await pmmInventoryPage.checkSort(4);
@@ -82,7 +76,7 @@ Scenario.skip(
 );
 
 Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Nodes tab) @inventory @nightly',
+  'PMM-T371 - Verify sorting in Inventory page(Nodes tab) @inventory @nightly ',
   async ({ I, pmmInventoryPage }) => {
     I.amOnPage(pmmInventoryPage.url);
     I.waitForVisible(pmmInventoryPage.fields.nodesLink, 20);
@@ -241,7 +235,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade @pmm-migration',
+  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     await I.amOnPage(pmmInventoryPage.url);
     await I.waitForVisible(pmmInventoryPage.fields.showRowDetails, 10);
@@ -571,7 +565,7 @@ Data(qanFilters).Scenario(
 
     assert.ok(count > 0, `The queries for filter ${current.filterName} instance do NOT exist`);
   },
-).retry(2);
+);
 
 Data(aws_instances).Scenario(
   'PMM-T2340 Verify QAN after Aurora instance is added and edited @inventory @inventory-fb',
@@ -592,7 +586,7 @@ Data(aws_instances).Scenario(
   },
 ).retry(1);
 
-Scenario('PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly @gssapi-nightly', async ({ I, pmmInventoryPage }) => {
+Scenario('PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly  @gssapi-nightly', async ({ I, pmmInventoryPage }) => {
   I.usePlaywrightTo('Mock Services List', async ({ page }) => {
     const mockedServices = { services: [] };
 
@@ -641,7 +635,7 @@ Scenario('PMM-T2024 - Verify services list does not refresh to first page @inven
 const tabs = [pmmInventoryPage.servicesTab.url, pmmInventoryPage.nodesTab.url];
 
 Data(tabs).Scenario(
-  'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly',
+  'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly ',
   async ({ I, pmmInventoryPage, current }) => {
     I.amOnPage(current);
     await pmmInventoryPage.pagination.selectRowsPerPage('100');

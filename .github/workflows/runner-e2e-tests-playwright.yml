@@ -22,22 +22,26 @@ on:
       pmm_client_version:
         description: 'Version of the pmm client used for testing'
         type: string
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         required: true
+      pmm_client_image:
+        description: 'pmm-client docker image used by the client containers'
+        type: string
+        required: false
       setup_services:
         description: 'Clients for pmm-server'
         type: string
         default: '--database ps=8.4,QUERY_SOURCE=slowlog'
         required: true
-      qa_integration_branch:
-        description: 'Branch for the qa-integration repository.'
-        type: string
-        default: 'main'
-        required: true
       workers:
         description: 'Number of workers for Playwright tests'
         type: number
-        default: 4
+        default: 1
+        required: false
+      launchable_confidence:
+        description: 'Launchable subset confidence percentage'
+        type: string
+        default: '100%'
         required: false
 
   workflow_call:
@@ -54,17 +58,25 @@ on:
       pmm_client_version:
         type: string
         required: true
+      pmm_client_image:
+        type: string
+        required: false
       setup_services:
         type: string
         required: false
-      qa_integration_branch:
-        type: string
-        required: true
       workers:
         type: number
         required: false
+      launchable_confidence:
+        type: string
+        required: false
+      sha:
+        type: string
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
+        required: false
+      ZEPHYR_PMM_API_KEY:
         required: false
 jobs:
   tests:
@@ -77,43 +89,25 @@ jobs:
 
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
 
-      OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
-      OAUTH_ISSUER_URL: 'https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7'
-      OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
-      OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
-      OAUTH_PMM_CLIENT_ID: ${{ secrets.OAUTH_PMM_CLIENT_ID }}
-      OAUTH_PMM_CLIENT_SECRET: ${{ secrets.OAUTH_PMM_CLIENT_SECRET }}
-      OAUTH_DEV_HOST: 'id-dev.percona.com'
-      OAUTH_SCOPES: percona
-
-      # Variables for E2E tests
-      MAILOSAUR_API_KEY: ${{ secrets.MAILOSAUR_API_KEY }}
-      MAILOSAUR_UI_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_UI_TESTS_SERVER_ID }}
-      MAILOSAUR_API_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_API_TESTS_SERVER_ID }}
-
-      SERVICENOW_LOGIN: percona_platform
-      SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
-      SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
-
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
-      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_version || github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
-      WORKERS: ${{ inputs.workers || 4 }}
+      WORKERS: ${{ inputs.workers || 1 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
+      SUBSET_FILE_NAME: 'launchable-subset.txt'
 
     steps:
-      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
-        if: ${{ env.SHA != 'null' }}
+      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" on pmm-qa branch ${{ inputs.pmm_qa_branch }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
@@ -125,31 +119,12 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Checkout qa-integration repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.QA_INTEGRATION_BRANCH }}
-          repository: Percona-Lab/qa-integration
-          path: ./qa-integration
-
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ env.PMM_QA_BRANCH }}
           repository: percona/pmm-qa
           path: ./pmm-qa
-
-      - name: Setup PMM Server
-        working-directory: ./pmm-qa/e2e_tests
-        run: |
-          ls
-          docker network create pmm-qa
-          docker volume create pmm-volume
-
-          PWD=$(pwd) docker compose -f docker-compose.yml up -d
-          
-          sleep 15
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -158,10 +133,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - name: Setup PMM-Client
-        working-directory: qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
-
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/
         run: |
@@ -169,24 +140,14 @@ jobs:
           npx playwright install-deps
           npx playwright install chromium
 
-      - name: Run Setup for E2E Tests
-        working-directory: qa-integration/pmm_qa
-        run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
-
       - name: 'Create report name'
         if: always()
         run: |
           # TODO: add job id for matrix call
-          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
+          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/@//" -e "s/|/-/g")
           report_name="$job_tag"
-          echo $report_name
-          echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+          echo "$report_name"
+          echo "REPORT_NAME=$report_name" >> "$GITHUB_ENV"
 
       - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
@@ -194,48 +155,90 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt || true
-          echo "$(cat launchable-subset.txt)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright < test_list.txt > launchable-subset.txt || true
+          cat launchable-subset.txt || true
 
-      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        working-directory: pmm-qa/e2e_tests/
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/e2e_tests
         run: |
-          SUBSET_FILE="launchable-subset.txt"
+          SUBSET_FILE="${{ env.SUBSET_FILE_NAME }}"
 
-          # Skip tests if the subset file is empty
+          # Skip downstream setup/tests when subset is empty.
           if [ -s "$SUBSET_FILE" ]; then
-            # Run tests if the subset file is not empty
-            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat launchable-subset.txt) || true
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
           else
-            echo "$SUBSET_FILE is empty, so we run tests for now."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}"
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
           fi
 
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
+
+      - name: Setup PMM Server
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/e2e_tests
+        run: |
+          ls
+          docker network create pmm-qa
+          docker volume create pmm-volume
+
+          PWD=$(pwd) docker compose -f docker-compose.yml up -d
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
+          timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
+
+      - name: Setup PMM-Client
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Run Setup for E2E Tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
+        run: |
+          ./pmm-framework/pmm-framework --parallel --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/e2e_tests/
+        run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+
       - name: Download logs
-        if: ${{ failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
           unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
-        if: ${{ failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()
@@ -249,7 +252,7 @@ jobs:
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}

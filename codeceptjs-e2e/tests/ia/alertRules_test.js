@@ -102,7 +102,7 @@ Scenario(
     });
     I.waitForElement(alertRulesPage.fields.templatesLoader, 10);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1392 - Verify fields dynamically change value when template is changed @fb-alerting @grafana-pr',
@@ -116,7 +116,7 @@ Scenario(
     I.waitForValue(alertRulesPage.fields.inputField('duration'), '60s');
     I.seeTextEquals('Warning', alertRulesPage.fields.dropdownValue('severity'));
   },
-).retry(2);
+);
 
 const usersTable = new DataTable(['username', 'password']);
 

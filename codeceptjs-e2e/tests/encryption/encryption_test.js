@@ -93,4 +93,88 @@ Scenario(
 
     assert.ok(pgRespBeforeRotation !== pgRespAfterRotation, 'The DB was not re-encrypted');
   },
-).retry(2);
+);
+
+Scenario(
+  'PMM-T2094 Verify MySQL TLS monitoring survives encryption key rotation without corrupting stored certificates @fb-encryption',
+  async ({
+    I, addInstanceAPI, pmmInventoryPage, inventoryAPI, grafanaAPI,
+  }) => {
+    // Regression coverage for PMM-15188: on every encryption key rotation the JSON
+    // "option" columns (here agents.mysql_options) were re-encrypted during the
+    // decrypt phase instead of being decrypted, stacking an extra encryption layer
+    // each time (~80% length growth per cycle). tls_cert/tls_key eventually became
+    // undecryptable and pmm-agent failed with
+    // "tls: failed to find any PEM data in certificate input", breaking MySQL TLS
+    // monitoring. This test adds a MySQL service WITH TLS, rotates the key twice and
+    // asserts that monitoring keeps working and the stored certificates do not grow.
+    const serviceName = `mysql_tls_encryption_${Math.floor(Math.random() * 99) + 1}`;
+    const dbUser = 'pmm_encryption';
+    const dbPass = 'pmm_encryption_pass1^';
+
+    // The encryption feature build provisions a Percona Server 8.0 instance
+    // (--database ps=8.0). Discover its container regardless of the version suffix.
+    const mysqlContainer = (await I.verifyCommand('docker ps --format "{{.Names}}" --filter name=ps_pmm | head -1')).trim();
+
+    assert.ok(mysqlContainer, 'Could not find a Percona Server (ps_pmm*) container to monitor over TLS');
+
+    // MySQL 8.0 auto-generates TLS material in its data directory and enables TLS by default.
+    const tlsCa = await I.verifyCommand(`docker exec ${mysqlContainer} cat /var/lib/mysql/ca.pem`);
+    const tlsCert = await I.verifyCommand(`docker exec ${mysqlContainer} cat /var/lib/mysql/client-cert.pem`);
+    const tlsKey = await I.verifyCommand(`docker exec ${mysqlContainer} cat /var/lib/mysql/client-key.pem`);
+
+    // Create a dedicated TLS-only monitoring user. mysql_native_password keeps the
+    // exporter connection simple and independent of caching_sha2 negotiation.
+    const grantSql = `CREATE USER IF NOT EXISTS '${dbUser}'@'%' IDENTIFIED WITH mysql_native_password BY '${dbPass}' REQUIRE SSL; GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO '${dbUser}'@'%'; GRANT SELECT ON performance_schema.* TO '${dbUser}'@'%'; FLUSH PRIVILEGES;`;
+
+    await I.verifyCommand(`docker exec ${mysqlContainer} mysql -uroot -pGRgrO9301RuF -e "${grantSql}"`);
+
+    I.amOnPage(pmmInventoryPage.url);
+
+    // Add the MySQL service WITH TLS so tls_cert/tls_key are stored (encrypted) in agents.mysql_options.
+    await addInstanceAPI.addMysqlSSL({
+      serviceName,
+      address: mysqlContainer,
+      port: 3306,
+      username: dbUser,
+      password: dbPass,
+      cluster: 'mysql_encryption_cluster',
+      tlsCAFile: tlsCa,
+      tlsCertFile: tlsCert,
+      tlsKeyFile: tlsKey,
+    });
+
+    // Monitoring works before rotation.
+    await grafanaAPI.checkMetricExist('mysql_up', { type: 'service_name', value: serviceName });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, serviceName);
+    const certLenSql = `SELECT length(mysql_options->>'tls_cert'), length(mysql_options->>'tls_key') FROM agents WHERE service_id='${service_id}' AND agent_type='mysqld_exporter';`;
+    const certLenCommand = `docker exec pmm-server psql -Upmm-managed -t -A -F',' -c "${certLenSql}"`;
+
+    const lengthsBeforeRotation = (await I.verifyCommand(certLenCommand)).trim();
+
+    // Guard against a vacuous pass: the certificates must actually be stored.
+    assert.ok(
+      /^[1-9][0-9]*,[1-9][0-9]*$/.test(lengthsBeforeRotation),
+      `tls_cert/tls_key are not stored in mysql_options (got "${lengthsBeforeRotation}")`,
+    );
+
+    // Rotate the encryption key twice.
+    await verifyEncryptionRotation('pmm-server');
+    await verifyEncryptionRotation('pmm-server');
+
+    // Wait for fresh scrapes and assert monitoring resumed AFTER rotation
+    // (2-minute lookback so only post-rotation samples satisfy the check).
+    I.wait(130);
+    await grafanaAPI.checkMetricExist('mysql_up', { type: 'service_name', value: serviceName }, 2);
+
+    const lengthsAfterRotation = (await I.verifyCommand(certLenCommand)).trim();
+
+    // The core PMM-15188 assertion: repeated rotations must not add encryption layers.
+    assert.strictEqual(
+      lengthsAfterRotation,
+      lengthsBeforeRotation,
+      `mysql_options tls_cert/tls_key length changed after encryption key rotation (before: ${lengthsBeforeRotation}, after: ${lengthsAfterRotation}); encryption layers accumulated (PMM-15188)`,
+    );
+  },
+).retry(1);

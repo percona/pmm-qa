@@ -36,7 +36,8 @@ module.exports = {
     newAlertRule: locate('a').withText('New alert rule'),
     newAlertRuleFromTemplate: locate('a').withText('New alert rule from template'),
     saveAndExit: locate('//button[.="Save rule and exit"]'),
-    editAlertRule: '//a[contains(@href, "/edit")]',
+    saveEditRule: I.useDataQA('save-rule'),
+    editAlertRule: locate('a').withText('Edit'),
     editRuleOnView: '//span[text()="Edit"]',
     deleteAlertRule: locate('[role="menuitem"]').withText('Delete'),
     groupCollapseButton: (folderText) => `//button[@data-testid='data-testid group-collapse-toggle'][following::div/h3[contains(., '${folderText}')]]`,
@@ -62,15 +63,16 @@ module.exports = {
     // resultsLocator: (name) => locate('//div[@aria-label="Select options menu"]')
       .find(I.useDataQA('data-testid Select option')).withText(name),
     inputField: (input) => `input[name='${input}']`,
-    editRuleThreshold: 'input[name=\'evaluateFor\']',
-    editRuleEvaluate: 'input[name=\'evaluateEvery\']',
+    editRuleThreshold: locate('input[name="evaluateFor"]'),
+    editRuleExpression: locate('textarea[placeholder*="Math operations on one or more queries"]'),
+    editRuleEvaluate: locate('input[name="evaluateEvery"]'),
     editRuleSeverity: I.useDataQA('label-value-1'),
     templatesLoader: locate('//div[@id=\'template\']').find('div').withText('Choose'),
     evaluationGroupName: I.useDataQA('data-testid alert-rule new-evaluation-group-name'),
   },
   messages: {
     noRulesFound: 'You haven\'t created any rules yet',
-    confirmDelete: 'Deleting this rule will permanently remove it from your alert rule list. Are you sure you want to delete this rule?',
+    confirmDelete: 'Are you sure you want to delete this rule? This rule will be recoverable from the Recently deleted page by a user with an admin role.',
     successRuleCreate: (name) => `Rule "${name}" saved.`,
     successRuleEdit: 'Rule updated successfully',
     successfullyDeleted: 'Rule successfully deleted',
@@ -120,8 +122,9 @@ module.exports = {
     // I.fillField(this.fields.editRuleSeverity, severity);
     I.fillField(this.fields.editRuleThreshold, duration);
     // I.fillField(this.fields.editRuleEvaluate, '10s');
-    I.click(this.buttons.saveAndExit);
+    I.click(this.buttons.saveEditRule);
     I.verifyPopUpMessage(this.messages.successRuleEdit);
+    this.openAlertRulesTab();
   },
 
   openAlertRulesTab() {

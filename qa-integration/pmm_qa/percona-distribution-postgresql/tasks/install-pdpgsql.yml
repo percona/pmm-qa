@@ -1,0 +1,68 @@
+- name: Cleanup existing Percona Distribution for Postgresql containers
+  shell: docker rm -fv {{ container_prefix }}{{ item }}
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  ignore_errors: true
+
+- name: Start containers for Percona Distribution for Postgresql
+  shell: |
+    docker run -d \
+      --name={{ container_prefix }}{{ item }} \
+      --restart=always \
+      --network {{ network_name }} \
+      -e POSTGRES_PASSWORD={{ root_password }} \
+      --privileged --cgroupns=host \
+      -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      -v /var/lib/containerd \
+      -p {{ pdpgsql_port + (item - 1) }}:5432 \
+      antmelekhin/docker-systemd:ubuntu-24.04
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install dependencies
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} apt-get update
+    docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install Percona Release
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+    docker exec {{ container_prefix }}{{ item }} dpkg -i ./percona-release_latest.generic_all.deb
+    docker exec {{ container_prefix }}{{ item }} percona-release enable ppg-{{ pdpgsql_version }}
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install Percona Distribution for PostgreSQL
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} apt-get install -y percona-postgresql-{{ pdpgsql_version }} percona-pgbackrest
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install PG Stat Monitor
+  shell: docker exec -u root {{ container_prefix }}{{ item }} apt-get install -y percona-pg-stat-monitor{{ pdpgsql_version }}
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: pgsm_branch | length == 0
+
+- name: Prepare installation of PG Stat Monitor from sources
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} apt-get install -y git clang-18 llvm-18 build-essential percona-postgresql-server-dev-{{ pdpgsql_version }}
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: pgsm_branch | length > 0
+
+- name: Install PG Stat Monitor from sources
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} sh -c '
+      git clone --branch {{ pgsm_branch }} https://github.com/percona/pg_stat_monitor.git &&
+      cd pg_stat_monitor &&
+      make USE_PGXS=1 &&
+      make USE_PGXS=1 install
+    '
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: pgsm_branch | length > 0
+
+- name: Start Percona distribution for Postgresql
+  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl start postgresql@{{ pdpgsql_version }}-main
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Wait until PostgreSQL is ready after install
+  include_tasks: ../tasks/wait_pgsql_ready.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"

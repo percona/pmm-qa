@@ -4,7 +4,7 @@ module.exports = {
   url: 'graph/admin/settings',
   fields: {
     settingsTitle: '[class*="title-info-container"]',
-    typeLabel: locate('tr').withChild(locate('td').withText('type')).find('td').at(2),
+    typeLabel: '//tr[td[1][normalize-space()="type"]]/td[2]',
   },
 
   async open() {

@@ -1,5 +1,3 @@
-const { isJenkinsGssapiJob } = require('./helper/constants');
-
 Feature('Test Dashboards inside the MongoDB Folder');
 
 Before(async ({ I }) => {
@@ -12,6 +10,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongodbOverviewDashboard.url, {
       from: 'now-5m',
       cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -25,10 +24,13 @@ Scenario(
 Scenario(
   'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
   async ({ I, dashboardPage }) => {
-    I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
-      cluster: 'sharded',
-      from: 'now-5m',
-    }));
+    I.amOnPage(
+      I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
+        cluster: 'sharded',
+        from: 'now-5m',
+        refresh: '5s',
+      }),
+    );
 
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
@@ -43,6 +45,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
       cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -56,42 +59,35 @@ Scenario(
 Scenario(
   'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @gssapi-nightly',
   async ({
-    I, dashboardPage, inventoryAPI, adminPage,
+    I, dashboardPage, inventoryAPI, adminPage, grafanaAPI,
   }) => {
     const mongoService = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
 
-    I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
-      from: 'now-5m',
-      node_name: mongoService.node_name,
-      refresh: '5s',
-    }));
+    await grafanaAPI.waitForMetric('mongodb_top_commands_count', { type: 'service_name', value: mongoService.service_name }, 120);
+    await grafanaAPI.waitForMetric('mongodb_dbstats_dataSize', { type: 'service_name', value: mongoService.service_name }, 120);
+
+    I.amOnPage(
+      I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
+        from: 'now-5m',
+        node_name: mongoService.node_name,
+        service_name: mongoService.service_name,
+        refresh: '5s',
+      }),
+    );
     dashboardPage.waitForDashboardOpened();
     await adminPage.performPageDown(5);
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbCollectionsOverview.metrics);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    await dashboardPage.waitForGraphsToHaveData(2, 60);
   },
-).retry(2);
+);
 
-const fcvPanelTestData = () => {
-  const { dashboardPage } = inject();
-  let dashboards = [
-    { url: dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, cluster: 'replicaset' },
-    { url: dashboardPage.mongoDbShardedClusterSummary.url, cluster: 'sharded' },
-  ];
-
-  if (isJenkinsGssapiJob) {
-    dashboards = dashboards.filter((item) => item.cluster !== 'sharded');
-  }
-
-  return dashboards;
-};
-
-Data(fcvPanelTestData()).Scenario(
-  'PMM-T2035 - Verify MongoDb Cluster and MongoDB ReplSet dashboards has FCV panel @nightly @dashboards @gssapi-nightly',
-  async ({ I, dashboardPage, current }) => {
-    const url = I.buildUrlWithParams(current.url, {
+Scenario(
+  'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @dashboards @gssapi-nightly',
+  async ({ I, dashboardPage }) => {
+    const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
-      cluster: current.cluster,
+      cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -99,36 +95,49 @@ Data(fcvPanelTestData()).Scenario(
     const fcvVersion = await I.grabTextFrom(dashboardPage.panelValueByTitle('Feature Compatibility Version'));
     const mongodbVersion = process.env.PSMDB_VERSION || '8.0';
 
-    I.assertEqual(
-      fcvVersion,
-      mongodbVersion.split('.')[0],
-      'Feature Compatibility Version is not correct.',
-    );
+    I.assertEqual(fcvVersion, mongodbVersion.split('.')[0], 'Feature Compatibility Version is not correct.');
   },
 );
 
-Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @nightly', async ({
-  I, dashboardPage, inventoryAPI,
-}) => {
-  const newClusterName = 'replicaset';
-  const newEnvironmentName = 'psmdb-dev';
-  const mongoServices = (await inventoryAPI.getServiceListDetailsByPartialDetails({ environment: newEnvironmentName }))
-    .map((service) => service.service_name);
+Scenario('PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @dashboards', async ({ I, dashboardPage }) => {
+  const url = I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
+    from: 'now-5m',
+    cluster: 'sharded',
+    refresh: '5s',
+  });
 
-  I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbInstancesCompareDashboard.url, { from: 'now-5m' }));
+  I.amOnPage(url);
+  dashboardPage.waitForDashboardOpened();
+  const fcvVersion = await I.grabTextFrom(dashboardPage.panelValueByTitle('Feature Compatibility Version'));
+  const mongodbVersion = process.env.PSMDB_VERSION || '8.0';
 
-  dashboardPage.mongodbInstancesCompareDashboard.selectEnvironment(newEnvironmentName);
-  dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed(mongoServices);
-  dashboardPage.mongodbInstancesCompareDashboard.unselectEnvironment();
-
-  dashboardPage.mongodbInstancesCompareDashboard.selectCluster(newClusterName);
-  dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed(mongoServices);
-  dashboardPage.mongodbInstancesCompareDashboard.unselectCluster();
-
-  dashboardPage.mongodbInstancesCompareDashboard.selectReplicationSet('rs');
-  I.waitInUrl('&var-replication_set=rs', 2);
-  dashboardPage.mongodbInstancesCompareDashboard.unselectReplicationSet();
-
-  dashboardPage.mongodbInstancesCompareDashboard.selectNode([mongoServices[0]]);
-  dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed([mongoServices[0]]);
+  I.assertEqual(fcvVersion, mongodbVersion.split('.')[0], 'Feature Compatibility Version is not correct.');
 });
+
+Scenario(
+  'PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @nightly',
+  async ({ I, dashboardPage, inventoryAPI }) => {
+    const newClusterName = 'replicaset';
+    const newEnvironmentName = 'psmdb-dev';
+    const mongoServices = (await inventoryAPI.getServiceListDetailsByPartialDetails({ environment: newEnvironmentName })).map(
+      (service) => service.service_name,
+    );
+
+    I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbInstancesCompareDashboard.url, { from: 'now-5m', refresh: '5s' }));
+
+    dashboardPage.mongodbInstancesCompareDashboard.selectEnvironment(newEnvironmentName);
+    dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed(mongoServices);
+    dashboardPage.mongodbInstancesCompareDashboard.unselectEnvironment();
+
+    dashboardPage.mongodbInstancesCompareDashboard.selectCluster(newClusterName);
+    dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed(mongoServices);
+    dashboardPage.mongodbInstancesCompareDashboard.unselectCluster();
+
+    dashboardPage.mongodbInstancesCompareDashboard.selectReplicationSet('rs');
+    I.waitInUrl('&var-replication_set=rs', 2);
+    dashboardPage.mongodbInstancesCompareDashboard.unselectReplicationSet();
+
+    dashboardPage.mongodbInstancesCompareDashboard.selectNode([mongoServices[0]]);
+    dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed([mongoServices[0]]);
+  },
+);

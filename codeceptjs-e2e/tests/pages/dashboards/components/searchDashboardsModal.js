@@ -7,18 +7,7 @@ module.exports = {
   folders: {
     experimental: {
       name: 'Experimental',
-      items: [
-        'DB Cluster Summary',
-        'Databases Overview',
-        'Environments Overview (Designed for PMM)',
-        'PMM HA Health Overview',
-        'Patroni Details',
-        'PMM Health',
-        'PostgreSQL Checkpoints, Buffers and WAL Usage',
-        'PostgreSQL Vacuum Monitoring',
-        'PostgreSQL Instance',
-        'PXC Galera Cluster Summary (experimental)',
-      ],
+      items: ['DB Cluster Summary', 'Databases Overview'],
     },
     insight: {
       name: 'Insight',
@@ -93,6 +82,10 @@ module.exports = {
         'Processes Details',
       ],
     },
+    pmmHealth: {
+      name: 'PMM Health',
+      items: ['Environments Overview (Designed for PMM)', 'PMM HA Health Overview', 'PMM Health'],
+    },
     postgreSql: {
       name: 'PostgreSQL',
       items: ['PostgreSQL Instance Summary', 'PostgreSQL Instances Compare', 'PostgreSQL Instances Overview'],
@@ -125,10 +118,9 @@ module.exports = {
     expandedFolderLocator: (folderName) => locate(`[aria-label="Collapse folder ${folderName}"]`),
     folderItemLocator: (itemName) => I.useDataQA(`data-testid browse dashboards row ${itemName}`),
     folderItemLocatorExpand: (itemName) => locate(I.useDataQA(`data-testid browse dashboards row ${itemName}`)).find('button'),
-    folderItemWithTagLocator: (itemName, tag) =>
-      locate(I.useDataQA(`data-testid browse dashboards row ${itemName}`))
-        .find('[aria-label="Tags"] li')
-        .withText(tag),
+    folderItemWithTagLocator: (itemName, tag) => locate(I.useDataQA(`data-testid browse dashboards row ${itemName}`))
+      .find('[aria-label="Tags"] li')
+      .withText(tag),
     itemLocator: (itemName) => locate(I.useDataQA(`data-testid Dashboard search item ${itemName}`)),
     closeButton: locate('button[aria-label="Close search"]').as('Close button'),
     folderRowLocator: locate('[data-testid^="data-testid browse dashboards row "]'),

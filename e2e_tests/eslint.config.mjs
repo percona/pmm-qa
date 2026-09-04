@@ -232,7 +232,7 @@ export default defineConfig([
       // -----------------------------------------------------------------------
       // Plugin: Unicorn
       // -----------------------------------------------------------------------
-      'unicorn/filename-case': ['error', { case: 'camelCase' }],
+      'unicorn/filename-case': ['error', { case: 'camelCase', checkDirectories: false }],
       'unicorn/no-array-reverse': 'off',
       'unicorn/no-await-expression-member': 'off',
       'unicorn/no-unnecessary-await': 'error',
@@ -280,6 +280,11 @@ export default defineConfig([
             'verifyQanStoredMetricsHaveData',
             'verifyTotalQueryCount',
             'verifyRTAAgentStatus',
+            'verifyAllMenuItems',
+            'waitForMetric',
+            'verifyRowMetricsPresent',
+            'verifyRowPanelsHaveData',
+            'verifyRowPanelValues',
           ],
         },
       ],

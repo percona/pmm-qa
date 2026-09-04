@@ -36,7 +36,6 @@ module.exports = {
     privacy: '//a[contains(text(), "Privacy")]',
     copyright: '//a[contains(text(), "Copyright")]',
     legal: '//a[contains(text(), "Legal")]',
-    accessDenied: '//div[contains(@class, "alert-title") and contains(text(), "Access denied.")]',
     title: '//span[contains(text(), "Percona Monitoring and Management")]',
     failedSecurityChecks: '//span[contains(text(), "Failed security check")]',
     noAccess: '$unauthorized',

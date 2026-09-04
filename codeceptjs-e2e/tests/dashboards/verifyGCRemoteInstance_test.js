@@ -88,7 +88,7 @@ Data(instances).Scenario(
     // Waiting for metrics to start hitting PMM-Server
     I.wait(20);
   },
-).retry(2);
+);
 
 Data(instances).Scenario(
   'Verify dashboard after Remote GC Instances are added @not-ui-pipeline @gcp',
@@ -120,7 +120,7 @@ Data(instances).Scenario(
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyThereAreNoGraphsWithoutData(6);
   },
-).retry(2);
+);
 
 // skipping mysql gc because of PMM-9389
 Data(instances).Scenario(
@@ -140,7 +140,7 @@ Data(instances).Scenario(
 
     assert.ok(count > 0, `The queries for service ${instanceDetails.serviceName} instance do NOT exist`);
   },
-).retry(2);
+);
 
 Data(instances).Scenario(
   'Check metrics from exporters are hitting PMM Server @not-ui-pipeline @gcp',

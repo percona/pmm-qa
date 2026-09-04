@@ -1,4 +1,4 @@
-Feature('Tests for PMM Demo Sanity Tests Cycle Dashboard Checks').retry(2);
+Feature('Tests for PMM Demo Sanity Tests Cycle Dashboard Checks');
 
 Scenario(
   // eslint-disable-next-line max-len

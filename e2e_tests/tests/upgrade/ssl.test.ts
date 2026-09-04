@@ -4,6 +4,7 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM upgrade tests for SSL', () => {
   const container = 'psmdb-server';
+  const metric = 'mongodb_connections';
   const remoteServiceName = `remote_api_${container}`;
 
   pmmTest(
@@ -45,4 +46,11 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
         .toBe(true);
     },
   );
+
+  pmmTest('Verify metrics from SSL instances on PMM-Server @post-upgrade', async ({ api }) => {
+    const clientService = await api.inventoryApi.getServiceDetailsByPartialName(container);
+
+    await api.grafanaApi.waitForMetric(metric, clientService.service_name);
+    await api.grafanaApi.waitForMetric(metric, remoteServiceName);
+  });
 });

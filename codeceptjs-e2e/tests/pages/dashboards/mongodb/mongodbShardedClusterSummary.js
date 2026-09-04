@@ -12,6 +12,8 @@ class MongodbShardedClusterSummary {
       'Chunks',
       'Last Election',
       'Data distribution',
+      'Total Data Size',
+      'Data Size Over Time',
       'Command Operations',
       'Top Hottest Collections by Read',
       'Operation Latencies',

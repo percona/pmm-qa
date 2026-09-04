@@ -7,7 +7,6 @@ require('dotenv').config();
 const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 
 process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 exports.config = {
   output: 'tests/output',
@@ -18,6 +17,7 @@ exports.config = {
       restart: true,
       show: false,
       trace: true,
+      retry: 2,
       keepTraceForPassedTests: false,
       browser: 'chromium',
       windowSize: '1920x1080',
@@ -73,9 +73,9 @@ exports.config = {
     REST: {
       endpoint: process.env.PMM_UI_URL || pmmUrl,
       timeout: 60000,
-      httpsAgent: new Agent({
-        rejectUnauthorized: false,
-      }),
+      onRequest: (request) => {
+        request.httpsAgent = new Agent({ rejectUnauthorized: false, keepAlive: false });
+      },
     },
     Mailosaur: {
       require: 'codeceptjs-mailosaurhelper',

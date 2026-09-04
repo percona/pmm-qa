@@ -1,0 +1,75 @@
+version: 2
+
+multi-ecosystem-groups:
+  all-dependencies:
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    labels:
+      - dependencies
+
+# Split per workspace only because `ignore` is scoped to an update entry and the
+# two groups below hold back different things. Both still share the same
+# multi-ecosystem-group, so this is still one PR a month.
+updates:
+  # e2e_tests already runs ESLint 10 flat config with typescript-eslint 8, so
+  # TypeScript is the only hold it needs.
+  - package-ecosystem: npm
+    directories:
+      - /e2e_tests
+    patterns:
+      - "*"
+    multi-ecosystem-group: all-dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    ignore:
+      # TypeScript 7 is the native Go compiler: it ships `tsc` and 20 platform
+      # binaries, with no `tsserver` and no JS compiler API. typescript-eslint
+      # pins `typescript >=4.8.4 <6.1.0` and ts-node loads the API too, so a
+      # bump to 7 fails `npm ci` on ERESOLVE. Lift when typescript-eslint
+      # supports TS 7.
+      - dependency-name: typescript
+        versions:
+          - ">=7.0.0"
+
+  - package-ecosystem: npm
+    directories:
+      - /cli
+      - /codeceptjs-e2e
+    patterns:
+      - "*"
+    multi-ecosystem-group: all-dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - ">=7.0.0"
+      # Both workspaces still lint through legacy `.eslintrc` and
+      # eslint-config-airbnb-typescript@18, which peers on eslint ^8.56.0 and
+      # @typescript-eslint ^7. ESLint 10 dropped eslintrc entirely. Lift both
+      # once they move to eslint.config.mjs and drop airbnb-typescript.
+      - dependency-name: eslint
+        versions:
+          - ">=9.0.0"
+      - dependency-name: "@typescript-eslint/*"
+        versions:
+          - ">=8.0.0"
+      # codeceptjs-e2e/tests/helper/mongoDB.js is written against driver v3:
+      # admin().addUser()/removeUser(), client.s.url and the
+      # useNewUrlParser/useUnifiedTopology options were all removed in v4.
+      # Lift once that helper is ported.
+      - dependency-name: mongodb
+        versions:
+          - ">=4.0.0"
+      # CodeceptJS 4 is a major the whole suite runs on. It needs its own PR
+      # with a full e2e run behind it, not a grouped bump.
+      - dependency-name: codeceptjs
+        versions:
+          - ">=4.0.0"

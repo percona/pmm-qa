@@ -1,0 +1,17 @@
+[libdefaults]
+    default_realm = PERCONATEST.COM
+    forwardable = true
+    dns_lookup_realm = false
+    dns_lookup_kdc = false
+    ignore_acceptor_hostname = true
+    rdns = false
+[realms]
+    PERCONATEST.COM = {
+        kdc_ports = 88
+        kdc = localhost
+        admin_server = localhost
+    }
+[domain_realm]
+    .perconatest.com = PERCONATEST.COM
+    perconatest.com = PERCONATEST.COM
+    kerberos = PERCONATEST.COM
