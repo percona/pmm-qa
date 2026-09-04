@@ -25,7 +25,6 @@
     "chai": "^6.2.2",
     "codeceptjs": "^4.1.0",
     "codeceptjs-chai": "^2.3.5",
-    "codeceptjs-dbhelper": "^1.2.2",
     "codeceptjs-mailosaurhelper": "^1.0.5",
     "codeceptjs-postgresqlhelper": "^1.0.1",
     "form-data": "^4.0.6",
