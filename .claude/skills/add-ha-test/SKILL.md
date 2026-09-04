@@ -33,9 +33,10 @@ topology, label reference and kubectl recipes.
 
 | Path | What |
 | --- | --- |
-| `e2e_tests/tests/ha/` | the tests; every one tagged `@pmm-ha` |
+| `e2e_tests/tests/ha/` | the tests; tagged `@pmm-ha`, except the upgrade test below |
 | `e2e_tests/helpers/k8s.helper.ts` | generic namespaced `kubectl` (`getPods`, `deletePod`, `execInPod`, `scaleStatefulSet`, `assertReachable`) |
-| `e2e_tests/helpers/haCluster.helper.ts` | HA-specific: `podNames`, `leaderFromPods`, `lastPromotionTime` |
+| `e2e_tests/helpers/haCluster.helper.ts` | HA-specific: `podNames`, `leaderFromPods`, `lastPromotionTime`, `versionFromPod` |
+| `e2e_tests/helpers/helm.helper.ts` | namespaced `helm`: release lookup by chart, `upgrade`, repo add |
 | `e2e_tests/api/ha.api.ts` | `/v1/ha/status`, `/v1/ha/nodes`, `pmm_ha_leader_status` helpers, failover-tolerant polls |
 | `e2e_tests/api/prometheus.api.ts` | PromQL via the Grafana datasource proxy |
 | `e2e_tests/pages/ha/highAvailability.page.ts` | sidebar HA badge and "Leader:" row |
@@ -183,6 +184,12 @@ npx playwright test --grep "@pmm-ha"
 `playwright.config.ts` supplies `baseURL`/`ADMIN_PASSWORD`; `KUBECONFIG` must
 point at the HA cluster. **Do not pass `--reporter=`** — a CLI reporter replaces
 the config list, including the `junit` reporter Jenkins consumes.
+
+`helmUpgrade.test.ts` is tagged **`@pmm-helm-upgrade`, not `@pmm-ha`** — it
+`helm upgrade`s the cluster it runs on, and `--grep "@pmm-ha"` would match a
+nested tag by substring. It needs `helm` on the runner and a cluster installed
+from the *released* chart; it fails fast, by design, on one already running the
+target image.
 
 Failover tests delete a leader pod on a shared cluster and leave leadership
 moved. That is fine and self-healing, but:

@@ -14,6 +14,8 @@ const pmmServerPort = 8_443;
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 /** The `pmm-ha` chart default. */
 const defaultReplicas = 3;
+// /v1/version needs credentials even from inside the pod.
+const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
 
 /**
  * PMM HA leadership asked of each pod directly, so tests can assert the UI and
@@ -141,6 +143,28 @@ export default class HaClusterHelper {
     }
 
     return names[0];
+  };
+
+  /**
+   * Asked of the pod itself rather than through HAProxy, which only ever answers
+   * from the leader - so this is what each replica actually serves.
+   */
+  versionFromPod = (podName: string): string => {
+    const response = this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -u 'admin:${adminPassword()}' https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.version}`,
+        { silent: true },
+      )
+      .stdout.trim();
+
+    try {
+      return (JSON.parse(response) as { version: string }).version;
+    } catch {
+      throw new Error(
+        `Pod "${podName}" did not answer ${apiEndpoints.server.version} with JSON: ${response || '(empty)'}`,
+      );
+    }
   };
 
   /**
