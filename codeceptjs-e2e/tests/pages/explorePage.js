@@ -27,6 +27,14 @@ class ExplorePage {
     I.fillField(this.elements.dataSourcePicker, dataSourceName);
     I.pressKey('Enter');
   }
+
+  // The query editor is mounted only after the picked datasource resolves, so
+  // neither the mode toggle nor the editor exists yet when selectDataSource returns.
+  openSqlEditor() {
+    I.waitForVisible(this.elements.sqlEditorButton, 30);
+    I.click(this.elements.sqlEditorButton);
+    I.waitForElement(this.elements.sqlBuilder, 30);
+  }
 }
 
 module.exports = new ExplorePage();
