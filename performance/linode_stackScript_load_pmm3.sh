@@ -1,36 +1,80 @@
 #!/usr/bin/env bash
+# Provision N Linode PMM client load-test VMs for one DB type via a Percona
+# StackScript. Each instance is tagged pmm-qa-perf-run:<PERF_RUN_ID> so its batch
+# can be found for inventory and teardown; credentials come from the environment.
+set -Eeuo pipefail
 
-PMM_SERVER_HOST=${1}
-PMM_SERVER_PASSWORD=${2}
-CLIENT_VERSION=${3}
-INSTANCES=${4}
-METRICS_MODE=${5}
-DBTYPE=${6}
-ENABLEALLMONGO=${7}
+usage() {
+  cat >&2 <<'EOF'
+Usage: linode_stackScript_load_pmm3.sh <pmm_server_host> <client_version> <instances> <metrics_mode> <dbtype>
+  dbtype: mysql | postgresql | mongodb
 
-if [[ $DBTYPE == mysql ]]; then 
-	for i in `seq 1 ${INSTANCES}`; do
-		linode-cli linodes create --type g6-standard-2 --image linode/ubuntu22.04 --label sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_test --stackscript_id 1611994 --stackscript_data '{"hostname": "'"li_client_mysql_${METRICS_MODE}_${i}"'", 
-		"pmmserver": "'"${PMM_SERVER_HOST}"'", "pmmpassword": "'"${PMM_SERVER_PASSWORD}"'", 
-		"clientversion": "'"${CLIENT_VERSION}"'", "metricsmode": "'"${METRICS_MODE}"'"}' --root_pass 00bf23c3eb595e98e44fe0872ddb50b7f --region us-east --authorized_keys "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDsvdKkZBUUfiaMbezq1DaVS/ifeAvMNBjhwcFs5kCGFpCB7wvWljvrAvOaqXHF0wo0uqvh/lK8y5yDvu8CeYyI9czpZ66T3+SkZ7wXf+h2qOtxabhPsKxmPaWRdbJQMsPLcorUKsLXh1URZyYXpzaoefmnknUO0fWDc4a/gIGYAnyYMfZoUFZ9T2cr4wCNi5Z7bzWH9nDEUeuHGoYaxHJhWJ4FDWdSqq6OjP5ck2U4Kf+hmBfMBxKSd0v8f6ABRjZ9wuuyz53lo1RMy3rZ+J2S/6fr2MNZPftQzOK6znZ6MERMyExZjuX6a2igoAUz/5Pms/Js2DAOYD98hssw+ijpRBybrXXW1NjWPqP94nvgSM+rm0uSDtNSQ3gONZOsIFwYoaZYZwu3DOnd1l/YkUnCD/hOZfXNJYhN9lfjZVIwMFHPlgiX6X0YoXxkgLMArRXEDiBwElbuJ5TAVSaaIO29S9H3KKHOTJKGHjzQLx8Ysa9b3En6FYpfKT6RzHvpmGL+o5Cb7Vma/peBO1V4qVkG4JZM8+TQ1jktjCqE7mSw9UQir8btzE7KdCl6rb86d6I4P3f1aPJyVXcYPrdv36yXYr/7YneBFsBcp0uWT+TlLUg/14JGdW0ZUNsU8auIlPNSMkHrvrrVweMeCqmdU67NgvlKKc5lFPljMRRkxMHzJQ== shruti@Shrutis-MacBook-Pro.local"
+Required environment:
+  LINODE_ROOT_PASS     root password for the provisioned VMs
+  PMM_PERF_SSH_PUBKEY  SSH public key to authorize on the provisioned VMs
+  PMM_SERVER_PASSWORD  PMM server admin password (from env; still reaches
+                       linode-cli via --stackscript_data, so visible in ps)
+
+Optional environment:
+  LINODE_REGION        default: us-east
+  LINODE_TYPE          default: g6-standard-2
+  PERF_RUN_ID          batch id, tagged pmm-qa-perf-run:<id> and put in the
+                       label so batches don't collide; default: UTC timestamp
+EOF
+  exit 2
+}
+
+[ "$#" -eq 5 ] || usage
+PMM_SERVER_HOST=$1
+CLIENT_VERSION=$2
+INSTANCES=$3
+METRICS_MODE=$4
+DBTYPE=$5
+
+: "${LINODE_ROOT_PASS:?set LINODE_ROOT_PASS (do not hardcode)}"
+: "${PMM_PERF_SSH_PUBKEY:?set PMM_PERF_SSH_PUBKEY (do not hardcode)}"
+: "${PMM_SERVER_PASSWORD:?set PMM_SERVER_PASSWORD}"
+LINODE_REGION=${LINODE_REGION:-us-east}
+LINODE_TYPE=${LINODE_TYPE:-g6-standard-2}
+PERF_RUN_ID=${PERF_RUN_ID:-$(date -u +%Y%m%d-%H%M%S)}
+
+[[ "$INSTANCES" =~ ^[1-9][0-9]*$ ]] || { echo "instances must be a positive integer, got: $INSTANCES" >&2; exit 2; }
+case "$DBTYPE" in
+  mysql)      STACKSCRIPT_ID=1611994; hostprefix=li_client_mysql ;;
+  postgresql) STACKSCRIPT_ID=1612038; hostprefix=li_client_pgsql ;;
+  mongodb)    STACKSCRIPT_ID=2046257; hostprefix=li_client_mongodb ;;
+  *) echo "unknown dbtype: $DBTYPE (expected mysql|postgresql|mongodb)" >&2; exit 2 ;;
+esac
+
+command -v linode-cli >/dev/null || { echo "linode-cli is required" >&2; exit 1; }
+command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
+
+for i in $(seq 1 "$INSTANCES"); do
+  hostname="${hostprefix}_${METRICS_MODE}_${i}"
+  label="sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_${PERF_RUN_ID}"
+  ssdata="$(jq -nc \
+    --arg hostname "$hostname" \
+    --arg pmmserver "$PMM_SERVER_HOST" \
+    --arg pmmpassword "$PMM_SERVER_PASSWORD" \
+    --arg clientversion "$CLIENT_VERSION" \
+    --arg metricsmode "$METRICS_MODE" \
+    '{hostname:$hostname, pmmserver:$pmmserver, pmmpassword:$pmmpassword, clientversion:$clientversion, metricsmode:$metricsmode}')"
+
+  linode-cli linodes create \
+    --type "$LINODE_TYPE" \
+    --image linode/ubuntu22.04 \
+    --label "$label" \
+    --stackscript_id "$STACKSCRIPT_ID" \
+    --stackscript_data "$ssdata" \
+    --root_pass "$LINODE_ROOT_PASS" \
+    --region "$LINODE_REGION" \
+    --tags pmm-qa-ephemeral \
+    --tags pmm-qa-perf \
+    --tags "pmm-qa-perf-run:${PERF_RUN_ID}" \
+    --authorized_keys "$PMM_PERF_SSH_PUBKEY"
   sleep 15
-	done
-fi
+done
 
-if [[ $DBTYPE == postgresql ]]; then
-	for i in `seq 1 ${INSTANCES}`; do
-		linode-cli linodes create --type g6-standard-2 --image linode/ubuntu22.04 --label sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_test --stackscript_id 1612038 --stackscript_data '{"hostname": "'"li_client_pgsql_${METRICS_MODE}_${i}"'", 
-		"pmmserver": "'"${PMM_SERVER_HOST}"'", "pmmpassword": "'"${PMM_SERVER_PASSWORD}"'", 
-        "clientversion": "'"${CLIENT_VERSION}"'", "metricsmode": "'"${METRICS_MODE}"'"}' --root_pass 00bf23c3eb595e98e44fe0872ddb50b7f --region us-east --authorized_keys "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDsvdKkZBUUfiaMbezq1DaVS/ifeAvMNBjhwcFs5kCGFpCB7wvWljvrAvOaqXHF0wo0uqvh/lK8y5yDvu8CeYyI9czpZ66T3+SkZ7wXf+h2qOtxabhPsKxmPaWRdbJQMsPLcorUKsLXh1URZyYXpzaoefmnknUO0fWDc4a/gIGYAnyYMfZoUFZ9T2cr4wCNi5Z7bzWH9nDEUeuHGoYaxHJhWJ4FDWdSqq6OjP5ck2U4Kf+hmBfMBxKSd0v8f6ABRjZ9wuuyz53lo1RMy3rZ+J2S/6fr2MNZPftQzOK6znZ6MERMyExZjuX6a2igoAUz/5Pms/Js2DAOYD98hssw+ijpRBybrXXW1NjWPqP94nvgSM+rm0uSDtNSQ3gONZOsIFwYoaZYZwu3DOnd1l/YkUnCD/hOZfXNJYhN9lfjZVIwMFHPlgiX6X0YoXxkgLMArRXEDiBwElbuJ5TAVSaaIO29S9H3KKHOTJKGHjzQLx8Ysa9b3En6FYpfKT6RzHvpmGL+o5Cb7Vma/peBO1V4qVkG4JZM8+TQ1jktjCqE7mSw9UQir8btzE7KdCl6rb86d6I4P3f1aPJyVXcYPrdv36yXYr/7YneBFsBcp0uWT+TlLUg/14JGdW0ZUNsU8auIlPNSMkHrvrrVweMeCqmdU67NgvlKKc5lFPljMRRkxMHzJQ== shruti@Shrutis-MacBook-Pro.local"		
-sleep 15
-	done
-fi
-
-if [[ $DBTYPE == mongodb ]]; then 
-	for i in `seq 1 ${INSTANCES}`; do
-		linode-cli linodes create --type g6-standard-2 --image linode/ubuntu22.04 --label sp_fb_${i}_${DBTYPE}_${METRICS_MODE}_test_1 --stackscript_id 2046257 --stackscript_data '{"hostname": "'"li_client_mongodb_${METRICS_MODE}_${i}"'", 
-		"pmmserver": "'"${PMM_SERVER_HOST}"'", "pmmpassword": "'"${PMM_SERVER_PASSWORD}"'",
-                "clientversion": "'"${CLIENT_VERSION}"'", "metricsmode": "'"${METRICS_MODE}"'"}' --root_pass 00bf23c3eb595e98e44fe0872ddb50b7f --region us-east --authorized_keys "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDsvdKkZBUUfiaMbezq1DaVS/ifeAvMNBjhwcFs5kCGFpCB7wvWljvrAvOaqXHF0wo0uqvh/lK8y5yDvu8CeYyI9czpZ66T3+SkZ7wXf+h2qOtxabhPsKxmPaWRdbJQMsPLcorUKsLXh1URZyYXpzaoefmnknUO0fWDc4a/gIGYAnyYMfZoUFZ9T2cr4wCNi5Z7bzWH9nDEUeuHGoYaxHJhWJ4FDWdSqq6OjP5ck2U4Kf+hmBfMBxKSd0v8f6ABRjZ9wuuyz53lo1RMy3rZ+J2S/6fr2MNZPftQzOK6znZ6MERMyExZjuX6a2igoAUz/5Pms/Js2DAOYD98hssw+ijpRBybrXXW1NjWPqP94nvgSM+rm0uSDtNSQ3gONZOsIFwYoaZYZwu3DOnd1l/YkUnCD/hOZfXNJYhN9lfjZVIwMFHPlgiX6X0YoXxkgLMArRXEDiBwElbuJ5TAVSaaIO29S9H3KKHOTJKGHjzQLx8Ysa9b3En6FYpfKT6RzHvpmGL+o5Cb7Vma/peBO1V4qVkG4JZM8+TQ1jktjCqE7mSw9UQir8btzE7KdCl6rb86d6I4P3f1aPJyVXcYPrdv36yXYr/7YneBFsBcp0uWT+TlLUg/14JGdW0ZUNsU8auIlPNSMkHrvrrVweMeCqmdU67NgvlKKc5lFPljMRRkxMHzJQ== shruti@Shrutis-MacBook-Pro.local" 
-		sleep 15
-	done
-fi
+echo "created ${INSTANCES} ${DBTYPE} client(s) as batch PERF_RUN_ID=${PERF_RUN_ID}"
+echo "inventory:  PERF_RUN_ID=${PERF_RUN_ID} ./prepare_ansible_client_inventory.sh"
+echo "teardown:   PMM_PERF_TAG=pmm-qa-perf-run:${PERF_RUN_ID} ./teardown_perf_linodes.sh"

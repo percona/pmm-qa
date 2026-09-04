@@ -1,19 +1,16 @@
 #!/bin/bash
+set -Eeuo pipefail
 
-# Check if exactly two arguments are passed
 if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 <version> <install_repo>"
-  echo "Example: $0 3.1.0 release"
+  echo "Usage: $0 <version> <install_repo>" >&2
+  echo "Example: $0 3.1.0 release" >&2
   exit 1
 fi
 
-# Set input arguments
-export ANSIBLE_HOST_KEY_CHECKING=False
+export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-True}"
 export version="$1"
 export install_repo="$2"
+INVENTORY="inventory_client_container2"
 
-# Optional: Print for debugging
-echo "Running upgrade with version=$version and install_repo=$install_repo"
-
-# Run Ansible playbook
-ansible-playbook -i inventory_client_container2 upgrade_client.yml
+echo "Running upgrade with version=$version repo=$install_repo (host_key_checking=$ANSIBLE_HOST_KEY_CHECKING)"
+ansible-playbook -i "$INVENTORY" upgrade_client.yml

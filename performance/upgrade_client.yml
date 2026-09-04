@@ -1,22 +1,42 @@
-#### export install_repo=testing                                     
-#### export ANSIBLE_HOST_KEY_CHECKING=False
+---
 - hosts: all
   become: true
   become_method: sudo
   remote_user: root
+
   vars:
-    repo: "{{ lookup('vars', 'extra_repo', default=lookup('env','install_repo') | default('testing', true) ) }}"
-    version: "{{ lookup('vars', 'extra_version', default=lookup('env','version') | default('3.7.0', true) ) }}"
+    repo: "{{ lookup('vars', 'extra_repo', default=lookup('env', 'install_repo') | default('testing', true)) }}"
+    version: "{{ lookup('vars', 'extra_version', default=lookup('env', 'version') | default('3.7.0', true)) }}"
 
   tasks:
-  - name: Copy Install Client Script
-    ansible.builtin.copy:
-      src: ./upgrade_all_v3.sh
-      dest: /tmp/upgrade_all_v3.sh
-      mode: '0655'
+    - name: Copy upgrade script
+      ansible.builtin.copy:
+        src: ./upgrade_all_v3.sh
+        dest: /tmp/upgrade_all_v3.sh
+        mode: '0755'
 
-  - name: run the script to setup needed repo and install pmm-client inside container
-    shell: bash /tmp/upgrade_all_v3.sh --repo {{ repo }} --version {{ version }} >> /tmp/update.log 2>&1
-    async: 3600
-    poll: 0
+    - name: Remove old log
+      ansible.builtin.file:
+        path: /tmp/update.log
+        state: absent
 
+    - name: Start PMM client upgrade (async)
+      ansible.builtin.shell: >
+        bash /tmp/upgrade_all_v3.sh --repo {{ repo | quote }} --version {{ version | quote }}
+        >> /tmp/update.log 2>&1
+      async: 7200
+      poll: 0
+      register: upgrade_result
+
+    - name: Wait for PMM client upgrade to finish
+      ansible.builtin.async_status:
+        jid: "{{ upgrade_result.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 240
+      delay: 30
+      failed_when: job_result.finished and (job_result.rc | default(0)) != 0
+
+    - name: Show final status
+      ansible.builtin.debug:
+        var: job_result
