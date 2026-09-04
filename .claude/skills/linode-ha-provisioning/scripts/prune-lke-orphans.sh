@@ -54,6 +54,7 @@ live_cluster_ids="$(printf '%s' "$clusters" | jq -r '.id' | sort -u)"
 # linode-cli). FAIL-SAFE: any unreadable cluster leaves xref_ok=0 -> volume sweep
 # skipped below.
 liveids=""; livepv=""; xref_ok=1
+kf=""; trap 'rm -f "${kf:-}"' EXIT   # a decoded kubeconfig holds cluster creds -- drop it even on interrupt
 if command -v kubectl >/dev/null 2>&1; then
   for cid in $live_cluster_ids; do
     [ -n "$cid" ] || continue
@@ -61,9 +62,9 @@ if command -v kubectl >/dev/null 2>&1; then
     if [ -z "$kc" ]; then echo "prune-lke-orphans: cluster $cid kubeconfig unreadable -> volume sweep skipped" >&2; xref_ok=0; break; fi
     kf="$(mktemp)"; printf '%s' "$kc" >"$kf"
     if ! pvjson="$(KUBECONFIG="$kf" kubectl get pv -o json 2>/dev/null)"; then
-      rm -f "$kf"; echo "prune-lke-orphans: cluster $cid PV list failed -> volume sweep skipped" >&2; xref_ok=0; break
+      rm -f "$kf"; kf=""; echo "prune-lke-orphans: cluster $cid PV list failed -> volume sweep skipped" >&2; xref_ok=0; break
     fi
-    rm -f "$kf"
+    rm -f "$kf"; kf=""
     liveids+="$(printf '%s' "$pvjson" | jq -r '.items[]?.spec.csi.volumeHandle // empty' | sed -n 's/^\([0-9]\{1,\}\).*/\1/p')"$'\n'
     livepv+="$(printf '%s' "$pvjson" | jq -r '.items[]?.metadata.name // empty')"$'\n'
   done
