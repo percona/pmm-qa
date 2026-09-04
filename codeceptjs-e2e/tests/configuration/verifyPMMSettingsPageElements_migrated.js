@@ -1,5 +1,3 @@
-// Kept after migration to e2e_tests/tests/configuration/settingsPageElements.test.ts: percona/grafana
-// CI runs @grafana-pr via package.json e2e:grafana-pr, which is CodeceptJS-only.
 const page = require('./pages/pmmSettingsPage');
 
 const dataRetentionTable = new DataTable(['value', 'message']);
