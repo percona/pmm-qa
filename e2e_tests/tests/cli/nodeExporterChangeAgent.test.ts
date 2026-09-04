@@ -115,40 +115,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  // eslint-disable-next-line playwright/no-commented-out-tests -- Temporary test
-  /*
-  pmmTgest(
+  pmmTest(
     'PMM-T9993 - Verify Change agent log level @node-exporter-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --log-level=debug`,
+        )
+        .assertSuccess();
       await grafanaHelper.authorize();
-      await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(pgExporterId);
+      await page.goto(agentsPage.nodesUrl(nodeId));
+      await agentsPage.showRowDetails(nodeExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(pgExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-
-      await expect(async () => {
-        const metrics = cliHelper.getMetrics({
-          agentPassword: pgExporterId,
-          dockerContainer: containerName,
-          serviceName: serviceName,
-        });
-
-        expect(metrics).toContain('redis_up');
-      }).toPass({
-        intervals: [Timeouts.TWO_SECONDS],
-        timeout: Timeouts.ONE_MINUTE,
-      });
     },
   );
 
+  // eslint-disable-next-line playwright/no-commented-out-tests -- Temporary test
+  /*
   pmsmTest(
     'PMM-T9993 - Verify Change agent debug, trace and json @node-exporter-integration',
     async ({ cliHelper }) => {
