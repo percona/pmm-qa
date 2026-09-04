@@ -100,12 +100,12 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
     I.fillField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
     I.fillField(pmmSettingsPage.fields.standartIntervalInput, standardInterval);
     I.fillField(pmmSettingsPage.fields.frequentIntervalInput, frequentInterval);
-    I.click(pmmSettingsPage.fields.advancedButton);
+    I.click(pmmSettingsPage.fields.advisorsButton);
     I.waitForValue(pmmSettingsPage.fields.rareIntervalInput, rareInterval, 5);
     I.waitForValue(pmmSettingsPage.fields.standartIntervalInput, standardInterval, 5);
     I.waitForValue(pmmSettingsPage.fields.frequentIntervalInput, frequentInterval, 5);
@@ -118,7 +118,7 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
     I.switchTo();
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
 
