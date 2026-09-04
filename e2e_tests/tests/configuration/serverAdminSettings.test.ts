@@ -13,11 +13,8 @@ pmmTest(
     await expect(serverAdminSettingsPage.elements.settingsTitle).toBeVisible({
       timeout: Timeouts.ONE_MINUTE,
     });
-
-    await pmmTest.step('Verify Grafana reports postgres as its database type', async () => {
-      await expect(serverAdminSettingsPage.elements.databaseType).toHaveText('postgres', {
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
+    await expect(serverAdminSettingsPage.elements.databaseType).toHaveText('postgres', {
+      timeout: Timeouts.THIRTY_SECONDS,
     });
   },
 );

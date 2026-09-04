@@ -8,7 +8,7 @@ export default class ServerAdminSettingsPage extends BasePage {
     databaseType: this.grafanaIframe().locator(
       '//tr[td[1]/span[normalize-space()="database"]]/following-sibling::tr[td[1][normalize-space()="type"]][1]/td[2]',
     ),
-    settingsTitle: this.grafanaIframe().locator('[class*="title-info-container"]'),
+    settingsTitle: this.grafanaIframe().getByRole('heading', { exact: true, name: 'Settings' }),
   };
   inputs = {};
   messages = {};
