@@ -3,10 +3,20 @@
 // the last 10 minutes, and MongoDB 7.0+ removed auto-splitting, so after the
 // initial shardCollection there is nothing left to keep the Chunks Split/Move
 // Events panels populated.
+//
+// One cycle per process, by design: the repeat loop is in the compose
+// entrypoint under `timeout`, so a chunk command the server blocks forever
+// costs one cycle instead of the run.
 
 const ns = process.env.CHURN_NAMESPACE || 'test.test';
-const intervalMs = Number(process.env.CHURN_INTERVAL_SECONDS || 120) * 1000;
 const maxChunks = Number(process.env.CHURN_MAX_CHUNKS || 64);
+// Soft bound so an abandoned command does not keep running server-side after
+// the entrypoint's `timeout` has already killed this process. maxTimeMS wants a
+// positive integer: 0 means "no limit" to the server, and a fraction or Infinity
+// is not a valid value at all, so anything else falls back.
+const commandTimeoutSeconds = Number(process.env.CHURN_COMMAND_TIMEOUT_SECONDS);
+const commandTimeoutValid = Number.isInteger(commandTimeoutSeconds) && commandTimeoutSeconds > 0;
+const commandTimeoutMs = (commandTimeoutValid ? commandTimeoutSeconds : 45) * 1000;
 const dbName = ns.slice(0, ns.indexOf('.'));
 const collName = ns.slice(ns.indexOf('.') + 1);
 const config = db.getSiblingDB('config');
@@ -25,7 +35,9 @@ function chunkFilter() {
 // throwing, so both shapes need reporting.
 function attempt(label, command) {
   try {
-    const res = admin.runCommand(command);
+    // maxTimeMS must trail the command fields: the server reads the first key
+    // of the document as the command name.
+    const res = admin.runCommand(Object.assign({}, command, { maxTimeMS: commandTimeoutMs }));
 
     if (res.ok !== 1) print(`${label} skipped: ${res.errmsg}`);
   } catch (e) {
@@ -48,43 +60,29 @@ function sampleOne(collection, filter) {
   return collection.aggregate(stages).toArray()[0];
 }
 
-print(`chunk churn on ${ns} every ${intervalMs / 1000}s`);
+const filter = chunkFilter();
 
-while (true) {
-  try {
-    const filter = chunkFilter();
+if (!filter) {
+  print(`${ns} is not sharded yet`);
+} else {
+  const doc = sampleOne(db.getSiblingDB(dbName).getCollection(collName));
 
-    if (!filter) {
-      print(`${ns} is not sharded yet`);
-    } else {
-      const doc = sampleOne(db.getSiblingDB(dbName).getCollection(collName));
+  if (doc) attempt('split', { split: ns, find: { _id: doc._id } });
 
-      if (doc) attempt('split', { split: ns, find: { _id: doc._id } });
+  const shards = config.shards
+    .find({}, { _id: 1 })
+    .toArray()
+    .map((shard) => shard._id);
+  const chunk = sampleOne(config.chunks, filter);
+  const target = shards.find((id) => chunk && id !== chunk.shard);
 
-      const shards = config.shards
-        .find({}, { _id: 1 })
-        .toArray()
-        .map((shard) => shard._id);
-      const chunk = sampleOne(config.chunks, filter);
-      const target = shards.find((id) => chunk && id !== chunk.shard);
-
-      if (chunk && target) {
-        // _waitForDelete keeps the range deleter in step with the churn: without it the
-        // next move of a range back to its previous owner fails while orphans from the
-        // last one are still being cleaned up.
-        attempt('moveChunk', {
-          moveChunk: ns,
-          bounds: [chunk.min, chunk.max],
-          to: target,
-          _waitForDelete: true,
-        });
-      }
-
-      mergeIfAboveCeiling(shards, filter);
-    }
-  } catch (e) {
-    print(`churn iteration failed: ${e.message}`);
+  if (chunk && target) {
+    attempt('moveChunk', {
+      moveChunk: ns,
+      bounds: [chunk.min, chunk.max],
+      to: target,
+    });
   }
 
-  sleep(intervalMs);
+  mergeIfAboveCeiling(shards, filter);
 }
