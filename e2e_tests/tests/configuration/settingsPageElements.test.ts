@@ -57,7 +57,6 @@ pmmTest(
 pmmTest(
   'PMM-T85 - Verify SSH Key Section Elements @settings @grafana-pr',
   async ({ api, page, settingsPage }) => {
-    // TODO: Remove the skip once CI provisions an AMI-distribution PMM Server.
     // eslint-disable-next-line playwright/no-skipped-test -- the SSH key section renders only on an AMI distribution; a runtime skip reports that honestly where the source's early return reported a pass.
     pmmTest.skip(
       (await api.serverApi.getDistributionMethod()) !== 'DISTRIBUTION_METHOD_AMI',
