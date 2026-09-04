@@ -273,7 +273,15 @@ jobs:
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
+          DEV_LATEST_VERSION: ${{ steps.resolve.outputs.DEV_LATEST_VERSION }}
         run: |
+          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
+            export CLIENT_REPOSITORY=experimental
+            export LATEST_VERSION=$DEV_LATEST_VERSION
+          else
+          export CLIENT_REPOSITORY=testing
+            export LATEST_VERSION=$PMM_SERVER_LATEST
+          fi
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
             echo "== upgrading client in $c =="
             log=$(mktemp)
@@ -284,11 +292,6 @@ jobs:
                 docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
                 docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
               else
-                if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
-                  export CLIENT_REPOSITORY=experimental
-                else
-                  export CLIENT_REPOSITORY=testing
-                fi
                 echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
@@ -305,10 +308,10 @@ jobs:
             fi
               UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '2p')
               CLIENT_UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '3p')
-              if [[ "$UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
-                echo "OK: version contains $PMM_SERVER_LATEST ($UPGRADE_VERSION)"
+              if [[ "$UPGRADE_VERSION" == *"$LATEST_VERSION"* ]]; then
+                echo "OK: version contains $LATEST_VERSION ($UPGRADE_VERSION)"
               else
-                echo "FAIL: expected $PMM_SERVER_LATEST, got $UPGRADE_VERSION"
+                echo "FAIL: expected $LATEST_VERSION, got $UPGRADE_VERSION"
               fi
               if [[ "$CLIENT_UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
                 echo "OK: version contains $PMM_SERVER_LATEST ($CLIENT_UPGRADE_VERSION)"
@@ -322,7 +325,14 @@ jobs:
       - name: Check client after upgrade
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
+          DEV_LATEST_VERSION: ${{ steps.resolve.outputs.DEV_LATEST_VERSION }}
+        run: |
+          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
+            export LATEST_VERSION=$DEV_LATEST_VERSION
+          else
+            export LATEST_VERSION=$PMM_SERVER_LATEST
+          fi
+          python3 pmm-qa/support_scripts/check_client_upgrade.py "$LATEST_VERSION"
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
