@@ -258,6 +258,25 @@ jobs:
             echo "codecept_failed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify the test harness actually ran
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          # A harness that never started produces no report, which Launchable then gates as a
+          # pass over zero tests. Fail on that here. Real test failures are deliberately left to
+          # `launchable gate`, so this does not override quarantine.
+          report=tests/output/result.xml
+          if [ ! -s "${report}" ]; then
+            echo "::error::CodeceptJS wrote no JUnit report (${report}); the test harness failed to start."
+            exit 1
+          fi
+          cases=$(grep -o '<testcase' "${report}" | wc -l)
+          echo "Recorded ${cases} test case(s) in ${report}"
+          if [ "${cases}" -eq 0 ]; then
+            echo "::error::${report} contains no test cases; the test harness ran nothing."
+            exit 1
+          fi
+
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
