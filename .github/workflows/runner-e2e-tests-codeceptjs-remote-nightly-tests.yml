@@ -293,8 +293,7 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           # A harness that never started produces no report, which Launchable then gates as a
-          # pass over zero tests. Fail on that here. Real test failures are deliberately left to
-          # `launchable gate`, so this does not override quarantine.
+          # pass over zero tests. Fail on that here.
           report=tests/output/result.xml
           if [ ! -s "${report}" ]; then
             echo "::error::CodeceptJS wrote no JUnit report (${report}); the test harness failed to start."
