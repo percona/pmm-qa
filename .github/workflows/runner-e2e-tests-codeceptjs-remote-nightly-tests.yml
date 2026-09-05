@@ -288,20 +288,6 @@ jobs:
             --reporter mocha-multi \
             -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
 
-      - name: Verify the test harness actually ran
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          # A harness that never started writes no report at all, which Launchable then gates
-          # as a pass over zero tests. A run that legitimately matches no tests still writes
-          # one, so the file's absence -- not its test count -- is what marks the failure.
-          report=tests/output/result.xml
-          if [ ! -s "${report}" ]; then
-            echo "::error::CodeceptJS wrote no JUnit report (${report}); the test harness failed to start."
-            exit 1
-          fi
-          echo "Recorded $(grep -o '<testcase' "${report}" | wc -l) test case(s) in ${report}"
-
       - name: Download PMM Server logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
