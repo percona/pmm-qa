@@ -285,3 +285,45 @@ jobs:
       metrics_mode: "auto"
       package: "pmm3-client"
       os: "ol-9"
+
+  notify_investigator:
+    name: Fire Investigator routine
+    # Inlined rather than a standalone `workflow_run` watcher, which left a
+    # skipped "Notify Investigator" entry in the Actions list after every green
+    # run. `!cancelled()` + `needs.*.result` is the job-graph equivalent of that
+    # watcher's run-level conclusion: it still catches a job that fails late
+    # (e.g. a Launchable collection error after the tests themselves passed),
+    # which a step-level `if: failure()` inside that job would miss.
+    # Keep `needs` in sync with the jobs above -- one missing from it is a
+    # failure Investigator never hears about.
+    needs:
+      - mongo_bm_ol8
+      - mongo_bm_ol9
+      - mongo_exporter_ol8
+      - mongo_exporter_ol9
+      - psmdb_replica_ol8
+      - psmdb_replica_ol9
+      - psmdb_rta_ol8
+      - psmdb_rta_ol9
+      - psmdb_6_replica-tests_ol8
+      - psmdb_7_replica-tests_ol8
+      - psmdb_8_replica-tests_ol8
+      - psmdb_6_replica-tests_ol9
+      - psmdb_7_replica-tests_ol9
+      - psmdb_8_replica-tests_ol9
+      - mongo_package_tests_integration_ol8
+      - mongo_package_tests_integration_ol9
+    # Only this workflow's own unattended cron run on the default branch --
+    # not a PR run, a human's manual dispatch, or a call from another suite.
+    if: >
+      !cancelled() && github.event_name == 'schedule' &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}

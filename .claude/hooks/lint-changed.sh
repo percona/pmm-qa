@@ -124,6 +124,37 @@ if [ ${#groovy_files[@]} -gt 0 ]; then
   npm-groovy-lint --failon error --files "$(printf '%s,' "${groovy_files[@]}" | sed 's/,$//')" || fail "npm-groovy-lint"
 fi
 
+# The `notify_investigator` job at the end of the watched suites only ever sees
+# a failure in a job it `needs` (see docs/agents/AUTOMATIONS.md). Adding a job
+# to such a workflow and forgetting that list is silent -- the suite goes red
+# and Investigator is never told -- so the list is checked here instead.
+if [ ${#workflow_files[@]} -gt 0 ]; then
+  for f in "${workflow_files[@]}"; do
+    grep -q '^  notify_investigator:' "$f" || continue
+    echo "==> notify_investigator needs ($f)"
+    mapfile -t uncovered < <(awk '
+      /^jobs:/ { in_jobs = 1; next }
+      !in_jobs { next }
+      /^  [A-Za-z0-9_-]+:/ {
+        cur = $1
+        sub(/:$/, "", cur)
+        jobs[++n] = cur
+        next
+      }
+      cur == "notify_investigator" { block = block "\n" $0 }
+      END {
+        for (i = 1; i <= n; i++) {
+          if (jobs[i] == "notify_investigator") continue
+          if (block !~ "(^|[^A-Za-z0-9_-])" jobs[i] "([^A-Za-z0-9_-]|$)") print jobs[i]
+        }
+      }
+    ' "$f")
+    for job in "${uncovered[@]}"; do
+      [ -n "$job" ] && fail "$f: job '$job' missing from notify_investigator.needs -- its failures would never reach Investigator"
+    done
+  done
+fi
+
 # A skip parked with `skip-until: YYYY-MM-DD` becomes a lint failure on that
 # date, so a temporary skip cannot quietly become permanent. CI passes every
 # tracked file, so once a date is reached every PR fails here until the skip is
