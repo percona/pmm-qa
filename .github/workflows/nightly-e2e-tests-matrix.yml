@@ -154,12 +154,11 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
 
-  # Migrated CodeceptJS scenarios keep their original tag bucket here (per
-  # .claude/skills/codeceptjs-migration/branch-workflow.md "Workflow coverage")
-  # so this workflow's coverage stays equivalent instead of silently dropping
-  # once the CodeceptJS source retires. Add a migrated tag to tags_for_tests
-  # below as each one lands; the test itself must keep the matching tag
-  # alongside its own file's execution tag.
+  # Migrated CodeceptJS scenarios keep their original tag bucket so coverage
+  # stays equivalent once the CodeceptJS source retires. `--grep` is a regex:
+  # add a migrated tag to the alternation, not as a matrix entry (a runner per
+  # tag, plus `expected_test_jobs` above). Not `@nightly` -- here it also marks
+  # tests owned by other jobs whose services these shards never provision.
   test_execution_playwright:
     # Name must start with "test execution / " -- the setup shards' own wait
     # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
@@ -170,7 +169,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tags_for_tests: '@menu'
+          - tags_for_tests: '@annotations|@menu'
     uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}

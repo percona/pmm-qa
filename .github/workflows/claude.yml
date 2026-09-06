@@ -45,5 +45,13 @@ jobs:
             actions: read
           # No `prompt`: an empty one is what keeps this workflow answering
           # @claude mentions instead of running unprompted.
+          #
+          # A mention run otherwise gets read-only file tools, the CI tools and its one
+          # sticky comment: nothing that answers inside a review thread or reads a PR in
+          # another repo. A second `--allowedTools` adds to that set instead of replacing
+          # it. A thread reply (`gh api .../comments/{id}/replies`) and a resolve (`gh api
+          # graphql`, `resolveReviewThread`) run on the action's app token, which is scoped
+          # to this repo -- a linked PR elsewhere is only reachable through `WebFetch`.
           claude_args: |
             --model claude-opus-5
+            --allowedTools "WebFetch,Bash(gh api:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"

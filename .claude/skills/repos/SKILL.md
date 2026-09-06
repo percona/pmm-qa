@@ -99,6 +99,16 @@ only for repos **attached at session/Routine creation** — verify with a small 
 - On an access/authorization error, relay the exact message to the user; don't
   silently guess.
 
+### An unattached `percona/*` repo is the same case
+
+Same org is not the same as attached. In a session scoped to `pmm-qa` alone, both the
+MCP tools and `gh` answer `percona/pmm` and `percona/grafana` with "not configured for
+this session / Allowed repositories: percona/pmm-qa"; `add_repo` returns
+`read_available` (anonymous git is already possible, nothing gets attached) and refuses
+`access: "push"` as a cross-tier add. Both repos are public, so read what you need over
+anonymous git rather than reporting the ticket unreadable — the `git-diff` skill carries
+the PR-ref recipe.
+
 ## Cloud environment
 
 This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-docker-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
