@@ -57,7 +57,7 @@ one round trip each and is not a bulk transfer channel.
 
 ### Anything longer than ~10 minutes runs detached
 
-`run.sh` gives up at the client's 620s curl timeout ("failed to reach exec-server"), but the remote process keeps going. A second run then shares the PMM Server with that orphan and the two suites' setup hooks destroy each other's fixtures — a worthless result from both. So launch a long test suite or playbook detached and poll it:
+The cap is the **exec-server's own 600s command timeout** — `run.sh:61` sends only `{"cmd": …}`, never a `timeout`, so the server falls back to its default (`cloud-init.yaml.tftpl:115`, `timeout = body.get("timeout", 600)`, fed to `subprocess.run`). It kills its direct `bash -c` child at 600s while any grandchild survives holding the captured stdout pipe, and `run.sh`'s own `curl -m 620` then aborts with "failed to reach exec-server" — the symptom you see, twenty seconds after the cause. A longer client timeout therefore buys nothing, and the remote process keeps going regardless. A second run then shares the PMM Server with that orphan and the two suites' setup hooks destroy each other's fixtures — a worthless result from both. So launch a long test suite or playbook detached and poll it:
 
 ```bash
 terraform/linode-runner/run.sh <run_id> -- "cd <dir> && nohup <command> >/root/<name>.log 2>&1 & echo \$!"
@@ -65,7 +65,7 @@ terraform/linode-runner/run.sh <run_id> -- "cd <dir> && nohup <command> >/root/<
 
 Before starting a new run, check for and kill any orphan a timed-out attempt left behind. Kill by the PID you printed, or with a self-excluding pattern (`pkill -f 'codecept[j]s'`): a plain `pkill -f codeceptjs` also matches the exec-server's own `bash -c "… codeceptjs …"` wrapper carrying the pkill, so it kills the calling remote shell (exit 241) and leaves the orphan running.
 
-Judge a detached run's progress from side effects — screenshot/artifact mtimes, containers, DB rows — or wait for it to exit and read the log once. Its stdout is a file rather than a TTY, so it flushes in blocks: a tail can sit many minutes behind and read as hung.
+Judge a detached run's progress from side effects — screenshot/artifact mtimes, containers, DB rows. Its stdout is a file rather than a TTY, so it flushes in blocks: a tail can sit many minutes behind and read as hung. Read the log itself **on the box** (`grep`, `tail -n`, a summary command), never by returning the whole file: a long suite's log is far past the payload cap above, so fetching it whole aborts the call with `Argument list too long` and returns nothing at all. Use the chunked base64 fetch only for the specific part you need.
 
 ## Pick a run_id
 
