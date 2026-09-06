@@ -219,14 +219,6 @@ jobs:
 
   notify_investigator:
     name: Fire Investigator routine
-    # Inlined rather than a standalone `workflow_run` watcher, which left a
-    # skipped "Notify Investigator" entry in the Actions list after every green
-    # run. `!cancelled()` + `needs.*.result` is the job-graph equivalent of that
-    # watcher's run-level conclusion: it still catches a job that fails late
-    # (e.g. a Launchable collection error after the tests themselves passed),
-    # which a step-level `if: failure()` inside that job would miss.
-    # Keep `needs` in sync with the jobs above -- one missing from it is a
-    # failure Investigator never hears about.
     needs:
       - settings_and_cli
       - ssl_mysql
@@ -240,8 +232,6 @@ jobs:
       - access-control
       - settings_playwright
       - fb_tests
-    # Only this workflow's own unattended cron run on the default branch --
-    # not a PR run, a human's manual dispatch, or a call from another suite.
     if: >
       !cancelled() && github.event_name == 'schedule' &&
       contains(needs.*.result, 'failure')

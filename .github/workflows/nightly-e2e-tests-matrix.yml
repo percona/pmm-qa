@@ -75,7 +75,6 @@ on:
         required: false
       GH_TOKEN:
         required: false
-      # Unused when called; only a top-level run fires Investigator.
       INVESTIGATOR_ROUTINE_TOKEN:
         required: false
 
@@ -191,22 +190,10 @@ jobs:
 
   notify_investigator:
     name: Fire Investigator routine
-    # Inlined rather than a standalone `workflow_run` watcher, which left a
-    # skipped "Notify Investigator" entry in the Actions list after every green
-    # run. `!cancelled()` + `needs.*.result` is the job-graph equivalent of that
-    # watcher's run-level conclusion: it still catches a job that fails late
-    # (e.g. a Launchable collection error after the tests themselves passed),
-    # which a step-level `if: failure()` inside that job would miss.
-    # Keep `needs` in sync with the jobs above -- one missing from it is a
-    # failure Investigator never hears about.
     needs:
       - setup
       - test_execution
       - test_execution_playwright
-    # This workflow has no cron of its own -- Jenkins dispatches it daily -- so
-    # any failed run on the default branch notifies. The `github.workflow` check
-    # keeps it to a top-level run: called as a reusable workflow, that context
-    # holds the caller's name instead.
     if: >
       !cancelled() &&
       github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&

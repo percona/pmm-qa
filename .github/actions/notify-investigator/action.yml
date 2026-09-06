@@ -1,18 +1,11 @@
 ---
 name: 'Notify Investigator'
-description: >
-  Fire the Investigator Claude Code routine for the current workflow run.
-  Meant as the last job of a pipeline, gated on that job's `if:` -- see
-  docs/agents/AUTOMATIONS.md.
+description: 'Fire the Investigator Claude Code routine for the current workflow run.'
 
 inputs:
   routine-token:
     description: 'INVESTIGATOR_ROUTINE_TOKEN repo secret'
     required: true
-  reason:
-    description: 'What failed, prepended to the run URL in the routine payload'
-    required: false
-    default: ''
 
 runs:
   using: composite
@@ -23,7 +16,6 @@ runs:
         # Update this if Investigator's routine is ever recreated.
         ROUTINE_ID: trig_01FhHBdz2yBibyVEfnG5gbQz
         ROUTINE_TOKEN: ${{ inputs.routine-token }}
-        REASON: ${{ inputs.reason }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         set -euo pipefail
@@ -31,10 +23,9 @@ runs:
           echo "::error::INVESTIGATOR_ROUTINE_TOKEN is not set -- Investigator was not notified of this failure." >&2
           exit 1
         fi
-        reason="${REASON:-Workflow '${GITHUB_WORKFLOW}' failed.}"
         curl -fsS -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
           -H "Authorization: Bearer ${ROUTINE_TOKEN}" \
           -H "anthropic-version: 2023-06-01" \
           -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
           -H "Content-Type: application/json" \
-          -d "$(jq -n --arg text "${reason} Run: ${RUN_URL}" '{text: $text}')"
+          -d "$(jq -n --arg text "Workflow '${GITHUB_WORKFLOW}' failed. Run: ${RUN_URL}" '{text: $text}')"
