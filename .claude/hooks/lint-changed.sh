@@ -125,9 +125,7 @@ if [ ${#groovy_files[@]} -gt 0 ]; then
 fi
 
 # The `notify_investigator` job at the end of the watched suites only ever sees
-# a failure in a job it `needs` (see docs/agents/AUTOMATIONS.md). Adding a job
-# to such a workflow and forgetting that list is silent -- the suite goes red
-# and Investigator is never told -- so the list is checked here instead.
+# a failure in a job it `needs` (see docs/agents/AUTOMATIONS.md).
 if [ ${#workflow_files[@]} -gt 0 ]; then
   for f in "${workflow_files[@]}"; do
     grep -q '^  notify_investigator:' "$f" || continue
