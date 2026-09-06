@@ -26,6 +26,12 @@ Always address the box by hostname, never its bare IP:
 
 Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
+### Calling `run.sh`
+
+- **Absolute path, always** — `/workspace/pmm-qa/terraform/linode-runner/run.sh`. The examples below are repo-relative for readability, but any compound command that writes a script somewhere else first leaves the working directory outside the repo, and the call dies with `No such file or directory`.
+- **The exec channel provides no `HOME`** (`run.sh <run_id> -- "echo HOME=$HOME"` prints empty). Start every script that runs on the box with `export HOME=/root`, including inside a detached one — the export does not carry over from the `run.sh` invocation. Without it `minikube start` wrote its kubeconfig and certs under the CWD, and every later `kubectl`/`helm` call failed on a missing `ca.crt`.
+- **Poll a sentinel, never `pgrep -f`.** End a detached script with a sentinel line (`echo DONE_MARKER=$?` appended to its log) and poll the log for it. `pgrep -f <script>` reports RUNNING forever — the pattern matches the exec-server's own wrapper carrying the poll — which burned two full 10-minute waits on a job that had already exited 0.
+
 **`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
 to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_STRLEN`
 (128 KiB), so a big remote *output* — not a long command — aborts the call with
@@ -58,6 +64,8 @@ one round trip each and is not a bulk transfer channel.
 ## Pick a run_id
 
 Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
+
+Those forms repeat across investigations of the same PR, so provisioning can come back `502` with `run_id '<id>' already has a state file`. That is an earlier run's state, possibly still tracking a live VM: pick a distinct suffix (`heal-<pr>-<test>`) and report the orphaned state in your run summary — never destroy it to free the name.
 
 ## 1. Provision the VM (via the relay)
 
@@ -182,6 +190,14 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
+**`GF_SECURITY_ADMIN_PASSWORD` does not set the password on a PMM image** — Grafana applies it only when it *creates* the admin user, and the image ships that user pre-created (its `user` row is dated the image build, `updated` equal to `created`), so a fresh `/srv` volume doesn't help either. Keep the env var, but set the password for real once readyz has passed:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "docker exec pmm-server change-admin-password '$ADMIN_PASSWORD'"
+```
+
+(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes.
+
 Once ready, fetch PMM's own TLS cert over the already cert-pinned exec channel and save it locally — this lets step 4's browser scripts pin PMM's cert too instead of trusting any cert on the connection:
 
 ```bash
@@ -195,12 +211,18 @@ terraform/linode-runner/run.sh <run_id> -- "echo | openssl s_client -connect 127
 ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)"
 
 terraform/linode-runner/run.sh <run_id> -- "
+  export HOME=/root
   cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
-  ADMIN_PASSWORD='$ADMIN_PASSWORD' CLIENT_VERSION='$CLIENT_VERSION' \
-  ./pmm-framework --pmm-server-password \"\$ADMIN_PASSWORD\" \
-    --client-version \"\$CLIENT_VERSION\" \
+  ./pmm-framework --pmm-server-password '$ADMIN_PASSWORD' \
+    --client-version '$CLIENT_VERSION' \
     --database <FROM_TEST_PLAN> --verbose
 "
+```
+
+The values are interpolated **here**, not dereferenced on the box: `VAR=x cmd --flag "$VAR"` is one simple command, so the argument expands before the assignment takes effect and the flag arrives empty. That form silently ran the framework as `--pmm-server-password  --client-version latest-tarball` and the whole setup had to be repeated. Confirm the arguments carry what you meant right after launching:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "pgrep -af pmm-framework"
 ```
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
@@ -218,6 +240,8 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
+**From a session behind the egress proxy, that pin cannot match — use `PMM_UI_INSECURE=1` on this path too.** Measured on a provisioned single-server Docker run: `pmm-ui-login.js` with the step 2 cert failed at `net::ERR_CERT_AUTHORITY_INVALID`, and `openssl s_client` against the run's host on 443 returned `subject=CN = *.nip.io`, `issuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)` — the gateway's certificate, not PMM's. `PMM_UI_INSECURE=1` succeeded immediately. It is not an HA/LKE-only fallback. The real trust boundary from a proxied session is the proxy plus the cert-pinned exec channel; the `PMM_CERT_PATH` pin is meaningful only on a direct, unproxied path.
+
 Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
 environment needs the proxy set explicitly. The symptom: every request fails with
 `503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
@@ -227,6 +251,8 @@ suite go through it explicitly: extend `playwright.config.ts` in a scratch confi
 `use.proxy.server` set to this session's `$HTTPS_PROXY`, run
 `npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
 have direct egress and the override would break them.
+
+That session-side recipe only covers suites that drive the UI over HTTP. **Anything touching Docker, `pmm-admin`, or the local filesystem must run on the VM, the way the workflow runs it** — install Node and the suite on the box and run the same `npx playwright test --grep`; `e2e_tests` needs only `PMM_UI_URL` and `ADMIN_PASSWORD`. Tests calling `docker exec <container> pmm-admin annotate` cannot work from this session at all (Docker runs only on the VM), and a session-side run of them reached the login redirect and never the dashboard. An ad-hoc spec must also sit under the config's `testDir` (`./tests`), or Playwright reports "No tests found".
 
 ## 5. FB / nightly workflow reproduction (Investigator)
 

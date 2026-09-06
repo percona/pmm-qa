@@ -148,6 +148,11 @@ J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
 J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != Done ORDER BY updated DESC' \
       '{jql:$q, maxResults:20, fields:"summary,status,issuetype,updated"}')"
 
+# search does NOT paginate: startAt and the returned nextPageToken are both ignored,
+# so six calls for a 219-issue result silently returned the same first 100 each time.
+# Page with a JQL cursor instead -- ORDER BY created ASC, then on each following call
+# add created >= "<created of the last issue seen, to the minute>" -- and dedup by key.
+
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"
 
@@ -169,3 +174,9 @@ Available actions: `create`, `read`, `search`, `comment`, `field`, `transitions`
 dedup goes through the relay instead of the Atlassian MCP), minus delete (the
 relay refuses that by construction). The **mandatory Developers-only visibility rule** is enforced by
 the relay itself, so it holds even if a caller forgets it.
+
+**Dashboards, gadgets and saved filters are out of reach on every path** — neither the
+relay actions above nor the Atlassian MCP (issue, comment, link, Confluence, Compass
+only) exposes one. For a "chart of tickets over time" ask, the deliverable is per-month
+JQL counts via `search` rendered as an artifact, plus the manual steps for the human:
+saved filter → dashboard → "Recently Created Chart" gadget, period Monthly.

@@ -20,6 +20,8 @@ gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
 - **Latest FB build only** — older comments/checks are invalid
 - Ignore JNKPercona "API tests have succeded/failed" comments
 
+Read the run's **`run_attempt`** too. Above 1, compare the jobs *across* attempts (`actions_list` → `list_workflow_jobs`, then `actions_get` → `get_workflow_job` for step-level conclusions): one run had attempt 1 dying at `Run Setup for E2E Tests` with the test step skipped and attempt 2 failing inside the test — the same job name covering two different failures. The attempt count also tells you how many re-runs have already been spent before you arrived.
+
 ## JNKPercona build comment (latest only)
 
 ```bash
@@ -42,6 +44,49 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 | `CLI tests *` | `fb-integration-suite.yml` | `runner-integration-cli-tests.yml` |
 
 Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from the failed job inputs.
+
+### Then read the failed job's artifact — before provisioning anything
+
+`artifacts_for_@<tag>` carries the CodeceptJS failure screenshot, a Playwright trace per
+`retry()` attempt, and the whole PMM Server log set. Take the artifact id from the job's
+upload-artifact step (or `actions_list` → `list_workflow_run_artifacts`), get a link with
+`actions_get` → `download_workflow_run_artifact`, and read `logs/pmm-managed.log`,
+`logs/client/pmm-agent/*` and `tests/output/*.png`. Two greps of `pmm-managed.log`
+(`CheckConnectionRequest`, `ServiceInfo response` around the failing add) once settled
+"product bug vs QA setup" with no VM at all.
+
+**Never retype a signed download URL.** Pasted unquoted into a command, its `&` splits the
+line and the request goes out without the `sig=` value; the download is then a 408-byte
+`<Code>AuthenticationFailed</Code> … Signature fields not well formed` that `unzip` reports
+as "not a zipfile" — that pair means a truncated signature, not an expired link. Write it
+verbatim and let curl read it:
+
+```bash
+cat >url.txt <<'EOF'
+<paste the returned URL exactly>
+EOF
+curl -sS -o out.zip -K <(printf 'url = "%s"\n' "$(cat url.txt)")
+```
+
+### Reading history in bulk
+
+Never `gh api --paginate` against `Percona-Lab/pmm-submodules`: the Link headers point at
+`repositories/{id}/…` URLs the proxy refuses with 403. Page with explicit `page=N`, and
+window the request by `created=YYYY-MM-DD..YYYY-MM-DD` so no single listing hits the
+REST 1000-result cap — windowing recovered all 1816 runs where a flat loop stopped at
+1000. Per-run `actions/runs/<id>/jobs?filter=latest` calls take ~4 s each, so run them
+through `xargs -P 10`. `gh api --jq` takes no `--arg`, so add fields like the run id in a
+second `jq` pass.
+
+Redirecting a job-log fetch to a file gives **0 bytes** unless escape sequences are
+allowed — the only hint is a stderr note about terminal escapes:
+
+```bash
+gh api --allow-escape-sequences "repos/Percona-Lab/pmm-submodules/actions/jobs/<id>/logs" \
+  | sed 's/\x1b\[[0-9;]*m//g' > log.txt
+```
+
+Then grep it for `✘`, `.failed.png` and `FAILED` to name the failing test.
 
 ## Flaky triage
 

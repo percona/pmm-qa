@@ -57,6 +57,15 @@ Tool map (what replaces each old `gh` recipe):
 | Failed-job logs | `get_job_logs` (`failed_only: true`) | `gh run view <id> --log-failed -R {owner}/{repo}` |
 | Re-run failed jobs | `actions_run_trigger` (`rerun_failed_jobs`) | `gh run rerun <id> --failed -R {owner}/{repo}` |
 | Issues | `issue_read`, `list_issues`, `search_issues` | `gh api …/issues/<n>` |
+| Open a PR | `create_pull_request` | — (`gh pr create` is GraphQL-backed and 403s) |
+
+Listing calls are for **enumerating**. A job or run you already have the id of is read
+with `actions_get` (`get_workflow_job` / `get_workflow_run`): polling one FB helm job
+through `list_workflow_jobs` returned every job's full step list and overflowed the cap
+even at `perPage: 5`, where `get_workflow_job` answered the same question in one small
+response. When you do list runs, the workflow filter is `resource_id` (a workflow id or
+file name, e.g. `e2e-tests-matrix.yml`) — a `workflow_id` argument is not in the schema
+and is silently ignored, returning the unfiltered repo-wide list at ~53 KB a page.
 
 ### Big listings overflow the result cap — that is expected
 
@@ -73,14 +82,42 @@ shape for all three is what produces `TypeError: string indices must be integers
 | `actions_list` → `list_workflow_jobs` | `{"jobs": {"total_count": N, "jobs": [...]}}` |
 | `actions_list` → `list_workflow_runs` | `{"total_count": N, "workflow_runs": [...]}` |
 | `list_pull_requests` | bare top-level list |
+| `pull_request_read` → `get_files` | bare top-level list |
 
 If a payload doesn't match, check before parsing rather than guessing:
-`jq 'if type == "array" then "array" else keys end' <file>`.
+`jq 'if type == "array" then "array" else keys end' <file>`. Per-item keys are not
+uniformly present either — an 11-file PR spilled entries where `f['deletions']` raised
+`KeyError` after the first entries parsed fine, so read fields with `.get(...)`, never
+bare subscripting.
 
 Two whole classes of `gh` command **403 even where `gh` exists** (never use them):
 **global search** (`gh search`, `gh api search/issues`) and **GraphQL-backed**
-(`gh pr diff/view/list --json`, `gh pr checks`, `gh search prs`). The MCP tools above
-cover all of these.
+(`gh pr diff/view/list --json`, `gh pr checks`, `gh search prs`, `gh pr create`). The
+MCP tools above cover all of these. The `search/*` REST paths are refused outright —
+`gh api search/issues?q=…` and `search/commits` return `403 sessions are bound to their
+configured repositories` — so PR, issue and commit searches go through the MCP
+`search_*` tools scoped with `owner`/`repo`, and file history through
+`repos/<owner>/<repo>/commits?path=`.
+
+## Jenkins access (Percona Jenkins MCP)
+
+PMM builds live on the **`pmm`** master (`pmm.cd.percona.com`). Every per-master
+`mcp__Percona-Jenkins-MCP__*` call must pass `master: "pmm"` explicitly: the argument is
+documented as optional ("omit for the default") but no default is configured, so it
+fails with `No Jenkins master selected. Configured: ['ps80','psmdb','pxc','cloud','pmm',
+'pxb','ps57','rel','pg']`. Batching the calls doesn't help — the whole batch fails.
+
+- `get_build_failure_summary` is the first call for a FAILED build; `get_build_console_tail`
+  takes **`lines`**, not `limit`.
+- **History is short.** `get_build` 404s for anything older than roughly the last ~30
+  builds of a busy job (about a day for `pmm3-aws-staging-start`), and `get_build_history`
+  returns at most 100 builds whatever `count` you pass (the REST tree is `builds{0,100}`).
+  A trend question must fit that window; older data comes from the job's own artifacts or
+  Slack `#pmm-notifications`, not from Jenkins.
+- Read a **matrix runner child** rather than its `-matrix` parent — the parent's children
+  consume the same 100-build window in days.
+- A build is the **scheduled cron run** when its timestamp falls within about two seconds
+  of the job's cron minute; manual and RC re-runs sit anywhere else in the minute.
 
 ## Cross-org access (`Percona-Lab/*`)
 
