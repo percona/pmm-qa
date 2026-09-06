@@ -49,7 +49,7 @@ export default class HaApi {
 
   /** Sorted to compare with {@link getNodeNames}. */
   getNodesFromMetrics = async (): Promise<string[]> => {
-    const samples = await this.prometheusApi.instantQuery(HaApi.leaderStatusMetric);
+    const samples = await this.prometheusApi.instantQuery(`last_over_time(${HaApi.leaderStatusMetric}[1m])`);
 
     return samples
       .map((sample) => sample.metric.node_id)

@@ -50,6 +50,24 @@ connector equivalent, currently not to be used):
 | Found by Automation | `customfield_10059` | Multi-checkbox; set `[{"value":"Yes"}]`. The relay sets this to Yes automatically on Bugs it `create`s |
 | Development panel | — | Linked GitHub PRs |
 
+The full field map for **writing** a ticket (priority, components, affects
+version, Regression Issue, Needs QA/Doc) is in
+`references/ticket-templates.md`.
+
+## Write — creating an issue
+
+**Read `references/ticket-templates.md` before every `create`** and follow the
+issue type's template. A ticket whose description doesn't carry the team's
+headings, or that arrives with no components and no priority, fails the
+Definition of Ready at refinement no matter how sound the investigation behind
+it was. That file has the templates in wiki markup, the verified field IDs, a
+worked `create` call and a pre-flight checklist.
+
+Two things to get right that are easy to miss: the relay talks Jira REST **v2**,
+so descriptions are **wiki markup** (`h2.`, `*bold*`, `{{mono}}`, `{code}`) and
+Markdown renders literally; and a template section with nothing to say gets an
+explicit `None known.` rather than being dropped.
+
 ## Write — comments (mandatory visibility)
 
 **Never post QA results as public comments.** Always restrict to **Developers** role.
@@ -111,8 +129,12 @@ J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
 # create — a new PMM issue (project is forced to PMM). issuetype + summary
 # required; description optional. On a Bug the relay auto-sets Found by
 # Automation (customfield_10059) = Yes unless you pass it yourself.
-J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "Repro + evidence...\nSuspected PR: <url>" \
-      '{issuetype:"Bug", summary:$s, description:$d}')"
+# Description + fields: follow references/ticket-templates.md.
+DESC="${DESC:?build the description from the issue type's template in references/ticket-templates.md}"
+J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "$DESC" \
+      '{issuetype:"Bug", summary:$s, description:$d,
+        fields:{priority:{name:"Medium"}, components:[{name:"Backend"}],
+                customfield_10064:{value:"Yes"}, customfield_10066:{value:"No"}}}')"
 # override / add fields (e.g. NOT automation-found):
 J create "$(jq -n --arg s "..." '{issuetype:"Bug", summary:$s, fields:{customfield_10059:[]}}')"
 
