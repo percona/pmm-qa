@@ -112,10 +112,13 @@ and `sentinel`/`sentinels` for Valkey.
 
 Configuration precedence is:
 
-1. Environment variable
-2. Global `--client-version` (for `CLIENT_VERSION`)
+1. Global `--client-version` flag (for `CLIENT_VERSION`)
+2. Environment variable
 3. Per-database option
 4. Registered default
+
+The `--client-version` flag comes first so an explicit override beats an
+ambient `CLIENT_VERSION` in the environment (e.g. one exported by CI).
 
 Each registration in `lib/config.sh` pins the version used when a spec omits
 one with an explicit `DEFAULT_VERSION=` entry. It is not a user-settable
