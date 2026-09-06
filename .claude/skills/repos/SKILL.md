@@ -113,6 +113,8 @@ the PR-ref recipe.
 
 This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-docker-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
 
+It is cloned by fetching the session's own branch **by name**, so it carries that ref and no other: `git diff origin/main...HEAD` fails with `fatal: bad revision` from a feature-branch session until `git fetch origin main` has run. Fetch any remote ref a comparison needs before using it.
+
 ## Find PRs by ticket
 
 The ticket's **Development panel** already lists its linked PRs (see `jira` skill) —

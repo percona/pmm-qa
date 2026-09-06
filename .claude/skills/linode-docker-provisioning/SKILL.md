@@ -218,6 +218,8 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
+That pin only bites on a direct connection. A session whose egress goes through the intercepting proxy is handed the proxy's own re-signed certificate, issued by a CA the browser already trusts, so the leaf Chromium checks is not PMM's; there the trust boundary is the proxy plus the cert-pinned exec channel. Don't read `PMM_CERT_PATH` as end-to-end pinning from a proxied session.
+
 Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
 environment needs the proxy set explicitly. The symptom: every request fails with
 `503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
