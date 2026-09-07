@@ -151,7 +151,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           serviceName: serviceName,
         });
 
-        expect(metrics).toContain('redis_up');
+        expect(metrics).toContain('pg_up');
       }).toPass({
         intervals: [Timeouts.TWO_SECONDS],
         timeout: Timeouts.ONE_MINUTE,
