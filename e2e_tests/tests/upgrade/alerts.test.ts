@@ -13,7 +13,7 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
   pmmTest(
     'PMM-T577 - Verify user is able to create and see firing alerts before upgrade @pre-upgrade',
     async ({ alertStatusPage, api, page }) => {
-      const folder = await api.alertingApi.getFolderByName('PMM Health');
+      const folder = await api.alertingApi.getOrCreateFolderByName('PMM Health');
 
       await api.alertingApi.createRule(GrafanaHelper.getAuthHeader(), {
         filters: [{ label: 'node_name', regexp: 'pmm-server', type: 'FILTER_TYPE_MATCH' }],

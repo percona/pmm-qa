@@ -13,6 +13,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
 
   pmmTest('Change advisors intervals before the upgrade @pre-upgrade', async ({ advisorsPage, page }) => {
     await page.goto(advisorsPage.configurationUrl, { timeout: Timeouts.ONE_MINUTE });
+    await advisorsPage.closeWelcomeModal();
     await advisorsPage.builders.advisorsGroupHeader(groupName).click({ timeout: Timeouts.ONE_MINUTE });
     await advisorsPage.builders.advisorsChangeInterval(advisorName).click();
     await advisorsPage.builders.changeIntervalValue('Frequent').click();
@@ -23,6 +24,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
 
   pmmTest('Disable advisor before upgrade @pre-upgrade', async ({ advisorsPage, page }) => {
     await page.goto(advisorsPage.configurationUrl, { timeout: Timeouts.ONE_MINUTE });
+    await advisorsPage.closeWelcomeModal();
     await advisorsPage.builders.advisorsGroupHeader(groupName).click({ timeout: Timeouts.ONE_MINUTE });
     await advisorsPage.builders.disableAdvisor(disabledAdvisorName).click();
     await expect(advisorsPage.builders.disableAdvisor(disabledAdvisorName)).toHaveText('Enable');

@@ -34,6 +34,14 @@ export interface FoldersResponseBody {
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
+  createFolder = async (title: string, headers?: Headers): Promise<FoldersResponseBody> => {
+    const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
+
+    return (
+      await this.request.post(apiEndpoints.alerting.folders, { data: { title }, headers: authHeaders })
+    ).json();
+  };
+
   createRule = async (headers: Headers, data: CreateRuleBody) =>
     this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
@@ -52,6 +60,13 @@ export default class AlertingApi {
     }
 
     return folder;
+  };
+
+  getOrCreateFolderByName = async (folderName: string, headers?: Headers): Promise<FoldersResponseBody> => {
+    const folders = await this.listFolders(headers);
+    const folder = folders.find((folder) => folder.title === folderName);
+
+    return folder ? folder : this.createFolder(folderName, headers);
   };
 
   listFolders = async (headers?: Headers): Promise<FoldersResponseBody[]> => {
