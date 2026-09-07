@@ -116,7 +116,7 @@ exports.config = {
   },
   mocha: {
     reporterOptions: {
-      'codeceptjs-cli-reporter': {
+      './cli-reporter.cjs': {
         stdout: '-',
         options: {
           verbose: false,

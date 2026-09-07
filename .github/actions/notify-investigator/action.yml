@@ -1,0 +1,31 @@
+---
+name: 'Notify Investigator'
+description: 'Fire the Investigator Claude Code routine for the current workflow run.'
+
+inputs:
+  routine-token:
+    description: 'INVESTIGATOR_ROUTINE_TOKEN repo secret'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Fire Investigator routine
+      shell: bash
+      env:
+        # Update this if Investigator's routine is ever recreated.
+        ROUTINE_ID: trig_01FhHBdz2yBibyVEfnG5gbQz
+        ROUTINE_TOKEN: ${{ inputs.routine-token }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        if [ -z "${ROUTINE_TOKEN}" ]; then
+          echo "::error::INVESTIGATOR_ROUTINE_TOKEN is not set -- Investigator was not notified of this failure." >&2
+          exit 1
+        fi
+        curl -fsS --connect-timeout 10 --max-time 60 -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
+          -H "Authorization: Bearer ${ROUTINE_TOKEN}" \
+          -H "anthropic-version: 2023-06-01" \
+          -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n --arg text "Workflow '${GITHUB_WORKFLOW}' failed. Run: ${RUN_URL}" '{text: $text}')"
