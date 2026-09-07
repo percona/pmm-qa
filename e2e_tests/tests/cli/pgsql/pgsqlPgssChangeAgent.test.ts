@@ -12,30 +12,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let pgVersion: string;
   let serviceName: string;
   let serviceId: string;
-  let socketServiceId: string;
   let pgExporterId: string;
   let pgExporterPort: string;
   let pgStatMonitorId: string;
-  let pgExporterSocketId: string;
-  let pgStatMonitorSocketId: string;
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pgsql_pgss`).stdout.trim();
     pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
+        `docker exec ${containerName} pmm-admin list | grep pgsql_pgss | head -1 | awk -F' ' '{print $2}'`,
       )
       .stdout.trim();
     serviceId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
-      )
-      .stdout.trim();
-    socketServiceId = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep socket_pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep pgsql_pgss | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
     pgExporterId = cliHelper
@@ -46,16 +38,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     pgStatMonitorId = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
-      )
-      .stdout.trim();
-    pgExporterSocketId = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
-      )
-      .stdout.trim();
-    pgStatMonitorSocketId = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
   });
@@ -77,8 +59,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => console.log(command));
@@ -97,8 +77,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
