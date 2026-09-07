@@ -1,6 +1,6 @@
 ---
 name: ui-evidence
-description: Capture PMM UI screenshots and screen recordings using the pre-installed local Chromium/Playwright. Use when documenting manual test results or FB Actions screenshots.
+description: Capture screenshots and screen recordings with the pre-installed local Chromium/Playwright — PMM UI, any other URL, or a local HTML file (artifact and report previews). Use when documenting manual test results, FB Actions screenshots, or taking a look at a page before publishing it.
 ---
 
 # PMM UI evidence
@@ -14,6 +14,8 @@ This environment ships Chromium pre-installed with Playwright already pointed at
 All three accept an optional `PMM_CERT_PATH` env var — set it to the cert `linode-docker-provisioning` step 2 fetched (`terraform/linode-runner/runs/<run_id>/pmm_cert.pem`) whenever the URL is PMM's own, so the browser pins that exact cert (via Chromium's `--ignore-certificate-errors-spki-list`) instead of falling back to `ignoreHTTPSErrors`. Omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
 On the **HA / LKE** path there is no exec-server to fetch a pinnable cert and PMM's cert is self-signed behind the egress MITM, so pinning can't match — pass **`PMM_UI_INSECURE=1`** to `pmm-ui-login.js` / `pw-screenshot.js` instead of `PMM_CERT_PATH` (see the HA variant below). Don't write a bespoke HA screenshot script — the same two helpers cover it.
+
+**The Docker-path pin can fail behind the egress proxy** — measured on a provisioned run: `net::ERR_CERT_AUTHORITY_INVALID`, with `openssl s_client` showing the host serving `issuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)`, the gateway's certificate rather than PMM's. When that happens, check the CA bundle before reaching for the insecure flag: `lib/proxy.js` pins the interception CAs it finds in `$CCR_CA_BUNDLE` (default `/root/.ccr/ca-bundle.crt`) alongside your PMM pin, so a gateway issuer missing from that bundle is the actual gap, and adding it keeps verification on. `PMM_UI_INSECURE=1` is the fallback only if that can't be resolved: it sets `ignoreHTTPSErrors` for the whole context rather than narrowing the pin, and `pmm-ui-login.js` sends the admin credential on this path — which is why the script warns it is for HA/LKE. Use it knowingly, say so in the evidence you produce, and only ever with a per-run throwaway password (the one `linode-docker-provisioning` step 2 generates), never a shared or long-lived one.
 
 ## Log into PMM UI and screenshot
 
@@ -92,6 +94,54 @@ not:
 - **A stale login session screenshots the login page**, not an error — Grafana
   rotates auth tokens. Always look at the image before attaching it; re-run
   `pmm-ui-login.js` and re-shoot if it's wrong.
+- **`/graph/` renders no PMM shell.** A dashboard-only image may use
+  `$PMM_HOST/graph/d/<dashboard>`, but anything involving PMM's own chrome — nav,
+  update modal, snackbars, prompts — must open `/pmm-ui/graph/d/<dashboard>`
+  (`PMM_BASE_PATH = /pmm-ui`). Waiting for an update popup on the bare path times
+  out against a page that was never going to render it.
+
+## What these helpers cannot be used for
+
+- **Update / upgrade UI.** Both `pw-screenshot.js` and `pmm-ui-login.js` install
+  `page.route("**/v1/server/updates?force=**")` answering `update_available: false`, to
+  keep the update modal out of unrelated evidence — which also erases the state under
+  test, and reads as a product bug ("up-to-date" on screen, `update_available: true`
+  from the API). `pmm-ui-login.js` additionally stubs `/v1/users/me`, and a run of it
+  leaves `snoozed_pmm_version` set with `snooze_count: 1`, after which the UI switches
+  from the centered modal to a bottom-right snackbar; `PUT /v1/users/me` clears the
+  version but not the count. Such a flow needs its own script that logs in with
+  `POST /graph/login` and installs no routes — plus a fresh data volume when the
+  pristine popup is required.
+- **Anything gated on a backgrounded tab.** No available route makes
+  `document.visibilityState` report `hidden`: two pages plus `bringToFront()`, headed
+  under `xvfb-run`, CDP `Emulation.setPageVisibilityOverride` (not found),
+  `Page.setWebLifecycleState: frozen` and `Browser.setWindowBounds: minimized` (both
+  accepted, no effect) all leave it `visible` with no `visibilitychange` — there is no
+  window manager under Xvfb, so Chromium never treats a page as occluded. An automated
+  test of such a branch exercises the visible path and passes without testing anything.
+  Declare it a gap for a human in a real browser.
+
+## Writing your own Playwright script
+
+Only when the helpers genuinely don't cover the flow — `pw-screenshot.js` already takes
+**any** URL, `file://` included, so an artifact or report preview is
+`node .claude/scripts/pw-screenshot.js file:///path/page.html out.png`, not a new script.
+
+When you do write one:
+
+- **Put it in `.claude/scripts/`** — not `/tmp`, not the scratchpad. Node resolves
+  `node_modules` from the script's own directory and the only install is
+  `.claude/scripts/node_modules`, so anywhere else fails with `Cannot find module
+  'playwright'` however you set the working directory; `require('./lib/proxy')` is
+  relative to that directory too.
+- **Launch like `pmm-ui-login.js:96` does**, not a bare `chromium.launch({ args })`:
+  `executablePath: "/opt/pw-browsers/chromium"` plus `proxyLaunchOptions({ spkiPins })`
+  from `.claude/scripts/lib/proxy.js`. A freshly `npm install`-ed playwright otherwise
+  resolves a browser revision that isn't present (`Executable doesn't exist at
+  /opt/pw-browsers/chromium_headless_shell-<rev>`).
+- **Selecting PMM's page frame:** `/graph/<x>` redirects to `/pmm-ui/graph/<x>` and
+  renders the old Grafana page in an iframe, so a `f.url().includes('/graph/…')` match
+  also hits the outer shell frame. Require `/graph/` **and** exclude `/pmm-ui/`.
 
 ## Artifacts
 
