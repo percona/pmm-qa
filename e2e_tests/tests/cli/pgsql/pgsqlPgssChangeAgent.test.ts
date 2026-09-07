@@ -37,7 +37,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     pgStatStatementId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatements_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
   });
@@ -91,7 +91,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --custom-labels=env=qa_testing_pgexporter`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --custom-labels=env=qa_testing_pgstatmonitor`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --custom-labels=env=qa_testing_pgstatements`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -101,7 +101,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property('env=qa_testing_pgexporter')).toBeVisible();
       await agentsPage.hideRowDetails(pgExporterId);
       await agentsPage.showRowDetails(pgStatStatementId);
-      await expect(agentsPage.builders.property('env=qa_testing_pgstatmonitor')).toBeVisible();
+      await expect(agentsPage.builders.property('env=qa_testing_pgstatements')).toBeVisible();
     },
   );
 
@@ -235,7 +235,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           .outContains(enableCommand.status);
         await cliHelper
           .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep postgresql_pgstatmonitor_agent | grep ${serviceId}`,
+            `docker exec ${containerName} pmm-admin list | grep postgresql_pgstatements_agent | grep ${serviceId}`,
           )
           .outContains(enableCommand.status);
       }
