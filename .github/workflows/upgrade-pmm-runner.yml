@@ -247,7 +247,7 @@ jobs:
 
       - name: Docker upgrade (swap server image, keep volume)
         run: |
-          if [[ "${{ matrix.docker_tag }}" == *rc* ]]; then
+          if [[ "${{ matrix.docker_tag }}" == *-rc* ]]; then
             export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
           else
             export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
