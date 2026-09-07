@@ -84,6 +84,7 @@ jobs:
       DOCKER_VERSION: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
       ADMIN_PASSWORD: 'admin-password'
       WORKERS: ${{ inputs.workers || 1 }}
