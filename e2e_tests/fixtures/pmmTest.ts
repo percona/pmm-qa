@@ -26,6 +26,8 @@ import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import LoginPage from '@pages/login.page';
+import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
@@ -33,8 +35,10 @@ import { minPmmVersion } from '@helpers/versionGates';
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   agentsPage: AgentsPage;
+  changePasswordPage: ChangePasswordPage;
   cliHelper: CliHelper;
   credentials: Credentials;
+  loginPage: LoginPage;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
@@ -65,6 +69,7 @@ const pmmTest = base.extend<{
 
     await use(inventoryApi);
   },
+  changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 
@@ -126,6 +131,7 @@ const pmmTest = base.extend<{
     await use(k8sHelper);
   },
   leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
+  loginPage: async ({ page }, use) => await use(new LoginPage(page)),
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
 
