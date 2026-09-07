@@ -14,7 +14,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceId: string;
   let pgExporterId: string;
   let pgExporterPort: string;
-  let pgStatMonitorId: string;
+  let pgStatStatementId: string;
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
@@ -35,7 +35,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
-    pgStatMonitorId = cliHelper
+    pgStatStatementId = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
@@ -58,7 +58,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => console.log(command));
@@ -76,7 +76,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -91,7 +91,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --custom-labels=env=qa_testing_pgexporter`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --custom-labels=env=qa_testing_pgstatmonitor`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --custom-labels=env=qa_testing_pgstatmonitor`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -100,7 +100,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(pgExporterId);
       await expect(agentsPage.builders.property('env=qa_testing_pgexporter')).toBeVisible();
       await agentsPage.hideRowDetails(pgExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
+      await agentsPage.showRowDetails(pgStatStatementId);
       await expect(agentsPage.builders.property('env=qa_testing_pgstatmonitor')).toBeVisible();
     },
   );
@@ -110,7 +110,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --log-level=debug`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -119,7 +119,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(pgExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
       await agentsPage.hideRowDetails(pgExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
+      await agentsPage.showRowDetails(pgStatStatementId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
 
       await expect(async () => {
@@ -142,7 +142,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --debug --trace --json`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -197,7 +197,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
@@ -218,7 +218,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       for (const enableCommand of enableCommands) {
         const commands = [
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} ${enableCommand.command}`,
         ];
 
         for (const command of commands) {
@@ -247,7 +247,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${pgExporterPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --agent-password=${pgExporterPassword}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
@@ -424,7 +424,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --pmm-agent-listen-port=7778`,
       ];
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
     },
@@ -437,7 +437,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
       let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --server-url=${serverUrl}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --server-url=${serverUrl}`,
       ];
 
       for (const command of commands) {
@@ -446,7 +446,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --server-url=${serverUrl} --server-insecure-tls`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --server-url=${serverUrl} --server-insecure-tls`,
       ];
 
       for (const command of commands) {
