@@ -49,6 +49,6 @@ Data(clientDbServices).Scenario(
     I.amOnPage(dashboardUrl);
     dashboardPage.waitForDashboardOpened();
     dashboardPage.verifyAnnotationsLoaded(annotationName);
-    I.seeElement(dashboardPage.annotationText(annotationName), 10);
+    I.seeElement(dashboardPage.annotationText(annotationName));
   },
 );
