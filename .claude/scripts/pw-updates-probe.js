@@ -15,7 +15,8 @@
 //     node pw-updates-probe.js /pmm-ui/settings/advanced-settings out.png PMM-15274
 //
 // Env: PMM_URL, PMM_CERT_PATH | PMM_UI_INSECURE=1, PW_SETTLE_MS,
-//      PW_WAIT_SELECTOR, PMM_UI_WIDTH/HEIGHT
+//      PW_WAIT_SELECTOR, PMM_UI_WIDTH/HEIGHT,
+//      PW_SET_CHECKBOX="<data-testid>=on|off", PW_CLICK_TEXT, PW_AFTER_CLICK_MS
 
 const fs = require("fs");
 const path = require("path");
@@ -24,6 +25,7 @@ const { proxyLaunchOptions } = require("./lib/proxy");
 const { spkiPinFromCertFile } = require("./lib/spki-pin");
 
 const UPDATES = "/v1/server/updates";
+const SETTINGS = "/v1/server/settings";
 
 async function main() {
   const [, , target, outputPath, sessionId] = process.argv;
@@ -85,44 +87,62 @@ async function main() {
   // Toasts auto-dismiss, so catch them as they are inserted rather than
   // querying after the fact.
   await page.addInitScript(() => {
+    const SNACK =
+      '[class*="notistack"], [role="alert"], .MuiSnackbar-root, .MuiAlert-root';
     window.__toasts = [];
     const seen = new Set();
-    const isToast = (n) =>
-      n.getAttribute &&
-      (n.getAttribute("role") === "alert" ||
-        String(n.className || "").includes("notistack"));
-    const record = (root) => {
-      if (!(root instanceof Element)) return;
-      for (const n of [root, ...root.querySelectorAll("*")]) {
-        if (!isToast(n)) continue;
-        const text = (n.textContent || "").trim();
-        if (text && !seen.has(text)) {
-          seen.add(text);
-          window.__toasts.push(text);
-        }
+    const add = (text) => {
+      const t = (text || "").trim();
+      if (t && !seen.has(t)) {
+        seen.add(t);
+        window.__toasts.push(t);
       }
     };
+    const scan = (root) => {
+      if (!(root instanceof Element)) return;
+      if (root.matches?.(SNACK)) add(root.textContent);
+      root.querySelectorAll?.(SNACK).forEach((n) => add(n.textContent));
+    };
+    // addInitScript runs at document-start, before documentElement exists, so
+    // observing it throws and takes the rest of this script with it. document
+    // is always present.
     new MutationObserver((muts) => {
-      for (const m of muts) for (const n of m.addedNodes) record(n);
-    }).observe(document.documentElement, { childList: true, subtree: true });
+      for (const m of muts) for (const n of m.addedNodes) scan(n);
+    }).observe(document, { childList: true, subtree: true });
+    // notistack inserts the snackbar node before React fills its children, so
+    // the observer can see it while textContent is still empty. Re-scan on a
+    // timer to catch the text once it lands, and to survive auto-dismiss.
+    setInterval(() => scan(document.body), 250);
   });
 
   const requests = [];
   const responses = [];
+  const settingsRequests = [];
+  const settingsResponses = [];
   page.on("request", (req) => {
-    if (req.url().includes(UPDATES)) {
-      requests.push({ method: req.method(), url: req.url() });
+    const url = req.url();
+    if (url.includes(UPDATES)) {
+      requests.push({ method: req.method(), url });
+    } else if (url.includes(SETTINGS)) {
+      settingsRequests.push({ method: req.method(), url });
     }
   });
   page.on("response", async (res) => {
-    if (!res.url().includes(UPDATES)) return;
+    const url = res.url();
+    const isUpdates = url.includes(UPDATES);
+    if (!isUpdates && !url.includes(SETTINGS)) return;
     let body = null;
     try {
       body = (await res.text()).slice(0, 400);
     } catch {
       /* body already consumed or navigation raced */
     }
-    responses.push({ status: res.status(), url: res.url(), body });
+    (isUpdates ? responses : settingsResponses).push({
+      status: res.status(),
+      method: res.request().method(),
+      url,
+      body,
+    });
   });
 
   await page.goto(url, { waitUntil: "networkidle" });
@@ -135,12 +155,50 @@ async function main() {
   }
   await page.waitForTimeout(Number(process.env.PW_SETTLE_MS || 8000));
 
+  // PW_SET_CHECKBOX="<data-testid>=on|off" flips a MUI switch, whose real input
+  // is transparent and overlaid, so setChecked drives it rather than a click on
+  // the visible track.
+  const setCheckbox = process.env.PW_SET_CHECKBOX;
+  if (setCheckbox) {
+    const [testId, want] = setCheckbox.split("=");
+    const box = page
+      .getByTestId(testId)
+      .locator('input[type="checkbox"]')
+      .first();
+    const before = await box.isChecked();
+    await box.setChecked(want === "on");
+    console.error(
+      `PW_SET_CHECKBOX ${testId}: ${before} -> ${await box.isChecked()}`,
+    );
+  }
+
+  const clickText = process.env.PW_CLICK_TEXT;
+  if (clickText) {
+    await page.getByRole("button", { name: clickText }).click();
+    await page.waitForTimeout(Number(process.env.PW_AFTER_CLICK_MS || 5000));
+  }
+
   const footer = page.locator('[data-testid="pmm-footer"]').first();
   let footerText = null;
   if (await footer.count()) {
     footerText = (await footer.textContent().catch(() => null))?.trim() ?? null;
   }
-  const toasts = await page.evaluate(() => window.__toasts || []);
+  const toastProbe = await page.evaluate(() => {
+    const SNACK =
+      '[class*="notistack"], [role="alert"], .MuiSnackbar-root, .MuiAlert-root';
+    return {
+      installed: typeof window.__toasts !== "undefined",
+      toasts: window.__toasts || [],
+      domNow: [...document.querySelectorAll(SNACK)].map((n) => ({
+        cls: (n.className || "").toString().slice(0, 60),
+        text: (n.textContent || "").trim().slice(0, 160),
+      })),
+      frames: [...document.querySelectorAll("iframe")].map(
+        (f) => f.getAttribute("src") || "(no src)",
+      ),
+    };
+  });
+  const toasts = toastProbe.toasts;
 
   await page.screenshot({ path: outputPath, fullPage: false });
   await browser.close();
@@ -164,10 +222,19 @@ async function main() {
           params: q(r.url),
           body: r.body,
         })),
+        settingsRequests: settingsRequests.map((r) => r.method),
+        settingsResponses: settingsResponses.map((r) => ({
+          method: r.method,
+          status: r.status,
+          body: r.body,
+        })),
         footerText,
         footerHasCheckDate: /Last checked/i.test(footerText || ""),
         footerHasInvalidDate: /Invalid Date|NaN/i.test(footerText || ""),
         toasts,
+        toastProbeInstalled: toastProbe.installed,
+        snackbarDomAtCapture: toastProbe.domNow,
+        iframes: toastProbe.frames,
         disabledToast: toasts.filter((t) => /updates are disabled/i.test(t)),
       },
       null,
