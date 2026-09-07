@@ -153,7 +153,7 @@ Scenario(
     I, homePage,
   }) => {
     await homePage.open();
-    I.dontSeeElement(homePage.fields.sttDisabledFailedChecksPanelSelector, 15);
+    I.dontSeeElement(homePage.fields.sttDisabledFailedChecksPanelSelector);
     I.waitForVisible(homePage.fields.failedChecksPanelContent, 30);
   },
 );
