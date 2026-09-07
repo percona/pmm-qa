@@ -245,6 +245,72 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1014 - Verify Change agent disable query examples @ps-integration',
+    async ({ api, cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --disable-query-examples`,
+        )
+        .assertSuccess()
+        .outContains('- disabled query examples');
+
+      const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
+
+      expect(
+        agent.query_examples_disabled,
+        'Query examples were not disabled on the qan_mysql_perfschema_agent',
+      ).toEqual(true);
+    },
+  );
+
+  pmmTest(
+    'PMM-T1015 - Verify Change agent max query length @ps-integration',
+    async ({ api, cliHelper }) => {
+      const maxQueryLength = 2_048;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --max-query-length=${maxQueryLength}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed max query length to ${maxQueryLength}`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
+
+      expect(
+        agent.max_query_length,
+        'Max query length was not persisted on the qan_mysql_perfschema_agent',
+      ).toEqual(maxQueryLength);
+    },
+  );
+
+  pmmTest(
+    'PMM-T1016 - Verify Change agent comments parsing @ps-integration',
+    async ({ api, cliHelper }) => {
+      const commentsParsingCases = [
+        { disabled: false, response: '- enabled comments parsing', value: 'on' },
+        { disabled: true, response: '- disabled comments parsing', value: 'off' },
+      ];
+
+      for (const commentsParsingCase of commentsParsingCases) {
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --comments-parsing=${commentsParsingCase.value}`,
+          )
+          .assertSuccess()
+          .outContains(commentsParsingCase.response);
+
+        const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
+
+        expect(
+          agent.comments_parsing_disabled ?? false,
+          `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_mysql_perfschema_agent`,
+        ).toEqual(commentsParsingCase.disabled);
+      }
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
