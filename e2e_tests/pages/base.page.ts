@@ -27,6 +27,24 @@ export default abstract class BasePage {
     this.snackbar = new SnackbarComponent(this.page);
   }
 
+  // The first visit shows a one-time "Welcome to PMM" onboarding dialog that intercepts
+  // clicks; dismiss it when present so interactions are not blocked.
+  closeWelcomeModal = async (): Promise<void> => {
+    const modal = this.page
+      .getByRole('dialog')
+      .filter({ hasText: 'Welcome to Percona Monitoring and Management' });
+
+    await modal.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS }).catch(() => {
+      /* dialog only appears on first visit */
+    });
+    await modal
+      .getByRole('button', { name: 'Close' })
+      .click()
+      .catch(() => {
+        /* nothing to dismiss */
+      });
+  };
+
   duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();
     const newPage = await this.page.context().newPage();
@@ -38,7 +56,9 @@ export default abstract class BasePage {
     return newPage;
   };
 
-  protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
+  // PMM 3.5.0 serves Grafana directly, without the pmm-ui iframe wrapper introduced later,
+  // so page objects operate on the page root rather than a frame.
+  protected grafanaIframe = () => this.page;
 
   haEnableCheck = async (request: APIRequestContext): Promise<void> => {
     const haResponse = await request.get(apiEndpoints.ha.status, {

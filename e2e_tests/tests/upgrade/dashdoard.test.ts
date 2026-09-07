@@ -26,7 +26,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       await grafanaHelper.starDashboard((await customDashboard.json()).uid);
       await grafanaHelper.setHomeDashboard((await customDashboard.json()).uid);
 
-      await page.goto('pmm-ui/graph/');
+      await page.goto('graph/');
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
       expect(page.url()).toContain(dashboardName);
       expect(page.url()).toContain((await customDashboard.json()).uid);
