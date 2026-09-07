@@ -386,6 +386,31 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1013 - Verify Change agent skip connection check @pgsm-pmm-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      let commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=invalid_skip_check_password --skip-connection-check`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
+      }
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --username=${newUsername} --password=${newPassword}`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess();
+      }
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ cliHelper, page }) => {
       let commands = [
@@ -407,7 +432,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T99103 - Verify Change agent server url and server insecure tls @ps-integration',
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
