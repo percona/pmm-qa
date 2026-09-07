@@ -12,8 +12,8 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
 
   pmmTest(
     'PMM-T577 - Verify user is able to create and see firing alerts before upgrade @pre-upgrade',
-    async ({ alertStatusPage, api, page }) => {
-      const folder = await api.alertingApi.getFolderByName('PMM Health');
+    async ({ api }) => {
+      const folder = await api.alertingApi.getFolderByName('Insight');
 
       await api.alertingApi.createRule(GrafanaHelper.getAuthHeader(), {
         filters: [{ label: 'node_name', regexp: 'pmm-server', type: 'FILTER_TYPE_MATCH' }],
@@ -26,10 +26,12 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
         template_name: 'pmm_node_high_cpu_load',
       });
 
-      await page.goto(alertStatusPage.url);
-      await expect(alertStatusPage.builders.firingAlert(upgradeRuleName)).toBeVisible({
-        timeout: Timeouts.TWO_MINUTES,
-      });
+      await expect
+        .poll(() => api.alertingApi.getAlertRuleState(upgradeRuleName), {
+          message: `Expected alert rule "${upgradeRuleName}" to be firing`,
+          timeout: Timeouts.TWO_MINUTES,
+        })
+        .toBe('firing');
     },
   );
 });
