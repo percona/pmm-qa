@@ -60,6 +60,22 @@ export default class AlertingApi {
     return await (await this.request.get(apiEndpoints.alerting.folders, { headers: authHeaders })).json();
   };
 
+  getAlertRuleState = async (ruleName: string, headers?: Headers): Promise<string | undefined> => {
+    const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
+    const response = await this.request.get(apiEndpoints.alerting.listAlerts, { headers: authHeaders });
+    const body = await response.json();
+
+    for (const group of body?.data?.groups ?? []) {
+      const rule = (group.rules ?? []).find((item: { name?: string }) => item.name === ruleName);
+
+      if (rule) {
+        return rule.state;
+      }
+    }
+
+    return undefined;
+  };
+
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
 
   updateTemplate = async (headers: Headers, templateName: string, yamlBody: AlertTemplateBody) =>
