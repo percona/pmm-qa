@@ -45,24 +45,29 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verify Change agent username and password @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const commands = [
+      let commands = [
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      // commands = [
-      //   `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
-      //   `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=${newPassword} --username=${newUsername}`,
-      // ];
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=${newPassword} --username=${newUsername}`,
+      ];
 
-      // commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
+      commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
 
-      console.log(
-        cliHelper.execSilent(
-          `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
-        ),
+      cliHelper.execSilent(
+        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
       );
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=${newPassword} --username=${newUsername}`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
