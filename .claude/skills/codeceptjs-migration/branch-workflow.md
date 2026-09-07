@@ -193,9 +193,26 @@ default-password interstitial. `PMM_MIGRATION=1` is not decoration either: `play
 does `dotenv.config({ override: !process.env.PMM_MIGRATION })`, so without it `e2e_tests/.env`
 silently overrides both values - and `.env` routinely points at an unrelated remote PMM.
 
+Before writing "could not be verified" into a PR body, check whether the repository's own CI already
+covers it. `.claude/hooks/lint-changed.sh` runs `actionlint` over `.github/workflows/*.yml` behind the
+`Lint` check, so a workflow added by a migration IS schema-checked on the PR even when `actionlint`
+cannot be installed locally. Row 6's PR body shipped that gap as an open risk and it was already closed.
+A false open risk costs reviewer attention and understates the evidence.
+
 Also run `python support_scripts/generate_readme.py --check` from the publish worktree's root. There is no npm script for it; `npm run readme:check` does not exist and its missing-script exit 1 reads like a failing check.
 
 If the test selects state by index, empty that state before this run as well - it is a second run against the same environment.
+
+A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` before
+`tsc`/`eslint`, or `npx` silently reports a missing-package error rather than a clean typecheck. And do
+not read `$?` after a pipe: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks
+like a pass. Put the check on its own line, or use `PIPESTATUS`.
+
+If the **parent** commits a fix onto the publish branch - which is legitimate; it is the parent's branch
+to correct - that commit has had no independent reviewer. Name it explicitly in the final-gate handoff
+as parent-authored and unreviewed, and ask the gate to check it as critically as the rest. Two of row 6's
+five commits were the parent's, and the gate validated one and found nothing wrong with it only because
+it was told to look.
 
 ## Workflow coverage
 
@@ -204,6 +221,25 @@ Committed on the publish branch, before the final review, so the gate can verify
 Preserve every original CodeceptJS scenario tag in the migrated Playwright test. A destination execution tag may be added, but it must not replace or remove a source tag.
 
 Leave existing CodeceptJS jobs and grep expressions unchanged, unless this migration is the one that empties them - see below.
+
+### Deriving a new runner workflow from two parents
+
+When coverage requires a new workflow assembled from two existing ones, the first check is a **parsed
+set diff of their `env:` blocks**, not a top-to-bottom read. Any key present in **both** parents and
+absent from the child is a defect until proven otherwise: it is exactly the shape that survives review,
+passes CI, and does the wrong thing quietly. Row 6's new podman runner omitted `CLIENT_VERSION`, so
+`pmm-framework`'s `resolve_value` fell through to `database_default_value` and the clients installed
+stock `3-dev-latest` instead of the FB build's - a green job monitoring the wrong artifact, which is the
+one thing an FB job exists to prevent.
+
+Then widen it to the real superset: **referenced but never defined**. Walk every `${{ env.X }}` in the
+child and confirm X is declared. Parse with a YAML library across workflow-, job- and step-level `env:`
+blocks; a line-scan or a bare grep misses step-level keys. Two false-positive classes to expect rather
+than chase: systemd `Environment=` directives inside a heredoc (referenced as escaped `\${...}`, and
+expanded by systemd, not the shell) and variables introduced by `. /etc/os-release`.
+
+A key present in only ONE parent is usually inert - it belongs to machinery the child deliberately did
+not port (Launchable subsetting, Zephyr reporting, CodeceptJS-only inputs). Say which, do not just drop it.
 
 ### First: enumerate what consumes the source today
 
@@ -284,6 +320,11 @@ git rev-parse <old-tip>^{tree} <new-tip>^{tree}   # must match
 git rev-parse <old-commit>^{tree} <new-commit>^{tree}   # must match at the amended commit too
 git log -1 --format=%B <new-tip>                  # tip message unchanged
 ```
+
+Write every commit message with `git commit -F -` and a quoted heredoc, never `-m "..."`. Migration
+messages routinely name backticked identifiers, and bash command-substitutes a backtick inside a
+double-quoted `-m` argument: the message is mangled, the shell reports a syntax error from the middle of
+your prose, and the leftover words are passed to git as pathspecs.
 
 ## Push and open the PR
 

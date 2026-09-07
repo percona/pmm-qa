@@ -19,6 +19,16 @@ The reviewer performs this checklist twice: before execution and after execution
 
 - [ ] Hooks and suite setup are preserved.
 - [ ] Cleanup is preserved.
+- [ ] Cleanup is correct on **every** path, not only the one that does not need it. A hook that restores
+      shared state by reading a variable the test sets *later* only works when nothing failed in between -
+      and its failure is usually swallowed (`tryTo` -> `.catch(() => undefined)`), so the environment is
+      left mutated and the next test dies with an error hiding the real one. Row 6 shipped exactly this
+      past both gates: `afterEach` authenticated a password restore with `process.env.ADMIN_PASSWORD`,
+      which only became the new password after a logout and an assertion. Prefer restoring from the
+      constant the test would have set (the redundant call fails harmlessly when the change never
+      happened) over reading mid-test state. Porting the source's own latent version of this bug is not
+      fidelity - the source leaks into one CodeceptJS run, while a Playwright worker is reused across spec
+      files.
 - [ ] Every assertion is present with equivalent strictness.
 - [ ] UI, API, CLI, download, and file behavior is preserved.
 - [ ] Reachable custom steps were inspected and mapped.
