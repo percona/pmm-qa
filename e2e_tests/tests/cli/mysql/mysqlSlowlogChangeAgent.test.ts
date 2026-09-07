@@ -379,7 +379,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9994 - Verify Change agent tls @ps-slowlog-integration',
+    'PMM-T1010 - Verify Change agent tls @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
@@ -411,7 +411,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.FIVE_MINUTES);
+      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
@@ -419,7 +419,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
   );
 
