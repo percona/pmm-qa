@@ -24,7 +24,7 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - **Nothing the migration produces is committed on control.** If a subagent reports a commit SHA on control for migration code, that is a defect: have it reset the commit and leave the change in the worktree.
 - Overlap only where gates allow: provisioning runs in the background while the writer migrates (step 2a); static review can start while PMM provisions; MCP locator checks begin after readyz passes. Everything else is serial. Candidates and their verdicts live in `parallelization-ledger.md`; do not add an overlap that is not recorded there as `implemented`.
 - Reuse one local PMM environment per batch (one row by default); never recreate it mid-workflow. Within a batch, reset test state between rows rather than reprovisioning - see section Batch mode.
-- Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local provisioning command selected different values, and pass the same pair to every review and execution command.
+- Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local environment selected different values, and pass the same pair to every review and execution command. A UI-login test is exactly that exception and needs a non-default password - see step 3. State the pair explicitly in every handoff rather than letting a subagent assume `admin`; `.env` routinely points at an unrelated remote PMM, and only `PMM_MIGRATION=1` stops it overriding you (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`).
 - **Operations a subagent is not permitted to perform belong to the parent.** Environment teardown and test-state resets - for example emptying the Grafana annotation table between runs on a reused environment - are refused by the permission classifier inside a subagent. A subagent must stop and ask rather than route around the refusal by another means; the parent performs the operation and resumes it.
 - Locator verification goes through the Playwright MCP server, which `.mcp.json` declares repo-level so every subagent inherits it. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is not a general fallback - it hardcodes `/pmm-ui/help` on every code path and supports only `getByRole` plus an optional `a[href=...]`. Use it for that one preset; if MCP is unavailable, stop and report it rather than checking a different page.
 - Once the background provisioning command starts in step 2a, if the workflow stops before the runner is invoked (including a provisioning failure or an exhausted writer/reviewer loop), the parent runs `node provisioning/setup.ts --teardown` before stopping. The runner owns cleanup for every path it reaches in step 8.
@@ -138,6 +138,22 @@ node provisioning/setup.ts --database ps=8.4 --db client
 ```
 
 Use no database arguments for server-only setup. Append `--db client` whenever the confirmed setup includes `setupClient: true`, including alongside database arguments; it represents a distinct standalone node.
+
+**A test that logs in through the UI needs a NON-DEFAULT admin password.** With the provisioner's
+default `admin`, PMM forces an "Update your password" interstitial after every UI login, and its URL
+matches neither `help` nor `home-dashboard` - the predicate the login page objects wait on - so the
+test times out at its first step and can never reach the change-password step that would clear the
+condition. The CodeceptJS source fails identically, so this is an environment precondition, not a
+migration defect: do not route it to the writer or the reviewer. CI never hits it because
+`runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml` and `runner-e2e-tests-podman.yml`
+all hard-code `ADMIN_PASSWORD: 'admin-password'`.
+
+`provisioning/setup.ts --admin-password` is NOT the fix. It sets `GF_SECURITY_ADMIN_PASSWORD` on a
+fresh server, but every pmm-agent registration then fails with "Invalid username or password" and all
+database jobs fail. What works: provision with the default, then change the password over the API -
+`PUT /graph/api/user/password` with `{oldPassword,newPassword,confirmNew}` - and hand the new value to
+every later phase. Verify with one `/v1/users/me` call. This is the same operation the password tests
+themselves perform, and registered services survive it.
 
 `PMM_DEBUG=1` is a provisioner default, matching every other PMM test environment in this repository, so source tests that assert on log volume work without extra flags. Override it only when a test needs quieter logs: `--server-env PMM_DEBUG=0`.
 

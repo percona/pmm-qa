@@ -127,12 +127,20 @@ For each path this migration touched, check `origin/main`:
 ```bash
 git -C <control-worktree> add -N .
 git -C <control-worktree> diff --name-only
-git show origin/main:<path>
+git ls-tree --name-only origin/main -- <path>     # empty output = absent
 ```
+
+Use `git ls-tree`, never `git show origin/main:<path>`. Under MSYS2/Git Bash on Windows the
+`ref:path` argument is path-mangled - `origin/main:.github/workflows/fb-e2e-suite.yml` reaches git as
+`origin\main;.github\workflows\fb-e2e-suite.yml` - and dies with "Not a valid object name". Wrapped
+in the obvious loop that maps a non-zero exit to "absent", that reports **every** path as absent from
+`origin/main`, which under the rule below reads as "this migration depends on an unmerged sibling" -
+the most consequential wrong answer this check can produce. `git ls-tree --name-only` takes the ref
+and the path as separate arguments and is immune.
 
 A path absent from `origin/main` depends on an earlier still-unmerged sibling migration - typically a shared helper. Decide explicitly whether to carry the full file into this PR or hold.
 
-**File existence is not enough - compare the hunks.** A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it. The existence check reports the path as present and says nothing. So for each changed path also look at the region being edited (`git show origin/main:<path>` and find the block). When the block is missing, the choice is the same as for a missing file: create it in this PR scoped to this migration's own needs, or hold. Do not import the sibling's version of the block - that pulls an unmerged migration's CI changes into this PR and can reference tags with no tests behind them.
+**File existence is not enough - compare the hunks.** A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it. The existence check reports the path as present and says nothing. So for each changed path also look at the region being edited (`git show "origin/main:<path>"` - quote the whole argument, or the MSYS2 mangling above applies here too - and find the block). When the block is missing, the choice is the same as for a missing file: create it in this PR scoped to this migration's own needs, or hold. Do not import the sibling's version of the block - that pulls an unmerged migration's CI changes into this PR and can reference tags with no tests behind them.
 
 ### Move the work across
 
@@ -175,8 +183,15 @@ Most of `.claude/` - `settings.json`, `hooks/`, `agents/`, and most of `scripts/
 
 ```bash
 cd ../pmm-qa-publish/e2e_tests
-PMM_MIGRATION=1 PMM_UI_URL='https://127.0.0.1/' ADMIN_PASSWORD='admin' npx playwright test <target-test-file> --workers=1
+PMM_MIGRATION=1 PMM_UI_URL='<the parent's PMM_UI_URL>' ADMIN_PASSWORD='<the parent's ADMIN_PASSWORD>' \n  npx playwright test <target-test-file> --workers=1
 ```
+
+Both values are placeholders - use the pair the parent handed over, which is frequently NOT
+`admin`. A test that logs in through the UI needs a non-default admin password (see `orchestration.md`
+step 3), so hardcoding `admin` here reruns the proof against a server that will deadlock on the
+default-password interstitial. `PMM_MIGRATION=1` is not decoration either: `playwright.config.ts`
+does `dotenv.config({ override: !process.env.PMM_MIGRATION })`, so without it `e2e_tests/.env`
+silently overrides both values - and `.env` routinely points at an unrelated remote PMM.
 
 Also run `python support_scripts/generate_readme.py --check` from the publish worktree's root. There is no npm script for it; `npm run readme:check` does not exist and its missing-script exit 1 reads like a failing check.
 

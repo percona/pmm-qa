@@ -6,6 +6,18 @@ Working phases edit the control branch's own worktree and **commit nothing there
 
 Environment contract for every phase that touches a running PMM: reuse the prepared local environment, never recreate or clean it, and pass the same `PMM_UI_URL` and `ADMIN_PASSWORD` the parent hands over (default `https://127.0.0.1/` and `admin`) to every command. Never edit `e2e_tests/.env`.
 
+**Never send a request with a wrong password.** Grafana blocks the `admin` user after 5 consecutive
+failed logins in a rolling 5-minute window, and the block covers BOTH basic auth and the UI login
+form, so it fails the migrated test too. Every "is it unblocked yet" retry is itself a failure that
+re-arms the window. Probing cost one migration ~11 minutes and invalidated a whole execution attempt;
+a second probe run later corrupted the diagnosis of an unrelated failure. To learn the password state,
+read `/srv/logs/grafana.log` inside the pmm-server container or the files under
+`provisioning-artifacts/` - never a credential probe.
+
+**`/v1/server/readyz` is UNAUTHENTICATED.** It returns 200 for any credentials, including deliberately
+wrong ones, so it can neither verify a password nor confirm that a password-changing test restored the
+original. The oracle is `/v1/users/me` (200 correct, 401 wrong) - one call, not a loop.
+
 Search contract for every phase: use the Grep tool with an explicit path scope and `output_mode`. A repo-wide `grep -rn` from the repository root exceeds the 120s Bash timeout in this repository and has to be re-run scoped anyway.
 
 Steps 1, 2a, and 3 are the parent's; they are in `orchestration.md`. Only the parent commits on control, and only the tracker and the graphs.

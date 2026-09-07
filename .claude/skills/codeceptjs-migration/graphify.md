@@ -19,6 +19,25 @@ It is not one. Per `.claude/skills/graphify/SKILL.md`, graphify needs no API key
 
 - **Never pass `--code-only` to step past a changed doc.** It suppresses the error by skipping the file, which silently leaves that node stale in a graph you are about to commit as refreshed. `--code-only` is legitimate only when the changed set genuinely contains no docs, papers, or images, which is also the case where it changes nothing.
 - **Pass the extraction prompt verbatim**, as the graphify skill already requires, and note the consequence of not doing so: adding a scope or budget instruction of your own can drive a file's node count below what the graph already holds for it, and `to_json`'s shrink guard then refuses the whole write - including the files extracted correctly - with a bare "refused to shrink" several steps later. If a file genuinely warrants fewer nodes, that is a full-rebuild decision, not a per-chunk one.
+- **The incremental `--update` path silently loses edges; prefer a full code-only AST pass merged over
+  the existing graph.** graphify builds its id remap only for the paths handed to `extract()`, so an
+  incremental fragment leaves every import edge that points into an *unchanged* file keyed on an
+  absolute-path id (`c_users_..._pages_foo_page_ts`) which matches nothing in the graph and is dropped
+  at merge; the fragment also cannot resolve symbol-level import targets for files it did not extract.
+  Measured on `e2e_tests/fixtures/pmmTest.ts` for a 3-file change: 47 outbound edges before, 34 via
+  `--update`, 65 via a full pass. The incremental result was a net regression on a graph about to be
+  committed as "refreshed" (1507 -> 1500 edges) while the full pass gave 1757.
+  The fix costs no LLM tokens. Extract the **code files only** - take `detect()`'s `files['code']`
+  list, not `collect_files()`, so the doc/image `source_file`s are not pruned and their semantic nodes
+  survive - then `build_merge([ast], graph_path=<existing>, prune_sources=<deleted files>, root='.')`.
+  Pass `prune_sources` or a renamed/retired source leaves a ghost node behind.
+  A full pass legitimately shrinks the node count when it collapses exact duplicates the incremental
+  path accumulated, and `to_json`'s shrink guard then refuses the write. Account for every node before
+  overriding: on row 6 the -5 was exactly -5 duplicates, -1 pruned retired source, +1 renamed
+  replacement. Only then pass `force=True`.
+- On Windows, run any `extract()` call from a script with an `if __name__ == '__main__':` guard;
+  graphify parallelises with `multiprocessing`, and without the guard each child re-imports the script
+  and the run dies in `spawn_main`.
 - If `steps.d.ts` is among the changed files, run a full build instead of an incremental one. The CodeceptJS injection registry can rebind unchanged consumers, and their old edges cannot be replaced safely from a changed-files-only fragment.
 - Run each update from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
 - Keep only `graph.json` and `manifest.json`. Delete generated reports, HTML, and `.graphify_*` sidecars, and delete the dated backup directory (`graphify-out/<YYYY-MM-DD>/`) that a curated-graph rebuild leaves behind - it holds its own `graph.json`/`manifest.json`, so a name-based `find ... -delete` skips it and it lands in the commit.
