@@ -369,4 +369,29 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
     },
   );
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @ps-slowlog-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+      const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+      let commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --server-url=${serverUrl}`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).outContains('tls: failed to verify certificate:');
+      }
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --server-url=${serverUrl} --server-insecure-tls`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
+      }
+    },
+  );
 });
