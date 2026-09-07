@@ -1,7 +1,9 @@
 const { I } = inject();
 const YAML = require('yaml');
 
-const templateRow = (templateName) => `//tr[td[contains(., "${templateName}")]]`;
+// Scoped to the name column and matched exactly: the name renders as the cell's own text,
+// or nested in an element once a template carries a badge.
+const templateRow = (templateName) => `//tr[td[1][text()[normalize-space() = "${templateName}"] or .//*[normalize-space(text()) = "${templateName}"]]]`;
 
 module.exports = {
   url: 'graph/alerting/alert-rule-templates',
@@ -14,7 +16,6 @@ module.exports = {
     templateName: '//tr/td[1]',
     modalHeader: '$modal-header',
     modalWarning: '$alert-rule-name-warning',
-    templateRowByName: (name) => templateRow(name),
     templateRowBySource: (source) => `//tr[descendant::div[contains(text(), "${source}")]]`,
     columnHeaderLocator: (columnHeaderText) => `//th[text()="${columnHeaderText}"]`,
     unathorizedMessage: '$unauthorized',
@@ -31,11 +32,9 @@ module.exports = {
     editButtonBySource: (source) => `//tr[descendant::div[contains(text(), "${source}")]]//button[@data-testid="edit-template-button"]`,
     // deleteButtonBySource returns Delete template button locators for a given source
     deleteButtonBySource: (source) => `//tr[descendant::div[contains(text(), "${source}")]]//button[@data-testid="delete-template-button"]`,
-    // editButtonByName returns Delete template button locator for a given Template name
-    editButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//button[@data-testid="edit-template-button"]`,
-    // deleteButtonByName returns Delete template button locator for a given Template name
-    deleteButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//button[@data-testid="delete-template-button"]`,
-    addRuleButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//a[@data-testid="create-from-template-button"]`,
+    editButtonByName: (name) => `${templateRow(name)}//button[@data-testid="edit-template-button"]`,
+    deleteButtonByName: (name) => `${templateRow(name)}//button[@data-testid="delete-template-button"]`,
+    addRuleButtonByName: (name) => `${templateRow(name)}//a[@data-testid="create-from-template-button"]`,
   },
   fields: {
     templateInput: locate('$yaml-textarea-input'),

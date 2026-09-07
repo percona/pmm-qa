@@ -112,24 +112,14 @@ _diag() {
     kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
     kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
 }
-# Stamp this cluster's volumes + NodeBalancer with pmm-qa-run:<id> so teardown
+# Stamp this cluster's volumes with pmm-qa-run:<id> so teardown
 # (prune-lke-orphans.sh) can attribute them. Runs on every exit path via the trap
-# so a failed bring-up is tagged too. Best-effort.
+# so a failed bring-up is tagged too. Best-effort. destroy-lke / the reaper tag
+# again right before deleting the cluster, catching volumes created after this.
 _tag_for_teardown() {
     [ -n "${CLUSTER_ID:-}" ] || return 0
-    local ids vols lid vid nbid
-    ids="$(linode-cli lke pools-list "$CLUSTER_ID" --json 2>/dev/null | jq -r '.[].nodes[].instance_id' 2>/dev/null)"
-    vols="$(linode-cli volumes list --page-size 500 --json 2>/dev/null)"
-    for lid in $ids; do
-        [ -n "$lid" ] && [ "$lid" != "null" ] || continue
-        for vid in $(printf '%s' "$vols" | jq -r --argjson l "$lid" '.[] | select(.linode_id==$l) | .id' 2>/dev/null); do
-            linode-cli volumes update "$vid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
-        done
-    done
-    for nbid in $(linode-cli nodebalancers list --page-size 500 --json 2>/dev/null \
-                    | jq -r --arg c "lke$CLUSTER_ID-" '.[] | select(.label|startswith($c)) | .id' 2>/dev/null); do
-        linode-cli nodebalancers update "$nbid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
-    done
+    local SD; SD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    LINODE_TOKEN="$LINODE_TOKEN" bash "$SD/tag-lke-resources.sh" "$CLUSTER_ID" "$RUN_ID" || true
 }
 trap '_diag; _tag_for_teardown' EXIT
 # Linode reports the pool "ready" before the nodes register with the k8s API
@@ -140,6 +130,27 @@ log "Waiting for $NODE_COUNT node(s) to register with the API server..."
 until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c .)" -ge "$NODE_COUNT" ]; do sleep 10; done
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
+
+# --- storage class: tag every CSI volume at birth ----------------------------
+# LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
+# so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
+# The name stays LKE's `-retain` so charts and existing PVCs still resolve it, even
+# though it now reclaims Delete: a churned PVC must free its volume mid-run.
+kubectl delete storageclass linode-block-storage-retain --ignore-not-found
+kubectl apply -f - <<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: linode-block-storage-retain
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: linodebs.csi.linode.com
+parameters:
+  linodebs.csi.linode.com/volumeTags: "pmm-qa-ephemeral,pmm-qa-run:$RUN_ID"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+EOF
 
 # --- dependencies (operators) ------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
