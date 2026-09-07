@@ -49,7 +49,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
 
       // commands = [
       //   `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
@@ -58,8 +58,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       // commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
 
-      cliHelper.execSilent(
-        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
+      console.log(
+        cliHelper.execSilent(
+          `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
+        ),
       );
 
       await grafanaHelper.authorize();
