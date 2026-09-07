@@ -327,6 +327,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1014 - Verify Change agent disable query examples @ps-slowlog-integration',
+    async ({ api, cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --disable-query-examples`,
+        )
+        .assertSuccess()
+        .outContains('- disabled query examples');
+
+      const agent = await api.inventoryApi.getAgentById(mysqldSlowlogAgentId);
+
+      expect(
+        agent.query_examples_disabled,
+        'Query examples were not disabled on the qan_mysql_perfschema_agent',
+      ).toEqual(true);
+    },
+  );
+
+  pmmTest(
     'PMM-T1015 - Verify Change agent max query length @ps-slowlog-integration',
     async ({ api, cliHelper }) => {
       const maxQueryLength = 2_048;
