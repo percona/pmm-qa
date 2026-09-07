@@ -81,6 +81,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
+      commands.forEach((command) => console.log(command));
+
       commands.forEach((command) =>
         cliHelper.execSilent(command).outContains('password authentication failed for user'),
       );

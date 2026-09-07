@@ -389,20 +389,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
   });
 
-  pmmTest(
-    'PMM-T1009 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
-      const commands = [
-        `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
-        `docker restart ${containerName}`,
-      ];
+  pmmTest('PMM-T1009 - Verify Change agent pmm agent listen port @rds-integration', async ({ cliHelper }) => {
+    const commands = [
+      `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+      `docker restart ${containerName}`,
+    ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent rds-exporter 97fb8372-a052-49df-b58e-76ca2fc8e3c0 --pmm-agent-listen-port=7778`,
-        )
-        .assertSuccess();
-    },
-  );
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter 97fb8372-a052-49df-b58e-76ca2fc8e3c0 --pmm-agent-listen-port=7778`,
+      )
+      .assertSuccess();
+  });
 });
