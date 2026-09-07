@@ -1,5 +1,4 @@
 import CliHelper from '@helpers/cli.helper';
-import ExecReturn from '@interfaces/execReturn';
 import { HelmRelease } from '@interfaces/helm';
 
 /**
@@ -46,7 +45,6 @@ export default class HelmHelper {
 
   private listReleases = (): HelmRelease[] =>
     JSON.parse(
-      this.cliHelper.execute(`helm list --output json --namespace ${this.namespace}`).assertSuccess()
-        .stdout,
+      this.cliHelper.execute(`helm list --output json --namespace ${this.namespace}`).assertSuccess().stdout,
     ) as HelmRelease[];
 }

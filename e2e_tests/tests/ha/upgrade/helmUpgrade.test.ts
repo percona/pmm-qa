@@ -9,6 +9,7 @@ import { serverVersionBelow } from '@helpers/version.helper';
 const pmmHaChart = 'pmm-ha';
 const dependenciesChart = 'pmm-ha-dependencies';
 const targetImage = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+
 /**
  * The image the cluster was installed from.
  */
@@ -24,6 +25,7 @@ const releasedImage = (): string => {
 
   return image;
 };
+
 // The upgrade happens between the two tests - and so between two Playwright
 // processes - so what the second one needs to compare against is written here.
 const baselineFile = process.env.HA_UPGRADE_BASELINE || resolve('output/ha-upgrade-baseline.json');
@@ -33,7 +35,6 @@ const baselineFile = process.env.HA_UPGRADE_BASELINE || resolve('output/ha-upgra
  * through a mirror, so only the repository and tag are comparable.
  */
 const repositoryAndTag = (image: string): string => image.split('/').slice(-2).join('/');
-
 /** The distinct PMM Server images the pods run; one entry when they all agree. */
 const serverImages = (pods: KubernetesPod[]): string[] => [
   ...new Set(pods.flatMap((pod) => pod.images).map(repositoryAndTag)),
@@ -51,8 +52,9 @@ const readBaseline = (): Baseline => {
     return JSON.parse(readFileSync(baselineFile, 'utf8')) as Baseline;
   } catch (error) {
     throw new Error(
-      `Cannot read the pre-upgrade baseline at "${baselineFile}": ${(error as Error).message}\n` +
+      `Cannot read the pre-upgrade baseline at "${baselineFile}". ` +
         'Run the @pmm-helm-pre-upgrade test against the released install before upgrading.',
+      { cause: error },
     );
   }
 };
@@ -105,6 +107,7 @@ pmmTest(
     });
 
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+
     const leader = await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
 
     await highAvailabilityPage.verifyLeaderBadge(leader);
@@ -147,10 +150,9 @@ pmmTest(
         before.podNames,
       );
 
-      expect(
-        serverImages(pods),
-        'Upgrading the dependencies must leave the server image alone',
-      ).toEqual(before.images.map(repositoryAndTag));
+      expect(serverImages(pods), 'Upgrading the dependencies must leave the server image alone').toEqual(
+        before.images.map(repositoryAndTag),
+      );
 
       return names;
     });
@@ -171,6 +173,7 @@ pmmTest(
     });
 
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+
     const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
 
     await highAvailabilityPage.verifyLeaderBadge(leader);

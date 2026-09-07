@@ -17,6 +17,7 @@ export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 const defaultReplicas = 3;
 // /v1/version needs credentials even from inside the pod.
 const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
+
 /** The `version` field, or undefined when the body is not the JSON we expect. */
 const parseVersion = (body: string): unknown => {
   try {

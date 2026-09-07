@@ -41,12 +41,6 @@ export default class HighAvailabilityPage extends BasePage {
 
   leaderNameLocator = (): Locator => this.elements.leaderNodeName;
 
-  verifyLeaderBadge = async (leader: string): Promise<void> =>
-    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
-      await this.reloadAndExpandHaNavItem();
-      await expect(this.elements.leaderNodeName).toHaveText(leader, { timeout: Timeouts.TWO_MINUTES });
-    });
-
   /**
    * Needed after a failover: the page was talking to the pod that was killed, so
    * its sidebar can be left holding a failed query instead of retrying.
@@ -55,4 +49,10 @@ export default class HighAvailabilityPage extends BasePage {
     await this.page.reload();
     await this.expandHaNavItem();
   };
+
+  verifyLeaderBadge = async (leader: string): Promise<void> =>
+    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
+      await this.reloadAndExpandHaNavItem();
+      await expect(this.elements.leaderNodeName).toHaveText(leader, { timeout: Timeouts.TWO_MINUTES });
+    });
 }
