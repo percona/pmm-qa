@@ -134,8 +134,6 @@ Scenario(
     dashboardPage.mongodbInstancesCompareDashboard.unselectCluster();
 
     dashboardPage.mongodbInstancesCompareDashboard.selectReplicationSet('rs');
-    // Not waitInUrl: it resolves a relative argument against the base URL, turning a
-    // bare query fragment into an unmatchable "<baseUrl>/&var-replication_set=rs".
     I.waitForURL(/[?&]var-replication_set=rs(&|$)/, { timeout: 10000 });
     dashboardPage.mongodbInstancesCompareDashboard.unselectReplicationSet();
 
