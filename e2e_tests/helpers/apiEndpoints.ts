@@ -43,6 +43,7 @@ const apiEndpoints = {
     leaderHealthCheck: '/v1/server/leaderHealthCheck',
     logs: '/logs.zip',
     readyz: '/v1/server/readyz',
+    serverVersion: '/v1/server/version',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
     version: '/v1/version',

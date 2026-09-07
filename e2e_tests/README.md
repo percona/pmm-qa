@@ -95,6 +95,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@downloads`
 - `@fb-instances`
 - `@fb-settings`
+- `@grafana-pr`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
