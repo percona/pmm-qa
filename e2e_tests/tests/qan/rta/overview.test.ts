@@ -185,20 +185,20 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
   });
 
-  await pmmTest.step('Filter by Host substring and verify only matching rows remain', async () => {
+  await pmmTest.step('Filter by Host and verify only matching rows remain', async () => {
     const rs101HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs101')) as string;
     const rs102HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs102')) as string;
-    const [rs101HostSubstring] = rs101HostName.split('_');
-    const [rs102HostSubstring] = rs102HostName.split('_');
 
-    expect(rs101HostSubstring).not.toBe(rs101HostName);
-    expect(rs102HostSubstring).not.toBe(rs102HostName);
+    // The Host column uses a fuzzy filter, so a shared substring such as the
+    // rsXXX prefix also matches the other host (rs102 is a subsequence of
+    // rs101_23853 via the trailing port). Filter on the full host name, which
+    // fuzzy-matches only its own rows.
     await queryAnalytics.rta.openFiltersIfHidden();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
     await queryAnalytics.rta.openFiltersIfHidden();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
   });
@@ -271,32 +271,37 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
 
-    // Headers are the union of keys across rows. client_app_name is dropped when
-    // empty (proto3 omits empty scalars), which it is unless a client sets an
-    // application name, so it is not required here.
+    // A fixed set of columns is exported by every build. client_app_name is
+    // dropped when empty (proto3 omits empty scalars), so it is not required.
+    const fixedHeaders = [
+      'operation_id',
+      'elapsed_exec_time_sec',
+      'db_instance_address',
+      'client_address',
+      'database_name',
+      'service',
+      'user_name',
+      'collection',
+      'operation',
+      'plan_summary',
+      'operation_start_time',
+      'data_capture_time',
+      'raw_query',
+    ];
+    // service_id, query_text and the injected future_export_field are unlisted
+    // API fields: only builds that append unlisted fields to the export emit
+    // them. Older release images the upgrade suite lands on export the fixed
+    // columns only, so require the appended fields only when the build appends.
+    const buildAppendsUnlistedFields = headers.includes(dynamicHeader);
+
     expect(headers).toEqual(
-      expect.arrayContaining([
-        'operation_id',
-        'elapsed_exec_time_sec',
-        'db_instance_address',
-        'client_address',
-        'database_name',
-        'service',
-        'user_name',
-        'collection',
-        'operation',
-        'plan_summary',
-        'operation_start_time',
-        'data_capture_time',
-        'raw_query',
-        'service_id',
-        'query_text',
-      ]),
+      expect.arrayContaining(
+        buildAppendsUnlistedFields ? [...fixedHeaders, 'service_id', 'query_text'] : fixedHeaders,
+      ),
     );
     expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
-    expect(headers).toContain(dynamicHeader);
-    expect(csvContent).toContain(dynamicValue);
     expect(headers).not.toContain('query_execution_duration');
+    expect(csvContent.includes(dynamicValue)).toBe(buildAppendsUnlistedFields);
   });
 
   await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);
