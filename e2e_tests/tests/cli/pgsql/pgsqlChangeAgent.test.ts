@@ -337,13 +337,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
+    async ({ api, cliHelper }) => {
+      const collectorsToDisable = ['stat_statements', 'locks'];
+
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --disable-collectors=stat_statements,locks`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${pgExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
         )
         .assertSuccess()
-        .outContains('- updated disabled collectors: [stat_statements locks]');
+        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
+
+      const agent = await api.inventoryApi.getAgentById(pgExporterId);
+
+      expect(
+        agent.disabled_collectors,
+        'Disabled collectors were not persisted on the mysqld_exporter agent',
+      ).toEqual(collectorsToDisable);
     },
   );
 
