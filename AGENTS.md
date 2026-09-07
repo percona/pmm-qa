@@ -252,7 +252,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
 - Don't skip cleanup — CI runs accumulate state across tests
 - Don't mix Playwright Test and CodeceptJS patterns — new UI tests go in `e2e_tests/` (Playwright)
-- Don't document an external CLI from vendor docs alone — they may describe an unreleased, renamed or separately-packaged tool whose commands the installed one doesn't have. Where it can't be authenticated while authoring, mark command names and flags verified but output field names **unverified**, with an instruction to print one payload and correct them on the first real run, rather than inventing plausible keys
+- Don't write a command into a skill or agent on someone else's say-so — vendor docs or a reviewer's suggestion alike; run it in the environment that file targets first. Vendor docs may describe an unreleased, renamed or separately-packaged tool whose commands the installed one doesn't have, and a reviewer's suggestion is a hypothesis until it runs: two on #1274 were unworkable in this environment and only execution showed it. Where it can't be run or authenticated while authoring, mark command names and flags verified but output field names **unverified**, with an instruction to print one payload and correct them on the first real run, rather than inventing plausible keys — the next session reads an unverified command as confirmed, which is worse than an acknowledged gap
 
 ## Environment Variables
 
