@@ -286,18 +286,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9998 - Verify Change agent skip connection check @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=invalid_skip_check_password --skip-connection-check`,
-        )
-        .assertSuccess()
-        .outContains('MySQL Exporter agent configuration updated.');
+      let commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=invalid_skip_check_password --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=invalid_skip_check_password --skip-connection-check`,
+      ];
 
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --username=${newUsername} --password=${newPassword}`,
-        )
-        .assertSuccess();
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
+      }
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --username=${newUsername} --password=${newPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --username=${newUsername} --password=${newPassword}`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess();
+      }
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -340,7 +345,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       expect(
         agent.query_examples_disabled,
-        'Query examples were not disabled on the qan_mysql_perfschema_agent',
+        'Query examples were not disabled on the qan_mysql_slowlog_agent',
       ).toEqual(true);
     },
   );
@@ -361,7 +366,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       expect(
         agent.max_query_length,
-        'Max query length was not persisted on the qan_mysql_perfschema_agent',
+        'Max query length was not persisted on the qan_mysql_slowlog_agent',
       ).toEqual(maxQueryLength);
     },
   );
