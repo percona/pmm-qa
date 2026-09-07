@@ -352,7 +352,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${pgExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
         )
         .assertSuccess()
         .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
