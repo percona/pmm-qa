@@ -152,4 +152,4 @@ Runs on a schedule outside any user session — a weekly Sunday Routine invoking
 - Never edit a target outside Publish. A session opens no PR; Publish opens at most one PR per lesson branch.
 - Never let gardening delay an unstable primary task or recursively review its own work.
 
-Concept adapted from Eoghan Henn's [Task Observer](https://github.com/rebelytics/one-skill-to-rule-them-all), licensed under CC BY 4.0.
+Skill Gardener is a substantially modified adaptation of Eoghan Henn's [Task Observer](https://github.com/rebelytics/one-skill-to-rule-them-all), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The repository-specific workflow and modifications are original Skill Gardener contributions.

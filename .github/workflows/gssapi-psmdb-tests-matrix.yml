@@ -285,3 +285,35 @@ jobs:
       metrics_mode: "auto"
       package: "pmm3-client"
       os: "ol-9"
+
+  notify_investigator:
+    name: Fire Investigator routine
+    needs:
+      - mongo_bm_ol8
+      - mongo_bm_ol9
+      - mongo_exporter_ol8
+      - mongo_exporter_ol9
+      - psmdb_replica_ol8
+      - psmdb_replica_ol9
+      - psmdb_rta_ol8
+      - psmdb_rta_ol9
+      - psmdb_6_replica-tests_ol8
+      - psmdb_7_replica-tests_ol8
+      - psmdb_8_replica-tests_ol8
+      - psmdb_6_replica-tests_ol9
+      - psmdb_7_replica-tests_ol9
+      - psmdb_8_replica-tests_ol9
+      - mongo_package_tests_integration_ol8
+      - mongo_package_tests_integration_ol9
+    if: >
+      !cancelled() && github.event_name == 'schedule' &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}
