@@ -386,6 +386,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1017 - Verify Change agent auto-discovery limit @pgsm-pmm-integration',
+    async ({ api, cliHelper }) => {
+      const autoDiscoveryLimit = 25;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --auto-discovery-limit=${autoDiscoveryLimit}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed auto-discovery limit to ${autoDiscoveryLimit}`);
+
+      const agent = await api.inventoryApi.getAgentById(pgExporterId);
+
+      expect(
+        agent.postgresql_options?.auto_discovery_limit,
+        'Auto-discovery limit was not persisted on the postgresql_exporter agent',
+      ).toEqual(autoDiscoveryLimit);
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
