@@ -101,6 +101,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@node-exporter-integration`
 - `@pgsm-pmm-integration`
+- `@pgss-pmm-integration`
 - `@pmm-ha`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
