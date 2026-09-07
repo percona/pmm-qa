@@ -379,6 +379,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1018 - Verify Change agent max slowlog file size @ps-slowlog-integration',
+    async ({ api, cliHelper }) => {
+      const maxSlowlogFileSize = '104857600';
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --max-slowlog-file-size=${maxSlowlogFileSize}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed max slowlog file size to ${maxSlowlogFileSize}`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldSlowlogAgentId);
+
+      expect(
+        agent.max_query_log_size,
+        'Max slowlog file size was not persisted on the qan_mysql_slowlog_agent',
+      ).toEqual(maxSlowlogFileSize);
+    },
+  );
+
+  pmmTest(
     'PMM-T1010 - Verify Change agent tls @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
