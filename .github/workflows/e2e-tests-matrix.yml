@@ -216,3 +216,31 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+
+  notify_investigator:
+    name: Fire Investigator routine
+    needs:
+      - settings_and_cli
+      - ssl_mysql
+      - ssl_mongo
+      - ssl_postgres
+      - disconnect
+      - ps_pxc_haproxy_integration
+      - psmdb_integration
+      - new-navigation
+      - inventory
+      - access-control
+      - settings_playwright
+      - fb_tests
+    if: >
+      !cancelled() && github.event_name == 'schedule' &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}
