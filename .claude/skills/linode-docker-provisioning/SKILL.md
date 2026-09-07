@@ -66,7 +66,7 @@ one round trip each and is not a bulk transfer channel.
 The cap is the **exec-server's own 600s command timeout** — `run.sh:61` sends only `{"cmd": …}`, never a `timeout`, so the server falls back to its default (`cloud-init.yaml.tftpl:115`, `timeout = body.get("timeout", 600)`, fed to `subprocess.run`). It kills its direct `bash -c` child at 600s while any grandchild survives holding the captured stdout pipe, and `run.sh`'s own `curl -m 620` then aborts with "failed to reach exec-server" — the symptom you see, twenty seconds after the cause. A longer client timeout therefore buys nothing, and the remote process keeps going regardless. A second run then shares the PMM Server with that orphan and the two suites' setup hooks destroy each other's fixtures — a worthless result from both. So launch a long test suite or playbook detached and poll it:
 
 ```bash
-terraform/linode-runner/run.sh <run_id> -- "cd <dir> && nohup <command> >/root/<name>.log 2>&1 & echo \$!"
+terraform/linode-runner/run.sh <run_id> -- "cd <dir> && nohup bash -c '<command>; rc=\$?; echo DONE_MARKER=\$rc >>/root/<name>.log; exit \$rc' >/root/<name>.log 2>&1 & echo \$!"
 ```
 
 Before starting a new run, check for and kill any orphan a timed-out attempt left behind. Kill by the PID you printed, or with a self-excluding pattern (`pkill -f 'codecept[j]s'`): a plain `pkill -f codeceptjs` also matches the exec-server's own `bash -c "… codeceptjs …"` wrapper carrying the pkill, so it kills the calling remote shell (exit 241) and leaves the orphan running.
@@ -231,11 +231,19 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
-The values are interpolated **here**, not dereferenced on the box: `VAR=x cmd --flag "$VAR"` is one simple command, so the argument expands before the assignment takes effect and the flag arrives empty. That form silently ran the framework as `--pmm-server-password  --client-version latest-tarball` and the whole setup had to be repeated. Confirm the arguments carry what you meant right after launching:
+The values are interpolated **here**, not dereferenced on the box: `VAR=x cmd --flag "$VAR"` is one simple command, so the argument expands before the assignment takes effect and the flag arrives empty. That form silently ran the framework as `--pmm-server-password  --client-version latest-tarball` and the whole setup had to be repeated. Confirm the arguments in the **same** remote command — `run.sh` blocks until the command finishes, so a later `pgrep` finds nothing on a run that already exited:
 
 ```bash
-terraform/linode-runner/run.sh <run_id> -- "pgrep -af pmm-framework"
+terraform/linode-runner/run.sh <run_id> -- "
+  export HOME=/root
+  cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
+  set -x && ./pmm-framework --pmm-server-password '$ADMIN_PASSWORD' … --verbose
+"
 ```
+
+`set -x` echoes the resolved argv (password included, so keep that output out of anything shared) before the framework runs.
+
+The password reaches the box inside the command string, which the exec-server runs through `bash -c`, so it is visible in the remote process arguments for the life of the call. That is inherent to `run.sh`'s single-string interface; it is acceptable here only because the VM is single-tenant and throwaway and the password is generated per run (step 2), never reused. Don't extend the pattern to a credential that outlives the run.
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
@@ -254,7 +262,7 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 
 **Behind the egress proxy that pin can fail on this path too.** Measured on a provisioned single-server Docker run: `pmm-ui-login.js` with the step 2 cert failed at `net::ERR_CERT_AUTHORITY_INVALID`, and `openssl s_client` against the run's host on 443 returned `subject=CN = *.nip.io`, `issuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)` — the gateway's certificate, not PMM's, so the leaf pin had nothing to match. The trust boundary from a proxied session is the proxy plus the cert-pinned exec channel; `PMM_CERT_PATH` bites end-to-end only on a direct, unproxied path.
 
-Check the CA bundle first: `.claude/scripts/lib/proxy.js` pins whatever interception CAs it finds in `$CCR_CA_BUNDLE` (default `/root/.ccr/ca-bundle.crt`) into the same flag as your PMM pin, so a gateway issuer missing there is the real gap and adding it keeps verification on. `PMM_UI_INSECURE=1` is the fallback when it can't be — it disables verification for the whole browser context, and this is the path that sends the admin credential, which is why `pmm-ui-login.js` prints an HA/LKE-only warning for it. Taking that route is a deliberate exception: note it in the evidence rather than treating it as the default.
+Check the CA bundle first: `.claude/scripts/lib/proxy.js` pins whatever interception CAs it finds in `$CCR_CA_BUNDLE` (default `/root/.ccr/ca-bundle.crt`) into the same flag as your PMM pin, so a gateway issuer missing there is the real gap and adding it keeps verification on. `PMM_UI_INSECURE=1` is the fallback when it can't be — it disables verification for the whole browser context, and this is the path that sends the admin credential, which is why `pmm-ui-login.js` prints an HA/LKE-only warning for it. Taking that route is a deliberate exception: note it in the evidence rather than treating it as the default. What makes it tolerable is that the credential at risk is this run's own — step 2 generates it per VM and it dies with the box — so never take this path with a shared or long-lived password.
 
 Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
 environment needs the proxy set explicitly. The symptom: every request fails with

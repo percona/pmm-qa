@@ -150,8 +150,12 @@ J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != D
 
 # search does NOT paginate: startAt and the returned nextPageToken are both ignored,
 # so six calls for a 219-issue result silently returned the same first 100 each time.
-# Page with a JQL cursor instead -- ORDER BY created ASC, then on each following call
-# add created >= "<created of the last issue seen, to the minute>" -- and dedup by key.
+# Page with a JQL cursor instead: ORDER BY created ASC, key ASC, then on each call add
+# created >= "<created of the last issue seen>" and exclude the keys already collected
+# (key NOT IN (...)). JQL's created is minute-precision, so a bare created >= cursor
+# re-serves the same minute forever once >100 issues share it -- the key exclusion is
+# what advances. Dedup by key, and stop with an error if a page adds no new keys
+# rather than looping.
 
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"

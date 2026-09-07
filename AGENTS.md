@@ -117,7 +117,7 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 
 | File kind | Command | Config |
 | ----------- | --------- | -------- |
-| `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) — **needs Node 22** (`nvm use 22`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
+| `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) — `e2e_tests` **needs Node 22** (`nvm use 22`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
 | `.github/workflows/*` | `actionlint` (embedded shellcheck at default severity) | [.github/actionlint.yaml](.github/actionlint.yaml) |
 | `*.sh` | `shellcheck -S warning` (every tracked script) | — |
@@ -135,7 +135,7 @@ actionlint's embedded shellcheck is on at its own default severity — info and 
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 
-**The `*.ts` entry point needs Node 22**, which is what `lint.yml` sets. On Node 20 `npm run lint` in `e2e_tests` never reaches a file: eslint 10.9.1 aborts importing eslint-plugin-unicorn 74 with `TypeError: mapTypes.union is not a function`, and past that the `stylish` formatter aborts with `TypeError: util.styleText is not a function` — both Node 22 APIs. Since `lint-changed.sh` runs that same command for any staged `.ts`, the commit gate then fails regardless of the diff. A crash at config load is not a clean diff, and it is never a reason to edit `eslint.config.mjs`.
+**`e2e_tests` lints only on Node 22**, which is what `lint.yml` sets; its `eslint-plugin-unicorn@^74` declares `node >=22`. On Node 20 `npm run lint` there never reaches a file: eslint aborts importing that plugin (`TypeError: mapTypes.union is not a function`), and past that the `stylish` formatter aborts on `util.styleText`. The `cli` workspace is on eslint 8 and sets no such floor. Since `lint-changed.sh` runs the owning workspace's command for any staged `.ts`, a Node 20 checkout fails the commit gate on an `e2e_tests` file regardless of the diff. A crash at config load is not a clean diff, and it is never a reason to edit `eslint.config.mjs`.
 
 ### Why not a bundled linter action
 
@@ -242,7 +242,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Use path aliases (`@pages/`, `@helpers/`) in imports
 - Use Playwright's `test.step()` for readable test structure — a **value-returning** `const x = await pmmTest.step(...)` needs expression statements as neighbours: `@stylistic/padding-line-between-statements` in `e2e_tests/eslint.config.mjs` forbids a blank line between adjacent `const`s while requiring one around block-like statements, so placing one next to another `const` is unsatisfiable and `--fix` answers with `ESLintCircularFixesWarning`
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
-- Run an **unmerged** script from the PR ref, never a working-tree path — `git show origin/<branch>:<path> >/tmp/x.sh` — then fingerprint what actually executed (grep a token unique to the new code) and confirm its result against a raw ground-truth listing. A dry run of a reaper from a checkout sitting on `main` reported `volumes=0`; the PR's own code found 64, against 66 orphans the raw API listing confirmed. The same rule covers anything deployed: verify the deployed artifact's *content*, not a diff against a checkout that may itself be stale
+- Validating **your own** unmerged script against a live environment: run it from the PR ref, never a working-tree path — `git show origin/<branch>:<path> >/tmp/x.sh` — then fingerprint what actually executed (grep a token unique to the new code) and confirm its result against a raw ground-truth listing. A dry run of a reaper from a checkout sitting on `main` reported `volumes=0`; the PR's own code found 64, against 66 orphans the raw API listing confirmed. The same rule covers anything deployed: verify the deployed artifact's *content*, not a diff against a checkout that may itself be stale. This is for code you are the author of — **reviewing** someone's PR never runs its tooling (`qa-code-review` section 1); inspect it instead
 - Write a skill or agent that wraps an **external CLI against the installed binary** — install the version CI actually pins and read `--help` for the real subcommand tree before documenting a single command
 
 ### Don't
