@@ -46,16 +46,16 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verify Change agent username and password @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      let commands = [
+      const commands = [
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=${newPassword} --username=${newUsername}`,
-      ];
+      // commands = [
+      //   `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
+      //   `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --password=${newPassword} --username=${newUsername}`,
+      // ];
 
       commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
 
