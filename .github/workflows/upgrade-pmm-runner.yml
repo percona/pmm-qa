@@ -247,13 +247,18 @@ jobs:
 
       - name: Docker upgrade (swap server image, keep volume)
         run: |
+          if [[ "$MY_VAR" == *rc* ]]; then
+            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
+          else
+            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
+          fi
           docker stop pmm-server
-          docker pull "${{ needs.prepare.outputs.rc_version }}"
+          docker pull "$UPGRADE_TAG"
           docker rename pmm-server pmm-server-old
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
-            --volumes-from pmm-server-old --name pmm-server "${{ needs.prepare.outputs.rc_version }}"
+            --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Post-server-upgrade UI tests
@@ -271,7 +276,7 @@ jobs:
             export CLIENT_REPOSITORY=experimental
             export LATEST_VERSION=$DEV_LATEST_VERSION
           else
-          export CLIENT_REPOSITORY=testing
+            export CLIENT_REPOSITORY=testing
             export LATEST_VERSION=$PMM_SERVER_LATEST
           fi
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
