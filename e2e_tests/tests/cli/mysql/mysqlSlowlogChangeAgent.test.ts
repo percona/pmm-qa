@@ -258,6 +258,29 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest('PMM-T1016 - Verify Change agent comments parsing @ps-integration', async ({ api, cliHelper }) => {
+    const commentsParsingCases = [
+      { disabled: false, response: '- enabled comments parsing', value: 'on' },
+      { disabled: true, response: '- disabled comments parsing', value: 'off' },
+    ];
+
+    for (const commentsParsingCase of commentsParsingCases) {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --comments-parsing=${commentsParsingCase.value}`,
+        )
+        .assertSuccess()
+        .outContains(commentsParsingCase.response);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldSlowlogAgentId);
+
+      expect(
+        agent.comments_parsing_disabled ?? false,
+        `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_mysql_slowlog_agent`,
+      ).toEqual(commentsParsingCase.disabled);
+    }
+  });
+
   pmmTest(
     'PMM-T9998 - Verify Change agent skip connection check @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
