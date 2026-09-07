@@ -40,7 +40,7 @@ class QueryAnalyticsQueryDetails {
 
     const result = (queryCountDetail / timeRangeInSec).toFixed(4);
 
-    this.compareCalculation(qpsvalue, result);
+    this.compareCalculation(qpsvalue, result, 1);
   }
 
   async verifyAverageQueryTime(timeRangeInSec = 300) {
@@ -62,20 +62,18 @@ class QueryAnalyticsQueryDetails {
     const [load] = (await I.grabTextFrom(loadLocator)).split(' ');
     const result = ((queryCountDetail * parseFloat(perQueryStats)) / timeRangeInSec).toFixed(4);
 
-    this.compareCalculation(load, result);
+    this.compareCalculation(load, result, 2);
   }
 
   getQueryCountValue(value) {
-    let result = parseFloat(value);
+    const abbreviations = {
+      k: 1e3, m: 1e6, b: 1e9, t: 1e12,
+    };
 
-    if (value.endsWith('k')) {
-      result *= 1000;
-    }
-
-    return result;
+    return parseFloat(value) * (abbreviations[value.trim().slice(-1).toLowerCase()] || 1);
   }
 
-  compareCalculation(value, result) {
+  compareCalculation(value, result, humanizedInputs) {
     switch (true) {
       case result < 0.01:
         assert.ok(value.startsWith('<0.01'), `Values don't match. Value: ${value}, calculated Result: ${result}`);
@@ -83,8 +81,16 @@ class QueryAnalyticsQueryDetails {
       case parseFloat(result) <= 0.0149:
         assert.ok(value.startsWith('0.01'), `Values don't match. Value: ${value}, calculated Result: ${result}`);
         break;
-      default:
-        assert.ok(parseFloat(parseFloat(result).toFixed(2)) === parseFloat(value), `Values don't match. Value: ${value}, calculated Result: ${result}`);
+      default: {
+        // Both sides are humanized UI text, never exact: the rate is rounded to
+        // two decimals, and `result` is built from `humanizedInputs` values that
+        // QAN prints to three significant digits (numeral's '0.00a').
+        const expected = parseFloat(result);
+        const tolerance = 0.005 + (expected * ((1 / (0.995 ** humanizedInputs)) - 1));
+
+        assert.ok(Math.abs(parseFloat(value) - expected) <= tolerance, `Values don't match. Value: ${value}, calculated Result: ${result}`);
+        break;
+      }
     }
   }
 

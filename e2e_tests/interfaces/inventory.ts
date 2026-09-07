@@ -3,6 +3,7 @@ export interface GetServices {
 }
 
 export enum ServiceType {
+  mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
   valkey = 'valkey',
