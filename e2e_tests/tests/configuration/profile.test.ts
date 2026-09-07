@@ -12,9 +12,7 @@ const MONITORED_METRICS = [
 ];
 
 pmmTest.afterEach(async ({ api }) => {
-  await api.grafanaApi
-    .changePassword(process.env.ADMIN_PASSWORD || INITIAL_ADMIN_PASSWORD, INITIAL_ADMIN_PASSWORD)
-    .catch(() => undefined);
+  await api.grafanaApi.changePassword(NEW_ADMIN_PASSWORD, INITIAL_ADMIN_PASSWORD).catch(() => undefined);
   process.env.ADMIN_PASSWORD = INITIAL_ADMIN_PASSWORD;
 });
 
@@ -44,12 +42,12 @@ pmmTest(
       await expect(changePasswordPage.messages.successPopUp).toContainText('User password changed', {
         timeout: Timeouts.THIRTY_SECONDS,
       });
+      process.env.ADMIN_PASSWORD = NEW_ADMIN_PASSWORD;
     });
 
     await pmmTest.step('Sign out and log back in with the new password', async () => {
       await page.goto('graph/logout');
       await expect(loginPage.inputs.username).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      process.env.ADMIN_PASSWORD = NEW_ADMIN_PASSWORD;
       await loginPage.login(NEW_ADMIN_PASSWORD);
     });
 

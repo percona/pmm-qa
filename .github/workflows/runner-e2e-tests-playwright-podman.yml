@@ -237,11 +237,8 @@ jobs:
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
-      # PMM Server is a podman container publishing to the host, while
-      # pmm-framework starts the monitored databases under docker. They reach
-      # the server over the docker0 bridge address, not 127.0.0.1, so this
-      # keeps the CodeceptJS podman runner's --pmm-server-ip rather than the
-      # docker runner's form.
+      # pmm-framework starts the databases under docker while PMM runs under
+      # podman, so they reach the server over the docker0 bridge, not 127.0.0.1.
       - name: Run Setup for E2E Tests
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
@@ -249,9 +246,7 @@ jobs:
           export HOST_IP
           ./pmm-framework/pmm-framework --parallel --verbosity-level=2 --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
-      # Podman publishes PMM on plain http port 80, so PMM_UI_URL has to be set
-      # explicitly -- playwright.config.ts would otherwise fall back to
-      # http://localhost/.
+      # Pinned to the IPv4 literal: localhost can resolve to ::1, which podman does not publish on.
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         working-directory: pmm-qa/e2e_tests/
         env:

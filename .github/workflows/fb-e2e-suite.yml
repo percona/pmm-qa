@@ -279,9 +279,8 @@ jobs:
       setup_services: '--database psmdb,SETUP_TYPE=pss'
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
-  # setup_services deliberately omits pdpgsql, unlike the docker job above: the
-  # podman server sets PMM_ENABLE_INTERNAL_PG_QAN=1, so PMM's own PostgreSQL
-  # supplies pg_stat_activity_count here.
+  # No pdpgsql: the podman server runs with PMM_ENABLE_INTERNAL_PG_QAN=1, so PMM's own
+  # PostgreSQL supplies pg_stat_activity_count.
   user_and_password_podman:
     name: User with changed password UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright-podman.yml
