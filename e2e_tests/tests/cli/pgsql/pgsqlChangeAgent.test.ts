@@ -361,7 +361,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       expect(
         agent.disabled_collectors,
-        'Disabled collectors were not persisted on the mysqld_exporter agent',
+        'Disabled collectors were not persisted on the postgresql_exporter agent',
       ).toEqual(collectorsToDisable);
     },
   );
