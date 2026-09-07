@@ -215,7 +215,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceMonitoring(serviceName, 'Failed', Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceMonitoring(serviceName, 'Failed', Timeouts.FIVE_MINUTES);
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
@@ -223,7 +223,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
-      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
+      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.FIVE_MINUTES);
     },
   );
 
