@@ -1,7 +1,7 @@
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import { Locator } from '@playwright/test';
+import { expect, Locator } from '@playwright/test';
 
 /** The "PMM HA" entry of the left navigation, rendered from `/v1/ha/nodes`. */
 export default class HighAvailabilityPage extends BasePage {
@@ -40,6 +40,12 @@ export default class HighAvailabilityPage extends BasePage {
     });
 
   leaderNameLocator = (): Locator => this.elements.leaderNodeName;
+
+  verifyLeaderBadge = async (leader: string): Promise<void> =>
+    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
+      await this.reloadAndExpandHaNavItem();
+      await expect(this.elements.leaderNodeName).toHaveText(leader, { timeout: Timeouts.TWO_MINUTES });
+    });
 
   /**
    * Needed after a failover: the page was talking to the pod that was killed, so

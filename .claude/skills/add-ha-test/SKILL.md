@@ -33,13 +33,15 @@ topology, label reference and kubectl recipes.
 
 | Path | What |
 | --- | --- |
-| `e2e_tests/tests/ha/` | the tests; tagged `@pmm-ha`, except the upgrade test below |
+| `e2e_tests/tests/ha/` | the tests; tagged `@pmm-ha` |
+| `e2e_tests/tests/ha/upgrade/` | the Helm upgrade tests; their `AGENTS.md` owns the tags, phase order and baseline |
 | `e2e_tests/helpers/k8s.helper.ts` | generic namespaced `kubectl` (`getPods`, `deletePod`, `execInPod`, `scaleStatefulSet`, `assertReachable`) |
-| `e2e_tests/helpers/haCluster.helper.ts` | HA-specific: `podNames`, `leaderFromPods`, `lastPromotionTime`, `versionFromPod` |
-| `e2e_tests/helpers/helm.helper.ts` | namespaced `helm`: release lookup by chart, `upgrade`, repo add |
+| `e2e_tests/helpers/haCluster.helper.ts` | HA-specific: `podNames`, `leaderFromPods`, `lastPromotionTime`, `versionFromPod`, and the shared assertions `verifyHaEnabled`, `verifySingleLeader` |
+| `e2e_tests/helpers/helm.helper.ts` | namespaced `helm`: availability check, release lookup by chart |
 | `e2e_tests/api/ha.api.ts` | `/v1/ha/status`, `/v1/ha/nodes`, `pmm_ha_leader_status` helpers, failover-tolerant polls |
 | `e2e_tests/api/prometheus.api.ts` | PromQL via the Grafana datasource proxy |
-| `e2e_tests/pages/ha/highAvailability.page.ts` | sidebar HA badge and "Leader:" row |
+| `e2e_tests/pages/ha/highAvailability.page.ts` | sidebar HA badge and "Leader:" row; `verifyLeaderBadge` |
+| `e2e_tests/pages/navigation.page.ts` | the PMM shell; `verifyUiRenders` is the sidebar-plus-home-dashboard check the HA tests share |
 
 Fixtures: `k8sHelper`, `haClusterHelper`, `highAvailabilityPage`, `api.haApi`,
 `api.prometheusApi`.
@@ -185,11 +187,15 @@ npx playwright test --grep "@pmm-ha"
 point at the HA cluster. **Do not pass `--reporter=`** — a CLI reporter replaces
 the config list, including the `junit` reporter Jenkins consumes.
 
-`helmUpgrade.test.ts` is tagged **`@pmm-helm-upgrade`, not `@pmm-ha`** — it
-`helm upgrade`s the cluster it runs on, and `--grep "@pmm-ha"` would match a
-nested tag by substring. It needs `helm` on the runner and a cluster installed
-from the *released* chart; it fails fast, by design, on one already running the
-target image.
+The Helm upgrade tests in `e2e_tests/tests/ha/upgrade/` are ordered, tagged one per
+phase, and hand each other a baseline file. **`e2e_tests/tests/ha/upgrade/AGENTS.md`
+is their contract** — the tags, the phase order, what the baseline carries and the
+rules that have already cost a run. Read it before touching them; do not restate
+its tags here, they drift.
+
+The one thing that matters for this table: none of those tests runs `helm`. Every
+helm step is a `k8s/install_pmm_ha.sh` call in `pmm3-ha-helm-upgrade-tests.groovy`,
+so `helm.helper.ts` is read-only.
 
 Failover tests delete a leader pod on a shared cluster and leave leadership
 moved. That is fine and self-healing, but:

@@ -63,9 +63,9 @@ and **fail** when it is missing rather than skipping their comparisons.
 - **Never tag these `@pmm-ha`.** `--grep "@pmm-ha"` matches a nested tag by
   substring, and these mutate the cluster they run on - the whole HA suite would
   drag them in.
-- **Compare images by `repo:tag` suffix**, never by equality (`runsImage`). ROSA
-  rewrites `docker.io` through a pull-through cache, so a pod's image carries a
-  registry prefix the chart never asked for.
+- **Compare images by repository and tag** (`repositoryAndTag`), never by the full
+  reference. ROSA rewrites `docker.io` through a pull-through cache, so a pod's
+  image carries a registry prefix the chart never asked for.
 - **Never pass `--reporter`** on the command line: it replaces the whole config
   reporter list, including the `junit` reporter CI consumes, and the HTML report.
 - `/v1/version` needs credentials **even from inside the pod**, which is why

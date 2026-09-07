@@ -14,7 +14,6 @@ export default class HelmHelper {
     this.namespace = namespace;
   }
 
-  /** Fails with helm's own error rather than skipping, as {@link K8sHelper.assertReachable} does. */
   assertAvailable = (): void => {
     const result = this.cliHelper.execSilent('helm version --short');
 
@@ -45,10 +44,9 @@ export default class HelmHelper {
     return releases[0];
   };
 
-  listReleases = (): HelmRelease[] =>
-    JSON.parse(this.exec('list --output json').assertSuccess().stdout) as HelmRelease[];
-
-  /** @param args everything that follows `helm`; `--namespace` is a helm global flag */
-  private exec = (args: string): ExecReturn =>
-    this.cliHelper.execute(`helm ${args} --namespace ${this.namespace}`);
+  private listReleases = (): HelmRelease[] =>
+    JSON.parse(
+      this.cliHelper.execute(`helm list --output json --namespace ${this.namespace}`).assertSuccess()
+        .stdout,
+    ) as HelmRelease[];
 }

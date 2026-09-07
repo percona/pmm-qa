@@ -2,23 +2,42 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { Timeouts } from '@helpers/timeouts';
-import apiEndpoints from '@helpers/apiEndpoints';
 import { pmmServerPodSelector } from '@helpers/haCluster.helper';
+import { KubernetesPod } from '@interfaces/kubernetes';
 import { serverVersionBelow } from '@helpers/version.helper';
 
 const pmmHaChart = 'pmm-ha';
 const dependenciesChart = 'pmm-ha-dependencies';
 const targetImage = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
-// Set by the pipeline to the image it asked k8s/install_pmm_ha.sh to install.
-const releaseImage = process.env.RELEASE_DOCKER_VERSION;
+/**
+ * The image the cluster was installed from.
+ */
+const releasedImage = (): string => {
+  const image = process.env.RELEASE_DOCKER_VERSION || 'percona/pmm-server:latest';
+
+  if (!image) {
+    throw new Error(
+      'RELEASE_DOCKER_VERSION must name the image the cluster was installed from, ' +
+        'so this test can prove the released install landed before anything moves.',
+    );
+  }
+
+  return image;
+};
 // The upgrade happens between the two tests - and so between two Playwright
 // processes - so what the second one needs to compare against is written here.
 const baselineFile = process.env.HA_UPGRADE_BASELINE || resolve('output/ha-upgrade-baseline.json');
-// A cluster can pull through a mirror - ROSA rewrites docker.io to an internal
-// cache registry - so a pod's image carries a prefix the chart never asked for.
-const runsImage = (images: string[], wanted: string): boolean =>
-  images.some((image) => image === wanted || image.endsWith(`/${wanted}`));
+/**
+ * `percona/pmm-server:3.9.1` out of a possibly mirrored reference like
+ * `reg.example.com/dockerhub-cache/percona/pmm-server:3.9.1` - a cluster can pull
+ * through a mirror, so only the repository and tag are comparable.
+ */
+const repositoryAndTag = (image: string): string => image.split('/').slice(-2).join('/');
+
+/** The distinct PMM Server images the pods run; one entry when they all agree. */
+const serverImages = (pods: KubernetesPod[]): string[] => [
+  ...new Set(pods.flatMap((pod) => pod.images).map(repositoryAndTag)),
+];
 
 interface Baseline {
   images: string[];
@@ -52,10 +71,8 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 // cluster they run on, and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
   'Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
-  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation, page }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
+  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation }) => {
+    await haClusterHelper.verifyHaEnabled(api.haApi);
 
     const baseline = await pmmTest.step('Baseline the release, images and version in place', async () => {
       helmHelper.assertAvailable();
@@ -69,16 +86,15 @@ pmmTest(
       expect(release.status, `Helm release "${release.name}" must be deployed`).toEqual('deployed');
       expect(pods.length, 'The HA cluster must have PMM Server pods').toBeGreaterThan(0);
       expect(
-        runsImage(images, targetImage),
+        serverImages(pods),
         `The upgrade target is "${targetImage}", so the cluster must be installed from the released chart first`,
-      ).toBeFalsy();
+      ).not.toContain(repositoryAndTag(targetImage));
 
-      // The pipeline names the image it asked the install script for; with nothing
-      // named there is nothing extra to pin down.
-      expect(
-        !releaseImage || pods.every((pod) => runsImage(pod.images, releaseImage)),
-        `Every PMM Server pod must run "${releaseImage}", got ${images.join(', ')}`,
-      ).toBeTruthy();
+      const releaseImage = releasedImage();
+
+      expect(serverImages(pods), `Every PMM Server pod must run "${releaseImage}"`).toEqual([
+        repositoryAndTag(releaseImage),
+      ]);
 
       return {
         images,
@@ -88,36 +104,10 @@ pmmTest(
       };
     });
 
-    await pmmTest.step('Verify the UI is accessible', async () => {
-      await page.goto(highAvailabilityPage.url, { timeout: Timeouts.TWO_MINUTES });
-      await expect(leftNavigation.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
-      await leftNavigation.selectMenuItem('home');
-      await expect(leftNavigation.elements.iframe, 'The home dashboard must render').toBeVisible({
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
+    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+    const leader = await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
 
-    const leader = await pmmTest.step('Verify the cluster has exactly one leader', async () => {
-      const leaderPod = await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
-
-      await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
-      expect(await api.haApi.getNodeNames(), 'Every pod must have joined the HA cluster').toEqual(
-        baseline.podNames,
-      );
-      expect(
-        (await api.haApi.getLeaderNode())?.node_name,
-        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
-      ).toEqual(leaderPod);
-
-      return leaderPod;
-    });
-
-    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
-      await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(leader, {
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
+    await highAvailabilityPage.verifyLeaderBadge(leader);
 
     await pmmTest.step(`Record the baseline in "${baselineFile}"`, async () => {
       writeBaseline(baseline);
@@ -127,12 +117,10 @@ pmmTest(
 
 pmmTest(
   'Verify a PMM HA cluster keeps serving while its dependencies are upgraded @pmm-helm-mid-upgrade',
-  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation, page }) => {
+  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation }) => {
     const before = readBaseline();
 
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
+    await haClusterHelper.verifyHaEnabled(api.haApi);
 
     await pmmTest.step('Verify the dependencies moved and the pmm-ha release did not', async () => {
       helmHelper.assertAvailable();
@@ -159,12 +147,10 @@ pmmTest(
         before.podNames,
       );
 
-      for (const pod of pods) {
-        expect(
-          runsImage(pod.images, targetImage),
-          `Pod "${pod.name}" must not be on the upgrade target yet, got ${pod.images.join(', ')}`,
-        ).toBeFalsy();
-      }
+      expect(
+        serverImages(pods),
+        'Upgrading the dependencies must leave the server image alone',
+      ).toEqual(before.images.map(repositoryAndTag));
 
       return names;
     });
@@ -184,34 +170,10 @@ pmmTest(
       }
     });
 
-    await pmmTest.step('Verify the UI is accessible', async () => {
-      await page.goto(highAvailabilityPage.url, { timeout: Timeouts.TWO_MINUTES });
-      await expect(leftNavigation.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
-      await leftNavigation.selectMenuItem('home');
-      await expect(leftNavigation.elements.iframe, 'The home dashboard must render').toBeVisible({
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
+    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+    const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
 
-    const leader = await pmmTest.step('Verify the cluster still has exactly one leader', async () => {
-      const leaderPod = await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
-
-      await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
-      expect(await api.haApi.getNodeNames(), 'Every pod must still be in the HA cluster').toEqual(podNames);
-      expect(
-        (await api.haApi.getLeaderNode())?.node_name,
-        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
-      ).toEqual(leaderPod);
-
-      return leaderPod;
-    });
-
-    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
-      await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(leader, {
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
+    await highAvailabilityPage.verifyLeaderBadge(leader);
   },
 );
 
@@ -225,13 +187,10 @@ pmmTest(
     highAvailabilityPage,
     k8sHelper,
     leftNavigation,
-    page,
   }) => {
     const before = readBaseline();
 
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
+    await haClusterHelper.verifyHaEnabled(api.haApi);
 
     await pmmTest.step('Verify Helm recorded a new deployed revision', async () => {
       helmHelper.assertAvailable();
@@ -251,12 +210,9 @@ pmmTest(
 
       expect(names, 'The upgrade must not replace the PMM Server pods').toEqual(before.podNames);
 
-      for (const pod of pods) {
-        expect(
-          runsImage(pod.images, targetImage),
-          `Pod "${pod.name}" must run the upgraded image, got ${pod.images.join(', ')}`,
-        ).toBeTruthy();
-      }
+      expect(serverImages(pods), 'Every pod must run the upgraded image').toEqual([
+        repositoryAndTag(targetImage),
+      ]);
 
       return names;
     });
@@ -264,11 +220,9 @@ pmmTest(
     await pmmTest.step('Verify every pod serves the upgraded version', async () => {
       const version = await api.serverApi.getPmmVersion();
 
-      // Not asserted to differ from the baseline: a dev build reports whatever
-      // version main is on, which can still be the released one.
       expect(
         serverVersionBelow(version, before.version),
-        `The cluster must not report a version older than "${before.version}"`,
+        `The cluster reports "${version.version}", older than the baseline "${before.version}"`,
       ).toBeFalsy();
 
       for (const podName of podNames) {
@@ -279,37 +233,10 @@ pmmTest(
       }
     });
 
-    const leader = await pmmTest.step('Verify the cluster settles with exactly one leader', async () => {
-      // No previous leader to wait away from - the rolling upgrade has already moved
-      // leadership; this retries until exactly one pod answers the health check again.
-      const leaderPod = await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+    const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
 
-      await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
-      expect(await api.haApi.getNodeNames(), 'Every pod must rejoin the HA cluster').toEqual(podNames);
-      expect(
-        (await api.haApi.getLeaderNode())?.node_name,
-        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
-      ).toEqual(leaderPod);
-
-      return leaderPod;
-    });
-
-    await pmmTest.step('Verify the UI is accessible after the upgrade', async () => {
-      // The pods that served the pre-upgrade session are gone.
-      await grafanaHelper.authorize();
-      await page.goto(highAvailabilityPage.url, { timeout: Timeouts.TWO_MINUTES });
-      await expect(leftNavigation.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
-      await leftNavigation.selectMenuItem('home');
-      await expect(leftNavigation.elements.iframe, 'The home dashboard must render').toBeVisible({
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
-
-    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
-      await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(leader, {
-        timeout: Timeouts.TWO_MINUTES,
-      });
-    });
+    await grafanaHelper.authorize();
+    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+    await highAvailabilityPage.verifyLeaderBadge(leader);
   },
 );
