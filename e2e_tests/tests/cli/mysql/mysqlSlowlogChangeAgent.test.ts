@@ -19,7 +19,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`).stdout.trim();
-    console.log(`Container name is: ${containerName}`);
     // pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
       .execSilent(
@@ -343,7 +342,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
@@ -351,13 +350,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
-      );
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess(),
-      );
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
+      cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`);
+      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
