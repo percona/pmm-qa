@@ -12,6 +12,8 @@ const pmmManagedLog = '/srv/logs/pmm-managed.log';
 const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
+/** The `haproxy` subchart labels by chart name, so this is independent of the release name. */
+export const haproxyPodSelector = 'app.kubernetes.io/name=haproxy';
 /** The `pmm-ha` chart default. */
 const defaultReplicas = 3;
 

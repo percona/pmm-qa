@@ -45,7 +45,10 @@ export default class K8sHelper {
     );
   };
 
-  deletePod = (podName: string): ExecReturn => this.exec(`delete pod ${podName} --wait=false`);
+  deletePod = (podName: string): ExecReturn => this.deletePods([podName]);
+
+  /** One call, so the pods are all told to go at the same moment. */
+  deletePods = (podNames: string[]): ExecReturn => this.exec(`delete pod ${podNames.join(' ')} --wait=false`);
 
   /** @param args everything that follows `kubectl --namespace <namespace>` */
   exec = (args: string): ExecReturn =>
@@ -81,14 +84,21 @@ export default class K8sHelper {
     return podList.items.map((item) => {
       const containerStatuses = item.status?.containerStatuses ?? [];
       const readyCondition = item.status?.conditions?.find((condition) => condition.type === 'Ready');
+      const ready = readyCondition?.status === 'True';
 
       return {
         containersReady: containerStatuses.filter((status) => status.ready).length,
         containersTotal: containerStatuses.length,
+        initContainers: (item.spec?.initContainers ?? []).map((container) => container.name),
         name: item.metadata.name,
         phase: item.status?.phase ?? 'Unknown',
-        ready: readyCondition?.status === 'True',
+        ready,
+        readySince:
+          ready && readyCondition?.lastTransitionTime
+            ? Date.parse(readyCondition.lastTransitionTime)
+            : undefined,
         restarts: containerStatuses.reduce((total, status) => total + status.restartCount, 0),
+        uid: item.metadata.uid,
       };
     });
   };
