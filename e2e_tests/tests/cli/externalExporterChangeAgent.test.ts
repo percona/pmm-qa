@@ -112,8 +112,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest('PMM-T1004 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
     const commands = [
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
-      `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --debug --trace --json`,
+      `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --debug --trace --json`,
     ];
 
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -131,8 +130,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       for (const enableCommand of enableCommands) {
         let commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} ${enableCommand.command}`,
         ];
 
         for (const command of commands) {
@@ -143,8 +141,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         commands = [
-          `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
-          `docker exec ${containerName} pmm-admin list | grep mysql_perfschema_agent | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep external-exporter | grep ${serviceId}`,
         ];
 
         for (const command of commands) {
