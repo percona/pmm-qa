@@ -133,10 +133,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+        // valkey-server runs as uid 999, so it must own every file it reads:
+        // the server cert/key and the CA used to verify client certs.
         `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
         `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
+        `docker exec ${containerName} chown 999:999 /certs/ca-certs.pem`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chmod 644 /certs/ca-certs.pem`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
