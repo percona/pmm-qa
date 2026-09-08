@@ -61,6 +61,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "INSERT INTO mysql_users (username, password) VALUES ('${newUsername}', '${newPassword}'); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"`,
       );
 
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
+        )
+        .assertSuccess();
+
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
