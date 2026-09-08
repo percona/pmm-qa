@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -33,6 +34,34 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       )
       .stdout.trim();
   });
+
+  // The external exporter is a redis_exporter serving http /metrics on :42200 (see
+  // qa-integration/pmm_qa/external_setup.yml). To prove metrics are reachable on a *changed*
+  // path/scheme the redis_exporter itself must serve there, so these helpers stop it and relaunch
+  // it with extra flags, reusing its original argv captured from /proc.
+  const redisExporterPort = '42200';
+  const captureRedisExporterCmd = (cliHelper: CliHelper) =>
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} bash -c 'for p in /proc/[0-9]*; do if [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ]; then tr "\\0" " " < "$p/cmdline" > /redis_orig_cmd; break; fi; done'`,
+      )
+      .assertSuccess();
+  const stopRedisExporter = (cliHelper: CliHelper) =>
+    cliHelper.execSilent(
+      `docker exec ${containerName} bash -c 'for p in /proc/[0-9]*; do [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ] && kill "$(basename "$p")"; done; sleep 2'`,
+    );
+  const startRedisExporter = (cliHelper: CliHelper, extraFlags: string) =>
+    cliHelper
+      .execSilent(
+        `docker exec -d ${containerName} bash -c 'cd / && $(cat /redis_orig_cmd) ${extraFlags} > /redis_reconfig.log 2>&1'`,
+      )
+      .assertSuccess();
+  const waitForRedisMetrics = (cliHelper: CliHelper, url: string) =>
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} bash -c 'timeout 60 bash -c "until curl -skf ${url} >/dev/null 2>&1; do sleep 2; done"'`,
+      )
+      .assertSuccess();
 
   pmmTest(
     'PMM-T1001 - Verify Change agent username and password @ps-integration',
@@ -222,4 +251,142 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
+
+  pmmTest('PMM-T1014 - Verify Change agent username @external-integration', async ({ cliHelper }) => {
+    const testUsername = 'external_flag_test_user';
+
+    // The change command output echoes the agent config the server stored, so asserting the
+    // "Username" field verifies the flag was applied, not just parsed.
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${testUsername} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContainsNormalizedMany([
+        'agent configuration updated.',
+        '- updated username',
+        `Username : ${testUsername}`,
+      ]);
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${newUsername} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains(`Username : ${newUsername}`);
+  });
+
+  pmmTest('PMM-T1015 - Verify Change agent listen port @external-integration', async ({ cliHelper }) => {
+    const readPort = () =>
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${externalExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
+    const originalPort = readPort();
+    const newPort = '42201';
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --listen-port=${newPort} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContainsNormalizedMany([`- changed listen port to ${newPort}`, `Listen port : ${newPort}`]);
+    // Independently confirm the new port via pmm-admin list.
+    expect(readPort(), 'Listen port should be updated in pmm-admin list').toEqual(newPort);
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --listen-port=${originalPort} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains(`- changed listen port to ${originalPort}`);
+    expect(readPort(), 'Listen port should be restored in pmm-admin list').toEqual(originalPort);
+  });
+
+  pmmTest('PMM-T1016 - Verify Change agent metrics scheme @external-integration', async ({ cliHelper }) => {
+    const httpsUrl = `https://127.0.0.1:${redisExporterPort}/metrics`;
+    const httpUrl = `http://127.0.0.1:${redisExporterPort}/metrics`;
+
+    captureRedisExporterCmd(cliHelper);
+
+    try {
+      // Serve the redis_exporter over TLS with a self-signed certificate.
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} bash -c 'openssl req -x509 -newkey rsa:2048 -nodes -keyout /redis_tls.key -out /redis_tls.crt -days 1 -subj "/CN=${containerName}" >/dev/null 2>&1'`,
+        )
+        .assertSuccess();
+      stopRedisExporter(cliHelper);
+      startRedisExporter(
+        cliHelper,
+        '-tls-server-cert-file=/redis_tls.crt -tls-server-key-file=/redis_tls.key',
+      );
+      await waitForRedisMetrics(cliHelper, httpsUrl);
+
+      // Metrics are served on the changed (https) scheme.
+      await cliHelper
+        .execSilent(`docker exec ${containerName} curl -skf ${httpsUrl}`)
+        .assertSuccess()
+        .outContains('redis_up');
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-scheme=https --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContainsNormalizedMany(['- changed metrics scheme to https', 'Scheme : https']);
+    } finally {
+      stopRedisExporter(cliHelper);
+      startRedisExporter(cliHelper, '');
+      await waitForRedisMetrics(cliHelper, httpUrl);
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-scheme=http --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContainsNormalizedMany(['- changed metrics scheme to http', 'Scheme : http']);
+    }
+  });
+
+  pmmTest('PMM-T1017 - Verify Change agent metrics path @external-integration', async ({ cliHelper }) => {
+    const customPath = '/custom-metrics';
+    const customUrl = `http://127.0.0.1:${redisExporterPort}${customPath}`;
+    const defaultUrl = `http://127.0.0.1:${redisExporterPort}/metrics`;
+
+    captureRedisExporterCmd(cliHelper);
+
+    try {
+      // Serve the redis_exporter metrics on a custom telemetry path.
+      stopRedisExporter(cliHelper);
+      startRedisExporter(cliHelper, `-web.telemetry-path=${customPath}`);
+      await waitForRedisMetrics(cliHelper, customUrl);
+
+      // Metrics are served on the changed path.
+      await cliHelper
+        .execSilent(`docker exec ${containerName} curl -sf ${customUrl}`)
+        .assertSuccess()
+        .outContains('redis_up');
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-path=${customPath} --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContainsNormalizedMany([
+          `- changed metrics path to ${customPath}`,
+          `Metrics path : ${customPath}`,
+        ]);
+    } finally {
+      stopRedisExporter(cliHelper);
+      startRedisExporter(cliHelper, '');
+      await waitForRedisMetrics(cliHelper, defaultUrl);
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-path=/metrics --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContainsNormalizedMany(['- changed metrics path to /metrics', 'Metrics path : /metrics']);
+    }
+  });
 });
