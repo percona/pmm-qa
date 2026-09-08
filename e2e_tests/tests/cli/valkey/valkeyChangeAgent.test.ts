@@ -133,8 +133,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-        `docker exec ${containerName} chown 999:999 /certs/valkey-primary-1.crt`,
-        `docker exec ${containerName} chown 999:999 /certs/valkey-primary-1.key`,
+        `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
@@ -143,7 +143,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `tls-port 6379\nport 0\ntls-cert-file /certs/${containerName}.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+        `tls-port 6379\nport 0\ntls-cert-file /certs/${containerName}.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/ca-certs.pem\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
