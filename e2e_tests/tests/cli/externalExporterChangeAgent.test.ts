@@ -301,11 +301,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T1013 - Verify Change agent skip connection check @ps-integration',
+    'PMM-T1013 - Verify Change agent skip connection check @external-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=invalid_skip_check_password --skip-connection-check`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=invalid_skip_check_password --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=invalid_skip_check_password --skip-connection-check`,
       ];
 
       for (const command of commands) {
@@ -313,8 +312,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --username=${newUsername} --password=${newPassword}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --username=${newUsername} --password=${newPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${newUsername}`,
       ];
 
       for (const command of commands) {
