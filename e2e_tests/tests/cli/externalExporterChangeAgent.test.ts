@@ -222,4 +222,77 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
+
+  pmmTest('PMM-T1014 - Verify Change agent username @external-integration', async ({ cliHelper }) => {
+    const testUsername = 'external_flag_test_user';
+    const result = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${testUsername} --skip-connection-check`,
+      )
+      .assertSuccess();
+
+    await result.outContains('agent configuration updated.');
+    await result.outContains('- updated username');
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${newUsername} --skip-connection-check`,
+      )
+      .assertSuccess();
+  });
+
+  pmmTest('PMM-T1015 - Verify Change agent listen port @external-integration', async ({ cliHelper }) => {
+    const originalPort = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${externalExporterId} | awk -F' ' '{print $6}'`,
+      )
+      .stdout.trim();
+    const newPort = '42201';
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --listen-port=${newPort} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains(`- changed listen port to ${newPort}`);
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --listen-port=${originalPort} --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains(`- changed listen port to ${originalPort}`);
+  });
+
+  pmmTest('PMM-T1016 - Verify Change agent metrics scheme @external-integration', async ({ cliHelper }) => {
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-scheme=https --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains('- changed metrics scheme to https');
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-scheme=http --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains('- changed metrics scheme to http');
+  });
+
+  pmmTest('PMM-T1017 - Verify Change agent metrics path @external-integration', async ({ cliHelper }) => {
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-path=/custom-metrics --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains('- changed metrics path to /custom-metrics');
+
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --metrics-path=/metrics --skip-connection-check`,
+      )
+      .assertSuccess()
+      .outContains('- changed metrics path to /metrics');
+  });
 });
