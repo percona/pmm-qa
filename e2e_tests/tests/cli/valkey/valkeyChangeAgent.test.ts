@@ -120,8 +120,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  // eslint-disable-next-line playwright/no-skipped-test -- Test
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9994 - Verify Change agent tls @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/usr/local/etc/valkey/valkey.conf`;
