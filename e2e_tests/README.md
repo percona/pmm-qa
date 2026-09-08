@@ -93,6 +93,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
+- `@external-integration`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
