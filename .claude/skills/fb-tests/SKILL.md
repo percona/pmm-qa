@@ -9,16 +9,20 @@ description: Analyze Percona-Lab/pmm-submodules FB Tests via REST check-runs, JN
 
 ## Collect checks
 
-Read checks with the GitHub MCP `pull_request_read` (`method: get_check_runs`, owner `Percona-Lab`, repo `pmm-submodules`, `pullNumber: <SUBMODULES_PR>`, `perPage: 100`) — it resolves the head SHA for you and returns the check runs. The FB matrix has many checks, so **page through every result** (bump `page` until a short page) before grouping — a partial page hides checks and skews the gate. `gh pr checks` is GraphQL-backed and **403s** anyway. Where `gh` exists, the repo-scoped REST recipe below is an equivalent fallback (`per_page=100`, one page covers the matrix); `group_by(.name) | max_by(.started_at)` keeps only the **latest** run per check (so a passing rerun supersedes its old failure):
+Read checks with the GitHub MCP `pull_request_read` (`method: get_check_runs`, owner `Percona-Lab`, repo `pmm-submodules`, `pullNumber: <SUBMODULES_PR>`, `perPage: 100`) — it resolves the head SHA for you and returns the check runs. The FB matrix has many checks, so **page through every result** (bump `page` until a short page) before grouping — a partial page hides checks and skews the gate. `gh pr checks` is GraphQL-backed and **403s** anyway. Where `gh` exists, the repo-scoped REST recipe below is an equivalent fallback (`per_page=100`, one page covers the matrix); keep only each check's **latest attempt** — but keep *all* of the runs at that timestamp: two different jobs can share one check name (`fb-e2e-suite.yml` runs a CodeceptJS and a Playwright job both named `… @fb-instances`), and a plain `max_by(.started_at)` then reports whichever of the two jq happens to pick, hiding a red one behind its green namesake. Observed live: one such pair, same name and same `started_at`, one `failure` and one `success`.
 
 ```bash
 SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
 gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
-  --jq '.check_runs | group_by(.name) | map(max_by(.started_at))[] | {name, status, conclusion}'
+  --jq '.check_runs | group_by(.name)
+        | map((max_by(.started_at).started_at) as $t | map(select(.started_at == $t)))
+        | flatten | .[] | {name, status, conclusion}'
 ```
 
 - **Latest FB build only** — older comments/checks are invalid
 - Ignore JNKPercona "API tests have succeded/failed" comments
+
+Read the run's **`run_attempt`** too. Above 1, compare the jobs *across* attempts — `actions_list` → `list_workflow_jobs` with **`filter: all`**, since it defaults to `latest` and would hand you only the newest attempt, then `actions_get` → `get_workflow_job` for step-level conclusions: one run had attempt 1 dying at `Run Setup for E2E Tests` with the test step skipped and attempt 2 failing inside the test — the same job name covering two different failures. The attempt count also tells you how many re-runs have already been spent before you arrived.
 
 ## JNKPercona build comment (latest only)
 
@@ -43,6 +47,54 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 
 Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from the failed job inputs.
 
+### Then read the failed job's artifact — it aims the reproduction, it does not replace it
+
+`artifacts_for_@<tag>` carries the CodeceptJS failure screenshot, a Playwright trace per
+`retry()` attempt, and the whole PMM Server log set. Take the artifact id from the job's
+upload-artifact step (or `actions_list` → `list_workflow_run_artifacts`), get a link with
+`actions_get` → `download_workflow_run_artifact`, and read `logs/pmm-managed.log`,
+`logs/client/pmm-agent/*` and `tests/output/*.png`. Two greps of `pmm-managed.log`
+(`CheckConnectionRequest`, `ServiceInfo response` around the failing add) once pointed straight at
+"product, not QA setup" before a VM existed — but that is a hypothesis to reproduce, not a verdict:
+`investigator.md` still requires the VM run before any classification, and the pre-change revision
+before attributing it to a specific change. What the artifact buys is a much narrower thing to
+reproduce.
+
+**Never retype a signed download URL.** Pasted unquoted into a command, its `&` splits the
+line and the request goes out without the `sig=` value; the download is then a 408-byte
+`<Code>AuthenticationFailed</Code> … Signature fields not well formed` that `unzip` reports
+as "not a zipfile" — that pair means a truncated signature, not an expired link. Write it
+verbatim and let curl read it:
+
+```bash
+umask 077                      # the file holds a bearer URL: keep it unreadable to others
+trap 'rm -f url.txt' EXIT      # and don't leave it in the workspace
+cat >url.txt <<'EOF'
+<paste the returned URL exactly>
+EOF
+curl -sS -o out.zip -K <(printf 'url = "%s"\n' "$(cat url.txt)")
+```
+
+### Reading history in bulk
+
+Never `gh api --paginate` against `Percona-Lab/pmm-submodules`: the Link headers point at
+`repositories/{id}/…` URLs the proxy refuses with 403. Page with explicit `page=N`, and
+window the request by `created=YYYY-MM-DD..YYYY-MM-DD` so no single listing hits the
+REST 1000-result cap — windowing recovered all 1816 runs where a flat loop stopped at
+1000. Per-run `actions/runs/<id>/jobs?filter=latest` calls take ~4 s each, so run them
+through `xargs -P 10`. `gh api --jq` takes no `--arg`, so add fields like the run id in a
+second `jq` pass.
+
+Redirecting a job-log fetch to a file gives **0 bytes** unless escape sequences are
+allowed — the only hint is a stderr note about terminal escapes:
+
+```bash
+gh api --allow-escape-sequences "repos/Percona-Lab/pmm-submodules/actions/jobs/<id>/logs" \
+  | sed 's/\x1b\[[0-9;]*m//g' > log.txt
+```
+
+Then grep it for `✘`, `.failed.png` and `FAILED` to name the failing test.
+
 ## Flaky triage
 
 Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**. Only expand manual scope for **relevant** failures.
@@ -66,8 +118,8 @@ or an empty set all read as not-green. Apply this identically whichever path
 retrieved the checks.
 
 Primary (works with no `gh`): from the `get_check_runs` output collected above
-(all pages, latest run per check), the set is **green** iff there is ≥1 check and
-**every** latest check has `status == "completed"` with `conclusion` in
+(all pages, every run at each name's latest timestamp — never one run per name), the
+set is **green** iff there is ≥1 check and **every** such run has `status == "completed"` with `conclusion` in
 `success` / `skipped` / `neutral`; anything else (`failure`, `cancelled`,
 `timed_out`, `null`, still-running, empty set) → not-green.
 
@@ -76,7 +128,9 @@ Where `gh` exists, this one-liner is the equivalent fallback:
 ```bash
 SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<PR> --jq .head.sha)
 gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq '
-  .check_runs | group_by(.name) | map(max_by(.started_at)) as $latest
+  .check_runs | group_by(.name)
+  | map((max_by(.started_at).started_at) as $t | map(select(.started_at == $t)))
+  | flatten as $latest
   | ($latest | length) as $n
   | ([ $latest[] | select(.status=="completed" and (.conclusion|IN("success","skipped","neutral"))) ] | length) as $ok
   | if $n>0 and $ok==$n then "green" else "not-green (\($ok)/\($n) clean)" end'
