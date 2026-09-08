@@ -5,6 +5,10 @@ export default class ServicesPage extends BasePage {
   builders = {
     monitoringStatusByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
+    statusByServiceName: (serviceName: string) =>
+      this.grafanaIframe()
+        .getByRole('row', { name: serviceName })
+        .getByTitle(/^STATUS_/),
   };
   buttons = {};
   elements = {};
