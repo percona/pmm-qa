@@ -242,6 +242,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent log level @rds-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const nodeId = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory list nodes | grep NODE_TYPE_REMOTE_RDS_NODE | awk -F' ' '{print $4}' `,
+        )
+        .stdout.trim();
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --log-level=debug`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.nodesUrl(nodeId));
+      await agentsPage.showRowDetails(rdsExporterId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+    },
+  );
+
   pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
     cliHelper.changeAgent(containerName, Types.rds, rdsExporterId, '--push-metrics');
     await expect(async () => {
