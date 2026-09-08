@@ -1,10 +1,27 @@
-# PMM-15262 / Experiment N1 — NetworkChaos: latency, PMM Server -> PostgreSQL.
+# PMM-15262 / Experiment N1 — NetworkChaos: latency, PMM Server <-> PostgreSQL.
 #
-# Adds 200ms +/-50ms of egress delay on all three PMM Server pods, but only on
-# traffic to pgbouncer. PMM keeps inventory, settings, users and all Grafana
-# state in PostgreSQL, so this is the link whose latency the UI and API feel
-# first. Metric ingest does not pass through here, so a clean run should show a
-# slower UI and untouched scrape/ingest counters.
+# Adds 200ms +/-50ms of delay between the PMM Server pods and the PostgreSQL
+# instance pods. PMM keeps inventory, settings, users and all Grafana state in
+# PostgreSQL, so this is the link the UI and API feel first. Metric ingest does
+# not pass through here, so a clean run shows a slower UI and untouched
+# scrape/ingest counters.
+#
+# TWO THINGS HERE ARE NOT GUESSABLE, both measured on this cluster:
+#
+# 1. Target the PostgreSQL *instance* pods, not pgbouncer. PMM_POSTGRES_ADDR and
+#    GF_DATABASE_HOST both point at the pmm-ha-pg-db-ha service, which routes
+#    straight to the instances; pg_stat_activity shows client_addr as the PMM pod
+#    IP, never a pgbouncer IP. Delaying pgbouncer tests a link PMM never uses.
+#
+# 2. Inject on the PostgreSQL side, delaying its egress back to PMM — NOT on the
+#    PMM side delaying egress to PostgreSQL. Chaos Mesh filters netem with an
+#    ipset of the target pods' IPs, but PMM addresses PostgreSQL by the service
+#    ClusterIP, and at the tc egress hook the destination is still that ClusterIP,
+#    so the ipset never matches and the delay silently does nothing. Measured
+#    under an active experiment, same destination pod: via ClusterIP 2.5-3.8ms
+#    (undelayed), direct to pod IP 159-248ms (delayed). PostgreSQL's replies are
+#    addressed to the real PMM pod IP, so the ipset matches and the delay lands.
+#    Latency is felt as round-trip, so delaying one direction is equivalent.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
@@ -17,8 +34,9 @@ spec:
   selector:
     namespaces:
       - pmm
-    labelSelectors:
-      app.kubernetes.io/component: pmm-server
+    expressionSelectors:
+      - key: postgres-operator.crunchydata.com/instance
+        operator: Exists
   direction: to
   target:
     mode: all
@@ -26,7 +44,7 @@ spec:
       namespaces:
         - pmm
       labelSelectors:
-        postgres-operator.crunchydata.com/role: pgbouncer
+        app.kubernetes.io/component: pmm-server
   delay:
     latency: 200ms
     jitter: 50ms
