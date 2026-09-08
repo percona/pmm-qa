@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
-import fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -45,8 +44,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
@@ -56,8 +54,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -81,27 +78,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(externalExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-    },
-  );
-
-  pmmTest(
-    'PMM-T1003 - Verify Change agent log level @ps-integration',
-    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      await grafanaHelper.authorize();
-      await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(mysqldExporterId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldExporterId);
-      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
   );
 
@@ -146,45 +122,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T1006 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
-    cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
-    );
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.TEN_SECONDS);
-
-    const metrics = cliHelper.getMetrics({
-      agentPassword: pgExporterPassword,
-      dockerContainer: containerName,
-      serviceName: serviceName,
-    });
-
-    expect(metrics).toContain('mysql_up');
-  });
-
-  pmmTest('PMM-T1007 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --expose-exporter`,
-      )
-      .assertSuccess()
-      .outContains('- enabled expose exporter');
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.ONE_MINUTE);
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('mysql_up');
-  });
-
   pmmTest(
     'PMM-T1008 - Verify Change agent push metrics @external-integration',
     async ({ cliHelper, page }) => {
@@ -220,87 +157,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1009 - Verify Change agent disable collectors @ps-integration',
-    async ({ api, cliHelper }) => {
-      const collectorsToDisable = ['perf_schema.eventsstatements', 'perf_schema.tablelocks'];
-
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
-        )
-        .assertSuccess()
-        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
-
-      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
-
-      expect(
-        agent.disabled_collectors,
-        'Disabled collectors were not persisted on the mysqld_exporter agent',
-      ).toEqual(collectorsToDisable);
-    },
-  );
-
-  pmmTest(
-    'PMM-T1014 - Verify Change agent disable query examples @ps-integration',
-    async ({ api, cliHelper }) => {
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --disable-query-examples`,
-        )
-        .assertSuccess()
-        .outContains('- disabled query examples');
-
-      const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
-
-      expect(
-        agent.query_examples_disabled,
-        'Query examples were not disabled on the qan_mysql_perfschema_agent',
-      ).toEqual(true);
-    },
-  );
-
-  pmmTest('PMM-T1015 - Verify Change agent max query length @ps-integration', async ({ api, cliHelper }) => {
-    const maxQueryLength = 2_048;
-
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --max-query-length=${maxQueryLength}`,
-      )
-      .assertSuccess()
-      .outContains(`- changed max query length to ${maxQueryLength}`);
-
-    const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
-
-    expect(
-      agent.max_query_length,
-      'Max query length was not persisted on the qan_mysql_perfschema_agent',
-    ).toEqual(maxQueryLength);
-  });
-
-  pmmTest('PMM-T1016 - Verify Change agent comments parsing @ps-integration', async ({ api, cliHelper }) => {
-    const commentsParsingCases = [
-      { disabled: false, response: '- enabled comments parsing', value: 'on' },
-      { disabled: true, response: '- disabled comments parsing', value: 'off' },
-    ];
-
-    for (const commentsParsingCase of commentsParsingCases) {
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --comments-parsing=${commentsParsingCase.value}`,
-        )
-        .assertSuccess()
-        .outContains(commentsParsingCase.response);
-
-      const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
-
-      expect(
-        agent.comments_parsing_disabled ?? false,
-        `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_mysql_perfschema_agent`,
-      ).toEqual(commentsParsingCase.disabled);
-    }
-  });
-
-  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @external-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
@@ -321,72 +177,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
-    },
-  );
-
-  pmmTest(
-    'PMM-T1012 - Verify Change agent tablestats group table limit @ps-integration',
-    async ({ api, cliHelper }) => {
-      const tablestatsGroupTableLimit = 2_000;
-
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tablestats-group-table-limit=${tablestatsGroupTableLimit}`,
-        )
-        .assertSuccess()
-        .outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
-
-      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
-
-      expect(
-        agent.table_count_tablestats_group_limit,
-        'Tablestats group table limit was not persisted on the mysqld_exporter agent',
-      ).toEqual(tablestatsGroupTableLimit);
-    },
-  );
-
-  pmmTest(
-    'PMM-T1010 - Verify Change agent tls @ps-integration',
-    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
-
-      cliHelper.createTlsCertificates(containerName);
-
-      let commands = [
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      fs.writeFileSync(
-        '/tmp/ssl.conf',
-        `ssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
-      );
-
-      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
-      cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`);
-      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess();
-
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
-
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command));
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
   );
