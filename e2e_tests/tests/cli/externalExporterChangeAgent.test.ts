@@ -69,23 +69,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1002 - Verify Change agent custom labels @ps-integration',
+    'PMM-T1002 - Verify Change agent custom labels @external-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
       const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --custom-labels=${customLabel}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --custom-labels=${customLabel}`,
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --custom-labels=${customLabel}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(externalExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldExporterId);
-      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
-      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
   );
 
