@@ -385,10 +385,77 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1016 - Verify Change agent comments parsing @pgss-pmm-integration',
+    async ({ api, cliHelper }) => {
+      const commentsParsingCases = [
+        { disabled: false, response: '- enabled comments parsing', value: 'on' },
+        { disabled: true, response: '- disabled comments parsing', value: 'off' },
+      ];
+
+      for (const commentsParsingCase of commentsParsingCases) {
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --comments-parsing=${commentsParsingCase.value}`,
+          )
+          .assertSuccess()
+          .outContains(commentsParsingCase.response);
+
+        const agent = await api.inventoryApi.getAgentById(pgStatStatementId);
+
+        expect(
+          agent.comments_parsing_disabled ?? false,
+          `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_postgresql_pgstatements_agent`,
+        ).toEqual(commentsParsingCase.disabled);
+      }
+    },
+  );
+
+  pmmTest(
+    'PMM-T1014 - Verify Change agent disable query examples @pgss-pmm-integration',
+    async ({ api, cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --disable-query-examples`,
+        )
+        .assertSuccess()
+        .outContains('- disabled query examples');
+
+      const agent = await api.inventoryApi.getAgentById(pgStatStatementId);
+
+      expect(
+        agent.query_examples_disabled,
+        'Query examples were not disabled on the qan_postgresql_pgstatements_agent',
+      ).toEqual(true);
+    },
+  );
+
+  pmmTest(
+    'PMM-T1015 - Verify Change agent max query length @pgss-pmm-integration',
+    async ({ api, cliHelper }) => {
+      const maxQueryLength = 2_048;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --max-query-length=${maxQueryLength}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed max query length to ${maxQueryLength}`);
+
+      const agent = await api.inventoryApi.getAgentById(pgStatStatementId);
+
+      expect(
+        agent.max_query_length,
+        'Max query length was not persisted on the qan_postgresql_pgstatements_agent',
+      ).toEqual(maxQueryLength);
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @pgss-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=invalid_skip_check_password --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --password=invalid_skip_check_password --skip-connection-check`,
       ];
 
       for (const command of commands) {
@@ -397,6 +464,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --username=${newUsername} --password=${newPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --username=${newUsername} --password=${newPassword}`,
       ];
 
       for (const command of commands) {
