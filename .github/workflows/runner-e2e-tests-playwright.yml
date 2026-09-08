@@ -205,6 +205,8 @@ jobs:
           ls
           docker network create pmm-qa
           docker volume create pmm-volume
+          
+          cat docker-compose.yml
 
           PWD=$(pwd) docker compose -f docker-compose.yml up -d
           # shellcheck disable=SC2016
