@@ -128,10 +128,8 @@ EOF
 }
 
 @test "an interrupted parallel run dumps the log of the setup still running" {
-  # CI wraps the framework in `timeout`, so a wedged setup is killed by SIGTERM
-  # and never reaches print_setup_log. Its buffered log is the only record of
-  # how far it got, and the log dir dies with the runner -- so the INT/TERM
-  # trap has to dump it before removing the dir.
+  # A wedged setup is SIGTERMed and never reaches print_setup_log, so only the
+  # INT/TERM trap can dump its buffered log before the log dir is removed.
   cat >"$TEST_BIN/ansible-playbook" <<'EOF'
 #!/usr/bin/env bash
 echo 'PS reached the wedge point'

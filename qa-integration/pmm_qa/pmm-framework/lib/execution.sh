@@ -263,12 +263,13 @@ run_parallel_setups() {
     done
 
     # A slot still holding a pid never reached print_setup_log, so its buffered
-    # log is the only record of how far it got. CI runs this under `timeout`,
-    # whose SIGTERM lands here, and the log dir sits on a runner disk that is
-    # discarded with the job -- so dump before waiting (a wedged child must not
-    # cost us the bytes already on disk) and before the rm below.
+    # log is the only record of how far it got. Dump before the wait and the rm:
+    # `timeout -k 30` leaves only 30s before SIGKILL. The trap is installed
+    # before the startup loop, so a signal mid-startup leaves later slots unset
+    # and the fork's redirect may not have created the log yet -- hence `:-` and
+    # the -f, without which `set -u`/`set -e` would abort the trap here.
     for ((index = 0; index < total; index++)); do
-      [[ -n ${pids[index]} ]] || continue
+      [[ -n ${pids[index]:-} && -f ${logs[index]} ]] || continue
       print_interrupted_setup_log \
         "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" "${logs[index]}"
     done
