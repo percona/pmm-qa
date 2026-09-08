@@ -282,14 +282,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('Running');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent disable collectors @valkey-integration', async ({ cliHelper }) => {
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --disable-collectors=stat_statements,locks`,
-      )
-      .assertSuccess()
-      .outContains('- updated disabled collectors: [stat_statements locks]');
-  });
+  pmmTest(
+    'PMM-T9993 - Verify Change agent disable collectors @valkey-integration',
+    async ({ api, cliHelper }) => {
+      const collectorsToDisable = ['config', 'latency'];
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
+        )
+        .assertSuccess()
+        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
+
+      const agent = await api.inventoryApi.getAgentById(valkeyExporterId);
+
+      expect(
+        agent.disabled_collectors,
+        'Disabled collectors were not persisted on the valkey exporter agent',
+      ).toEqual(collectorsToDisable);
+    },
+  );
 
   pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @valkey-integration',
