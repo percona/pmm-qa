@@ -96,4 +96,4 @@
     ignore_errors: yes
   - name: Fail with the original error
     fail:
-      msg: "{{ item.service_name }}: '{{ item.metric }}' not received. Last 'pmm-admin list' output: {{ list_output.stdout | default('(not captured)') }}"
+      msg: "{{ item.service_name }}: verification failed. Last 'pmm-admin list' output: {{ list_output.stdout | default('(not captured)') }}"

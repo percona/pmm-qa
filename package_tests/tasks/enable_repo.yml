@@ -19,12 +19,8 @@
   command: percona-release enable{{ suffix_only }} {{ package }} {{ repository }}
   become: true
 
-# `clean all` on each attempt re-reads repomd.xml, so a retry sees a
-# republished repo rather than the repodata names it already cached.
 - name: Clean and update package cache
-  shell: |
-    {{ ansible_pkg_mgr }} clean all
-    {{ ansible_pkg_mgr }} makecache
+  shell: "{{ ansible_pkg_mgr }} clean all && {{ ansible_pkg_mgr }} makecache"
   register: makecache_result
   until: makecache_result.rc == 0
   retries: 5
