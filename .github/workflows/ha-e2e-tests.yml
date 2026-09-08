@@ -146,13 +146,13 @@ jobs:
       - name: Setup PMM-Client against remote PMM HA Server
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 10
+          timeout_minutes: 20
           retry_wait_seconds: '10'
           max_attempts: 2
           retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
-            sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
+            sudo timeout -k 30 19m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
               --client_version "${PMM_CLIENT_VERSION}" \
               --admin_password "${ADMIN_PASSWORD}" \
