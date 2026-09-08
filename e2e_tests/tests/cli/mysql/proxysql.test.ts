@@ -375,7 +375,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .outContains('ProxySQL Exporter agent configuration updated');
 
       // Restore the working username so subsequent tests keep a healthy exporter.
-      await cliHelper
+      cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --username=admin --skip-connection-check`,
         )
