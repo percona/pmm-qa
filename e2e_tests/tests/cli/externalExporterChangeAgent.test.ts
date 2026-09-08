@@ -190,36 +190,39 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('mysql_up');
   });
 
-  pmmTest('PMM-T1008 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --push-metrics`,
-      )
-      .assertSuccess()
-      .outContains('- enabled push metrics');
+  pmmTest(
+    'PMM-T1008 - Verify Change agent push metrics @external-integration',
+    async ({ cliHelper, page }) => {
+      pgExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${externalExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --push-metrics`,
+        )
+        .assertSuccess()
+        .outContains('- enabled push metrics');
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('mysql_up');
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
-      )
-      .outEquals('');
-    await cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId}`)
-      .outContains('Running');
-  });
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+        )
+        .assertSuccess()
+        .outContains('mysql_up');
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
+        )
+        .outEquals('');
+      await cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep ${externalExporterId}`)
+        .outContains('Running');
+    },
+  );
 
   pmmTest(
     'PMM-T1009 - Verify Change agent disable collectors @ps-integration',
