@@ -97,23 +97,19 @@ Before(async ({
 
   const c = await I.mongoGetCollection('test', 'test');
 
-  let selectionError;
-
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       // eslint-disable-next-line no-await-in-loop
       await c.deleteMany({ number: 2 });
-      selectionError = undefined;
       break;
     } catch (error) {
-      selectionError = error;
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => { setTimeout(resolve, 10000); });
-    }
-  }
+      if (attempt === 2) {
+        throw error;
+      }
 
-  if (selectionError) {
-    throw selectionError;
+      // eslint-disable-next-line no-await-in-loop
+      await I.wait(10);
+    }
   }
 
   await I.Authorize();
