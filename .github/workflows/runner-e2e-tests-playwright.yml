@@ -81,14 +81,15 @@ on:
       sha:
         type: string
         required: false
+      arch:
+        type: string
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
       ZEPHYR_PMM_API_KEY:
         required: false
-    arch:
-      type: string
-      required: false
+
 
 jobs:
   tests:
