@@ -43,7 +43,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "INSERT INTO mysql_users (username, password) VALUES ('${newUsername}', '${newPassword}-wrong'); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"`,
+          `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "SET admin-admin_credentials='admin:${mysqlPassword};${newUsername}:${newPassword}-wrong'; LOAD ADMIN VARIABLES TO RUNTIME; SAVE ADMIN VARIABLES TO DISK;"`,
         )
         .assertSuccess();
 
@@ -59,7 +59,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
       cliHelper.execSilent(
-        `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "UPDATE mysql_users SET password='${newPassword}' WHERE username='${newUsername}'; LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"`,
+        `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "SET admin-admin_credentials='admin:${mysqlPassword};${newUsername}:${newPassword}'; LOAD ADMIN VARIABLES TO RUNTIME; SAVE ADMIN VARIABLES TO DISK;"`,
       );
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Developing tests
