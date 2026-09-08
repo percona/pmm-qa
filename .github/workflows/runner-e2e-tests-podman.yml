@@ -34,6 +34,14 @@ on:
         description: "example: @settings-fb"
         required: true
         type: string
+      arch:
+        description: "package for enabling repo"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -66,12 +74,15 @@ on:
       sha:
         required: false
         type: string
+      arch:
+        type: string
+        required: false
 
 jobs:
   ui-tests-e2e:
     name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
     #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-22.04
+    runs-on: ${{ github.event.inputs.arch == 'amd64' && 'ubuntu-22.04' || 'ubuntu-22.04-arm' }}
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
