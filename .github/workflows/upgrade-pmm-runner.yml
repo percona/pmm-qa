@@ -275,7 +275,7 @@ jobs:
             export PMM_SERVER_LATEST="$PMM_SERVER_LATEST"
           fi
           echo "Latest PMM Version is: $PMM_SERVER_LATEST"
-          npx playwright test --grep "@post-upgrade"
+          npx playwright test --grep "@post-server-upgrade"
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:

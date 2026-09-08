@@ -47,10 +47,13 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
     },
   );
 
-  pmmTest('Verify metrics from SSL instances on PMM-Server @post-upgrade', async ({ api }) => {
-    const clientService = await api.inventoryApi.getServiceDetailsByPartialName(container);
+  pmmTest(
+    'Verify metrics from SSL instances on PMM-Server @post-upgrade @post-server-upgrade',
+    async ({ api }) => {
+      const clientService = await api.inventoryApi.getServiceDetailsByPartialName(container);
 
-    await api.grafanaApi.waitForMetric(metric, clientService.service_name);
-    await api.grafanaApi.waitForMetric(metric, remoteServiceName);
-  });
+      await api.grafanaApi.waitForMetric(metric, clientService.service_name);
+      await api.grafanaApi.waitForMetric(metric, remoteServiceName);
+    },
+  );
 });

@@ -62,7 +62,7 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
 
   for (const service of services) {
     pmmTest(
-      `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${service.serviceType} @post-upgrade`,
+      `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${service.serviceType} @post-upgrade @post-server-upgrade`,
       async ({ api }) => {
         await expect
           .poll(() => api.inventoryApi.verifyAgentsAreRunning(`upgrade-${service.upgradeService}`), {
@@ -76,7 +76,7 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
 
   for (const service of services) {
     pmmTest(
-      `PMM-T2071 - Verify Agents are Running and Metrics are being collected Pre and Post Upgrade (API) for upgrade-${service.upgradeService} @pre-upgrade @post-upgrade`,
+      `PMM-T2071 - Verify Agents are Running and Metrics are being collected Pre and Post Upgrade (API) for upgrade-${service.upgradeService} @pre-upgrade @post-upgrade @post-server-upgrade`,
       async ({ api }) => {
         await api.grafanaApi.waitForMetric(service.metric, `upgrade-${service.upgradeService}`);
       },

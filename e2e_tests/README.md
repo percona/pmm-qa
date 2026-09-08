@@ -106,6 +106,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@post-server-upgrade`
 - `@post-upgrade`
 - `@pre-upgrade`
 - `@rta`
