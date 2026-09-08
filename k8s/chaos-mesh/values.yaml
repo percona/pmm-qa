@@ -1,0 +1,17 @@
+# PMM-15262 — Chaos Mesh for PMM HA (cluster PMM-HA-load-chaos / lke650742)
+# Blast radius: cluster-scoped controller, but injection filtered to namespaces
+# annotated chaos-mesh.org/inject=enabled — only `pmm` is annotated.
+clusterScoped: true
+
+controllerManager:
+  enableFilterNamespace: true
+
+chaosDaemon:
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock
+
+dashboard:
+  create: true
+  securityMode: true
+  service:
+    type: ClusterIP

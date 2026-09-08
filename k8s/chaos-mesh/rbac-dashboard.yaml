@@ -1,0 +1,35 @@
+# PMM-15262 — dashboard login identity for the Chaos Mesh UI.
+# Manages chaos objects anywhere, reads pods/namespaces so the selector UI works.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-manager
+  namespace: chaos-mesh
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chaos-manager
+rules:
+  - apiGroups: ["chaos-mesh.org"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "events", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chaos-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chaos-manager
+subjects:
+  - kind: ServiceAccount
+    name: chaos-manager
+    namespace: chaos-mesh

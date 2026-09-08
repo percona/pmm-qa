@@ -1,0 +1,18 @@
+# PMM-15262 / Experiment 1 — PodChaos: kill a PMM Server pod (the Raft leader).
+# Selector keys on component=pmm-server, which the ClickHouse Keeper pods do not
+# carry, so Keeper is excluded by construction rather than by an exclusion list.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: exp1-kill-pmm-server-leader
+  namespace: chaos-mesh
+spec:
+  action: pod-kill
+  mode: one
+  gracePeriod: 0
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+      statefulset.kubernetes.io/pod-name: pmm-ha-0
