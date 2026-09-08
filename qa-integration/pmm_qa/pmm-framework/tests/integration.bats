@@ -305,7 +305,7 @@ EOF
 
   # Both setups must have written to their buffers before the signal, or the
   # test would pass on an empty dump.
-  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null || echo 0) -eq 2 ]]; do
+  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 2 ]]; do
     ((waited += 1))
     [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
     sleep 0.2
@@ -319,7 +319,7 @@ EOF
   [[ $fw_status -eq 130 ]]
   [[ $output == *'===== [1/2] ps=8.4 INTERRUPTED ====='* ]]
   [[ $output == *'===== [2/2] pgsql=16 INTERRUPTED ====='* ]]
-  [[ $output == *'setup is working'* ]]
+  [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
 
   local log_dir
@@ -341,7 +341,7 @@ EOF
       --database ps=8.4 >"$out" 2>&1 &
   fw_pid=$!
 
-  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null || echo 0) -eq 1 ]]; do
+  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
     ((waited += 1))
     [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
     sleep 0.2
@@ -354,7 +354,7 @@ EOF
 
   [[ $fw_status -eq 130 ]]
   [[ $output == *'===== [1/1] ps=8.4 INTERRUPTED ====='* ]]
-  [[ $output == *'setup is working'* ]]
+  [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
 
   local log_dir
   log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")
