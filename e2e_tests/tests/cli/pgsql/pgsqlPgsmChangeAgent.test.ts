@@ -433,6 +433,46 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1014 - Verify Change agent disable query examples @pgsm-pmm-integration',
+    async ({ api, cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --disable-query-examples`,
+        )
+        .assertSuccess()
+        .outContains('- disabled query examples');
+
+      const agent = await api.inventoryApi.getAgentById(pgStatMonitorId);
+
+      expect(
+        agent.query_examples_disabled,
+        'Query examples were not disabled on the qan_postgresql_pgstatmonitor_agent',
+      ).toEqual(true);
+    },
+  );
+
+  pmmTest(
+    'PMM-T1015 - Verify Change agent max query length @pgsm-pmm-integration',
+    async ({ api, cliHelper }) => {
+      const maxQueryLength = 2_048;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --max-query-length=${maxQueryLength}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed max query length to ${maxQueryLength}`);
+
+      const agent = await api.inventoryApi.getAgentById(pgStatMonitorId);
+
+      expect(
+        agent.max_query_length,
+        'Max query length was not persisted on the qan_postgresql_pgstatmonitor_agent',
+      ).toEqual(maxQueryLength);
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
