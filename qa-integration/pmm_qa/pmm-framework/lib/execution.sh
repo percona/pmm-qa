@@ -214,7 +214,9 @@ print_setup_log() {
 # half-provisioned containers mid-run leaves more mess than it saves.
 #
 # On success the log directory is removed; on failure it is kept and its path
-# printed, so the full transcripts survive for inspection.
+# printed, so the full transcripts survive for inspection. An INT/TERM
+# interrupt keeps it too and dumps the partial log of every setup still
+# running -- under `timeout` in CI that is the only record there will be.
 #
 # Requires: bash 5.1+ for `wait -n -p`
 # Reads:    DATABASE_SPECS
@@ -234,14 +236,31 @@ run_parallel_setups() {
 
   # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
-    local pid
+    local pid index
     for pid in "${pids[@]}"; do
       # Negative PID targets the whole process group; fall back to the single
       # process if the group is already gone.
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
+    # The kills are issued, so job control has done its job; leaving monitor
+    # mode on would interleave "[1]+ Terminated ..." notices into the dump.
+    set +m
+
+    # In CI the signal is almost always `timeout` firing, and the buffered logs
+    # are the only record of how far each setup got. Deleting them left a
+    # nightly shard that burned two 19-minute attempts reporting nothing but
+    # "Starting [1/1] valkey". Dump before waiting on the children: `timeout
+    # -k` follows up with SIGKILL, and output already written beats output
+    # complete but never printed.
+    printf '\nInterrupted -- dumping partial logs of the setups still running.\n'
+    for ((index = 0; index < total; index++)); do
+      [[ -n ${pids[index]} ]] || continue
+      print_setup_log \
+        "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" 130 "${logs[index]}"
+    done
+    printf '\nParallel setup logs kept at: %s\n' "$log_dir"
+
     wait >/dev/null 2>&1 || true
-    rm -rf "$log_dir"
     exit 130
   }
   trap cleanup_parallel_jobs INT TERM

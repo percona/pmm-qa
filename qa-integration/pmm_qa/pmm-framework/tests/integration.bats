@@ -31,6 +31,10 @@ if [[ ${PARALLEL_TEST:-false} == true ]]; then
     echo 'PGSQL parallel log'
   fi
 fi
+if [[ ${HANG_PS:-false} == true && -n ${PS_VERSION:-} ]]; then
+  echo 'PS is still working'
+  sleep 60
+fi
 if [[ ${FAIL_PS:-false} == true && -n ${PS_VERSION:-} ]]; then
   echo 'PS failed as requested'
   exit 9
@@ -125,6 +129,32 @@ EOF
   [[ $output == *'[2/2] pgsql=16: OK (log:'* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
+@test "a parallel run killed mid-setup dumps the partial logs it had" {
+  # `timeout` around the framework is how CI runs it, so SIGTERM must not take
+  # the buffered logs with it -- that is what left a nightly valkey shard
+  # reporting nothing after two 19-minute attempts.
+  run timeout -s TERM 8 env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    HANG_PS=true \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  # 124 is `timeout`'s own "I had to signal it" status -- the exact code the
+  # failing nightly job reported.
+  [[ $status -eq 124 ]]
+  [[ $output == *'Interrupted -- dumping partial logs'* ]]
+  [[ $output == *'PS is still working'* ]]
+  [[ $output == *'Parallel setup logs kept at:'* ]]
+  if grep -qE '^\[[0-9]+\][-+]?[[:space:]]' <<<"$output"; then
+    echo "job-control notifications leaked into the interrupted dump"
+    return 1
+  fi
 }
 
 @test "parallel mode job control emits no job-status noise" {
