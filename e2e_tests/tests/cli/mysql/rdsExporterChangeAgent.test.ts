@@ -416,6 +416,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     ];
 
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+    await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
     cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent rds-exporter 97fb8372-a052-49df-b58e-76ca2fc8e3c0 --pmm-agent-listen-port=7778`,
