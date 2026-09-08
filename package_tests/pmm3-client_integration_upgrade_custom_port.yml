@@ -104,7 +104,7 @@
 
   - name: Install PMM client old rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name={{ pmm_client_old }} state=present
+    yum: name={{ pmm_client_old }} state=present update_cache=yes
     register: yum_install_result
     retries: 3
     delay: 30
@@ -262,7 +262,7 @@
 
   - name: Upgrade PMM client to the latest rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name=pmm-client state=latest
+    yum: name=pmm-client state=latest update_cache=yes
     register: yum_upgrade_result
     retries: 3
     delay: 30
