@@ -415,6 +415,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       let commands = [
         `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
         `docker restart ${containerName}`,
+        `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
