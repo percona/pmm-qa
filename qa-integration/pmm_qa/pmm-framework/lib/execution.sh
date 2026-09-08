@@ -164,6 +164,22 @@ should_dump_successful_logs() {
   [[ ${VERBOSE:-false} == true ]]
 }
 
+# Echo one buffered setup log between markers.
+#
+# Usage: dump_setup_log INDEX TOTAL SPEC LOG_FILE
+#
+# Stdout: the log file's contents, framed so concurrent setups stay readable
+dump_setup_log() {
+  local index=$1 total=$2 spec=$3 log_file=$4
+
+  cat "$log_file"
+  # Keep the END marker on its own line when the log has no trailing newline.
+  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
+    printf '\n'
+  fi
+  printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
+}
+
 # Report one finished parallel setup.
 #
 # Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
@@ -183,11 +199,7 @@ print_setup_log() {
     printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
-      cat "$log_file"
-      if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-        printf '\n'
-      fi
-      printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
+      dump_setup_log "$index" "$total" "$spec" "$log_file"
     fi
     return
   fi
@@ -195,12 +207,21 @@ print_setup_log() {
   printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
     "$index" "$total" "$spec" "$status"
   printf 'log: %s\n' "$log_file"
-  cat "$log_file"
-  # Keep the END marker on its own line when the log has no trailing newline.
-  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-    printf '\n'
-  fi
-  printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
+  dump_setup_log "$index" "$total" "$spec" "$log_file"
+}
+
+# Report one parallel setup that was still running when we were signalled.
+#
+# Usage: print_interrupted_setup_log INDEX TOTAL SPEC LOG_FILE
+#
+# Stdout: an INTERRUPTED banner plus however much of the log had been written
+print_interrupted_setup_log() {
+  local index=$1 total=$2 spec=$3 log_file=$4
+
+  printf '\n===== [%d/%d] %s INTERRUPTED (still running when signalled) =====\n' \
+    "$index" "$total" "$spec"
+  printf 'log: %s\n' "$log_file"
+  dump_setup_log "$index" "$total" "$spec" "$log_file"
 }
 
 # Provision every spec concurrently, reporting each as it finishes.
@@ -234,12 +255,24 @@ run_parallel_setups() {
 
   # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
-    local pid
+    local pid index
     for pid in "${pids[@]}"; do
       # Negative PID targets the whole process group; fall back to the single
       # process if the group is already gone.
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
+
+    # A slot still holding a pid never reached print_setup_log, so its buffered
+    # log is the only record of how far it got. CI runs this under `timeout`,
+    # whose SIGTERM lands here, and the log dir sits on a runner disk that is
+    # discarded with the job -- so dump before waiting (a wedged child must not
+    # cost us the bytes already on disk) and before the rm below.
+    for ((index = 0; index < total; index++)); do
+      [[ -n ${pids[index]} ]] || continue
+      print_interrupted_setup_log \
+        "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" "${logs[index]}"
+    done
+
     wait >/dev/null 2>&1 || true
     rm -rf "$log_dir"
     exit 130

@@ -127,6 +127,49 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
+@test "an interrupted parallel run dumps the log of the setup still running" {
+  # CI wraps the framework in `timeout`, so a wedged setup is killed by SIGTERM
+  # and never reaches print_setup_log. Its buffered log is the only record of
+  # how far it got, and the log dir dies with the runner -- so the INT/TERM
+  # trap has to dump it before removing the dir.
+  cat >"$TEST_BIN/ansible-playbook" <<'EOF'
+#!/usr/bin/env bash
+echo 'PS reached the wedge point'
+touch "$WEDGE_MARKER"
+sleep 300
+EOF
+  chmod +x "$TEST_BIN/ansible-playbook"
+
+  local out=$BATS_TEST_TMPDIR/interrupted.log
+  local marker=$BATS_TEST_TMPDIR/wedged
+  local fw_pid status=0
+
+  env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    WEDGE_MARKER="$marker" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+    >"$out" 2>&1 &
+  fw_pid=$!
+
+  for _ in $(seq 1 200); do
+    [[ -f $marker ]] && break
+    sleep 0.1
+  done
+  [[ -f $marker ]]
+
+  kill -TERM "$fw_pid"
+  wait "$fw_pid" || status=$?
+
+  [[ $status -eq 130 ]]
+  [[ $(cat "$out") == *'===== [1/1] ps=8.4 INTERRUPTED (still running when signalled) ====='* ]]
+  [[ $(cat "$out") == *'PS reached the wedge point'* ]]
+  [[ $(cat "$out") == *'===== END [1/1] ps=8.4 ====='* ]]
+}
+
 @test "parallel mode job control emits no job-status noise" {
   run env \
     PATH="$TEST_BIN:$PATH" \
