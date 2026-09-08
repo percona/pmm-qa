@@ -13,7 +13,6 @@ services:
   pmm-server:
     image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server
-    platform: linux/amd64
     ports:
       - "80:8080"
       - "443:8443"
@@ -35,24 +34,9 @@ services:
   renderer:
     image: grafana/grafana-image-renderer:latest
     container_name: renderer
-    platform: linux/amd64
     environment:
       - GF_RENDERER_PLUGIN_IGNORE_HTTPS_ERRORS=true
       - BROWSER_FLAG=--ignore-certificate-errors
-    networks:
-      - pmm-network
-      - pmm-qa
-
-  watchtower:
-    image: perconalab/watchtower:dev-latest
-    container_name: watchtower
-    platform: linux/amd64
-    environment:
-      - WATCHTOWER_DEBUG=1
-      - WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken
-      - WATCHTOWER_HTTP_API_UPDATE=1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - pmm-network
       - pmm-qa
