@@ -128,3 +128,20 @@ jobs:
             -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
             -f description="Helm Tests status: $STATUS" \
             -f context='actions/workflows/helm-tests'
+
+  notify_investigator:
+    name: Fire Investigator routine
+    needs:
+      - helm-tests
+    if: >
+      !cancelled() && github.event_name == 'schedule' &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}

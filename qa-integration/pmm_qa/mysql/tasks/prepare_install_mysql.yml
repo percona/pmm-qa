@@ -134,9 +134,13 @@
 - name: Restart MySQL docker container
   shell: docker restart {{ container_prefix }}{{ index }}
 
-- name: Wait 5 seconds for MySQL to start
-  pause:
-    seconds: 5
+- name: Wait for MySQL to accept connections
+  shell: docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqladmin ping
+  register: mysql_ready
+  until: mysql_ready.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
 
 - name: Change root password + allow root from any host (Percona Server for MySQL 5.7)
   shell: >

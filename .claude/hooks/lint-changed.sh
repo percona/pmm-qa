@@ -49,6 +49,7 @@ mapfile -t tf_files < <(select_files '\.tf$')
 mapfile -t docker_files < <(select_files '(^|/)Dockerfile[^/]*$')
 mapfile -t compose_files < <(select_files '(^|/)(docker-)?compose[^/]*\.ya?ml$')
 mapfile -t groovy_files < <(select_files '\.groovy$')
+mapfile -t test_files < <(select_files '\.(js|ts)$')
 
 # TypeScript: each Playwright workspace owns its eslint + tsconfig, so lint the
 # whole workspace rather than the individual files.
@@ -121,6 +122,55 @@ if [ ${#groovy_files[@]} -gt 0 ]; then
   echo "==> npm-groovy-lint"
   ensure_npm_groovy_lint || fail "npm-groovy-lint not installed"
   npm-groovy-lint --failon error --files "$(printf '%s,' "${groovy_files[@]}" | sed 's/,$//')" || fail "npm-groovy-lint"
+fi
+
+# The `notify_investigator` job at the end of the watched suites only ever sees
+# a failure in a job it `needs` (see docs/agents/AUTOMATIONS.md).
+if [ ${#workflow_files[@]} -gt 0 ]; then
+  for f in "${workflow_files[@]}"; do
+    grep -q '^  notify_investigator:' "$f" || continue
+    echo "==> notify_investigator needs ($f)"
+    mapfile -t uncovered < <(awk '
+      /^jobs:/ { in_jobs = 1; next }
+      !in_jobs { next }
+      /^  [A-Za-z0-9_-]+:/ {
+        cur = $1
+        sub(/:$/, "", cur)
+        jobs[++n] = cur
+        next
+      }
+      cur == "notify_investigator" { block = block "\n" $0 }
+      END {
+        for (i = 1; i <= n; i++) {
+          if (jobs[i] == "notify_investigator") continue
+          if (block !~ "(^|[^A-Za-z0-9_-])" jobs[i] "([^A-Za-z0-9_-]|$)") print jobs[i]
+        }
+      }
+    ' "$f")
+    for job in "${uncovered[@]}"; do
+      [ -n "$job" ] && fail "$f: job '$job' missing from notify_investigator.needs -- its failures would never reach Investigator"
+    done
+  done
+fi
+
+# A skip parked with `skip-until: YYYY-MM-DD` becomes a lint failure on that
+# date, so a temporary skip cannot quietly become permanent. CI passes every
+# tracked file, so once a date is reached every PR fails here until the skip is
+# revisited or the date is deliberately moved. Only skips that opted in by
+# carrying the marker are checked.
+if [ ${#test_files[@]} -gt 0 ]; then
+  echo "==> skip-until expiry"
+  mapfile -t expired < <(
+    grep -HnoE 'skip-until:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "${test_files[@]}" 2>/dev/null |
+      awk -v today="$(date -u +%F)" '
+        match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/) {
+          d = substr($0, RSTART, RLENGTH)
+          if (d "" <= today "") print $0
+        }'
+  )
+  for hit in "${expired[@]}"; do
+    [ -n "$hit" ] && fail "skip-until date reached -- revisit the skip or move the date: $hit"
+  done
 fi
 
 exit $rc

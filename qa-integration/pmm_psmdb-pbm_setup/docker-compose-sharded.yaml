@@ -249,9 +249,20 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ./conf/datagen:/etc/datagen:ro
+      - ./conf/mongos:/etc/mongos
     privileged: true
     cgroup: host
-    command: "mongos --keyFile=/etc/keyfile --configdb rscfg/rscfg01:27017,rscfg02:27017,rscfg03:27017 --port 27017 --bind_ip 0.0.0.0"
+    environment:
+      - "PMM_AGENT_SERVER_ADDRESS=${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}"
+      - "PMM_AGENT_SERVER_USERNAME=admin"
+      - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
+      - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+      # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
+      # instead of as the container's raw PID 1, so this container can also run
+      # its own local pmm-agent -- otherwise the router has to be registered
+      # "remotely" from another node's agent and ends up misattributed to that
+      # node's identity instead of its own (see start-sharded.sh).
+    entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -275,13 +286,42 @@ services:
       - "CHURN_NAMESPACE=${CHURN_NAMESPACE:-test.test}"
       - "CHURN_INTERVAL_SECONDS=${CHURN_INTERVAL_SECONDS:-120}"
       - "CHURN_MAX_CHUNKS=${CHURN_MAX_CHUNKS:-64}"
+      - "CHURN_COMMAND_TIMEOUT_SECONDS=${CHURN_COMMAND_TIMEOUT_SECONDS:-45}"
+      - "CHURN_CYCLE_TIMEOUT_SECONDS=${CHURN_CYCLE_TIMEOUT_SECONDS:-90}"
+    # The repeat loop lives here rather than in chunk-churn.js so `timeout` can
+    # kill a cycle the server has blocked; the script's own maxTimeMS
+    # (CHURN_COMMAND_TIMEOUT_SECONDS) is the shorter, softer bound. Both are
+    # rejected unless they are positive integers of at most five digits with no
+    # leading zero: `timeout 0` and `maxTimeMS: 0` each mean "no limit",
+    # `timeout 00` is the same zero by another spelling, a leading zero would
+    # make the shell read the value as octal, and an oversized value is the same
+    # "no limit" from the other end -- `sleep 9999999999` never wakes and
+    # `timeout 9999999999` never fires. The cycle bound needs at least 2s so the
+    # command bound derived from it cannot round down to an unlimited 0, and
+    # cycle + interval must stay under the metric's 10-minute window, since a
+    # gap longer than that is what blanks the panels in the first place.
     entrypoint:
       - /bin/bash
       - -c
       - >-
         uri="mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASS:-root}@mongos:27017/admin";
+        case "$${CHURN_CYCLE_TIMEOUT_SECONDS}" in ''|*[!0-9]*|0*|??????*) CHURN_CYCLE_TIMEOUT_SECONDS=90;; esac;
+        [ "$${CHURN_CYCLE_TIMEOUT_SECONDS}" -ge 2 ] && [ "$${CHURN_CYCLE_TIMEOUT_SECONDS}" -le 300 ]
+        || CHURN_CYCLE_TIMEOUT_SECONDS=90;
+        case "$${CHURN_INTERVAL_SECONDS}" in ''|*[!0-9]*|0*|??????*) CHURN_INTERVAL_SECONDS=120;; esac;
+        [ "$${CHURN_INTERVAL_SECONDS}" -le 300 ] || CHURN_INTERVAL_SECONDS=120;
+        [ $$(( CHURN_CYCLE_TIMEOUT_SECONDS + CHURN_INTERVAL_SECONDS )) -le 540 ]
+        || { CHURN_CYCLE_TIMEOUT_SECONDS=90; CHURN_INTERVAL_SECONDS=120; };
+        case "$${CHURN_COMMAND_TIMEOUT_SECONDS}" in ''|*[!0-9]*|0*|??????*) CHURN_COMMAND_TIMEOUT_SECONDS=45;; esac;
+        [ "$${CHURN_COMMAND_TIMEOUT_SECONDS}" -lt "$${CHURN_CYCLE_TIMEOUT_SECONDS}" ]
+        || CHURN_COMMAND_TIMEOUT_SECONDS=$$(( CHURN_CYCLE_TIMEOUT_SECONDS / 2 ));
+        export CHURN_COMMAND_TIMEOUT_SECONDS;
         until mongosh "$$uri" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do sleep 10; done;
-        exec mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
+        while true; do
+        timeout --signal=KILL "$${CHURN_CYCLE_TIMEOUT_SECONDS}" mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
+        || echo "churn cycle failed or timed out";
+        sleep "$${CHURN_INTERVAL_SECONDS}";
+        done
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -292,7 +332,13 @@ services:
       - build_member
       - mongos
 
+  # Shared, single-instance object store for PBM backups. See the matching note
+  # in docker-compose-rs.yaml: kept behind the "minio" profile and pinned to the
+  # fixed container_name so one minio is shared across concurrent PSMDB
+  # projects. The start scripts actually bring the shared minio up from
+  # docker-compose-rs.yaml; this definition is retained for standalone use.
   minio:
+    profiles: ["minio"]
     image: minio/minio
     container_name: minio
     ports:
@@ -311,6 +357,7 @@ services:
     command: server /backups
 
   createbucket:
+    profiles: ["minio"]
     container_name: createbucket
     image: minio/mc
     networks:
@@ -325,6 +372,7 @@ services:
       /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
 
   test:
+    profiles: ["tests"]
     build:
       dockerfile: ./Dockerfile-testinfra
       context: .

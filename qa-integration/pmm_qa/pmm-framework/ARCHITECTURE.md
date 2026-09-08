@@ -156,7 +156,10 @@ stay quiet. Individual callers can still opt in through `services_list` /
 
 Parallel mode enables job control (`set -m`) so each setup gets its own process
 group. That way an interrupt takes down `ansible-playbook` and its children
-too, not just the wrapper subshell. It is also why each job gets
+too, not just the wrapper subshell. The interrupt handler then dumps the
+buffered log of every setup still running and keeps the log directory, because
+CI wraps the framework in `timeout` and that buffer is the only record of where
+a hung setup got to. It is also why each job gets
 `</dev/null` — a background process group that reads the terminal is stopped by
 `SIGTTIN` and would hang forever.
 
@@ -168,7 +171,7 @@ Four sources can supply a value. Highest wins:
 
 ```mermaid
 flowchart LR
-    A["1. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."] --> B["2. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"]
+    A["1. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"] --> B["2. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."]
     B --> C["3. spec option<br/>--database ps,SETUP_TYPE=gr"]
     C --> D["4. registered default<br/>lib/config.sh"]
 ```

@@ -60,9 +60,12 @@ Scenario('PMM-T1883 - Configuring pmm-agent to use service account @service-acco
   // them 0/0 and they render as "No data". Keep committing while the dashboard is polled.
   await I.verifyCommand(`sudo docker exec -d ${psContainerName} timeout 420 bash -c 'while true; do mysql ${mysqlCredentials} -e "INSERT INTO ${loadDatabase}.write_load (value) VALUES (UUID())"; sleep 1; done'`);
 
+  // This dashboard ships with refresh disabled, so without an explicit refresh param Grafana
+  // queries the panels once and waitForGraphsToHaveData just re-counts that static render.
   const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
     from: 'now-1m',
     to: 'now',
+    refresh: '10s',
     service_name: newServiceName,
   });
 

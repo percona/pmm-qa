@@ -5,7 +5,7 @@ description: Review an open pull request in percona/pmm-qa — Playwright and Co
 
 # QA code review
 
-Reviews an **open PR in `percona/pmm-qa`**. Its only output is review threads plus one summary comment; it never opens, edits, pushes to, approves or merges a PR.
+Reviews an **open PR in `percona/pmm-qa`**. Its output is review threads, plus a summary comment in the narrow cases section 6 allows; it never opens, edits, pushes to, approves or merges a PR.
 
 ## 1. Read the checks, never run the PR's tooling
 
@@ -38,16 +38,40 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 4. **Reachability.** A new or retagged test is reachable from a workflow in the same PR. Prefer an existing tag and runner; inventing a tag, or widening a workflow's `--grep` to rescue a test that is missing its file's own tag, is 🔴.
 5. **Test case ID.** Every test title carries its `PMM-Txxxx` (`PMM-Txxxx - description`, or `PMM-Txxxx + PMM-Tyyyy - description`). Create the ticket first — see the `zephyr` skill.
 6. **Generated regions.** Content between `<!-- *-START -->` / `<!-- *-END -->` markers is produced by `support_scripts/generate_readme.py:191`. A hand edit there is 🔴 even when the text happens to be right.
-7. **Over-engineering.** Hand-rolled machinery is a finding until proven necessary. Duplicated blocks, a helper or const file with one caller, two tests where one covers the regression, a new tag where an existing one fits — all 🟡 or worse.
+7. **Over-engineering.** Hand-rolled machinery is a finding until proven necessary. Duplicated blocks, a helper or const file with one caller, two tests where one covers the regression, a new tag where an existing one fits — all 🟡 or worse. When the remedy is to **delete** a CI job, a workflow entry or a test, state the duplication and its cost and ask the author to confirm — never prescribe the deletion. Run cost against dedicated coverage is the author's trade-off: one such thread got a job deleted and pushed, then reversed by the author who wanted it kept, costing two pushes and a correction.
 8. **New `eslint-disable`.** The `--` reason must state a real invariant. `TODO` as the reason means the code is not ready.
 9. **Bot findings.** CodeRabbit findings are claims to verify, not noise: an unanswered valid one is 🟡. Never restate a finding that already has a thread. Read the PR's existing threads before writing anything and sweep every bot — CodeRabbit, Copilot, any other — for a finding the author never answered or resolved. Each one that is still open and still valid gets a thread asking for it to be answered and resolved; each one that is open but wrong gets a thread saying so, so the author can close it with a reason instead of leaving it hanging. A finding that already has a thread gets a **reply inside that thread**, never a parallel one. A finding with no file line — a PR-level bot verdict, a problem with the body or the scope — goes in the summary comment.
 10. **Blocked PR.** Depends on unmerged work → draft, with the dependency linked in the body (`> [!WARNING] This is dependent on <url>` or a plain `Depends on <url>`).
 11. **A method with one caller does not need to exist.** Called exactly once → inline it at the call site and delete it. Applies to page-object methods, helpers, API-class methods and const files alike. Reuse that is only planned is not reuse. 🟡
 12. **No methods in a test file.** A test file holds tests. Behaviour belongs in a page object or a helper, whichever is more coherent for it — never declared next to the tests. This does not conflict with 11: 11 says do not create the abstraction when there is one caller, 12 says where it lives once it has earned existing. 🟡
-13. **`private` is a smell.** In practice a private method exists to carve out one extra step that a single method with an internal branch would have covered. A new `private` needs a stated reason; without one, ask for it to be folded into its caller. Dropping an existing `private` is a move in the right direction, not a finding. 🟡
-14. **Code comments get reduced, not reworded.** Every comment in the diff justifies itself or goes. Delete a comment that restates the code, narrates what a step is *not* doing, or banners a section. What survives: a non-obvious invariant, a workaround with its Jira link, a contract a caller cannot infer — one line each. 🟡
+13. **`private` is a smell.** In practice a private method exists to carve out one extra step that a single method with an internal branch would have covered. A new `private` needs a stated reason; without one, ask for it to be folded into its caller. Dropping an existing `private` is a move in the right direction, not a finding. 🟡 Don't describe the diff that *would* have dropped it as one line: `e2e_tests/eslint.config.mjs:126` orders public members before private ones, so un-privatising a method forces it to move. Read the config (don't run it, per section 1) and scope the finding to the rename or other churn that was actually avoidable.
+14. **A guard that fails a job on a missing or empty artifact.** The diff must distinguish the broken-tooling signature from a legitimate zero-work run, each one *measured*. A guard failing on a missing **or** zero-testcase `result.xml` was called validated off three synthetic inputs; measuring showed a harness crash writes no report at all, while a run whose `--grep` matches nothing writes a 65-byte report with zero testcases and exits 0 — so the zero branch would have turned valid runs red. A guard validated only against synthetic inputs is 🟡; 🔴 where the legitimate case is one CI actually produces.
 
-## 4. Severity
+## 4. Comments in the diff
+
+**This is the check that slips.** Comments read as harmless next to a correct diff, so they get waved through — and the debt lands in the file forever. Reviewing them is not optional and not a nitpick to mention in passing: read every added or edited comment line, and every one that should not exist gets its **own thread**, 🟡. Never soften one to 🔵 and never let it ride on "the change itself is fine".
+
+A comment stays only if it carries what the code cannot:
+
+- a non-obvious invariant
+- a workaround, with the reason or Jira link that explains why it exists
+- a contract a caller cannot infer from the signature
+
+One or two lines each is the budget. Anything longer is describing a decision, and a decision belongs in the PR body or the commit message, where it is searchable and does not age in the file.
+
+Everything else is a finding:
+
+| Delete | Why |
+|---|---|
+| Restates the line below it | the code already said that |
+| Narrates what a step is *not* doing, or why an alternative was rejected | belongs in the commit message |
+| Banners a section or a file | structure is not documentation |
+| An explanation of mechanism longer than the change it sits on | PR body |
+| Reworded rather than removed in response to earlier feedback | the ask was to cut it |
+
+Accuracy does not earn a comment its place — a true comment that restates the code still goes. Match the density of the file being edited; a file that carries no comments is telling you what it wants.
+
+## 5. Severity
 
 | | Means |
 |---|---|
@@ -55,17 +79,26 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 | 🟡 **Should fix** | Real defect or convention break, not merge-stopping by itself. |
 | 🔵 **Nit** | Preference, or pre-existing debt this PR only brushes against. |
 
-## 5. Output
+## 6. Output
 
-- One thread per finding, anchored at the exact `file:line`.
-- Thread body: the claim in one sentence, then why it matters, then the concrete change. Lead with the emoji.
+**The threads are the review.** Every finding is a thread; the summary is an exception, not a wrapper around them.
+
+- One thread per finding, anchored at the exact `file:line`. A finding about a file outside the diff still gets a thread whenever a line the PR *does* touch can carry it — anchor it there and name the other file in the body.
+- Thread body: **one paragraph**, leading with the emoji. Where the fix is an edit to the lines the thread anchors on, that paragraph is followed by a ` ```suggestion ` block carrying it (an empty block deletes them) — prose describing a fix a suggestion could have applied is the failure mode to avoid, and a fix spanning other *changed* regions gets companion threads naming the main one. Where no suggestion can express it — a finding about a file outside the diff, red CI on the head, a PR that should be a draft, anything whose fix is "measure this first" — the paragraph stands alone and says the claim, why it matters, and the change to make. Never fabricate a suggestion to satisfy the shape.
+- Anchor from the **head**, not from diff arithmetic: re-resolve the head SHA immediately before posting, pin the pending review's `commitID` to it, and take line numbers from `git fetch origin pull/<number>/head:pr-head` plus `git show <sha>:<path> | cat -n` — `origin/<head-branch>` does not exist when the PR comes from a fork. A head that advanced by one commit mid-review mis-anchors every suggestion counted from `get_diff` hunks.
 - Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
-- One summary comment: counts per severity, plus any finding that has no line to anchor to. Post it with `gh pr comment --edit-last --create-if-none`, so a re-review on a later push replaces the summary instead of stacking a second one.
-- Name the checks you read (section 1) and their result in the summary.
+- **Where there is no `gh`** (a web/Routine session), the GitHub MCP route is: `pull_request_review_write` `create` with `commitID` = head SHA → one `add_comment_to_pending_review` per thread (`startLine`/`line`, `side: RIGHT`, `subjectType: LINE`) → `submit_pending` with `event: COMMENT`. Those tools take no `confirmed`. Verify with a single `get_review_comments` filtered by author and time — not by paging `get_reviews` oldest-first, which cost four calls to answer the same question.
+- **Never count anything.** No tally of findings, no counts per severity, no "N issues found". A count exists only to head a summary, so writing one talks you into posting a summary you did not need.
+- Never restate a thread, list the files you read, walk through the diff, or report a check that passed. None of that is the review.
+- Nothing found at all: the whole summary is `LGTM!` — as a comment, never an approval. The one thing that goes with it is a gap section 1 or 2 left: no gate covers the diff, no reference covers a path. Clean checks that do cover the diff are worth no words.
+- Nothing of your own, but open threads you agree with: one sentence in each of those threads, and no summary comment at all.
+- Otherwise post a summary only for what no line in the diff can carry: a finding about the body or the scope, a bot verdict with no file, a gate that misses the diff. Three sentences at most, and only the finding — never the author's reasoning confirmed back to them.
+- Use `gh pr comment --edit-last --create-if-none`, so a later run replaces the summary instead of adding another. Where no summary is warranted and an earlier run left one, edit that comment down to a single line saying nothing is outstanding — an edit, not a new comment. Touch no comment but your own.
 
-## 6. Never
+## 7. Never
 
 - Never approve, merge, push, or edit the PR's files.
 - Never post findings before section 1 has run.
 - Never raise a formatting nit a linter owns.
+- Never let an added comment through unread (section 4).
 - Never soften a rule to let a PR pass; say it is a Blocker and why.

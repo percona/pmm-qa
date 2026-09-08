@@ -22,19 +22,19 @@ to use [Base Image docker Container](https://github.com/phusion/baseimage-docker
 this gives developers + QA the flexibility to run Integrations tests locally, on Pull Requests with Continuous Integration
 
 3) The script ensures PG_STAT_MONITOR extension is enabled and a Monitoring user is created which will be used for
-pmm2-client and server connection
+pmm-client and server connection
 
 ### PMM Client Setup ###
 
-We used the same container to setup pgsql+pgsm and installing pmm2-client package inside this container (Base Image docker container),
+We used the same container to setup pgsql+pgsm and installing pmm-client package inside this container (Base Image docker container),
 so it could be added for monitoring to pmm-server, the
-[pmm2-client setup script](https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm2-client-setup.sh)
-just gives users an option to install desired version of pmm2-client inside this container.
+[pmm-client setup script](https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm2-client-setup.sh)
+just gives users an option to install desired version of pmm-client inside this container.
 
 ### PMM-Server Setup ###
 
 We setup PMM-Server and then use the [playbook from pmm-qa](https://github.com/percona/pmm-qa/blob/main/pmm-tests/pgsql_pgsm_setup.yml)
-which ensures pmm2-client & pgsm setup is ready to execute our e2e tests
+which ensures pmm-client & pgsm setup is ready to execute our e2e tests
 
 ### E2E Tests ###
 

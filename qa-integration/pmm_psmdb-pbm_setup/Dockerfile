@@ -102,6 +102,14 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
 COPY conf/sysconfig/mongod /etc/sysconfig/
 COPY keyfile /etc/keyfile
 COPY conf/krb/krb5.conf /etc/krb5.conf
+# mongos has no shipped systemd unit (only mongod does) -- install our own so
+# a container that wants to run mongos can manage it (and pmm-agent) via
+# systemd too, instead of running mongos as the container's raw PID 1 with no
+# init system at all. Not enabled here: only the compose service that actually
+# runs mongos should enable it (see docker-compose-sharded*.yaml), so plain
+# mongod nodes don't carry a permanently-failing unit for a config that never
+# exists on them.
+COPY conf/mongos/mongos.service /usr/lib/systemd/system/mongos.service
 RUN ln -s /usr/bin/mongosh /usr/bin/mongo || true
 RUN chown mongod /etc/keyfile && chmod 400 /etc/keyfile
 EXPOSE 27017

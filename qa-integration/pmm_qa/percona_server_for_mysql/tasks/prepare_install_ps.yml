@@ -39,12 +39,14 @@
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Enable Percona Server for MySQL repository
-  shell: docker exec {{ container_prefix }}{{ item }} percona-release enable {{ 'ps-84-lts' if ps_version == '8_4' else 'ps-' + ps_version | replace('_', '') }} release
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} percona-release enable {{ {'8_4': 'ps-84-lts', '9_7': 'ps-97-lts'}.get(ps_version, 'ps-' + ps_version | replace('_', '')) }} release
+    docker exec {{ container_prefix }}{{ item }} apt-get update
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install Percona Server for MySQL
   shell: |
-    docker exec {{ container_prefix }}{{ item }} apt install -y \
+    docker exec {{ container_prefix }}{{ item }} env DEBIAN_FRONTEND=noninteractive apt install -y \
       percona-server-server{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }} \
       percona-server-rocksdb{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }} \
   loop: "{{ range(1, nodes_count | int + 1) | list }}"

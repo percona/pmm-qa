@@ -42,7 +42,7 @@ while [ $# -gt 0 ]; do
       printf "***************************\n"
       printf "Invalid Argument Passed, usage of this script:\n"
       echo "--psmdb-version=4.4                                               Pass PSMDB Version that needs to be setup for monitoring, default is 4.4"
-      echo "--client-version=dev-latest                                       Pass the pmm2-client version, acceptable values are dev-latest (Default, if no value passed), pmm2-latest, 2.x.x, or a binary tarball http url"
+      echo "--client-version=dev-latest                                       Pass the pmm-client version, acceptable values are dev-latest (Default, if no value passed), pmm2-latest, 2.x.x, or a binary tarball http url"
       echo "--psmdb-container=psmdb                                           PSMDB & PMM-CLient Docker container name prefix, default value is psmdb"
       echo "--pmm-container-name=pmm-server                                   Pass the pmm-server name, default container name is pmm-server"
       echo "--pmm-container-port=443                                          Pass the pmm-server port, default https port number is 443, http port is 8081"

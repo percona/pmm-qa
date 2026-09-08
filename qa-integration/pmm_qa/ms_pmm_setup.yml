@@ -58,7 +58,7 @@
       - docker exec {{ ms_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat libtirpc-dev
       - docker exec {{ ms_container }} apt install -y sysbench
 
-  - name: Install pmm2-client on the ms_container
+  - name: Install pmm-client on the ms_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ ms_container }}

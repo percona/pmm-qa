@@ -43,7 +43,7 @@
       - docker exec {{ psmdb_container }} python3 -m pip install --upgrade pip
       - docker exec {{ psmdb_container }} pip3 install 'mtools[all]'
 
-  - name: Install pmm2-client on the psmdb_container
+  - name: Install pmm-client on the psmdb_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ psmdb_container }}

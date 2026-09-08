@@ -61,10 +61,10 @@ register_database() {
 
 register_database PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL OL_VERSION GSSAPI STORAGE_ENGINE' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
   'DEFAULT_VERSION=latest' \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
-  'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger'
+  'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database MLAUNCH_PSMDB \
   '4.4 5.0 6.0 7.0 8.0' \
@@ -86,9 +86,9 @@ register_database SSL_MLAUNCH \
 
 register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
@@ -98,14 +98,14 @@ register_database MYSQL \
   'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
-  '5.7 8.0 8.4' \
+  '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
   'DEFAULT_VERSION=8.0' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
   'TARBALL=' 'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
-  '5.7 8.0 8.4' \
+  '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL' \
   'DEFAULT_VERSION=8.0' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' 'TARBALL='
@@ -205,12 +205,12 @@ database_default_value() {
 #   e.g. setup_type=$(resolve_value PS SETUP_TYPE DB_CONFIG)
 #
 # Precedence, highest first:
-#   1. an existing shell/environment variable named KEY
-#   2. the global --client-version, for KEY == CLIENT_VERSION only
+#   1. the global --client-version flag, for KEY == CLIENT_VERSION only
+#   2. an existing shell/environment variable named KEY
 #   3. the per-database option parsed from the --database spec
 #   4. the default registered above
 #
-# Step 1 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
+# Step 2 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
 # but *empty* variable deliberately wins and yields ''. Contrast with
 # resolved_version() in lib/runners.sh, which mirrors `os.getenv(...) or ...`
 # and therefore skips empty values -- the two rules are intentionally
@@ -222,10 +222,10 @@ database_default_value() {
 resolve_value() {
   local type=$1 key=$2 config_name=$3
   local -n config_ref=$config_name
-  if [[ -v $key ]]; then
-    printf '%s' "${!key}"
-  elif [[ $key == CLIENT_VERSION && -n ${GLOBAL_CLIENT_VERSION:-} ]]; then
+  if [[ $key == CLIENT_VERSION && -n ${GLOBAL_CLIENT_VERSION:-} ]]; then
     printf '%s' "$GLOBAL_CLIENT_VERSION"
+  elif [[ -v $key ]]; then
+    printf '%s' "${!key}"
   elif [[ -v "config_ref[$key]" ]]; then
     printf '%s' "${config_ref[$key]}"
   else
