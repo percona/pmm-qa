@@ -210,15 +210,19 @@ print_setup_log() {
   dump_setup_log "$index" "$total" "$spec" "$log_file"
 }
 
-# Report one parallel setup that was still running when we were signalled.
+# Report one parallel setup that had not been reported when we were signalled.
 #
 # Usage: print_interrupted_setup_log INDEX TOTAL SPEC LOG_FILE
+#
+# A filled slot means "never reported", which is not the same as "still
+# running": a child that exited before `wait -n` reaped it also still holds its
+# slot. The banner says unreported rather than running for that reason.
 #
 # Stdout: an INTERRUPTED banner plus however much of the log had been written
 print_interrupted_setup_log() {
   local index=$1 total=$2 spec=$3 log_file=$4
 
-  printf '\n===== [%d/%d] %s INTERRUPTED (still running when signalled) =====\n' \
+  printf '\n===== [%d/%d] %s INTERRUPTED (no completion reported) =====\n' \
     "$index" "$total" "$spec"
   printf 'log: %s\n' "$log_file"
   dump_setup_log "$index" "$total" "$spec" "$log_file"
@@ -262,8 +266,8 @@ run_parallel_setups() {
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
 
-    # A slot still holding a pid never reached print_setup_log, so its buffered
-    # log is the only record of how far it got. Dump before the wait and the rm:
+    # A slot still holding a pid was never reported, so its buffered log is the
+    # only record of how far it got. Dump before the wait and the rm:
     # `timeout -k 30` leaves only 30s before SIGKILL. The trap is installed
     # before the startup loop, so a signal mid-startup leaves later slots unset
     # and the fork's redirect may not have created the log yet -- hence `:-` and
@@ -309,10 +313,13 @@ run_parallel_setups() {
     for ((index = 0; index < total; index++)); do
       if [[ ${pids[index]} == "$finished_pid" ]]; then
         ((status == 0)) || overall_status=1
+        # Clear the slot *before* reporting: the INT/TERM trap treats a filled
+        # slot as unreported, so a signal arriving mid-report would otherwise
+        # dump this same log a second time under its own banner.
+        pids[index]=
         print_setup_log \
           "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
           "$status" "${logs[index]}"
-        pids[index]=
         matched=true
         break
       fi

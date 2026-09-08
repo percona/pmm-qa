@@ -127,7 +127,7 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
-@test "an interrupted parallel run dumps the log of the setup still running" {
+@test "an interrupted parallel run dumps the log of the unreported setup" {
   # A wedged setup is SIGTERMed and never reaches print_setup_log, so only the
   # INT/TERM trap can dump its buffered log before the log dir is removed.
   cat >"$TEST_BIN/ansible-playbook" <<'EOF'
@@ -163,9 +163,52 @@ EOF
   wait "$fw_pid" || status=$?
 
   [[ $status -eq 130 ]]
-  [[ $(cat "$out") == *'===== [1/1] ps=8.4 INTERRUPTED (still running when signalled) ====='* ]]
+  [[ $(cat "$out") == *'===== [1/1] ps=8.4 INTERRUPTED (no completion reported) ====='* ]]
   [[ $(cat "$out") == *'PS reached the wedge point'* ]]
   [[ $(cat "$out") == *'===== END [1/1] ps=8.4 ====='* ]]
+}
+
+@test "a signal mid-report does not re-dump the reported setup as interrupted" {
+  # The reported slot must be cleared before print_setup_log runs, or a signal
+  # arriving while it cats a large log makes the trap dump that same log again
+  # under an INTERRUPTED banner -- mislabelling a setup that already reported.
+  # The window is the length of the cat, so the log has to be big to hit it.
+  cat >"$TEST_BIN/ansible-playbook" <<'EOF'
+#!/usr/bin/env bash
+if [[ -n ${PGSQL_VERSION:-} ]]; then
+  yes 'PGSQL FAILED LOG LINE' | head -c 50000000
+  exit 9
+fi
+sleep 300
+EOF
+  chmod +x "$TEST_BIN/ansible-playbook"
+
+  local out=$BATS_TEST_TMPDIR/midreport.log
+  local fw_pid status=0
+
+  env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database pgsql=16 \
+      --database ps=8.4 \
+    >"$out" 2>&1 &
+  fw_pid=$!
+
+  for _ in $(seq 1 600); do
+    grep -q 'pgsql=16 FAILED' "$out" 2>/dev/null && break
+    sleep 0.05
+  done
+
+  kill -TERM "$fw_pid"
+  wait "$fw_pid" || status=$?
+
+  [[ $status -eq 130 ]]
+  # ps never reported, so it is legitimately interrupted; pgsql did report.
+  [[ $(grep -c 'pgsql=16 INTERRUPTED' "$out") -eq 0 ]]
+  [[ $(grep -c 'ps=8.4 INTERRUPTED' "$out") -eq 1 ]]
 }
 
 @test "parallel mode job control emits no job-status noise" {
