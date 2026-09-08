@@ -1,0 +1,6 @@
+# candidate: jenkins-builds — a parallel build's console is one flat interleave, so read the stage map first and the recap counters second
+
+- Added: 2026-09-08
+- Applies to: all agents that read Jenkins build results (investigator, test-runner, fb-reporter)
+- Evidence: on nine failed `nightly-package-testing-*` builds the exported console carried no per-branch prefix, so the nearest preceding `TASK [...]` line belonged to a different one of the eight parallel branches and mis-attributed two failures; `grep -c 'fatal:'` reported 80 where 2 were terminal, the rest being `...ignoring` or inside a `block`/`rescue`. `get_build_stages` had already answered the load-bearing question in one call — three builds failed all 8 OS branches (a bad parameter) versus five that failed 1-2 (environmental) — before any log was fetched.
+- Proposed change: for a build using `parallel`, require `get_build_stages` before any log read, to get the per-branch pass/fail map and split systematic from environmental; then attribute each failure by finding a `PLAY RECAP` with a non-zero `failed=`, taking the nearest *preceding* `fatal:` block that is not followed by `...ignoring`, and confirming against the `Failed in branch <name>` marker — and state that `rescued=N` alongside `failed=1` means one rescue chain, not N independent failures.
