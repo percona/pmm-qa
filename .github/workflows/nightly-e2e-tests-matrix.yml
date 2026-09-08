@@ -82,7 +82,12 @@ jobs:
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
-      fail-fast: true
+      # Each shard holds its own databases alive for the whole run, so under
+      # fail-fast one shard's death cancels the other 13 and strips the server
+      # of every monitored service while the test jobs still have over an hour
+      # to run. Shards are independent: losing one must cost only its own
+      # tests, which is why both test_execution matrices are already false.
+      fail-fast: false
       matrix:
         include:
           - shard_name: external

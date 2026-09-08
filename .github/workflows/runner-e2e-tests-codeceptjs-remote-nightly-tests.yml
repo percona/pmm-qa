@@ -191,8 +191,35 @@ jobs:
               return new Promise((resolve) => setTimeout(resolve, ms));
             }
 
+            // Every shard polls this run on the same interval, so these calls
+            // reach the API in bursts and a transient 5xx or rate-limit reply
+            // is expected. Unretried, one such reply ends the job -- and with
+            // it the databases that job holds open for the whole run.
+            const apiRetryAttempts = 5;
+            const apiRetryBaseDelayMs = 5000;
+
+            function isRetriableApiError(error) {
+              const status = error?.status;
+              return status === undefined || status >= 500 || status === 403 || status === 429;
+            }
+
+            async function withApiRetry(label, call) {
+              for (let attempt = 1; ; attempt += 1) {
+                try {
+                  return await call();
+                } catch (error) {
+                  if (attempt >= apiRetryAttempts || !isRetriableApiError(error)) {
+                    throw error;
+                  }
+                  const delayMs = apiRetryBaseDelayMs * attempt;
+                  core.warning(`${label} failed (attempt ${attempt}/${apiRetryAttempts}, status=${error?.status ?? 'unknown'}): ${error?.message}. Retrying in ${delayMs}ms.`);
+                  await sleep(delayMs);
+                }
+              }
+            }
+
             async function listJobs() {
-              return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              return withApiRetry('listJobsForWorkflowRun', () => github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 owner,
                 repo,
                 run_id,
@@ -201,18 +228,18 @@ jobs:
                 headers: {
                   'X-GitHub-Api-Version': '2026-03-10',
                 },
-              });
+              }));
             }
 
             async function getJob(job) {
-              const response = await github.rest.actions.getJobForWorkflowRun({
+              const response = await withApiRetry(`getJobForWorkflowRun(${job.id})`, () => github.rest.actions.getJobForWorkflowRun({
                 owner,
                 repo,
                 job_id: job.id,
                 headers: {
                   'X-GitHub-Api-Version': '2026-03-10',
                 },
-              });
+              }));
               return response.data;
             }
 
