@@ -19,11 +19,8 @@
   command: percona-release enable{{ suffix_only }} {{ package }} {{ repository }}
   become: true
 
-# Retried like the apt task below: repo.percona.com regenerates the pmm3-client
-# repos on the hour, and a makecache that lands mid-publish gets a 404 on the
-# repodata files the repomd.xml it just fetched named. `clean all` on each
-# attempt re-reads repomd.xml, so a retry sees the new set rather than the
-# stale one.
+# `clean all` on each attempt re-reads repomd.xml, so a retry sees a
+# republished repo rather than the repodata names it already cached.
 - name: Clean and update package cache
   shell: |
     {{ ansible_pkg_mgr }} clean all

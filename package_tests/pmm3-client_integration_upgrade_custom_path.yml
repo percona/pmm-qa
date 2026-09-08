@@ -55,10 +55,8 @@
       -n2 | head -n1
     register: old_release
 
-  # The upgrade target is pmm_version. When that is already the newest release —
-  # which is the case on arm64, where no dev client tarball is published and the
-  # newest GA is the only thing this suite can install — starting from
-  # latest_release would make the upgrade a no-op, so step back one release.
+  # When pmm_version is already the newest release, starting from
+  # latest_release would make this a no-op upgrade.
   - set_fact:
       old_version: >-
         {{ old_release.stdout

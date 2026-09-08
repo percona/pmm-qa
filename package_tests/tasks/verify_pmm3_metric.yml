@@ -92,5 +92,5 @@
 
   rescue:
   - name: Generate PMM summary on failure
-    command: "pmm-admin summary --filename {{ pmm_summary_file | default('/tmp/pmm-summary.zip', true) }} {{ port_flag }}"
+    command: "pmm-admin summary --filename {{ pmm_summary_file | default(playbook_dir | dirname ~ '/pmm-summary.zip', true) }} {{ port_flag }}"
     ignore_errors: yes
