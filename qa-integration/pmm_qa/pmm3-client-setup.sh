@@ -105,8 +105,15 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
-  dpkg -i pmm-client.deb
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+  # ~170MB, and repo.percona.com has served it to CI runners as slowly as 190KB/s.
+  # Resume instead of restarting: the callers wrap this script in a retry that gives
+  # every attempt the same wall clock, so without --continue a slow link never finishes.
+  # Safe to resume here (a released version's URL is immutable, and the file name
+  # carries the version, so a stale partial can never belong to a different build).
+  wget --continue --tries=3 --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
+  dpkg -i "${deb_file}"
 fi
 
 ## Default Binary path
@@ -117,7 +124,10 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       # No --continue: this URL is mutable (pmm-client-latest.tar.gz), so a partial
+       # left by an earlier build must not be resumed into.
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --tries=3 --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
