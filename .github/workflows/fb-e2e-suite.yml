@@ -81,6 +81,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      arch: ${{ inputs.arch || 'amd64' }}
 #      setup_services: '--database psmdb,SETUP_TYPE=pss'
       setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
       tags_for_tests: '@bm-mongo'
@@ -97,6 +98,7 @@ jobs:
 #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
 ###      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      arch: ${{ inputs.arch || 'amd64' }}
 #      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
 #      tags_for_tests: '@bm-mysql'
 
@@ -112,6 +114,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
       #      tags_for_tests: '@bm-common|@bm-locations' -- include bm-common once setup for mysql fixed
       tags_for_tests: '@bm-locations'
@@ -128,6 +131,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database ps,QUERY_SOURCE=slowlog'
       tags_for_tests: '@exporters'
 
@@ -143,6 +147,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database psmdb'
       tags_for_tests: '@mongodb-exporter'
 
@@ -158,6 +163,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database ps --database external --database haproxy'
       tags_for_tests: '@fb-instances'
 
@@ -171,6 +177,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database ps --database external --database haproxy'
       pmm_test_flag: '@fb-instances'
 
@@ -186,6 +193,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database mysql'
       tags_for_tests: '@fb-alerting|@fb-settings'
  
@@ -199,6 +207,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '-h'
       pmm_test_flag: '@alerting'
 
@@ -212,6 +221,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database mysql'
       pmm_test_flag: '@fb-settings'
 
