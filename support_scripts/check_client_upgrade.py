@@ -1,3 +1,4 @@
+import re
 import subprocess
 import sys
 
@@ -132,6 +133,14 @@ if len(errors) > 0:
   raise RuntimeError("Some errors in pmm-admin status: ".join(errors))
 
 expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
+
+# CLIENT_VERSION may be a client tarball URL instead of a bare version: the upgrade
+# matrix uses one for releases whose client deb is no longer in the apt repo.
+if expected_version.startswith("http"):
+  tarball_version = re.search(r"pmm-client-(\d+\.\d+\.\d+)", expected_version)
+  if not tarball_version:
+    raise RuntimeError(f"Cannot determine expected version from client tarball URL: {expected_version}")
+  expected_version = tarball_version.group(1)
 
 
 if not admin_version.startswith(expected_version):
