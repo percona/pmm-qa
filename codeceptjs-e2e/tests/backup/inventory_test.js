@@ -97,7 +97,28 @@ Before(async ({
 
   const c = await I.mongoGetCollection('test', 'test');
 
-  await c.deleteMany({ number: 2 });
+  // systemctl returns as soon as systemd accepts the unit, but the replica set
+  // still has to elect a primary before an operation can be routed to one, and
+  // this is the first operation after the restart. One server-selection budget
+  // is not always enough for a cold election, so give it three.
+  let selectionError;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await c.deleteMany({ number: 2 });
+      selectionError = undefined;
+      break;
+    } catch (error) {
+      selectionError = error;
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => { setTimeout(resolve, 10000); });
+    }
+  }
+
+  if (selectionError) {
+    throw selectionError;
+  }
 
   await I.Authorize();
   await settingsAPI.changeSettings({ backup: true });
