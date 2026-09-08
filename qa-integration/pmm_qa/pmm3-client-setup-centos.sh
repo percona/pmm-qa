@@ -90,8 +90,11 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm
-  rpm -i pmm-client.rpm
+  rpm_file="pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+  # Resumable: a released version's URL is immutable and the file name carries the version.
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/${rpm_file}"
+  rpm -i "${rpm_file}"
 fi
 
 ## Default Binary path
@@ -102,7 +105,10 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       # No --continue: this URL is mutable (pmm-client-latest.tar.gz), so a partial
+       # left by an earlier build must not be resumed into.
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz

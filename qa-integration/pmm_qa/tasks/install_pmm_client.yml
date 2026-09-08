@@ -148,7 +148,11 @@
       elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
         build_number=1
       fi
-      wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+      # Removed first so wget resumes only its own partial: containers are recreated
+      # between outer retries, so nothing older can be resumed into.
+      rm -f /pmm-client.deb
+      wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+        -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
     '
     docker exec --user root {{ container_name }} dpkg -i /pmm-client.deb
   when:
@@ -167,7 +171,9 @@
       elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
         build_number=1
       fi
-      wget -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+      rm -f /pmm-client.rpm
+      wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+        -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
     '
     docker exec --user root {{ container_name }} rpm -i /pmm-client.rpm
   when:
@@ -177,7 +183,7 @@
 - name: Install tarball PMM client version
   shell: |
     docker exec --user root {{ container_name }} sh -c '
-      wget -O /pmm-client.tar.gz "{{ client_version }}" &&
+      wget --timeout=60 --waitretry=15 --progress=dot:giga -O /pmm-client.tar.gz "{{ client_version }}" &&
       tar -zxpf /pmm-client.tar.gz &&
       PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1` &&
       echo ${PMM_CLIENT} &&
