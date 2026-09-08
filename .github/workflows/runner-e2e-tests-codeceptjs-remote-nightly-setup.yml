@@ -143,11 +143,9 @@ jobs:
       - name: Waiting for tests execution
         uses: actions/github-script@v7
         with:
-          # Enables @octokit/plugin-retry on this script's `github` client, so a
-          # transient API reply is retried instead of ending the job. Every shard
-          # polls this run on the same interval, and a job that dies here takes the
-          # databases it holds open with it. Exempt (not retried) by default:
-          # 400,401,403,404,422.
+          # Enables @octokit/plugin-retry on this script's `github` client; a
+          # transient reply here would otherwise end the shard and drop the
+          # databases it holds open. Exempt by default: 400,401,403,404,422.
           retries: 5
           script: |
             const owner = context.repo.owner;

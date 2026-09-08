@@ -176,11 +176,9 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         uses: actions/github-script@v7
         with:
-          # Enables @octokit/plugin-retry on this script's `github` client, so a
-          # transient API reply is retried instead of ending the job. Every shard
-          # polls this run on the same interval, and a job that dies here takes the
-          # databases it holds open with it. Exempt (not retried) by default:
-          # 400,401,403,404,422.
+          # Enables @octokit/plugin-retry on this script's `github` client.
+          # Setup shards and test jobs all poll this run on the same interval,
+          # so a transient 5xx or rate-limit reply is expected.
           retries: 5
           script: |
             const owner = context.repo.owner;
