@@ -153,6 +153,7 @@ jobs:
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
+            -e PMM_ENABLE_TELEMETRY=0 \
             --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
@@ -257,6 +258,7 @@ jobs:
           docker rename pmm-server pmm-server-old
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            -e PMM_ENABLE_TELEMETRY=0 \
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
@@ -343,7 +345,13 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-        run: npx playwright test --grep "@post-upgrade|@rta"
+        run: |
+          if [[ "${{ matrix.docker_tag }}" == *-rc* ]]; then
+            export PMM_SERVER_LATEST="$DEV_LATEST_VERSION"
+          else
+            export PMM_SERVER_LATEST="$PMM_SERVER_LATEST"
+          fi
+          npx playwright test --grep "@post-upgrade|@rta"
 
       - name: Check packages after upgrade
         run: |
