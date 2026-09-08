@@ -47,19 +47,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .assertSuccess();
 
-      console.log(
-        `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
-      );
-
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Developing tests
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
         )
         .outContains('Access denied for user');
 
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Developing tests
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
       cliHelper.execSilent(
         `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "INSERT INTO mysql_users (username, password) VALUES ('${newUsername}', '${newPassword}'); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"`,
       );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Developing tests
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
       cliHelper
         .execSilent(
