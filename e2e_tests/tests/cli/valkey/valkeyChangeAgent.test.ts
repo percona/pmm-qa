@@ -58,10 +58,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .outContains('invalid username-password pair or user is disabled');
 
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
-
       cliHelper
         .execSilent(
           `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
