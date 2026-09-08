@@ -91,7 +91,6 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
     build_number=1
   fi
   rpm_file="pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
-  # Resumable: a released version's URL is immutable and the file name carries the version.
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
     -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/${rpm_file}"
   rpm -i "${rpm_file}"
