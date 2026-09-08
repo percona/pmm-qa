@@ -44,7 +44,3 @@ parallel_decision() {
 @test "two SSL PSMDB setups fall back to sequential" {
   [[ $(parallel_decision ssl_psmdb ssl_psmdb) == false ]]
 }
-
-@test "a single setup runs sequentially so its output streams" {
-  [[ $(parallel_decision ps) == false ]]
-}

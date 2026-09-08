@@ -115,13 +115,6 @@ preflight_database_setups() {
     PARALLEL=false
   fi
 
-  # A lone setup has nothing to interleave with, so buffering its output buys
-  # nothing and costs live progress -- and costs it entirely when CI's
-  # `timeout` kills the run mid-setup, leaving only the "Starting" line behind.
-  if [[ $PARALLEL == true && ${#DATABASE_SPECS[@]} -eq 1 ]]; then
-    PARALLEL=false
-  fi
-
   [[ $needs_server == true ]] && resolve_pmm_server
   [[ $needs_curl == true ]] && require_command curl
   # Warm these up before forking so parallel jobs cannot race to install the
@@ -254,13 +247,15 @@ run_parallel_setups() {
     wait >/dev/null 2>&1 || true
     # The signal is usually CI's `timeout` giving up on a setup that hung, so
     # the buffers of the setups still running are the only record of where it
-    # got stuck. Dump them and keep the directory instead of deleting both.
+    # got stuck.
     for ((slot = 0; slot < total; slot++)); do
       [[ -n ${pids[slot]} ]] || continue
       printf '\n===== [%d/%d] %s INTERRUPTED =====\n' \
         "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
       printf 'log: %s\n' "${logs[slot]}"
-      cat_setup_log "${logs[slot]}"
+      # A signal between the fork and the child's own redirect leaves this file
+      # uncreated; errexit must not abandon the remaining slots over it.
+      cat_setup_log "${logs[slot]}" || true
       printf '===== END [%d/%d] %s =====\n' "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
     done
     printf '\nParallel setup logs kept at: %s\n' "$log_dir"

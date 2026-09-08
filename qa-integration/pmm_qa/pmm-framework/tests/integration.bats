@@ -327,3 +327,37 @@ EOF
   [[ -d $log_dir ]]
   rm -rf "$log_dir"
 }
+
+@test "a signalled single-setup parallel run dumps its buffer too" {
+  local out="$BATS_TEST_TMPDIR/signalled-one.out" waited=0 fw_pid fw_status=0
+
+  env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    HANG_SECONDS=120 \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 >"$out" 2>&1 &
+  fw_pid=$!
+
+  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null || echo 0) -eq 1 ]]; do
+    ((waited += 1))
+    [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
+    sleep 0.2
+  done
+  sleep 1
+
+  kill -TERM "$fw_pid"
+  wait "$fw_pid" || fw_status=$?
+  run cat "$out"
+
+  [[ $fw_status -eq 130 ]]
+  [[ $output == *'===== [1/1] ps=8.4 INTERRUPTED ====='* ]]
+  [[ $output == *'setup is working'* ]]
+
+  local log_dir
+  log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")
+  [[ -d $log_dir ]]
+  rm -rf "$log_dir"
+}
