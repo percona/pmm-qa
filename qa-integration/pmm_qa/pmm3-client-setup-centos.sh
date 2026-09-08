@@ -105,8 +105,6 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       # No --continue: this URL is mutable (pmm-client-latest.tar.gz), so a partial
-       # left by an earlier build must not be resumed into.
        wget -O pmm-client.tar.gz --progress=dot:giga \
          --timeout=60 --waitretry=15 "${client_version}"
     fi

@@ -106,7 +106,6 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
     build_number=1
   fi
   deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
-  # Resumable: a released version's URL is immutable and the file name carries the version.
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
     -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   dpkg -i "${deb_file}"
@@ -120,8 +119,6 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       # No --continue: this URL is mutable (pmm-client-latest.tar.gz), so a partial
-       # left by an earlier build must not be resumed into.
        wget -O pmm-client.tar.gz --progress=dot:giga \
          --timeout=60 --waitretry=15 "${client_version}"
     fi

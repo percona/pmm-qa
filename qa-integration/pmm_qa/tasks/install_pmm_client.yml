@@ -148,8 +148,6 @@
       elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
         build_number=1
       fi
-      # Removed first so wget resumes only its own partial: containers are recreated
-      # between outer retries, so nothing older can be resumed into.
       rm -f /pmm-client.deb
       wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
         -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
