@@ -407,6 +407,32 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T1016 - Verify Change agent comments parsing @pgsm-pmm-integration',
+    async ({ api, cliHelper }) => {
+      const commentsParsingCases = [
+        { disabled: false, response: '- enabled comments parsing', value: 'on' },
+        { disabled: true, response: '- disabled comments parsing', value: 'off' },
+      ];
+
+      for (const commentsParsingCase of commentsParsingCases) {
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --comments-parsing=${commentsParsingCase.value}`,
+          )
+          .assertSuccess()
+          .outContains(commentsParsingCase.response);
+
+        const agent = await api.inventoryApi.getAgentById(pgStatMonitorId);
+
+        expect(
+          agent.comments_parsing_disabled ?? false,
+          `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_postgresql_pgstatmonitor_agent`,
+        ).toEqual(commentsParsingCase.disabled);
+      }
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
