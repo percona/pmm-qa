@@ -292,6 +292,31 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
+    'PMM-T1013 - Verify Change agent skip connection check @valkey-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      let commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=invalid_skip_check_password --skip-connection-check`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
+      }
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --username=${newUsername} --password=${newPassword}`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper.execSilent(command).assertSuccess();
+      }
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @valkey-integration',
     async ({ cliHelper }) => {
       const commands = [
