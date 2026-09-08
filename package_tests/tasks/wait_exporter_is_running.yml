@@ -27,3 +27,6 @@
     - name: Generate PMM summary on failure
       command: "pmm-admin summary --filename {{ pmm_summary_file | default(playbook_dir | dirname ~ '/pmm-summary.zip', true) }} {{ port_flag if port_flag is defined else '' }}"
       ignore_errors: yes
+    - name: Fail with the original error
+      fail:
+        msg: "{{ process_name }} never reached Running. Last status: '{{ last_status.stdout | default('(not captured)') }}'"
