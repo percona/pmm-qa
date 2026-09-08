@@ -1,0 +1,32 @@
+# PMM-15262 / Experiment N2 — NetworkChaos: packet loss on the ingest path.
+#
+# Drops 30% of packets from vmagent to vminsert. vmagent is what actually
+# scrapes the 174 monitored services and writes them into VictoriaMetrics, so
+# this is the one link where loss can cost real samples. vmagent buffers and
+# retries on its persistent queue, so the question is whether the backlog drains
+# with no gap once the loss clears, not whether throughput dips during it.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n2-loss-vmagent-to-vminsert
+  namespace: chaos-mesh
+spec:
+  action: loss
+  mode: all
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/name: vmagent
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        app.kubernetes.io/name: vminsert
+  loss:
+    loss: "30"
+    correlation: "25"

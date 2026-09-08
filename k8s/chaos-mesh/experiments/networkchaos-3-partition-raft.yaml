@@ -1,0 +1,37 @@
+# PMM-15262 / Experiment N3 — NetworkChaos: partition the Raft leader.
+#
+# Cuts all traffic, both directions, between the current leader and the other
+# two PMM Server replicas. The leader lands in a minority of one and must step
+# down; the surviving two hold quorum and elect a new leader. The finding this
+# hunts for is split-brain: two pods answering 200 on leaderHealthCheck at once.
+# On heal, the old leader must rejoin as a follower, not resume leadership.
+#
+# PIN THE POD NAME BEFORE EACH RUN. Leadership drifts between experiments; check
+# with leaderHealthCheck and update both pod-name fields below to match.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n3-partition-raft-leader
+  namespace: chaos-mesh
+spec:
+  action: partition
+  mode: all
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      statefulset.kubernetes.io/pod-name: pmm-ha-1
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        app.kubernetes.io/component: pmm-server
+      expressionSelectors:
+        - key: statefulset.kubernetes.io/pod-name
+          operator: NotIn
+          values:
+            - pmm-ha-1

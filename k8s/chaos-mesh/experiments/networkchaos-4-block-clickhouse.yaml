@@ -1,0 +1,33 @@
+# PMM-15262 / Experiment N4 — NetworkChaos: block PMM Server -> ClickHouse.
+#
+# Severs all traffic from the PMM Server pods to the ClickHouse servers, which
+# hold Query Analytics data. This is the "block communication to a specific
+# component" case, and it doubles as a blast-radius check: QAN should degrade
+# while metrics, dashboards and the rest of the UI carry on, because those live
+# in VictoriaMetrics and PostgreSQL instead.
+#
+# Selects on clickhouse.altinity.com/chi, which the ClickHouse Keeper pods do
+# not carry (they use clickhouse-keeper.altinity.com/chk) — Keeper quorum stays
+# out of range, as the PVC pending deletion requires.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n4-block-pmm-to-clickhouse
+  namespace: chaos-mesh
+spec:
+  action: partition
+  mode: all
+  duration: 2m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        clickhouse.altinity.com/chi: pmm-ha

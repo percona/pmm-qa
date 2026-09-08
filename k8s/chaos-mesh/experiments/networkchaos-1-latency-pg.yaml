@@ -1,0 +1,33 @@
+# PMM-15262 / Experiment N1 — NetworkChaos: latency, PMM Server -> PostgreSQL.
+#
+# Adds 200ms +/-50ms of egress delay on all three PMM Server pods, but only on
+# traffic to pgbouncer. PMM keeps inventory, settings, users and all Grafana
+# state in PostgreSQL, so this is the link whose latency the UI and API feel
+# first. Metric ingest does not pass through here, so a clean run should show a
+# slower UI and untouched scrape/ingest counters.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n1-latency-pmm-to-pg
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        postgres-operator.crunchydata.com/role: pgbouncer
+  delay:
+    latency: 200ms
+    jitter: 50ms
+    correlation: "50"
