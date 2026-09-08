@@ -28,8 +28,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
     I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, `No values for filter: "${filter}" were displayed`);
-    // Re-clicking the same index is not a reliable deselect, and a filter left applied here
-    // re-ranks the Service Name values the assertions below pick from.
+    // A leftover filter re-ranks the Service Name values the assertions below pick from.
     I.click(queryAnalyticsPage.filters.buttons.resetAll);
     queryAnalyticsPage.waitForLoaded();
   }
