@@ -46,21 +46,35 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verify Change agent username and password @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const commands = [
-        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
-      ];
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
+        )
+        .assertSuccess();
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
+        )
+        .outContains('invalid username-password pair or user is disabled');
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
-      cliHelper.execSilent(
-        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
-      );
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
+        )
+        .assertSuccess();
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
+        )
+        .assertSuccess();
 
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
   );
