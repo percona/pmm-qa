@@ -97,10 +97,6 @@ Before(async ({
 
   const c = await I.mongoGetCollection('test', 'test');
 
-  // systemctl returns as soon as systemd accepts the unit, but the replica set
-  // still has to elect a primary before an operation can be routed to one, and
-  // this is the first operation after the restart. One server-selection budget
-  // is not always enough for a cold election, so give it three.
   let selectionError;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
