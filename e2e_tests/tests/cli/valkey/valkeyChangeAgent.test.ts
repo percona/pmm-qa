@@ -11,7 +11,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
   let containerName: string;
-  let pgVersion: string;
   let serviceName: string;
   let serviceId: string;
   let valkeyExporterId: string;
@@ -111,6 +110,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  // eslint-disable-next-line playwright/no-skipped-test -- Test
   pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
@@ -138,13 +138,16 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
+      console.log(
+        cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
+      );
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
       cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
-      console.log(cliHelper
-        .execSilent(
+      console.log(
+        cliHelper.execSilent(
           `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
-        ));
+        ),
+      );
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -181,7 +184,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         console.log(enableCommand.command);
-        console.log( `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`);
+        console.log(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`,
+        );
 
         await cliHelper
           .execSilent(
