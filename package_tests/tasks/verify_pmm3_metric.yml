@@ -92,5 +92,8 @@
 
   rescue:
   - name: Generate PMM summary on failure
-    command: "pmm-admin summary --filename /pmm/package-testing/pmm-summary.zip {{ port_flag }}"
+    command: "pmm-admin summary --filename {{ pmm_summary_file | default(playbook_dir | dirname ~ '/pmm-summary.zip', true) }} {{ port_flag }}"
     ignore_errors: yes
+  - name: Fail with the original error
+    fail:
+      msg: "{{ item.service_name }}: '{{ item.metric }}' not received. Last 'pmm-admin list' output: {{ list_output.stdout | default('(not captured)') }}"
