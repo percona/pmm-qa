@@ -424,7 +424,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent rds-exporter 97fb8372-a052-49df-b58e-76ca2fc8e3c0 --pmm-agent-listen-port=7778`,
+          `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --pmm-agent-listen-port=7778`,
         )
         .assertSuccess();
     },
