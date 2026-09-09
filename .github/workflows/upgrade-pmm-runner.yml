@@ -15,6 +15,10 @@ on:
         description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
         default: ''
         type: string
+      upgrade_tag:
+        description: 'PMM Server docker tag to upgrade to'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       upgrade_type:
         description: "Type of upgrade Docker or UI"
         required: true
@@ -37,10 +41,17 @@ on:
         description: 'PMM Server docker tag to upgrade from'
         default: ''
         type: string
+        required: true
       version:
         description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
         default: ''
         type: string
+        required: true
+      upgrade_tag:
+        description: 'PMM Server docker tag to upgrade to'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
+        required: true
       upgrade_type:
         description: "Type of upgrade Docker or UI"
         required: true
