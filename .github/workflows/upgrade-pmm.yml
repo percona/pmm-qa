@@ -89,7 +89,14 @@ jobs:
           echo $VERSIONS
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
-          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; ($versions | length)) as $i | { version: $versions[$i], docker_tag: $tags[$i]}]')
+          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" \
+            --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "$RC_VERSION" --arg dev_ver "$DEV_LATEST_VERSION" \
+            '[range(0; ($versions | length)) as $i
+              | ($tags[$i] | test("-rc")) as $is_rc
+              | { version: $versions[$i],
+                  docker_tag: $tags[$i],
+                  upgrade_tag: (if $is_rc then "perconalab/pmm-server:3-dev-latest" else $rc_tag end),
+                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end) }]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
