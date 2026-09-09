@@ -111,7 +111,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T1005 - Verify Change agent enable true/false @azure-integration',
-    async ({ api, cliHelper }) => {
+    async ({ api, cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'AGENT_STATUS_DONE' },
         { command: '--enable=true', response: '- enabled agent', status: 'AGENT_STATUS_RUNNING' },
@@ -127,6 +127,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         for (const command of commands) {
           await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
         }
+
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+        await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         await expect(async () => {
           const agentStatus = (
