@@ -199,4 +199,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
     },
   );
+
+  pmmTest('PMM-T1011 - Verify Change agent pmm agent listen port @ps-integration', async ({ cliHelper }) => {
+    let commands = [
+      `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+      `docker restart ${containerName}`,
+      `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
+    ];
+
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+    commands = [
+      `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --pmm-agent-listen-port=7778`,
+    ];
+
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+  });
 });
