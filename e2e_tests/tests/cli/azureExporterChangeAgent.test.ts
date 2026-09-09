@@ -55,7 +55,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(
       (
         await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
-      ).agents.find((agent) => agent.agent_type === 'azure_database_exporter'),
+      ).agents.find((agent) => agent.agent_type === 'azure_database_exporter')?.agent_id,
     );
     console.log(azureExporterId);
     console.log(azureExporterPort);
