@@ -5,7 +5,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   let containerName: string;
   let azureExporterId: string;
-  let azureExporterPort: string;
+  // let azureExporterPort: string;
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
@@ -46,28 +46,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
 
     console.log(resp);
-    azureExporterId = cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
-      .stdout.trim();
-    azureExporterPort = cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
-      .stdout.trim();
-    console.log(
+    azureExporterId =
       (
         await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
-      ).agents.find((agent) => agent.agent_type === 'azure_database_exporter')?.agent_id,
-    );
+      ).agents.find((agent) => agent.agent_type === 'azure_database_exporter')?.agent_id || '';
     console.log(azureExporterId);
-    console.log(azureExporterPort);
+    // console.log(azureExporterPort);
   });
-  // eslint-disable-next-line playwright/no-commented-out-tests -- Debug test
-  /*pmmTest(
+
+  pmmTest(
     'PMM-T1001 - Verify Change agent server url and server insecure tls @valkey-integration',
     async ({ cliHelper }) => {
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
       let commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent azure-exporter ${valkeyExporterId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent azure-exporter ${azureExporterId} --server-url=${serverUrl}`,
       ];
 
       for (const command of commands) {
@@ -75,12 +68,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent azure-exporter ${valkeyExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent azure-exporter ${azureExporterId} --server-url=${serverUrl} --server-insecure-tls`,
       ];
 
       for (const command of commands) {
         await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
       }
     },
-  );*/
+  );
 });
