@@ -33,6 +33,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep external-exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
+
+    // Capture the redis_exporter argv while it is guaranteed to be running, so PMM-T1016/T1017
+    // can relaunch it even after PMM-T1011 restarts the container (which kills the exporter).
+    captureRedisExporterCmd(cliHelper);
   });
 
   // The external exporter is a redis_exporter serving http /metrics on :42200 (see
@@ -46,10 +50,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c 'for p in /proc/[0-9]*; do if [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ]; then tr "\\0" " " < "$p/cmdline" > /redis_orig_cmd; break; fi; done'`,
       )
       .assertSuccess();
+  // Force-kill the exporter and wait until it is really gone, so the port is free before the
+  // next start; a plain SIGTERM + fixed sleep raced the relaunch and left :42200 unbound.
   const stopRedisExporter = (cliHelper: CliHelper) =>
-    cliHelper.execSilent(
-      `docker exec ${containerName} bash -c 'for p in /proc/[0-9]*; do [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ] && kill "$(basename "$p")"; done; sleep 2'`,
-    );
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} bash -c 'for p in /proc/[0-9]*; do [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ] && kill -9 "$(basename "$p")"; done; for i in $(seq 30); do r=0; for p in /proc/[0-9]*; do [ "$(cat "$p/comm" 2>/dev/null)" = "redis_exporter" ] && r=1; done; [ "$r" = 0 ] && break; sleep 1; done'`,
+      )
+      .assertSuccess();
   const startRedisExporter = (cliHelper: CliHelper, extraFlags: string) =>
     cliHelper
       .execSilent(
