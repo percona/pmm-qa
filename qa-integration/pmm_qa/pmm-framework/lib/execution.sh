@@ -164,6 +164,16 @@ should_dump_successful_logs() {
   [[ ${VERBOSE:-false} == true ]]
 }
 
+# Echo one buffered log, guaranteeing it ends on a line of its own so the END
+# marker that follows it is not appended to the log's last line.
+cat_setup_log() {
+  local log_file=$1
+  cat "$log_file"
+  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
+    printf '\n'
+  fi
+}
+
 # Report one finished parallel setup.
 #
 # Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
@@ -183,10 +193,7 @@ print_setup_log() {
     printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
-      cat "$log_file"
-      if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-        printf '\n'
-      fi
+      cat_setup_log "$log_file"
       printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
     fi
     return
@@ -195,11 +202,7 @@ print_setup_log() {
   printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
     "$index" "$total" "$spec" "$status"
   printf 'log: %s\n' "$log_file"
-  cat "$log_file"
-  # Keep the END marker on its own line when the log has no trailing newline.
-  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-    printf '\n'
-  fi
+  cat_setup_log "$log_file"
   printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
 }
 
@@ -213,8 +216,9 @@ print_setup_log() {
 # Every setup is allowed to finish even after one fails, because tearing down
 # half-provisioned containers mid-run leaves more mess than it saves.
 #
-# On success the log directory is removed; on failure it is kept and its path
-# printed, so the full transcripts survive for inspection.
+# On success the log directory is removed; on failure -- or when a signal cuts
+# the run short -- it is kept and its path printed, so the full transcripts
+# survive for inspection.
 #
 # Requires: bash 5.1+ for `wait -n -p`
 # Reads:    DATABASE_SPECS
@@ -234,14 +238,27 @@ run_parallel_setups() {
 
   # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
-    local pid
+    local pid slot
     for pid in "${pids[@]}"; do
       # Negative PID targets the whole process group; fall back to the single
       # process if the group is already gone.
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
     wait >/dev/null 2>&1 || true
-    rm -rf "$log_dir"
+    # The signal is usually CI's `timeout` giving up on a setup that hung, so
+    # the buffers of the setups still running are the only record of where it
+    # got stuck.
+    for ((slot = 0; slot < total; slot++)); do
+      [[ -n ${pids[slot]} ]] || continue
+      printf '\n===== [%d/%d] %s INTERRUPTED =====\n' \
+        "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+      printf 'log: %s\n' "${logs[slot]}"
+      # A signal between the fork and the child's own redirect leaves this file
+      # uncreated; errexit must not abandon the remaining slots over it.
+      cat_setup_log "${logs[slot]}" || true
+      printf '===== END [%d/%d] %s =====\n' "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+    done
+    printf '\nParallel setup logs kept at: %s\n' "$log_dir"
     exit 130
   }
   trap cleanup_parallel_jobs INT TERM

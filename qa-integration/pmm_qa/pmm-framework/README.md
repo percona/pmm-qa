@@ -79,19 +79,14 @@ failure the log directory is kept for inspection; on a fully successful run it
 is removed.
 
 Each setup runs in its own process group, so interrupting the framework also
-terminates the `ansible-playbook` processes it started.
+terminates the `ansible-playbook` processes it started. An interrupt dumps the
+buffered log of every setup still running and keeps the log directory — under a
+`timeout` wrapper that buffer is the only record of where a setup got stuck.
 
 Setups that cannot run concurrently — two of the same database type, or any two
 of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
 ports — are detected during preflight. The run is not rejected: it falls back
 to sequential execution with a warning, so every requested setup still runs.
-
-To rerun the representative four-database setup and print its wall-clock time
-to milliseconds:
-
-```bash
-qa-integration/pmm_qa/pmm-framework/run_parallel_timing.sh
-```
 
 `--database` values use this grammar:
 

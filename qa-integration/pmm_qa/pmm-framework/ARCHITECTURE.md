@@ -156,7 +156,10 @@ stay quiet. Individual callers can still opt in through `services_list` /
 
 Parallel mode enables job control (`set -m`) so each setup gets its own process
 group. That way an interrupt takes down `ansible-playbook` and its children
-too, not just the wrapper subshell. It is also why each job gets
+too, not just the wrapper subshell. The interrupt handler then dumps the
+buffered log of every setup still running and keeps the log directory, because
+CI wraps the framework in `timeout` and that buffer is the only record of where
+a hung setup got to. It is also why each job gets
 `</dev/null` — a background process group that reads the terminal is stopped by
 `SIGTTIN` and would hang forever.
 
