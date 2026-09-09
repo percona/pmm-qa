@@ -70,13 +70,6 @@ jobs:
       KUBECONFIG: ${{ github.workspace }}/kubeconfig
       PMM_K8S_NAMESPACE: pmm
       WORKERS: 1
-      # Consumed by PMM-T2105 through credentials.helper.ts. Scoped to the
-      # pmm-ha-staging environment; the test skips itself when they are unset.
-      PMM_QA_AWS_ACCESS_KEY_ID: ${{ secrets.PMM_QA_AWS_ACCESS_KEY_ID }}
-      PMM_QA_AWS_ACCESS_KEY: ${{ secrets.PMM_QA_AWS_ACCESS_KEY }}
-      PMM_QA_MYSQL_RDS_8_4_HOST: ${{ secrets.PMM_QA_MYSQL_RDS_8_4_HOST }}
-      PMM_QA_MYSQL_RDS_8_4_USER: ${{ secrets.PMM_QA_MYSQL_RDS_8_4_USER }}
-      PMM_QA_MYSQL_RDS_8_4_PASSWORD: ${{ secrets.PMM_QA_MYSQL_RDS_8_4_PASSWORD }}
 
     steps:
       - name: Checkout pmm-qa repo

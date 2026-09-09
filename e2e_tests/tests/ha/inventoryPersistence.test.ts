@@ -18,12 +18,6 @@ pmmTest.afterEach(async ({ api }) => {
 pmmTest(
   'PMM-T2105 - Verify RDS inventory and dashboards after failover @pmm-ha',
   async ({ api, credentials, dashboard, haClusterHelper, page, servicesPage, urlHelper }) => {
-    // eslint-disable-next-line playwright/no-skipped-test -- without the RDS secrets addRds fails on an empty address, which reads as an HA failure rather than an unprovisioned environment.
-    pmmTest.skip(
-      !credentials.rdsMysql84.address || !credentials.aws.accessKey,
-      'Requires the PMM_QA_MYSQL_RDS_8_4_* and PMM_QA_AWS_* credentials',
-    );
-
     const serviceName = `ha-rds-mysql-${Date.now()}`;
     const summaryUrl = urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
       from: 'now-15m',
