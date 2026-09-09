@@ -22,6 +22,7 @@ const apiEndpoints = {
   },
   management: {
     annotations: '/v1/management/annotations',
+    azure: 'v1/management/services/azure',
     discoverRDS: 'v1/management/services:discoverRDS',
     nodes: 'v1/management/nodes',
     services: '/v1/management/services',
