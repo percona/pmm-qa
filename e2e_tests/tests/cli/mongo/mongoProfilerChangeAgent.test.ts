@@ -163,22 +163,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T1006 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
-    cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
-    );
+  pmmTest(
+    'PMM-T1006 - Verify Change agent agent password @psmdb-profiler-integration',
+    async ({ cliHelper, page }) => {
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --agent-password=${pgExporterPassword}`,
+      );
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
-    const metrics = cliHelper.getMetrics({
-      agentPassword: pgExporterPassword,
-      dockerContainer: containerName,
-      serviceName: serviceName,
-    });
+      const metrics = cliHelper.getMetrics({
+        agentPassword: pgExporterPassword,
+        dockerContainer: containerName,
+        serviceName: serviceName,
+      });
 
-    expect(metrics).toContain('mysql_up');
-  });
+      expect(metrics).toContain('mongo_up');
+    },
+  );
 
   pmmTest('PMM-T1007 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
