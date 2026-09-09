@@ -15,6 +15,16 @@ on:
         description: 'pmm-qa branch'
         default: 'main'
         type: string
+  workflow_call:
+    inputs:
+      client_tarball_upgrade:
+        description: 'Client tarball URL to upgrade to (empty = use repo)'
+        default: ''
+        type: string
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
 
 env:
   ADMIN_PASSWORD: admin
