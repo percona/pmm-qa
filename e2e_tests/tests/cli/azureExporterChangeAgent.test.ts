@@ -1,11 +1,12 @@
 import pmmTest from '@fixtures/pmmTest';
+import { expect } from '@playwright/test';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
 
   let containerName: string;
   let azureExporterId: string;
-  // let azureExporterPort: string;
+  let serviceId: string;
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
@@ -51,11 +52,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
       ).agents.find((agent) => agent.agent_type === 'azure_database_exporter')?.agent_id || '';
     console.log(azureExporterId);
-    console.log(
-      (await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || ''))
-        .service_id,
-    );
-    // console.log(azureExporterPort);
+    serviceId = (
+      await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
+    ).service_id;
+    console.log(serviceId);
   });
 
   pmmTest(
@@ -89,6 +89,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    },
+  );
+
+  pmmTest(
+    'PMM-T1003 - Verify Change agent log level @azure-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --log-level=debug`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(azureExporterId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
     },
   );
 });
