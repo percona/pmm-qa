@@ -122,14 +122,14 @@ jobs:
       - name: Run setup for E2E tests (start client services on this runner)
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 20
+          timeout_minutes: 30
           retry_wait_seconds: '10'
           max_attempts: 2
           retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            timeout -k 30 19m ./pmm-framework/pmm-framework \
+            timeout -k 30 29m ./pmm-framework/pmm-framework \
               --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
