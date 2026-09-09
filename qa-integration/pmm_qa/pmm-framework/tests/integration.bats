@@ -241,9 +241,8 @@ EOF
       --database external \
       --database valkey
 
-  # Sequential execution is no remedy for a shared host port, so unlike the
-  # downgrades above this pair is rejected -- and rejected in preflight, with
-  # neither setup started.
+  # Unlike the downgrades above, rejected -- and rejected before either
+  # setup started.
   [[ $status -eq 1 ]]
   [[ $output == *'EXTERNAL and VALKEY setups'* ]]
   [[ $output == *'host port 6379'* ]]

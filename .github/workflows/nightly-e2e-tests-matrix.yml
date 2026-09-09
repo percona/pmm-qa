@@ -79,30 +79,11 @@ on:
         required: false
 
 jobs:
-  # One shard provisions its whole `setup_services` list on a single runner:
-  # the setup runner passes --parallel, so a shard costs its slowest member
-  # rather than the sum. That grouping is the point of these five shards --
-  # fourteen single-setup shards plus the three consumers below claimed
-  # seventeen runners per nightly run, and a few concurrent runs exhausted the
-  # org's GHA job allowance, leaving every shard queued instead of provisioning.
-  #
-  # Setups that may not share a shard. Three pairs cannot share a host at all,
-  # because each holds a fixed container name or host port for as long as it is
-  # up, so the second one fails in either order:
-  #   * PSMDB with PSMDB      -- docker-compose-rs.yaml and
-  #     docker-compose-sharded.yaml both pin container_name rs101..rs203 and
-  #     publish host port 27027 (preflight refuses this pair)
-  #   * EXTERNAL with VALKEY  -- both publish host port 6379 (refused too)
-  #   * PXC with PXC          -- container pxc_proxysql_pmm_<ver> and host port
-  #     6033 are fixed; preflight only downgrades this pair to sequential,
-  #     which does not save it
-  # Two more can run one after another but not at once, so preflight downgrades
-  # a shard holding either to sequential -- and a sequential shard costs the sum
-  # of its setups rather than its slowest one, which defeats the grouping:
-  #   * PS with PS or MYSQL   -- they share the $HOME/mysql_cluster_data staging
-  #     directory that each run wipes, and each probes for a free host port from
-  #     3306 (find_first_empty_docker_port), so concurrent runs race
-  #   * PDPGSQL with PDPGSQL  -- the same, for $HOME/pgsql_cluster_data
+  # A shard provisions its whole list at once (the setup runner passes
+  # --parallel), so it costs its slowest member -- but only while no two of its
+  # setups collide. Keep one of the MySQL family, one PXC, one PDPGSQL and one
+  # PSMDB per shard, and never EXTERNAL with VALKEY: see "The conflict rules"
+  # in pmm-framework/ARCHITECTURE.md for what each pair shares.
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:

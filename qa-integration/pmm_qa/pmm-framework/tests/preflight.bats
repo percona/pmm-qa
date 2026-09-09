@@ -23,8 +23,7 @@ parallel_decision() {
   printf '%s' "$PARALLEL"
 }
 
-# For the host-conflict cases, which die() rather than downgrading: `run` keeps
-# the exit status and the stderr message where the assertions can see them.
+# The host-conflict cases die() rather than downgrade, so they need `run`.
 preflight_run() {
   DATABASE_SPECS=("$@")
   PARALLEL=true
@@ -86,10 +85,7 @@ preflight_run() {
   [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]
 }
 
-# The five shards of nightly-e2e-tests-matrix.yml, verbatim. Each one has to
-# stay genuinely parallel: a shard that silently downgrades to sequential pays
-# the sum of its setups instead of its slowest one, which is the whole reason
-# the shards were grouped.
+# The five shards of nightly-e2e-tests-matrix.yml, verbatim.
 @test "every nightly setup shard provisions in parallel" {
   [[ $(parallel_decision mysql 'psmdb,SETUP_TYPE=pss' pgsql) == true ]]
   [[ $(parallel_decision 'ps,SETUP_TYPE=gr' pxc valkey) == true ]]

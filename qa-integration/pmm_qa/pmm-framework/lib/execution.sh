@@ -38,21 +38,16 @@ setup_uses_ansible() {
 #   * do any two setups conflict, so parallel is unsafe?
 #   * are the shared Ansible prerequisites ready before jobs fork?
 #
-# Conflicts come in two grades, and what separates them is whether waiting
-# helps:
+# Conflict rule: two setups of the same type, any two of the MySQL family
+# (PS/MYSQL), or PDPGSQL with a PGSQL setup that uses replication, reuse the
+# same container names, host ports and/or data directories. Rather than
+# refusing the run, the framework keeps every setup and gives up only the
+# concurrency -- the caller asked for something valid that merely cannot
+# happen at the same time.
 #
-#   concurrency  two setups of the same type, any two of the MySQL family
-#                (PS/MYSQL), or PDPGSQL with a PGSQL setup that uses
-#                replication, reuse the same container names, host ports and/or
-#                data directories. Rather than refusing the run, the framework
-#                keeps every setup and gives up only the concurrency -- the
-#                caller asked for something valid that merely cannot happen at
-#                the same time.
-#   host         two PSMDB setups, or EXTERNAL together with VALKEY, hold the
-#                same container name or host port for as long as they are up,
-#                so the second one fails whether it starts now or after the
-#                first has finished. These are refused, naming the collision:
-#                the remedy is two machines, not two turns.
+# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
+# the same container name or host port for as long as they are up, so waiting
+# is no remedy.
 #
 # The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
 # replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
@@ -81,14 +76,10 @@ preflight_database_setups() {
     # same container names, host ports and data directories, so they cannot run
     # at the same time.
     #
-    # PSMDB is stricter still. Its replica-set (pss/psa) and sharded
-    # (shards/sharding) SETUP_TYPEs do run from separate compose projects, but
+    # The separate compose projects do not make the PSMDB stacks independent:
     # docker-compose-rs.yaml and docker-compose-sharded.yaml both pin
-    # container_name rs101..rs203 and both publish host port 27027, and a
-    # container name is unique per daemon no matter which project claims it. So
-    # not even that pair can share a host, in either order. Relaxing this again
-    # means dropping those container_name keys and moving one stack's ports
-    # first.
+    # container_name rs101..rs203 and host port 27027, and a container name is
+    # unique per daemon. Relaxing this needs those keys dropped first.
     if [[ -v "seen_types[$DB_TYPE]" ]]; then
       if [[ $DB_TYPE == PSMDB ]]; then
         host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
@@ -112,9 +103,6 @@ preflight_database_setups() {
         [[ $pdpgsql_seen == true ]] &&
           conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
       fi
-    # EXTERNAL runs its redis_container on 6379 (external_setup.yml) and that is
-    # also the Valkey cluster's base host port, so whichever starts second gets
-    # "port is already allocated".
     elif [[ $DB_TYPE == EXTERNAL ]]; then
       external_seen=true
       [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict
