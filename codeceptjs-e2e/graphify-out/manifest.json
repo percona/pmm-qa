@@ -5,7 +5,7 @@
     "semantic_hash": "1fecd6e169ee1e19f013f9358193d699"
   },
   "codeceptConfigHelper.js": {
-    "mtime": 1788804815.9183416,
+    "mtime": 1788892204.6452057,
     "ast_hash": "28658af0a6fa9e249a9aa176b3e07ac7",
     "semantic_hash": "28658af0a6fa9e249a9aa176b3e07ac7"
   },
@@ -20,17 +20,17 @@
     "semantic_hash": "1b49da361007acc40b0629d218f4922a"
   },
   "package.json": {
-    "mtime": 1788804815.9382162,
+    "mtime": 1788892204.6656876,
     "ast_hash": "a99bedef0e4b2ca68d55e6ef84a6f61e",
     "semantic_hash": "a99bedef0e4b2ca68d55e6ef84a6f61e"
   },
   "pr.codecept.js": {
-    "mtime": 1788812990.0515409,
+    "mtime": 1788892204.6666875,
     "ast_hash": "ee0e86097b4121d6e3eb8b0735bf22b9",
     "semantic_hash": "ee0e86097b4121d6e3eb8b0735bf22b9"
   },
   "steps.d.ts": {
-    "mtime": 1788804815.9417858,
+    "mtime": 1788892204.6676881,
     "ast_hash": "3bfdfcd06e804b480070bb6d844e9440",
     "semantic_hash": "3bfdfcd06e804b480070bb6d844e9440"
   },
@@ -45,7 +45,7 @@
     "semantic_hash": "bb4945c905e141513703b4e5856ea8ad"
   },
   "testdata/db_setup.sh": {
-    "mtime": 1788804815.9495904,
+    "mtime": 1788892204.6726866,
     "ast_hash": "26feb19fad82e6ad7656524547afd3ea",
     "semantic_hash": "26feb19fad82e6ad7656524547afd3ea"
   },
@@ -205,7 +205,7 @@
     "semantic_hash": "8e1f591643f2b559d2c616c24bf5539c"
   },
   "tests/QAN/externalClickhouse_test.js": {
-    "mtime": 1788804815.9912724,
+    "mtime": 1788892204.6998947,
     "ast_hash": "1aa9d7a090ef1a4ace45e5258e9c9206",
     "semantic_hash": "1aa9d7a090ef1a4ace45e5258e9c9206"
   },
@@ -235,7 +235,7 @@
     "semantic_hash": "3af5f527634c52f581c722ef11a85292"
   },
   "tests/administration/serviceAccounts_test.js": {
-    "mtime": 1788804815.9918504,
+    "mtime": 1788892204.7066154,
     "ast_hash": "72481a4188838ffb39fd764cb37a9467",
     "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
   },
@@ -285,9 +285,9 @@
     "semantic_hash": "1898416a26772546ac1f11d9ac271fb2"
   },
   "tests/backup/inventory_test.js": {
-    "mtime": 1787233825.2420282,
-    "ast_hash": "318c28345f31a0458e1c6809e27c0f6c",
-    "semantic_hash": "318c28345f31a0458e1c6809e27c0f6c"
+    "mtime": 1788988052.9478476,
+    "ast_hash": "13938c79cc41f2c6454cedfcd60ec607",
+    "semantic_hash": "13938c79cc41f2c6454cedfcd60ec607"
   },
   "tests/backup/locations_test.js": {
     "mtime": 1787233825.2420282,
@@ -404,11 +404,6 @@
     "ast_hash": "cb2cd6c97f68b9ac9a58313e7ba6c695",
     "semantic_hash": "cb2cd6c97f68b9ac9a58313e7ba6c695"
   },
-  "tests/configuration/profile_test.js": {
-    "mtime": 1788804815.9918504,
-    "ast_hash": "683f87cc7bcf94996b3c41a2f91f922a",
-    "semantic_hash": "683f87cc7bcf94996b3c41a2f91f922a"
-  },
   "tests/configuration/verifyPMMInventoryPagination_test.js": {
     "mtime": 1784571729.1360152,
     "ast_hash": "9b864aebc5ab10d6f2d083eec4ad4bba",
@@ -425,7 +420,7 @@
     "semantic_hash": "0086a703d5582581c447c6152504678a"
   },
   "tests/configuration/verifyPMMSettingsPageFunctionality_test.js": {
-    "mtime": 1788804815.9938586,
+    "mtime": 1788892204.7076707,
     "ast_hash": "793efa9cf7b53294a11bcd48c0d95e10",
     "semantic_hash": "793efa9cf7b53294a11bcd48c0d95e10"
   },
@@ -495,7 +490,7 @@
     "semantic_hash": "34396e74712de6aafa04d0cfae6045dc"
   },
   "tests/dockerConfiguration/publicAddressVariable_test.js": {
-    "mtime": 1788804816.0051968,
+    "mtime": 1788892204.7125812,
     "ast_hash": "3a482378c7e2c11666814623fcf302f9",
     "semantic_hash": "3a482378c7e2c11666814623fcf302f9"
   },
@@ -650,7 +645,7 @@
     "semantic_hash": "7cc36a65fde62f72ec07f44ae3388f65"
   },
   "tests/ia/pages/ruleTemplatesPage.js": {
-    "mtime": 1788804816.0108123,
+    "mtime": 1788892204.7206657,
     "ast_hash": "65d02844a7291ebea3594c5375915596",
     "semantic_hash": "65d02844a7291ebea3594c5375915596"
   },
@@ -665,7 +660,7 @@
     "semantic_hash": "4c77df9ff8c28c2735394a314f1e6396"
   },
   "tests/ia/ruleTemplates_test.js": {
-    "mtime": 1788804816.0236933,
+    "mtime": 1788892204.724399,
     "ast_hash": "20c90a2aee957eecd8ececdf67f6759b",
     "semantic_hash": "20c90a2aee957eecd8ececdf67f6759b"
   },
@@ -795,7 +790,7 @@
     "semantic_hash": "924b10f47730ba1d158d6f2f830c2876"
   },
   "tests/pages/components/queryAnalytics/queryAnalyticsQueryDetails.js": {
-    "mtime": 1788804816.0236933,
+    "mtime": 1788892204.724399,
     "ast_hash": "84e965cd4e6b7ed1d2019a6642c1ff25",
     "semantic_hash": "84e965cd4e6b7ed1d2019a6642c1ff25"
   },
@@ -810,9 +805,9 @@
     "semantic_hash": "63d18840f42a8c5c3673da0bf4b2ef9c"
   },
   "tests/pages/dashboardPage.js": {
-    "mtime": 1788804816.0236933,
-    "ast_hash": "fc340c69b195c06204bd30a96db13f0f",
-    "semantic_hash": "fc340c69b195c06204bd30a96db13f0f"
+    "mtime": 1788988052.9515824,
+    "ast_hash": "e7d046edda2d1e5ce23076ac26cf0aef",
+    "semantic_hash": "e7d046edda2d1e5ce23076ac26cf0aef"
   },
   "tests/pages/dashboards/components/DashboardPanelMenu.js": {
     "mtime": 1784571729.2285361,
@@ -1020,9 +1015,9 @@
     "semantic_hash": "b64bc62391f83e74c43294e4ca4db270"
   },
   "tests/qa-integration/pmm_pgsm_integration_test.js": {
-    "mtime": 1787233825.2635162,
-    "ast_hash": "c938e11b87b29b726dfdeacac08b1231",
-    "semantic_hash": "c938e11b87b29b726dfdeacac08b1231"
+    "mtime": 1788988052.952088,
+    "ast_hash": "5cc7a16ddd268a5c47bc5c6a5073f2cd",
+    "semantic_hash": "5cc7a16ddd268a5c47bc5c6a5073f2cd"
   },
   "tests/qa-integration/pmm_pgss_integration_test.js": {
     "mtime": 1784571729.2755456,
@@ -1070,7 +1065,7 @@
     "semantic_hash": "7c8c24fd7d317496b16e78cc925f999b"
   },
   "tests/upgrade/advisorsAlerting_test.js": {
-    "mtime": 1788812990.0525336,
+    "mtime": 1788892204.7481415,
     "ast_hash": "1ed9ee1a847c28c4352a8cdc3a858bac",
     "semantic_hash": "1ed9ee1a847c28c4352a8cdc3a858bac"
   },
@@ -1080,7 +1075,7 @@
     "semantic_hash": "42265dcd963c5ed7a05d992163826e9c"
   },
   "tests/upgrade/annotationsPrometheus_test.js": {
-    "mtime": 1788812990.0535338,
+    "mtime": 1788892204.7481415,
     "ast_hash": "17ef87ab844f4f49ff41b82bcee5e694",
     "semantic_hash": "17ef87ab844f4f49ff41b82bcee5e694"
   },
@@ -1140,9 +1135,9 @@
     "semantic_hash": "bfcf22f187d91a76c571771c6ab363d6"
   },
   "tests/verifyAzureMySQLPostgreSQLRemoteInstance_test.js": {
-    "mtime": 1784571729.3609574,
-    "ast_hash": "b6b5e55cb2d6d4c62f1c2cc108e374be",
-    "semantic_hash": "b6b5e55cb2d6d4c62f1c2cc108e374be"
+    "mtime": 1788988052.9540954,
+    "ast_hash": "c037f398c95122522fe358d9c774e69a",
+    "semantic_hash": "c037f398c95122522fe358d9c774e69a"
   },
   "tests/verifyDump_test.js": {
     "mtime": 1785947292.5376592,
@@ -1160,9 +1155,9 @@
     "semantic_hash": "43cae22200b109d0950f3ef2788c8094"
   },
   "tests/verifyMongodbDashboards_test.js": {
-    "mtime": 1788804816.0236933,
-    "ast_hash": "188557e53ebbd0d77b1b3db43cec1d5e",
-    "semantic_hash": "188557e53ebbd0d77b1b3db43cec1d5e"
+    "mtime": 1788988052.9540954,
+    "ast_hash": "af6e848d38662ecfb04deb1750ca2ca6",
+    "semantic_hash": "af6e848d38662ecfb04deb1750ca2ca6"
   },
   "tests/verifyMysqlDashboards_test.js": {
     "mtime": 1784571729.3720355,
@@ -1195,7 +1190,7 @@
     "semantic_hash": "45b29aacb6a658634357705fc850eac3"
   },
   "tests/verifyRemoteInstances_test.js": {
-    "mtime": 1788812990.0535338,
+    "mtime": 1788892204.762829,
     "ast_hash": "3f0fbfaece59e8647f406c7924b90bbe",
     "semantic_hash": "3f0fbfaece59e8647f406c7924b90bbe"
   },
@@ -1250,7 +1245,7 @@
     "semantic_hash": "78f7db78a992999191ce118e2d624193"
   },
   "docker-compose-clickhouse.yml": {
-    "mtime": 1788804815.9224331,
+    "mtime": 1788892204.6507215,
     "ast_hash": "c6b309473ff1a19c23fecc8dfc5c5e99",
     "semantic_hash": "c6b309473ff1a19c23fecc8dfc5c5e99"
   },
@@ -1275,7 +1270,7 @@
     "semantic_hash": "5b8713d4a032524367a0f914fbfb26a2"
   },
   "docker-compose-nomad.yml": {
-    "mtime": 1788804815.9292648,
+    "mtime": 1788892204.657301,
     "ast_hash": "b942f9dd309b172faa6305b6f68539ce",
     "semantic_hash": "b942f9dd309b172faa6305b6f68539ce"
   },
@@ -1290,7 +1285,7 @@
     "semantic_hash": "68273ae71096bddaef94e02d5cb761c8"
   },
   "docker-compose.yml": {
-    "mtime": 1788804815.936351,
+    "mtime": 1788892204.6636844,
     "ast_hash": "c312ea61f937781d4c3917f4965246a8",
     "semantic_hash": "c312ea61f937781d4c3917f4965246a8"
   },
@@ -1300,12 +1295,12 @@
     "semantic_hash": "781db46985a73a6967bef9e922fafab6"
   },
   "testdata/external-services/external-pgsql-ssl.yml": {
-    "mtime": 1788804815.9724128,
+    "mtime": 1788892204.691316,
     "ast_hash": "89abecd789b7fb28c643a77f46e59071",
     "semantic_hash": "89abecd789b7fb28c643a77f46e59071"
   },
   "testdata/external-services/external-pgsql.yml": {
-    "mtime": 1788804815.9771378,
+    "mtime": 1788892204.6998947,
     "ast_hash": "4a2fcb25b787f41b9dcb2087665e27ee",
     "semantic_hash": "4a2fcb25b787f41b9dcb2087665e27ee"
   },
@@ -1385,33 +1380,38 @@
     "semantic_hash": "cf06274f5dab87a4b88934e4d5df956f"
   },
   "tests/serverLogs_migrated.js": {
-    "mtime": 1788804816.0236933,
+    "mtime": 1788892204.7407744,
     "ast_hash": "4685265ab01152da03c293921e9fd65f",
     "semantic_hash": "4685265ab01152da03c293921e9fd65f"
   },
   "tests/verifyAnnotations_migrated.js": {
-    "mtime": 1788804816.0236933,
+    "mtime": 1788892204.7481415,
     "ast_hash": "b64e82b5cd607281ff7958c359f26e8b",
     "semantic_hash": "b64e82b5cd607281ff7958c359f26e8b"
   },
   "testdata/docker-db-setup-scripts/drop_default_db.sh": {
-    "mtime": 1788804815.9595885,
+    "mtime": 1788892204.6743596,
     "ast_hash": "6f4d10cc2eb4664d012d9a9bd86f3b57",
     "semantic_hash": "6f4d10cc2eb4664d012d9a9bd86f3b57"
   },
   "testdata/docker-db-setup-scripts/verify_no_default_db.sh": {
-    "mtime": 1788804815.9659567,
+    "mtime": 1788892204.6879473,
     "ast_hash": "bd557b3e41e6b5272af32ab99b447937",
     "semantic_hash": "bd557b3e41e6b5272af32ab99b447937"
   },
   "tests/configuration/verifyPMMSettingsPageElements_migrated.js": {
-    "mtime": 1788804815.9938586,
+    "mtime": 1788892204.7076707,
     "ast_hash": "de3ddce773589e8e2d209d7e12072883",
     "semantic_hash": "de3ddce773589e8e2d209d7e12072883"
   },
   "tests/configuration/verifyServerAdminSettings_migrated.js": {
-    "mtime": 1788812990.0515409,
+    "mtime": 1788892204.7076707,
     "ast_hash": "bfdc6a1ce84c93d161f46716734a4e89",
     "semantic_hash": "bfdc6a1ce84c93d161f46716734a4e89"
+  },
+  "tests/configuration/profile_migrated.js": {
+    "mtime": 1788988052.9488492,
+    "ast_hash": "683f87cc7bcf94996b3c41a2f91f922a",
+    "semantic_hash": "683f87cc7bcf94996b3c41a2f91f922a"
   }
 }
