@@ -183,27 +183,30 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T1007 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --expose-exporter`,
-      )
-      .assertSuccess()
-      .outContains('- enabled expose exporter');
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.ONE_MINUTE);
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('mysql_up');
-  });
+  pmmTest(
+    'PMM-T1007 - Verify Change agent expose exporter @psmdb-profiler-integration',
+    async ({ cliHelper, page }) => {
+      pgExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${mongoExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --expose-exporter`,
+        )
+        .assertSuccess()
+        .outContains('- enabled expose exporter');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.ONE_MINUTE);
+      await cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+        )
+        .assertSuccess()
+        .outContains('mongodb_up');
+    },
+  );
 
   pmmTest('PMM-T1008 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
