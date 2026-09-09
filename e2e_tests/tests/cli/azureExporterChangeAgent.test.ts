@@ -76,4 +76,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
+
+  pmmTest('PMM-T1004 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
+    const commands = [
+      `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --debug --trace --json`,
+    ];
+
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+  });
 });
