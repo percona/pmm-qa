@@ -27,7 +27,7 @@ on:
         type: string
       expected_setup_jobs:
         required: false
-        default: 14
+        default: 5
         type: number
       workers:
         required: false
@@ -74,7 +74,7 @@ jobs:
       SUBSET_FILE_NAME: 'launchable-subset.txt'
       SETUP_WAIT_STEP: 'Waiting for tests execution'
       SETUP_JOB_PREFIX: 'setup / '
-      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 14 }}
+      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 5 }}
       WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 

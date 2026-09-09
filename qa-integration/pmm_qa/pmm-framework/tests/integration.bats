@@ -231,6 +231,26 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
+@test "a host conflict is refused before anything is provisioned" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database external \
+      --database valkey
+
+  # Sequential execution is no remedy for a shared host port, so unlike the
+  # downgrades above this pair is rejected -- and rejected in preflight, with
+  # neither setup started.
+  [[ $status -eq 1 ]]
+  [[ $output == *'EXTERNAL and VALKEY setups'* ]]
+  [[ $output == *'host port 6379'* ]]
+  [[ $output != *'Running setups sequentially'* ]]
+  [[ ! -e "$RECORD_FILE" ]]
+}
+
 @test "parallel mode stays parallel for PDPGSQL and non-replication PGSQL" {
   run env \
     PATH="$TEST_BIN:$PATH" \

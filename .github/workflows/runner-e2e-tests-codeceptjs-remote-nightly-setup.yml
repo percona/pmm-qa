@@ -119,17 +119,24 @@ jobs:
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
+      # A shard provisions several setups at once under --parallel, so this
+      # budget has to cover the slowest member plus the contention of the
+      # others, not one setup alone: the slowest single setup measured ~8.5
+      # minutes (pdpgsql patroni) against 19m here when every shard held one
+      # setup. `timeout` fires first so the framework's INT trap can dump the
+      # buffered log of whatever was still running; the action's own
+      # timeout_minutes only kills the step.
       - name: Run setup for E2E tests (start client services on this runner)
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 20
+          timeout_minutes: 30
           retry_wait_seconds: '10'
           max_attempts: 2
           retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            timeout -k 30 19m ./pmm-framework/pmm-framework \
+            timeout -k 30 29m ./pmm-framework/pmm-framework \
               --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \

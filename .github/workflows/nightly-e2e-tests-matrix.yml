@@ -1,7 +1,7 @@
 name: "Nightly E2E tests Matrix (remote PMM Server)"
 # Triggered by Jenkins (pmm3-ui-tests-nightly-gha.groovy) once the PMM Server
-# is up. Fans out one job per (client setup, tag) pair so each worker only
-# runs the tests it has data for.
+# is up. Fans out one setup shard per group of client setups and one job per
+# tag bucket, so each worker only runs the tests it has data for.
 
 on:
   workflow_dispatch:
@@ -79,40 +79,46 @@ on:
         required: false
 
 jobs:
+  # One shard provisions its whole `setup_services` list on a single runner:
+  # the setup runner passes --parallel, so a shard costs its slowest member
+  # rather than the sum. That grouping is the point of these five shards --
+  # fourteen single-setup shards plus the three consumers below claimed
+  # seventeen runners per nightly run, and a few concurrent runs exhausted the
+  # org's GHA job allowance, leaving every shard queued instead of provisioning.
+  #
+  # Setups that may not share a shard. Three pairs cannot share a host at all,
+  # because each holds a fixed container name or host port for as long as it is
+  # up, so the second one fails in either order:
+  #   * PSMDB with PSMDB      -- docker-compose-rs.yaml and
+  #     docker-compose-sharded.yaml both pin container_name rs101..rs203 and
+  #     publish host port 27027 (preflight refuses this pair)
+  #   * EXTERNAL with VALKEY  -- both publish host port 6379 (refused too)
+  #   * PXC with PXC          -- container pxc_proxysql_pmm_<ver> and host port
+  #     6033 are fixed; preflight only downgrades this pair to sequential,
+  #     which does not save it
+  # Two more can run one after another but not at once, so preflight downgrades
+  # a shard holding either to sequential -- and a sequential shard costs the sum
+  # of its setups rather than its slowest one, which defeats the grouping:
+  #   * PS with PS or MYSQL   -- they share the $HOME/mysql_cluster_data staging
+  #     directory that each run wipes, and each probes for a free host port from
+  #     3306 (find_first_empty_docker_port), so concurrent runs race
+  #   * PDPGSQL with PDPGSQL  -- the same, for $HOME/pgsql_cluster_data
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
       fail-fast: true
       matrix:
         include:
-          - shard_name: external
-            setup_services: '--database external'
-          - shard_name: haproxy
-            setup_services: '--database haproxy'
-          - shard_name: ps-gr
-            setup_services: '--database ps,SETUP_TYPE=gr'
-          - shard_name: mysql
-            setup_services: '--database mysql'
-          - shard_name: ps-replication
-            setup_services: '--database ps,SETUP_TYPE=replication'
-          - shard_name: pxc
-            setup_services: '--database pxc'
-          - shard_name: ps-myrocks
-            setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true'
-          - shard_name: psmdb-pss
-            setup_services: '--database psmdb,SETUP_TYPE=pss'
-          - shard_name: pdpgsql
-            setup_services: '--database pdpgsql'
-          - shard_name: pgsql
-            setup_services: '--database pgsql'
-          - shard_name: pdpgsql-patroni
-            setup_services: '--database pdpgsql,SETUP_TYPE=patroni'
-          - shard_name: psmdb-sharded
-            setup_services: '--database psmdb,SETUP_TYPE=sharding'
-          - shard_name: extra-pxc
-            setup_services: '--database pxc'
-          - shard_name: valkey
-            setup_services: '--database valkey'
+          - shard_name: mysql-psmdb-pgsql
+            setup_services: '--database mysql --database psmdb,SETUP_TYPE=pss --database pgsql'
+          - shard_name: ps-gr-pxc-valkey
+            setup_services: '--database ps,SETUP_TYPE=gr --database pxc --database valkey'
+          - shard_name: ps-replication-psmdb-sharded
+            setup_services: '--database ps,SETUP_TYPE=replication --database psmdb,SETUP_TYPE=sharding'
+          - shard_name: ps-myrocks-pdpgsql-patroni-external
+            setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true --database pdpgsql,SETUP_TYPE=patroni --database external'
+          - shard_name: extra-pxc-pdpgsql-haproxy
+            setup_services: '--database pxc --database pdpgsql --database haproxy'
 
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-setup.yml
     secrets:
@@ -151,7 +157,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       tags_for_tests: ${{ matrix.tags_for_tests }}
-      expected_setup_jobs: 14
+      expected_setup_jobs: 5
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
@@ -183,7 +189,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       tags_for_tests: ${{ matrix.tags_for_tests }}
-      expected_setup_jobs: 14
+      expected_setup_jobs: 5
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
