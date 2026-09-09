@@ -19,6 +19,10 @@ on:
         description: 'PMM Server docker tag to upgrade to'
         default: 'perconalab/pmm-server:3-dev-latest'
         type: string
+      upgrade_version:
+        description: 'Expected PMM version after upgrade'
+        default: ''
+        type: string
       upgrade_type:
         description: "Type of upgrade Docker or UI"
         required: true
@@ -50,6 +54,11 @@ on:
       upgrade_tag:
         description: 'PMM Server docker tag to upgrade to'
         default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
+        required: true
+      upgrade_version:
+        description: 'Expected PMM version after upgrade'
+        default: ''
         type: string
         required: true
       upgrade_type:
@@ -87,7 +96,6 @@ jobs:
           ver="${RC_VERSION##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
-          echo "PMM_SERVER_LATEST=$ver" >> "$GITHUB_OUTPUT"
           echo "Version: ${{ inputs.version }}"
           echo "Docker Tag: ${{ inputs.docker_tag }}"
           # 1. all X.Y.Z versions available in the apt pool
@@ -133,14 +141,8 @@ jobs:
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
       - name: Start PMM Server (old image)
-        env:
-          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
-          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
-            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
-          else
-            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
-          fi
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           docker network create pmm-qa || true
           docker volume create pmm-volume
           if [[ "${{ inputs.upgrade_type }}" == "ui" ]]; then
@@ -256,11 +258,7 @@ jobs:
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
-          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
-            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
-          else
-            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
-          fi
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           docker stop pmm-server
           docker pull "$UPGRADE_TAG"
           docker rename pmm-server pmm-server-old
@@ -276,38 +274,25 @@ jobs:
         if: ${{ inputs.upgrade_type == 'ui' }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
-            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
-          else
-            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
-          fi
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           npx playwright test --grep "@pmm-upgrade"
 
       - name: Post-server-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
         env:
-          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-          DEV_LATEST_VERSION: ${{ needs.prepare.outputs.DEV_LATEST_VERSION }}
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
         run: |
-          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
-            export PMM_SERVER_LATEST="$DEV_LATEST_VERSION"
-          else
-            export PMM_SERVER_LATEST="$PMM_SERVER_LATEST"
-          fi
           echo "Latest PMM Version is: $PMM_SERVER_LATEST"
           npx playwright test --grep "@post-server-upgrade"
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:
-          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-          DEV_LATEST_VERSION: ${{ steps.resolve.outputs.DEV_LATEST_VERSION }}
+          LATEST_VERSION: ${{ inputs.upgrade_version }}
         run: |
           if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
             export CLIENT_REPOSITORY=experimental
-            export LATEST_VERSION=$DEV_LATEST_VERSION
           else
             export CLIENT_REPOSITORY=testing
-            export LATEST_VERSION=$PMM_SERVER_LATEST
           fi
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
             echo "== upgrading client in $c =="
@@ -340,10 +325,10 @@ jobs:
               else
                 echo "FAIL: expected $LATEST_VERSION, got $UPGRADE_VERSION"
               fi
-              if [[ "$CLIENT_UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
-                echo "OK: version contains $PMM_SERVER_LATEST ($CLIENT_UPGRADE_VERSION)"
+              if [[ "$CLIENT_UPGRADE_VERSION" == *"$LATEST_VERSION"* ]]; then
+                echo "OK: version contains $LATEST_VERSION ($CLIENT_UPGRADE_VERSION)"
               else
-                echo "FAIL: expected $PMM_SERVER_LATEST, got $CLIENT_UPGRADE_VERSION"
+                echo "FAIL: expected $LATEST_VERSION, got $CLIENT_UPGRADE_VERSION"
               fi
               echo "== upgrade succeeded in $c == ($CLIENT_UPGRADE_VERSION)"
             rm -f "$log"
@@ -351,27 +336,15 @@ jobs:
 
       - name: Check client after upgrade
         env:
-          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-          DEV_LATEST_VERSION: ${{ steps.resolve.outputs.DEV_LATEST_VERSION }}
+          LATEST_VERSION: ${{ inputs.upgrade_version }}
         run: |
-          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
-            export LATEST_VERSION=$DEV_LATEST_VERSION
-          else
-            export LATEST_VERSION=$PMM_SERVER_LATEST
-          fi
           python3 pmm-qa/support_scripts/check_client_upgrade.py "$LATEST_VERSION"
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
         env:
-          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-          DEV_LATEST_VERSION: ${{ needs.prepare.outputs.DEV_LATEST_VERSION }}
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
         run: |
-          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
-            export PMM_SERVER_LATEST="$DEV_LATEST_VERSION"
-          else
-            export PMM_SERVER_LATEST="$PMM_SERVER_LATEST"
-          fi
           echo "Latest PMM Version is: $PMM_SERVER_LATEST"
           npx playwright test --grep "@post-upgrade|@rta"
 

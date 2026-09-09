@@ -68,15 +68,18 @@ jobs:
 
 
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
-          UI_MATRIX=$(jq -cn --argjson versions "$UI_VERSIONS" '[$versions[] | { version: ., docker_tag: ("percona/pmm-server:" + .) }]')
-          echo "ui_matrix=$UI_MATRIX" >> "$GITHUB_OUTPUT"
-          echo "UI matrix: $UI_MATRIX"
           RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
+          RC_SERVER_VERSION="${RC_VERSION%-rc*}"
           DEV_LATEST_VERSION=$(curl https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
           echo "dev latest version: $DEV_LATEST_VERSION"
           echo "DEV_LATEST_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_OUTPUT"
+          UI_MATRIX=$(jq -cn --argjson versions "$UI_VERSIONS" \
+            --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "$RC_SERVER_VERSION" \
+            '[$versions[] | { version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver }]')
+          echo "ui_matrix=$UI_MATRIX" >> "$GITHUB_OUTPUT"
+          echo "UI matrix: $UI_MATRIX"
           export VERSION_LIST=$(echo "$VERSIONS" | tr -d '[]"' | tr ',' ' ')
           DOCKER_TAGS=()
           DOCKER_TAGS+=(perconalab/pmm-server:$RC_VERSION)
@@ -89,7 +92,14 @@ jobs:
           echo $VERSIONS
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
-          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; ($versions | length)) as $i | { version: $versions[$i], docker_tag: $tags[$i]}]')
+          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" \
+            --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "$RC_SERVER_VERSION" --arg dev_ver "$DEV_LATEST_VERSION" \
+            '[range(0; ($versions | length)) as $i
+              | ($tags[$i] | test("-rc")) as $is_rc
+              | { version: $versions[$i],
+                  docker_tag: $tags[$i],
+                  upgrade_tag: (if $is_rc then "perconalab/pmm-server:3-dev-latest" else $rc_tag end),
+                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end) }]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
@@ -103,6 +113,8 @@ jobs:
     with:
       docker_tag: ${{ matrix.docker_tag }}
       version: ${{ matrix.version }}
+      upgrade_tag: ${{ matrix.upgrade_tag }}
+      upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: docker
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
 
@@ -117,5 +129,7 @@ jobs:
     with:
       docker_tag: ${{ matrix.docker_tag }}
       version: ${{ matrix.version }}
+      upgrade_tag: ${{ matrix.upgrade_tag }}
+      upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: ui
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
