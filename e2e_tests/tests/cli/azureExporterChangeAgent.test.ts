@@ -3,7 +3,7 @@ import pmmTest from '@fixtures/pmmTest';
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
 
-  pmmTest.beforeAll(async ({ api }) => {
+  pmmTest.beforeEach(async ({ api }) => {
     await api.settingsApi.enableAzureMonitoring();
   });
 
