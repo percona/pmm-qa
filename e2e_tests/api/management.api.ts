@@ -62,7 +62,7 @@ export default class ManagementApi {
   constructor(private request: APIRequestContext) {}
 
   addAzure = async (addInstance: AddAzure) => {
-    const res = await this.request.post(apiEndpoints.management.services, {
+    const res = await this.request.post(apiEndpoints.management.azure, {
       data: addInstance,
       headers: GrafanaHelper.getAuthHeader(),
       ignoreHTTPSErrors: true,
