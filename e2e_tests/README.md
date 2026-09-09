@@ -91,6 +91,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@alerting`
 - `@all`
 - `@annotations`
+- `@azure-integration`
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
