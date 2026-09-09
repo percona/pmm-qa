@@ -50,9 +50,9 @@ pmmTest(
     await pmmTest.step(
       `Verify ${HaApi.raftTermMetric} rises on every node after the switch to "${newLeader}"`,
       async () => {
-        // The term itself, not changes() over a rolling window: an older change ages
-        // out of that window as the new one enters it, so the count can stay flat
-        // across a switch that really did raise the term.
+        // Compared against baselineTerms rather than a changes() delta: an older change
+        // ages out of the rolling window as the new one enters it, so the count is not a
+        // delta. The changes() step below still holds as a separate signal.
         await expect(async () => {
           const terms = await api.haApi.getRaftTerms();
 
