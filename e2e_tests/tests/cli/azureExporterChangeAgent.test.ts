@@ -231,7 +231,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       };
       const response = cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${azureOptions.clientId} --azure-client-secret=${azureOptions.clientSecret} --azure-tenant-id=${azureOptions.tenantId} --azure-subscription-id=${azureOptions.subscriptionId} --azure-resource-group=${azureOptions.resourceGroup}`,
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${azureOptions.clientId} --azure-client-secret=${azureOptions.clientSecret} --azure-tenant-id=${azureOptions.tenantId} --azure-subscription-id=${azureOptions.subscriptionId} --azure-resource-group=${azureOptions.resourceGroup} --pmm-agent-listen-port=7778`,
         )
         .assertSuccess();
 
@@ -263,7 +263,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       // Restore the working credentials so the exporter can authenticate again.
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${process.env.PMM_QA_AZURE_CLIENT_ID} --azure-client-secret=${process.env.PMM_QA_AZURE_CLIENT_SECRET} --azure-tenant-id=${process.env.PMM_QA_AZURE_AD_TENANT_ID} --azure-subscription-id=${process.env.PMM_QA_AZURE_SUBSCRIPTION_ID} --azure-resource-group=pmm-qa`,
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${process.env.PMM_QA_AZURE_CLIENT_ID} --azure-client-secret=${process.env.PMM_QA_AZURE_CLIENT_SECRET} --azure-tenant-id=${process.env.PMM_QA_AZURE_AD_TENANT_ID} --azure-subscription-id=${process.env.PMM_QA_AZURE_SUBSCRIPTION_ID} --azure-resource-group=pmm-qa --pmm-agent-listen-port=7778`,
         )
         .assertSuccess();
 
