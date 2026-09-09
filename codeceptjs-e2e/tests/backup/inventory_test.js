@@ -97,7 +97,20 @@ Before(async ({
 
   const c = await I.mongoGetCollection('test', 'test');
 
-  await c.deleteMany({ number: 2 });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await c.deleteMany({ number: 2 });
+      break;
+    } catch (error) {
+      if (attempt === 2) {
+        throw error;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      await I.wait(10);
+    }
+  }
 
   await I.Authorize();
   await settingsAPI.changeSettings({ backup: true });
