@@ -215,11 +215,17 @@ One branch, one PR **per week**: the current ISO week's lesson branch is the inp
 
 `qa-code-review` reviews every PR; humans then reject findings it raised and raise findings it
 missed. Sections 3.7, 3.13 and 3.14 of that skill are lessons someone folded in **by hand** from
-exactly this signal. The agent that automates the reading half of that loop lives in
-[`.claude/agents/review-feedback-gardener.md`](../../.claude/agents/review-feedback-gardener.md);
-its daily Routine was created 2026-09-09 and fires at 20:00 UTC. Until this agent file reaches
-`main`, every fire stops at its own guard and captures nothing — the schedule is live, the sweep
-starts the day the PR adding it merges.
+exactly this signal. [`.claude/agents/review-feedback-gardener.md`](../../.claude/agents/review-feedback-gardener.md)
+automates the reading half of that loop; its daily Routine was created 2026-09-09 and fires at
+20:00 UTC. Until the agent file reaches `main`, every fire stops at its own guard and captures
+nothing — the schedule is live, the sweep starts the day the PR adding it merges.
+
+**The agent names no repository, no reviewing skill and no schedule.** That is deliberate, and it
+is what review asked for: hard-coding `pmm-qa`, or a section number in another file, breaks
+silently the moment either moves, and it would stop the agent being reusable for a review skill
+that is not this one. It takes the repository from the git remote, the window from its caller, and
+carries its own comment filter rather than pointing at somebody else's. This document is the
+pmm-qa-specific half — the agent is not.
 
 **It captures nothing itself.** It sweeps, filters and judges; the entry file, the week branch and
 the push all belong to **Capture** in
@@ -227,18 +233,18 @@ the push all belong to **Capture** in
 belongs to the Sunday publisher above. The agent exists only because the gardener's evidence is the
 observable session sequence — it has no notion of reading a PR comment.
 
-**Telling a human from Claude is the whole trick.** Claude posts as `claude[bot]` from the review
-workflow *and* under a contributor's own account from a Claude Code session, so the login settles
-nothing: the discriminator is the login not ending in `[bot]`, **no** markdown link labelled
-`Claude Code` to `claude.ai`/`claude.com` (two footer wordings are live), **and** a body saying
-something past a bare ` ```suggestion ` block. It lives in section 7 of
-[`qa-code-review/SKILL.md`](../../.claude/skills/qa-code-review/SKILL.md), where the review itself
-also uses it — a review must never re-raise a finding a human already rejected.
+**Telling a person from the reviewer is the whole trick, and it is not the footer.** A login ending
+in `[bot]` is a machine; everything else is a person, including someone who drafted their reply
+through Claude — dropping those on the attribution footer would discard real feedback, and a bare
+` ```suggestion ` block is feedback too, not noise. One case is discarded: the reviewing skill's own
+output posted under its operator's login, which a local run produces. Its shape gives it away — it
+opens a thread instead of replying in one, and leads with a 🔴/🟡/🔵 severity marker. Without that
+carve-out the sweep reads a review as feedback about itself.
 
 **Daily, not weekly**, on a 26h window: the two-hour margin absorbs a run that fires *late* — not one
 that never fired, which loses its window outright and needs a hand re-run with a wider `SINCE`. The
 comment permalink on each entry's `Evidence:` line keeps the overlap from double-capturing, and it is
-checked against the previous week's branch as well as the current one, since a Monday window reaches
+checked against the previous week's queue as well as the current one, since a Monday window reaches
 back across the week boundary the publisher has already cut. The Monday–Sunday grouping is not the
 sweep's doing — it falls out of the gardener resolving `skill-gardener/<YYYY>-W<WW>` per run.
 
