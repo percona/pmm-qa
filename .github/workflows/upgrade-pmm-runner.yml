@@ -62,7 +62,7 @@ env:
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
 
 jobs:
-  upgrade-docker:
+  upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -125,13 +125,31 @@ jobs:
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
+          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
+            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
+          else
+            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
+          fi
           docker network create pmm-qa || true
           docker volume create pmm-volume
+          if [[ "${{ inputs.upgrade_type }}" == "ui" ]]; then
+            docker run --detach --restart always \
+              --network="pmm-qa" \
+              -e WATCHTOWER_DEBUG=1 \
+              -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
+              -e WATCHTOWER_HTTP_API_UPDATE=1 \
+              --volume /var/run/docker.sock:/var/run/docker.sock \
+              --name watchtower \
+              perconalab/watchtower:dev-latest
+          fi
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
             -e PMM_ENABLE_TELEMETRY=0 \
+            -e PMM_DEV_UPDATE_DOCKER_IMAGE=$UPGRADE_TAG \
             -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
+            -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
+            -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
             --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
@@ -225,6 +243,7 @@ jobs:
           npx playwright install --with-deps
 
       - name: Docker upgrade (swap server image, keep volume)
+        if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
           if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
             export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
@@ -241,6 +260,17 @@ jobs:
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+
+      - name: UI Upgrade
+        if: ${{ inputs.upgrade_type == 'ui' }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          if [[ "${{ inputs.docker_tag }}" == *-rc* ]]; then
+            export UPGRADE_TAG="perconalab/pmm-server:3-dev-latest"
+          else
+            export UPGRADE_TAG="${{ needs.prepare.outputs.rc_version }}"
+          fi
+          npx playwright test --grep "@pmm-upgrade"
 
       - name: Post-server-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
