@@ -345,13 +345,14 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
-          DEV_LATEST_VERSION: ${{ steps.resolve.outputs.DEV_LATEST_VERSION }}
+          DEV_LATEST_VERSION: ${{ needs.prepare.outputs.DEV_LATEST_VERSION }}
         run: |
           if [[ "${{ matrix.docker_tag }}" == *-rc* ]]; then
             export PMM_SERVER_LATEST="$DEV_LATEST_VERSION"
           else
             export PMM_SERVER_LATEST="$PMM_SERVER_LATEST"
           fi
+          echo "Latest PMM Version is: $PMM_SERVER_LATEST"
           npx playwright test --grep "@post-upgrade|@rta"
 
       - name: Check packages after upgrade
