@@ -136,6 +136,20 @@ jobs:
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
+            # The remote PMM Server keeps whatever the failed attempt already
+            # registered, and the local wipe below cannot reach it. Left there,
+            # those nodes have no client, never reconnect, and the inventory and
+            # dashboard-count tests read them as real failures.
+            for c in $(docker ps -q); do
+              name=$(docker inspect -f '{{.Name}}' "$c" 2>/dev/null || echo "$c")
+              rc=0
+              timeout 60 docker exec "$c" pmm-admin unregister --force >/dev/null 2>&1 || rc=$?
+              case $rc in
+                0) echo "unregistered PMM node of ${name#/}" ;;
+                124) echo "unregister timed out after 60s for ${name#/} - its node may stay on the server" ;;
+                *) echo "no PMM client to unregister in ${name#/} (rc=$rc)" ;;
+              esac
+            done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
             docker network rm -f $(docker network ls -q) || true
