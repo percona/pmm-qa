@@ -2,20 +2,13 @@
 # Remove from a PMM Server the nodes registered by containers that live on this
 # runner, so a retried setup does not leave a dead half-registration behind.
 #
-# The nightly matrix points several runners at one long-lived remote PMM Server.
-# When a setup attempt times out, the retry wipes the runner's Docker state but
-# the nodes, services and agents it had already registered stay on the server
-# with no agent behind them, and every later test that walks the inventory or a
-# node dashboard fails on them.
-#
-# Each container is asked to unregister itself (`pmm-admin unregister`, whose
-# only subject is the node that container's own agent registered), which needs
-# no name matching at all and so cannot reach another runner's node. Only what that misses is
-# matched by name, and then only against container ids: a container name or a
+# Several runners share one PMM Server, so what this deletes has to be scoped to
+# this runner and nothing else. Each container is asked to unregister itself,
+# which names no node but its own; only what that misses falls back to matching
+# the inventory, and then against container ids alone. A container name or a
 # configured hostname is unique to one Docker daemon, not to the fleet --
-# docker-compose-rs.yaml and docker-compose-sharded.yaml both pin rs101..rs203
-# and those setups run on different runners against the same server, so matching
-# on those would force-delete a live node belonging to another shard.
+# docker-compose-rs.yaml and docker-compose-sharded.yaml both pin rs101..rs203,
+# and those setups run on different runners against the same server.
 
 set -uo pipefail
 
@@ -36,9 +29,7 @@ if [ "${#containers[@]}" -eq 0 ]; then
 fi
 
 # A PMM Server running as a local container carries pmm-admin too, and asking it
-# to unregister would remove the server's own node. That is not the nightly's
-# layout -- there the server is remote -- but it is how a reproduction box is
-# built, so skip it explicitly rather than relying on the difference.
+# to unregister would remove the server's own node.
 is_pmm_server() {
   local name image
   name=$(docker inspect -f '{{.Name}}' "$1" 2>/dev/null)
@@ -71,7 +62,10 @@ fi
 
 # Fall back to the server's inventory for containers that could not be reached
 # (stopped, or no pmm-admin inside), matching container ids only.
-nodes_json=$(curl "${CURL_OPTS[@]}" "${AUTH[@]}" "${BASE}/v1/management/nodes")
+# --fail so an HTTP error takes the branch below: without it curl exits 0 on a
+# 401 or a 502, jq finds no node_id in the error body, and a server this script
+# could not actually read reports "no stale nodes" and looks like it worked.
+nodes_json=$(curl "${CURL_OPTS[@]}" "${AUTH[@]}" --fail "${BASE}/v1/management/nodes")
 rc=$?
 if [ "$rc" -ne 0 ] || [ -z "$nodes_json" ]; then
   echo "deregister: could not read the node inventory from ${SERVER_IP} (curl rc=${rc}); leaving it alone" >&2
