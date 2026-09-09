@@ -180,9 +180,11 @@ jobs:
             # failed attempt registered stay in its inventory as Failed forever.
             for c in $(docker ps -a -q); do
               docker start "$c" >/dev/null 2>&1 || true
-              timeout 60 docker exec "$c" bash -lc \
-                'command -v pmm-admin >/dev/null 2>&1 && pmm-admin unregister --force' \
-                || echo "no PMM Client to unregister in $c"
+              if ! timeout 60 docker exec "$c" bash -lc 'command -v pmm-admin' >/dev/null 2>&1; then
+                echo "no PMM Client in $c, nothing to unregister"
+              elif ! timeout 60 docker exec "$c" bash -lc 'pmm-admin unregister --force'; then
+                echo "WARNING: unregister failed in $c - its node may survive into the retry as Failed"
+              fi
             done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
