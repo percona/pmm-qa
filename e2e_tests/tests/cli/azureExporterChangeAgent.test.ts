@@ -110,7 +110,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1005 - Verify Change agent enable true/false @ps-integration',
+    'PMM-T1005 - Verify Change agent enable true/false @azure-integration',
     async ({ api, cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
