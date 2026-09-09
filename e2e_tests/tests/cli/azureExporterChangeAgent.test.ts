@@ -137,7 +137,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
           expect(
             agentStatus,
-            `Agent status should be: ${enableCommand.status} but is: ${agentStatus}`,
+            `Agent status should be: ${enableCommand.status} but is: ${agentStatus} for command: ${enableCommand.command}`,
           ).toEqual(enableCommand.status);
         }).toPass({
           intervals: [Timeouts.TWO_SECONDS],
