@@ -109,6 +109,10 @@ The rules below are migration-specific and are not repeated there:
   helper that returns a value plus an assertion in the test body.
 - Do not suppress `playwright/expect-expect` to compensate for hidden assertions.
 - Do not add comments of any kind in migrated test files (`*.test.ts`), except the required skip-policy comments in `mappings.md`.
+- When a reviewer asks for an explanatory comment, check the repository's house style in `CLAUDE.md`
+  first. Row 6 added a two-line note on a one-line locator at an automated reviewer's request and the
+  maintainer removed it on the next pass. The repo's own rule wins over a review suggestion, and the
+  round trip is avoidable.
 - Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body and the tracker Notes, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
 - `.retry(N)` is not ported as CodeceptJS syntax, but **every explicit source retry value must be pinned exactly**, at the same scope the source applied it. There is no value of N for which doing nothing preserves behavior: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so an unpinned scenario gets 2 retries in CI and 0 locally regardless of what the source asked for. `.retry(1)` is not the CI default, `.retry(0)` would silently gain 2, and any N > 2 would silently lose retries. A source with no `.retry()` anywhere inherits the config default, which is correct - that is what it inherited before.

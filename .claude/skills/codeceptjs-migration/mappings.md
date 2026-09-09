@@ -60,6 +60,13 @@ Legacy remote-instance tests route from `client_container` to a database through
 
 `verifyPopUpMessage(message, t=30)` / `verifyWarning(message, t=10)` / `getPopUpLocator` / `getSuccessPopUpLocator` / `getClosePopUpButtonLocator` -> POM `messages` locator first; create `@components/notification.component.ts` only when reused across pages.
 
+- Every locator this file spells out is a **floor, not a ceiling**. Where a higher rung of
+  `playwright-practices.md`'s ladder resolves to the same element, use it - these strings predate the
+  ladder and several are raw CSS. `[role="alert"],[role="status"]` is `getByRole('status').or(getByRole('alert'))`.
+  Row 6 declined that promotion at the gate on the grounds that this file prescribed the CSS form, and the
+  maintainer overruled it: a better locator is welcome even where it departs from the CodeceptJS original,
+  as long as the logic is unchanged. Do not narrow a union to one role on inference alone - keep the union
+  via `.or()` unless the surviving role was measured live.
 - If a component is created, keep it **dumb**: it exposes the locator (`[role="alert"],[role="status"]`) and a `close()` method (click `[aria-label="Close alert"]`). It does NOT assert.
 - The `expect(pom.messages.successPopUp).toContainText(message)` or `expect(component.message).toContainText(message)` call MUST be written inline in the test body - never hidden inside the POM/component. This is a `NoExpectsInHelpers` case (see `SKILL.md` section Native Playwright rules and `playwright-practices.md` section Web-first assertions).
 - `verifyWarning` asserts on `[data-testid="data-testid Alert warning"]` instead of the generic alert locator.

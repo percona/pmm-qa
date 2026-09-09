@@ -203,8 +203,11 @@ Also run `python support_scripts/generate_readme.py --check` from the publish wo
 
 If the test selects state by index, empty that state before this run as well - it is a second run against the same environment.
 
-A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` before
-`tsc`/`eslint`, or `npx` silently reports a missing-package error rather than a clean typecheck. And do
+A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` as the first
+thing you do in it. Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean
+run, and `.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged`
+MODULE_NOT_FOUND - including a docs-only one that stages no `.ts` at all. Install rather than reaching for
+`--no-verify`. And do
 not read `$?` after a pipe: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks
 like a pass. Put the check on its own line, or use `PIPESTATUS`.
 
@@ -221,6 +224,43 @@ Committed on the publish branch, before the final review, so the gate can verify
 Preserve every original CodeceptJS scenario tag in the migrated Playwright test. A destination execution tag may be added, but it must not replace or remove a source tag.
 
 Leave existing CodeceptJS jobs and grep expressions unchanged, unless this migration is the one that empties them - see below.
+
+### First ask whether a new runner is needed at all
+
+When this migration retires the last CodeceptJS consumer of a **runner** workflow, the default is to
+**convert that runner in place** - same filename, same server-setup steps - not to add a parallel
+Playwright one beside it. Adding one leaves the original with no caller, duplicates whatever server
+setup it owns, and forces a keep-or-delete argument in review that the conversion never raises.
+
+Row 6 learned this the expensive way. It added `runner-e2e-tests-playwright-podman.yml` next to
+`runner-e2e-tests-podman.yml`, and the maintainer's review reversed it in one line: podman was used by
+that one test and nowhere else. The cost of the detour was a duplicated systemd unit, a PR-body
+paragraph defending a dead workflow, an extra review round, and a hand-built `CLIENT_VERSION` bug that
+could not have existed in the original file, which already had it. The converted runner keeps the
+podman parent's `--pmm-server-ip` topology for free, for the same reason.
+
+Convert when the retired test is the runner's only consumer. Add a new runner only when the old one
+still has other callers, and say which they are.
+
+A conversion is usually three edits: point the dependency install at `e2e_tests/`, swap the
+`codeceptjs run` invocation for `npx playwright test --grep`, and set any URL the harness needs.
+Rename its selection input `tags_for_tests` -> `pmm_test_flag` as part of the conversion: that key is
+what the per-scenario selectability check keys on, and a Playwright job left under the CodeceptJS key
+is invisible to it.
+
+### Never interpolate a workflow input into a `run:` block
+
+`${{ env.X }}` inside `run:` is substituted into the script **before** the shell parses it, so an input
+that reaches it can close the quote and execute arbitrary commands with the job's `GITHUB_TOKEN`.
+Any value already declared in the job's `env:` must be read as a shell variable instead:
+
+```yaml
+run: npx playwright test --grep "$PMM_TEST_FLAG"      # not "${{ env.PMM_TEST_FLAG }}"
+```
+
+This applies to every `run:` line a migration writes or rewrites. Pre-existing interpolations in lines
+the migration does not touch are repo-wide hardening, not this PR's business - say so rather than
+fixing one file asymmetrically.
 
 ### Deriving a new runner workflow from two parents
 
