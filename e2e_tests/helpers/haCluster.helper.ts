@@ -15,6 +15,8 @@ const pmmServerPort = 8_443;
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 /** The `pmm-ha` chart default. */
 export const defaultReplicas = 3;
+/** The `pmm-ha` chart default for `clickhouse.keeper.replicasCount`. */
+export const clickHouseKeeperReplicas = 3;
 // /v1/version needs credentials even from inside the pod.
 const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
 // POSIX single-quote escaping, so a password containing a quote cannot end the

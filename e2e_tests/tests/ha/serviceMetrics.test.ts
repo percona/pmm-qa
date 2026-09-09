@@ -1,11 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { defaultReplicas } from '@helpers/haCluster.helper';
+import { clickHouseKeeperReplicas, defaultReplicas } from '@helpers/haCluster.helper';
 
 const monitoredServices = [
   {
-    expectedSources: 6,
+    // clickhouse.cluster.shards * clickhouse.cluster.replicas server pods plus
+    // clickhouse.keeper.replicasCount keeper pods, all of which export the metric.
+    expectedSources: defaultReplicas + clickHouseKeeperReplicas,
     groupBy: 'pod',
     metric: 'ClickHouseAsyncMetrics_AsynchronousMetricsUpdateInterval',
     name: 'ClickHouse',
