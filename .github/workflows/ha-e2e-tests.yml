@@ -175,10 +175,7 @@ jobs:
               --pmm-server-password "${ADMIN_PASSWORD}" \
               --client-version "${PMM_CLIENT_VERSION}" \
               ${WIZARD_ARGS}
-          on_retry_command: |
-            docker rm -f $(docker ps -a -q) || true
-            docker volume rm -f $(docker volume ls -q) || true
-            docker network rm -f $(docker network ls -q) || true
+          on_retry_command: bash pmm-qa/.github/scripts/reset-runner-clients.sh
 
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/
