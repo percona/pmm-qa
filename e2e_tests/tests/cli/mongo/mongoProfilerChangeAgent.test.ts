@@ -99,23 +99,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1003 - Verify Change agent log level @ps-integration',
+    'PMM-T1003 - Verify Change agent log level @psmdb-profiler-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --log-level=debug`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(mongoExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldExporterId);
-      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
+      await agentsPage.hideRowDetails(mongoExporterId);
+      await agentsPage.showRowDetails(mongoProfilerAgentId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
+      await agentsPage.hideRowDetails(mongoProfilerAgentId);
     },
   );
 
@@ -129,7 +129,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T1005 - Verify Change agent enable true/false @ps-integration',
+    'PMM-T1005 - Verify Change agent enable true/false @psmdb-profiler-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -140,8 +140,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       for (const enableCommand of enableCommands) {
         let commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} ${enableCommand.command}`,
         ];
 
         for (const command of commands) {
@@ -152,8 +152,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         commands = [
-          `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
-          `docker exec ${containerName} pmm-admin list | grep mysql_perfschema_agent | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep mongodb_exporter | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep mongodb_profiler_agent | grep ${serviceId}`,
         ];
 
         for (const command of commands) {
