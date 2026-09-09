@@ -179,7 +179,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         serviceName: serviceName,
       });
 
-      expect(metrics).toContain('mongo_up');
+      expect(metrics).toContain('mongodb_up');
     },
   );
 
