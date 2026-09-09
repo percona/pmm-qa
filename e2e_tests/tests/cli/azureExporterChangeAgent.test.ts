@@ -149,4 +149,38 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
+
+  pmmTest(
+    'PMM-T1008 - Verify Change agent push metrics @azure-integration',
+    async ({ api, cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --push-metrics`,
+        )
+        .assertSuccess()
+        .outContains('- enabled push metrics');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await expect(async () => {
+        const agentStatus = (
+          await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
+        ).agents.find(
+          (agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter',
+        )?.status;
+
+        expect(agentStatus, `Agent status should be: AGENT_STATUS_RUNNING but is: ${agentStatus}`).toEqual(
+          'AGENT_STATUS_RUNNING',
+        );
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
+        )
+        .outEquals('');
+    },
+  );
 });
