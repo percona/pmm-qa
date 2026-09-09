@@ -218,4 +218,67 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
     },
   );
+
+  pmmTest(
+    'PMM-T1006 - Verify Change agent azure connection credentials @azure-integration',
+    async ({ api, cliHelper }) => {
+      const azureOptions = {
+        clientId: 'AZURE-CLIENT-ID',
+        clientSecret: 'AZURE-CLIENT-SECRET',
+        resourceGroup: 'AZURE-RESOURCE-GROUP',
+        subscriptionId: 'AZURE-SUBSCRIPTION-ID',
+        tenantId: 'AZURE-TENANT-ID',
+      };
+      const response = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${azureOptions.clientId} --azure-client-secret=${azureOptions.clientSecret} --azure-tenant-id=${azureOptions.tenantId} --azure-subscription-id=${azureOptions.subscriptionId} --azure-resource-group=${azureOptions.resourceGroup}`,
+        )
+        .assertSuccess();
+
+      await response.outContains('agent configuration updated.');
+      await response.outContainsNormalizedMany([
+        '- updated azure_client_id',
+        '- updated azure_client_secret',
+        '- updated azure_tenant_id',
+        '- updated azure_subscription_id',
+        '- updated azure_resource_group',
+      ]);
+
+      await expect(async () => {
+        const azureAgent = (
+          await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
+        ).agents.find((agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter');
+
+        expect(azureAgent?.azure_options.client_id).toEqual(azureOptions.clientId);
+        expect(azureAgent?.azure_options.tenant_id).toEqual(azureOptions.tenantId);
+        expect(azureAgent?.azure_options.subscription_id).toEqual(azureOptions.subscriptionId);
+        expect(azureAgent?.azure_options.resource_group).toEqual(azureOptions.resourceGroup);
+        // The client secret itself is never returned by the API, only a flag that one is set.
+        expect(azureAgent?.azure_options.is_client_secret_set).toEqual(true);
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
+
+      // Restore the working credentials so the exporter can authenticate again.
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --azure-client-id=${process.env.PMM_QA_AZURE_CLIENT_ID} --azure-client-secret=${process.env.PMM_QA_AZURE_CLIENT_SECRET} --azure-tenant-id=${process.env.PMM_QA_AZURE_AD_TENANT_ID} --azure-subscription-id=${process.env.PMM_QA_AZURE_SUBSCRIPTION_ID} --azure-resource-group=pmm-qa`,
+        )
+        .assertSuccess();
+
+      await expect(async () => {
+        const azureAgent = (
+          await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
+        ).agents.find((agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter');
+
+        expect(azureAgent?.azure_options.client_id).toEqual(process.env.PMM_QA_AZURE_CLIENT_ID);
+        expect(azureAgent?.azure_options.subscription_id).toEqual(process.env.PMM_QA_AZURE_SUBSCRIPTION_ID);
+        expect(azureAgent?.azure_options.resource_group).toEqual('pmm-qa');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
+    },
+  );
 });
