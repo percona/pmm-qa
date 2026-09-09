@@ -8,10 +8,8 @@ export default class HighAvailabilityPage extends BasePage {
   url = 'pmm-ui/help';
   builders = {};
   buttons = {
-    haNavItem: this.page.getByTestId('navitem-high-availability'),
     // Expands without navigating; the item itself links to a child with no url.
     haNavItemToggle: this.page.getByTestId('navitem-high-availability-toggle'),
-    identifyNodes: this.page.getByTestId('navitem-high-availability-nodes'),
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),

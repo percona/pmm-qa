@@ -20,11 +20,3 @@ export interface HaNodesResponse {
 export interface HaStatusResponse {
   status: string;
 }
-
-/** What {@link HaClusterHelper.failoverLeaderWhileProbing} saw on the public URL during a failover. */
-export interface HaFailoverProbe {
-  failures: number;
-  longestOutage: number;
-  newLeader: string;
-  probes: number;
-}

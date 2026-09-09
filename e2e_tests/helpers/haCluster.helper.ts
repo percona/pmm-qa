@@ -4,8 +4,8 @@ import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { HaFailoverProbe, HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
-import { APIRequestContext, expect } from '@playwright/test';
+import { HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
+import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 
 const leaderLogLine = 'I am the leader!';
@@ -86,53 +86,6 @@ export default class HaClusterHelper {
     await this.waitForApiServing(haApi);
 
     return newLeader;
-  };
-
-  /**
-   * {@link failoverLeader} while polling `path` through HAProxy, which is the only way to
-   * tell a brief election gap from the public URL actually going down. Reports the longest
-   * unbroken stretch of 5xx or connection errors.
-   */
-  failoverLeaderWhileProbing = async (
-    haApi: HaApi,
-    request: APIRequestContext,
-    path: string,
-  ): Promise<HaFailoverProbe> => {
-    let probing = true;
-    let longestOutage = 0;
-    let failures = 0;
-    let probes = 0;
-    // Measured from the last good response, not from the first failed probe: anchoring
-    // on the failure makes an isolated one measure zero, which reads as "no outage"
-    // next to a non-zero failure count.
-    let lastServedAt = Date.now();
-    // Back-to-back, with no sleep between requests: a sampled probe can only ever
-    // bound an outage by its own interval, so "the UI never went down" is not a
-    // claim a 1s poll is entitled to make. Each request costs milliseconds, which
-    // is the rate limit.
-    const probe = (async () => {
-      while (probing) {
-        const served = await request
-          .get(path, { failOnStatusCode: false, maxRedirects: 0, timeout: Timeouts.TEN_SECONDS })
-          .then((response) => response.status() < 500)
-          .catch(() => false);
-
-        probes++;
-
-        if (served) {
-          lastServedAt = Date.now();
-        } else {
-          failures++;
-          longestOutage = Math.max(longestOutage, Date.now() - lastServedAt);
-        }
-      }
-    })();
-    const newLeader = await this.failoverLeader(haApi);
-
-    probing = false;
-    await probe;
-
-    return { failures, longestOutage, newLeader, probes };
   };
 
   /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */
