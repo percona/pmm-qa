@@ -18,3 +18,18 @@ pmmTest(
     });
   },
 );
+
+pmmTest(
+  'PMM-10162 Verify that Grafana Enterprise is not present @grafana-pr',
+  async ({ page, statsAndLicensePage }) => {
+    await page.goto(statsAndLicensePage.url);
+    await statsAndLicensePage.waitForPageLoaded();
+    await expect(statsAndLicensePage.elements.manageDashboardsLabel).toBeVisible();
+
+    await pmmTest.step('Verify no Grafana Enterprise advertising is present', async () => {
+      for (const text of statsAndLicensePage.enterpriseAdvertising) {
+        await expect(statsAndLicensePage.builders.advertisement(text)).toBeHidden();
+      }
+    });
+  },
+);
