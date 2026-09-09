@@ -25,6 +25,14 @@ on:
         type: string
   workflow_call:
     inputs:
+      docker_tag:
+        description: 'PMM Server docker tag to upgrade from'
+        default: ''
+        type: string
+      version:
+        description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
+        default: ''
+        type: string
       client_tarball_upgrade:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
