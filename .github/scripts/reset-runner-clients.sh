@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
 # reset-runner-clients.sh
 #
-# Cleanup between attempts of the "Run setup for E2E tests" step, for the
-# workflows that point pmm-framework at a PMM Server this runner does not own.
-#
-# Wiping the runner's Docker state is not enough on its own. The PMM Server
-# outlives the retry, so nodes a failed attempt already registered stay in its
-# inventory with no agent behind them, and the next attempt registers fresh
-# ones under new random names (start-sharded.sh suffixes every node with
-# $RANDOM). The leftovers then show up as services in "Failed" state and
-# inflate the inventory counts the dashboard panels are compared against.
-#
-# So unregister every container-hosted node first, then wipe.
-#
-# Usage:
-#   reset-runner-clients.sh
+# The PMM Server outlives the retry, so nodes a failed attempt already
+# registered stay in its inventory with no agent behind them: unregister
+# before wiping.
 #
 # Environment:
 #   UNREGISTER_TIMEOUT_SECONDS  per-container bound, default 60
@@ -23,12 +12,17 @@ set -uo pipefail
 
 timeout_seconds=${UNREGISTER_TIMEOUT_SECONDS:-60}
 
-for container in $(docker ps --format '{{.Names}}'); do
+for container in $(docker ps -a --format '{{.Names}}'); do
     # The PMM Server's own container carries pmm-admin too, and unregistering
     # it would delete the server's self-monitoring node.
     case "$container" in
         pmm-server | watchtower) continue ;;
     esac
+
+    if [ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" != true ]; then
+        echo "${container} is not running, so its node cannot be unregistered from inside it and may remain in the inventory"
+        continue
+    fi
 
     if ! docker exec "$container" sh -c 'command -v pmm-admin' >/dev/null 2>&1; then
         continue
