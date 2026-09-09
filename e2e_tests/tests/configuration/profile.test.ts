@@ -14,6 +14,7 @@ const MONITORED_METRICS = [
 pmmTest.afterEach(async ({ api }) => {
   await api.grafanaApi.changePassword(NEW_ADMIN_PASSWORD, INITIAL_ADMIN_PASSWORD).catch(() => undefined);
   process.env.ADMIN_PASSWORD = INITIAL_ADMIN_PASSWORD;
+  await api.grafanaApi.getDataSourceByName();
 });
 
 pmmTest(

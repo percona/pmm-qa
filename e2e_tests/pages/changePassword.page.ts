@@ -13,6 +13,6 @@ export default class ChangePasswordPage extends BasePage {
     oldPassword: this.grafanaIframe().getByLabel('Old password', { exact: true }),
   };
   messages = {
-    successPopUp: this.grafanaIframe().locator('[role="alert"], [role="status"]'),
+    successPopUp: this.grafanaIframe().getByRole('status').or(this.grafanaIframe().getByRole('alert')),
   };
 }

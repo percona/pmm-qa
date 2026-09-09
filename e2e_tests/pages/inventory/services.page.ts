@@ -12,8 +12,6 @@ export default class ServicesPage extends BasePage {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
   };
   elements = {
-    // react-select exposes role=combobox on a hidden dummy input with no text; the emotion
-    // -singleValue div is the only node carrying the selected page size.
     rowsPerPageDropdown: this.grafanaIframe().getByTestId('pagination').locator('div[class*="-singleValue"]'),
   };
   inputs = {};

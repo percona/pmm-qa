@@ -30,7 +30,7 @@ on:
         description: "Setup arguments, ex.: --addclient=ps,1 --ps-version=5.7"
         required: false
         type: string
-      tags_for_tests:
+      pmm_test_flag:
         description: "example: @settings-fb"
         required: true
         type: string
@@ -60,7 +60,7 @@ on:
       setup_services:
         required: false
         type: string
-      tags_for_tests:
+      pmm_test_flag:
         required: true
         type: string
       sha:
@@ -69,7 +69,7 @@ on:
 
 jobs:
   ui-tests-e2e:
-    name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
+    name: "podman e2e tests: ${{ inputs.pmm_test_flag || '@settings-fb' }}"
     #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
     timeout-minutes: 60
@@ -82,7 +82,7 @@ jobs:
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_TEST_FLAG: ${{ inputs.pmm_test_flag || '@settings-fb' }}
       ADMIN_PASSWORD: 'admin-password'
 
     steps:
@@ -92,7 +92,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ env.TAGS_FOR_TESTS }} UI tests"
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
           description: "Test execution ${{ job.status }}"
           state: "pending"
           repository: ${{ github.repository }}
@@ -232,32 +232,24 @@ jobs:
           ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
-        working-directory: ./pmm-qa/codeceptjs-e2e
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install
-          envsubst < env.list > env.generated.list
+          npx playwright install-deps
+          npx playwright install chromium
 
-      - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
-        working-directory: ./pmm-qa/codeceptjs-e2e
+      - name: Execute e2e tests with tags ${{ env.PMM_TEST_FLAG }}
+        working-directory: ./pmm-qa/e2e_tests
         env:
-          SERVER_IP: "127.0.0.1"
           PMM_UI_URL: "http://127.0.0.1/"
-          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
-        run: |
-          # shellcheck disable=SC2016
-          # This substitutes the literal string ${PMM_UI_URL}, not its value. It only
-          # rewrites the unused fallback in pr.codecept.js, so it is inert today --
-          # left as-is rather than changed blind. See the PR description.
-          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
+        run: npx playwright test --grep "${{ env.PMM_TEST_FLAG }}"
 
       - uses: actions/github-script@v7
         if: ${{ always() }}
         id: artifact_name
         with:
           script: |
-            return `artifacts_for_${process.env.TAGS_FOR_TESTS.replaceAll('|', '')}`
+            return `artifacts_for_${process.env.PMM_TEST_FLAG.replaceAll('|', '')}`
           result-encoding: string
 
       - name: Create status check
@@ -266,7 +258,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ env.TAGS_FOR_TESTS }} UI tests"
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
