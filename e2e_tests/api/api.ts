@@ -40,5 +40,6 @@ export default class Api {
     this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);
     this.settingsApi = new SettingsApi(request);
+    this.serverApi = new ServerApi(request);
   }
 }

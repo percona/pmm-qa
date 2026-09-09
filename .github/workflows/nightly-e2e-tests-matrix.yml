@@ -75,6 +75,8 @@ on:
         required: false
       GH_TOKEN:
         required: false
+      INVESTIGATOR_ROUTINE_TOKEN:
+        required: false
 
 jobs:
   setup:
@@ -154,12 +156,11 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
 
-  # Migrated CodeceptJS scenarios keep their original tag bucket here (per
-  # .claude/skills/codeceptjs-migration/branch-workflow.md "Workflow coverage")
-  # so this workflow's coverage stays equivalent instead of silently dropping
-  # once the CodeceptJS source retires. Add a migrated tag to tags_for_tests
-  # below as each one lands; the test itself must keep the matching tag
-  # alongside its own file's execution tag.
+  # Migrated CodeceptJS scenarios keep their original tag bucket so coverage
+  # stays equivalent once the CodeceptJS source retires. `--grep` is a regex:
+  # add a migrated tag to the alternation, not as a matrix entry (a runner per
+  # tag, plus `expected_test_jobs` above). Not `@nightly` -- here it also marks
+  # tests owned by other jobs whose services these shards never provision.
   test_execution_playwright:
     # Name must start with "test execution / " -- the setup shards' own wait
     # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
@@ -170,7 +171,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tags_for_tests: '@menu'
+          - tags_for_tests: '@annotations|@menu'
     uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -186,3 +187,24 @@ jobs:
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
+
+  notify_investigator:
+    name: Fire Investigator routine
+    needs:
+      - setup
+      - test_execution
+      - test_execution_playwright
+    if: >
+      !cancelled() &&
+      github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&
+      github.ref_name == github.event.repository.default_branch &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}

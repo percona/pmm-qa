@@ -20,9 +20,11 @@
   become: true
 
 - name: Clean and update package cache
-  shell: |
-    {{ ansible_pkg_mgr }} clean all
-    {{ ansible_pkg_mgr }} makecache
+  shell: "{{ ansible_pkg_mgr }} clean all && {{ ansible_pkg_mgr }} makecache"
+  register: makecache_result
+  until: makecache_result.rc == 0
+  retries: 5
+  delay: 30
   when:
     - ansible_facts['distribution'] in ["RedHat", "CentOS", "OracleLinux", "Amazon"]
 

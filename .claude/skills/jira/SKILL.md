@@ -50,6 +50,24 @@ connector equivalent, currently not to be used):
 | Found by Automation | `customfield_10059` | Multi-checkbox; set `[{"value":"Yes"}]`. The relay sets this to Yes automatically on Bugs it `create`s |
 | Development panel | — | Linked GitHub PRs |
 
+The full field map for **writing** a ticket (priority, components, affects
+version, Regression Issue, Needs QA/Doc) is in
+`references/ticket-templates.md`.
+
+## Write — creating an issue
+
+**Read `references/ticket-templates.md` before every `create`** and follow the
+issue type's template. A ticket whose description doesn't carry the team's
+headings, or that arrives with no components and no priority, fails the
+Definition of Ready at refinement no matter how sound the investigation behind
+it was. That file has the templates in wiki markup, the verified field IDs, a
+worked `create` call and a pre-flight checklist.
+
+Two things to get right that are easy to miss: the relay talks Jira REST **v2**,
+so descriptions are **wiki markup** (`h2.`, `*bold*`, `{{mono}}`, `{code}`) and
+Markdown renders literally; and a template section with nothing to say gets an
+explicit `None known.` rather than being dropped.
+
 ## Write — comments (mandatory visibility)
 
 **Never post QA results as public comments.** Always restrict to **Developers** role.
@@ -111,8 +129,12 @@ J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
 # create — a new PMM issue (project is forced to PMM). issuetype + summary
 # required; description optional. On a Bug the relay auto-sets Found by
 # Automation (customfield_10059) = Yes unless you pass it yourself.
-J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "Repro + evidence...\nSuspected PR: <url>" \
-      '{issuetype:"Bug", summary:$s, description:$d}')"
+# Description + fields: follow references/ticket-templates.md.
+DESC="${DESC:?build the description from the issue type's template in references/ticket-templates.md}"
+J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "$DESC" \
+      '{issuetype:"Bug", summary:$s, description:$d,
+        fields:{priority:{name:"Medium"}, components:[{name:"Backend"}],
+                customfield_10064:{value:"Yes"}, customfield_10066:{value:"No"}}}')"
 # override / add fields (e.g. NOT automation-found):
 J create "$(jq -n --arg s "..." '{issuetype:"Bug", summary:$s, fields:{customfield_10059:[]}}')"
 
@@ -125,6 +147,15 @@ J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
 # maxResults<=100 (default 20); fields optional. Use THIS, never the Atlassian MCP.
 J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != Done ORDER BY updated DESC' \
       '{jql:$q, maxResults:20, fields:"summary,status,issuetype,updated"}')"
+
+# search does NOT paginate: startAt and the returned nextPageToken are both ignored,
+# so six calls for a 219-issue result silently returned the same first 100 each time.
+# Page with a JQL cursor instead: ORDER BY created ASC, key ASC, then on each call add
+# created >= "<created of the last issue seen>" and exclude the keys already collected
+# (key NOT IN (...)). JQL's created is minute-precision, so a bare created >= cursor
+# re-serves the same minute forever once >100 issues share it -- the key exclusion is
+# what advances. Dedup by key, and stop with an error if a page adds no new keys
+# rather than looping.
 
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"
@@ -147,3 +178,9 @@ Available actions: `create`, `read`, `search`, `comment`, `field`, `transitions`
 dedup goes through the relay instead of the Atlassian MCP), minus delete (the
 relay refuses that by construction). The **mandatory Developers-only visibility rule** is enforced by
 the relay itself, so it holds even if a caller forgets it.
+
+**Dashboards, gadgets and saved filters are out of reach on every path** — neither the
+relay actions above nor the Atlassian MCP (issue, comment, link, Confluence, Compass
+only) exposes one. For a "chart of tickets over time" ask, the deliverable is per-month
+JQL counts via `search` rendered as an artifact, plus the manual steps for the human:
+saved filter → dashboard → "Recently Created Chart" gadget, period Monthly.

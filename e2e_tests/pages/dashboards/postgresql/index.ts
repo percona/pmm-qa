@@ -1,9 +1,10 @@
-import DashboardInterface from '../../../interfaces/dashboard';
-import PostgresqlInstancesOverviewDashboard from './postgresqlInstancesOverview';
+import DashboardInterface from '@interfaces/dashboard';
+import PostgresqlInstanceSummary from './postgresqlInstanceSummary';
 
-const PostgresqlDashboards = {
-  instanceOverview: new PostgresqlInstancesOverviewDashboard(),
+export const PostgresqlDashboards = {
+  postgresqlInstanceSummary: new PostgresqlInstanceSummary(),
 };
 
 export type PostgresqlDashboardsType = typeof PostgresqlDashboards & Record<string, DashboardInterface>;
+
 export default PostgresqlDashboards;
