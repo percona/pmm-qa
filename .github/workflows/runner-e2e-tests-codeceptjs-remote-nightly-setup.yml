@@ -136,6 +136,15 @@ jobs:
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
+            # The PMM Server is remote and shared with the other shards, so removing this
+            # runner's containers does not remove what they registered on it. Unregister
+            # each node first, or the failed attempt's services and agents stay in the
+            # inventory for the whole run as permanently disconnected entries that the
+            # whole-inventory tests (PMM-T554, PMM-T2146, PMM-T2007) count and assert on.
+            for c in $(docker ps -aq); do
+              timeout 60 docker exec "$c" pmm-admin unregister --force >/dev/null 2>&1 \
+                || echo "unregister skipped for container $c"
+            done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
             docker network rm -f $(docker network ls -q) || true
