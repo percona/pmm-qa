@@ -1,0 +1,6 @@
+# .claude/skills/pmm-framework-change/SKILL.md — check a setup's container `-v` flags before grading a conflict; the `*_cluster_data` dirs are host-side staging
+
+- Added: 2026-09-09
+- Applies to: .claude/skills/pmm-framework-change/SKILL.md
+- Evidence: A workflow comment and commit message asserted that PS/MYSQL "wipe and bind-mount $HOME/mysql_cluster_data, so a later setup destroys the datadir of a running earlier one", inferred from the `rm -rf` at the top of percona-server-setup.yml; prepare_install_ps.yml mounts only cgroups, containerd and ./ssl, so the directory is host-side config staging that is `docker cp`'d in, and the pair is a concurrency conflict (safe sequentially) rather than a host-exclusive one. The same held for $HOME/pgsql_cluster_data. Both claims had to be corrected after the first push.
+- Proposed change: In the footgun list, next to the existing same-type/MySQL-family conflict bullet, state that `mysql_cluster_data` and `pgsql_cluster_data` are host-side staging directories whose contents reach containers by `docker cp`, so grading a pair as unable to share a *host* (rather than merely unable to run concurrently) requires reading the container's `docker run -v` flags in the matching `prepare_install_*.yml`/compose file first.
