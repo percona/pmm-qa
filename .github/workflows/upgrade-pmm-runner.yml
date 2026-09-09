@@ -22,6 +22,12 @@ env:
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
 
+# Cancel superseded runs on the same PR; manual dispatches get a unique group so
+# they never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -36,7 +42,8 @@ jobs:
         id: set
         shell: bash
         run: |
-          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+          CURL="curl -sS --retry 5 --retry-delay 2 --retry-connrefused --max-time 60"
+          TAGS=$($CURL "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
           | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
 
           # --- CLIENT range: latest -> 5 minors back ---
@@ -59,10 +66,10 @@ jobs:
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
           echo "CLIENT versions: $VERSIONS"
           echo "UI versions:     $UI_VERSIONS"
-          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          RC_VERSION=$($CURL "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
-          DEV_LATEST_VERSION=$(curl https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
+          DEV_LATEST_VERSION=$($CURL https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
           echo "dev latest version: $DEV_LATEST_VERSION"
           echo "DEV_LATEST_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_OUTPUT"
           export VERSION_LIST=$(echo "$VERSIONS" | tr -d '[]"' | tr ',' ' ')
@@ -103,7 +110,8 @@ jobs:
           echo "Version: ${{ matrix.version }}"
           echo "Docker Tag: ${{ matrix.docker_tag }}"
           # 1. all X.Y.Z versions available in the apt pool
-          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+          apt_versions=$(curl -sS --retry 5 --retry-delay 2 --retry-connrefused --max-time 60 \
+            "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
             | sed -E 's/pmm-client_//' | sort -Vu)
 
@@ -125,7 +133,7 @@ jobs:
             echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
 
             # verify it exists before committing to it
-            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            code=$(curl -sS --retry 3 --retry-connrefused --max-time 30 -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
             if [ "$code" != "200" ]; then
               echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
               exit 1
@@ -144,6 +152,15 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
+      - name: Cache npm & Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: pmm-upgrade-deps-${{ runner.os }}-${{ hashFiles('pmm-qa/e2e_tests/package-lock.json', 'pmm-qa/codeceptjs-e2e/package-lock.json') }}
+          restore-keys: |
+            pmm-upgrade-deps-${{ runner.os }}-
       - name: Start PMM Server (old image)
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
@@ -155,7 +172,7 @@ jobs:
             --publish 80:8080 --publish 443:8443 \
             -e PMM_ENABLE_TELEMETRY=0 \
             --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
-          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+          timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -227,7 +244,8 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install --with-deps
+          # OS libs already installed by the codeceptjs-e2e --with-deps step above
+          npx playwright install
 
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
@@ -244,7 +262,8 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install --with-deps
+          # OS libs already installed by the codeceptjs-e2e --with-deps step above
+          npx playwright install
 
       - name: Docker upgrade (swap server image, keep volume)
         run: |
@@ -261,7 +280,7 @@ jobs:
             -e PMM_ENABLE_TELEMETRY=0 \
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
-          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+          timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Post-server-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
@@ -405,7 +424,8 @@ jobs:
           echo "Version: ${{ matrix.version }}"
           echo "Docker Tag: ${{ matrix.docker_tag }}"
           # 1. all X.Y.Z versions available in the apt pool
-          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+          apt_versions=$(curl -sS --retry 5 --retry-delay 2 --retry-connrefused --max-time 60 \
+            "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
             | sed -E 's/pmm-client_//' | sort -Vu)
 
@@ -427,7 +447,7 @@ jobs:
             echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
 
             # verify it exists before committing to it
-            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            code=$(curl -sS --retry 3 --retry-connrefused --max-time 30 -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
             if [ "$code" != "200" ]; then
               echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
               exit 1
@@ -446,6 +466,15 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
+      - name: Cache npm & Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: pmm-upgrade-deps-${{ runner.os }}-${{ hashFiles('pmm-qa/e2e_tests/package-lock.json', 'pmm-qa/codeceptjs-e2e/package-lock.json') }}
+          restore-keys: |
+            pmm-upgrade-deps-${{ runner.os }}-
       - name: Start PMM Server (old image)
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
@@ -468,8 +497,7 @@ jobs:
             --publish 80:8080 --publish 443:8443 \
             -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ needs.prepare.outputs.rc_version }} \
             --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
-          fi
-          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+          timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -541,7 +569,8 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install --with-deps
+          # OS libs already installed by the codeceptjs-e2e --with-deps step above
+          npx playwright install
 
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
@@ -558,7 +587,8 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install --with-deps
+          # OS libs already installed by the codeceptjs-e2e --with-deps step above
+          npx playwright install
 
       - name: UI Upgrade
         run: npx playwright test --grep "@pmm-upgrade"
