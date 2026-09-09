@@ -132,7 +132,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         console.log(
-          await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || ''),
+          (
+            await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
+          ).agents.find((agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter')
+            ?.status,
         );
       }
     },
