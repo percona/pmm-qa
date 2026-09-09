@@ -78,23 +78,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1002 - Verify Change agent custom labels @ps-integration',
+    'PMM-T1002 - Verify Change agent custom labels @psmdb-profiler-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
       const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --custom-labels=${customLabel}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --custom-labels=${customLabel}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --custom-labels=${customLabel}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --custom-labels=${customLabel}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(mongoExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldExporterId);
-      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
+      await agentsPage.hideRowDetails(mongoExporterId);
+      await agentsPage.showRowDetails(mongoProfilerAgentId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
+      await agentsPage.hideRowDetails(mongoProfilerAgentId);
     },
   );
 
