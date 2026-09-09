@@ -8,8 +8,9 @@
 # with no agent behind them, and every later test that walks the inventory or a
 # node dashboard fails on them.
 #
-# Each container is asked to unregister itself, which needs no name matching at
-# all and so cannot reach another runner's node. Only what that misses is
+# Each container is asked to unregister itself (`pmm-admin unregister`, whose
+# only subject is the node that container's own agent registered), which needs
+# no name matching at all and so cannot reach another runner's node. Only what that misses is
 # matched by name, and then only against container ids: a container name or a
 # configured hostname is unique to one Docker daemon, not to the fleet --
 # docker-compose-rs.yaml and docker-compose-sharded.yaml both pin rs101..rs203
@@ -53,7 +54,7 @@ for cid in "${containers[@]}"; do
   if is_pmm_server "$cid"; then
     continue
   fi
-  if docker exec "$cid" pmm-admin unregister --force >/dev/null 2>&1; then
+  if docker exec "$cid" pmm-admin unregister >/dev/null 2>&1; then
     echo "deregister: container ${cid} unregistered its own node"
   else
     leftovers+=("$cid")
