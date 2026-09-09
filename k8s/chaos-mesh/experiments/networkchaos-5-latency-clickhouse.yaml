@@ -1,0 +1,47 @@
+# PMM-15262 / Experiment N5 — NetworkChaos: latency, PMM Server <-> ClickHouse.
+#
+# Adds 200ms +/-50ms of delay between the PMM Server pods and the three
+# ClickHouse server pods. ClickHouse holds Query Analytics, so this degrades QAN
+# while metrics (VictoriaMetrics) and the rest of the UI (PostgreSQL) should stay
+# responsive — the same blast-radius check as N4, but with degradation rather
+# than a hard cut, which is closer to a real cross-AZ or noisy-network incident.
+#
+# Injected on the ClickHouse side, delaying its replies to PMM. PMM reaches
+# ClickHouse at PMM_CLICKHOUSE_ADDR=pmm-ha-clickhouse-sticky.pmm.svc:9000, a
+# ClusterIP; Chaos Mesh filters netem with an ipset of target pod IPs, and at the
+# tc egress hook a ClusterIP-addressed packet has not been rewritten yet, so
+# injecting on the PMM side matches nothing and the experiment silently passes.
+# (Measured under N1: same destination pod, 2.5-3.8ms via ClusterIP vs 159-248ms
+# direct to the pod IP.) ClickHouse's replies carry real PMM pod IPs, so the
+# ipset matches. This also covers the PMM_CLICKHOUSE_NODES path, which resolves
+# through the headless clickhouse-pmm-ha service straight to pod IPs.
+#
+# Selects on clickhouse.altinity.com/chi, which the ClickHouse Keeper pods do not
+# carry (theirs is clickhouse-keeper.altinity.com/chk) — verified 0 Keeper pods
+# match, so Keeper quorum and its PVC pending deletion stay out of range.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n5-latency-pmm-to-clickhouse
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      clickhouse.altinity.com/chi: pmm-ha
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        app.kubernetes.io/component: pmm-server
+  delay:
+    latency: 200ms
+    jitter: 50ms
+    correlation: "50"
