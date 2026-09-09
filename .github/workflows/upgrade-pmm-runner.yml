@@ -15,6 +15,14 @@ on:
         description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
         default: ''
         type: string
+      upgrade_type:
+        description: "Type of upgrade Docker or UI"
+        required: true
+        default: "docker"
+        type: choice
+        options:
+          - docker
+          - ui
       client_tarball_upgrade:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
@@ -32,6 +40,11 @@ on:
       version:
         description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
         default: ''
+        type: string
+      upgrade_type:
+        description: "Type of upgrade Docker or UI"
+        required: true
+        default: "docker"
         type: string
       client_tarball_upgrade:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
