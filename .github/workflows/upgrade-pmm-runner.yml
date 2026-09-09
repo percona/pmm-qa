@@ -154,6 +154,7 @@ jobs:
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
             -e PMM_ENABLE_TELEMETRY=0 \
+            -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
             --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
@@ -259,6 +260,7 @@ jobs:
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             -e PMM_ENABLE_TELEMETRY=0 \
+            -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
@@ -467,6 +469,7 @@ jobs:
             -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
             --publish 80:8080 --publish 443:8443 \
             -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ needs.prepare.outputs.rc_version }} \
+            -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
             --volume pmm-volume:/srv --name pmm-server "${{ matrix.docker_tag }}"
           fi
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
