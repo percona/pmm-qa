@@ -179,9 +179,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
         )
         .outEquals('');
-      await cliHelper
-        .execSilent(`docker exec ${containerName} pmm-admin list | grep ${externalExporterId}`)
-        .outContains('Running');
+      // The agent briefly reports "Unknown" while it re-registers after the push-metrics
+      // reconfiguration, so poll until it settles on "Running".
+      await expect(async () => {
+        const status = cliHelper.execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${externalExporterId}`,
+        ).stdout;
+
+        expect(status, 'External exporter should report Running status').toContain('Running');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 
