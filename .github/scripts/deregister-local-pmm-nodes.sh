@@ -54,7 +54,10 @@ for cid in "${containers[@]}"; do
   if is_pmm_server "$cid"; then
     continue
   fi
-  if docker exec "$cid" pmm-admin unregister >/dev/null 2>&1; then
+  # --force is missing from `pmm-admin unregister --help`, but it is required
+  # and it works: without it the command refuses a node that still has agents
+  # ("Node with ID ... has agents", rc=1), which is every node a setup creates.
+  if docker exec "$cid" pmm-admin unregister --force >/dev/null 2>&1; then
     echo "deregister: container ${cid} unregistered its own node"
   else
     leftovers+=("$cid")
