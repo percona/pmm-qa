@@ -242,7 +242,7 @@ jobs:
         working-directory: ./pmm-qa/e2e_tests
         env:
           PMM_UI_URL: "http://127.0.0.1/"
-        run: npx playwright test --grep "${{ env.PMM_TEST_FLAG }}"
+        run: npx playwright test --grep "$PMM_TEST_FLAG"
 
       - uses: actions/github-script@v7
         if: ${{ always() }}
