@@ -122,6 +122,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@proxysql-integration`
 - `@ps-integration`
 - `@ps-slowlog-integration`
+- `@psmdb-profiler-integration`
 - `@rds-integration`
 - `@rta`
 - `@settings`
