@@ -238,14 +238,14 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database psmdb \
-      --database psmdb,SETUP_TYPE=sharding
+      --database external \
+      --database valkey
 
   # Unlike the downgrades above, rejected -- and rejected before either
   # setup started.
   [[ $status -eq 1 ]]
-  [[ $output == *'two PSMDB setups'* ]]
-  [[ $output == *'rs101..rs203 and host port 27027'* ]]
+  [[ $output == *'EXTERNAL and VALKEY setups'* ]]
+  [[ $output == *'host port 6379'* ]]
   [[ $output != *'Running setups sequentially'* ]]
   [[ ! -e "$RECORD_FILE" ]]
 }

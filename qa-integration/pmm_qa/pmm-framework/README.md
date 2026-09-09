@@ -88,11 +88,13 @@ of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
 ports — are detected during preflight. The run is not rejected: it falls back
 to sequential execution with a warning, so every requested setup still runs.
 
-Two PSMDB setups cannot share a host at all, and that pair preflight refuses
-instead: both compose stacks pin the container names `rs101`..`rs203` and host
-port 27027, replica-set and sharded included. They hold those names and ports
-for as long as they are up, so sequential execution is no remedy — provision
-them on separate machines.
+Two pairs cannot share a host at all, and those preflight refuses instead:
+two PSMDB setups (both compose stacks pin the container names `rs101`..`rs203`
+and host port 27027, replica-set and sharded included) and EXTERNAL together
+with VALKEY (`redis_container` and the Valkey primary both take host port
+6379). Each holds its names and ports for
+as long as it is up, so sequential execution is no remedy — provision them on
+separate machines.
 
 `--database` values use this grammar:
 

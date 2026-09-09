@@ -69,6 +69,22 @@ preflight_run() {
   [[ $(parallel_decision ssl_psmdb ssl_psmdb) == false ]]
 }
 
+@test "EXTERNAL and VALKEY cannot share a host" {
+  for specs in 'external valkey' 'valkey external'; do
+    # shellcheck disable=SC2086  # each half of $specs is one --database spec.
+    preflight_run $specs
+    [[ $status -eq 1 ]]
+    [[ $output == *'EXTERNAL and VALKEY setups'* ]]
+    [[ $output == *'host port 6379'* ]]
+    [[ $output == *'separate machines'* ]]
+  done
+}
+
+@test "EXTERNAL and VALKEY each parallelize with other setups" {
+  [[ $(parallel_decision external haproxy pdpgsql) == true ]]
+  [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]
+}
+
 # The five shards of nightly-e2e-tests-matrix.yml, verbatim.
 @test "every nightly setup shard provisions in parallel" {
   [[ $(parallel_decision mysql 'psmdb,SETUP_TYPE=pss' pgsql) == true ]]

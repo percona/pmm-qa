@@ -45,8 +45,9 @@ setup_uses_ansible() {
 # concurrency -- the caller asked for something valid that merely cannot
 # happen at the same time.
 #
-# Two PSMDB setups are refused instead: they hold the same container names and
-# host port for as long as they are up, so waiting is no remedy.
+# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
+# the same container name or host port for as long as they are up, so waiting
+# is no remedy.
 #
 # The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
 # replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
@@ -61,6 +62,8 @@ preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
   local mysql_data_owner='' conflict='' host_conflict=''
   local pdpgsql_seen=false pgsql_replication_seen=false
+  local external_seen=false valkey_seen=false
+  local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   declare -A seen_types=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
@@ -100,6 +103,16 @@ preflight_database_setups() {
         [[ $pdpgsql_seen == true ]] &&
           conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
       fi
+    # external_setup.yml publishes redis_container on host port 6379, and both
+    # Valkey topologies put a node on that same port -- valkey-cluster.yml's
+    # valkey_cluster_start_port and valkey-sentinel.yml's valkey_primary_port
+    # are both 6379 -- so one of the two cannot bind it.
+    elif [[ $DB_TYPE == EXTERNAL ]]; then
+      external_seen=true
+      [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict
+    elif [[ $DB_TYPE == VALKEY ]]; then
+      valkey_seen=true
+      [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
     seen_types["$DB_TYPE"]=1
   done
