@@ -139,8 +139,8 @@ jobs:
             # The remote PMM Server is shared with the other shards, so wiping this
             # runner's containers does not remove what they registered on it.
             for c in $(docker ps -aq); do
-              timeout 60 docker exec "$c" pmm-admin unregister --force >/dev/null 2>&1 \
-                || echo "unregister skipped for container $c"
+              err=$(timeout 60 docker exec "$c" pmm-admin unregister --force 2>&1) \
+                || echo "unregister skipped for container $c: $err"
             done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
