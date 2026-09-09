@@ -9,6 +9,7 @@ const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'hap
 
 test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, () => {
   test.beforeAll(async () => {
+    test.setTimeout(360_000);
     const startCommand = `PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE} PMM_CLIENT_IMAGE=${PMM_CLIENT_IMAGE} docker compose -f test-setup/docker-compose-pmm-admin-remove.yml up -d`;
     await cli.exec(startCommand);
     await expect(async () => {
@@ -19,13 +20,26 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
       intervals: [2_000],
     });
 
+    const addCommands: string[] = [];
     for (let i = 0; i < 2; i++) {
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add mysql --username=root --password=${clientPassword} mysql5.7 --service-name=mysql${i} mysql5.7:3306`);
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add mongodb --username=root --password=${clientPassword} mongo4.2 --service-name=mongodb${i} mongo4.2:27017`);
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add postgresql --username=postgres --password=${clientPassword} postgres11 --service-name=postgresql${i} postgres11:5432`);
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add proxysql --skip-connection-check --service-name=proxysql${i}`);
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add external --listen-port=1 --skip-connection-check --service-name=external${i}`);
-      await cli.exec(`docker exec pmm-client-remove pmm-admin add haproxy --listen-port=1 --skip-connection-check haproxy${i}`);
+      addCommands.push(
+        `docker exec pmm-client-remove pmm-admin add mysql --username=root --password=${clientPassword} mysql5.7 --service-name=mysql${i} mysql5.7:3306`,
+        `docker exec pmm-client-remove pmm-admin add mongodb --username=root --password=${clientPassword} mongo4.2 --service-name=mongodb${i} mongo4.2:27017`,
+        `docker exec pmm-client-remove pmm-admin add postgresql --username=postgres --password=${clientPassword} postgres11 --service-name=postgresql${i} postgres11:5432`,
+        `docker exec pmm-client-remove pmm-admin add proxysql --skip-connection-check --service-name=proxysql${i}`,
+        `docker exec pmm-client-remove pmm-admin add external --listen-port=1 --skip-connection-check --service-name=external${i}`,
+        `docker exec pmm-client-remove pmm-admin add haproxy --listen-port=1 --skip-connection-check haproxy${i}`,
+      );
+    }
+
+    for (const addCommand of addCommands) {
+      await expect(async () => {
+        const output = await cli.exec(addCommand);
+        await output.assertSuccess();
+      }, { message: `"${addCommand}" failed to register the service.` }).toPass({
+        timeout: 15_000,
+        intervals: [2_000],
+      });
     }
   });
 

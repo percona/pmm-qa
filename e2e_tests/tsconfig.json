@@ -41,6 +41,12 @@
     }
   },
   "include": [
+    "api/**/*.ts",
+    "components/**/*.ts",
+    "fixtures/**/*.ts",
+    "helpers/**/*.ts",
+    "interfaces/**/*.ts",
+    "pages/**/*.ts",
     "tests/**/*.ts",
     "playwright.config.ts"
   ]

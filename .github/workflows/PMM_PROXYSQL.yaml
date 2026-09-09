@@ -62,23 +62,24 @@ jobs:
       - name: PXC_VERSION ENV Setup
         run: |
           if [[ "${PXC_VERSION}" != http* ]]; then
-            PXC_VERSION="${PXC_VERSION}"
-            PXC_VERSION_PATH=$(echo "pxc-$PXC_VERSION")
-            PXC_VERSION_TRIMED=$(echo ${PXC_VERSION%-*})
+            PXC_VERSION_PATH="pxc-$PXC_VERSION"
+            PXC_VERSION_TRIMED="${PXC_VERSION%-*}"
           else
             wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/VERSIONS
             PXC_VERSION="$(grep 'PXC80_VER' VERSIONS | cut -d = -f 2)"
-            PXC_VERSION_PATH=$(echo "pxc-$PXC_VERSION.1")
-            PXC_VERSION_TRIMED=$(echo ${PXC_VERSION%-*})
+            PXC_VERSION_PATH="pxc-$PXC_VERSION.1"
+            PXC_VERSION_TRIMED="${PXC_VERSION%-*}"
           fi
-          echo "PXC_VERSION=${PXC_VERSION}"  | sed 's/"//g'  >> $GITHUB_ENV
-          echo "PXC_VERSION_TAR=${PXC_VERSION}.1"  | sed 's/"//g' >> $GITHUB_ENV
-          echo "PXC_VERSION_PATH=${PXC_VERSION_PATH}" >> $GITHUB_ENV
-          echo "PXC_VERSION_TRIMED=${PXC_VERSION_TRIMED}" >> $GITHUB_ENV
+          {
+            echo "PXC_VERSION=${PXC_VERSION}"  | sed 's/"//g'
+            echo "PXC_VERSION_TAR=${PXC_VERSION}.1"  | sed 's/"//g'
+            echo "PXC_VERSION_PATH=${PXC_VERSION_PATH}"
+            echo "PXC_VERSION_TRIMED=${PXC_VERSION_TRIMED}"
+          } >> "$GITHUB_ENV"
 
       - name: Concatenate values to environment file
         run: |
-          echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/${PXC_VERSION_PATH}/Percona-XtraDB-Cluster_${PXC_VERSION_TAR}_Linux.x86_64.glibc${PXC_GLIBC}.tar.gz" >> $GITHUB_ENV
+          echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/${PXC_VERSION_PATH}/Percona-XtraDB-Cluster_${PXC_VERSION_TAR}_Linux.x86_64.glibc${PXC_GLIBC}.tar.gz" >> "$GITHUB_ENV"
 
       - name: Install Ansible and update the node
         run: sudo apt-get update -y && sudo apt-get install ansible -y
@@ -93,16 +94,17 @@ jobs:
 
       - name: Export path to qa-integration tree
         working-directory: qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           if [[ "${PXC_VERSION}" != http* ]]; then
-            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC=${PXC_VERSION}
+            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database "PXC=${PXC_VERSION}"
           else
-            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC,TARBALL=${PXC_TARBALL_PATH}
+            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database "PXC,TARBALL=${PXC_TARBALL_PATH}"
           fi
 
       - name: Install npx dependencies

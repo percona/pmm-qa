@@ -111,7 +111,9 @@
   ignore_errors: yes
 
 - name: Add mongodb metrics to monitoring
-  command: pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --service-name={{ mongo_service_name }} --username="pmm-test@PERCONATEST.COM" --password=password1 --authentication-mechanism=GSSAPI --authentication-database='$external'
+  command: >-
+    pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --service-name={{ mongo_service_name }} --username="pmm-test@PERCONATEST.COM" --password=password1
+    --authentication-mechanism=GSSAPI --authentication-database='$external'
 
 - name: Wait 30 seconds for percona server for mongodb start to complete
   pause:

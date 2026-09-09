@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 while [ $# -gt 0 ]; do
@@ -27,6 +27,7 @@ then
 fi
 
 # Install the dependencies
+# shellcheck source=/dev/null
 source ~/.bash_profile || true;
 apt-get update
 apt-get -y install wget curl git gnupg2 lsb-release

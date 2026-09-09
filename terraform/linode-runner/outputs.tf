@@ -10,6 +10,10 @@ output "label" {
   value = local.label
 }
 
+output "run_tag" {
+  value = local.run_tag
+}
+
 output "exec_token" {
   value     = random_password.exec_token.result
   sensitive = true

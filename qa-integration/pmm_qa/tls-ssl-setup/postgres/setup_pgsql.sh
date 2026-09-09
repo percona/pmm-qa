@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 while [ $# -gt 0 ]; do
@@ -22,9 +22,9 @@ wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 dpkg -i percona-release_latest.generic_all.deb
 percona-release setup ppg${pgsql_version}
 sleep 10
-pushd artifacts
+pushd artifacts || exit 1
 bash -x create_certs.sh
-popd
+popd || exit 1
 sleep 10
 pwd
 apt -y install percona-postgresql-${pgsql_version}

@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # Create the server-side certificates
 # This has more interaction that must be automated
 

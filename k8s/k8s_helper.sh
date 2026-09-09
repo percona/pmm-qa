@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 wait_for_pmm(){
     sleep 5
     kubectl wait --for=condition=Ready --selector=app.kubernetes.io/name=pmm pod --timeout=5m
@@ -38,7 +39,8 @@ stop_port_forward(){
 get_env_variable(){
     local instance_name=$1
     local env_var=$2
-    local pod_name=$(kubectl get pods -l app.kubernetes.io/instance=$instance_name -o jsonpath='{.items[0].metadata.name}')
+    local pod_name
+    pod_name=$(kubectl get pods -l app.kubernetes.io/instance=$instance_name -o jsonpath='{.items[0].metadata.name}')
     kubectl exec -it $pod_name -- printenv $env_var
 }
 

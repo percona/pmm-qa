@@ -11,7 +11,7 @@ mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 gssapi_enabled=${GSSAPI:-false}
 gssapi_username=${GSSAPI_USERNAME:-pmm@PERCONATEST.COM}
 gssapi_password=${GSSAPI_PASSWORD:-password1}
-client_credentials_flags="--username=${pmm_mongo_user} --password=${pmm_mongo_user_pass}"
+client_credentials_flags=(--username="${pmm_mongo_user}" --password="${pmm_mongo_user_pass}")
 gssapi_service_name_part=""
 
 if [[ $gssapi_enabled == "true" ]]; then
@@ -61,7 +61,7 @@ do
       docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     else
       echo
-      docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs ${client_credentials_flags[*]} --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
+      docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs "${client_credentials_flags[@]}" --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     fi
 done
 echo

@@ -136,14 +136,14 @@ Scenario(
     const alertName = 'Node high CPU load';
 
     I.amOnPage(alertsPage.url);
-    I.waitForElement(alertsPage.elements.alertRow(alertName), 120);
+    I.waitForElement(alertsPage.elements.alertRow(ruleName), 120);
 
     await alertsAPI.waitForAlerts(10, 1);
     const alerts = await alertsAPI.getAlertsList();
 
     assert.ok(alerts[0].annotations.summary.includes(alertName), `Didn't find alert with name ${alertName}`);
 
-    I.waitForElement(alertsPage.elements.alertRow(alertName), 60);
+    I.waitForElement(alertsPage.elements.alertRow(ruleName), 60);
   },
 );
 
@@ -153,7 +153,7 @@ Scenario(
     I, homePage,
   }) => {
     await homePage.open();
-    I.dontSeeElement(homePage.fields.sttDisabledFailedChecksPanelSelector, 15);
+    I.dontSeeElement(homePage.fields.sttDisabledFailedChecksPanelSelector);
     I.waitForVisible(homePage.fields.failedChecksPanelContent, 30);
   },
 );

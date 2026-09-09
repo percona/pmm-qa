@@ -46,11 +46,14 @@ mkdir /tmp || true
 chmod 1777 /tmp || true
 
 ## Deploy DB deployer
-export tar_ball_name=$(ls Percona-Server*)
+tar_ball_name=$(ls Percona-Server*)
+export tar_ball_name
 dbdeployer unpack ${tar_ball_name} --sandbox-binary=~/ps${ps_version} --flavor=percona
-export db_version_sandbox=$(ls ~/ps${ps_version})
+db_version_sandbox=$(ls ~/ps${ps_version})
+export db_version_sandbox
 
-export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+export db_sandbox
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 
 # Initialize my_cnf_options
@@ -69,12 +72,14 @@ fi
 if [[ "$number_of_nodes" == 1 ]];then
    if [[ ! -z $group_replication ]]; then
       dbdeployer deploy --topology=group replication ${db_version_sandbox} --single-primary --sandbox-binary=~/ps${ps_version} --remote-access=% --bind-address=0.0.0.0 --force ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-      export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      export db_sandbox
       node_port=`dbdeployer sandboxes --header | grep ${db_version_sandbox} | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'GRgrO9301RuF';"
    else
       dbdeployer deploy single ${db_version_sandbox} --sandbox-binary=~/ps${ps_version} --port=${PS_PORT} --remote-access=% --bind-address=0.0.0.0 --force ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-      export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      export db_sandbox
       node_port=`dbdeployer sandboxes --header | grep  ${db_version_sandbox} | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'GRgrO9301RuF';"
       if [[ "${query_source}" == "slowlog" ]]; then
@@ -129,7 +134,8 @@ if [[ "$number_of_nodes" == 1 ]];then
    fi
 else
      dbdeployer deploy multiple ${db_version_sandbox} --sandbox-binary=~/ps${ps_version} --nodes $number_of_nodes --force --remote-access=% --bind-address=0.0.0.0 --my-cnf-options=gtid_mode=ON --my-cnf-options=enforce-gtid-consistency=ON --my-cnf-options=binlog-format=ROW --my-cnf-options=log-slave-updates=ON --my-cnf-options=binlog-checksum=NONE ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-     export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+     db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+     export db_sandbox
      master_port=`dbdeployer sandboxes --header | grep ${db_version_sandbox} | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
      if echo "$ps_version" | grep '5.7'; then
        slave_port=`dbdeployer sandboxes --header | grep ${db_version_sandbox} | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $2}'`

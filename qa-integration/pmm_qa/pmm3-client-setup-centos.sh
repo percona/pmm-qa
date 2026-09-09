@@ -48,7 +48,7 @@ fi
 microdnf install -y wget gnupg2 jq
 wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 rpm -i ./percona-release-latest.noarch.rpm
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
 
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
 # which makes microdnf abort. The mismatch usually clears within a minute, so retry.
@@ -90,8 +90,10 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm
-  rpm -i pmm-client.rpm
+  rpm_file="pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/${rpm_file}"
+  rpm -i "${rpm_file}"
 fi
 
 ## Default Binary path
@@ -102,21 +104,22 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
-    PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+    PMM_CLIENT=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
     echo ${PMM_CLIENT}
     rm -rf pmm-client
     mv ${PMM_CLIENT} pmm-client
     rm -rf /usr/local/bin/pmm-client
     mv -f pmm-client /usr/local/bin
-    pushd /usr/local/bin/pmm-client
+    pushd /usr/local/bin/pmm-client || exit 1
     ## only setting up all binaries in default path /usr/local/percona/pmm
     bash -x ./install_tarball ${upgrade}
     pwd
-    popd
+    popd || exit 1
     pmm-admin --version
 fi    
 

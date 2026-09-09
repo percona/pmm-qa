@@ -43,13 +43,13 @@ async function main() {
   // non-PMM pages with a real CA already, which strict verification (the
   // default below) already handles fine.
   const certPath = process.env.PMM_CERT_PATH;
-  const launchArgs = [];
+  const spkiPins = [];
   if (certPath) {
     if (!fs.existsSync(certPath)) {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
     }
-    launchArgs.push(`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`);
+    spkiPins.push(spkiPinFromCertFile(certPath));
   }
 
   const videoDir = fs.mkdtempSync(path.join(os.tmpdir(), "pmm-qa-recording-"));
@@ -78,10 +78,10 @@ async function main() {
   // /opt/pw-browsers can drift from what a freshly `npm install`-ed
   // playwright expects (confirmed live), so don't rely on Playwright's own
   // bundled-browser resolution to find it.
-  const proxyOpts = proxyLaunchOptions();
+  const proxyOpts = proxyLaunchOptions({ spkiPins });
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
-    args: [...launchArgs, ...proxyOpts.args],
+    args: proxyOpts.args,
     proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext(contextOpts);

@@ -6,6 +6,12 @@ Before(async ({ I }) => {
 
 let serviceAccountUsername = '';
 const newServiceName = 'mysql_service_service_token1';
+const loadDatabase = 'pmm_t1883_load';
+
+// PMM-T1883 leaves a detached write loop running; stop it even when the scenario fails.
+After(async ({ I }) => {
+  await I.verifyCommand(`sudo docker exec $(docker ps | grep ps_pmm | awk '{print $NF}') pkill -f "${loadDatabase}.write_load" || true`);
+});
 
 Scenario('PMM-T1883 - Configuring pmm-agent to use service account @service-account', async ({
   I, codeceptjsConfig, serviceAccountsPage, dashboardPage, inventoryAPI, nodesOverviewPage, credentials,
@@ -47,9 +53,19 @@ Scenario('PMM-T1883 - Configuring pmm-agent to use service account @service-acco
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.waitForGraphsToHaveData(19, 300);
 
+  const mysqlCredentials = `-h 127.0.0.1 --port 3306 -u${credentials.perconaServer.root.username} -p${credentials.perconaServer.root.password}`;
+
+  await I.verifyCommand(`sudo docker exec ${psContainerName} mysql ${mysqlCredentials} -e "CREATE DATABASE IF NOT EXISTS ${loadDatabase}; CREATE TABLE IF NOT EXISTS ${loadDatabase}.write_load (id INT AUTO_INCREMENT PRIMARY KEY, value CHAR(36))"`);
+  // The InnoDB I/O panels below are ratios of the read/write/fsync rates, so an idle server makes
+  // them 0/0 and they render as "No data". Keep committing while the dashboard is polled.
+  await I.verifyCommand(`sudo docker exec -d ${psContainerName} timeout 420 bash -c 'while true; do mysql ${mysqlCredentials} -e "INSERT INTO ${loadDatabase}.write_load (value) VALUES (UUID())"; sleep 1; done'`);
+
+  // This dashboard ships with refresh disabled, so without an explicit refresh param Grafana
+  // queries the panels once and waitForGraphsToHaveData just re-counts that static render.
   const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
     from: 'now-1m',
     to: 'now',
+    refresh: '10s',
     service_name: newServiceName,
   });
 

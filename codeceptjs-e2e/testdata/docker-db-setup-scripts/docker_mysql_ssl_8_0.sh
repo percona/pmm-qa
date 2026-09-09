@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pushd testdata/mysql/ssl-cert-scripts/
+pushd testdata/mysql/ssl-cert-scripts/ || exit 1
 bash ./gencerts.sh
 docker exec mysql_ssl bash -c "mkdir -p /root/certs"
 docker exec mysql_ssl mkdir -p /root/certs
@@ -12,4 +12,4 @@ docker exec mysql_ssl chmod 600 /etc/certs/client-key.pem /etc/certs/server-key.
 docker exec mysql_ssl mysql -u root -pr00tr00t -e "SET GLOBAL slow_query_log='ON';"
 docker restart mysql_ssl
 sleep 20
-popd
+popd || exit 1

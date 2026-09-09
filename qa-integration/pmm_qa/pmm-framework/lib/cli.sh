@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # parse_args sets these for lib/ and setups/ to read; shellcheck sees one file at a time.
 #
 # lib/cli.sh -- command-line parsing and the --database spec grammar.
 #

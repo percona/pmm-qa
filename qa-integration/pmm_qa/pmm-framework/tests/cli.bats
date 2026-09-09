@@ -38,17 +38,21 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
 }
 
-@test "value precedence is environment then global then database then default" {
+@test "value precedence is global flag then environment then database then default" {
   parse_database_spec 'ps,CLIENT_VERSION=from-spec,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=from-global
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == slowlog ]]
 
   CLIENT_VERSION=from-env
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
+
+  GLOBAL_CLIENT_VERSION=''
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-env ]]
   unset CLIENT_VERSION
 
-  GLOBAL_CLIENT_VERSION=''
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-spec ]]
+
   unset 'DB_CONFIG[QUERY_SOURCE]'
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == perfschema ]]
 }
@@ -96,9 +100,12 @@ load helpers/test_helper
   # Same patch, two builds: only correct if 'patch-build' is compared as
   # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
   # token (see the "-" to "." conversion in latest_psmdb_version()).
+  # 8.0.29-13 is deliberately absent: only what the release repo carries is a
+  # candidate, so a patch still sitting in psmdb-80/yum/testing is never picked.
   curl() {
-    printf '%s' \
-      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.4-2"]}}'
+    printf '%s\n' \
+      '<a href="percona-server-mongodb-server-8.0.4-1.el9.x86_64.rpm">' \
+      '<a href="percona-server-mongodb-server-8.0.4-2.el9.x86_64.rpm">'
   }
 
   [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]

@@ -53,11 +53,13 @@
     with_items:
       - docker exec {{ pgsql_ssl_container }} bash -xe ./setup_pgsql.sh --pgsql_version {{ pgsql_version }} > postgres/setup_pgsql_{{ pgsql_version }}.log
 
-  - name: Install pmm2-client on the pgsql_ssl_container
+  - name: Install pmm-client on the pgsql_ssl_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pgsql_ssl_container }}
-      - docker exec {{ pgsql_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ pgsql_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
+        --use_metrics_mode no
 
   - name: Remove pgsql service if already added previously
     shell: "{{ item }}"
@@ -73,7 +75,9 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem {{ pgsql_ssl_container }}_ssl_service{{ random_number }}'
+      - >-
+        docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls
+        --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem {{ pgsql_ssl_container }}_ssl_service{{ random_number }}'
      # - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile; pmm-admin add postgresql --socket=/var/run/postgresql postgresql_socket'
 
   - name: Get client cert Files on host

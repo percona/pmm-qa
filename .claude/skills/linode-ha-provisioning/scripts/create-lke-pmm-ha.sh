@@ -78,7 +78,7 @@ linode-cli lke cluster-create \
     --node_pools.count "$NODE_COUNT" \
     --tags pmm-qa-ephemeral \
     --tags "expires-${EXPIRES_EPOCH}" \
-    --tags "$RUN_ID"
+    --tags "pmm-qa-run:$RUN_ID"
 
 log "Resolving cluster ID..."
 CLUSTER_ID=""
@@ -112,7 +112,16 @@ _diag() {
     kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
     kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
 }
-trap _diag EXIT
+# Stamp this cluster's volumes with pmm-qa-run:<id> so teardown
+# (prune-lke-orphans.sh) can attribute them. Runs on every exit path via the trap
+# so a failed bring-up is tagged too. Best-effort. destroy-lke / the reaper tag
+# again right before deleting the cluster, catching volumes created after this.
+_tag_for_teardown() {
+    [ -n "${CLUSTER_ID:-}" ] || return 0
+    local SD; SD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    LINODE_TOKEN="$LINODE_TOKEN" bash "$SD/tag-lke-resources.sh" "$CLUSTER_ID" "$RUN_ID" || true
+}
+trap '_diag; _tag_for_teardown' EXIT
 # Linode reports the pool "ready" before the nodes register with the k8s API
 # server, so `kubectl wait --all` would hit an empty list and fail immediately
 # ("no matching resources found"). Wait for the nodes to appear first, then wait
@@ -122,12 +131,46 @@ until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c .)" -ge "$NODE_C
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
 
+# --- storage class: tag every CSI volume at birth ----------------------------
+# LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
+# so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
+# The name stays LKE's `-retain` so charts and existing PVCs still resolve it, even
+# though it now reclaims Delete: a churned PVC must free its volume mid-run.
+kubectl delete storageclass linode-block-storage-retain --ignore-not-found
+kubectl apply -f - <<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: linode-block-storage-retain
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: linodebs.csi.linode.com
+parameters:
+  linodebs.csi.linode.com/volumeTags: "pmm-qa-ephemeral,pmm-qa-run:$RUN_ID"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+EOF
+
 # --- dependencies (operators) ------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 if [[ "$DEPS_CHART" == percona/* || "$PMM_CHART" == percona/* ]]; then
     helm repo add "$HELM_REPO_NAME" "$HELM_REPO_URL" --force-update
     helm repo update
+fi
+
+# Make the chart version explicit in the log. An unset CHART_VERSION installs the
+# LATEST published chart -- correct for "latest" runs, wrong for a specific
+# release/RC/FB. Surface which chart actually gets deployed so a run that forgot to
+# pin is visible in the log tail (the relay returns it), not silently mismatched.
+if [ -n "$CHART_VERSION" ]; then
+    log "Chart version pinned: $CHART_VERSION ($PMM_CHART, $DEPS_CHART)"
+else
+    log "WARNING: no CHART_VERSION set -- installing LATEST $PMM_CHART / $DEPS_CHART. Pin chart_version when testing a specific release/RC/FB."
+    if [[ "$PMM_CHART" == percona/* ]]; then
+        log "Latest available: $(helm search repo "$PMM_CHART" -o json 2>/dev/null | jq -r '.[0] | "chart \(.version) → appVersion \(.app_version)"' 2>/dev/null || echo '?')"
+    fi
 fi
 
 deps_args=(); [ -n "$CHART_VERSION" ] && deps_args+=(--version "$CHART_VERSION")
@@ -231,6 +274,8 @@ until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_I
     sleep 10
 done
 log "PMM is serving (/v1/readyz 200)."
+# (volumes + NodeBalancer are tagged for teardown attribution by the EXIT trap,
+# so failed bring-ups are covered too -- see _tag_for_teardown above.)
 
 # --- persist run artifacts ---------------------------------------------------
 {

@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { readZipArchive } from '@helpers/archive.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
@@ -64,6 +65,22 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
     const download = await helpPage.exportLogs();
 
     expect(download).toBeTruthy();
+  });
+});
+
+pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({ helpPage }) => {
+  const download = await helpPage.exportLogs();
+  const entries = readZipArchive(await download.path());
+
+  await pmmTest.step('Verify required log entries are present', async () => {
+    expect(entries).toContain('pmm-agent.yaml');
+    expect(entries).toContain('pmm-managed.log');
+    expect(entries).toContain('pmm-agent.log');
+  });
+
+  await pmmTest.step('Verify alertmanager files are absent', async () => {
+    expect(entries).not.toContain('alertmanager.yml');
+    expect(entries).not.toContain('alertmanager.base.yml');
   });
 });
 
@@ -142,7 +159,7 @@ pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ hel
   });
 });
 
-pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
+pmmTest('PMM-T2284 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
   const cases = helpPage.cases;
 
   for (const c of cases) {

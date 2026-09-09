@@ -26,9 +26,58 @@ Always address the box by hostname, never its bare IP:
 
 Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
+### Calling `run.sh`
+
+- **Absolute path, always** — `/workspace/pmm-qa/terraform/linode-runner/run.sh`. The examples below are repo-relative for readability, but any compound command that writes a script somewhere else first leaves the working directory outside the repo, and the call dies with `No such file or directory`.
+- **The exec channel provides no `HOME`** (`run.sh <run_id> -- "echo HOME=$HOME"` prints empty). Start every script that runs on the box with `export HOME=/root`, including inside a detached one — the export does not carry over from the `run.sh` invocation. Without it `minikube start` wrote its kubeconfig and certs under the CWD, and every later `kubectl`/`helm` call failed on a missing `ca.crt`.
+- **Poll a sentinel, never `pgrep -f`.** End a detached script with a sentinel line (`echo DONE_MARKER=$?` appended to its log) and poll the log for it. `pgrep -f <script>` reports RUNNING forever — the pattern matches the exec-server's own wrapper carrying the poll — which burned two full 10-minute waits on a job that had already exited 0.
+
+**`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
+to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_STRLEN`
+(128 KiB), so a big remote *output* — not a long command — aborts the call with
+`Argument list too long` and you see none of it. Anything that could be large (a full API
+dump, a log file, `docker inspect` over everything) gets summarised **on the box** so only
+a few lines come back.
+
+When you need the bytes themselves, `tar czf - <paths> | base64 -w0` is only safe under a
+budget: base64 inflates by 4/3 and the JSON wrapper adds more, so keep the *compressed*
+archive **≤ 64 KiB**. Compression is no guarantee — already-compressed logs, images and
+binaries barely shrink — so measure on the box before shipping, and chunk when it's over:
+
+```bash
+run.sh <run_id> -- "tar czf /tmp/o.tgz <paths>; stat -c%s /tmp/o.tgz"
+
+# ≤ 64 KiB — one call:
+run.sh <run_id> -- "base64 -w0 /tmp/o.tgz" | base64 -d > out.tgz
+
+# larger — split on the box, one call per chunk (49152 is a multiple of 3, so no
+# '=' padding lands mid-stream and the concatenated base64 decodes as one archive):
+run.sh <run_id> -- "split -b 49152 -d /tmp/o.tgz /tmp/o.part-; ls /tmp/o.part-*"
+for part in <the listed parts, in order>; do
+  run.sh <run_id> -- "base64 -w0 $part"
+done | base64 -d > out.tgz
+```
+
+Past a few hundred KiB, stop fetching and summarise on the box instead — the chunk loop is
+one round trip each and is not a bulk transfer channel.
+
+### Anything longer than ~10 minutes runs detached
+
+The cap is the **exec-server's own 600s command timeout** — `run.sh:61` sends only `{"cmd": …}`, never a `timeout`, so the server falls back to its default (`cloud-init.yaml.tftpl:115`, `timeout = body.get("timeout", 600)`, fed to `subprocess.run`). It kills its direct `bash -c` child at 600s while any grandchild survives holding the captured stdout pipe, and `run.sh`'s own `curl -m 620` then aborts with "failed to reach exec-server" — the symptom you see, twenty seconds after the cause. A longer client timeout therefore buys nothing, and the remote process keeps going regardless. A second run then shares the PMM Server with that orphan and the two suites' setup hooks destroy each other's fixtures — a worthless result from both. So launch a long test suite or playbook detached and poll it:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "cd <dir> && nohup bash -c '<command>; rc=\$?; echo DONE_MARKER=\$rc >>/root/<name>.log; exit \$rc' >/root/<name>.log 2>&1 & echo \$!"
+```
+
+Before starting a new run, check for and kill any orphan a timed-out attempt left behind. Kill by the PID you printed, or with a self-excluding pattern (`pkill -f 'codecept[j]s'`): a plain `pkill -f codeceptjs` also matches the exec-server's own `bash -c "… codeceptjs …"` wrapper carrying the pkill, so it kills the calling remote shell (exit 241) and leaves the orphan running.
+
+Judge a detached run's progress from side effects — screenshot/artifact mtimes, containers, DB rows. Its stdout is a file rather than a TTY, so it flushes in blocks: a tail can sit many minutes behind and read as hung. Read the log itself **on the box** (`grep`, `tail -n`, a summary command), never by returning the whole file: a long suite's log is far past the payload cap above, so fetching it whole aborts the call with `Argument list too long` and returns nothing at all. Use the chunked base64 fetch only for the specific part you need.
+
 ## Pick a run_id
 
 Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
+
+Those forms repeat across investigations of the same PR, so provisioning can come back `502` with `run_id '<id>' already has a state file`. That is an earlier run's state, possibly still tracking a live VM: pick a distinct suffix (`heal-<pr>-<test>`) and report the orphaned state in your run summary — never destroy it to free the name.
 
 ## 1. Provision the VM (via the relay)
 
@@ -40,11 +89,15 @@ returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
 environment.
 
-**Identity:** every broker call carries your GitHub login in `X-Actor` (from
-`gh api user`, which the proxy verifies). The relay checks it against the team
-roster (the `github` logins in its people files) and records who acted — so the
-audit always names a real person, no self-reported email. `RELAY_KEY` is the
-possession gate; `X-Actor` is the identity.
+**Identity:** every broker call carries your GitHub login in `X-Actor`. The relay
+checks it against the team roster (the `github` logins in its people files) and
+records who acted — so the audit always names a real person, no self-reported
+email. `RELAY_KEY` is the possession gate; `X-Actor` is the identity.
+
+**Get your login the portable way:** call the GitHub MCP `get_me` tool and read
+`.login`, then `export ACTOR=<that login>` before the block below. Routine-fired
+sessions have **no `gh` CLI**, so `gh api user` returns empty there and the relay
+would 401 on an empty actor — `gh` is only a fallback where it actually exists.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
@@ -52,7 +105,10 @@ RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
@@ -93,6 +149,7 @@ fi
 `role` is `test-runner` or `investigator` — a tag only, but it must be a safe
 identifier (`[A-Za-z0-9._-]`, no spaces or `..`); the relay rejects anything else
 with `400 bad_role`. The relay:
+
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).
@@ -145,6 +202,14 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
+**`GF_SECURITY_ADMIN_PASSWORD` does not set the password on a PMM image** — Grafana applies it only when it *creates* the admin user, and the image ships that user pre-created (its `user` row is dated the image build, `updated` equal to `created`), so a fresh `/srv` volume doesn't help either. Keep the env var, but set the password for real once readyz has passed:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "docker exec pmm-server change-admin-password '$ADMIN_PASSWORD'"
+```
+
+(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes.
+
 Once ready, fetch PMM's own TLS cert over the already cert-pinned exec channel and save it locally — this lets step 4's browser scripts pin PMM's cert too instead of trusting any cert on the connection:
 
 ```bash
@@ -158,13 +223,27 @@ terraform/linode-runner/run.sh <run_id> -- "echo | openssl s_client -connect 127
 ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)"
 
 terraform/linode-runner/run.sh <run_id> -- "
+  export HOME=/root
   cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
-  ADMIN_PASSWORD='$ADMIN_PASSWORD' CLIENT_VERSION='$CLIENT_VERSION' \
-  ./pmm-framework --pmm-server-password \"\$ADMIN_PASSWORD\" \
-    --client-version \"\$CLIENT_VERSION\" \
+  ./pmm-framework --pmm-server-password '$ADMIN_PASSWORD' \
+    --client-version '$CLIENT_VERSION' \
     --database <FROM_TEST_PLAN> --verbose
 "
 ```
+
+The values are interpolated **here**, not dereferenced on the box: `VAR=x cmd --flag "$VAR"` is one simple command, so the argument expands before the assignment takes effect and the flag arrives empty. That form silently ran the framework as `--pmm-server-password  --client-version latest-tarball` and the whole setup had to be repeated. Confirm the arguments in the **same** remote command — `run.sh` blocks until the command finishes, so a later `pgrep` finds nothing on a run that already exited:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "
+  export HOME=/root
+  cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
+  set -x && ./pmm-framework --pmm-server-password '$ADMIN_PASSWORD' … --verbose
+"
+```
+
+`set -x` echoes the resolved argv (password included, so keep that output out of anything shared) before the framework runs.
+
+The password reaches the box inside the command string, which the exec-server runs through `bash -c`, so it is visible in the remote process arguments for the life of the call. That is inherent to `run.sh`'s single-string interface; it is acceptable here only because the VM is single-tenant and throwaway and the password is generated per run (step 2), never reused. Don't extend the pattern to a credential that outlives the run.
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
@@ -180,6 +259,22 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 ```
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
+
+**Behind the egress proxy that pin can fail on this path too.** Measured on a provisioned single-server Docker run: `pmm-ui-login.js` with the step 2 cert failed at `net::ERR_CERT_AUTHORITY_INVALID`, and `openssl s_client` against the run's host on 443 returned `subject=CN = *.nip.io`, `issuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)` — the gateway's certificate, not PMM's, so the leaf pin had nothing to match. The trust boundary from a proxied session is the proxy plus the cert-pinned exec channel; `PMM_CERT_PATH` bites end-to-end only on a direct, unproxied path.
+
+Check the CA bundle first: `.claude/scripts/lib/proxy.js` pins whatever interception CAs it finds in `$CCR_CA_BUNDLE` (default `/root/.ccr/ca-bundle.crt`) into the same flag as your PMM pin, so a gateway issuer missing there is the real gap and adding it keeps verification on. `PMM_UI_INSECURE=1` is the fallback when it can't be — it disables verification for the whole browser context, and this is the path that sends the admin credential, which is why `pmm-ui-login.js` prints an HA/LKE-only warning for it. Taking that route is a deliberate exception: note it in the evidence rather than treating it as the default. What makes it tolerable is that the credential at risk is this run's own — step 2 generates it per VM and it dies with the box — so never take this path with a shared or long-lived password.
+
+Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
+environment needs the proxy set explicitly. The symptom: every request fails with
+`503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
+egress proxy's own response, so the traffic did reach it — this is a proxy *path* problem,
+not a broken PMM, and not the suite bypassing the proxy altogether. The fix is to make the
+suite go through it explicitly: extend `playwright.config.ts` in a scratch config with
+`use.proxy.server` set to this session's `$HTTPS_PROXY`, run
+`npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
+have direct egress and the override would break them.
+
+That session-side recipe only covers suites that drive the UI over HTTP. **Anything touching Docker, `pmm-admin`, or the local filesystem must run on the VM, the way the workflow runs it** — install Node and the suite on the box and run the same `npx playwright test --grep`; `e2e_tests` needs only `PMM_UI_URL` and `ADMIN_PASSWORD`. Tests calling `docker exec <container> pmm-admin annotate` cannot work from this session at all (Docker runs only on the VM), and a session-side run of them reached the login redirect and never the dashboard. An ad-hoc spec must also sit under the config's `testDir` (`./tests`), or Playwright reports "No tests found".
 
 ## 5. FB / nightly workflow reproduction (Investigator)
 
@@ -199,13 +294,22 @@ Teardown holds the account token, so it too goes through the relay:
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com
-curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
-  -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
-rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
+# Drop the local run markers only after a confirmed destroy — otherwise the SessionEnd
+# hook (and the on-box timer) can still retry teardown of an un-destroyed VM.
+if curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
+     -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
+     -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"; then
+  rm -rf "terraform/linode-runner/runs/<run_id>"
+else
+  echo "destroy failed — keeping run markers so the SessionEnd hook / reaper can retry" >&2
+fi
 ```
 
-Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.)
+Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.) Teardown also deletes the run's unique account-level tag (Linode leaves those behind on destroy, so they otherwise pile up); to sweep any leftovers by hand on the relay, `LINODE_TOKEN=… terraform/linode-runner/prune-tags.sh --dry-run` lists every matching orphan tag (`pmm-qa*` / `expires-`), then run it without `--dry-run` to delete them.
 
 ## Network policy — shared env is `Full` (tracking claude-code#82284)
 
@@ -213,9 +317,11 @@ The shared QA environment's network access is set to **`Full`**, not Custom — 
 
 On each provisioning run, cheaply check whether that's still necessary — if #82284 is fixed we want to tighten egress back to Custom:
 
-```bash
-gh api repos/anthropics/claude-code/issues/82284 --jq .state 2>/dev/null || true
-```
+Check the issue state with the GitHub MCP `issue_read` tool (owner `anthropics`,
+repo `claude-code`, issue `82284`) — it may 403 if that repo isn't attached to the
+session, which is fine, treat as "unknown, leave as-is". (`gh api
+repos/anthropics/claude-code/issues/82284 --jq .state` is a fallback only where
+`gh` exists.)
 
 If it reports `closed` (or the issue page shows it resolved), leave the user a note in your run summary — do **not** change anything yourself (the env's network level is admin-only, web-UI config):
 

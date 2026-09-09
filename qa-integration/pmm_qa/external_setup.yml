@@ -69,7 +69,9 @@
   - name: Start Redis for monitoring
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ external_container }} nohup bash -c './redis_exporter/redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=redis_container:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
+      - >-
+        docker exec {{ external_container }} nohup bash -c './redis_exporter/redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=redis_container:6379 -web.listen-address=:42200 > redis.log
+        2>&1 &'
 
   - name: Wait for redis exporter metrics endpoint
     shell: >

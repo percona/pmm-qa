@@ -203,7 +203,8 @@
       community.docker.docker_container_exec:
         container: "pgsql_pmm_{{ pg_version }}_1"
         command: >
-          sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ '80' if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else '8080' }}/v1/management/services" | jq -r ".services[].service_name"'
+          sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ '80' if pmm_server_ip is
+          match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else '8080' }}/v1/management/services" | jq -r ".services[].service_name"'
       register: pmm_server_services
 
     - name: Display already connected services to pmm server

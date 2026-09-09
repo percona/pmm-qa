@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 while [ $# -gt 0 ]; do
    if [[ $1 == *"--"* ]]; then
@@ -12,8 +12,8 @@ if [ -z "$mongodb_version" ]; then
   export mongodb_version=7.0
 fi
 
-if [ -z "$mongdb_setup" ]; then
-  export mongdb_setup=pss
+if [ -z "$mongodb_setup" ]; then
+  export mongodb_setup=pss
 fi
 
 if [ -z "$metrics_mode" ]; then
@@ -25,6 +25,7 @@ export user="dba"
 export pwd="test1234"
 
 # Install the dependencies
+# shellcheck source=/dev/null
 source ~/.bash_profile || true;
 apt-get update
 apt-get -y install wget curl jq git gnupg2 lsb-release
@@ -33,7 +34,7 @@ sleep 10
 
 #wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
 #chmod +x mongo_startup.sh
-export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
+export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 
 ## Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
 modb_tarball=$(curl -s "https://www.mongodb.com/try/download/community" | \
@@ -44,7 +45,8 @@ echo "Downloading ${mongodb_version} from ${modb_tarball}..."
 wget -O percona_server_mongodb.tar.gz ${modb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
-export extracted_folder_name=$(ls | grep mongodb-linux)
+extracted_folder_name=$(compgen -G 'mongodb-linux*' | head -n1)
+export extracted_folder_name
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} modb_${mongodb_version}
 rm percona_server_mongodb.tar.gz*

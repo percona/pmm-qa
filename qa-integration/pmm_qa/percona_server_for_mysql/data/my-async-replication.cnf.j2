@@ -29,7 +29,9 @@ report_host={{ container_prefix }}{{ item }}
 {% if item != 1 %}
 # Replica specific settings
 replica_parallel_workers=4
+{% if ps_version | replace('_', '') | int < 90 %}
 replica_parallel_type=LOGICAL_CLOCK
+{% endif %}
 replica_preserve_commit_order=1
 {% endif %}
 

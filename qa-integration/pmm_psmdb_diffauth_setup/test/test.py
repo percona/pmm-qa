@@ -1,10 +1,11 @@
+import contextlib
+import json
+import os
+import time
+
 import docker
 import pytest
 import testinfra
-import re
-import time
-import os
-import json
 
 env_vars = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_USERNAME']
 
@@ -25,10 +26,8 @@ def run_test(add_db_command):
         if service_type == "SERVICE_TYPE_MONGODB_SERVICE" and service_name.startswith("psmdb-server"):
             services_to_remove.append(service_name)
     for service_name in services_to_remove:
-        try:
+        with contextlib.suppress(AssertionError):
             docker_pmm_client.check_output(f'pmm-admin remove mongodb {service_name}', timeout=30)
-        except AssertionError:
-            pass
     try:
         docker_pmm_client.check_output(add_db_command, timeout=30)
     except AssertionError:
@@ -45,11 +44,11 @@ def run_test(add_db_command):
       command = f"curl -s http://pmm:{agent_id}@127.0.0.1:{agent_port}/metrics"
       metrics = docker_pmm_client.run(command, timeout=30)
       assert metrics.exit_status == 0, f"Curl command failed with exit status {metrics.exit_status}"
-    except Exception as e:
-      pytest.fail(f"Fail to get metrics from exporter")
+    except Exception as err:  # noqa: BLE001 -- any failure here is a test failure
+      pytest.fail(f"Fail to get metrics from exporter: {err!r}")
 
     try:
-        with open("expected_metrics.txt", "r") as f:
+        with open("expected_metrics.txt") as f:
             expected_metrics = {line.strip() for line in f if line.strip()}
     except FileNotFoundError:
         pytest.fail("Expected metrics file not found")
@@ -122,7 +121,7 @@ def test_kerberos_auth_tls():
 
 @pytest.mark.skipif(
     any(not os.environ.get(var) for var in env_vars) or os.environ.get('SKIP_AWS_TESTS') == 'true',
-    reason=f"One or more of AWS env var isn't defined or SKIP_AWS_TESTS is set to true")
+    reason="One or more of AWS env var isn't defined or SKIP_AWS_TESTS is set to true")
 def test_aws_auth_wo_tls():
     run_test(f'pmm-admin add mongodb psmdb-server --agent-password=mypass --username={os.environ.get("AWS_ACCESS_KEY_ID")}'
              f'--password={os.environ.get("AWS_SECRET_ACCESS_KEY")}'
@@ -133,7 +132,7 @@ def test_aws_auth_wo_tls():
 
 @pytest.mark.skipif(
     any(not os.environ.get(var) for var in env_vars) or os.environ.get('SKIP_AWS_TESTS') == 'true',
-    reason=f"One or more of AWS env var isn't defined or SKIP_AWS_TESTS is set to true")
+    reason="One or more of AWS env var isn't defined or SKIP_AWS_TESTS is set to true")
 def test_aws_auth_tls():
     run_test(f'pmm-admin add mongodb psmdb-server --agent-password=mypass --username={os.environ.get("AWS_ACCESS_KEY_ID")}'
              f'--password={os.environ.get("AWS_SECRET_ACCESS_KEY")}'

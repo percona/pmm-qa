@@ -1,10 +1,11 @@
+import re
 import subprocess
 import sys
 
 arguments = sys.argv
 print(arguments)
 
-containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True).stdout.splitlines()
+containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def verify_agent_status(list, service_name):
     if any('Waiting' in name or 'Done' in name or 'Unknown' in name or 'Initialization Error' in name or 'Stopping' in name for name in list):
@@ -14,23 +15,23 @@ def verify_agent_status(list, service_name):
 
 def get_pmm_admin_status(service_type):
     container_name = containers[i][containers[i].index(service_type):]
-    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def get_pmm_admin_list(service_type):
     container_name = containers[i][containers[i].index(service_type):]
-    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def get_admin_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
 
-    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
 
 def get_agent_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-agent | awk \'{{print \\$3}}\'"'
 
-    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
 
 psContainerStatus = []
 pgContainerStatus = []
@@ -129,16 +130,27 @@ if len(thirdMongoReplicaStatus) > 0:
     verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
 
 if len(errors) > 0:
-  raise Exception("Some errors in pmm-admin status: ".join(errors))
+  raise RuntimeError("Some errors in pmm-admin status: ".join(errors))
 
-expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
+expected_version=arguments[1].replace("\\r\\n", "")
+
+# CLIENT_VERSION may be a client tarball URL instead of a bare version: the upgrade
+# matrix uses one for releases whose client deb is no longer in the apt repo. Parse
+# it before stripping -rc, or a -rcN suffix corrupts the captured version.
+if expected_version.startswith("http"):
+  tarball_version = re.search(r"pmm-client-(\d+\.\d+\.\d+)", expected_version)
+  if not tarball_version:
+    raise RuntimeError(f"Cannot determine expected version from client tarball URL: {expected_version}")
+  expected_version = tarball_version.group(1)
+
+expected_version = expected_version.replace("-rc", "")
 
 
-if admin_version != expected_version:
+if not admin_version.startswith(expected_version):
   print(f"admin version is: {admin_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version}")
 
-if agent_version != expected_version:
+if not agent_version.startswith(expected_version):
   print(f"agent version is: {agent_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm agent is not correct expected: {expected_version} actual: {agent_version}")
 
@@ -146,5 +158,5 @@ if admin_version != agent_version:
   errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
 
 if len(errors) > 0:
-  raise Exception("Errors in pmm-admin and pmm-agent versions: ".join(errors))
+  raise RuntimeError("Errors in pmm-admin and pmm-agent versions: ".join(errors))
 

@@ -11,7 +11,8 @@ description: Read and write PMM tickets on perconadev.atlassian.net — fields, 
 see "Operations" below). The relay holds the Jira service-account credentials
 (`JIRA_EMAIL` + `JIRA_API_TOKEN`); this environment holds only a scoped
 `RELAY_KEY` (the relay URL is a fixed public hostname, hardcoded in the snippet
-below). You identify yourself with `X-Actor` (your `gh api user` login), which
+below). You identify yourself with `X-Actor` (your GitHub login — from the GitHub MCP
+`get_me`; `gh api user` only where `gh` exists), which
 the relay roster-checks. The relay:
 
 - operates on existing `PMM-<number>` tickets, **and can `create` a new PMM
@@ -43,11 +44,29 @@ Fields to fetch (via REST per the policy above; `getJiraIssue` is the
 connector equivalent, currently not to be used):
 
 | Field | ID | Notes |
-|-------|-----|-------|
+| ------- | ----- | ------- |
 | How to test | `customfield_10083` | Verify against code, do not trust blindly |
 | FB test screenshots | `customfield_10492` | Wiki markup + attachments |
 | Found by Automation | `customfield_10059` | Multi-checkbox; set `[{"value":"Yes"}]`. The relay sets this to Yes automatically on Bugs it `create`s |
 | Development panel | — | Linked GitHub PRs |
+
+The full field map for **writing** a ticket (priority, components, affects
+version, Regression Issue, Needs QA/Doc) is in
+`references/ticket-templates.md`.
+
+## Write — creating an issue
+
+**Read `references/ticket-templates.md` before every `create`** and follow the
+issue type's template. A ticket whose description doesn't carry the team's
+headings, or that arrives with no components and no priority, fails the
+Definition of Ready at refinement no matter how sound the investigation behind
+it was. That file has the templates in wiki markup, the verified field IDs, a
+worked `create` call and a pre-flight checklist.
+
+Two things to get right that are easy to miss: the relay talks Jira REST **v2**,
+so descriptions are **wiki markup** (`h2.`, `*bold*`, `{{mono}}`, `{code}`) and
+Markdown renders literally; and a template section with nothing to say gets an
+explicit `None known.` rather than being dropped.
 
 ## Write — comments (mandatory visibility)
 
@@ -89,7 +108,8 @@ Unless the user explicitly requested the Jira update, confirm before writing to 
 ## Operations (via the relay)
 
 `POST $RELAY/jira/<action>` (relay URL hardcoded below) with headers `X-Relay-Secret: $RELAY_KEY`
-and `X-Actor: <your gh login>` (from `gh api user`; the relay roster-checks it
+and `X-Actor: <your GitHub login>` (from the GitHub MCP `get_me`, or `gh api user`
+where `gh` exists; the relay roster-checks it
 and records who acted — no self-reported email). The action is
 in the **URL path**; the JSON body carries `issue` (must be a `PMM-<number>`
 key) and any action args. The relay talks Jira REST **v2** upstream (wiki
@@ -98,7 +118,10 @@ so newlines/quotes escape cleanly.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
         -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }
@@ -106,8 +129,12 @@ J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
 # create — a new PMM issue (project is forced to PMM). issuetype + summary
 # required; description optional. On a Bug the relay auto-sets Found by
 # Automation (customfield_10059) = Yes unless you pass it yourself.
-J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "Repro + evidence...\nSuspected PR: <url>" \
-      '{issuetype:"Bug", summary:$s, description:$d}')"
+# Description + fields: follow references/ticket-templates.md.
+DESC="${DESC:?build the description from the issue type's template in references/ticket-templates.md}"
+J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "$DESC" \
+      '{issuetype:"Bug", summary:$s, description:$d,
+        fields:{priority:{name:"Medium"}, components:[{name:"Backend"}],
+                customfield_10064:{value:"Yes"}, customfield_10066:{value:"No"}}}')"
 # override / add fields (e.g. NOT automation-found):
 J create "$(jq -n --arg s "..." '{issuetype:"Bug", summary:$s, fields:{customfield_10059:[]}}')"
 
@@ -120,6 +147,15 @@ J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
 # maxResults<=100 (default 20); fields optional. Use THIS, never the Atlassian MCP.
 J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != Done ORDER BY updated DESC' \
       '{jql:$q, maxResults:20, fields:"summary,status,issuetype,updated"}')"
+
+# search does NOT paginate: startAt and the returned nextPageToken are both ignored,
+# so six calls for a 219-issue result silently returned the same first 100 each time.
+# Page with a JQL cursor instead: ORDER BY created ASC, key ASC, then on each call add
+# created >= "<created of the last issue seen>" and exclude the keys already collected
+# (key NOT IN (...)). JQL's created is minute-precision, so a bare created >= cursor
+# re-serves the same minute forever once >100 issues share it -- the key exclusion is
+# what advances. Dedup by key, and stop with an error if a page adds no new keys
+# rather than looping.
 
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"
@@ -142,3 +178,9 @@ Available actions: `create`, `read`, `search`, `comment`, `field`, `transitions`
 dedup goes through the relay instead of the Atlassian MCP), minus delete (the
 relay refuses that by construction). The **mandatory Developers-only visibility rule** is enforced by
 the relay itself, so it holds even if a caller forgets it.
+
+**Dashboards, gadgets and saved filters are out of reach on every path** — neither the
+relay actions above nor the Atlassian MCP (issue, comment, link, Confluence, Compass
+only) exposes one. For a "chart of tickets over time" ask, the deliverable is per-month
+JQL counts via `search` rendered as an artifact, plus the manual steps for the human:
+saved filter → dashboard → "Recently Created Chart" gadget, period Monthly.

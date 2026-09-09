@@ -34,6 +34,16 @@ export default class StoredMetricsPage extends BasePage {
   };
   messages = {};
 
+  getTotalQueryCount = async () => {
+    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
+
+    if (!countString) throw new Error('Count of queries is not displayed!');
+
+    const match = countString.match(/of (\d+) items/);
+
+    return match ? parseInt(match[1], 10) : null;
+  };
+
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
     await expect(this.elements.pageTitle).toBeVisible({
       timeout: Timeouts.THIRTY_SECONDS,
@@ -60,14 +70,7 @@ export default class StoredMetricsPage extends BasePage {
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
-    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
-
-    if (!countString) throw new Error('Count of queries is not displayed!');
-
-    const match = countString.match(/of (\d+) items/);
-    const queryCount = match ? parseInt(match[1], 10) : null;
-
-    expect(queryCount).toEqual(expectedQueryCount);
+    expect(await this.getTotalQueryCount()).toEqual(expectedQueryCount);
   };
 
   waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {

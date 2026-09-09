@@ -16,7 +16,7 @@ on:
         required: true
       playbook:
         description: 'Select test to run:'
-        default: 'pmm3-client_integration'
+        default: 'pmm3-client_integration_custom_path'
         required: true
         type: choice
         options:
@@ -78,7 +78,7 @@ jobs:
         run: |
           pt_os='${{ needs.get_versions.outputs.pt_os }}'
           filtered_os=$(echo "$pt_os" | jq -c 'map(select(. == "noble"))')
-          echo "filtered_os=$filtered_os" >> $GITHUB_OUTPUT
+          echo "filtered_os=$filtered_os" >> "$GITHUB_OUTPUT"
 
   fb_test:
     name: ${{ inputs.playbook }}

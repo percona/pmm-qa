@@ -45,13 +45,17 @@
   - name: Execute Setup script inside the pdpgsql pdpgsql_pgsm_container
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ pdpgsql_pgsm_container }} bash -xe ./pg_stat_monitor_setup.sh --distribution {{ distribution }} --pgsql_version {{ pdpgsql_version }} --pgstat_monitor_branch {{ pgstat_monitor_branch }} --pgstat_monitor_repo {{ pgstat_monitor_repo }} > setup_{{ pdpgsql_pgsm_container }}.log
+      - >-
+        docker exec {{ pdpgsql_pgsm_container }} bash -xe ./pg_stat_monitor_setup.sh --distribution {{ distribution }} --pgsql_version {{ pdpgsql_version }} --pgstat_monitor_branch {{
+        pgstat_monitor_branch }} --pgstat_monitor_repo {{ pgstat_monitor_repo }} > setup_{{ pdpgsql_pgsm_container }}.log
 
-  - name: Install pmm2-client on the pdpgsql_pgsm_container
+  - name: Install pmm-client on the pdpgsql_pgsm_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pdpgsql_pgsm_container }}
-      - docker exec {{ pdpgsql_pgsm_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ pdpgsql_pgsm_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
+        --use_metrics_mode no
 
   - name: Set Random Number Fact
     set_fact:
@@ -67,18 +71,22 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pdpgsql_pgsm_container }}_service_{{ random_number }}'
+      - >-
+        docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pdpgsql_pgsm_container
+        }}_service_{{ random_number }}'
 
   - name: Add pdpgsql_pgsm for monitoring
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor --socket=/var/run/postgresql socket_{{ pdpgsql_pgsm_container }}_service_{{ random_number }}'
+      - >-
+        docker exec {{ pdpgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor
+        --socket=/var/run/postgresql socket_{{ pdpgsql_pgsm_container }}_service_{{ random_number }}'
 
   - name: Run queries for generating data
     shell: "{{ item }}"
     with_items:
-        - docker exec {{ pdpgsql_pgsm_container }} bash ./pgsm_run_queries.sh &
+      - docker exec {{ pdpgsql_pgsm_container }} bash ./pgsm_run_queries.sh &
 
   - name: Copy a file into the container
     community.docker.docker_container_copy_into:

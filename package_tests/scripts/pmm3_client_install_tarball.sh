@@ -16,8 +16,8 @@ Help()
    echo "p     Installation path. Default: /usr/local/percona/pmm."
    echo "      Sets default version to 3.0.0 if no version specified"
    echo "l     listening custom port mode. Sets default version to 3.0.0 if no version specified"
-   echo "u     PMM-Agent can be updated from tarball: run ./install_tarball script with the “-u” flag."
-   echo "      The configuration file will not be overwritten with “-u” flag while the pmm-agent is updated."
+   echo 'u     PMM-Agent can be updated from tarball: run ./install_tarball script with the “-u” flag.'
+   echo '      The configuration file will not be overwritten with “-u” flag while the pmm-agent is updated.'
 }
 
 ### Defaults
@@ -111,8 +111,9 @@ echo "Downloading ${tarball_url}"
 mkdir -p ./tmp/
 wget -O ./tmp/pmm-client.tar.gz --progress=dot:giga "${tarball_url}" || exit 1
 tar -xvf "./tmp/pmm-client.tar.gz" -C ./tmp/
-cd ./tmp
-extracted_folder_name=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+cd ./tmp || exit 1
+extracted_folder_name=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
+extracted_folder_name=${extracted_folder_name%/}
 echo ${extracted_folder_name}
 ## for FB extract minor version from folder and check flags are compatible
 if [ -n "${fb}" ]; then
@@ -123,7 +124,7 @@ echo "Installing tarball to ${path}"
 mkdir -p ${path}
 export PMM_DIR=${path}
 if [[ $min_ver -lt 30 ]]; then
-  cd ./tmp/${extracted_folder_name}
+  cd ./tmp/${extracted_folder_name} || exit 1
   ./install_tarball ${update_flag}
   cd ../../
 else

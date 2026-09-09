@@ -243,7 +243,9 @@
       community.docker.docker_container_exec:
         container: "valkey-primary"
         command: >-
-          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} SET k$i v$i >/dev/null; valkey-cli -a {{ valkey_password }} GET k$i >/dev/null; valkey-cli -a {{ valkey_password }} HSET h$i f v >/dev/null; valkey-cli -a {{ valkey_password }} LPUSH l$i a b c >/dev/null; valkey-cli -a {{ valkey_password }} RPUSH l$i d e f >/dev/null; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null; valkey-cli -a {{ valkey_password }} LPOP l$i >/dev/null || true; valkey-cli -a {{ valkey_password }} RPOP l$i >/dev/null || true; done"
+          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} SET k$i v$i >/dev/null; valkey-cli -a {{ valkey_password }} GET k$i >/dev/null; valkey-cli -a {{ valkey_password }} HSET
+          h$i f v >/dev/null; valkey-cli -a {{ valkey_password }} LPUSH l$i a b c >/dev/null; valkey-cli -a {{ valkey_password }} RPUSH l$i d e f >/dev/null; valkey-cli -a {{ valkey_password }} LRANGE
+          l$i 0 -1 >/dev/null; valkey-cli -a {{ valkey_password }} LPOP l$i >/dev/null || true; valkey-cli -a {{ valkey_password }} RPOP l$i >/dev/null || true; done"
       ignore_errors: yes
 
     - name: Generate read workload on replicas (sentinel setup)

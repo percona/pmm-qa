@@ -19,10 +19,13 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
+// Anchored so it cannot also match the source node — see mysqlDashboards.test.ts.
+const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
+
 pmmTest(
   'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
   async ({ api, page, qanStoredMetrics, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(replicaServiceRegex);
 
     await page.goto(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {

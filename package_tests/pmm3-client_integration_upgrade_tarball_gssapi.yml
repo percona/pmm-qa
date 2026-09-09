@@ -84,7 +84,7 @@
     when: '"psmdb-" in enabled_db | join("") and mongodb_connection_type == "gssapi"'
     include_tasks: ./tasks/install_and_add_to_pmm_psmdb_gssapi.yml
     vars:
-      psmdb_to_test:  "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
+      psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
   - name: Verify MongoDB Exporter metric endpoint with Auth
     when: '"psmdb-" in enabled_db | join("") and mongodb_connection_type == "gssapi"'

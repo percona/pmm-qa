@@ -75,6 +75,8 @@ on:
         required: false
       GH_TOKEN:
         required: false
+      INVESTIGATOR_ROUTINE_TOKEN:
+        required: false
 
 jobs:
   setup:
@@ -123,7 +125,12 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: ${{ matrix.setup_services }}
       shard_name: ${{ matrix.shard_name }}
-      expected_test_jobs: 2
+      # 3: the two CodeceptJS `test_execution / ...` jobs plus the Playwright
+      # `test_execution / playwright ...` job below. The setup shards poll by
+      # job-name prefix "test execution / " to know when it's safe to finish
+      # waiting -- undercounting here lets a shard finish (and its runner
+      # terminate) while a still-running consumer job needs it.
+      expected_test_jobs: 3
 
   test_execution:
     name: "test execution / ${{ matrix.tags_for_tests }}"
@@ -131,7 +138,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tags_for_tests: '@qan|@menu|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+          - tags_for_tests: '@qan|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
           - tags_for_tests: '@nightly'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets:
@@ -148,3 +155,56 @@ jobs:
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
+
+  # Migrated CodeceptJS scenarios keep their original tag bucket so coverage
+  # stays equivalent once the CodeceptJS source retires. `--grep` is a regex:
+  # add a migrated tag to the alternation, not as a matrix entry (a runner per
+  # tag, plus `expected_test_jobs` above). Not `@nightly` -- here it also marks
+  # tests owned by other jobs whose services these shards never provision.
+  test_execution_playwright:
+    # Name must start with "test execution / " -- the setup shards' own wait
+    # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
+    # by that literal prefix to count consumers; anything else is invisible
+    # to it and the shard can finish/terminate while this job still needs it.
+    name: "test execution / playwright ${{ matrix.tags_for_tests }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tags_for_tests: '@annotations|@menu'
+    uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      tags_for_tests: ${{ matrix.tags_for_tests }}
+      expected_setup_jobs: 14
+      workers: 1
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      installation_type: ${{ inputs.installation_type || 'docker' }}
+
+  notify_investigator:
+    name: Fire Investigator routine
+    needs:
+      - setup
+      - test_execution
+      - test_execution_playwright
+    if: >
+      !cancelled() &&
+      github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&
+      github.ref_name == github.event.repository.default_branch &&
+      contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/notify-investigator
+        with:
+          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-pushd testdata/mongodb/
+pushd testdata/mongodb/ || exit 1
 bash ./gencerts.sh
 sleep 20
-popd
+popd || exit 1
 PWD=$(pwd) docker-compose -f docker-compose-mongodb-ssl.yml up -d
 
 cat > add_new_user.js <<EOF
