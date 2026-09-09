@@ -1,0 +1,51 @@
+# PMM-15262 / Experiment N6 — NetworkChaos: latency, PMM Server <-> VictoriaMetrics.
+#
+# Adds 200ms +/-50ms of delay on the metrics READ path, so dashboards and every
+# metric query slow down. Query Analytics (ClickHouse) and inventory/settings
+# (PostgreSQL) should stay responsive.
+#
+# WHICH VM PODS: the read tier — vmauth and vmselect. PMM Server pods only talk
+# to VictoriaMetrics to read: Grafana's datasource is http://127.0.0.1:8430/
+# (vmproxy, inside the PMM pod), which forwards to vmauth, which fans out to
+# vmselect, which reads vmstorage. Confirmed from live sockets in pmm-ha-1:
+# an established connection to 10.128.234.149 = the pmm-ha-vmauth ClusterIP.
+#
+# NOT the ingest path. Metrics are WRITTEN by vmagent -> vminsert, which does not
+# involve a PMM Server pod at all, so nothing here delays data *arriving* — only
+# data being *displayed*. Delaying arrival is a separate experiment (N2).
+#
+# Injected on the VictoriaMetrics side, delaying replies to PMM, for the reason
+# N1 established: PMM addresses vmauth by ClusterIP, and a ClusterIP-addressed
+# packet has not been rewritten to a pod IP when it reaches the tc egress hook,
+# so Chaos Mesh's ipset never matches and a PMM-side injection reports
+# AllInjected while delaying nothing. Replies carry real PMM pod IPs.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: exp-n6-latency-pmm-to-victoriametrics
+  namespace: chaos-mesh
+spec:
+  action: delay
+  mode: all
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    expressionSelectors:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - vmauth
+          - vmselect
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - pmm
+      labelSelectors:
+        app.kubernetes.io/component: pmm-server
+  delay:
+    latency: 200ms
+    jitter: 50ms
+    correlation: "50"
