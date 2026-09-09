@@ -1,0 +1,6 @@
+# .claude/skills/zephyr/SKILL.md — judge coverage by mapping a case's steps, not by grepping for its key
+
+- Added: 2026-09-09
+- Applies to: any skill or agent answering "is this test case covered?" (also .claude/agents/investigator.md, which already carries a related rule about searching open PR branches)
+- Evidence: Asked whether PMM-T2138 ("Verify PMM UI is accessible if leader pod goes down") was covered, the answer was "not covered" because the key appeared nowhere in the repo and one step's prose said "never goes down"; the user pushed back and a step-by-step mapping then showed an existing test already logs in through the public URL, deletes the leader pod and asserts the UI renders correctly afterwards — 3 of 4 steps exactly, and the 4th per its own stated expected result.
+- Proposed change: In the lookup/`get` guidance, add that a missing PMM-Txxxx in the repo proves only that no test carries the key, so before answering "not covered" map each step against candidate tests and weigh each step's `expectedResult` over its `description` prose, which routinely overstates the assertion; when the behavior is already covered, prefer attaching the key to the existing test via the ` + ` multi-key title over writing a second test.
