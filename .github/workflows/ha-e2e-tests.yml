@@ -178,8 +178,9 @@ jobs:
           on_retry_command: |
             # Removing a container does not unregister its node from the remote server.
             for c in $(docker ps -q); do
-              timeout 60 docker exec "$c" pmm-admin unregister --force >/dev/null 2>&1 ||
-                echo "pmm-admin unregister skipped for container $c"
+              docker exec "$c" sh -c 'command -v pmm-admin' >/dev/null 2>&1 || continue
+              timeout 60 docker exec "$c" pmm-admin unregister --force ||
+                echo "pmm-admin unregister FAILED for $c - its node may still be registered"
             done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
