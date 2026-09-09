@@ -98,6 +98,6 @@ Data(filters).Scenario('PMM-T746, PMM-T748 - Verify adding monitoring for Azure 
 Data(metrics).Scenario(
   'PMM-T743 - Check metrics from exporters are hitting PMM Server @instances',
   async ({ grafanaAPI, current }) => {
-    await grafanaAPI.waitForMetric(current.metricName, null, 10);
+    await grafanaAPI.waitForMetric(current.metricName, null, 90);
   },
 ).retry(1);

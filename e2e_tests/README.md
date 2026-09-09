@@ -114,6 +114,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@rta`
 - `@settings`
 - `@standalone`
+- `@user-password`
 
 <!-- E2E-TAGS-END -->
 

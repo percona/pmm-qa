@@ -10,6 +10,19 @@ export default class GrafanaApi {
     private request: APIRequestContext,
   ) {}
 
+  changePassword = async (currentPassword: string, newPassword: string) => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken('admin', currentPassword)}` };
+    const response = await this.request.put('graph/api/user/password', {
+      data: { confirmNew: newPassword, newPassword, oldPassword: currentPassword },
+      headers,
+    });
+
+    expect(
+      response.status(),
+      `Change user account password API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+  };
+
   createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
     const response = await this.request.post(apiEndpoints.grafana.dashboards, {
       data: {
