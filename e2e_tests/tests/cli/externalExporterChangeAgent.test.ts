@@ -17,7 +17,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    containerName = cliHelper.execSilent(``).stdout.trim();
+    containerName = cliHelper.execSilent("docker ps --format '{{.Names}}' | grep external").stdout.trim();
     serviceName = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep redis_external_service | head -1 | awk -F' ' '{print $2}'`,
