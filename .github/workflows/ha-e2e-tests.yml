@@ -176,6 +176,15 @@ jobs:
               --client-version "${PMM_CLIENT_VERSION}" \
               ${WIZARD_ARGS}
           on_retry_command: |
+            # Each client container registered its own node, services and agents
+            # on the remote PMM Server. Removing the container does not undo that,
+            # so unregister first -- otherwise attempt 1's registrations survive as
+            # permanently disconnected agents and duplicate services that the
+            # inventory and dashboard tests then fail on.
+            for c in $(docker ps -q); do
+              timeout 60 docker exec "$c" pmm-admin unregister --force >/dev/null 2>&1 ||
+                echo "pmm-admin unregister skipped for container $c"
+            done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
             docker network rm -f $(docker network ls -q) || true
