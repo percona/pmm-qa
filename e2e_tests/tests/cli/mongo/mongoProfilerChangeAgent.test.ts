@@ -119,14 +119,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T1004 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
-    const commands = [
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
-      `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --debug --trace --json`,
-    ];
+  pmmTest(
+    'PMM-T1004 - Verify Change agent debug, trace and json @psmdb-profiler-integration',
+    async ({ cliHelper }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --debug --trace --json`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --debug --trace --json`,
+      ];
 
-    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-  });
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    },
+  );
 
   pmmTest(
     'PMM-T1005 - Verify Change agent enable true/false @psmdb-profiler-integration',
