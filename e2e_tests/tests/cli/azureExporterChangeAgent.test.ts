@@ -111,12 +111,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T1005 - Verify Change agent enable true/false @azure-integration',
-    async ({ api, cliHelper, page }) => {
+    async ({ api, cliHelper }) => {
       const enableCommands = [
-        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
-        { command: '--enable=true', response: '- enabled agent', status: 'Running' },
-        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
-        { command: '--enable', response: '- enabled agent', status: 'Running' },
+        { command: '--enable=false', response: '- disabled agent', status: 'AGENT_STATUS_DONE' },
+        { command: '--enable=true', response: '- enabled agent', status: 'AGENT_STATUS_RUNNING' },
+        { command: '--enable=false', response: '- disabled agent', status: 'AGENT_STATUS_DONE' },
+        { command: '--enable', response: '- enabled agent', status: 'AGENT_STATUS_RUNNING' },
       ];
 
       for (const enableCommand of enableCommands) {
@@ -128,15 +128,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
         }
 
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-        await page.waitForTimeout(Timeouts.TEN_SECONDS);
-
-        console.log(
-          (
+        await expect(async () => {
+          const agentStatus = (
             await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || '')
-          ).agents.find((agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter')
-            ?.status,
-        );
+          ).agents.find(
+            (agent: { agent_type: string }) => agent.agent_type === 'azure_database_exporter',
+          )?.status;
+
+          expect(
+            agentStatus,
+            `Agent status should be: ${enableCommand.status} but is: ${agentStatus}`,
+          ).toEqual(enableCommand.status);
+        }).toPass({
+          intervals: [Timeouts.TWO_SECONDS],
+          timeout: Timeouts.ONE_MINUTE,
+        });
       }
     },
   );
