@@ -1,0 +1,6 @@
+# .claude/skills/qa-code-review/SKILL.md — a skip-TLS-verification finding needs scoping for QA harness code
+
+- Added: 2026-09-09
+- Applies to: .claude/skills/qa-code-review/SKILL.md
+- Evidence: coderabbitai's Security Review flagged `tls_skip_verify: true` against a QA RDS instance (percona/pmm-qa#1255, discussion_r3969032964) and `curl --insecure` against PMM Server (percona/pmm-qa#1392, discussion_r3972551441) as CWE-295 findings. Both were rejected: the surrounding harness already treats the same connection as untrusted throughout the file (`curl -sk` elsewhere in the RDS case; every other call to PMM Server in the same job already uses `-ksS`/`--insecure` for its self-signed cert), so flipping verification on in one spot alone would just fail the call without hardening anything.
+- Proposed change: in the security-finding guidance, note that a skip-verification call talking to test infrastructure with a self-signed or untrusted cert (PMM Server's own dev cert, a QA database instance) is expected when the rest of the same file or job already treats that connection the same way — check for that pattern before raising CWE-295/improper-certificate-validation as a finding, and scope it to a real inconsistency (one call verifying, a sibling call not) rather than the QA-harness posture itself.
