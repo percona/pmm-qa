@@ -147,7 +147,8 @@ jobs:
               case $rc in
                 0) echo "unregistered PMM node of ${name#/}" ;;
                 124) echo "unregister timed out after 60s for ${name#/} - its node may stay on the server" ;;
-                *) echo "no PMM client to unregister in ${name#/} (rc=$rc)" ;;
+                126 | 127) echo "no PMM client to unregister in ${name#/} (rc=$rc)" ;;
+                *) echo "unregister failed in ${name#/} (rc=$rc) - its node may stay on the server" ;;
               esac
             done
             docker rm -f $(docker ps -a -q) || true
