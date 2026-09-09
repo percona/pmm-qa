@@ -210,19 +210,42 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1011 - Verify Change agent pmm agent listen port @external-integration',
     async ({ cliHelper }) => {
-      let commands = [
-        `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
-        `docker restart ${containerName}`,
-        `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
-      ];
+      const configFile = '/usr/local/percona/pmm/config/pmm-agent.yaml';
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      try {
+        let commands = [
+          `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' ${configFile}`,
+          `docker restart ${containerName}`,
+          `docker exec -d ${containerName} pmm-agent --config-file=${configFile}`,
+        ];
 
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --pmm-agent-listen-port=7778`,
-      ];
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+        commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --pmm-agent-listen-port=7778`,
+        ];
+
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      } finally {
+        // Restore the default port so the following serial tests can reach the local pmm-agent
+        // on 7777. pmm-agent runs as a bare background process, so a restart drops it until it
+        // is relaunched; wait for it to reconnect before handing over to the next test.
+        const restoreCommands = [
+          `docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${configFile}`,
+          `docker restart ${containerName}`,
+          `docker exec -d ${containerName} pmm-agent --config-file=${configFile}`,
+        ];
+
+        restoreCommands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+        await expect(async () => {
+          cliHelper
+            .execSilent(
+              `docker exec ${containerName} sh -c 'pmm-admin status 2>/dev/null | grep -Eq "Connected[[:space:]]*: true"'`,
+            )
+            .assertSuccess();
+        }).toPass({ intervals: [Timeouts.TWO_SECONDS], timeout: Timeouts.TWO_MINUTES });
+      }
     },
   );
 
