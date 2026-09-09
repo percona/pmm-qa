@@ -1,0 +1,6 @@
+# .claude/skills/qa-code-review/SKILL.md — `.claude/**` skill and agent files get no design review, only section 3
+
+- Added: 2026-09-09
+- Applies to: .claude/skills/qa-code-review/SKILL.md (section 2 routing table, and a reference for `.claude/**`)
+- Evidence: percona/pmm-qa#1391 added a new agent and edited a skill; `claude[bot]`'s review of it (run under section 3 only, since the routing table has no row for `.claude/**`) found only internal-consistency issues in the drafted text. A human reviewer's follow-up review then raised several design defects the bot review never touched: an unneeded dependency on another skill (discussion_r3969710878, r3969745306), hardcoded repo/schedule/routine specifics that limit reuse (discussion_r3969738954), a "what not to do" instruction where a positive one would serve better (discussion_r3969779515), and prose that doesn't change the agent's behavior (discussion_r3969766368, "token waste"). All were accepted and applied (issuecomment-5604121849).
+- Proposed change: add a `.claude/**` reference (or extend section 3) so a review of a skill/agent file explicitly checks for: unneeded cross-skill/agent dependencies, repo/schedule/routine specifics baked into text that should stay reusable, "what not to do" phrasing where a "what to do" instruction would do the same job, and text that does not change the file's behavior.
