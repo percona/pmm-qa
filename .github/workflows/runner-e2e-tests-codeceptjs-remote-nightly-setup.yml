@@ -136,6 +136,7 @@ jobs:
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
+            pmm-qa/.github/scripts/deregister-local-pmm-nodes.sh || true
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
             docker network rm -f $(docker network ls -q) || true
