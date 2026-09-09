@@ -40,7 +40,7 @@ jobs:
   setup:
     name: "setup / ${{ inputs.shard_name }}"
     runs-on: ubuntu-22.04
-    timeout-minutes: 150
+    timeout-minutes: 210
     env:
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
