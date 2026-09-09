@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -105,6 +106,35 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(azureExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+    },
+  );
+
+  pmmTest(
+    'PMM-T1005 - Verify Change agent enable true/false @ps-integration',
+    async ({ api, cliHelper, page }) => {
+      const enableCommands = [
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable=true', response: '- enabled agent', status: 'Running' },
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable', response: '- enabled agent', status: 'Running' },
+      ];
+
+      for (const enableCommand of enableCommands) {
+        const commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} ${enableCommand.command}`,
+        ];
+
+        for (const command of commands) {
+          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
+        }
+
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+        await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+        console.log(
+          await api.inventoryApi.getServiceDetailsByPartialName(process.env.PMM_QA_AZURE_MYSQL_HOST || ''),
+        );
+      }
     },
   );
 });
