@@ -55,7 +55,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T1001 - Verify Change agent server url and server insecure tls @valkey-integration',
+    'PMM-T1001 - Verify Change agent server url and server insecure tls @azure-integration',
     async ({ cliHelper }) => {
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
