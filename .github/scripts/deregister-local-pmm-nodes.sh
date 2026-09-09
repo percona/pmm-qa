@@ -40,7 +40,10 @@ if [ ! -s "$candidates_file" ]; then
 fi
 
 # Never delete the runner's own node: the client-setup step registers it once and
-# the retried attempt reuses it.
+# the retried attempt reuses it. The PMM Server's own node is always node_id
+# "pmm-server" and is refused with a 403 anyway; it is only a candidate at all
+# when the server runs as a local container, which is not the nightly's layout
+# but is how a reproduction box is built.
 runner_node=$(hostname)
 
 nodes_json=$(curl "${CURL_OPTS[@]}" "${AUTH[@]}" "${BASE}/v1/management/nodes")
@@ -57,7 +60,7 @@ mapfile -t doomed < <(
       | [.. | objects | select(has("node_id") and has("node_name"))]
       | unique_by(.node_id)
       | .[]
-      | select(.node_name != $runner)
+      | select(.node_id != "pmm-server" and .node_name != $runner)
       | select(.node_name as $n | $local | index($n))
       | "\(.node_id)\t\(.node_name)"
     ' 2>/dev/null
