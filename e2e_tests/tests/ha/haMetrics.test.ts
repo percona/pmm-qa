@@ -17,8 +17,6 @@ pmmTest(
     });
 
     const initialLeader = haClusterHelper.leaderFromPods();
-    // Waited for rather than read once: a node missing from the baseline would drop
-    // out of the post-switch comparison instead of failing it.
     const baselineTerms = await api.haApi.waitForRaftTerms(haClusterHelper.podNames());
 
     await pmmTest.step(

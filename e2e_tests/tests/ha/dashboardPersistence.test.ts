@@ -5,48 +5,44 @@ import { Timeouts } from '@helpers/timeouts';
 const suffix = Date.now();
 const dashboardTitle = `PMM-T2137 HA dashboard ${suffix}`;
 const panelTitle = 'HA TESTING';
+let uid = '';
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
   await haClusterHelper.ensureServing(api.haApi);
 });
 
+pmmTest.afterEach(async ({ api }) => {
+  if (uid) await api.grafanaApi.deleteDashboard(uid);
+});
+
 pmmTest(
   'PMM-T2137 - Verify new dashboards are retained after failover @pmm-ha',
   async ({ api, dashboard, haClusterHelper, page }) => {
-    let uid = '';
+    const url = await pmmTest.step(`Create a new dashboard with a panel titled "${panelTitle}"`, async () => {
+      const created = await api.grafanaApi.createDashboard(dashboardTitle, panelTitle);
 
-    try {
-      const url = await pmmTest.step(
-        `Create a new dashboard with a panel titled "${panelTitle}"`,
-        async () => {
-          const created = await api.grafanaApi.createDashboard(dashboardTitle, panelTitle);
+      uid = created.uid;
 
-          uid = created.uid;
-
-          await page.goto(created.url);
-          await expect(dashboard.elements.panelName).toHaveText(panelTitle, {
-            timeout: Timeouts.ONE_MINUTE,
-          });
-
-          return created.url;
-        },
-      );
-
-      await pmmTest.step('Restart the leader pod', async () => {
-        await haClusterHelper.failoverLeader(api.haApi);
+      await page.goto(created.url);
+      await expect(dashboard.elements.panelName).toHaveText(panelTitle, {
+        timeout: Timeouts.ONE_MINUTE,
       });
 
-      await pmmTest.step('Open the UI again and verify the dashboard is retained', async () => {
-        await expect(async () => {
-          await page.goto(url);
-          await expect(dashboard.elements.panelName).toHaveText(panelTitle, {
-            timeout: Timeouts.THIRTY_SECONDS,
-          });
-        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-      });
-    } finally {
-      if (uid) await api.grafanaApi.deleteDashboard(uid);
-    }
+      return created.url;
+    });
+
+    await pmmTest.step('Restart the leader pod', async () => {
+      await haClusterHelper.failoverLeader(api.haApi);
+    });
+
+    await pmmTest.step('Open the UI again and verify the dashboard is retained', async () => {
+      await expect(async () => {
+        await page.goto(url);
+        await expect(dashboard.elements.panelName).toHaveText(panelTitle, {
+          timeout: Timeouts.THIRTY_SECONDS,
+        });
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    });
   },
 );
