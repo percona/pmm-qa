@@ -6,7 +6,6 @@ import fs from 'node:fs';
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
 
-  const mysqlPassword = 'GRgrO9301RuF';
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
   let containerName: string;
@@ -44,26 +43,30 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1001 - Verify Change agent username and password @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      const mongoUri = 'mongodb://root:root@localhost/?replicaSet=rs';
+      const monitoringRoles =
+        '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
+
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })'`,
+        )
+        .assertSuccess();
+
       let commands = [
-        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
+      commands.forEach((command) => cliHelper.execSilent(command).outContains('Authentication failed'));
 
       cliHelper.execSilent(
-        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
+        `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")'`,
       );
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
