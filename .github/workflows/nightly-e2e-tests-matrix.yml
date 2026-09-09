@@ -79,11 +79,6 @@ on:
         required: false
 
 jobs:
-  # A shard provisions its whole list at once (the setup runner passes
-  # --parallel), so it costs its slowest member -- but only while no two of its
-  # setups collide. Keep one of the MySQL family, one PXC, one PDPGSQL and one
-  # PSMDB per shard, and never EXTERNAL with VALKEY: see "The conflict rules"
-  # in pmm-framework/ARCHITECTURE.md for what each pair shares.
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
