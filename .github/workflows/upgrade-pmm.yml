@@ -93,6 +93,7 @@ jobs:
   upgrade-docker:
     name: Docker way upgrade for PMM
     uses: ./.github/workflows/upgrade-pmm-runner.yml
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
