@@ -1,0 +1,45 @@
+# PMM-15262 / Experiment S1 — StressChaos: CPU stress on one PMM Server pod.
+#
+# 2 workers at 100% against a 4-core limit, so roughly half the pod's CPU
+# budget goes to the stressor and PMM competes for the rest. The question is
+# whether PMM stays responsive and, in particular, whether the readiness probe
+# still answers within its timeout under contention.
+#
+# SIZING, measured on this cluster: the pmm-ha container requests 2 CPU and is
+# limited to 4. `nproc` inside the pod reports 8 — that is the node's core
+# count, not the pod's limit, so sizing workers from nproc would oversubscribe
+# by 2x. Workers are set against the 4-core limit.
+#
+# TARGET ONE FOLLOWER, NOT THE LEADER. Two reasons, both measured here:
+# stressing the leader risks a spurious failover that muddies the result, and
+# the leader holds far more PostgreSQL connections than a follower (61 vs ~12),
+# so if it does restart it leaks the most. Check which pod is leader and pin a
+# different one before running:
+#   kubectl exec -n pmm pmm-ha-N -c pmm-ha -- bash -c \
+#     'curl -s -o /dev/null -w "%{http_code}" -u "admin:$PMM_ADMIN_PASSWORD" \
+#      http://127.0.0.1:8080/v1/server/leaderHealthCheck'   # 200 = leader
+#
+# ESCALATION: start here. If PMM absorbs it, raise workers 2 -> 3 -> 4 in
+# separate runs. Do not jump to 4: saturating the whole limit can starve the
+# readiness probe, and a pod that goes NotReady long enough to be restarted
+# hits the PostgreSQL connection leak and comes back permanently broken.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: exp-s1-cpu-stress-pmm-server
+  namespace: chaos-mesh
+spec:
+  mode: one
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+      statefulset.kubernetes.io/pod-name: pmm-ha-0
+  containerNames:
+    - pmm-ha
+  stressors:
+    cpu:
+      workers: 2
+      load: 100

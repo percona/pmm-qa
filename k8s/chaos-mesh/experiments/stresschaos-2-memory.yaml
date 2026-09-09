@@ -1,0 +1,47 @@
+# PMM-15262 / Experiment S2 — StressChaos: memory stress on one PMM Server pod.
+#
+# Allocates 2 GiB inside the pod, on top of the ~534 MiB PMM actually uses,
+# against an 8 GiB container limit — roughly a third of the budget consumed.
+#
+# SIZING IS DELIBERATELY CONSERVATIVE, and the reason is measured, not
+# cautious-by-default. stress-ng runs inside the target container's cgroup, so
+# the allocation counts against the pod's own memory.max (8192 MiB, verified;
+# current usage 534 MiB). Exceeding it does not stress the node — it OOM-kills
+# the container. On this cluster a PMM Server pod restart is not recoverable on
+# its own: the dead pod's PostgreSQL connections are never reaped, and with
+# max_connections=100 already ~90% consumed the replacement pod's Grafana cannot
+# get a slot, exits FATAL, and the pod sits at 0/1 until the orphaned backends
+# are terminated by hand. An OOM here therefore costs a replica, not a data
+# point.
+#
+# Separately, node memory limits on this cluster are already overcommitted
+# (105-173% of allocatable), so several pods stressed at once could push a node
+# into kernel OOM and take out something that was never targeted. Stress one pod.
+#
+# ESCALATION: 2 GiB -> 4 GiB -> 6 GiB in separate runs, checking memory.current
+# against memory.max between each. Stop before 7 GiB; PMM's own working set
+# grows with the 174 monitored services and the gap is the safety margin.
+#   kubectl exec -n pmm pmm-ha-0 -c pmm-ha -- \
+#     cat /sys/fs/cgroup/memory.current /sys/fs/cgroup/memory.max
+#
+# Target a follower, not the leader — see stresschaos-1-cpu.yaml for why.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: exp-s2-memory-stress-pmm-server
+  namespace: chaos-mesh
+spec:
+  mode: one
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+      statefulset.kubernetes.io/pod-name: pmm-ha-0
+  containerNames:
+    - pmm-ha
+  stressors:
+    memory:
+      workers: 2
+      size: 2GiB

@@ -1,0 +1,45 @@
+# PMM-15262 / Experiment S3 — StressChaos: combined CPU + memory on one PMM
+# Server pod.
+#
+# Same sizing as S1 and S2 run together: 2 CPU workers at 100% against a 4-core
+# limit, plus 2 GiB against an 8 GiB limit. Run this only after S1 and S2 have
+# each passed on their own — combined is where the interaction shows up, and a
+# failure here is only interpretable if you already know each half is survivable.
+#
+# The interaction worth watching: CPU contention slows PMM's own allocation and
+# garbage collection, so its working set can sit higher for longer than it does
+# under memory stress alone. The 2 GiB that was comfortable in S2 has less room
+# above it here. Re-check memory.current during the run rather than assuming S2's
+# margin carries over.
+#
+# Everything in S1 and S2 about sizing applies unchanged: workers are set against
+# the 4-core limit rather than the 8 cores nproc reports; the memory allocation
+# lands in the pod's own cgroup, so overshooting OOM-kills the container rather
+# than stressing the node; and on this cluster a PMM Server pod that restarts
+# does not come back on its own, because the dead pod's PostgreSQL connections
+# are never reaped and its replacement's Grafana cannot get a slot.
+#
+# Target a follower, not the leader — see stresschaos-1-cpu.yaml for why.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: exp-s3-cpu-memory-stress-pmm-server
+  namespace: chaos-mesh
+spec:
+  mode: one
+  duration: 3m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+      statefulset.kubernetes.io/pod-name: pmm-ha-0
+  containerNames:
+    - pmm-ha
+  stressors:
+    cpu:
+      workers: 2
+      load: 100
+    memory:
+      workers: 2
+      size: 2GiB
