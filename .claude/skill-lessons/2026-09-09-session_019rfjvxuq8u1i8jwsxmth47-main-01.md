@@ -1,0 +1,6 @@
+# .claude/skills/verification-depth/SKILL.md — the wrong PMM inventory endpoint reads as an empty inventory, not as an error
+
+- Added: 2026-09-09
+- Applies to: .claude/skills/verification-depth/SKILL.md
+- Evidence: verifying orphaned PMM inventory on a repro box, `POST /v1/inventory/services:list` with `{}` (gRPC-transcoding style) returned HTTP 200 with a body carrying no lists, so the check printed an empty inventory and read as a clean environment — the opposite of the truth it was there to test; the working call is a plain `GET /v1/inventory/services`. A second round trip was then lost because `is_connected` is omitted from `/v1/inventory/agents` and `/v1/inventory/agents/{id}` for connected and disconnected agents alike, and only `GET /v1/management/services` reports it per service under `agents[]`.
+- Proposed change: give the API-verification section the concrete PMM 3 endpoints — inventory listings are `GET /v1/inventory/{nodes,services,agents}`, and service monitoring `status` plus per-agent `is_connected` come from `GET /v1/management/services` (what codeceptjs `inventoryAPI.apiGetServices()` uses, so it matches PMM-T554/PMM-T2146) — and state that an absence claim from an inventory query is only evidence once the same call has returned a non-empty result on a known-populated environment.
