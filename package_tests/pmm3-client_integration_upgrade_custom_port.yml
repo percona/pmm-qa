@@ -97,10 +97,18 @@
   - name: Install PMM client old deb packages
     when: ansible_os_family == "Debian"
     apt: name={{ pmm_client_old }} update_cache=yes state=present
+    register: apt_install_result
+    retries: 3
+    delay: 30
+    until: apt_install_result is succeeded
 
   - name: Install PMM client old rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name={{ pmm_client_old }} state=present
+    yum: name={{ pmm_client_old }} state=present update_cache=yes
+    register: yum_install_result
+    retries: 3
+    delay: 30
+    until: yum_install_result is succeeded
 
 ### Setup PMM Client
   - name: Use "pmm-admin config" to connect pmm client to server
@@ -247,10 +255,18 @@
   - name: Upgrade PMM client to the latest deb packages
     when: ansible_os_family == "Debian"
     apt: name=pmm-client update_cache=yes state=latest
+    register: apt_upgrade_result
+    retries: 3
+    delay: 30
+    until: apt_upgrade_result is succeeded
 
   - name: Upgrade PMM client to the latest rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name=pmm-client state=latest
+    yum: name=pmm-client state=latest update_cache=yes
+    register: yum_upgrade_result
+    retries: 3
+    delay: 30
+    until: yum_upgrade_result is succeeded
 
 ### Verifications after upgrade
   - name: Perform standard verifications set for PMM Client
