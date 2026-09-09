@@ -1,0 +1,91 @@
+name: PMM Upgrade
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/upgrade-pmm-runner.yml'
+  workflow_dispatch:
+    inputs:
+      client_tarball_upgrade:
+        description: 'Client tarball URL to upgrade to (empty = use repo)'
+        default: ''
+        type: string
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+
+env:
+  ADMIN_PASSWORD: admin
+  PMM_URL: http://admin:admin@127.0.0.1
+  CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
+  PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set.outputs.versions }}
+      ui_versions: ${{ steps.set.outputs.ui_versions }}
+      rc_version:  ${{ steps.set.outputs.rc_version }}
+      matrix:  ${{ steps.set.outputs.matrix }}
+      DEV_LATEST_VERSION: ${{ steps.set.outputs.DEV_LATEST_VERSION }}
+    steps:
+      - name: Compute version range (latest -> 5 minors back)
+        id: set
+        shell: bash
+        run: |
+          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+          | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
+
+          # --- CLIENT range: latest -> 5 minors back ---
+          FLOOR=$(echo "$TAGS" | sed -E 's/\.[0-9]+$//' | sort -Vru | sed -n '5p' | sed 's/$/.0/')
+          VERSIONS=$(echo "$TAGS" | sort -Vr \
+            | awk -v floor="$FLOOR" '{print} $0==floor{exit}' \
+            | jq -R . | jq -sc .)
+
+          UI_LOW=3.5.0
+          UI_HIGH=3.8.0
+          UI_VERSIONS=$(echo "$TAGS" | sort -Vr | awk -v low="$UI_LOW" -v high="$UI_HIGH" '
+            { split($0,a,"."); split(low,l,"."); split(high,h,".");
+            v = a[1]*1000000 + a[2]*1000 + a[3];
+            lo = l[1]*1000000 + l[2]*1000 + l[3];
+            hi = h[1]*1000000 + h[2]*1000 + h[3];
+            if (v >= lo && v <= hi) print }' \
+            | jq -R . | jq -sc .)
+
+
+          echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
+          echo "CLIENT versions: $VERSIONS"
+          echo "UI versions:     $UI_VERSIONS"
+          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          echo "Latest RC: $RC_VERSION"
+          echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
+          DEV_LATEST_VERSION=$(curl https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
+          echo "dev latest version: $DEV_LATEST_VERSION"
+          echo "DEV_LATEST_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_OUTPUT"
+          export VERSION_LIST=$(echo "$VERSIONS" | tr -d '[]"' | tr ',' ' ')
+          DOCKER_TAGS=()
+          DOCKER_TAGS+=(perconalab/pmm-server:$RC_VERSION)
+          for version in $VERSION_LIST; do
+            DOCKER_TAGS+=("percona/pmm-server:$version")
+          done
+          echo "${DOCKER_TAGS[@]}"
+          echo "DOCKER_TAGS=${DOCKER_TAGS[@]}" >> "$GITHUB_OUTPUT"
+          VERSIONS=$(jq -cn --argjson versions "$VERSIONS" '["pmm3-rc"] + $versions')
+          echo $VERSIONS
+          echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
+          DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
+          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; ($versions | length)) as $i | { version: $versions[$i], docker_tag: $tags[$i]}]')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  upgrade-docker:
+    name: Docker way upgrade for PMM
+    uses: ./.github/workflows/upgrade-pmm-runner.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    with:
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}

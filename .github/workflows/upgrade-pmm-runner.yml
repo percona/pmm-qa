@@ -1,4 +1,4 @@
-name: PMM Upgrade
+name: PMM Upgrade runner
 
 on:
   pull_request:
