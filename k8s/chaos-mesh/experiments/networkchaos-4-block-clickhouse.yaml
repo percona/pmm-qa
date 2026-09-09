@@ -1,14 +1,20 @@
-# PMM-15262 / Experiment N4 — NetworkChaos: block PMM Server -> ClickHouse.
+# PMM-15262 / Experiment N4 — NetworkChaos: block PMM Server <-> ClickHouse.
 #
-# Severs all traffic from the PMM Server pods to the ClickHouse servers, which
-# hold Query Analytics data. This is the "block communication to a specific
-# component" case, and it doubles as a blast-radius check: QAN should degrade
-# while metrics, dashboards and the rest of the UI carry on, because those live
-# in VictoriaMetrics and PostgreSQL instead.
+# Severs all traffic between the PMM Server pods and the ClickHouse servers,
+# which hold Query Analytics. This is the "block communication to a specific
+# component" case, and doubles as a blast-radius check: QAN should fail while
+# metrics (VictoriaMetrics) and inventory/dashboards (PostgreSQL) carry on.
 #
-# Selects on clickhouse.altinity.com/chi, which the ClickHouse Keeper pods do
-# not carry (they use clickhouse-keeper.altinity.com/chk) — Keeper quorum stays
-# out of range, as the PVC pending deletion requires.
+# Injected on the ClickHouse side for the ClusterIP reason N1 established.
+# Cutting ClickHouse's replies severs the connection in practice — PMM's requests
+# leave but nothing comes back.
+#
+# 4m rather than 2m: paired UI evidence needs ~60s per page, and a 2m window
+# closed before the second capture, invalidating it as a control.
+#
+# Selects on clickhouse.altinity.com/chi, which the ClickHouse Keeper pods do not
+# carry (theirs is clickhouse-keeper.altinity.com/chk) — verified 0 Keeper pods
+# match, so Keeper quorum and its PVC pending deletion stay out of range.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
@@ -17,12 +23,12 @@ metadata:
 spec:
   action: partition
   mode: all
-  duration: 2m
+  duration: 4m
   selector:
     namespaces:
       - pmm
     labelSelectors:
-      app.kubernetes.io/component: pmm-server
+      clickhouse.altinity.com/chi: pmm-ha
   direction: both
   target:
     mode: all
@@ -30,4 +36,4 @@ spec:
       namespaces:
         - pmm
       labelSelectors:
-        clickhouse.altinity.com/chi: pmm-ha
+        app.kubernetes.io/component: pmm-server

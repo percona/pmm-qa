@@ -1,14 +1,24 @@
-# PMM-15262 / Experiment N2 — NetworkChaos: packet loss on the ingest path.
+# PMM-15262 / Experiment N2 — NetworkChaos: packet loss on the metrics WRITE path.
 #
-# Drops 30% of packets from vmagent to vminsert. vmagent is what actually
-# scrapes the 174 monitored services and writes them into VictoriaMetrics, so
-# this is the one link where loss can cost real samples. vmagent buffers and
-# retries on its persistent queue, so the question is whether the backlog drains
-# with no gap once the loss clears, not whether throughput dips during it.
+# Drops 30% of packets between vmagent and vmauth. vmagent scrapes the 174
+# monitored services and writes them into VictoriaMetrics, so this is the one
+# link where loss can cost real samples. vmagent buffers on a persistent queue
+# and retries, so the question is whether the backlog drains with no gap once
+# the loss clears — not whether throughput dips during it.
+#
+# The write path terminates at vmauth, NOT vminsert. The VMAgent CR's
+# remoteWrite.url is http://pmm-ha-vmauth.pmm.svc.cluster.local:8427/api/v1/write,
+# confirmed by a live socket from the vmagent pod to the pmm-ha-vmauth ClusterIP;
+# vmauth then fans out to vminsert. Targeting vminsert tests a link vmagent
+# never opens.
+#
+# Injected on the vmauth side for the ClusterIP reason N1 established. Targeting
+# only the vmagent pods keeps this to the write path — vmauth also serves PMM
+# Server's reads, and those are left alone.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: exp-n2-loss-vmagent-to-vminsert
+  name: exp-n2-loss-vmagent-write-path
   namespace: chaos-mesh
 spec:
   action: loss
@@ -18,7 +28,7 @@ spec:
     namespaces:
       - pmm
     labelSelectors:
-      app.kubernetes.io/name: vmagent
+      app.kubernetes.io/name: vmauth
   direction: to
   target:
     mode: all
@@ -26,7 +36,7 @@ spec:
       namespaces:
         - pmm
       labelSelectors:
-        app.kubernetes.io/name: vminsert
+        app.kubernetes.io/name: vmagent
   loss:
     loss: "30"
     correlation: "25"
