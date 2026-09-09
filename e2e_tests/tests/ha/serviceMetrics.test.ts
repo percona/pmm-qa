@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import { defaultReplicas } from '@helpers/haCluster.helper';
 
 const monitoredServices = [
   {
@@ -9,9 +10,19 @@ const monitoredServices = [
     metric: 'ClickHouseAsyncMetrics_AsynchronousMetricsUpdateInterval',
     name: 'ClickHouse',
   },
-  { expectedSources: 3, groupBy: 'service_name', metric: 'pg_exporter_scrapes_total', name: 'PostgreSQL' },
-  { expectedSources: 3, groupBy: 'pod', metric: 'vm_vminsert_conns', name: 'VictoriaMetrics' },
-  { expectedSources: 3, groupBy: 'pod', metric: 'haproxy_backend_active_servers', name: 'HAProxy' },
+  {
+    expectedSources: defaultReplicas,
+    groupBy: 'service_name',
+    metric: 'pg_exporter_scrapes_total',
+    name: 'PostgreSQL',
+  },
+  { expectedSources: defaultReplicas, groupBy: 'pod', metric: 'vm_vminsert_conns', name: 'VictoriaMetrics' },
+  {
+    expectedSources: defaultReplicas,
+    groupBy: 'pod',
+    metric: 'haproxy_backend_active_servers',
+    name: 'HAProxy',
+  },
 ];
 const sourceCount = (metric: string, groupBy: string) => `count(count by (${groupBy}) (${metric}))`;
 

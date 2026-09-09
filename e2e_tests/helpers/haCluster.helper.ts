@@ -83,7 +83,7 @@ export default class HaClusterHelper {
 
     const newLeader = await this.waitForLeaderChange(initialLeader, timeout);
 
-    await this.waitForApiServing(haApi);
+    await this.waitForApiServing(haApi, timeout);
 
     return newLeader;
   };
@@ -106,10 +106,9 @@ export default class HaClusterHelper {
 
   /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
   haStatusFromPod = (podName: string): string => {
-    const password = process.env.ADMIN_PASSWORD ?? 'admin';
     const { stdout } = this.k8sHelper.execInPod(
       podName,
-      `curl -sk -u admin:${password} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      `curl -sk -u 'admin:${adminPassword()}' https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
       { silent: true },
     );
 
