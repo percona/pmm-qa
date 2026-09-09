@@ -355,7 +355,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1010 - Verify Change agent tls @ps-integration',
+    'PMM-T1010 - Verify Change agent tls @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
