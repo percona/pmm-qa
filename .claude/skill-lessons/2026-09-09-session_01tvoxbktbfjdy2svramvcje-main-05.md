@@ -1,0 +1,6 @@
+# .claude/agents/investigator.md — a job cancelled with no steps executed is capacity starvation, not a failure to root-cause
+
+- Added: 2026-09-09
+- Applies to: target only
+- Evidence: on percona/pmm-qa#1396 every one of `E2E tests Matrix`'s 36 jobs was allocated and cancelled 60-85s later; `GET /actions/jobs/<id>` returned no `steps` array at all, so nothing had run. The same workflow was `cancelled` on six unrelated branches in the same window, `e2e-tests-matrix.yml` had 11 cancelled / 0 success at 19h and 3 / 0 at 20h against a last repo-wide success at 15:07, single-job `lint` stayed green on the same head, and concurrency was excluded (group keyed on `head_ref`, no other workflow using it, a re-run cancelled with no later push). Eight nightly runs dispatched 17:11-18:00 were holding runners for ~2h each.
+- Proposed change: add that `cancelled` with an empty `steps` array means the job never started, so it is never this PR's failure and never worth a second re-run — establish it repo-wide instead by the workflow's own cancelled-vs-success rate over the last hours plus the same workflow on unrelated branches, and note that a small single-job workflow staying green while a large matrix dies is the capacity tell.
