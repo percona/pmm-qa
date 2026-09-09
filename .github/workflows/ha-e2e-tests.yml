@@ -176,6 +176,17 @@ jobs:
               --client-version "${PMM_CLIENT_VERSION}" \
               ${WIZARD_ARGS}
           on_retry_command: |
+            # The PMM Server is remote and outlives this runner, so the nodes and
+            # services the failed attempt registered survive the container wipe
+            # below and stay in its inventory as Failed/disconnected forever.
+            # Unregister each container's node before removing it. Names are
+            # per-attempt random for some setups, so the retry cannot reuse them.
+            for c in $(docker ps -a -q); do
+              docker start "$c" >/dev/null 2>&1 || true
+              timeout 60 docker exec "$c" bash -lc \
+                'command -v pmm-admin >/dev/null 2>&1 && pmm-admin unregister --force' \
+                || echo "no PMM Client to unregister in $c"
+            done
             docker rm -f $(docker ps -a -q) || true
             docker volume rm -f $(docker volume ls -q) || true
             docker network rm -f $(docker network ls -q) || true
