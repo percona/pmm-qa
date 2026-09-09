@@ -99,4 +99,6 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     with:
+      docker_tag: ${{ matrix.docker_tag }}
+      version: ${{ matrix.version }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
