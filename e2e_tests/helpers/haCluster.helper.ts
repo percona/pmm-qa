@@ -17,6 +17,10 @@ export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 export const defaultReplicas = 3;
 // /v1/version needs credentials even from inside the pod.
 const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
+// POSIX single-quote escaping, so a password containing a quote cannot end the
+// quoted string: close, escape the quote, reopen.
+const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+const curlCredentials = (): string => shellQuote(`admin:${adminPassword()}`);
 
 /** The `version` field, or undefined when the body is not the JSON we expect. */
 const parseVersion = (body: string): unknown => {
@@ -108,7 +112,7 @@ export default class HaClusterHelper {
   haStatusFromPod = (podName: string): string => {
     const { stdout } = this.k8sHelper.execInPod(
       podName,
-      `curl -sk -u 'admin:${adminPassword()}' https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      `curl -sk -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
       { silent: true },
     );
 
@@ -227,7 +231,7 @@ export default class HaClusterHelper {
     // mismatch instead of a pod that refused the request.
     const result = this.k8sHelper.execInPod(
       podName,
-      `curl -sk --fail -u 'admin:${adminPassword()}' https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.version}`,
+      `curl -sk --fail -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.version}`,
       { silent: true },
     );
     const body = result.stdout.trim();
