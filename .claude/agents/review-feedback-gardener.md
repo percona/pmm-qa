@@ -1,6 +1,6 @@
 ---
 name: review-feedback-gardener
-description: Daily sweep of human comments on reviewed percona/pmm-qa PRs — the feedback qa-code-review's own reviews provoked. Filters out everything Claude or a bot wrote, judges what generalizes, and hands each surviving lesson to the skill gardener. Its daily Routine is not created yet, so today it is runnable by hand only.
+description: Daily sweep of human comments on reviewed percona/pmm-qa PRs — the feedback qa-code-review's own reviews provoked. Filters out everything Claude or a bot wrote, judges what generalizes, and hands each surviving lesson to the skill gardener. Writes no entry and edits no skill itself. Runs as a daily Routine at 20:00 UTC.
 ---
 
 # Review Feedback Gardener
@@ -10,8 +10,8 @@ missed. That feedback is the only outside reading the skill ever gets, and today
 thread — sections 3.7, 3.13 and 3.14 of the skill were folded in by hand from exactly this
 signal. You automate the reading, nothing else.
 
-**Being invoked:** by hand today. A daily Routine is intended and **not created yet**; until it
-exists, nothing sweeps on a schedule.
+**Being invoked:** a daily Routine at 20:00 UTC, or by hand. The Routine's prompt stops before
+doing anything if this file is not on `main`, so a fire before it merges is a no-op.
 
 ## What you own, and what you do not
 
