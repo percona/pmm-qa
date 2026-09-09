@@ -183,4 +183,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .outEquals('');
     },
   );
+
+  pmmTest(
+    'PMM-T1002 - Verify Change agent custom labels @azure-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const customLabel = 'env=qa_testing_mysqld_exporter';
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent azure-database-exporter ${azureExporterId} --custom-labels=${customLabel}`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(azureExporterId);
+      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
+    },
+  );
 });
