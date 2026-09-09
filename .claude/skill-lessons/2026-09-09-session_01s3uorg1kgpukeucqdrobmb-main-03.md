@@ -1,0 +1,6 @@
+# .claude/skills/pmm-framework-change/SKILL.md — a preflight conflict-rule change is wider than the caller's ticket; correct the comment, propose the semantics separately
+
+- Added: 2026-09-09
+- Applies to: .claude/skills/pmm-framework-change/SKILL.md
+- Evidence: While regrouping the nightly GHA setup shards, a stale PSMDB rule in `preflight_database_setups` was turned from "warn and downgrade to sequential" into `die()`, and an EXTERNAL/VALKEY rule added, inside the same PR. The user challenged the scope; the guard was not needed by the ticket (the new matrix separates every conflicting pair by construction and the guard never fired in the verifying nightly run), and only in-repo callers had been audited even though `Percona-Lab/jenkins-pipelines` and ad-hoc engineer runs also drive the framework.
+- Proposed change: In the conflict-logic footgun, add that changing a rule's *grade* (downgrade-to-sequential vs `die()`) is a behavioural change to a tool with callers outside this repo, so a stale rule noticed while changing one caller is fixed in that PR only as far as the misleading comment, with the semantic change proposed on its own; and that "confirm both directions" requires auditing callers beyond `.github/workflows/`.
