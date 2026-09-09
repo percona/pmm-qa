@@ -409,8 +409,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
     commands = [
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --pmm-agent-listen-port=7778`,
-      `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --pmm-agent-listen-port=7778`,
+      `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --pmm-agent-listen-port=7778`,
+      `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --pmm-agent-listen-port=7778`,
     ];
 
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -422,8 +422,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
       let commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --server-url=${serverUrl}`,
       ];
 
       for (const command of commands) {
@@ -431,8 +431,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --server-url=${serverUrl} --server-insecure-tls`,
       ];
 
       for (const command of commands) {
