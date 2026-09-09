@@ -1,0 +1,6 @@
+# .claude/agents/investigator.md — orphaned-inventory symptoms point at the setup step's retry, and the run's own arithmetic settles it
+
+- Added: 2026-09-09
+- Applies to: target only
+- Evidence: nightly run 34381821186 failed PMM-T554 (disconnected pmm-agents), PMM-T2146 (`mongos_32107` Failed) and PMM-T2007 (23 inventory services vs 13 on the panel). One grep of the run-logs zip for `Attempt [0-9] failed|INTERRUPTED|Command completed after` over `*setup*.txt` showed the `ps-replication-psmdb-sharded` shard hit its `timeout -k 30 29m` after psmdb sharding had already registered 10 nodes, so `nick-fields/retry`'s `on_retry_command` wiped containers whose nodes stay in a PMM Server that outlives the retry; 23 − 13 = 10, the agents' `created_at` all fell inside the failed attempt's window, and sibling run 34381643225 retried three shards and failed with a superset.
+- Proposed change: in the CI-trigger step, add that services in `Failed` state, disconnected pmm-agents, or an inventory-vs-panel service-count mismatch indicate the setup step's retry rather than the product — grep the run-logs zip's `*setup*.txt` for `Attempt [0-9] failed|INTERRUPTED|Command completed after` first, then confirm before provisioning that the orphan count equals the nodes the wiped setup registered and their `created_at` falls inside the failed attempt's window.
