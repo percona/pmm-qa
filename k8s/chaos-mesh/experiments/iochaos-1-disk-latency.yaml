@@ -1,0 +1,77 @@
+# !! DO NOT RUN ON AN LKE (cgroup v2) CLUSTER — THIS BREAKS THE TARGET POD !!
+#
+# Ran once on 2026-09-10 against pmm-ha-2 and did NOT inject latency. Instead it
+# detached the volume from the application: Chaos Mesh moved the PVC aside to
+# /__chaosfs__srv__, mounted the toda FUSE layer on it there, and never bind-
+# mounted it back to /srv. The container was left looking at an empty directory
+# on its overlay filesystem, pmm-managed died with ENOENT, and the pod went 0/1.
+# Deleting the IOChaos object did NOT restore the mount; only deleting the pod
+# does. No data was lost — it stays on the PVC — but the pod cannot reach it.
+#
+# Measured proof no latency was applied: writes went 57-73ms -> 7-8ms (FASTER,
+# because they were landing on local overlay instead of network block storage),
+# reads unchanged at 4-5ms.
+#
+# The cause is the /dev/fuse warning every chaos-daemon logs at startup on these
+# nodes ("fail to find device cgroup" — cgroup v2 vs Chaos Mesh's v1 lookup).
+# toda starts, but the mount handoff into the container namespace never
+# completes. The CR still reported AllInjected: True with 7 Failed Apply events
+# against 1 Succeeded, so its status cannot be trusted here.
+#
+# The disk read/write-fault experiment uses the identical FUSE mechanism and
+# will fail the same way; it was deliberately not attempted. BlockChaos
+# (device-mapper, no FUSE) is the untested alternative for disk latency.
+#
+# Kept in the repo as the record of that finding, not as a runnable experiment.
+#
+# PMM-15262 / Experiment I1 — IOChaos: disk latency on a PMM Server volume.
+#
+# Adds 100ms to 50% of filesystem operations on /srv, the pmm-storage PVC. That
+# volume holds PMM's logs, Grafana's plugin and session working files, alerting
+# state and the local ClickHouse and nginx directories — so this exercises the
+# one storage path PMM Server owns directly. The bulk data stores (PostgreSQL,
+# VictoriaMetrics, ClickHouse proper) live in their own pods with their own
+# volumes and are untouched here.
+#
+# THIS EXPERIMENT MAY NOT INJECT AT ALL, and that is a legitimate result to
+# record. IOChaos works by mounting a FUSE layer (toda) over volumePath and
+# intercepting syscalls. Every chaos-daemon on this cluster logs at startup:
+#
+#   ERROR  grant access to /dev/fuse  {"error": "fail to find device cgroup"}
+#
+# because the LKE nodes run cgroup v2 and Chaos Mesh looks for a cgroup v1
+# device controller. /dev/fuse is present in the daemon container (crw-rw-rw-),
+# so the privileged daemon may reach it regardless — but this is the first run
+# that settles it. If injection fails, BlockChaos (device-mapper, no FUSE) is
+# the fallback for latency, though it has no equivalent for I/O faults.
+#
+# Percentages and delay are deliberately modest. A FUSE layer over a live data
+# volume is the most invasive fault in this suite: if the mount misbehaves, PMM
+# loses access to /srv rather than merely being slowed, and on this cluster a
+# PMM Server pod that restarts does not come back cleanly while PostgreSQL is
+# near its connection limit.
+#
+# Targets a follower, not the leader — see stresschaos-1-cpu.yaml for why.
+# Re-check which pod holds leadership before every run; Chaos Mesh cannot
+# express "not the Raft leader" as a selector.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: exp-i1-disk-latency-pmm-server
+  namespace: chaos-mesh
+spec:
+  action: latency
+  mode: one
+  duration: 2m
+  selector:
+    namespaces:
+      - pmm
+    labelSelectors:
+      app.kubernetes.io/component: pmm-server
+      statefulset.kubernetes.io/pod-name: pmm-ha-2
+  containerNames:
+    - pmm-ha
+  volumePath: /srv
+  path: /srv/**/*
+  delay: 100ms
+  percent: 50
