@@ -273,6 +273,8 @@ jobs:
       - name: UI Upgrade
         if: ${{ inputs.upgrade_type == 'ui' }}
         working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
         run: |
           export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           npx playwright test --grep "@pmm-upgrade"
