@@ -9,6 +9,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
     'nginx',
     'redis_container',
     'chunk-churn',
+    'watchtower',
   ];
 
   pmmTest('Verify PMM Agents statuses @pre-upgrade', async ({ cliHelper }) => {
