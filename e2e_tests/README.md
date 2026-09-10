@@ -103,6 +103,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@new-navigation`
 - `@nightly`
 - `@pmm-ha`
+- `@pmm-helm-mid-upgrade`
+- `@pmm-helm-post-upgrade`
+- `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`

@@ -24,6 +24,7 @@ import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
+import StatsAndLicensePage from '@pages/statsAndLicense.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
@@ -60,6 +61,7 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
+  statsAndLicensePage: StatsAndLicensePage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -170,6 +172,7 @@ const pmmTest = base.extend<{
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
+  statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
