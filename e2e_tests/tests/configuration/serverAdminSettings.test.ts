@@ -20,7 +20,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-10162 Verify that Grafana Enterprise is not present @grafana-pr',
+  'PMM-10162 Verify that Grafana Enterprise is not present @settings @grafana-pr',
   async ({ page, statsAndLicensePage }) => {
     await page.goto(statsAndLicensePage.url);
     await statsAndLicensePage.waitForPageLoaded();
@@ -28,7 +28,7 @@ pmmTest(
 
     await pmmTest.step('Verify no Grafana Enterprise advertising is present', async () => {
       for (const text of statsAndLicensePage.enterpriseAdvertising) {
-        await expect(statsAndLicensePage.builders.advertisement(text)).toBeHidden();
+        await expect(statsAndLicensePage.builders.advertisement(text)).toHaveCount(0);
       }
     });
   },
