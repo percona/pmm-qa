@@ -9,6 +9,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
     'nginx',
     'redis_container',
     'chunk-churn',
+    'watchtower',
   ];
 
   pmmTest(
@@ -17,7 +18,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       const containers: string[] = cliHelper
         .execSilent(`docker ps --format "{{.Names }}"`)
         .stdout.split('\n')
-        .filter((item) => item && !nonClientContainers.includes(item));
+        .filter((item: string) => item && !nonClientContainers.includes(item));
 
       for (const container of containers) {
         const pmmAdminStatus: string = cliHelper.execSilent(
