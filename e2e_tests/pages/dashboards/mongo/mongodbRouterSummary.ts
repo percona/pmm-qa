@@ -18,7 +18,7 @@ export default class MongodbRouterSummaryDashboard implements DashboardInterface
     { name: 'Operation Latencies', type: 'timeSeries' },
     { name: 'Average Connections', type: 'timeSeries' },
     { name: 'Reads & Writes', type: 'timeSeries' },
-    { name: 'Router Status', type: 'stateTime' },
+    { name: 'Router Status', type: 'singleStateTime' },
   ];
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));

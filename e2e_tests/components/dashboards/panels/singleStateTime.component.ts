@@ -11,6 +11,6 @@ export default class SingleStateTimePanel extends PanelComponent {
   };
 
   verifyPanelData = async (panelName: string) => {
-    await this.verifyData(this.elements.stateTimeValues(panelName), panelName);
+    await this.verifyData(this.elements.stateTimeValues(panelName), panelName, false);
   };
 }
