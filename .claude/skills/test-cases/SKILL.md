@@ -20,6 +20,7 @@ Read only the skills needed for the current step:
 - Known failure shapes: [references/failure-mechanisms.md](references/failure-mechanisms.md)
 - Recurring PMM risks: [references/pmm-risk-patterns.md](references/pmm-risk-patterns.md)
 - Coverage search and suite placement: [references/coverage.md](references/coverage.md)
+- Test-case format and examples: [references/test-case-template.md](references/test-case-template.md)
 
 The references above distill the reusable research from `../test-case-design/`. Keep that older skill as historical reference only; do not inherit its workflow, output size, publishing steps, or evaluation process.
 
@@ -121,7 +122,9 @@ Write related actions and assertions as one flow. Set state through APIs or fixt
 
 ### 7. Produce the review draft and stop
 
-Use this compact structure:
+Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case. Keep Findings and coverage decisions outside the case body.
+
+Use this review structure:
 
 ```markdown
 ## PMM-XXXX — test cases
@@ -134,23 +137,11 @@ Ticket: <summary> · PRs: <repo#number or none> · Version: <version>
 
 ### Existing coverage
 
-- <covered behavior> — <PMM-T key or path:line> — <assertion>
+- <covered behavior> — <PMM-T key or path:line> — <assertion or missing assertion to extend>
 
 ### Proposed cases
 
-#### 1. <Zephyr case name without key or automation tag>
-
-Disposition: new | extend <PMM-T key/path>
-Priority: High | Normal | Low
-Risk: <named defect and user impact>
-Evidence: <AC, implementation branch, or bug>
-Preconditions: <role, services, versions, configuration>
-Test data: <values that select the behavior>
-Steps:
-| Action | Data | Expected result |
-|---|---|---|
-| <action> | <data> | <specific observable result> |
-Verify via: <API, CLI, persisted state, permission, flag, metric, or UI contract>
+<one test-case-template block per new case>
 
 ### Considered and dropped
 
