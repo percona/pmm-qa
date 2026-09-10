@@ -1,6 +1,6 @@
 ---
 name: git-diff
-description: Read and summarize git diffs for percona/pmm and percona/grafana PRs linked to a PMM Jira ticket. Use before planning manual QA or when Test Runner needs PR scope. Includes JSON dashboard diff guidance.
+description: Read and summarize git diffs for percona/pmm, percona/grafana, percona/percona-helm-charts PRs linked to a PMM Jira ticket. Use before planning manual QA or when Test Runner needs PR scope. Includes JSON dashboard diff guidance.
 ---
 
 # PMM git diff
@@ -33,11 +33,13 @@ gh api "repos/percona/pmm/pulls/<n>/files?per_page=100" \
 
 Return: files changed, behavioral summary, gaps in "How to test", suggested manual checks.
 
+Do not stop after finding a PMM or Grafana PR. HA behavior may live in `percona/percona-helm-charts`. For chart tickets inspect templates, values, image pins, and feature gates.
+
 ## When the session doesn't have the repo
 
 A session scoped to `pmm-qa` alone gets "not configured for this session" from both the
-MCP tools and `gh` for `percona/pmm` and `percona/grafana`, and `add_repo` only offers
-anonymous read (see the `repos` skill). Both are public, so fetch the PR ref directly:
+MCP tools and `gh` for percona/pmm, percona/grafana, percona/percona-helm-charts and `add_repo` only offers
+anonymous read (see the `repos` skill). Public repositories can be fetched by PR ref directly:
 
 ```bash
 REPO=percona/pmm        # or percona/grafana — whichever the PR is in
