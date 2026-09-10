@@ -323,6 +323,9 @@ export default class Dashboards extends BasePage {
         case 'stateTime':
           await this.panels().stateTime.verifyPanelData(panel.name);
           break;
+        case 'singleStateTime':
+          await this.panels().singleStateTime.verifyPanelData(panel.name);
+          break;
         case 'summary':
           await this.elements.summaryPanelText.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           break;
@@ -411,6 +414,9 @@ export default class Dashboards extends BasePage {
           break;
         case 'stateTime':
           await this.panels().stateTime.verifyPanelData(panel.name);
+          break;
+        case 'singleStateTime':
+          await this.panels().singleStateTime.verifyPanelData(panel.name);
           break;
         case 'summary':
           await this.elements.summaryPanelText.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
