@@ -1,8 +1,8 @@
 export interface KubernetesPod {
   containersReady: number;
   containersTotal: number;
-  initContainers: string[];
   images: string[];
+  initContainers: string[];
   name: string;
   phase: string;
   ready: boolean;
