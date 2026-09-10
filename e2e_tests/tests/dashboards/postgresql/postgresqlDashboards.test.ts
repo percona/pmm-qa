@@ -11,15 +11,15 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('pgsql');
 
       await page.goto(
-        urlHelper.buildUrlWithParameters(dashboard.pgsql.instanceOverview.url, {
+        urlHelper.buildUrlWithParameters(dashboard.postgresql.postgresqlInstancesOverview.url, {
           from: 'now-1h',
           refresh: '5s',
           serviceName: service_name,
         }),
       );
-      await dashboard.verifyMetricsPresent(dashboard.pgsql.instanceOverview.metrics);
-      await dashboard.verifyAllPanelsHaveData(dashboard.pgsql.instanceOverview.noDataMetrics);
-      await dashboard.verifyPanelValues(dashboard.pgsql.instanceOverview.metricsWithData);
+      await dashboard.verifyMetricsPresent(dashboard.postgresql.postgresqlInstancesOverview.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.postgresql.postgresqlInstancesOverview.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.postgresql.postgresqlInstancesOverview.metricsWithData);
     },
   );
 });

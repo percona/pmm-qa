@@ -30,28 +30,8 @@ export default class Dashboards extends BasePage {
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
-  readonly pgsql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  builders = {
-    collapseRowByName: (rowName: string) =>
-      this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Collapse row"]`,
-      ),
-    expandRowByName: (rowName: string) =>
-      this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
-      ),
-    panelByExactName: (panelName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
-    panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
-    panelHeaderByName: (panelName: string) =>
-      this.builders.panelByExactName(panelName).getByTestId('header-container'),
-    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
-    panelMenuItemByName: (menuItemName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-  };
   elements = {
     annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
     // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
@@ -76,6 +56,14 @@ export default class Dashboards extends BasePage {
   builders = {
     annotationTagText: (tagValue: string) =>
       this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
+    collapseRowByName: (rowName: string) =>
+      this.grafanaIframe().locator(
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Collapse row"]`,
+      ),
+    expandRowByName: (rowName: string) =>
+      this.grafanaIframe().locator(
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
+      ),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
@@ -85,10 +73,6 @@ export default class Dashboards extends BasePage {
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-  };
-  buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
-    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
