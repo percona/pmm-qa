@@ -1,0 +1,180 @@
+# PMM HA performance profile: SMALL - up to 50 monitored databases under load
+#
+#   ./k8s/install_pmm_ha.sh --platform eks \
+#       --values performance/pmm-ha/values-perf-small.yaml
+#
+# Design point: 50 databases x ~5,000 active series, plus the ~165,000 series the
+# chart's own vmagent scrapes from kubelet/cAdvisor/kube-apiserver/kube-state-metrics.
+# That is ~415k active series, ~30k samples/s, ~2.3 GB/day of metrics - inside the
+# chart's own ~100-node default profile, so every resource block here is the chart
+# default and is restated only to pin what the run was sized against.
+#
+# The one thing that is NOT a default is dataRetentionDays. See the comment on it.
+#
+# Cluster: 3 workers x 16 vCPU / 64Gi across 3 AZs. Requests total ~16.5 CPU / ~40Gi;
+# aggregate limits ~54 CPU / ~96Gi. Storage 471Gi.
+
+# Metrics retention defaults to 90d while vmstorage.storageSize defaults to 50Gi,
+# which holds ~30d at this fleet size. A full vmstorage PVC makes VictoriaMetrics
+# REJECT WRITES rather than drop old data, which in a load test shows up as ingest
+# gaps and gets misread as a PMM ingestion defect. Pin both ends instead.
+dataRetentionDays: 30
+
+# PMM Server has no native ARM64 build and Query Analytics needs SSE4.2, so the server
+# pods are pinned. ClickHouse needs amd64 for the same reason but this chart version
+# exposes no clickhouse.nodeSelector and hardcodes its podTemplate affinity, so it
+# CANNOT be pinned from values - keep the worker pool homogeneous amd64 rather than
+# relying on a selector. See README.md, "EKS specifics".
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+replicas: 3
+
+pmmResources:
+  requests:
+    cpu: "2"
+    memory: "4Gi"
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+
+storage:
+  size: 40Gi
+
+haproxy:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 128Mi
+    limits:
+      cpu: 1
+      memory: 512Mi
+
+# Left at the chart default of 3. These pods exist so remote/RDS/Azure services have
+# a Node to be added to; they are NOT the load generators. Drive the load from
+# databases outside this cluster so the fleet under test does not compete for CPU
+# with PMM Server - see README.md, "Keep the load off the cluster under test".
+pmmClient:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  storage:
+    size: 2Gi
+
+victoriaMetrics:
+  vminsert:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+  vmstorage:
+    replicaCount: 3
+    retentionPeriod: "30d"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+    # ~30Gi needed at 30d; 50Gi leaves merge headroom.
+    storageSize: 50Gi
+  vmselect:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+  vmauth:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+  vmagent:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+
+clickhouse:
+  resources:
+    requests:
+      cpu: "1"
+      memory: "4Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+  # ~15Gi of QAN at 30d and 200 rows/min/service. The margin here is deliberate:
+  # under sustained load the row rate runs several times that, and ClickHouse's own
+  # system.* log tables have been measured at many times the size of the QAN data.
+  storage:
+    size: 50Gi
+  keeper:
+    replicasCount: 3
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    storage:
+      size: 5Gi
+
+pg-db:
+  # instances is a LIST, so Helm replaces it wholesale instead of merging. Every
+  # field the chart sets has to be repeated here, not just resources.
+  instances:
+    - name: instance1
+      replicas: 3
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2
+          memory: 4Gi
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/data: postgres
+                  postgres-operator.crunchydata.com/instance-set: instance1
+  proxy:
+    pgBouncer:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi

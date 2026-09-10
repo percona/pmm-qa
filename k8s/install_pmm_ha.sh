@@ -64,6 +64,14 @@ RELEASED_REPOSITORY="${RELEASED_REPOSITORY:-percona/pmm-server}"
 # OpenShift, hence the platform default.
 WEBHOOK_SETTLE_SECONDS="${WEBHOOK_SETTLE_SECONDS:-}"
 EXTRA_SET=()
+# Seeded from the env before the CLI is parsed, so a --values on the command line is
+# passed to helm after these and therefore wins.
+EXTRA_VALUES=()
+if [ -n "${VALUES_FILES:-}" ]; then
+    while IFS= read -r _vf; do
+        [ -n "$_vf" ] && EXTRA_VALUES+=(--values "$_vf")
+    done <<< "${VALUES_FILES//:/$'\n'}"
+fi
 
 # pmm3-ha-eks / pmm3-ha-rosa already pass the image split in two, accept it as-is.
 if [ -z "$IMAGE" ] && [ -n "${PMM_IMAGE_REPOSITORY:-}" ] && [ -n "${PMM_IMAGE_TAG:-}" ]; then
@@ -100,6 +108,9 @@ usage() {
                                 is created and no password is given
         --external-access       expose HAProxy and wait for PMM to serve on it:
                                 an NLB on eks, a LoadBalancer on lke, a Route on openshift
+        --values FILE           extra values file for the pmm-ha chart; repeatable.
+                                Applied before --set, so --set still wins. Sizing
+                                profiles live in performance/pmm-ha/
         --set KEY=VALUE         extra --set for the pmm-ha chart; repeatable
         --charts WHICH          which charts to install or upgrade (default: all)
                                   all     pmm-ha-dependencies, then pmm-ha
@@ -113,7 +124,7 @@ usage() {
         DEPS_RELEASE, CHART_DIR, CHART_BRANCH (or PMM_CHART_BRANCH), CHART_REPO, CHART_VERSION, PMM_IMAGE (or
         DEPS_CHART_VERSION, PMM_IMAGE_REPOSITORY + PMM_IMAGE_TAG), PMM_ADMIN_PASSWORD,
         EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
-        RELEASED_REPOSITORY.
+        RELEASED_REPOSITORY. VALUES_FILES takes a colon-separated list for --values.
         "
     exit 2
 }
@@ -131,6 +142,7 @@ while [ $# -gt 0 ]; do
         --image)           IMAGE="$2"; IMAGE_FROM_FLAG="true"; shift 2 ;;
         --admin-password)  ADMIN_PASSWORD="$2"; shift 2 ;;
         --external-access) EXTERNAL_ACCESS="true"; EXTERNAL_ACCESS_FROM_FLAG="true"; shift ;;
+        --values)          EXTRA_VALUES+=(--values "$2"); shift 2 ;;
         --set)             EXTRA_SET+=(--set "$2"); shift 2 ;;
         --charts)          CHARTS="$2"; shift 2 ;;
         --timeout)         TIMEOUT="$2"; shift 2 ;;
@@ -143,6 +155,13 @@ done
 
 log() { echo "[pmm-ha] $*"; }
 fail() { echo "ERROR: $*" >&2; exit 1; }
+
+# Checked here rather than left to helm: a mistyped profile path otherwise surfaces
+# only after the operators are installed, minutes into the run.
+for _i in "${!EXTRA_VALUES[@]}"; do
+    [ "${EXTRA_VALUES[$_i]}" = "--values" ] && continue
+    [ -f "${EXTRA_VALUES[$_i]}" ] || fail "values file not found: ${EXTRA_VALUES[$_i]}"
+done
 
 # Jenkins booleans arrive as true/1/yes depending on the caller.
 normalize_bool() {
@@ -517,7 +536,7 @@ helm upgrade --install "$RELEASE" "$PMM_CHART" \
     --wait --timeout "$TIMEOUT" \
     --set "image.repository=${IMAGE%:*}" \
     --set "image.tag=${IMAGE##*:}" \
-    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${EXTRA_VALUES[@]+"${EXTRA_VALUES[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 
 # Resolved by label rather than named: the StatefulSet is named after the release.
 log "Waiting for the PMM Server StatefulSet to roll out"

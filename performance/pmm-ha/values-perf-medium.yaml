@@ -1,0 +1,193 @@
+# PMM HA performance profile: MEDIUM - 50 to 200 monitored databases under load
+#
+#   ./k8s/install_pmm_ha.sh --platform eks \
+#       --values performance/pmm-ha/values-perf-medium.yaml
+#
+# Sized at the TOP of the band (200 databases), so one profile covers 50-200.
+#
+# Design point: 200 databases x ~5,000 active series + ~165,000 series of Kubernetes
+# baseline = ~1.17M active series, ~83k samples/s, ~6.5 GB/day of metrics. That is
+# roughly 230 node-equivalents, about halfway between the chart's ~100-node default
+# and its ~500-node profile, and these numbers interpolate between the two - rounded
+# up on the write path (HAProxy, vminsert, vmstorage, ClickHouse), because that is
+# what a client-buffer replay after a failover hits first.
+#
+# Cluster: 6 workers x 16 vCPU / 64Gi, 2 per AZ across 3 AZs.
+# Requests total ~25 CPU / ~64Gi; aggregate limits ~78 CPU / ~149Gi. Storage 801Gi.
+
+# 200 databases at 90d would need ~250Gi per vmstorage pod. Pinned to 30d so the
+# PVC below is the real working set; a full vmstorage PVC rejects writes rather than
+# expiring data, which reads as an ingest defect in a load test.
+dataRetentionDays: 30
+
+# PMM Server has no native ARM64 build and Query Analytics needs SSE4.2, so the server
+# pods are pinned. ClickHouse needs amd64 for the same reason but this chart version
+# exposes no clickhouse.nodeSelector and hardcodes its podTemplate affinity, so it
+# CANNOT be pinned from values - keep the worker pool homogeneous amd64 rather than
+# relying on a selector. See README.md, "EKS specifics".
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+replicas: 3
+
+# Only the HAProxy-elected leader serves UI, remote_write and QAN, so the limit has
+# to carry the whole 200-database fleet while the request is paid by all three pods.
+pmmResources:
+  requests:
+    cpu: "3"
+    memory: "6Gi"
+  limits:
+    cpu: "6"
+    memory: "12Gi"
+
+storage:
+  size: 40Gi
+
+haproxy:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 400m
+      memory: 192Mi
+    limits:
+      cpu: 1500m
+      memory: 768Mi
+
+# Still the chart default count. Drive the 200 databases from outside this cluster -
+# see README.md, "Keep the load off the cluster under test". If you deliberately want
+# in-cluster remote monitoring instead, scale these per the README's client table and
+# put them on their own tainted node group.
+pmmClient:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  storage:
+    size: 2Gi
+
+victoriaMetrics:
+  # Third replica added here rather than at 500 databases: vminsert is the first hop
+  # for replayed client buffers and the cheapest place to add burst capacity.
+  vminsert:
+    replicaCount: 3
+    resources:
+      requests:
+        cpu: "300m"
+        memory: "768Mi"
+      limits:
+        cpu: "1500m"
+        memory: "2Gi"
+  vmstorage:
+    replicaCount: 3
+    retentionPeriod: "30d"
+    # Memory tracks ACTIVE SERIES, not ingest rate, and VictoriaMetrics sizes its
+    # caches from the cgroup limit - keep request within ~2x of limit or the node
+    # overcommits and the OOM killer takes vmstorage out mid-run.
+    resources:
+      requests:
+        cpu: "750m"
+        memory: "4Gi"
+      limits:
+        cpu: "3"
+        memory: "8Gi"
+    # ~84Gi needed at 30d across 3 pods with replicationFactor 2; 100Gi for merges.
+    storageSize: 100Gi
+  vmselect:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "750m"
+        memory: "1536Mi"
+      limits:
+        cpu: "3"
+        memory: "6Gi"
+  vmauth:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "192Mi"
+      limits:
+        cpu: "750m"
+        memory: "768Mi"
+  # Unchanged from the default profile: this vmagent scrapes the Kubernetes control
+  # plane and the PMM components, and that workload does not grow with the number of
+  # monitored databases.
+  vmagent:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+
+clickhouse:
+  resources:
+    requests:
+      cpu: "1500m"
+      memory: "6Gi"
+    limits:
+      cpu: "5"
+      memory: "12Gi"
+  # QAN is NOT sharded - all three replicas hold a full copy. ~59Gi at 30d and
+  # 200 rows/min/service, so 50Gi would not hold it; 100Gi also absorbs the higher
+  # row rate that sustained load produces.
+  storage:
+    size: 100Gi
+  keeper:
+    replicasCount: 3
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    storage:
+      size: 5Gi
+
+pg-db:
+  # PostgreSQL scales with the number of agents and services, not with metric volume,
+  # so it stays modest relative to the metrics tier.
+  #
+  # instances is a LIST - Helm replaces it wholesale, so every field is repeated.
+  # The required podAntiAffinity below is why the cluster needs at least 3 workers.
+  instances:
+    - name: instance1
+      replicas: 3
+      resources:
+        requests:
+          cpu: 750m
+          memory: 1536Mi
+        limits:
+          cpu: 3
+          memory: 6Gi
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/data: postgres
+                  postgres-operator.crunchydata.com/instance-set: instance1
+  proxy:
+    pgBouncer:
+      resources:
+        requests:
+          cpu: 150m
+          memory: 192Mi
+        limits:
+          cpu: 750m
+          memory: 768Mi
