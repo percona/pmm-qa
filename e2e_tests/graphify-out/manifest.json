@@ -30,7 +30,7 @@
     "semantic_hash": "a3db274b924c96175235be1d39199ba6"
   },
   "api/inventory.api.ts": {
-    "mtime": 1788987933.9962907,
+    "mtime": 1789077903.5104299,
     "ast_hash": "61f942e932d9757a5c0551ead9ef35ca",
     "semantic_hash": "61f942e932d9757a5c0551ead9ef35ca"
   },
@@ -115,12 +115,12 @@
     "semantic_hash": "00a370b346676d70d2b149962747e3bd"
   },
   "fixtures/pmmTest.ts": {
-    "mtime": 1788988052.9561024,
-    "ast_hash": "3b4dcd37ff1d5a7e1b6b2618419a332f",
-    "semantic_hash": "3b4dcd37ff1d5a7e1b6b2618419a332f"
+    "mtime": 1789078005.7655015,
+    "ast_hash": "c7f4f6077f99c3baf5e8b9c69028bb2f",
+    "semantic_hash": "c7f4f6077f99c3baf5e8b9c69028bb2f"
   },
   "helpers/apiEndpoints.ts": {
-    "mtime": 1788987934.002054,
+    "mtime": 1789077903.5124395,
     "ast_hash": "db482e1312015c0dabaf7ea1c5dcce30",
     "semantic_hash": "db482e1312015c0dabaf7ea1c5dcce30"
   },
@@ -190,7 +190,7 @@
     "semantic_hash": "55b3a4ebf44f612cc68222c4017d3aa0"
   },
   "interfaces/inventory.ts": {
-    "mtime": 1788987934.004733,
+    "mtime": 1789077903.5124395,
     "ast_hash": "cc159e2340aed31625987f463d81fa26",
     "semantic_hash": "cc159e2340aed31625987f463d81fa26"
   },
@@ -425,7 +425,7 @@
     "semantic_hash": "0c2abb8ea8e9ea6a5d9c408e7ab80cb9"
   },
   "playwright.config.ts": {
-    "mtime": 1788987934.0092628,
+    "mtime": 1789077903.5124395,
     "ast_hash": "b1baf031435c8cedc70b60d005a71617",
     "semantic_hash": "b1baf031435c8cedc70b60d005a71617"
   },
@@ -615,9 +615,9 @@
     "semantic_hash": "20aaf1091f9d2b5f32b501d20a2d4bcb"
   },
   "README.md": {
-    "mtime": 1788988052.9561024,
-    "ast_hash": "5ce3203572132d39115ba715c8e504c9",
-    "semantic_hash": "5ce3203572132d39115ba715c8e504c9"
+    "mtime": 1789078005.7655015,
+    "ast_hash": "091517113d1c64c2f30ff21a1c547842",
+    "semantic_hash": "091517113d1c64c2f30ff21a1c547842"
   },
   "docker-compose.yml": {
     "mtime": 1784571729.4178278,
@@ -790,9 +790,9 @@
     "semantic_hash": "3b6301037bf27217b89848edfb2dd00c"
   },
   "tests/configuration/serverAdminSettings.test.ts": {
-    "mtime": 1788892204.8243554,
-    "ast_hash": "07299c3fae8855acffe63a172104be46",
-    "semantic_hash": "07299c3fae8855acffe63a172104be46"
+    "mtime": 1789078005.7655015,
+    "ast_hash": "245b95b804f92c98fb8a9e8f3d445167",
+    "semantic_hash": "245b95b804f92c98fb8a9e8f3d445167"
   },
   "helpers/helm.helper.ts": {
     "mtime": 1788988052.9561024,
@@ -828,5 +828,10 @@
     "mtime": 1788988052.9657986,
     "ast_hash": "41ed01511b65415984ced99bf9db94b8",
     "semantic_hash": "41ed01511b65415984ced99bf9db94b8"
+  },
+  "pages/statsAndLicense.page.ts": {
+    "mtime": 1789078005.7655015,
+    "ast_hash": "b196848c54d455e327d666e1510bebb5",
+    "semantic_hash": "b196848c54d455e327d666e1510bebb5"
   }
 }
