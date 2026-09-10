@@ -380,8 +380,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       let commands = [
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /easy-rsa/easyrsa3/pki/private/${containerName}.key > /certs/server.pem"`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.pem"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
         `docker exec ${containerName} chown mongod:mongod /certs/server.pem /certs/ca-certs.pem`,
         `docker exec ${containerName} chmod 600 /certs/server.pem`,
@@ -400,12 +399,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
+      // MongoDB agents take a single cert+key PEM via --tls-certificate-key-file;
+      // the MySQL-style --tls-cert-file/--tls-key-file flags do not exist here and
+      // make pmm-admin reject the whole command, leaving the agents without TLS.
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --tls-certificate-key-file=/certs/client.pem --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-certificate-key-file=/certs/client.pem --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
     },
   );
