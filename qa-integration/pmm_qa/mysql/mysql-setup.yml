@@ -26,6 +26,14 @@
     my_rocks: "{{ lookup('env', 'MY_ROCKS') | default(false, true) }}"
     container_prefix: "mysql_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ mysql_version }}_"
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+    backup: "{{ lookup('env', 'BACKUP') | default(false, true) | bool }}"
+    buckets: "{{ lookup('env', 'BUCKETS') | default('bcp', true) }}"
+    minio_access_key: minio1234
+    minio_secret_key: minio1234
+    minio_volume_name: minio_backups
+    minio_ports:
+      - "9010:9000"
+      - "9001:9001"
 
   tasks:
     - name: Modify the node count for group replication
@@ -86,6 +94,12 @@
         docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL log_slow_admin_statements=ON; SET GLOBAL log_slow_slave_statements=ON;"
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: query_source == "slowlog"
+
+    - name: Install Percona XtraBackup for MySQL backups
+      include_tasks: tasks/backup_setup.yml
+      vars:
+        container_name: "{{ container_prefix }}{{ item }}"
+      when: backup | default(false) | bool
 
     - name: Install and add pmm client.
       include_tasks: ../tasks/install_pmm_client.yml
