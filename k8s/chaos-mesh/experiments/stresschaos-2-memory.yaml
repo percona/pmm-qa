@@ -38,7 +38,7 @@ spec:
       - pmm
     labelSelectors:
       app.kubernetes.io/component: pmm-server
-      statefulset.kubernetes.io/pod-name: pmm-ha-0
+      statefulset.kubernetes.io/pod-name: pmm-ha-2
   containerNames:
     - pmm-ha
   stressors:
