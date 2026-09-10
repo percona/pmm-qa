@@ -4,6 +4,7 @@ server_id={{ item }}
 bind-address=0.0.0.0
 port={{ mysql_listen_port }}
 userstat=1
+query_response_time_stats = ON
 
 # Authentication settings for caching_sha2_password
 caching_sha2_password_auto_generate_rsa_keys=ON
