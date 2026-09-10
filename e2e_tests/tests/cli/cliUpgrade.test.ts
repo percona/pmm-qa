@@ -44,6 +44,8 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       .stdout.split('\n')
       .filter((item) => item && !nonClientContainers.includes(item));
 
+    console.log(`Container names are: ${containers}`);
+
     for (const container of containers) {
       const pmmAdminVersion: string = cliHelper.execSilent(
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
