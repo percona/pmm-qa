@@ -95,7 +95,15 @@ Accuracy does not earn a comment its place — a true comment that restates the 
 - Otherwise post a summary only for what no line in the diff can carry: a finding about the body or the scope, a bot verdict with no file, a gate that misses the diff. Three sentences at most, and only the finding — never the author's reasoning confirmed back to them.
 - Use `gh pr comment --edit-last --create-if-none`, so a later run replaces the summary instead of adding another. Where no summary is warranted and an earlier run left one, edit that comment down to a single line saying nothing is outstanding — an edit, not a new comment. Touch no comment but your own.
 
-## 7. Never
+## 7. When a human answers a finding
+
+The author login does not end in `[bot]` — that alone excludes `claude[bot]`, `coderabbitai[bot]`, `copilot-pull-request-reviewer[bot]` and `github-actions[bot]`. What is left is a person, whether or not they drafted it through Claude.
+
+- **Only re-raise a finding a human rejected when they declined it for the wrong reason** — when what they replied to explicitly contradicts the reason they gave.
+- **Never re-raise a finding a human rejected or resolved without saying why in that thread.** You cannot assume they are wrong.
+- **A human finding on a line an earlier review passed is a gap in these rules, not a thread to duplicate.** Leave their thread alone.
+
+## 8. Never
 
 - Never approve, merge, push, or edit the PR's files.
 - Never post findings before section 1 has run.
