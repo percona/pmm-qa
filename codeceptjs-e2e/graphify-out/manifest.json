@@ -285,9 +285,9 @@
     "semantic_hash": "1898416a26772546ac1f11d9ac271fb2"
   },
   "tests/backup/inventory_test.js": {
-    "mtime": 1788988052.9478476,
-    "ast_hash": "13938c79cc41f2c6454cedfcd60ec607",
-    "semantic_hash": "13938c79cc41f2c6454cedfcd60ec607"
+    "mtime": 1789078005.7608495,
+    "ast_hash": "3e08acdc013595f1e56e9ca16d5b8cd5",
+    "semantic_hash": "3e08acdc013595f1e56e9ca16d5b8cd5"
   },
   "tests/backup/locations_test.js": {
     "mtime": 1787233825.2420282,
@@ -1054,11 +1054,6 @@
     "ast_hash": "2bc14fcfd222c15468a3cf4998ecb62f",
     "semantic_hash": "2bc14fcfd222c15468a3cf4998ecb62f"
   },
-  "tests/server-admin/verifyGrafanaIsGone_test.js": {
-    "mtime": 1784571729.3343894,
-    "ast_hash": "ac5f450800b6d92ba1993d81b2637ea6",
-    "semantic_hash": "ac5f450800b6d92ba1993d81b2637ea6"
-  },
   "tests/sshOVF_test.js": {
     "mtime": 1784571729.3461256,
     "ast_hash": "7c8c24fd7d317496b16e78cc925f999b",
@@ -1413,5 +1408,10 @@
     "mtime": 1788988052.9488492,
     "ast_hash": "683f87cc7bcf94996b3c41a2f91f922a",
     "semantic_hash": "683f87cc7bcf94996b3c41a2f91f922a"
+  },
+  "tests/server-admin/verifyGrafanaIsGone_migrated.js": {
+    "mtime": 1789078005.7608495,
+    "ast_hash": "ac5f450800b6d92ba1993d81b2637ea6",
+    "semantic_hash": "ac5f450800b6d92ba1993d81b2637ea6"
   }
 }
