@@ -388,7 +388,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: upgrade-logs
+          name: upgrade-logs-${{ inputs.upgrade_type }}-${{ inputs.version }}
           path: |
             logs.zip
             srv-logs.tar.gz
