@@ -2,6 +2,7 @@ export interface KubernetesPod {
   containersReady: number;
   containersTotal: number;
   initContainers: string[];
+  images: string[];
   name: string;
   phase: string;
   ready: boolean;
@@ -18,6 +19,7 @@ export interface KubernetesResourceList<T> {
 export interface KubernetesPodResource {
   metadata: { name: string; uid: string };
   spec?: {
+    containers?: { image: string }[];
     initContainers?: { name: string }[];
   };
   status?: {

@@ -95,9 +95,26 @@ Before(async ({
 
   await I.verifyCommand('docker exec rs101 systemctl start mongod');
 
-  const c = await I.mongoGetCollection('test', 'test');
+  // mongod can take minutes to accept connections again after a restart, and a
+  // client that was connected before it never recovers on its own.
+  /* eslint-disable no-await-in-loop */
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    try {
+      await I.mongoDisconnect();
+      await I.mongoConnect(mongoConnection);
+      const c = await I.mongoGetCollection('test', 'test');
 
-  await c.deleteMany({ number: 2 });
+      await c.deleteMany({ number: 2 });
+      break;
+    } catch (error) {
+      if (attempt === 10) {
+        throw error;
+      }
+
+      await I.wait(10);
+    }
+  }
+  /* eslint-enable no-await-in-loop */
 
   await I.Authorize();
   await settingsAPI.changeSettings({ backup: true });

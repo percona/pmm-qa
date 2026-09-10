@@ -27,7 +27,7 @@ on:
         type: string
       expected_setup_jobs:
         required: false
-        default: 14
+        default: 5
         type: number
       workers:
         required: false
@@ -57,7 +57,7 @@ jobs:
   tests:
     name: "test execution / ${{ inputs.tags_for_tests }}"
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
@@ -76,7 +76,7 @@ jobs:
       SUBSET_FILE_NAME: 'launchable-subset.json'
       SETUP_WAIT_STEP: 'Waiting for tests execution'
       SETUP_JOB_PREFIX: 'setup / '
-      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 14 }}
+      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 5 }}
       WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 

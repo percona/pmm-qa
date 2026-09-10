@@ -90,6 +90,7 @@ export default class K8sHelper {
         containersReady: containerStatuses.filter((status) => status.ready).length,
         containersTotal: containerStatuses.length,
         initContainers: (item.spec?.initContainers ?? []).map((container) => container.name),
+        images: (item.spec?.containers ?? []).map((container) => container.image),
         name: item.metadata.name,
         phase: item.status?.phase ?? 'Unknown',
         ready,

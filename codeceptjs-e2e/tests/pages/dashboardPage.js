@@ -1196,6 +1196,7 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
+      await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
       I.waitForElement(this.graphsLocator(metrics[i]), 5);
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
@@ -1205,8 +1206,22 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
+      await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
       I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+    }
+  },
+
+  // The metric walk pages down blindly and Grafana unmounts whatever is off-screen, so a
+  // panel can be scrolled past. Step back up until it is mounted again; a panel that is
+  // genuinely missing still fails on the wait that follows.
+  async scrollBackToPanel(panelLocator, pages = 3) {
+    let attempts = 0;
+
+    while (attempts < pages && await I.grabNumberOfVisibleElements(panelLocator) === 0) {
+      I.pressKey('PageUp');
+      I.wait(1);
+      attempts += 1;
     }
   },
 
