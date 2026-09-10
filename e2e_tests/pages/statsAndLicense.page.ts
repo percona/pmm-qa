@@ -44,7 +44,7 @@ export default class StatsAndLicensePage extends BasePage {
     'Contact us and get a free trial',
   ];
   builders = {
-    advertisement: (text: string) => this.grafanaIframe().getByText(text).filter({ visible: true }),
+    visibleAdvertisement: (text: string) => this.grafanaIframe().getByText(text).filter({ visible: true }),
   };
   buttons = {
     manageAlerts: this.grafanaIframe().getByRole('link', { name: 'Manage alerts' }),

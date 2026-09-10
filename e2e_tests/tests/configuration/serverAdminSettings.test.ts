@@ -28,7 +28,7 @@ pmmTest(
 
     await pmmTest.step('Verify no Grafana Enterprise advertising is present', async () => {
       for (const text of statsAndLicensePage.enterpriseAdvertising) {
-        await expect(statsAndLicensePage.builders.advertisement(text)).toHaveCount(0);
+        await expect(statsAndLicensePage.builders.visibleAdvertisement(text)).toHaveCount(0);
       }
     });
   },
