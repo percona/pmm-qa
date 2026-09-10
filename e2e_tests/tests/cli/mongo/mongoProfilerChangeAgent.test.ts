@@ -42,17 +42,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1001 - Verify Change agent username and password @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const mongoUri = 'mongodb://root:root@localhost/?replicaSet=rs';
+      const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
       const monitoringRoles =
         '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
       const mongoEval = (js: string) =>
         `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval '${js}'`;
 
-      // The replica set can be briefly unreachable when the suite starts (a mongod
-      // restart/election leaves the primary refusing connections -> ECONNREFUSED),
-      // so wait for it to answer before creating the monitoring user.
+      // Talk straight to rs101 (the priority-2 primary) with a direct connection
+      // instead of driving replica-set discovery: from inside the container the
+      // discovered primary resolves to loopback, so a mongod restart/election makes
+      // mongosh abort the whole command with "ECONNREFUSED 127.0.0.1:27017" even
+      // when the local mongod is up. createUser must run on the primary, so wait
+      // until rs101 answers as a writable primary before creating the user.
       await expect(() => {
-        cliHelper.execSilent(mongoEval('db.adminCommand({ ping: 1 })')).assertSuccess();
+        cliHelper
+          .execSilent(
+            mongoEval('if (!db.hello().isWritablePrimary) throw new Error("rs101 is not primary yet")'),
+          )
+          .assertSuccess();
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
 
       cliHelper
