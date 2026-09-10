@@ -1,11 +1,11 @@
 ---
 name: test-cases
-description: Design a concise set of strong, evidence-backed test cases for a PMM Jira ticket. Use when asked what should be tested for PMM-XXXXX, or when reviewing whether proposed coverage is sufficient. Read the ticket and implementation through the existing Jira and git-diff skills, compare candidates with Zephyr and pmm-qa coverage, and produce a review draft of new, extended, covered, and dropped cases. Do not execute tests or write to Jira or Zephyr.
+description: Design concise, evidence-backed test cases for a PMM Jira ticket or audit coverage of an existing PMM feature. Use when asked what should be tested for PMM-XXXXX, where existing coverage has gaps, or whether proposed coverage is sufficient. Compare requirements and current implementation with Zephyr and pmm-qa coverage, then produce a review draft of new, extended, covered, and dropped cases. Do not execute tests or write to Jira or Zephyr.
 ---
 
 # Test cases
 
-Turn a ticket's intended and implemented behavior into the few test cases that can catch meaningful defects. Treat happy paths, negative scenarios, and edge cases as prompts, not quotas.
+Turn a ticket or existing feature into the few test cases that can catch meaningful defects. Treat happy paths, negative scenarios, and edge cases as prompts, not quotas.
 
 ## Evidence sources
 
@@ -28,18 +28,22 @@ The references above distill the reusable research from `../test-case-design/`. 
 
 ### 1. Establish the test basis
 
-Use `jira` to read the summary, description, acceptance criteria, How to test, comments, components, labels, fix version, and linked pull requests.
+For a ticket, use `jira` to read the summary, description, acceptance criteria, How to test, comments, components, labels, fix version, and linked pull requests.
+
+For a coverage audit, name one narrow feature, then derive its public behavior from current code, API schemas, CLI help, configuration, documentation, and relevant historical bugs. Do not audit all of PMM at once.
 
 Extract:
 
 - the user-visible behavior and customer goal;
-- each testable acceptance criterion;
+- each testable acceptance criterion or public behavior;
 - constraints, roles, versions, and supported configurations;
 - ambiguities, contradictions, and missing expected behavior.
 
 Do not invent expected behavior to repair a weak ticket. Record uncertainty under Findings.
 
 ### 2. Inspect the implementation
+
+For a coverage audit, inspect the current implementation in every relevant repository. Use history and old tickets only to clarify intent; a linked pull request is not required.
 
 Use `git-diff` to inspect **every** linked implementation pull request, regardless of repository. Common homes are `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change. A feature may span several of them. Read changed files before hunks, then read behavior-changing code and the pull request's tests.
 
@@ -55,7 +59,7 @@ Identify validation, errors, permissions, persistence, lifecycle transitions, ve
 - implemented behavior absent from the ticket is a Finding or candidate, depending on whether it is a public contract;
 - developer tests are existing lower-layer coverage, not automatic reasons for another end-to-end case.
 
-If no implementation exists, continue from the ticket and mark implementation-dependent expectations as unverified.
+For a ticket with no implementation, continue from its requirements and mark implementation-dependent expectations as unverified.
 
 ### 3. Build behavior candidates
 
@@ -127,9 +131,9 @@ Read and follow [test-case-template.md](references/test-case-template.md) for ev
 Use this review structure:
 
 ```markdown
-## PMM-XXXX — test cases
+## <PMM-XXXX or feature> — test cases
 
-Ticket: <summary> · PRs: <repo#number or none> · Version: <version>
+Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <version>
 
 ### Findings
 
