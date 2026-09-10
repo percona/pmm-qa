@@ -91,7 +91,7 @@ register_database SSL_PSMDB \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
 
 register_database MYSQL \
-  '5.7 8.0 8.4 9.7' \
+  '5.7 8.0 8.4 9.0 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=9.7' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
