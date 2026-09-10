@@ -4,6 +4,7 @@ server_id={{ server_id_start + item - 1 }}
 bind-address=0.0.0.0
 port={{ mysql_listen_port }}
 userstat=1
+plugin-load-add = query_response_time.so
 query_response_time_stats = ON
 
 # General replication settings
