@@ -45,10 +45,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const mongoUri = 'mongodb://root:root@localhost/?replicaSet=rs';
       const monitoringRoles =
         '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
+      const mongoEval = (js: string) =>
+        `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval '${js}'`;
+
+      // The replica set can be briefly unreachable when the suite starts (a mongod
+      // restart/election leaves the primary refusing connections -> ECONNREFUSED),
+      // so wait for it to answer before creating the monitoring user.
+      await expect(() => {
+        cliHelper.execSilent(mongoEval('db.adminCommand({ ping: 1 })')).assertSuccess();
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
 
       cliHelper
         .execSilent(
-          `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })'`,
+          mongoEval(
+            `db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`,
+          ),
         )
         .assertSuccess();
 
@@ -60,7 +71,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).outContains('Authentication failed'));
 
       cliHelper.execSilent(
-        `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")'`,
+        mongoEval(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`),
       );
 
       commands = [
