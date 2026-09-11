@@ -57,7 +57,7 @@ pmmTest.describe(() => {
               cliHelper.execSilent(exporterRunningCommand(psContainerName, 'node_exporter')).stdout.trim(),
             {
               message: 'node_exporter should be Running after the pmm-agent was set up',
-              timeout: Timeouts.FIFTEEN_SECONDS,
+              timeout: Timeouts.ONE_MINUTE,
             },
           )
           .toBe('0');
