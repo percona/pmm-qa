@@ -29,7 +29,11 @@
   .checks th, .checks td { padding:4px 8px; border-bottom:1px solid var(--line); }
   .checks .bad { color:var(--fail); font-weight:600; }
   a { color:inherit; } .muted { color:var(--muted); } .empty { padding:24px; text-align:center; color:var(--muted); }
-  .snaps a { margin-right:10px; }
+  .snaps { white-space:normal; min-width:260px; } .snaps a { margin-right:10px; }
+  .filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; color:var(--muted); font-size:13px; }
+  .filters button { font:inherit; padding:3px 10px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--fg); cursor:pointer; }
+  .filters button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .filters label { display:inline-flex; gap:4px; align-items:center; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -39,6 +43,11 @@
 
   <div class="cards" id="cards"></div>
   <div class="chart"><canvas id="trend" height="110"></canvas><p class="empty" id="nochart" hidden>Trend chart unavailable (chart library did not load); the runs table below is complete.</p></div>
+  <div class="filters" id="filters" hidden>
+    <span>Scale:</span><button data-scale="" class="on">all</button>
+    <label><input type="checkbox" id="failsonly"> failing only</label>
+    <span id="count"></span>
+  </div>
   <div class="tablewrap">
     <table>
       <thead><tr><th>Date</th><th>Run</th><th>Scale</th><th>Server</th><th>Client</th><th>Status</th><th>Max deviation</th><th>Snapshots</th></tr></thead>
@@ -61,14 +70,16 @@
   if (!runs.length) { rows.innerHTML = '<tr><td colspan="8" class="empty">No runs published yet.</td></tr>'; return; }
   if (runs[0].deviation_threshold_pct != null) document.getElementById('thr').textContent = runs.at(-1).deviation_threshold_pct;
 
-  // Trend indicator per scale: compare the mean max-deviation of the last 3 runs
-  // to the 3 before them. Lower deviation = getting better.
+  // Trend indicator per scale: compare the mean max-deviation of the last 5 runs
+  // to the 5 before them. Lower deviation = getting better. Five smooths out the
+  // run-to-run noise that made 3-run windows flip verdicts.
+  const WIN = 5;
   const byScale = {};
   for (const r of runs) (byScale[r.scale] ||= []).push(r);
   const cards = document.getElementById('cards');
   for (const [scale, list] of Object.entries(byScale)) {
     const devs = list.map(maxDev);
-    const recent = devs.slice(-3), prior = devs.slice(-6, -3);
+    const recent = devs.slice(-WIN), prior = devs.slice(-2 * WIN, -WIN);
     const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
     const m1 = mean(recent), m0 = mean(prior);
     let cls = 'flat', word = 'stable', arrow = '→';
@@ -80,8 +91,29 @@
     cards.insertAdjacentHTML('beforeend', `
       <div class="card"><div class="k">${scale} clients · ${list.length} run${list.length === 1 ? '' : 's'}</div>
       <div class="v ${cls}">${arrow} ${word}</div>
-      <div class="muted">last: ${pct(devs.at(-1))} max deviation · ${fails} failing</div></div>`);
+      <div class="muted">last: ${pct(devs.at(-1))} max deviation · ${fails} of ${list.length} failing</div></div>`);
   }
+
+  // Table filters: one button per scale plus a failing-only toggle.
+  const filters = document.getElementById('filters');
+  for (const scale of Object.keys(byScale)) filters.querySelector('label').insertAdjacentHTML('beforebegin', `<button data-scale="${scale}">${scale}</button>`);
+  filters.hidden = false;
+  const applyFilters = () => {
+    const scale = filters.querySelector('button.on').dataset.scale;
+    const failsOnly = document.getElementById('failsonly').checked;
+    let shown = 0;
+    for (const tr of rows.querySelectorAll('tr.run')) {
+      const hide = (scale && tr.dataset.scale !== scale) || (failsOnly && tr.dataset.status === 'pass');
+      tr.hidden = hide; shown += hide ? 0 : 1;
+      if (hide) rows.querySelector(`tr.detail[data-for="${tr.dataset.id}"]`).hidden = true;
+    }
+    document.getElementById('count').textContent = `${shown} of ${runs.length} runs`;
+  };
+  filters.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    filters.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); applyFilters();
+  });
+  document.getElementById('failsonly').addEventListener('change', applyFilters);
 
   // Chart: max deviation over time, one line per scale. Optional — if the CDN is
   // unreachable the cards and table below still render.
@@ -108,7 +140,7 @@
     const snaps = (r.snapshots || []).map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.dashboard}</a>`).join('') || '<span class="muted">—</span>';
     const server = r.server ? `${r.server.from ?? '?'} → ${r.server.to ?? '?'}` : '—';
     rows.insertAdjacentHTML('beforeend', `
-      <tr class="run" data-id="${r.run_id}">
+      <tr class="run" data-id="${r.run_id}" data-scale="${r.scale ?? ''}" data-status="${r.status}">
         <td>${fmtDate(r.date)}</td><td><a href="reports/${r.run_id}.json">${r.run_id}</a></td><td>${r.scale ?? '—'}</td>
         <td>${server}</td><td>${r.client_version ?? '—'}</td>
         <td><span class="badge ${r.status === 'pass' ? 'pass' : 'fail'}">${r.status}</span></td>
@@ -126,6 +158,7 @@
     const tr = e.target.closest('tr.run'); if (!tr || e.target.closest('a')) return;
     const d = rows.querySelector(`tr.detail[data-for="${tr.dataset.id}"]`); d.hidden = !d.hidden;
   });
+  applyFilters();
 })();
 </script>
 </body>
