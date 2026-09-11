@@ -4,8 +4,8 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 ## Search order
 
-1. Run `git log --all --grep PMM-XXXX` because coverage may have landed with the fix.
-2. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`.
+1. Run `git rev-parse --is-shallow-repository`, then `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone an empty result is not evidence of absence; cite only the working-tree `rg` searches.
+2. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`. Use only `-n`, `-l`, `-g`, and `--hidden` — `rg` recurses by default and `-r` is `--replace`, which rewrites matched text in the output to look like source. Re-run any hit whose matched text differs from the query.
 3. Search the feature or page name only after identifiers.
 4. Read the full setup and assertions of every plausible hit.
 5. Search Zephyr with the `zephyr` skill's read-only `search`, `list`, and `get` operations.
@@ -39,7 +39,7 @@ For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tes
 
 Check the candidate test's tags against `.github/workflows/`. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
 
-A lane must also produce the required engine/client version, dataset shape, topology, and tools. Put version and data requirements in Preconditions. If no lane can run the case at all, report that as a Finding.
+A lane must also produce the required engine/client version, dataset shape, topology, and tools. Put version and data requirements in Preconditions. If no lane can run the case at all, report that as a Finding and route the case to Manual only rather than dropping it.
 
 ## Zephyr
 

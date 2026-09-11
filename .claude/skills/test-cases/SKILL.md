@@ -41,6 +41,8 @@ Extract:
 
 Do not invent expected behavior to repair a weak ticket. Record uncertainty under Findings.
 
+When ticket fields disagree with each other or with the implementation, the implementation and the pull request's acceptance checklist outrank the description. Report the disagreement as a Finding naming each source and its claim before proposing any case that depends on it.
+
 ### 2. Inspect the implementation
 
 For a coverage audit, inspect the current implementation in every relevant repository. Use history and old tickets only to clarify intent; a linked pull request is not required.
@@ -49,11 +51,17 @@ Use `git-diff` to inspect **every** linked implementation pull request, regardle
 
 Use the Jira Development panel first. If it has no links, search the ticket key in each repository implied by the component and behavior; for HA or chart work always include `percona/percona-helm-charts`, and for exporter behavior include the relevant exporter repository. Do not take the no-implementation path until these candidates have been checked. If none contains a change, list the repositories searched in Findings.
 
+A dashboard or component ticket predating a repository consolidation may have been fixed in an archived upstream repository outside the session's scope. Take the candidate name from the feature build's "Custom branches" list, then attach and clone it before reporting no implementation. A feature-build pull request is never the fix.
+
 An inaccessible linked repository is not "no implementation." Report the access gap and do not state implementation-dependent expected results as facts.
+
+When the ticket's fix version predates the current major and the implementation is absent from every candidate repository, treat the feature as removed, not unimplemented. Report obsolescence with the missing paths as evidence and stop.
 
 For chart or HA work, read `../test-scope/references/ha.md` and inspect the effective chart configuration: templates, default values, image/version pins, and feature gates. Do not derive expected behavior from a single-server PMM default when the chart disables or replaces it.
 
-Identify validation, errors, permissions, persistence, lifecycle transitions, version gates, shared callers, and externally observable outputs. Compare requirements and implementation in both directions:
+Identify validation, errors, permissions, persistence, lifecycle transitions, version gates, shared callers, and externally observable outputs. Confirm on the base branch that every metric, label, field, or endpoint an expected result depends on already exists; give anything the change introduces its own existence assertion, since a missing input to an alert or a query fails silently.
+
+Compare requirements and implementation in both directions:
 
 - an acceptance criterion missing from the implementation is a Finding;
 - implemented behavior absent from the ticket is a Finding or candidate, depending on whether it is a public contract;
@@ -73,7 +81,7 @@ Create one candidate per distinct behavior or risk. Consider:
 - regression coverage that reproduces the ticket's original failure;
 - persistence, lifecycle, compatibility, upgrade, HA, or database variants only when the ticket or implementation makes them relevant.
 
-Merge data variants that exercise the same branch. Keep cases separate when they exercise different branches or would fail for different reasons.
+Merge data variants only when they share the branch *and* the data that selects it. Keep cases separate when they exercise different branches, carry their own selector or threshold, or would fail for different reasons.
 
 ### 4. Find existing coverage
 
@@ -83,8 +91,8 @@ Search both automation and Zephyr before deciding that a case is new.
 
 For `pmm-qa`:
 
-1. Run `git log --all --grep PMM-XXXX`.
-2. Search the ticket key and behavior identifiers such as API fields, CLI flags, routes, metrics, and persisted values with `rg --hidden -g '!.git/**'` so `.github/` workflows are included.
+1. Run `git rev-parse --is-shallow-repository`, then `git log --all --grep PMM-XXXX`. In a shallow clone an empty result is not evidence of absence.
+2. Search the ticket key and behavior identifiers such as API fields, CLI flags, routes, metrics, and persisted values with `rg --hidden -g '!.git/**'` so `.github/` workflows are included. Never pass `-r`: it is ripgrep's `--replace`, not a recursion flag.
 3. Read the assertions of every relevant hit.
 
 For Zephyr, use only read operations from the `zephyr` skill: `search`, `list`, and `get` as appropriate.
@@ -108,7 +116,7 @@ Keep a candidate only when **all** five conditions hold:
 2. **Named defect:** state the plausible defect that the case catches and confirm the case would fail if that defect existed.
 3. **Unique coverage:** no existing assertion already catches the same defect; otherwise mark it covered or extend it.
 4. **Reliable oracle:** assert a deterministic public result at the layer that matters, such as an API response, persisted state, CLI result, permission decision, exporter flag, metric, or supported UI behavior.
-5. **Value exceeds cost:** the user or product impact justifies the setup, runtime, credentials, and maintenance burden.
+5. **Value exceeds cost:** the user or product impact justifies the setup, runtime, credentials, and maintenance burden. Route a candidate that passes on user impact but fails only on automation cost to Manual only with its blocker named; do not drop it.
 
 Reject generic justification such as "best practice," "test an edge case," "realistic workflow," or "could break." Reject assertions such as "works," "page loads," or "error appears."
 
@@ -147,11 +155,15 @@ Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <ve
 
 <one test-case-template block per new case>
 
+### Manual only
+
+- <candidate> — <what a human should run> — <automation blocker: no fixture, no CI lane, no deterministic oracle>
+
 ### Considered and dropped
 
 - <candidate> — <covered, same branch as case N, no evidence, nondeterministic, or cost exceeds value>
 ```
 
-Omit empty Findings and dropped sections. Zero proposed cases is valid when existing coverage already catches every identified defect.
+Omit empty Findings, manual-only, and dropped sections. Zero proposed cases is valid when existing coverage already catches every identified defect.
 
 Do not execute cases, create or update Zephyr entries, modify Jira, or begin automation. Those actions require explicit user approval after review.

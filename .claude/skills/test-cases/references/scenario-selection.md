@@ -6,6 +6,8 @@ Use these rules to turn requirements and implementation branches into candidates
 
 Create one candidate for each distinct public workflow added or changed by the ticket. Different data values on the same branch belong in one parameterized case.
 
+Merge variants only when they share both the branch and the data that selects it. A per-instance selector, identifier, query, or threshold that can be wrong on its own keeps them separate; a shared expression shape is not a shared branch. For a set of sibling artefacts — alert templates, dashboard panels, exporter collectors — record a coverage matrix naming which are asserted to act, not merely to exist. One induction or fixture script per artefact means they are not one variant.
+
 Do not create another happy path when an existing assertion already proves the same result or when a pull request unit test proves an internal branch with no additional PMM integration risk.
 
 ## Negative and error paths
