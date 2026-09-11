@@ -2,9 +2,6 @@
   debug:
     var: backup
 
-- name: Configure apt inside the container
-  include_tasks: ../tasks/configure_container_apt.yml
-
 - name: Install percona xtrabackup 8.4
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only tools testing

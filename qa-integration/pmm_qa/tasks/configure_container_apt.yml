@@ -1,10 +1,5 @@
-# Containers ship the stock archive.ubuntu.com sources, while CI hosts are
-# configured with a local mirror (GitHub runners use azure.archive.ubuntu.com
-# via /etc/apt/apt-mirrors.txt). The public archive is erratic from those
-# runners under load -- observed dropping to 44 kB/s with apt retrying every
-# index -- which turned an 8 minute setup into 50. Inherit whatever mirror the
-# host is already using successfully; hosts without one keep their sources and
-# get only the timeout bound.
+# Containers ship stock archive.ubuntu.com sources, which is erratic from CI
+# runners; inherit whatever mirror the host is already using successfully.
 #
 # Requires: container_name
 - name: Detect the host's Ubuntu apt mirror
@@ -12,11 +7,24 @@
     # A mirrorlist, where present, is authoritative and ordered by priority.
     mirror=$(grep -hoE 'https?://[^[:space:]]+' /etc/apt/apt-mirrors.txt 2>/dev/null | head -n1)
     if [ -z "$mirror" ]; then
+      # Only the distro's own archive files: sources.list.d also holds vendor
+      # repos laid out as <host>/ubuntu (packages.microsoft.com), which are not
+      # Ubuntu mirrors and would break every container's apt if picked up.
       mirror=$(grep -rhoE 'https?://[a-zA-Z0-9.-]+/ubuntu' \
-        /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
+        /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null \
         | grep -vE '://(archive|security)\.ubuntu\.com' | head -n1)
     fi
-    printf '%s' "${mirror%/}"
+    mirror=${mirror%/}
+    # The value is spliced into a sed program below, so keep it to characters a
+    # URL needs and drop anything else rather than escaping it.
+    case $mirror in
+      http://*|https://*) ;;
+      *) mirror= ;;
+    esac
+    case $mirror in
+      *[!A-Za-z0-9:/._~-]*) mirror= ;;
+    esac
+    printf '%s' "$mirror"
   register: container_apt_mirror_probe
   changed_when: false
   failed_when: false
@@ -33,10 +41,6 @@
     mode: '0755'
     content: |
       #!/bin/sh
-      # Repoint a container's Ubuntu apt sources at $1, when given, and bound
-      # apt's network stalls. Ubuntu <= 23.10 keeps sources in
-      # /etc/apt/sources.list; 24.04+ uses deb822 in
-      # /etc/apt/sources.list.d/ubuntu.sources, so both shapes are rewritten.
       set -eu
 
       # Setups share this task across Debian- and RHEL-family containers.
@@ -44,6 +48,8 @@
 
       mirror=${1:-}
 
+      # Ubuntu <= 23.10 keeps sources in /etc/apt/sources.list; 24.04+ uses
+      # deb822 in /etc/apt/sources.list.d/ubuntu.sources.
       if [ -n "$mirror" ]; then
         for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
           [ -f "$f" ] || continue
@@ -54,6 +60,7 @@
         done
       fi
 
+      # A mirror IP that blackholes costs a full stall per index file otherwise.
       cat >/etc/apt/apt.conf.d/99qa-network <<'CONF'
       Acquire::Retries "3";
       Acquire::http::Timeout "30";
@@ -62,6 +69,6 @@
 
 - name: Configure apt inside the container
   shell: >
-    docker exec -i --user root {{ container_name }}
+    docker exec -i --user root {{ container_name | quote }}
     sh -s {{ container_apt_mirror | quote }} < /tmp/pmm-qa-container-apt.sh
   changed_when: true
