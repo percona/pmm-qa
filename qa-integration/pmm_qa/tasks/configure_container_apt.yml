@@ -9,9 +9,14 @@
 # Requires: container_name
 - name: Detect the host's Ubuntu apt mirror
   shell: |
-    grep -rhoE 'https?://[a-zA-Z0-9.-]*archive\.ubuntu\.com/ubuntu' \
-      /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
-      | grep -v '://archive\.ubuntu\.com' | head -n1
+    # A mirrorlist, where present, is authoritative and ordered by priority.
+    mirror=$(grep -hoE 'https?://[^[:space:]]+' /etc/apt/apt-mirrors.txt 2>/dev/null | head -n1)
+    if [ -z "$mirror" ]; then
+      mirror=$(grep -rhoE 'https?://[a-zA-Z0-9.-]+/ubuntu' \
+        /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
+        | grep -vE '://(archive|security)\.ubuntu\.com' | head -n1)
+    fi
+    printf '%s' "${mirror%/}"
   register: container_apt_mirror_probe
   changed_when: false
   failed_when: false
