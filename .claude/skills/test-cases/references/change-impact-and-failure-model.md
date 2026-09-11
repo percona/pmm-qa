@@ -4,6 +4,14 @@ Use this before generating test cases.
 
 The goal is to convert a code/ticket change into a model of **where it can fail and what else it can damage**. Do not start from "happy / negative / edge." Start from product flow and failure mechanisms.
 
+## Contents
+
+- [Trace the real path](#1-trace-the-real-path)
+- [Build the blast-radius map](#2-build-the-blast-radius-map)
+- [Derive invariants](#3-derive-invariants)
+- [Generate failure hypotheses](#4-generate-failure-hypotheses)
+- [Choose where a defect becomes meaningful](#5-choose-where-a-defect-becomes-meaningful)
+
 ## 1. Trace the real path
 
 For every changed public behavior, trace:
@@ -189,77 +197,9 @@ Common PMM invariants:
 
 ## 4. Generate failure hypotheses
 
-For each changed path or invariant, ask how the implementation could violate it.
+For each changed path or invariant, ask how the implementation could violate it. Use [failure-mechanisms.md](failure-mechanisms.md) as the single failure catalogue and select only mechanisms reachable from the current path.
 
-Use concrete mechanisms.
-
-### Wrong branch / selector
-
-- default path used instead of explicit value;
-- wrong role/version/topology selects branch;
-- boundary uses `>` instead of `>=`;
-- empty collection bypasses per-item validation.
-
-### Partial mutation
-
-- validation fails after part of state is written;
-- update replaces instead of merges;
-- rollback misses one resource;
-- retry reuses partial residue.
-
-### Stored but not consumed
-
-- API shows new value but agent/exporter uses old one;
-- cache survives restart/reconnect;
-- one consumer still reads legacy field;
-- generated config is not refreshed.
-
-### Cross-entity leakage
-
-- service A's value becomes global;
-- shared cache key omits service/node ID;
-- dashboard grouping collapses two entities;
-- cleanup for one object deletes sibling state.
-
-### Ordering / timing
-
-- stale response overwrites a newer response;
-- completion is acknowledged before downstream delivery;
-- scheduler stops rescheduling after an error;
-- recovery runs before dependency readiness.
-
-### Compatibility
-
-- old client is accepted but cannot drive the new behavior;
-- migration preserves schema but not semantic state;
-- chart feature gate disables a dependency the test assumes;
-- backend B implements happy path but not rejection/recovery behavior.
-
-### Authorization / visibility
-
-- UI hides action but API permits it;
-- forbidden data renders as empty data;
-- role-specific request set differs from expected;
-- secret is removed from UI but leaks into logs/response.
-
-## 5. Use historical bugs to challenge, not copy
-
-A historical PMM bug is useful only when it exposes a failure mechanism relevant to the current path.
-
-Good:
-
-- current change touches per-service grouping;
-- historical bug showed aggregation by the wrong label;
-- challenge the change with two independent entities.
-
-Weak:
-
-- both tickets mention Grafana;
-- therefore create a dashboard test.
-
-Extract the mechanism and apply it only if reachable.
-
-## 6. Choose where a defect becomes meaningful
+## 5. Choose where a defect becomes meaningful
 
 Assert at the layer where the defect matters.
 
@@ -273,15 +213,4 @@ Examples:
 
 A UI badge alone is usually insufficient when the owning state is server-side.
 
-## 7. Stop conditions
-
-Do not generate a test when:
-
-- no changed behavior, invariant, dependency, or historical mechanism supports it;
-- the defect is already caught by an existing assertion;
-- the setup cannot reach the claimed branch;
-- the oracle cannot distinguish the proposed defect from unrelated failure;
-- the only justification is a generic testing category;
-- the product simply passes the value through to an upstream component and PMM adds no contract around it.
-
-The purpose of this model is **depth before breadth**: fewer cases, each tied to a credible failure mechanism.
+Apply the authoritative strong-case and refusal gate in `../SKILL.md` after candidate generation.

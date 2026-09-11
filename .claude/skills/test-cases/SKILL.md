@@ -11,7 +11,7 @@ Do not generate tests from category checklists alone. First understand the chang
 
 ## Evidence sources
 
-Read only the skills and references needed for the current step:
+Load no reference up front. Read it only when its workflow step applies:
 
 - Ticket context: `../jira/SKILL.md`
 - Linked implementation: `../git-diff/SKILL.md`
@@ -20,9 +20,9 @@ Read only the skills and references needed for the current step:
 - Observation layer or timing when unclear: `../verification-depth/SKILL.md`
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
-- Known failure shapes: [references/failure-mechanisms.md](references/failure-mechanisms.md)
-- Recurring PMM risks: [references/pmm-risk-patterns.md](references/pmm-risk-patterns.md)
-- Worked reasoning examples: [references/examples.md](references/examples.md)
+- Known failure shapes when the initial model needs challenging: [references/failure-mechanisms.md](references/failure-mechanisms.md)
+- Historical PMM risks for the behavior-changing areas named in step 4: [references/pmm-risk-patterns.md](references/pmm-risk-patterns.md)
+- Worked reasoning examples only when the model or case boundaries remain unclear: [references/examples.md](references/examples.md)
 - Coverage search and suite placement: [references/coverage.md](references/coverage.md)
 - Test-case format: [references/test-case-template.md](references/test-case-template.md)
 
@@ -84,6 +84,8 @@ Inventory a wiring or registration change only when it changes execution, orderi
 
 Search every repository implied by the component and behavior when linked pull requests were not supplied. For HA/chart work include `percona/percona-helm-charts`; for exporter behavior include the relevant exporter repository. List the repositories searched when none contains the implementation.
 
+For a ticket predating repository consolidation, use the feature build's Custom branches list to identify and inspect the archived upstream repository. A feature-build pull request is not the implementation.
+
 An inaccessible linked repository is not "no implementation." Report the access gap.
 
 When a ticket's fix version predates the current major and the implementation is absent from every plausible current repository, verify whether the feature still exists before designing implementation-dependent cases.
@@ -91,8 +93,6 @@ When a ticket's fix version predates the current major and the implementation is
 For chart or HA work, inspect effective chart configuration: templates, default values, image/version pins, and feature gates.
 
 Read the effective value of any timeout, interval, retention, path, threshold, or other constant used by a proposed precondition or oracle.
-
-Confirm on the base branch that every pre-existing metric, label, field, endpoint, or other input used by an oracle exists. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
 
 Compare requirements and implementation in both directions:
 
@@ -112,20 +112,11 @@ For every behavior inventory entry, trace the shortest real product path:
 
 Use the reference to inspect blast radius, derive relevant invariants, and write concrete failure hypotheses that name **how** the product could be wrong. Read [failure-mechanisms.md](references/failure-mechanisms.md) to challenge the model when relevant.
 
+After choosing how to induce each behavior, trace that path against every inventory entry. Name any entry the setup bypasses and use a second induction path where needed. Mutating server state can bypass client scheduling; mutating client state can bypass server rejection.
+
 ### 4. Challenge with historical PMM defects
 
-Read [pmm-risk-patterns.md](references/pmm-risk-patterns.md).
-
-For behavior-changing tickets involving state, monitoring data flow, permissions, lifecycle, upgrade, HA, cross-component calls, dashboards, QAN, agents, exporters, or persistence:
-
-1. search recent/resolved PMM bugs for the **same behavior, boundary, state transition, or dependency**;
-2. select at most 2-3 relevant bugs;
-3. extract the failure mechanism, not the title;
-4. use those mechanisms to challenge the failure model.
-
-Do not create a case merely because a historical bug exists. Component similarity alone is not evidence.
-
-For cosmetic/text-only changes, skip historical mining unless the implementation touches behavior.
+For behavior-changing tickets involving state, monitoring data flow, permissions, lifecycle, upgrade, HA, cross-component calls, dashboards, QAN, agents, exporters, or persistence, read and follow [pmm-risk-patterns.md](references/pmm-risk-patterns.md). For cosmetic/text-only changes, skip historical mining unless the implementation touches behavior.
 
 If Jira search is unavailable or remains inconclusive, report the historical check as skipped or inconclusive and continue from requirements and implementation evidence. Do not imply that no relevant defects exist.
 
@@ -133,7 +124,7 @@ If Jira search is unavailable or remains inconclusive, report the historical che
 
 Read [scenario-selection.md](references/scenario-selection.md).
 
-Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. One case may cover several related hypotheses when they share the same trigger, setup, and oracle; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure when deterministic.
+Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure when deterministic.
 
 ### 6. Find existing coverage
 
@@ -141,14 +132,7 @@ Read [coverage.md](references/coverage.md).
 
 Search both automation and Zephyr before deciding a case is new.
 
-Classify coverage by whether the existing assertion would catch the named defect:
-
-- **covered**: existing assertion fails if the defect occurs;
-- **extend**: same flow exists, but its assertion misses the defect;
-- **adjacent**: similar setup/subject, different behavior;
-- **none**: no relevant executable assertion.
-
-A matching title, command, ticket key, fixture, or endpoint constant is not coverage by itself.
+Use the coverage classifications and decisions in `coverage.md`; they are authoritative.
 
 ### 7. Apply the strong-case gate
 
@@ -172,11 +156,11 @@ Keep a candidate only when **all** conditions hold:
 6. **Blast-radius relevance**
    The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.
 
-Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break."
-
-Reject assertions such as "works," "page loads," "success," "non-zero exit," or "error appears."
+Reject candidates that test an upstream component rather than PMM's contract with it, or values PMM only passes through without adding a contract. Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break," and assertions such as "works," "page loads," "success," "non-zero exit," or "error appears." This gate is the authoritative refusal policy.
 
 Each surviving case must have controlled preconditions, bounded waits, cleanup when it changes state, and one primary failure signal.
+
+For each surviving case, confirm on the base branch that every pre-existing metric, label, field, endpoint, or other oracle input exists. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
 
 ### 8. Rank and write
 
@@ -225,7 +209,7 @@ Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <ve
 
 ### Manual only
 
-- <High / Normal / Low> — <candidate> — <what a human should run> — <automation blocker>
+<one test-case-template block per manual case, followed by `Automation blocker: <reason>`>
 
 ### Considered and dropped
 
@@ -236,7 +220,7 @@ Keep the impact table concise: include only changed behaviors and failure hypoth
 
 Implementation coverage must contain one row per behavior inventory entry and resolve it to the exact proposed-case title, existing coverage, or a stated drop reason.
 
-Omit empty Findings, Manual only, and Considered and dropped sections. Do not omit Implementation coverage.
+Omit empty Findings, Existing coverage, Proposed cases, Manual only, and Considered and dropped sections. Always include Impact and failure model and Implementation coverage.
 
 Zero proposed cases is valid when existing coverage already catches every meaningful identified defect.
 

@@ -2,9 +2,9 @@
 
 Use the row matching the changed area to challenge the failure model. These are historical prompts, not automatic cases.
 
-A historical bug is evidence only when its **failure mechanism** is reachable from the current change.
+A historical bug is evidence only when its **failure mechanism** is reachable from the current change. `PMM-*` entries are Jira bugs; an explicitly marked `PMM-T*` entry is a Zephyr test-case observation and must be read with the `zephyr` skill.
 
-| Area | Recurring PMM failure | Historical evidence | Candidate to consider |
+| Area | Known PMM failure | Evidence | Candidate to consider |
 |---|---|---|---|
 | Agent connectivity | Agent remains disconnected or metrics do not resume after a dropped connection | PMM-15310, PMM-15200, PMM-14442, PMM-13994 | Drop and restore the link; assert Connected and fresh metrics after one reconnect cycle |
 | CLI and inventory changes | Invalid changes are accepted, exporter becomes `Done`, or CLI fails after UI removal | PMM-15130, PMM-15201, PMM-13120, PMM-15242 | Validate rejection without mutation; assert exporter remains Running; check cross-surface lifecycle |
@@ -16,9 +16,8 @@ A historical bug is evidence only when its **failure mechanism** is reachable fr
 | QAN and RTA | Filters omit values, historical ranges fail, or missing DB privileges look like no data | PMM-15206, PMM-15336, PMM-14661, PMM-14717 | Trace workload to ClickHouse to UI; distinguish authorization failure from empty data |
 | Settings and persistence | Value appears saved but is lost or never reaches the consumer | PMM-15074, PMM-15354, PMM-15241, PMM-14751, PMM-14931 | Read back through the API and at exporter/metric consumer after the relevant reload |
 | RBAC, anonymous, and secrets | UI hides an action while API allows it, or credentials leak into logs | PMM-15138, PMM-15139, PMM-15309, PMM-15067, PMM-15164, PMM-15010 | Deny the API mutation and verify unchanged state; search bounded logs for the exact secret |
-| PMM UI client state | Session, polling, or cache state held in the browser dies silently | PMM-15420 | Confirm state is reachable from the app's serving path, then drive the relevant client-state transition |
 | HA | Stale inventory, false health, incorrect proxy routing, or restart failure | PMM-15227, PMM-14734, PMM-15030, PMM-15029, PMM-15228 | Drive the actual cluster trigger and assert at the owning layer; test unhealthy as well as healthy |
-| Helm and HA chart configuration | Chart defaults, image pins, or feature gates make behavior differ from single-server PMM | PMM-T2217 exposed this with internal PostgreSQL QAN disabled | Inspect/render effective values before assuming a component exists |
+| Helm and HA chart configuration | Chart defaults, image pins, or feature gates make behavior differ from single-server PMM | PMM-T2217 test-case observation: internal PostgreSQL QAN disabled | Inspect/render effective values before assuming a component exists |
 | Upgrade and restart | Migration crash-loop, restart hangs, or large state fails | PMM-15404, PMM-15266, PMM-15050 | Upgrade seeded data and perform both a post-upgrade read and write |
 | Backups | Restore does not restart the DB, tool versions conflict, or polling misreports state | PMM-15163, PMM-14594, PMM-14576 | Perform a real restore; assert the DB is running and queryable |
 | Alerting | Missing series incorrectly resolves a firing alert | PMM-14193, PMM-15145 | Hold the condition beyond the evaluation/lookback window and assert the alert remains firing |
@@ -90,7 +89,5 @@ These are not interchangeable:
 - migration.
 
 Drive the exact trigger the implementation observes.
-
-Before writing a client-state case, confirm the app can read that cookie/storage value from its own path/origin.
 
 For chart tickets, treat `percona/percona-helm-charts` as implementation, not provisioning detail. Inspect templates and effective values alongside PMM code before choosing an oracle.

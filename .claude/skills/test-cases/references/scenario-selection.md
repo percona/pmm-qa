@@ -4,6 +4,12 @@ Generate candidates only after the change-impact and failure model exists.
 
 Categories are not quotas. Pick a technique because it matches the behavior or failure mechanism.
 
+## Contents
+
+- [Technique selection](#technique-selection)
+- [Candidate rules](#candidate-rules)
+- [Merge vs split](#merge-vs-split)
+
 ## Technique selection
 
 | Situation | Primary technique | What to derive |
@@ -142,7 +148,7 @@ Examples:
 
 ## Candidate rules
 
-Create one candidate per distinct public behavior or independently observable defect mechanism. Related hypotheses may share one case when they use the same trigger, setup, and oracle.
+Create one candidate per distinct public behavior or independently observable defect mechanism. Related hypotheses may share one case when they traverse the same product path and use compatible setup and verification layers.
 
 ### Happy path
 
@@ -228,7 +234,7 @@ Add nearby regression candidates only when the change affects a shared boundary/
 Merge when candidates:
 
 - share the same trigger and setup;
-- use the same selector and oracle;
+- use the same selector and compatible verification layers;
 - exercise one product path with one primary failure signal;
 - differ only in representative data.
 
@@ -240,14 +246,4 @@ Split when candidates:
 - have different failure mechanisms;
 - require different oracles.
 
-## Refuse
-
-Refuse candidates that:
-
-- exist only because a technique/category is available;
-- test Grafana, VictoriaMetrics, or a DB engine instead of PMM's contract;
-- repeat an existing assertion with different data on the same branch;
-- require unbounded waiting;
-- assert only presence/success/generic failure;
-- cannot name the implementation change or invariant that would make them fail;
-- add a configuration combination with no interaction rationale.
+Apply the authoritative strong-case and refusal gate in `../SKILL.md` after candidate generation.
