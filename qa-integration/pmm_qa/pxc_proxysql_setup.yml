@@ -65,6 +65,11 @@
     shell: basename {{ proxysql_package }}    
     register: file_name
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ pxc_container }}"
+
   - name: Execute User & Proxysql Setup inside the PXC pxc_container
     shell: "{{ item }}"
     with_items:
