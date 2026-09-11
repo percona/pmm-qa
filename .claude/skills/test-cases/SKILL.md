@@ -27,11 +27,13 @@ Load no reference up front. Read it only when its workflow step applies:
 
 The references above are prompts for reasoning, not quotas. A technique, historical bug, or risk category never justifies a test by itself.
 
+When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. The workflow below assumes a fresh session with nothing supplied.
+
 ## Workflow
 
 ### 1. Establish the test basis
 
-For a ticket, use `jira` with `fieldsCsv:"*all"` to read the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
+For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with `jira` using `fieldsCsv:"*all"` when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
 
 The Jira relay cannot read the Development panel. Use linked pull requests already present in the supplied ticket context when available; otherwise search the repositories implied by the component and behavior for the ticket key. Report that Development-panel discovery was unavailable, because repository search can miss a linked pull request whose title and branch omit the key.
 
@@ -65,7 +67,7 @@ When ticket fields, documentation, API/CLI contracts, historical behavior, triag
 
 For a coverage audit, inspect the current implementation in every relevant repository. Use history and old tickets only to clarify intent; a linked pull request is not required.
 
-Use `git-diff` to inspect every supplied or discovered implementation pull request, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
+Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
 Read changed files before individual hunks, then read behavior-changing code and developer tests.
 
@@ -161,7 +163,7 @@ Reject candidates that test an upstream component rather than PMM's contract wit
 
 Each surviving case must have controlled preconditions, bounded waits, cleanup when it changes state, and one primary failure signal.
 
-For each surviving case, confirm on the base branch that every pre-existing metric, label, field, endpoint, or other oracle input exists. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
+For each surviving case, confirm on the base branch that every pre-existing metric, label, field, endpoint, or other oracle input exists. Read the base branch only for inputs in files the change did not touch; a diff already read shows the base side of the rest. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
 
 ### 8. Rank and write
 

@@ -4,7 +4,7 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 ## Search order
 
-1. Run `git rev-parse --is-shallow-repository`, then `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone an empty result is not evidence of absence; cite only the working-tree `rg` searches.
+1. Run `git rev-parse --is-shallow-repository`. Only when it prints `false`, run `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone skip the log search — its empty result is not evidence of absence, so cite only the working-tree `rg` searches.
 2. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`. Use only `-n`, `-l`, `-g`, and `--hidden` — `rg` recurses by default and `-r` is `--replace`, which rewrites matched text in the output to look like source. Re-run any hit whose matched text differs from the query.
 3. Search the feature or page name only after identifiers.
 4. Read the full setup and assertions of every plausible hit.
@@ -49,4 +49,4 @@ A lane must also produce the required engine/client version, dataset shape, topo
 
 ## Zephyr
 
-Use Zephyr only for deduplication during design. A `search` response with `truncated: true` cannot prove absence: narrow the query, constrain it to the feature folder, or use `list` on that folder. If the relay is unavailable, report that the check was skipped; if every useful scan remains capped, report deduplication as inconclusive. Never create or update a case during this skill.
+Use Zephyr only for deduplication during design. A `search` response with `truncated: true` cannot prove absence: narrow the query, constrain it to the feature folder, or use `list` on that folder. If the relay is unavailable, report that the check was skipped; if every useful scan remains capped, report deduplication as inconclusive. Skip the scan entirely when the caller will create a new case regardless of existing ones — Test Runner's automation step does. Never create or update a case during this skill.
