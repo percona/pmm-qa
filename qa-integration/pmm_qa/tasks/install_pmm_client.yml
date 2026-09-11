@@ -38,6 +38,10 @@
         ) | trim
       }}
 
+- name: Configure apt inside Debian-family container
+  include_tasks: configure_container_apt.yml
+  when: distro_family == "debian"
+
 - name: Install dependencies inside Debian-family container
   shell: |
     docker exec --user root {{ container_name }} apt-get update

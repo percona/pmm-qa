@@ -1,0 +1,59 @@
+# Containers ship the stock archive.ubuntu.com sources, while CI hosts are
+# configured with a local mirror (GitHub runners use azure.archive.ubuntu.com
+# via /etc/apt/apt-mirrors.txt). The public archive is erratic from those
+# runners under load -- observed dropping to 44 kB/s with apt retrying every
+# index -- which turned an 8 minute setup into 50. Inherit whatever mirror the
+# host is already using successfully; hosts without one keep their sources and
+# get only the timeout bound.
+#
+# Requires: container_name
+- name: Detect the host's Ubuntu apt mirror
+  shell: |
+    grep -rhoE 'https?://[a-zA-Z0-9.-]*archive\.ubuntu\.com/ubuntu' \
+      /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
+      | grep -v '://archive\.ubuntu\.com' | head -n1
+  register: container_apt_mirror_probe
+  changed_when: false
+  failed_when: false
+  when: container_apt_mirror is not defined
+
+- name: Remember the host's Ubuntu apt mirror
+  set_fact:
+    container_apt_mirror: "{{ container_apt_mirror_probe.stdout | default('') | trim }}"
+  when: container_apt_mirror is not defined
+
+- name: Stage the container apt helper
+  copy:
+    dest: /tmp/pmm-qa-container-apt.sh
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      # Repoint a container's Ubuntu apt sources at $1, when given, and bound
+      # apt's network stalls. Ubuntu <= 23.10 keeps sources in
+      # /etc/apt/sources.list; 24.04+ uses deb822 in
+      # /etc/apt/sources.list.d/ubuntu.sources, so both shapes are rewritten.
+      set -eu
+
+      mirror=${1:-}
+
+      if [ -n "$mirror" ]; then
+        for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
+          [ -f "$f" ] || continue
+          sed -i -E \
+            -e "s#https?://[a-zA-Z0-9.-]*archive\.ubuntu\.com/ubuntu#${mirror}#g" \
+            -e "s#https?://security\.ubuntu\.com/ubuntu#${mirror}#g" \
+            "$f"
+        done
+      fi
+
+      cat >/etc/apt/apt.conf.d/99qa-network <<'CONF'
+      Acquire::Retries "3";
+      Acquire::http::Timeout "30";
+      Acquire::https::Timeout "30";
+      CONF
+
+- name: Configure apt inside the container
+  shell: >
+    docker exec -i --user root {{ container_name }}
+    sh -s {{ container_apt_mirror | quote }} < /tmp/pmm-qa-container-apt.sh
+  changed_when: true
