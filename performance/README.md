@@ -66,9 +66,10 @@ never the account-wide `pmm-qa-ephemeral`.
 
 ## Reports (GitHub Pages)
 
-Every run publishes its report to the `gh-pages` branch, which GitHub Pages serves
-as a trend dashboard (per-scale indicator, deviation chart, runs table with shared
-PMM snapshot links). The report schema lives in that branch's `README.md`.
+Once the perf pipeline is wired into CI, each run publishes its report to the
+`gh-pages` branch, which GitHub Pages serves as a trend dashboard (per-scale indicator,
+deviation chart, runs table with shared PMM snapshot links). Nothing in this repo calls
+the script yet. The report schema lives in that branch's `README.md`.
 
 ```bash
 performance/ci/publish_report.sh perf-report.json   # adds reports/<run_id>.json, rebuilds data/index.json, pushes
