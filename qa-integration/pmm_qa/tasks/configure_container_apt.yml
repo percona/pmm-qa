@@ -39,6 +39,9 @@
       # /etc/apt/sources.list.d/ubuntu.sources, so both shapes are rewritten.
       set -eu
 
+      # Setups share this task across Debian- and RHEL-family containers.
+      [ -d /etc/apt ] || exit 0
+
       mirror=${1:-}
 
       if [ -n "$mirror" ]; then
