@@ -63,13 +63,4 @@ export default class ServiceAccountsPage extends BasePage {
 
     return this.inputs.tokenValue.inputValue();
   };
-
-  disableServiceAccount = async (username: string) => {
-    await this.builders.disableAccountButton(username).click({ timeout: Timeouts.ONE_MINUTE });
-    await this.buttons.confirmDisable.click();
-  };
-
-  enableServiceAccount = async (username: string) => {
-    await this.builders.enableAccountButton(username).click({ timeout: Timeouts.ONE_MINUTE });
-  };
 }
