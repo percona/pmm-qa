@@ -136,7 +136,7 @@ Use the coverage classifications and decisions in `coverage.md`; they are author
 
 ### 7. Apply the strong-case gate
 
-Keep a candidate only when **all** conditions hold:
+Keep candidates only when **all** conditions hold:
 
 1. **Traceable evidence**
    Name the acceptance criterion, implementation branch, invariant, historical defect mechanism, or explicit customer behavior that justifies it.

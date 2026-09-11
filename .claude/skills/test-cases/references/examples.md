@@ -6,6 +6,14 @@ The pattern is:
 
 `change -> impact map -> invariant -> failure hypothesis -> technique -> final case`
 
+## Contents
+
+- [Per-service setting propagation](#example-1--per-service-setting-propagation)
+- [Dashboard grouping change](#example-2--dashboard-grouping-change)
+- [Agent reconnect behavior](#example-3--agent-reconnect-behavior)
+- [Role-controlled mutation](#example-4--role-controlled-mutation)
+- [Review heuristic](#review-heuristic)
+
 ## Example 1 — Per-service setting propagation
 
 ### Change
