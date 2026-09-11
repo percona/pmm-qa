@@ -40,6 +40,7 @@ Review the full observable sequence, not only skill invocations. Look for:
 - a user correction that generalizes beyond the current task;
 - a failed approach followed by a reusable successful approach;
 - repeated or unnecessary reads, searches, retries, setup, or dependencies;
+- an instruction file that re-fetches context its caller already gathered, or repeats a step the invoking agent already ran — read a newly added or newly wired skill against the agents that invoke it, not only against an observed run;
 - independent calls that should have been safely batched or parallelized;
 - a repository helper, standard library, or native tool that should replace custom work;
 - an instruction that caused or failed to prevent a concrete mistake;
