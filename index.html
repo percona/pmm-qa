@@ -38,7 +38,7 @@
   <p class="sub">Each run upgrades a PMM server + clients against a dynamic baseline captured just before the upgrade. A check fails past a <span id="thr">10</span>% deviation. Humans verify via the shared PMM snapshots linked per run.</p>
 
   <div class="cards" id="cards"></div>
-  <div class="chart"><canvas id="trend" height="110"></canvas></div>
+  <div class="chart"><canvas id="trend" height="110"></canvas><p class="empty" id="nochart" hidden>Trend chart unavailable (chart library did not load); the runs table below is complete.</p></div>
   <div class="tablewrap">
     <table>
       <thead><tr><th>Date</th><th>Run</th><th>Scale</th><th>Server</th><th>Client</th><th>Status</th><th>Max deviation</th><th>Snapshots</th></tr></thead>
@@ -86,7 +86,7 @@
   // Chart: max deviation over time, one line per scale. Optional — if the CDN is
   // unreachable the cards and table below still render.
   const palette = ['#0969da', '#8250df', '#bf8700', '#1a7f37'];
-  if (window.Chart) try { new Chart(document.getElementById('trend'), {
+  if (!window.Chart) { document.getElementById('nochart').hidden = false; } else try { new Chart(document.getElementById('trend'), {
     type: 'line',
     data: { datasets: Object.entries(byScale).map(([scale, list], i) => ({
       label: `${scale} clients`, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
@@ -100,7 +100,7 @@
                 y: { title: { display: true, text: 'max deviation vs baseline (%)' }, ticks: { color: '#8b949e' }, beginAtZero: true } },
       plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${pct(c.raw.y)} (${c.raw.run.run_id}, ${c.raw.run.status})` } } },
     },
-  }); } catch (e) { console.warn('trend chart skipped:', e); }
+  }); } catch (e) { console.warn('trend chart skipped:', e); document.getElementById('nochart').hidden = false; }
 
   // Runs table, newest first; click a row for its checks.
   rows.innerHTML = '';
