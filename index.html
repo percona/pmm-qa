@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMM Performance Reports</title>
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#656d76; --line:#d0d7de; --pass:#1a7f37; --fail:#cf222e; --warn:#9a6700; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --line:#30363d; --pass:#3fb950; --fail:#f85149; --warn:#d29922; --card:#161b22; } }
+  body { margin:0; padding:24px 16px; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  .card { flex:1 1 220px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+  .card .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .card .v { font-size:20px; font-weight:600; margin-top:2px; }
+  .up { color:var(--fail); } .down { color:var(--pass); } .flat { color:var(--warn); }
+  .chart { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:20px; }
+  canvas { max-width:100%; }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; min-width:760px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { background:var(--card); color:var(--muted); font-weight:600; font-size:12px; }
+  tr.run { cursor:pointer; } tr.run:hover td { background:var(--card); }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; color:#fff; }
+  .badge.pass { background:var(--pass); } .badge.fail { background:var(--fail); }
+  tr.detail td { background:var(--card); white-space:normal; padding:10px 14px 14px; }
+  .checks { border-collapse:collapse; width:100%; font-size:13px; }
+  .checks th, .checks td { padding:4px 8px; border-bottom:1px solid var(--line); }
+  .checks .bad { color:var(--fail); font-weight:600; }
+  a { color:inherit; } .muted { color:var(--muted); } .empty { padding:24px; text-align:center; color:var(--muted); }
+  .snaps a { margin-right:10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PMM Performance Reports</h1>
+  <p class="sub">Each run upgrades a PMM server + clients against a dynamic baseline captured just before the upgrade. A check fails past a <span id="thr">10</span>% deviation. Humans verify via the shared PMM snapshots linked per run.</p>
+
+  <div class="cards" id="cards"></div>
+  <div class="chart"><canvas id="trend" height="110"></canvas></div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Date</th><th>Run</th><th>Scale</th><th>Server</th><th>Client</th><th>Status</th><th>Max deviation</th><th>Snapshots</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(async () => {
+  const fmtDate = s => new Date(s).toISOString().replace('T',' ').slice(0,16) + 'Z';
+  const pct = n => (n == null || Number.isNaN(n)) ? '—' : `${n > 0 ? '+' : ''}${Number(n).toFixed(1)}%`;
+  const maxDev = r => Math.max(...(r.checks || []).map(c => Math.abs(c.deviation_pct ?? 0)), 0);
+
+  let runs = [];
+  try { runs = await (await fetch('data/index.json', { cache: 'no-store' })).json(); } catch (e) { runs = []; }
+  runs.sort((a, b) => new Date(a.date) - new Date(b.date));
+  const rows = document.getElementById('rows');
+  if (!runs.length) { rows.innerHTML = '<tr><td colspan="8" class="empty">No runs published yet.</td></tr>'; return; }
+  if (runs[0].deviation_threshold_pct != null) document.getElementById('thr').textContent = runs.at(-1).deviation_threshold_pct;
+
+  // Trend indicator per scale: compare the mean max-deviation of the last 3 runs
+  // to the 3 before them. Lower deviation = getting better.
+  const byScale = {};
+  for (const r of runs) (byScale[r.scale] ||= []).push(r);
+  const cards = document.getElementById('cards');
+  for (const [scale, list] of Object.entries(byScale)) {
+    const devs = list.map(maxDev);
+    const recent = devs.slice(-3), prior = devs.slice(-6, -3);
+    const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    const m1 = mean(recent), m0 = mean(prior);
+    let cls = 'flat', word = 'stable', arrow = '→';
+    if (m0 != null && m1 != null) {
+      if (m1 < m0 * 0.9) { cls = 'down'; word = 'improving'; arrow = '↓'; }
+      else if (m1 > m0 * 1.1) { cls = 'up'; word = 'regressing'; arrow = '↑'; }
+    } else if (m0 == null) { word = 'not enough history'; }
+    const fails = list.filter(r => r.status !== 'pass').length;
+    cards.insertAdjacentHTML('beforeend', `
+      <div class="card"><div class="k">${scale} clients · ${list.length} run${list.length === 1 ? '' : 's'}</div>
+      <div class="v ${cls}">${arrow} ${word}</div>
+      <div class="muted">last: ${pct(devs.at(-1))} max deviation · ${fails} failing</div></div>`);
+  }
+
+  // Chart: max deviation over time, one line per scale.
+  const palette = ['#0969da', '#8250df', '#bf8700', '#1a7f37'];
+  new Chart(document.getElementById('trend'), {
+    type: 'line',
+    data: { datasets: Object.entries(byScale).map(([scale, list], i) => ({
+      label: `${scale} clients`, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
+      tension: .25, pointRadius: 4,
+      data: list.map(r => ({ x: new Date(r.date).getTime(), y: +maxDev(r).toFixed(2), run: r })),
+    })) },
+    options: {
+      parsing: false, responsive: true,
+      // linear epoch-ms axis: avoids the date-adapter the `time` scale requires
+      scales: { x: { type: 'linear', ticks: { color: '#8b949e', callback: v => new Date(v).toISOString().slice(0, 10) } },
+                y: { title: { display: true, text: 'max deviation vs baseline (%)' }, ticks: { color: '#8b949e' }, beginAtZero: true } },
+      plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${pct(c.raw.y)} (${c.raw.run.run_id}, ${c.raw.run.status})` } } },
+    },
+  });
+
+  // Runs table, newest first; click a row for its checks.
+  rows.innerHTML = '';
+  for (const r of [...runs].reverse()) {
+    const snaps = (r.snapshots || []).map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.dashboard}</a>`).join('') || '<span class="muted">—</span>';
+    const server = r.server ? `${r.server.from ?? '?'} → ${r.server.to ?? '?'}` : '—';
+    rows.insertAdjacentHTML('beforeend', `
+      <tr class="run" data-id="${r.run_id}">
+        <td>${fmtDate(r.date)}</td><td><a href="reports/${r.run_id}.json">${r.run_id}</a></td><td>${r.scale ?? '—'}</td>
+        <td>${server}</td><td>${r.client_version ?? '—'}</td>
+        <td><span class="badge ${r.status === 'pass' ? 'pass' : 'fail'}">${r.status}</span></td>
+        <td>${pct(maxDev(r))}</td><td class="snaps">${snaps}</td>
+      </tr>
+      <tr class="detail" data-for="${r.run_id}" hidden><td colspan="8">
+        ${r.summary ? `<p><b>${r.summary}</b></p>` : ''}
+        <table class="checks"><thead><tr><th>check</th><th>baseline</th><th>after</th><th>deviation</th><th>ok</th></tr></thead><tbody>
+        ${(r.checks || []).map(c => `<tr><td>${c.name}</td><td>${c.baseline ?? c.observed ?? '—'} ${c.unit ?? ''}</td><td>${c.after ?? '—'} ${c.unit ?? ''}</td>
+          <td class="${c.ok === false ? 'bad' : ''}">${pct(c.deviation_pct)}</td><td>${c.ok === false ? '✗' : '✓'}</td></tr>`).join('')}
+        </tbody></table>
+      </td></tr>`);
+  }
+  rows.addEventListener('click', e => {
+    const tr = e.target.closest('tr.run'); if (!tr || e.target.closest('a')) return;
+    const d = rows.querySelector(`tr.detail[data-for="${tr.dataset.id}"]`); d.hidden = !d.hidden;
+  });
+})();
+</script>
+</body>
+</html>
