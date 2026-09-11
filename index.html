@@ -83,9 +83,10 @@
       <div class="muted">last: ${pct(devs.at(-1))} max deviation · ${fails} failing</div></div>`);
   }
 
-  // Chart: max deviation over time, one line per scale.
+  // Chart: max deviation over time, one line per scale. Optional — if the CDN is
+  // unreachable the cards and table below still render.
   const palette = ['#0969da', '#8250df', '#bf8700', '#1a7f37'];
-  new Chart(document.getElementById('trend'), {
+  if (window.Chart) try { new Chart(document.getElementById('trend'), {
     type: 'line',
     data: { datasets: Object.entries(byScale).map(([scale, list], i) => ({
       label: `${scale} clients`, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
@@ -99,7 +100,7 @@
                 y: { title: { display: true, text: 'max deviation vs baseline (%)' }, ticks: { color: '#8b949e' }, beginAtZero: true } },
       plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${pct(c.raw.y)} (${c.raw.run.run_id}, ${c.raw.run.status})` } } },
     },
-  });
+  }); } catch (e) { console.warn('trend chart skipped:', e); }
 
   // Runs table, newest first; click a row for its checks.
   rows.innerHTML = '';
