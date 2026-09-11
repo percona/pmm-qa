@@ -45,6 +45,10 @@ setup_uses_ansible() {
 # concurrency -- the caller asked for something valid that merely cannot
 # happen at the same time.
 #
+# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
+# the same container name or host port for as long as they are up, so waiting
+# is no remedy.
+#
 # The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
 # replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
 # fixed $HOME/pgsql_cluster_data and port 6432 -- PGSQL's default,
@@ -52,13 +56,15 @@ setup_uses_ansible() {
 #
 # Reads:  DATABASE_SPECS, PARALLEL
 # Writes: PARALLEL (may be turned off), PMM_SERVER_HOST/PORT via resolve_pmm_server
-# Exits:  via die() from the helpers it calls (unknown type, missing server, ...)
+# Exits:  via die() on a host conflict, and from the helpers it calls (unknown
+#         type, missing server, ...)
 preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
-  local mysql_data_owner='' conflict=''
+  local mysql_data_owner='' conflict='' host_conflict=''
   local pdpgsql_seen=false pgsql_replication_seen=false
+  local external_seen=false valkey_seen=false
+  local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   declare -A seen_types=()
-  declare -A seen_psmdb_classes=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
@@ -70,23 +76,16 @@ preflight_database_setups() {
     # same container names, host ports and data directories, so they cannot run
     # at the same time.
     #
-    # PSMDB is the exception: its replica-set (pss/psa) and sharded
-    # (shards/sharding) SETUP_TYPEs run from separate compose projects with
-    # non-overlapping container names, host ports and inter-node networks, so
-    # they parallelize. Only two PSMDB setups of the *same* class collide.
-    if [[ $DB_TYPE == PSMDB ]]; then
-      local psmdb_setup_type psmdb_class
-      psmdb_setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
-      case "${psmdb_setup_type,,}" in
-        shards | sharding) psmdb_class=sharded ;;
-        *) psmdb_class=rs ;;
-      esac
-      if [[ -v "seen_psmdb_classes[$psmdb_class]" ]]; then
-        conflict="two PSMDB $psmdb_class setups"
+    # The separate compose projects do not make the PSMDB stacks independent:
+    # docker-compose-rs.yaml and docker-compose-sharded.yaml both pin
+    # container_name rs101..rs203 and host port 27027, and a container name is
+    # unique per daemon. Relaxing this needs those keys dropped first.
+    if [[ -v "seen_types[$DB_TYPE]" ]]; then
+      if [[ $DB_TYPE == PSMDB ]]; then
+        host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
+      else
+        conflict="two $DB_TYPE setups"
       fi
-      seen_psmdb_classes["$psmdb_class"]=1
-    elif [[ -v "seen_types[$DB_TYPE]" ]]; then
-      conflict="two $DB_TYPE setups"
     elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then
         conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
@@ -104,9 +103,23 @@ preflight_database_setups() {
         [[ $pdpgsql_seen == true ]] &&
           conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
       fi
+    # external_setup.yml publishes redis_container on host port 6379, and both
+    # Valkey topologies put a node on that same port -- valkey-cluster.yml's
+    # valkey_cluster_start_port and valkey-sentinel.yml's valkey_primary_port
+    # are both 6379 -- so one of the two cannot bind it.
+    elif [[ $DB_TYPE == EXTERNAL ]]; then
+      external_seen=true
+      [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict
+    elif [[ $DB_TYPE == VALKEY ]]; then
+      valkey_seen=true
+      [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
     seen_types["$DB_TYPE"]=1
   done
+
+  if [[ -n $host_conflict ]]; then
+    die "$host_conflict cannot share a host; provision them on separate machines."
+  fi
 
   # Fall back to sequential rather than refusing to run: the caller asked for a
   # valid set of setups, they just cannot be provisioned concurrently.

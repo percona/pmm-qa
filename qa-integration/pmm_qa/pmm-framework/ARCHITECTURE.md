@@ -119,14 +119,14 @@ fails in seconds rather than halfway through. Preflight decides:
 - **warm up Ansible** before parallel jobs fork, so they cannot race to install
   the same collection
 
-### The conflict rule
+### The conflict rules
 
 Two setups of the **same type**, or any two of the **MySQL family**
 (`PS`/`MYSQL`), reuse the same container names, host ports and data
 directories. They cannot run at the same time.
 
-When `--parallel` is asked for and a conflict exists, the framework keeps every
-setup and gives up only the concurrency:
+When `--parallel` is asked for and such a conflict exists, the framework keeps
+every setup and gives up only the concurrency:
 
 ```text
 WARNING: Running setups sequentially: two PS setups cannot run in parallel.
@@ -134,6 +134,28 @@ WARNING: Running setups sequentially: two PS setups cannot run in parallel.
 
 This matters because CI passes `--parallel` unconditionally; refusing the run
 would fail jobs that are perfectly valid, just not parallelisable.
+
+Two pairs are worse than non-parallelisable — they cannot share a **host** at
+all, because each holds the same container name or host port for as long as it
+is up, so the second one fails whether it starts now or after the first has
+finished:
+
+- **two `PSMDB` setups**, replica-set and sharded included:
+  `docker-compose-rs.yaml` and `docker-compose-sharded.yaml` run from separate
+  compose projects but both pin `container_name` `rs101`..`rs203` and publish
+  host port 27027, and a container name is unique per daemon whatever the
+  project.
+- **`EXTERNAL` with `VALKEY`**: `external_setup.yml` publishes its
+  `redis_container` on host port 6379, and both Valkey topologies put a node on
+  that port — `valkey_cluster_start_port` in `valkey/valkey-cluster.yml` and
+  `valkey_primary_port` in `valkey/valkey-sentinel.yml` are both 6379.
+
+These are refused in preflight, naming the collision — the remedy is two
+machines, not two turns:
+
+```text
+ERROR: EXTERNAL and VALKEY setups (both publish host port 6379) cannot share a host; provision them on separate machines.
+```
 
 ### Sequential vs parallel
 
