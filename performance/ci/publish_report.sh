@@ -2,7 +2,7 @@
 # Publish one performance run's report to the GitHub Pages site (gh-pages branch):
 # adds reports/<run_id>.json and rebuilds data/index.json, the file the dashboard
 # reads. Needs push rights to gh-pages (in CI: `permissions: contents: write` and a
-# checkout that keeps its credentials, or PAGES_REMOTE set to an authenticated URL).
+# either PAGES_REMOTE set to an authenticated URL, or GITHUB_TOKEN + GITHUB_REPOSITORY).
 #
 #   publish_report.sh <run.json>
 set -Eeuo pipefail
@@ -17,7 +17,18 @@ run_id="$(jq -r '.run_id' "$RUN_JSON")"
 status="$(jq -r '.status' "$RUN_JSON")"
 [[ "$run_id" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "bad run_id: $run_id" >&2; exit 1; }
 
-remote="${PAGES_REMOTE:-$(git config --get remote.origin.url)}"
+remote="${PAGES_REMOTE:-}"
+if [ -z "$remote" ] && [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+fi
+if [ -z "$remote" ]; then
+  # Outside CI the developer's credential helper authenticates origin. In CI the
+  # checkout token lives only in the workspace repo's .git/config, which a fresh
+  # clone never inherits -- so require an explicit authenticated remote instead of
+  # failing on the final push.
+  [ -z "${GITHUB_ACTIONS:-}" ] || { echo "in CI set PAGES_REMOTE, or GITHUB_TOKEN and GITHUB_REPOSITORY" >&2; exit 1; }
+  remote="$(git config --get remote.origin.url)"
+fi
 wt="$(mktemp -d)"
 trap 'rm -rf "$wt"' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP

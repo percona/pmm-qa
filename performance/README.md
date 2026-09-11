@@ -74,5 +74,6 @@ PMM snapshot links). The report schema lives in that branch's `README.md`.
 performance/ci/publish_report.sh perf-report.json   # adds reports/<run_id>.json, rebuilds data/index.json, pushes
 ```
 
-In CI the job needs `permissions: contents: write` and a checkout that keeps its
-credentials (or `PAGES_REMOTE` set to an authenticated URL).
+In CI the job needs `permissions: contents: write` and either `PAGES_REMOTE` set to an
+authenticated URL, or `GITHUB_TOKEN` and `GITHUB_REPOSITORY` in the environment. A
+checkout's persisted token does not reach the script's separate clone.
