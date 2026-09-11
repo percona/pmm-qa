@@ -22,6 +22,7 @@ const apiEndpoints = {
   },
   management: {
     annotations: '/v1/management/annotations',
+    nodes: '/v1/management/nodes',
     services: '/v1/management/services',
   },
   platform: {
