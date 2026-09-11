@@ -17,7 +17,7 @@ DoNotMigrateHelpers;MapToExistingPlaywrightHelpers.
 `ChaiWrapper`(`assert`)->`expect()`.
 `linksHelper.js`->Inline/POM/`@helpers/apiEndpoints.ts`.
 `I.verifyCommand()`->`@helpers/cli.helper.ts`;fixture:`cliHelper`. Preserve all four source semantics: a normal command uses `cliHelper.execute(command).assertSuccess()`; read `stdout.trim()` when the source consumes its return value; assert the requested output substring when supplied; for `result='fail'`, assert a nonzero exit code and use `stderr.trim()` when `returnErrorPipe=true`.
-When a source test with `setupClient=true` runs a bare or `sudo`-prefixed `pmm-admin` command on the standalone client host, preserve its arguments and the assertions above but execute it in the locally provisioned client: `cliHelper.execute('docker exec client_container pmm-admin ...').assertSuccess()`. Never assume `pmm-admin` is installed on the workstation.
+When a source test with `setupClient=true` runs a bare or `sudo`-prefixed `pmm-admin` command on the standalone client host, preserve its arguments and the assertions above. Do not redirect it into `client_container`: `provisioning/` never creates that container, and a database container's embedded client is a different agent, so redirecting changes what the command measures. Such a row needs a host client installed separately - see `orchestration.md` step 3 - and cannot run on a workstation without one.
 `testdata/`->`e2e_tests/testdata/`;LoadVia`fs`Or`cliHelper`.
 
 SafeOmission: `parseInt(versionPart, 10)`->`parseInt(versionPart)` for normal decimal version segments.
@@ -26,7 +26,9 @@ SafeOmission: `parseInt(versionPart, 10)`->`parseInt(versionPart)` for normal de
 
 ## CodeceptSyntax
 
-Legacy remote-instance tests route from `client_container` to a database through `192.168.0.1`, `host_server_port`, and credentials created by the old environment. Local provisioning puts both containers on `pmm-qa`, so preserve the selected PMM node as `client_container` but derive the database container DNS name, internal service port, username, and password together from the exact `provisioning/` engine/topology selected for the test. Confirm the account accepts connections from `client_container`; when the provisioner only creates a loopback account, create a dedicated network-accessible test account through the database container during test setup and remove it during teardown. Do not copy the legacy gateway, host-published port, or credentials, and do not guess a container name.
+For a legacy remote-instance test, keep the selected PMM node as `client_container`, then derive the database container's DNS name, internal service port, username and password together from the exact `provisioning/` engine and topology the test selects. Local provisioning puts both containers on `pmm-qa`, unlike the legacy route through `192.168.0.1` and `host_server_port`.
+
+Confirm the account accepts connections from `client_container`. When the provisioner creates only a loopback account, create a network-accessible test account through the database container during setup and remove it during teardown. Never copy the legacy gateway, host-published port or credentials, and never guess a container name.
 
 `I.amOnPage(path)`->`await page.goto(path)`.
 `I.click(locator)`->`await locator.click()`.
@@ -54,7 +56,8 @@ Legacy remote-instance tests route from `client_container` to a database through
 `useDataQA(sel)`->`getByTestId(sel)`.
 `seeElementsDisabled/seeElementsEnabled(locator)`->`expect(locator).toHaveAttribute('disabled', ...)`/`toBeEnabled()`.
 `locate('$testid').find('<tag>')`(labelLocator)->`getByTestId('testid')`assertedWith`toContainText`, notA`.locator('<tag>')`chainPlus`first()`. Under MUI the child tag is routinely multi-match, so the literal translation is a strict-mode violation on `toBeVisible`/`toContainText`, while the wrapper's innerText is the union of those children. Narrow to a child testid only when MCP shows the wrapper itself is multi-match.
-`BeforeSuite`/`AfterSuite` -> `beforeAll`/`afterAll`, but the scope is not equivalent: CodeceptJS runs `BeforeSuite` once per suite, while Playwright runs `beforeAll` **once per worker**, and `playwright.config.ts` sets `fullyParallel: true`. A ported `BeforeSuite` whose body is expensive or mutates shared server state therefore runs once per worker that picks up a test from the file - three times for a three-scenario file at `WORKERS=3`. Preserve once-per-file semantics explicitly with a top-level `pmmTest.describe.configure({ mode: 'default' })` (applies file-wide, so no describe block and no re-indentation of the scenarios) or a worker-scoped fixture. `Before`/`After` -> `beforeEach`/`afterEach`, which do correspond directly.
+`Before`/`After` -> `beforeEach`/`afterEach`, which correspond directly.
+`BeforeSuite`/`AfterSuite` -> `beforeAll`/`afterAll`, but the scope differs: CodeceptJS runs `BeforeSuite` once per suite, Playwright runs `beforeAll` **once per worker**, and `playwright.config.ts` sets `fullyParallel: true`. An expensive or shared-state-mutating `BeforeSuite` therefore runs once per worker that picks up a test from the file - three times for a three-scenario file at `WORKERS=3`. Pin once-per-file semantics with a top-level `pmmTest.describe.configure({ mode: 'default' })` (file-wide, so no describe block and no re-indentation) or a worker-scoped fixture.
 
 ## Custom Steps
 

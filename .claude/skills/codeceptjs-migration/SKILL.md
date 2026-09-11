@@ -53,6 +53,13 @@ Preserve behavior, not redundant syntax. Omit arguments/options only when they r
 When unsure, keep the source syntax.
 That applies to syntax, never to locator form. A ported locator is migrated at the level of the **element**, not the selector string: once the live environment exists, re-derive each one at the highest rung of `playwright-practices.md`'s ladder that resolves to the same element, and keep the source selector only when nothing higher does. That the source uses it and is green today is evidence the **element** is right, never that the selector form is - CodeceptJS sources predate the ladder entirely, and a resolving locator is not the same thing as a well-formed one.
 
+**Duplication is not behavior.** When the source repeats a block across scenarios, extract it. Execution order and cross-scenario state handoff are the behavior and must not change; the repetition is not.
+
+- Extract into module-scope functions in the migrated test file, not into a POM or shared helper module. Those functions orchestrate POM and helper calls; raw locators, element waits and navigation still belong in the POM.
+- Prove the extraction by expansion arithmetic: per assertion/call category, the new literal count expanded by each function's call-site multiplicity must equal the pre-refactor count exactly. Do not verify a large reflow by reading the diff.
+- Keep any asymmetry between the scenarios. If one polls an exporter the other does not, or one passes `service_name` where the other passes `node_name`, a shared function must not grant both the union - that is added coverage.
+- Runs of spaces between arguments in a shell command string are not a difference: `cli.helper.ts` hands the string to `/bin/sh`, which collapses them. Call sites differing only that way share one builder.
+
 **Drop what is inert in Playwright.** The test: if removing it cannot change the outcome for any migrated value, remove it. This is not a coverage change - inert code asserts nothing, so removing it removes nothing - and it is the one place where fidelity to the source is the wrong answer. Shapes seen so far:
 
 - a wait on a locator the same step has already acted on (`waitFor({ state: 'attached' })` after `clear()`/`fill()`);
@@ -65,6 +72,14 @@ Record each removal and why it is inert. If you cannot show that removal is outc
 
 Waits are the one shape where that proof is arithmetic rather than judgement. Sequential source waits on **different** locators sum, so collapsing them into a single assertion timeout is outcome-neutral only when that timeout is at least the sum - folding a 60s page-load wait and a 30s cell wait into one 60s assertion silently cuts the worst case from 90s to 60s. State the sum when you collapse. A wait on a locator the same step already acted on is the genuinely inert case, because it adds no budget the following web-first assertion does not already have.
 
+**The sum is a floor, not the answer.** A bare `I.wait(N)` could not fail, so turning it into an `expect.poll` deadline adds a failure mode the source never had - and `N` is then the tightest possible bound on an operation the source never bounded. Source the budget in this order:
+
+1. another scenario in the same file polling the identical command or locator - reuse its budget verbatim;
+2. the source's own explicit waiter for that operation elsewhere (`I.asyncWaitFor(..., 60)`);
+3. the slept value, as the floor.
+
+Never leave two polls on the same command with different timeouts in one file. Raising a deadline above the floor is not a weakening: the assertion is unchanged and a poll exits on success, so the happy path does not slow down.
+
 ## Minimal reuse diffs
 
 When the source needs behavior that **already exists** in Playwright code (POM, helper, API client, component, fixture), reuse it with the **smallest** change:
@@ -73,6 +88,7 @@ When the source needs behavior that **already exists** in Playwright code (POM, 
 2. Update existing internal callers in the same file to use that one implementation.
 3. Do **not** add a second public surface plus a private delegate/wrapper that only forwards to it.
 4. Do **not** duplicate the same logic in the test, a new helper, or a new abstraction when an existing one can be exposed.
+5. Do **not** add a **new** POM method with one call site when its locators are already public; inline it there. Applies to methods this migration introduces, at any length - a two-action sequence as much as a single click. Neither "other single-caller POM methods exist" nor "the source POM declared this method too" is a defence; the source's POM shape is not a preserved behavior. Exposing an *existing* method for reuse is rule 1, not this.
 
 ```ts
 // BAD - duplicate surface
@@ -106,7 +122,12 @@ The rules below are migration-specific and are not repeated there:
 - Keep URLs in the repository's existing POM structure.
 - Do not retain CodeceptJS `I.*` calls or recreate an actor abstraction.
 - Do not hide assertions inside POMs or helpers; a CodeceptJS custom step that asserts becomes a
-  helper that returns a value plus an assertion in the test body.
+  helper that returns a value plus an assertion in the test body. "Helper" means a shared module under
+  `e2e_tests/helpers/`, `pages/`, `api/` or `components/` - something another spec can import; a
+  module-scope function in the migrated spec file is not one. Such a function may carry an assertion
+  only when the assertion sits *between* other steps, so hoisting it would reinstate the duplication
+  the extraction removed. Every scenario must still hold a direct assertion, and never add the
+  function to `assertFunctionNames` to satisfy `playwright/expect-expect`.
 - Do not suppress `playwright/expect-expect` to compensate for hidden assertions.
 - Do not add comments of any kind in migrated test files (`*.test.ts`), except the required skip-policy comments in `mappings.md`.
 - When a reviewer asks for an explanatory comment, check the repository's house style in `CLAUDE.md`
@@ -115,7 +136,7 @@ The rules below are migration-specific and are not repeated there:
   round trip is avoidable.
 - Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body and the tracker Notes, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
-- `.retry(N)` is not ported as CodeceptJS syntax, but **every explicit source retry value must be pinned exactly**, at the same scope the source applied it. There is no value of N for which doing nothing preserves behavior: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so an unpinned scenario gets 2 retries in CI and 0 locally regardless of what the source asked for. `.retry(1)` is not the CI default, `.retry(0)` would silently gain 2, and any N > 2 would silently lose retries. A source with no `.retry()` anywhere inherits the config default, which is correct - that is what it inherited before.
+- Pin **every explicit source retry value exactly**, at the scope the source applied it; do not port `.retry(N)` as CodeceptJS syntax. No value of N survives being left unpinned: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so `.retry(1)` is not the CI default, `.retry(0)` silently gains 2, and any N > 2 silently loses retries. A source with no `.retry()` anywhere correctly inherits the config default.
   Scope matters, because Playwright has no per-test `retries` option and `pmmTest.describe.configure({ retries: N })` applies to everything in its enclosing scope:
   - **Feature-level** (`Feature('...').retry(N)`): one `pmmTest.describe.configure({ retries: N })` at file scope. This is the direct equivalent - the source applied it to the whole file too.
   - **Scenario-level** (`}).retry(N)` on an individual `Scenario`/`Data` block) where every retrying scenario in the file shares the same N and no scenario is meant to differ: file-scope `configure` is still equivalent, and is preferred over wrapping.

@@ -23,15 +23,14 @@ Use the Docker-native [`provisioning/`](../../../provisioning/) entry point from
 ```bash
 node provisioning/setup.ts
 node provisioning/setup.ts --database ps=8.4 --database psmdb
-node provisioning/setup.ts --db client
-node provisioning/setup.ts --database ps=8.4 --db client
 ```
 
 Build the command from source behavior:
 
-- no database arguments starts PMM Server only;
-- pass every derived database argument for a database-backed test; and
-- append `--db client` whenever `setup_client=true`, with or without database arguments. A database container's embedded PMM Client does not replace a source-required standalone client/node.
+- no database arguments starts PMM Server only; and
+- pass every derived database argument for a database-backed test.
+
+**`--db client` does not exist - never pass it.** `node provisioning/setup.ts --help` is the authority on accepted `--db` types. A source needing a standalone client, running `pmm-admin`/`pmm-agent` on the host rather than inside a database container, is not served by this entry point; see `orchestration.md` step 3.
 
 Tracker values `-h` and `--help` mean no database setup in the old workflow. Omit them here: passing either to `provisioning/setup.ts` prints help and exits without starting PMM.
 

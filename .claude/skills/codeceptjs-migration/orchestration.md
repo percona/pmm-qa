@@ -37,7 +37,13 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 
 ## 1. Select and prepare
 
-On the control branch, first check whether another tracker row is already `in-progress`; stop and report the conflict if so. Then check whether **any** migration PR is currently open; stop and report if even one is. Third, ensure Node.js 22.18 or newer and Docker are available and inspect the fixed local resources the provisioner uses: `pmm-server`, `client_container`, `pmm-data`, the `pmm-qa` network, and engine-labeled containers and volumes. Treat every matching resource as foreign unless this migration created it earlier in the same run; stop instead of adopting, replacing, or tearing down another environment.
+On the control branch, run three preflight checks. Stop on any of them and report which one tripped:
+
+1. another tracker row already `in-progress`;
+2. **any** migration PR currently open;
+3. Node.js older than 22.18, Docker unavailable, or any fixed local resource already present - `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (which `provisioning/` never creates; it belongs to the older `qa-integration` framework, so finding it means a foreign environment).
+
+Treat every matching resource as foreign unless this migration created it earlier in the same run. Never adopt, replace or tear down another environment.
 
 All three are preflight stop conditions, so all three run here - before the `origin/main` merge, both graph refreshes, and the `in-progress` tracker commit. A foreign environment found at step 2a instead would strand a committed `in-progress` row behind a provision that cannot start. Match on the `migrate(<scope>):` title prefix every migration PR uses, not on a full-text title search:
 
@@ -47,9 +53,13 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
 `--search 'migrate in:title'` is wrong here: GitHub tokenizes the query, so it also matches unrelated PRs such as "Migrate QA cloud agents to Claude Code" and "PMM-7: Migrate upgrade tests". Since this step stops the workflow, one such PR blocks every future row with a reason that is not true.
 
-The nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR, so starting a new row while one is open is what produces the second conflicting PR - the cap is one open migration PR in total, which means zero open before a new row starts. Land or otherwise close the open PR before selecting a new row. Note that a batch (section Batch mode) produces one PR for several rows, which is how throughput is recovered under this cap rather than by allowing a second PR. Only once both checks are clear, merge `origin/main` into control - merging before this check risks mixing an unrelated merge commit into an already-active migration's history.
+The cap is one open migration PR in total, so zero open before a new row starts: the nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR. Land or close the open PR before selecting a new row; a batch (section Batch mode) is how throughput is recovered under this cap, not a second PR.
 
-If that merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow - do **not** reach for `--allow-unrelated-histories`, which grafts two disjoint histories together and cannot be undone. Confirm with `git rev-parse --is-shallow-repository` and repair with `git fetch --unshallow origin`, then merge again. The tell is that `git merge-base HEAD origin/main` is empty while control already carries earlier merge commits from `origin/main`, and `git rev-list --max-parents=0 origin/main` reports a recent commit with an ordinary PR subject: that is a shallow boundary, not a root commit.
+Merge `origin/main` into control only once all three checks are clear, or an unrelated merge commit lands in an already-active migration's history.
+
+If that merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow. Confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, then merge again. Never reach for `--allow-unrelated-histories`: it grafts two disjoint histories together and cannot be undone.
+
+The tell is `git merge-base HEAD origin/main` empty while control already carries earlier merge commits from `origin/main`, and `git rev-list --max-parents=0 origin/main` reporting a recent commit with an ordinary PR subject - a shallow boundary, not a root commit.
 
 `tracker.md` runs to tens of kilobytes. Never read it whole: select the row with a scoped `grep`/`head` over the status column, and read only that row plus whichever header section you actually need.
 
@@ -91,13 +101,21 @@ All other steps, including provisioning, review, `READY_TO_RUN`, execution, and 
 
 ## Batch mode
 
-**Status: defined but not enabled.** `parallelization-ledger.md` records this candidate as `needs-evidence, trial-gated`, and the rule above ("do not add an overlap that is not recorded there as `implemented`") therefore forbids using batch mode as routine practice. Do not batch rows by default. Batch mode may be used only when the parent explicitly designates a run as a batch-mode trial, which must record per-row phase timings and any cross-row state contamination on the timeline. After two such trials the ledger row moves to `implemented` or `unsafe`; until then, every migration is a single-row batch.
+**Status: defined but not enabled.** Never batch rows by default - every migration is a single-row batch. `parallelization-ledger.md` records this candidate as `needs-evidence, trial-gated`, which the rule above forbids using as routine practice.
+
+Use batch mode only when the parent explicitly designates a run as a batch-mode trial, and record per-row phase timings and any cross-row state contamination on the timeline. After two trials the ledger row moves to `implemented` or `unsafe`.
 
 Provisioning overlap with the writer is already free - it cost zero net wall clock on the one migration measured. What is not free is the per-row cost that does not shrink with diff size: the final gate, the publish phase, the two graph refreshes, and the PR itself. Batch mode amortizes that fixed cost across several rows that already share a provisioned environment, instead of paying it once per row.
 
 Eligibility: consecutive `pending` rows (after any reordering needed so rows sharing a `Setup` string are adjacent) whose `Setup` column is character-for-character identical, capped at 5 rows per batch. Do not batch across a bucket boundary and do not batch a row whose test selects state by index on a reused environment (for example anything like `verifyAnnotations`) with any other row - state from one row's proof run must not leak into the next row's.
 
-Procedure: provision once for the whole batch. For each row in the batch, in turn: run the writer, the initial review gate, and the row's own live execution against the shared environment, exactly as a single-row migration would - each row still gets its own independent proof. Do not cut a publish worktree per row. Once every row in the batch has passed its own initial review and execution, cut one publish worktree and branch, move every row's changes across, commit the retirement and workflow coverage for the whole batch, run one final review covering all rows, and open one PR listing every migrated row. Update every row's tracker status together, in one tracker-only commit, once the PR is open.
+Procedure:
+
+1. Provision once for the whole batch.
+2. Per row, in turn: writer, initial review gate, and that row's own live execution against the shared environment - each row still gets its own independent proof. Do not cut a publish worktree per row.
+3. Once every row has passed its own initial review and execution: cut one publish worktree and branch, move every row's changes across, commit the retirement and workflow coverage for the whole batch.
+4. Run one final review covering all rows, and open one PR listing every migrated row.
+5. Update every row's tracker status together, in one tracker-only commit, once the PR is open.
 
 State reset between rows in a batch must be explicit and recorded on the timeline (for example a Grafana annotation table reset) - do not assume one row's proof run left the environment in the state the next row's proof run needs.
 
@@ -108,7 +126,7 @@ Tracker and recovery bookkeeping for a batch:
 - Maintain one timeline file per row, as usual, plus one gate-ledger entry per gate spawn recording which rows that gate covered.
 - **Classify every changed path before publishing, because rows in a batch routinely share files.** A path is *row-exclusive* if exactly one row in the batch changed it (typically the migrated test and any POM or helper only it needs). A path is *batch-shared* if two or more rows changed it - which is the normal case for the workflow-coverage YAML (each row appends a tag) and for `e2e_tests/README.md` (the pre-commit hook regenerates it for every commit touching `e2e_tests/tests/**/*.ts`), and can also happen for a helper or API client two rows both extend.
 - **Do not batch two rows that edit the same region of a shared code file.** Overlapping hunks in one helper cannot be separated later, so the rows cannot be dropped independently. Compare each row's changed-path list against the others' after its writer pass; on an overlapping-hunk collision, split the batch rather than continuing.
-- If one row fails and cannot be fixed, drop just that row - but never by restoring a batch-shared path, which would erase the surviving rows' changes to it. Restore only that row's *exclusive* paths, then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, and let the pre-commit hook regenerate `README.md`. Revert the dropped row's tracker row to `pending` with a Notes entry, and re-verify selectability for the survivors afterwards, since the coverage YAML changed. Do not fail the whole batch for one row, and do not carry a known-broken row into the shared PR.
+- If one row fails and cannot be fixed, drop just that row. Do not fail the whole batch, and never carry a known-broken row into the shared PR. Restore only that row's *exclusive* paths - restoring a batch-shared path erases the survivors' changes to it. Then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, let the pre-commit hook regenerate `README.md`, and re-verify selectability for the survivors since that YAML changed. Revert the dropped row to `pending` with a Notes entry.
 
 ## 2a. Start provisioning in the background
 
@@ -116,7 +134,7 @@ This runs before step 2 and overlaps it. Provisioning is the long pole and the e
 
 The parent, not the writer, owns the confirmation, and the tracker's `Setup` is a planned default that is regularly wrong. Derive the real set from the services the source's data rows, hooks, and shell commands actually name, then correct the tracker row when it differs - a row can just as easily name a database the test never touches as omit one it needs.
 
-Cross-check the derived set against the **destination** Playwright job's `setup_services` before provisioning. It costs nothing, because the writer's step 8 selectability check already opens those workflow files, and it is the one free second opinion available at this point. The **retiring CodeceptJS job's** `setup_services` is not a valid cross-check and is a common source of a wrong tracker value: a union grep provisions for every tag in the union, so it over-states what any single migrated scenario needs. Row 5's planned `--database pgsql` came from exactly that, while the destination job ran `-h` and the true bucket was server-only.
+Cross-check the derived set against the **destination** Playwright job's `setup_services` before provisioning - free, since the writer's step 8 selectability check already opens those workflow files. Never cross-check against the **retiring CodeceptJS job's** `setup_services`: a union grep provisions for every tag in the union, over-stating what any single migrated scenario needs.
 
 The local-resource inspection that gates provisioning is a step 1 preflight check, not a step 2a one - see step 1. Do not repeat it here; by this point it has already passed.
 
@@ -133,11 +151,19 @@ The provisioning command runs from control's worktree and accepts the tracker's 
 ```bash
 node provisioning/setup.ts
 node provisioning/setup.ts --database ps=8.4 --database psmdb
-node provisioning/setup.ts --db client
-node provisioning/setup.ts --database ps=8.4 --db client
 ```
 
-Use no database arguments for server-only setup. Append `--db client` whenever the confirmed setup includes `setupClient: true`, including alongside database arguments; it represents a distinct standalone node.
+Use no database arguments for server-only setup.
+
+**`--db client` does not exist - never pass it.** `node provisioning/setup.ts --help` is the authority on accepted `--db` types; `dockerclients` is the nearest name and provisions nothing.
+
+A source with `setupClient: true` - one running `pmm-admin`/`pmm-agent` on the **host** rather than inside a database container - is not served by this entry point. Install the host client the way CI does, from `qa-integration/pmm_qa`:
+
+```bash
+sudo bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password <p> --use_metrics_mode no
+```
+
+This step is Linux-only: run such a row under WSL2 or route it to CI, and record which. Derive `setupClient` from the source before provisioning; a host `pmm-admin` invocation is the tell.
 
 **A test that logs in through the UI needs a NON-DEFAULT admin password.** With the provisioner's
 default `admin`, PMM forces an "Update your password" interstitial after every UI login, and its URL

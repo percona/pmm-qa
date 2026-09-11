@@ -89,9 +89,16 @@ git add -N -- <paths...>
 git diff HEAD --binary -M --output=.claude/migration-observations/<row>-<slug>.patch -- <paths...>
 ```
 
-`git add -N` is still required: `git diff HEAD` sees staged content, but a genuinely untracked new file is invisible to any `git diff` form unless it is marked with intent-to-add first. `--binary` is required or a changed binary file (for example an `image-renderer` snapshot baseline) produces an unappliable stub. `-M` is required or a `git mv` (the source retirement) is invisible to the diff entirely. `--output=` is required instead of a shell redirect or a pipe: on this Windows/PowerShell setup a `>` redirect or a `|` pipe re-encodes the bytes with a UTF-8 BOM and CRLF line endings, and `git apply` accepts the corrupted patch silently. `git diff --output=` writes the bytes itself and is safe in any shell. `.claude/migration-observations/` is gitignored, so this is a checkpoint and not a commit. Note the snapshot on the timeline and delete it once the PR is open.
+Every part of that form is load-bearing:
 
-Every path in the `add -N` pathspec must exist on disk right now, under its current name. `git add -N` fails on the whole invocation if even one listed path does not exist - for example the pre-rename name of a file `git mv` already renamed - and when it fails, none of the paths in that call get intent-to-add, including ones that were otherwise fine; the checkpoint then silently omits every genuinely new file with no error surfaced downstream. List only the paths `git status --short` shows right now (their current names, not any name a file used to have), not a remembered list from earlier in the phase.
+- `git add -N` - an untracked new file is invisible to any `git diff` form until it is marked intent-to-add.
+- `--binary` - without it a changed binary file (an `image-renderer` snapshot baseline, say) produces an unappliable stub.
+- `-M` - without it a `git mv` (the source retirement) is invisible to the diff entirely.
+- `--output=` - never a `>` redirect or a `|` pipe. Both re-encode the bytes here with a UTF-8 BOM and CRLF, and `git apply` accepts the corrupted patch silently. `git diff --output=` writes the bytes itself and is safe in any shell.
+
+`.claude/migration-observations/` is gitignored, so this is a checkpoint, not a commit. Note the snapshot on the timeline and delete it once the PR is open.
+
+List only the paths `git status --short` shows right now, under their current names - never a remembered list from earlier in the phase, and never the pre-rename name of a file `git mv` already renamed. One missing path fails the whole `git add -N` invocation, so no path in that call gets intent-to-add and the checkpoint silently omits every new file, with no error downstream.
 
 `git add -N` leaves intent-to-add entries in the index, and they persist. That is why the cleanup at the end restores `--staged` as well as `--worktree`: without it a new file that was snapshotted and then removed shows up as a staged deletion on control.
 
@@ -140,7 +147,9 @@ and the path as separate arguments and is immune.
 
 A path absent from `origin/main` depends on an earlier still-unmerged sibling migration - typically a shared helper. Decide explicitly whether to carry the full file into this PR or hold.
 
-**File existence is not enough - compare the hunks.** A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it. The existence check reports the path as present and says nothing. So for each changed path also look at the region being edited (`git show "origin/main:<path>"` - quote the whole argument, or the MSYS2 mangling above applies here too - and find the block). When the block is missing, the choice is the same as for a missing file: create it in this PR scoped to this migration's own needs, or hold. Do not import the sibling's version of the block - that pulls an unmerged migration's CI changes into this PR and can reference tags with no tests behind them.
+**File existence is not enough - compare the hunks.** For each changed path, read the region being edited with `git show "origin/main:<path>"` (quote the whole argument, or the MSYS2 mangling above applies). A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it; the existence check reports the path as present and says nothing.
+
+When the block is missing, treat it as a missing file: create it in this PR scoped to this migration's own needs, or hold. Never import the sibling's version - that pulls an unmerged migration's CI changes in and can reference tags with no tests behind them.
 
 ### Move the work across
 
@@ -157,6 +166,12 @@ List the paths explicitly rather than taking the whole diff, so an unrelated edi
 Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep before writing it. Row 4's body named an API method that did not exist and POM sections that were byte-identical to `origin/main`; both were falsifiable in about 30 seconds each, and missing them cost a full amend cycle after the final gate had passed.
 
 A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
+
+**This repository squash-merges, and the squash body is the concatenation of the branch's commit messages - not the PR body** (`4d5e8427` carries all five of its branch commits as `* ` bullets and none of the PR body). A false statement in a commit body therefore reaches `main` verbatim; the PR body does not. Consequences:
+
+- Correct a defect in an already-pushed **non-tip** commit body in the *next* commit's body, naming the commit and quoting the false clause - squash concatenates both, so the claim and its retraction cannot be separated. Do not force-push for this. Amending a tip commit is allowed, but weigh it against cancelling an in-flight CI matrix.
+- Re-read the PR body against `git diff -M origin/main..HEAD` before requesting review, and again after any push that changes what shipped. A corrective commit silently falsifies it.
+- Do not hand-trim the pre-filled bullets in the merge box; that drops a retraction while keeping the claim.
 
 ### Retire the source and add coverage, here
 
@@ -179,7 +194,17 @@ Then commit workflow coverage, per the section below.
 
 Rerun static validation (lint/typecheck/build) and the migrated test itself in the publish worktree before pushing. A migration can call something an unmerged sibling added to a shared file without touching that file itself, which no dependency check above will catch.
 
-Most of `.claude/` - `settings.json`, `hooks/`, `agents/`, and most of `scripts/` (`pmm-ui-login.js`, `pw-record.js`, `pw-screenshot.js`, `skill-gardener-counter.sh`, and their `lib/`) - is on `origin/main` and present in this worktree. Only four migration-specific scripts are control-only and therefore absent here: `check-migration-conventions.sh`, `run-migration-single-test.sh`, `verify-migration-locator.mjs`, and `validate-migration-scripts.sh` - along with the `codeceptjs-migration` skill and its three agents, which also exist only on control. Where one of those four scripts is still needed against files in this worktree, invoke it by its absolute path on the control worktree, pointed at the target file's path here, rather than assuming a local copy: `bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" ../pmm-qa-publish/e2e_tests/tests/<file>.test.ts`. For `run-migration-single-test.sh`, invoke the test runner directly instead, against the same live environment and the same credential pair:
+Most of `.claude/` is on `origin/main` and present in this worktree: `settings.json`, `hooks/`, `agents/`, and most of `scripts/` (`pmm-ui-login.js`, `pw-record.js`, `pw-screenshot.js`, `skill-gardener-counter.sh`, and their `lib/`).
+
+Control-only, and therefore absent here: `check-migration-conventions.sh`, `run-migration-single-test.sh`, `verify-migration-locator.mjs`, `validate-migration-scripts.sh`, plus the `codeceptjs-migration` skill and its three agents.
+
+Invoke any of those four scripts by absolute path on the control worktree, pointed at the target file here - never assume a local copy:
+
+```bash
+bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" ../pmm-qa-publish/e2e_tests/tests/<file>.test.ts
+```
+
+For `run-migration-single-test.sh`, invoke the test runner directly instead, against the same live environment and credential pair:
 
 ```bash
 cd ../pmm-qa-publish/e2e_tests
@@ -293,13 +318,15 @@ So for each migrated tag, state either its consumers or that a cross-repository 
 
 When two coverage shapes are arguable, stop reasoning in prose and read the precedent: `git log -- .github/workflows/` and the last migration's actual diff shows which surfaces the previous retirement moved and why.
 
-If retiring this source leaves a CodeceptJS job's grep expression selecting zero remaining active scenarios, delete that job in this same PR, in the same commit as the Playwright coverage that replaces it. Do not leave it in place "unchanged": both CI runners treat an empty test selection as a passing job (the launchable-subset gate skips every downstream step, and the run step itself ends `|| true`), so an emptied job does not fail or warn - it reports green forever while testing nothing, and nothing later in this process, or in CI, will ever flag it. Check every job the retired source's tags feed, not only the one job this migration happens to be touching.
+When retiring a CodeceptJS source, check every job whose grep matches its title tags, not only the one this migration touches. Report the tagged and active counts, counting by tag rather than by file and matching `Scenario(`, `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(`. If no active matches remain, delete the job in the same commit as the replacement Playwright coverage - empty selections otherwise pass silently.
 
-Count that selection the way CodeceptJS does, because the obvious count is wrong twice over. It is a count of scenarios whose **title carries one of that job's grep tags**, not of scenarios in the file, and the matcher must catch `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(` as well as `Scenario(`. Two figures come out of it and they license different decisions: the tagged count reproduces what CI selects, and the active count decides whether the job may stay. Row 5 was miscounted three separate times - 6 with a bare `Scenario(` matcher, 22 by counting whole files, against a true 11 tagged of which 6 active. An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever.
+An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever.
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
-On a surface the source genuinely ran on, and only there, append the migrated tag to that surface's existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Two cases are not this case, and both take a new job rather than an append: no Playwright job of any kind exists yet for this migration's CI surface, or the surface is `fb-e2e-suite.yml`, which has no `test_execution_playwright` entry to append to - see The FB-suite case below. In either, mirror the retiring CodeceptJS job's setup verbatim.
+On a surface the source genuinely ran on, and only there, append the migrated tag to that surface's existing `test_execution_playwright` matrix entry - a one-line append to the existing `tags_for_tests` entry, since that job and its counter are already established on `main`. Do not add a new Playwright job block.
+
+Two cases take a new job instead, both mirroring the retiring CodeceptJS job's setup verbatim: no Playwright job of any kind exists yet for this migration's CI surface, or the surface is `fb-e2e-suite.yml`, which has no `test_execution_playwright` entry to append to (see The FB-suite case below).
 
 When there is no retiring job to mirror - the source is kept, or the new job needs no database - the server-only value is `setup_services: '-h'`, as used by `fb-e2e-suite.yml`'s `alerting` job. Omitting the input is **not** equivalent: `runner-e2e-tests-playwright.yml` falls back to `''`, so `pmm-framework` runs with no arguments at all.
 
@@ -334,11 +361,11 @@ A source file's scenarios rarely all carry the same tags, so the file's union of
 
 Bound the reverse direction first. Run `git diff --name-status origin/main HEAD -- e2e_tests/tests/`: when it shows no modified test file (only additions), no existing expression's selection can change except by newly matching the added file, so the whole reverse check reduces to listing each existing expression once and confirming zero hits for that filename. Do not re-derive per-scenario selections for expressions nothing could have moved.
 
-Then widen the check beyond the job you just edited: tags are reused across many tracker rows, so a migrated scenario's tag can already be selected by a job you never touched - one that was written for an earlier, different migration and may not provision what this scenario needs. For each tag on each migrated scenario, enumerate every job across `.github/workflows/` whose `pmm_test_flag`/`tags_for_tests` would select it (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml`), and for every consumer found - not only the one this migration edited - confirm its `setup_services` actually covers what the scenario needs. Selection is not the same claim as executability: a scenario can be correctly *selected* by a job whose environment cannot make it *pass*.
+Then check **every** consumer, not just the job you edited - tags are reused across rows, so a scenario's tag can already be selected by a job written for an earlier migration that does not provision what this scenario needs. For each tag on each migrated scenario, enumerate every selecting job (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml`) and confirm each one's `setup_services` covers what the scenario needs. Selection is not executability.
 
 A migrated scenario that matches no destination grep is coverage that vanishes the moment the source is retired, and nothing about a green test run reveals it. A migrated scenario selected by a job that cannot supply its required services is worse: it may fail (swallowed by the `|| true` on the run step, reading as flake) or silently pass while asserting less than the source did.
 
-**When the edit newly selects tests outside the migrated file, run them.** Widening a grep can pull in existing tests that no job selects today. Selection evidence is not execution evidence, and the `|| true` hides the difference - a newly-selected test the job's environment cannot support fails silently and reads as flake rather than as a coverage defect this migration introduced. Run the **edited job's own full grep expression** once, at the job's own worker count, rather than only the newly-selected tests - it costs one run instead of two, discharges the same obligation, and reproduces exactly what CI will select and the order and concurrency it runs at, which a per-file run cannot. Report that command as the coverage-edit execution evidence.
+**When the edit newly selects tests outside the migrated file, run them.** Run the **edited job's own full grep expression** once, at the job's own worker count - not just the newly-selected tests. That reproduces what CI selects, in CI's order and concurrency, in one run. Report the command as the coverage-edit execution evidence. Selection evidence is not execution evidence, and `|| true` masks the difference: a newly-selected test the environment cannot support reads as flake rather than as a defect this migration introduced.
 
 ### Fixing a non-tip commit message after the final gate
 
@@ -410,7 +437,7 @@ After the PR exists, on control's own checkout (never switched away from - only 
 
 1. update the row to `done`;
 2. record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and pre-migration graph-refresh results;
-3. commit and push only the tracker change - edit the row as an **anchored substring replacement**, never a whole-file rewrite. `tracker.md` is LF-only and a naive whole-file write flips all 164 lines to CRLF on this Windows setup. Before staging, require `git diff --numstat -- <tracker>` to show `1 1` and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`. Do not reach for a shell CR literal here: it does not survive quoting or a heredoc, and a grep left holding an empty pattern reports every line as a match, which reads as a total CRLF flip that never happened; and
+3. commit and push only the tracker change. Edit the row as an **anchored substring replacement**, never a whole-file rewrite - `tracker.md` is LF-only and a whole-file write flips every line to CRLF here. Before staging, require `git diff --numstat -- <tracker>` to show `1 1`, and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`. Never use a shell CR literal to check this: it does not survive quoting or a heredoc, and the resulting empty grep pattern matches every line, reading as a total CRLF flip that never happened; and
 4. restore control's worktree to clean.
 
 Step 4 is not optional. The migration's edits are still sitting there uncommitted, and leaving them means the next migration starts on top of them and sweeps them into its own patch:
@@ -420,7 +447,9 @@ git -C <control-worktree> restore --staged --worktree -- <paths...>
 git -C <control-worktree> status --short
 ```
 
-`restore --staged --worktree` on its own is both necessary and sufficient here, and it depends on the intent-to-add entries from `git add -N` still being in the index. Do not `git reset` those entries first: `reset` turns an intent-to-add new file back into a plain untracked file, and `restore` then fails on it with `pathspec ... did not match any file(s) known to git` and aborts the **entire** invocation - so the new file survives and every other path in the same pathspec is left un-restored too. Verified: with the entries intact, one `restore --staged --worktree` deletes intent-to-add new files (binaries included), reverts modified files, exits 0, and leaves `git status --short` empty.
+`restore --staged --worktree` alone is necessary and sufficient, and depends on the intent-to-add entries from `git add -N` still being in the index. Never `git reset` them first: that turns an intent-to-add file back into a plain untracked one, `restore` then fails with `pathspec ... did not match any file(s) known to git`, and the **entire** invocation aborts - the new file survives and every other path goes un-restored.
+
+With the entries intact, one `restore --staged --worktree` deletes intent-to-add new files (binaries included), reverts modified files, exits 0, and leaves `git status --short` empty.
 
 Do not use `git clean -fd` here either, even scoped to specific paths. If the migration created a new directory, `clean -fd` removes the whole directory rather than an enumerated file list, and it will delete anything else placed there since - with no backup, because by this point the `.patch` checkpoint has already been deleted and nothing was ever committed on control. If a path still shows after the restore, inspect it by name before removing it.
 
