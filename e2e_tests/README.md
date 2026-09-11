@@ -112,6 +112,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-valkey-integration`
 - `@post-release`
 - `@rta`
+- `@service-account`
 - `@settings`
 - `@standalone`
 - `@user-password`
