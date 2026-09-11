@@ -41,6 +41,9 @@ Use these prompts only when the ticket or implementation makes the mechanism rea
 - **Legacy URL resolves incorrectly:** old encoding points to the wrong entity rather than failing. Use a compact table of new, legacy, empty, duplicate, and unknown identifiers only when URL parsing changed.
 - **Response order changes the result:** two requests race and one overwrites the other. Reverse their completion order and assert value and position.
 - **Role changes requests:** a page renders while calling an endpoint the role cannot use. Assert the request set and authorization result per relevant role.
+- **Scheduler stops rescheduling:** a computed interval goes non-positive or undefined and nothing is scheduled again, with no error and no console output. Assert the periodic request fires within a bounded window, not that the page renders.
+- **Hidden tabs delay or throttle timers:** scheduled work runs late or not at all while hidden, so the page can return past a deadline. Where the implementation provides a focus catch-up, assert it on return; do not assert an absence of work while hidden.
+- **Client state the page cannot read:** a cookie or storage entry written at a different path or origin than the app's reads as absent, silently selecting the fallback branch. Confirm visibility from the app's own path before asserting on its value.
 
 ## Observation rule
 

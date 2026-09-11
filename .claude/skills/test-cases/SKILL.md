@@ -49,6 +49,10 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect **every** linked implementation pull request, regardless of repository. Common homes are `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change. A feature may span several of them. Read changed files before hunks, then read behavior-changing code and the pull request's tests.
 
+Inventory the distinct behavior changes before building candidates: one entry per behavior, not per hunk or exported symbol. This inventory is the input to step 3 and to the coverage table in step 7. Cover every linked pull request across repositories; for a coverage audit with no pull request, inventory the feature's current public behaviors the same way.
+
+Inventory a wiring or registration change only when it changes execution, ordering, or availability. A relocated import that changes none of these is not an entry. Resolve such an entry to its own case only when it changes observable behavior beyond what another case already proves.
+
 Use the Jira Development panel first. If it has no links, search the ticket key in each repository implied by the component and behavior; for HA or chart work always include `percona/percona-helm-charts`, and for exporter behavior include the relevant exporter repository. Do not take the no-implementation path until these candidates have been checked. If none contains a change, list the repositories searched in Findings.
 
 A dashboard or component ticket predating a repository consolidation may have been fixed in an archived upstream repository outside the session's scope. Take the candidate name from the feature build's "Custom branches" list, then attach and clone it before reporting no implementation. A feature-build pull request is never the fix.
@@ -58,6 +62,8 @@ An inaccessible linked repository is not "no implementation." Report the access 
 When the ticket's fix version predates the current major and the implementation is absent from every candidate repository, treat the feature as removed, not unimplemented. Report obsolescence with the missing paths as evidence and stop.
 
 For chart or HA work, read `../test-scope/references/ha.md` and inspect the effective chart configuration: templates, default values, image/version pins, and feature gates. Do not derive expected behavior from a single-server PMM default when the chart disables or replaces it.
+
+Read the effective value of any constant a precondition will depend on — see "Effective constants" in [coverage.md](references/coverage.md).
 
 Identify validation, errors, permissions, persistence, lifecycle transitions, version gates, shared callers, and externally observable outputs. Confirm on the base branch that every metric, label, field, or endpoint an expected result depends on already exists; give anything the change introduces its own existence assertion, since a missing input to an alert or a query fails silently.
 
@@ -82,6 +88,8 @@ Create one candidate per distinct behavior or risk. Consider:
 - persistence, lifecycle, compatibility, upgrade, HA, or database variants only when the ticket or implementation makes them relevant.
 
 Merge data variants only when they share the branch *and* the data that selects it. Keep cases separate when they exercise different branches, carry their own selector or threshold, or would fail for different reasons.
+
+After choosing an induction method, trace it against each entry in the step 2 inventory. Name the entries it may bypass and pick a second method for those. Mutating server state may bypass client-side scheduling; mutating client state may bypass server-side rejection. Trace which applies rather than assuming.
 
 ### 4. Find existing coverage
 
@@ -115,7 +123,7 @@ Keep a candidate only when **all** five conditions hold:
 1. **Traceable evidence:** name the acceptance criterion, implementation branch, historical bug, or explicit customer behavior that justifies it.
 2. **Named defect:** state the plausible defect that the case catches and confirm the case would fail if that defect existed.
 3. **Unique coverage:** no existing assertion already catches the same defect; otherwise mark it covered or extend it.
-4. **Reliable oracle:** assert a deterministic public result at the layer that matters, such as an API response, persisted state, CLI result, permission decision, exporter flag, metric, or supported UI behavior.
+4. **Reliable oracle:** assert a deterministic public result at the layer that matters, such as an API response, persisted state, CLI result, permission decision, exporter flag, metric, or supported UI behavior. Rejecting a candidate for lack of a deterministic oracle: name the caller or page checked. Accepting an oracle that depends on concurrency: show the concurrent requests are reproducible on the surface under test, and name the layer where the asserted quantity is counted.
 5. **Value exceeds cost:** the user or product impact justifies the setup, runtime, credentials, and maintenance burden. Route a candidate that passes on user impact but fails only on automation cost to Manual only with its blocker named; do not drop it.
 
 Reject generic justification such as "best practice," "test an edge case," "realistic workflow," or "could break." Reject assertions such as "works," "page loads," or "error appears."
@@ -147,6 +155,12 @@ Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <ve
 
 - <requirement/implementation contradiction, ambiguity, or missing behavior>
 
+### Implementation coverage
+
+| Behavior | Source | Accounted for |
+| --- | --- | --- |
+| <what changed, in behavior terms> | <repo#PR — file or symbol> | <Case N / PMM-T key / dropped: reason> |
+
 ### Existing coverage
 
 - <covered behavior> — <PMM-T key or path:line> — <assertion or missing assertion to extend>
@@ -164,6 +178,8 @@ Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <ve
 - <candidate> — <covered, same branch as case N, no evidence, nondeterministic, or cost exceeds value>
 ```
 
-Omit empty Findings, manual-only, and dropped sections. Zero proposed cases is valid when existing coverage already catches every identified defect.
+Implementation coverage carries one row per inventory entry from step 2, resolved to a case, to existing coverage, or to a stated drop reason. One table covers all linked pull requests together; drop `#PR` from `Source` for a coverage audit with none. A row may cite several cases and a case may resolve several rows.
+
+Omit empty Findings, manual-only, and dropped sections; never omit Implementation coverage. Zero proposed cases is valid when existing coverage already catches every identified defect.
 
 Do not execute cases, create or update Zephyr entries, modify Jira, or begin automation. Those actions require explicit user approval after review.

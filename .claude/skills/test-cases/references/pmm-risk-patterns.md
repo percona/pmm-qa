@@ -14,6 +14,7 @@ Use the row matching the changed area to challenge the initial candidate list. T
 | QAN and RTA | Filters omit values, historical ranges fail, or missing DB privileges look like no data | PMM-15206, PMM-15336, PMM-14661, PMM-14717 | Trace workload to ClickHouse to UI; distinguish authorization failure from empty data |
 | Settings and persistence | Value appears saved but is lost or never reaches the consumer | PMM-15074, PMM-15354, PMM-15241, PMM-14751, PMM-14931 | Read back through the API and at exporter/metric consumer after the relevant reload |
 | RBAC, anonymous, and secrets | UI hides an action while API allows it, or credentials leak into logs | PMM-15138, PMM-15139, PMM-15309, PMM-15067, PMM-15164, PMM-15010 | Deny the API mutation and verify unchanged state; search bounded logs for the exact secret |
+| PMM UI client state | Session, polling, or cache state held in the browser dies silently: a scheduler that stops rescheduling, a cookie the app's path cannot read, a deadline missed while the tab is hidden | PMM-15420 | Confirm the state is reachable from the app's own serving path, then drive it directly (cookie edit, blur/focus) rather than only through server state |
 | HA | Stale inventory, false health, incorrect proxy routing, or restart failure | PMM-15227, PMM-14734, PMM-15030, PMM-15029, PMM-15228 | Drive the actual cluster trigger and assert at the owning layer; test unhealthy as well as healthy |
 | Helm and HA chart configuration | Chart defaults, image pins, or feature gates make product behavior differ from single-server PMM | PMM-T2217 exposed this with internal PostgreSQL QAN disabled | Render or inspect effective values first; never assert output from a component the chart disables |
 | Upgrade and restart | Migration crash-loop, restart hangs, or large state fails | PMM-15404, PMM-15266, PMM-15050 | Upgrade seeded data and perform both a post-upgrade read and write |
@@ -24,6 +25,8 @@ Use the row matching the changed area to challenge the initial candidate list. T
 ## Trigger discipline
 
 Before proposing a lifecycle case, identify what invokes the changed path. Helm scaling, pod deletion, process restart, reconciliation, scrape, election, and migration can produce different inputs. Drive the exact trigger the implementation observes and name it in Preconditions.
+
+Before writing a client-state case, confirm the app can read that cookie or storage entry at its serving path. Before writing a focus-recovery case, confirm the implementation registers a focus or visibility handler and acts on it.
 
 For chart tickets, treat `percona/percona-helm-charts` as implementation, not provisioning detail. Inspect templates and effective values alongside PMM code before selecting the oracle.
 

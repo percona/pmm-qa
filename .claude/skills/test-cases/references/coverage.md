@@ -35,6 +35,12 @@ Treat broad search results as a candidate pool. Narrow terms before classifying 
 
 For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tests/api/`, and endpoint constants in `e2e_tests/helpers/apiEndpoints.ts`. An endpoint constant proves availability, not coverage; find a test that calls it and asserts the result.
 
+## Effective constants
+
+Before writing a precondition that depends on a timeout, interval, retention, serving path, base path, or cookie path, read that value's effective setting in this product's configuration. Never assume the upstream default: a case parameterized to one can pass on the broken build.
+
+Where the value is observable only at runtime, resolve it as a design-time preflight and write the discovered value into the Precondition, or report it as a Finding. Make it a step only when that step has its own expected result.
+
 ## Execution reality
 
 Check the candidate test's tags against `.github/workflows/`. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
