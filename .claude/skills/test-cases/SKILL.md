@@ -17,7 +17,6 @@ Load no reference up front. Read it only when its workflow step applies:
 - Linked implementation: `../git-diff/SKILL.md`
 - Existing manual cases: `../zephyr/SKILL.md`
 - Environment dimensions when relevant: `../test-scope/SKILL.md`
-- Observation layer or timing when unclear: `../verification-depth/SKILL.md`
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
 - Known failure shapes when the initial model needs challenging: [references/failure-mechanisms.md](references/failure-mechanisms.md)
@@ -32,7 +31,7 @@ The references above are prompts for reasoning, not quotas. A technique, histori
 
 ### 1. Establish the test basis
 
-For a ticket, use `jira` with `fieldsCsv:"*all"` to read the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version.
+For a ticket, use `jira` with `fieldsCsv:"*all"` to read the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
 
 The Jira relay cannot read the Development panel. Use linked pull requests already present in the supplied ticket context when available; otherwise search the repositories implied by the component and behavior for the ticket key. Report that Development-panel discovery was unavailable, because repository search can miss a linked pull request whose title and branch omit the key.
 
@@ -52,7 +51,9 @@ Do not invent expected behavior to repair a weak ticket.
 
 Do not silently treat implementation as the source of truth. The implementation is the subject under test.
 
-When ticket fields, documentation, API/CLI contracts, historical behavior, PR acceptance notes, or implementation disagree:
+Treat an AI-triage comment's root-cause analysis and recommended fix as unverified hypotheses. Use them to guide inspection, never as test basis; verify them against the linked or shipped implementation and record a mismatch as a Finding.
+
+When ticket fields, documentation, API/CLI contracts, historical behavior, triage claims, PR acceptance notes, or implementation disagree:
 
 1. record each source and what it claims;
 2. identify which behavior is externally observable;

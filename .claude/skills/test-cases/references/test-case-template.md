@@ -47,7 +47,7 @@ Precondition: <Short optional setup>
 
 ## Example
 
-Adapted from automated case `PMM-T2168` in `e2e_tests/tests/inventory/inventory.test.ts`. When Zephyr is available, use its `get` operation to read the stored case before reusing or extending it.
+Case-1 Adapted from automated case `PMM-T2168` in `e2e_tests/tests/inventory/inventory.test.ts`. When Zephyr is available, use its `get` operation to read the stored case before reusing or extending it.
 
 ```markdown
 ### Refresh inventory data
