@@ -5,6 +5,8 @@ Use this format for every proposed case.
 ## Rules
 
 - Use a short, action-oriented title.
+- Assign `High`, `Normal`, or `Low` priority from failure impact.
+- Name the primary defect the case catches and its traceable evidence.
 - Omit the `Precondition` line when unnecessary; do not write `None` or `N/A`.
 - Use only `Step` and `Expected` columns.
 - Start every table cell with `- `.
@@ -20,6 +22,8 @@ Use this format for every proposed case.
 | Template | Zephyr field |
 | --- | --- |
 | Title | `name` |
+| Priority | `priorityName` |
+| Catches / Evidence | `objective` |
 | Precondition | `precondition` |
 | Step | `description` |
 | Expected | `expectedResult` |
@@ -28,6 +32,10 @@ Use this format for every proposed case.
 
 ```markdown
 ### <Short title>
+
+Priority: <High | Normal | Low>
+
+Catches: <Primary defect> — Evidence: <acceptance criterion, implementation branch, invariant, or historical mechanism>
 
 Precondition: <Short optional setup>
 
@@ -43,6 +51,10 @@ Adapted from automated case `PMM-T2168` in `e2e_tests/tests/inventory/inventory.
 
 ```markdown
 ### Refresh inventory data
+
+Priority: Normal
+
+Catches: Expanded row collapses during polling — Evidence: PMM-T2168 polling behavior
 
 Precondition: One inventory item exists.
 
