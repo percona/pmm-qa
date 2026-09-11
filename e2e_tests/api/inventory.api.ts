@@ -6,6 +6,30 @@ import apiEndpoints from '@helpers/apiEndpoints';
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
 
+  deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
+    const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+  };
+
+  getAllNodes = async (): Promise<GetNode[]> => {
+    const response = await this.request.get(apiEndpoints.management.nodes, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get nodes API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return ((await response.json()) as { nodes?: GetNode[] }).nodes ?? [];
+  };
+
   getNodeName = async (nodeId: string): Promise<string> => {
     const response = await this.request.get(`${apiEndpoints.management.nodes}/${nodeId}`, {
       headers: GrafanaHelper.getAuthHeader(),

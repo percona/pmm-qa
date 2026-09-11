@@ -63,3 +63,18 @@ PMM_PERF_TAG=pmm-qa-perf-run:myrun-01 ./teardown_perf_linodes.sh    # delete jus
 
 Teardown deletes only instances tagged `pmm-qa-perf` (this harness's own tag),
 never the account-wide `pmm-qa-ephemeral`.
+
+## Reports (GitHub Pages)
+
+Once the perf pipeline is wired into CI, each run publishes its report to the
+`gh-pages` branch, which GitHub Pages serves as a trend dashboard (per-scale indicator,
+deviation chart, runs table with shared PMM snapshot links). Nothing in this repo calls
+the script yet. The report schema lives in that branch's `README.md`.
+
+```bash
+performance/ci/publish_report.sh perf-report.json   # adds reports/<run_id>.json, rebuilds data/index.json, pushes
+```
+
+In CI the job needs `permissions: contents: write` and either `PAGES_REMOTE` set to an
+authenticated URL, or `GITHUB_TOKEN` and `GITHUB_REPOSITORY` in the environment. A
+checkout's persisted token does not reach the script's separate clone.

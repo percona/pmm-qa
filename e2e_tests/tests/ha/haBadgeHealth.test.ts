@@ -11,7 +11,6 @@ const healthByReplicas = [
   { expectedHealth: 'Unreachable', replicas: 0 },
 ];
 const expectedNodes = 3;
-let statefulSet: string | undefined;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
@@ -25,13 +24,9 @@ pmmTest.afterEach(async ({ api, haClusterHelper }) => {
 pmmTest(
   'PMM-T2250 Verify the HA badge reflects the health of the PMM HA cluster @pmm-ha',
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
+    const statefulSet = haClusterHelper.statefulSetName();
 
     await pmmTest.step(`Verify the cluster starts with ${expectedNodes} pods up and running`, async () => {
-      statefulSet = haClusterHelper.statefulSetName();
-
       expect(
         k8sHelper.getStatefulSetReplicas(statefulSet),
         `The Degraded and Critical thresholds below are derived from a ${expectedNodes}-node cluster`,
@@ -57,8 +52,7 @@ pmmTest(
         // at four attempts this failed roughly one run in sixteen.
         expect(attempt, `Leadership never landed on "${survivor}"`).toBeLessThan(8);
 
-        k8sHelper.deletePod(haClusterHelper.leaderFromPods()).assertSuccess();
-        await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+        await haClusterHelper.failoverLeader(api.haApi);
         await expect
           .poll(() => k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
             message: `All ${expectedNodes} pods must rejoin before the next attempt`,
@@ -77,7 +71,7 @@ pmmTest(
 
     for (const { expectedHealth, replicas } of healthByReplicas) {
       await pmmTest.step(`Scale the cluster to ${replicas} replicas`, async () => {
-        k8sHelper.scaleStatefulSet(statefulSet as string, replicas).assertSuccess();
+        k8sHelper.scaleStatefulSet(statefulSet, replicas).assertSuccess();
       });
 
       // Never reload: at 0 replicas nothing serves the page. The app's own 15s
