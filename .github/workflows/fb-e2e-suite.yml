@@ -349,10 +349,7 @@ jobs:
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       setup_services: '--database ps,SETUP_TYPE=replication,MY_ROCKS=true --database ps,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
       pmm_test_flag: '@pmm-ps-integration'
-      # This tag provisions two PS clusters (6 package-based MySQL installs)
-      # before the tests start. That setup has been measured at 43.8-57.2 min
-      # on GitHub runners against the 60 min default, so the job kept dying in
-      # setup with the tests never running.
+      # This tag provisions two PS clusters sequentially, so its setup alone can outrun the runner's 60 min default.
       timeout_minutes: 90
 
   rbac:
