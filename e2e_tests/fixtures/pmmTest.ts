@@ -28,6 +28,7 @@ import StatsAndLicensePage from '@pages/statsAndLicense.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import DataSourcesPage from '@pages/dataSources.page';
 import LoginPage from '@pages/login.page';
 import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
@@ -43,6 +44,7 @@ const pmmTest = base.extend<{
   credentials: Credentials;
   loginPage: LoginPage;
   dashboard: Dashboard;
+  dataSourcesPage: DataSourcesPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
@@ -118,6 +120,7 @@ const pmmTest = base.extend<{
 
     await use(dashboardPage);
   },
+  dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
