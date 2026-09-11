@@ -234,11 +234,6 @@
     "ast_hash": "3af5f527634c52f581c722ef11a85292",
     "semantic_hash": "3af5f527634c52f581c722ef11a85292"
   },
-  "tests/administration/serviceAccounts_test.js": {
-    "mtime": 1788892204.7066154,
-    "ast_hash": "72481a4188838ffb39fd764cb37a9467",
-    "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
-  },
   "tests/advisors/advisors_test.js": {
     "mtime": 1784571729.0961483,
     "ast_hash": "3891176166766519548b46f0ae6fdddc",
@@ -1413,5 +1408,10 @@
     "mtime": 1789078005.7608495,
     "ast_hash": "ac5f450800b6d92ba1993d81b2637ea6",
     "semantic_hash": "ac5f450800b6d92ba1993d81b2637ea6"
+  },
+  "tests/administration/serviceAccounts_migrated.js": {
+    "mtime": 1789157278.2597563,
+    "ast_hash": "72481a4188838ffb39fd764cb37a9467",
+    "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
   }
 }
