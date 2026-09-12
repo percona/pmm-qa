@@ -339,7 +339,7 @@ services:
   # docker-compose-rs.yaml; this definition is retained for standalone use.
   minio:
     profiles: ["minio"]
-    image: minio/minio
+    image: quay.io/minio/minio
     container_name: minio
     ports:
       - "9001:9000"
@@ -359,7 +359,7 @@ services:
   createbucket:
     profiles: ["minio"]
     container_name: createbucket
-    image: minio/mc
+    image: quay.io/minio/mc
     networks:
       - pmm-qa
       - pmm-ui-tests1
