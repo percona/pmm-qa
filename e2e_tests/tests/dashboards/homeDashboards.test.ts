@@ -94,6 +94,9 @@ pmmTest.describe(() => {
         await dashboard.waitForDashboardToLoad();
 
         const nodeNames = (await dashboard.getVariableValues('Node Name')).filter((name) => name !== 'All');
+
+        expect(nodeNames.length, 'PMM-T1565 needs at least two monitored nodes').toBeGreaterThan(1);
+
         const currentPanelValue = await panelDataLink.innerText();
 
         await pmmTest.step('Select the first two node names and refresh the home dashboard', async () => {
