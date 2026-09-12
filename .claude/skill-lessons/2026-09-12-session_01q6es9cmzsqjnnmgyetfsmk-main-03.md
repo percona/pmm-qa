@@ -1,0 +1,6 @@
+# .claude/skills/qa-code-review/references/playwright-suite.md — `collectTextsAcrossScroll` dedupes, so it weakens a count-based panel budget
+
+- Added: 2026-09-12
+- Applies to: target only
+- Evidence: A 🟡 thread on percona/pmm-qa#1417 held that `allTextContents()` returns only the panels mounted at the current scroll position and asked for `collectTextsAcrossScroll` instead. Measured on a live PMM the premise did not hold: after `loadAllPanels()` every grid item stays mounted, and the raw call returned equal or higher counts on all three dashboards (Nodes Overview 81 vs 79 scrolled, Memory Details 38 vs 38, Disk Details 31 vs 31). The helper's `Set` dedupe drops genuinely duplicate panel titles and shrinks the count toward `acceptableNoDataCount`, weakening the budget the finding set out to protect (https://github.com/percona/pmm-qa/pull/1417#discussion_r3994508794). Same shape as the measured-mechanism substitution already queued against check 7 from #1414.
+- Proposed change: record that `collectTextsAcrossScroll` dedupes by text, so it must not be recommended over a raw `allTextContents()` wherever the count feeds a threshold, and that after `loadAllPanels()` the raw call does not undercount a Grafana dashboard.

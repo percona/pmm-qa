@@ -1,0 +1,6 @@
+# .claude/skills/qa-code-review/SKILL.md — a decision the PR already recorded is raised for its maintainer, not re-proposed as a finding
+
+- Added: 2026-09-12
+- Applies to: target only
+- Evidence: Two 🟡 threads on percona/pmm-qa#1417 proposed reversing decisions the PR had already settled — deriving the migrated title with `JSON.stringify(panel)`, the exact construction an earlier review round on the same PR had failed it for (https://github.com/percona/pmm-qa/pull/1417#discussion_r3994508912), and undoing a nightly tag widening the maintainer had taken deliberately with the valkey consequence on the table (https://github.com/percona/pmm-qa/pull/1417#discussion_r3994508997). Both were declined in the same terms: a maintainer's call to make in its own commit, not something to fold into a review round. The second finding's factual half — that the run linked in the body does not exercise the edited workflow — was conceded as correct.
+- Proposed change: extend check 9's "read the PR's existing threads before writing anything" to resolved and outdated threads and to decisions stated in the body, and say that a finding which would reverse one takes check 7's confirm-don't-prescribe form — state the cost and ask the maintainer — instead of a 🟡 with a suggestion block.
