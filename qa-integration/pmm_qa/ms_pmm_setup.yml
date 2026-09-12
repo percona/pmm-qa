@@ -50,6 +50,11 @@
     set_fact:
       ms_tarball: "{{tarball.stdout | default(ms_tarball,true)}}"
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ ms_container }}"
+
   - name: Setup libraries required inside the container
     shell: "{{ item }}"
     with_items:
