@@ -26,6 +26,11 @@ maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'm
 maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
 maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
 
+// Nothing else running against the SSL MySQL instance reads
+// information_schema.character_sets, so a QAN search on it returns only this test's
+// own probe query.
+const exampleQueryMarker = 'character_sets';
+
 let serviceName;
 
 BeforeSuite(async ({ inventoryAPI }) => {
@@ -266,6 +271,15 @@ Data(maxQueryLengthInstances).Scenario(
       await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.QAN_MYSQL_PERFSCHEMA_AGENT, `max_query_length=${maxQueryLength}`);
     }
 
+    if (maxQueryLength === '' || maxQueryLength === '-1') {
+      // QAN only has an Example for a query still present in
+      // performance_schema.events_statements_history, which keeps statements of live
+      // threads only. On this idle instance the profile is topped by exporter queries
+      // whose connections are gone, so run one application query from a connection held
+      // open past the agent's history poll and assert on that row instead.
+      await I.verifyCommand(`docker exec -d ${container} bash -c 'mysql -upmm -ppmm -e "SELECT COUNT(*) FROM information_schema.${exampleQueryMarker}; DO SLEEP(120);"'`);
+    }
+
     // This extra time is needed for queries to appear in QAN
     await I.wait(70);
     // Check max visible query length is less than max_query_length option
@@ -281,6 +295,8 @@ Data(maxQueryLengthInstances).Scenario(
     } else {
       // 6 is chosen because it's the length of "SELECT" any query that starts with that word should be longer
       assert.ok(queryFromRow.length >= 6, `Query length is equal to ${queryFromRow.length} which is less than minimal possible length`);
+      queryAnalyticsPage.data.searchByValue(exampleQueryMarker);
+      queryAnalyticsPage.waitForLoaded();
       queryAnalyticsPage.data.selectRow(1);
       queryAnalyticsPage.waitForLoaded();
       queryAnalyticsPage.queryDetails.checkExamplesTab();
