@@ -26,10 +26,14 @@ maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'm
 maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
 maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
 
-// Nothing else running against the SSL MySQL instance reads
-// information_schema.character_sets, so a QAN search on it returns only this test's
-// own probe query.
-const exampleQueryMarker = 'character_sets';
+// The probe query below is searched for by table name, so it needs a table nothing
+// else on the SSL MySQL instance reads. One per data row: opening the Explain tab
+// re-runs the probe as EXPLAIN [FORMAT = JSON] <query>, and those land in the profile
+// under the same name, so a later row reusing a name would match three rows.
+const exampleQueryMarkers = {
+  '-1': 'character_sets',
+  '': 'collations',
+};
 
 let serviceName;
 
@@ -271,7 +275,9 @@ Data(maxQueryLengthInstances).Scenario(
       await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.QAN_MYSQL_PERFSCHEMA_AGENT, `max_query_length=${maxQueryLength}`);
     }
 
-    if (maxQueryLength === '' || maxQueryLength === '-1') {
+    const exampleQueryMarker = exampleQueryMarkers[maxQueryLength];
+
+    if (exampleQueryMarker) {
       // QAN only has an Example for a query still present in
       // performance_schema.events_statements_history, which keeps statements of live
       // threads only. On this idle instance the profile is topped by exporter queries
