@@ -1,0 +1,6 @@
+# .claude/agents/investigator.md — "element still not present" can be a blocked renderer, not a missing element
+
+- Added: 2026-09-13
+- Applies to: .claude/agents/investigator.md
+- Evidence: PMM-T2048 in nightly run 34727137335 failed with `element (...Total Blocks Operations) still not present on page after 5 sec`. A detailed hypothesis built from the failure screenshot alone (that `scrollBackToPanel`'s PageUp scan had stranded the page) was wrong. Pairing `before`/`after` events by `callId` in `trace.trace` showed `queryCount=1` and `isVisible=true` for that exact selector 130 ms before the wait, and no `keyboardPress PageUp` in the iteration at all; gaps between consecutive `screencast-frame` timestamps showed an 8.96 s interval with no paint that fully contained the failed 5 s wait, against a routine 2.0-2.5 s.
+- Proposed change: In the reproduce/classify steps, state that Playwright polls for a selector from a script inside the page, so a blocked renderer makes a present element report as "still not present" — and that a not-present timeout is read from the trace first: pair `before`/`after` by `callId` for each action's selector and result, and diff consecutive `screencast-frame` timestamps to measure paint stalls, before theorising from the failure screenshot, which only shows where the viewport ended up.
