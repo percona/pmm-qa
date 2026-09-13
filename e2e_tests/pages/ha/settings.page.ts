@@ -10,7 +10,10 @@ export default class SettingsPage extends BasePage {
     metrics: '/pmm-ui/settings/metrics-resolution',
     ssh: '/pmm-ui/settings/ssh-key',
   };
-  haQanErrorMessage = "Enabling QAN on PMM's own database is not supported in HA mode.";
+  // The pmm-ha chart pins PMM_ENABLE_INTERNAL_PG_QAN=0 (PMM-15301), and the env-var
+  // precondition in managed/services/server/server.go is checked before the HA one,
+  // so this is the message an HA deployment actually returns.
+  haQanErrorMessage = 'QAN for internal PostgreSQL is already configured via an environment variable.';
   tabs = {
     advanced: this.page.getByTestId('settings-tab-advanced'),
     metrics: this.page.getByTestId('settings-tab-metrics'),

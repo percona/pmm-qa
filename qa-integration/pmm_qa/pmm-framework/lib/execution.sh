@@ -45,6 +45,10 @@ setup_uses_ansible() {
 # concurrency -- the caller asked for something valid that merely cannot
 # happen at the same time.
 #
+# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
+# the same container name or host port for as long as they are up, so waiting
+# is no remedy.
+#
 # The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
 # replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
 # fixed $HOME/pgsql_cluster_data and port 6432 -- PGSQL's default,
@@ -52,13 +56,15 @@ setup_uses_ansible() {
 #
 # Reads:  DATABASE_SPECS, PARALLEL
 # Writes: PARALLEL (may be turned off), PMM_SERVER_HOST/PORT via resolve_pmm_server
-# Exits:  via die() from the helpers it calls (unknown type, missing server, ...)
+# Exits:  via die() on a host conflict, and from the helpers it calls (unknown
+#         type, missing server, ...)
 preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
-  local mysql_data_owner='' conflict=''
+  local mysql_data_owner='' conflict='' host_conflict=''
   local pdpgsql_seen=false pgsql_replication_seen=false
+  local external_seen=false valkey_seen=false
+  local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   declare -A seen_types=()
-  declare -A seen_psmdb_classes=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
@@ -70,23 +76,16 @@ preflight_database_setups() {
     # same container names, host ports and data directories, so they cannot run
     # at the same time.
     #
-    # PSMDB is the exception: its replica-set (pss/psa) and sharded
-    # (shards/sharding) SETUP_TYPEs run from separate compose projects with
-    # non-overlapping container names, host ports and inter-node networks, so
-    # they parallelize. Only two PSMDB setups of the *same* class collide.
-    if [[ $DB_TYPE == PSMDB ]]; then
-      local psmdb_setup_type psmdb_class
-      psmdb_setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
-      case "${psmdb_setup_type,,}" in
-        shards | sharding) psmdb_class=sharded ;;
-        *) psmdb_class=rs ;;
-      esac
-      if [[ -v "seen_psmdb_classes[$psmdb_class]" ]]; then
-        conflict="two PSMDB $psmdb_class setups"
+    # The separate compose projects do not make the PSMDB stacks independent:
+    # docker-compose-rs.yaml and docker-compose-sharded.yaml both pin
+    # container_name rs101..rs203 and host port 27027, and a container name is
+    # unique per daemon. Relaxing this needs those keys dropped first.
+    if [[ -v "seen_types[$DB_TYPE]" ]]; then
+      if [[ $DB_TYPE == PSMDB ]]; then
+        host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
+      else
+        conflict="two $DB_TYPE setups"
       fi
-      seen_psmdb_classes["$psmdb_class"]=1
-    elif [[ -v "seen_types[$DB_TYPE]" ]]; then
-      conflict="two $DB_TYPE setups"
     elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then
         conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
@@ -104,9 +103,23 @@ preflight_database_setups() {
         [[ $pdpgsql_seen == true ]] &&
           conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
       fi
+    # external_setup.yml publishes redis_container on host port 6379, and both
+    # Valkey topologies put a node on that same port -- valkey-cluster.yml's
+    # valkey_cluster_start_port and valkey-sentinel.yml's valkey_primary_port
+    # are both 6379 -- so one of the two cannot bind it.
+    elif [[ $DB_TYPE == EXTERNAL ]]; then
+      external_seen=true
+      [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict
+    elif [[ $DB_TYPE == VALKEY ]]; then
+      valkey_seen=true
+      [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
     seen_types["$DB_TYPE"]=1
   done
+
+  if [[ -n $host_conflict ]]; then
+    die "$host_conflict cannot share a host; provision them on separate machines."
+  fi
 
   # Fall back to sequential rather than refusing to run: the caller asked for a
   # valid set of setups, they just cannot be provisioned concurrently.
@@ -164,6 +177,16 @@ should_dump_successful_logs() {
   [[ ${VERBOSE:-false} == true ]]
 }
 
+# Echo one buffered log, guaranteeing it ends on a line of its own so the END
+# marker that follows it is not appended to the log's last line.
+cat_setup_log() {
+  local log_file=$1
+  cat "$log_file"
+  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
+    printf '\n'
+  fi
+}
+
 # Report one finished parallel setup.
 #
 # Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
@@ -183,10 +206,7 @@ print_setup_log() {
     printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
-      cat "$log_file"
-      if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-        printf '\n'
-      fi
+      cat_setup_log "$log_file"
       printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
     fi
     return
@@ -195,11 +215,7 @@ print_setup_log() {
   printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
     "$index" "$total" "$spec" "$status"
   printf 'log: %s\n' "$log_file"
-  cat "$log_file"
-  # Keep the END marker on its own line when the log has no trailing newline.
-  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-    printf '\n'
-  fi
+  cat_setup_log "$log_file"
   printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
 }
 
@@ -213,8 +229,9 @@ print_setup_log() {
 # Every setup is allowed to finish even after one fails, because tearing down
 # half-provisioned containers mid-run leaves more mess than it saves.
 #
-# On success the log directory is removed; on failure it is kept and its path
-# printed, so the full transcripts survive for inspection.
+# On success the log directory is removed; on failure -- or when a signal cuts
+# the run short -- it is kept and its path printed, so the full transcripts
+# survive for inspection.
 #
 # Requires: bash 5.1+ for `wait -n -p`
 # Reads:    DATABASE_SPECS
@@ -234,14 +251,27 @@ run_parallel_setups() {
 
   # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
-    local pid
+    local pid slot
     for pid in "${pids[@]}"; do
       # Negative PID targets the whole process group; fall back to the single
       # process if the group is already gone.
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
     wait >/dev/null 2>&1 || true
-    rm -rf "$log_dir"
+    # The signal is usually CI's `timeout` giving up on a setup that hung, so
+    # the buffers of the setups still running are the only record of where it
+    # got stuck.
+    for ((slot = 0; slot < total; slot++)); do
+      [[ -n ${pids[slot]} ]] || continue
+      printf '\n===== [%d/%d] %s INTERRUPTED =====\n' \
+        "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+      printf 'log: %s\n' "${logs[slot]}"
+      # A signal between the fork and the child's own redirect leaves this file
+      # uncreated; errexit must not abandon the remaining slots over it.
+      cat_setup_log "${logs[slot]}" || true
+      printf '===== END [%d/%d] %s =====\n' "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+    done
+    printf '\nParallel setup logs kept at: %s\n' "$log_dir"
     exit 130
   }
   trap cleanup_parallel_jobs INT TERM

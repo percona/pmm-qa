@@ -5,8 +5,10 @@ import apiEndpoints from '@helpers/apiEndpoints';
 interface SettingsResponse {
   settings: {
     backup_management_enabled: boolean;
+    data_retention: string;
     default_role_id?: number | string;
     enable_access_control: boolean;
+    pmm_public_address: string;
   };
 }
 
@@ -18,12 +20,7 @@ export default class SettingsApi {
 
     if (settings.settings.enable_access_control === true) return;
 
-    const response = await this.request.put(apiEndpoints.server.settings, {
-      data: { enable_access_control: true },
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status()).toEqual(200);
+    await this.updateSettings({ enable_access_control: true });
   };
 
   enableBackupManagement = async () => {
@@ -31,12 +28,7 @@ export default class SettingsApi {
 
     if (settings.settings.backup_management_enabled === true) return;
 
-    const response = await this.request.put(apiEndpoints.server.settings, {
-      data: { enable_backup_management: true },
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status()).toEqual(200);
+    await this.updateSettings({ enable_backup_management: true });
   };
 
   getSettings = async () => {
@@ -89,12 +81,19 @@ export default class SettingsApi {
     expect(retry.status()).toEqual(200);
   };
 
-  setPublicAddress = async (address: string): Promise<void> => {
+  setPublicAddress = async (address: string): Promise<void> =>
+    await this.updateSettings({ pmm_public_address: address });
+
+  /** Only the keys passed are changed; used to put a shared cluster back as it was found. */
+  updateSettings = async (data: Record<string, unknown>) => {
     const response = await this.request.put(apiEndpoints.server.settings, {
-      data: { pmm_public_address: address },
+      data,
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    expect(response.status()).toEqual(200);
+    expect(
+      response.status(),
+      `Update settings API call returned status code: ${response.status()} (${response.statusText()})`,
+    ).toEqual(200);
   };
 }

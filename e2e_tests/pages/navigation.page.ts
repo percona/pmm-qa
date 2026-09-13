@@ -282,6 +282,17 @@ export default class LeftNavigation extends BasePage {
     }
   };
 
+  /** The PMM shell at `url`: sidebar up, and the home dashboard rendering in it. */
+  verifyUiRenders = async (url: string): Promise<void> =>
+    await pmmTest.step(`Verify the PMM UI renders at "${url}"`, async () => {
+      await this.page.goto(url, { timeout: Timeouts.TWO_MINUTES });
+      await expect(this.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
+      await this.selectMenuItem('home');
+      await expect(this.elements.iframe, 'The home dashboard must render').toBeVisible({
+        timeout: Timeouts.TWO_MINUTES,
+      });
+    });
+
   dashboardsToVerifyTimeRange(): string[] {
     const dashboards: string[] = [];
 

@@ -105,8 +105,10 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
-  dpkg -i pmm-client.deb
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
+  dpkg -i "${deb_file}"
 fi
 
 ## Default Binary path
@@ -117,7 +119,8 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz

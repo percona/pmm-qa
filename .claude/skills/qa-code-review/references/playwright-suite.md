@@ -35,6 +35,7 @@ Patterns already dead at `1.62`:
 | `expect().toPass()` for retryable blocks | replaces hand-rolled poll loops |
 | `expect().toHaveText()` beats `textContent()` + `equal` | auto-retries |
 | A green test must be able to fail | mutate the expected **value** and re-run. Inverting a matcher is not a mutation: anything satisfies it |
+| Whole-string equality against UI text cites where the string was measured | `=== ` / `toHaveText` on text that may carry a suffix silently never matches. A migrated test compared an annotation tooltip to its title; measured on a live box, the API-created form reads `title (Service Name: … Node Name: …)` and only the CLI-created form is bare — 2 cases passed, 5 could never pass. Prefer a boundary match, and treat tightening a ported substring match into equality as a coverage change that needs evidence |
 
 ## Page objects
 
@@ -54,6 +55,8 @@ Patterns already dead at `1.62`:
 
 - Priority `getByTestId` > `getByRole` > `getByLabel` > `getByPlaceholder`. No CSS classes for Grafana elements — they change per version.
 - `first()` / `last()` / `nth()`: allowed when the DOM genuinely has N equivalent nodes and the test does not care which, and the diff says so in one line. Not allowed as a patch for a locator that should have been unique — that is the case `pomRules.md` bans, and there are 31 live uses, so judge the intent, not the call.
+- Caller text interpolated into an XPath or CSS string is 🟡: the fix is `getByText` / `getByTestId` / `filter({ hasText })`, which take the value as data (Playwright quotes it) and return the innermost match, so the XPath's element-type scoping isn't lost either. A **new quoting or escaping helper for selectors is itself the finding** — one PR answered a bot's "an apostrophe breaks `//div[contains(text(), '${title}')]`" by adding an XPath-literal `concat()` helper, for values that were all test-file constants.
+- In a loop scanning candidate elements, the interaction goes **inside** the guard with its own bounded timeout, so an unactionable candidate is skipped rather than ending the search; give the loop an overall budget and a failure message naming what it looked for. A scan that hovered outside its try/catch died at the project's 10s `actionTimeout` on the first of 24 markers whose neighbour intercepted pointer events.
 
 ## Steps and waits
 

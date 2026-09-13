@@ -49,8 +49,8 @@
       sudo apt-get update
       sudo apt-get install pmm-client
     register: apt_install_result
-    retries: 3
-    delay: 30
+    retries: 10
+    delay: 60
     until: apt_install_result.rc == 0
 
   - name: Install PMM client new rpm packages
@@ -61,8 +61,8 @@
       yum -y update
       yum -y install pmm-client
     register: yum_install_result
-    retries: 3
-    delay: 30
+    retries: 10
+    delay: 60
     until: yum_install_result.rc == 0
 
   - name: Check that PMM Client version is correct

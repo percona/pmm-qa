@@ -79,19 +79,22 @@ failure the log directory is kept for inspection; on a fully successful run it
 is removed.
 
 Each setup runs in its own process group, so interrupting the framework also
-terminates the `ansible-playbook` processes it started.
+terminates the `ansible-playbook` processes it started. An interrupt dumps the
+buffered log of every setup still running and keeps the log directory — under a
+`timeout` wrapper that buffer is the only record of where a setup got stuck.
 
 Setups that cannot run concurrently — two of the same database type, or any two
 of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
 ports — are detected during preflight. The run is not rejected: it falls back
 to sequential execution with a warning, so every requested setup still runs.
 
-To rerun the representative four-database setup and print its wall-clock time
-to milliseconds:
-
-```bash
-qa-integration/pmm_qa/pmm-framework/run_parallel_timing.sh
-```
+Two pairs cannot share a host at all, and those preflight refuses instead:
+two PSMDB setups (both compose stacks pin the container names `rs101`..`rs203`
+and host port 27027, replica-set and sharded included) and EXTERNAL together
+with VALKEY (`redis_container` and the Valkey primary both take host port
+6379). Each holds its names and ports for
+as long as it is up, so sequential execution is no remedy — provision them on
+separate machines.
 
 `--database` values use this grammar:
 

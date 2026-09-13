@@ -42,6 +42,7 @@ A single snapshot is sufficient only for deterministic static state. Otherwise:
 - **Persistence:** read before the event, immediately after it, and after subsequent background processing. Perform the restart, failover, migration, or upgrade named by the claim.
 - **Data flow:** create a uniquely identifiable workload and locate it at every material boundary claimed, such as agent state, VictoriaMetrics, ClickHouse, API, and UI.
 - **Absence:** deterministically trigger one complete opportunity cycle in which the unwanted event would be produced, then show it did not occur in the cursor-bounded evidence. Do not claim open-ended absence such as "no errors ever."
+- **Deletion:** read the resource by its immutable id and require a not-found, after the owning system's reconcile or drain interval has passed. A query that returns no match by name, tag, or label proves nothing — a controller can strip a mutable attribute off a resource that is still very much alive.
 
 Do not substitute an adjacent layer: registration is not a running agent, HTTP success is not correct resulting state, a fresh metric is not a rendered dashboard, and a rendered dashboard is not persistence.
 

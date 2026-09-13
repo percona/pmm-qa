@@ -11,7 +11,7 @@
 - name: Remove old MinIO docker container
   community.docker.docker_container:
     name: minio
-    image: minio/minio
+    image: quay.io/minio/minio
     restart_policy: always
     state: absent
   ignore_errors: yes
@@ -29,7 +29,7 @@
 - name: Run MinIO container
   community.docker.docker_container:
     name: minio
-    image: minio/minio
+    image: quay.io/minio/minio
     restart_policy: unless-stopped
     ports: "{{ minio_ports }}"
     networks:

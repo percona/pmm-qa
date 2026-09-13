@@ -57,3 +57,4 @@ Format: a title line with the date, then one section per **non-empty** bucket (e
 - Use CI check state to classify a PR
 - Guess — when a PR doesn't fit a bucket cleanly it is **Needs a human**, with the reason
 - Touch any repo other than reading an upstream PR to judge whether a block cleared
+- Ask CodeRabbit to re-review to refresh a stale summary or `Merge Risk` banner — the OSS allowance is a shared org resource, and the bot states it "does not re-review already reviewed commits", so a request against an already-reviewed head returns `Review rate limited` and changes nothing. Where the verdict is stale relative to the head, correct the record with one short comment stating the current facts

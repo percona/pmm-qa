@@ -1,17 +1,15 @@
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import { Locator } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 /** The "PMM HA" entry of the left navigation, rendered from `/v1/ha/nodes`. */
 export default class HighAvailabilityPage extends BasePage {
   url = 'pmm-ui/help';
   builders = {};
   buttons = {
-    haNavItem: this.page.getByTestId('navitem-high-availability'),
     // Expands without navigating; the item itself links to a child with no url.
     haNavItemToggle: this.page.getByTestId('navitem-high-availability-toggle'),
-    identifyNodes: this.page.getByTestId('navitem-high-availability-nodes'),
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),
@@ -32,14 +30,11 @@ export default class HighAvailabilityPage extends BasePage {
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
   };
 
-  getLeaderName = async (): Promise<string> =>
-    await pmmTest.step('Read the current leader from the HA badge', async () => {
-      await this.expandHaNavItem();
+  getLeaderName = async (): Promise<string> => {
+    await this.expandHaNavItem();
 
-      return (await this.elements.leaderNodeName.innerText()).trim();
-    });
-
-  leaderNameLocator = (): Locator => this.elements.leaderNodeName;
+    return (await this.elements.leaderNodeName.innerText()).trim();
+  };
 
   /**
    * Needed after a failover: the page was talking to the pod that was killed, so
@@ -49,4 +44,14 @@ export default class HighAvailabilityPage extends BasePage {
     await this.page.reload();
     await this.expandHaNavItem();
   };
+
+  verifyLeaderBadge = async (leader: string): Promise<void> =>
+    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
+      await expect(async () => {
+        await this.reloadAndExpandHaNavItem();
+        await expect(this.elements.leaderNodeName).toHaveText(leader, {
+          timeout: Timeouts.TEN_SECONDS,
+        });
+      }).toPass({ timeout: Timeouts.TWO_MINUTES });
+    });
 }
