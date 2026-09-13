@@ -45,6 +45,7 @@ A conclusion records what the harness did, not whether a test ran or whether the
 | ------- | ------ |
 | Linode VM + pmm-framework provisioning | `.claude/skills/linode-docker-provisioning/SKILL.md` |
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
+| Reading and attributing Jenkins builds | `.claude/skills/jenkins-builds/SKILL.md` |
 | PR diffs, JSON dashboards | `.claude/skills/git-diff/SKILL.md` |
 | Repo map, gh rules — **read first**, before any GitHub MCP listing or log call | `.claude/skills/repos/SKILL.md` |
 | Jira | `.claude/skills/jira/SKILL.md` |
