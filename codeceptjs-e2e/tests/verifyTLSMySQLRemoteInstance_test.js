@@ -276,8 +276,10 @@ Data(maxQueryLengthInstances).Scenario(
       // performance_schema.events_statements_history, which keeps statements of live
       // threads only. On this idle instance the profile is topped by exporter queries
       // whose connections are gone, so run one application query from a connection held
-      // open past the agent's history poll and assert on that row instead.
-      await I.verifyCommand(`docker exec -d ${container} bash -c 'mysql -upmm -ppmm -e "SELECT COUNT(*) FROM information_schema.${exampleQueryMarker}; DO SLEEP(120);"'`);
+      // open past the agent's history poll and assert on that row instead. The client
+      // idles on stdin rather than sleeping in SQL, so the probe adds no query time of
+      // its own and leaves the profile's ranking alone.
+      await I.verifyCommand(`docker exec -d ${container} bash -c '{ echo "SELECT COUNT(*) FROM information_schema.${exampleQueryMarker};"; sleep 120; } | mysql -upmm -ppmm'`);
     }
 
     // This extra time is needed for queries to appear in QAN
