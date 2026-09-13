@@ -27,6 +27,12 @@ const ValkeyPersistenceDetailsDashboard = require('../pages/dashboards/valkey/va
 const ValkeyReplicationDashboard = require('../pages/dashboards/valkey/valkeyReplicationDashboard');
 const ValkeySlowlogDashboard = require('../pages/dashboards/valkey/valkeySlowlogDashboard');
 
+// Re-rendering an expanded dashboard blocks Grafana's renderer for seconds at a time, and a
+// blocked renderer cannot answer Playwright's in-page poll, so a panel that is on screen reports
+// as "still not present". Nightly run 34727137335 stalled 2.0-2.5s repeatedly during one metric
+// walk and once for 8.96s, which is what a five-second budget lost to.
+const panelWaitSeconds = 30;
+
 module.exports = {
   // insert your locators and methods here
   // setting locators
@@ -1197,7 +1203,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
-      I.waitForElement(this.graphsLocator(metrics[i]), 5);
+      I.waitForElement(this.graphsLocator(metrics[i]), panelWaitSeconds);
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
   },
@@ -1207,7 +1213,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
+      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), panelWaitSeconds);
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
     }
   },
