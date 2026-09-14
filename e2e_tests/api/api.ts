@@ -11,7 +11,6 @@ import AnnotationApi from '@api/annotation.api';
 import HaApi from '@api/ha.api';
 import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
-import ManagementApi from '@api/management.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
