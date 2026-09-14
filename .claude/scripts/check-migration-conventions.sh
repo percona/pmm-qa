@@ -46,6 +46,68 @@ report_advisory() {
   fi
 }
 
+# Declared once, used once. Both shapes below reached a PR and drew a review comment; both are
+# `SKILL.md` Minimal reuse diffs rule 5. Restricted to identifiers this file both declares and uses,
+# so a symbol exported for another module is never flagged.
+check_single_use_names() {
+  local file=$1
+
+  local is_test=0
+  [[ $file == *.test.ts ]] && is_test=1
+
+  awk -v file="$file" -v is_test="$is_test" '
+    {
+      line[NR] = $0
+
+      # One linear pass: count every identifier, and note which ones are mapped. Counting by
+      # re-scanning the whole file per declaration is quadratic and takes minutes on this suite.
+      rest = $0
+      while (match(rest, /[A-Za-z_][A-Za-z0-9_]*/)) {
+        seen[substr(rest, RSTART, RLENGTH)]++
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+      if (match($0, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\.[[:space:]]*map[[:space:]]*\(/)) {
+        target = substr($0, RSTART, RLENGTH)
+        sub(/[^A-Za-z0-9_].*$/, "", target)
+        mapped[target] = 1
+      }
+    }
+    END {
+      for (n = 1; n <= NR; n++) {
+        name = ""
+        kind = ""
+        # An exported symbol is another module`s to use, so it is out of scope for a single-file count.
+        if (line[n] ~ /^export/) continue
+        if (match(line[n], /^(interface|type)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+          kind = (line[n] ~ /^interface/) ? "interface" : "type alias"
+          name = line[n]
+          sub(/^(interface|type)[[:space:]]+/, "", name)
+          sub(/[^A-Za-z0-9_].*$/, "", name)
+        } else if (match(line[n], /^const[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(:[^=]*)?=[[:space:]]*\[/)) {
+          kind = "const array"
+          name = line[n]
+          sub(/^const[[:space:]]+/, "", name)
+          sub(/[^A-Za-z0-9_].*$/, "", name)
+        }
+        if (name == "") continue
+
+        uses = seen[name]
+        if (uses <= 1) {
+          printf "%s:%d: %s `%s` is declared and never used - delete it (SKILL.md Minimal reuse diffs rule 5)\n", file, n, kind, name > "/dev/stderr"
+          failed = 1
+        } else if (uses == 2 && kind == "const array" && mapped[name]) {
+          printf "%s:%d: const array `%s` exists only to be mapped once - inline it (SKILL.md Minimal reuse diffs rule 5)\n", file, n, name > "/dev/stderr"
+          failed = 1
+        } else if (uses == 2 && is_test && kind != "const array") {
+          printf "%s:%d: %s `%s` is referenced once - a data row needs no declared type, `as const` supplies the literal types (SKILL.md Migration invariants)\n", file, n, kind, name > "/dev/stderr"
+          failed = 1
+        }
+      }
+      exit failed
+    }
+  ' "$file" || failures=1
+}
+
 # Two call shapes, two rules. The unconditional `pmmTest.skip('<title>', fn)` is a migrated
 # xScenario and carries a TODO naming the ticket that would reactivate it. The conditional
 # `pmmTest.skip(<condition>, '<reason>')` has no ticket to name, so demanding a TODO there only
@@ -99,6 +161,11 @@ for file in "$@"; do
   if [[ $file == */e2e_tests/helpers/* || $file == e2e_tests/helpers/* ]]; then
     report_matches 'helpers must not hide expect()' 'expect[[:space:]]*\(' "$file"
   fi
+  if [[ $file == *.test.ts ]]; then
+    report_matches 'title: the data-row suffix is the one distinguishing value, not a JSON restatement' '\|[[:space:]]*\$?\{"' "$file"
+    report_advisory 'title: prefer the one distinguishing value over JSON.stringify(row)' 'JSON[[:space:]]*\.[[:space:]]*stringify' "$file"
+  fi
+  check_single_use_names "$file"
   check_skip_policy "$file"
 done
 

@@ -30,32 +30,32 @@ Because every publish branch is cut from `origin/main` and none of them merge in
 Preserve exactly:
 
 - every active executable scenario;
-- scenario titles and tags;
+- every `PMM-Txxxx` id and every tag;
 - hooks, suite setup, and cleanup;
-- data-driven rows and generated test titles;
+- data-driven rows, one generated test per row;
 - assertions and assertion strictness;
 - API, CLI, UI, download, and file-check behavior;
 - ordering when it affects behavior.
 
 That list is exhaustive. A synchronization wait is a means, not one of the preserved behaviors, so which element it watches is governed by the locator ladder like any other locator - re-anchoring a load guard is not a fidelity change and needs no reviewer dispensation. What a wait does carry is its timeout budget; see Drop what is inert below.
 
-Titles are byte-identical **through the gates**, and that is what the invariant buys: a programmatic diff of the two title lists proves no scenario or data row was silently dropped or renamed. It is a migration-time check, not a permanent constraint on the file. Once both gates have passed, a reviewer may explicitly approve a clearer title. Make such a change only on an explicit reviewer request, in its own commit, and record it in the PR body. Never retitle on your own judgement mid-migration: that is the silent rename the invariant exists to catch.
+**Write the title in the destination idiom from the first commit**, and never retitle after it: `PMM-Txxxx - <description> <tags>`, plus ` | <the one value that distinguishes the row>` for a data-driven scenario. Do not imitate CodeceptJS's `DataTable` suffix. Reviewers have rejected that imitation on two separate rows five weeks apart - it is too long for an artifact viewer to render, it restates data the row already carries, and hand-building the JSON escapes nothing, so a row containing a quote or backslash diverges silently anyway.
+
+What the gates prove is **completeness, not string equality**: that no scenario and no data row was silently dropped or renamed. Compare the two runners' listings on the parts that carry identity - scenario count, row count per scenario, each `PMM-Txxxx` id, each tag set, and each row's distinguishing value - never on the whole title string. A descriptive middle that reads better in the destination is not a silent rename; a missing row is, and this comparison still catches it.
 
 Two parts of a title are load-bearing at runtime and survive any retitle verbatim:
 
 - **Every tag.** CI selects with `npx playwright test --grep`, and the tags live inside the title string.
 - **The `PMM-Txxxx` token.** `e2e_tests/fixtures/pmmTest.ts` extracts it with `testInfo.title.match(/PMM-T\d+/)` and keys `minPmmVersion` off it to gate the test by server version. Drop or mangle the id and the gate silently stops firing - the test then runs on every version and fails somewhere unrelated, with nothing pointing back at the title.
 
-Only the descriptive middle is free text. Launchable does not key on it either, since it subsets by file rather than by test name. A data-driven suffix that imitates CodeceptJS's `DataTable` output is the usual thing worth rewriting, and hand-building that JSON is its own hazard: nothing escapes it, so a row whose value contains a quote or backslash diverges silently.
-
-Once both gates have passed, reduce a data-driven suffix to the single value that distinguishes the row - `| Disk Space Total`, not a JSON restatement of every field. A full-row suffix is long enough that artifact viewers cannot render the title, and it repeats data the row already carries. Row 9's reviewer asked for exactly this, and it is the normal end state rather than an exception.
+Everything else in the title is free text. Launchable does not key on it either, since it subsets by file rather than by test name.
 
 Do not add, remove, weaken, or improve coverage during migration.
 Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
 When unsure, keep the source syntax.
 That applies to syntax, never to locator form. A ported locator is migrated at the level of the **element**, not the selector string: once the live environment exists, re-derive each one at the highest rung of `playwright-practices.md`'s ladder that resolves to the same element, and keep the source selector only when nothing higher does. That the source uses it and is green today is evidence the **element** is right, never that the selector form is - CodeceptJS sources predate the ladder entirely, and a resolving locator is not the same thing as a well-formed one.
 
-**A migrated data row carries only what varies.** A `DataTable` column is not automatically a field on the migrated row. Drop a column whose value is fully determined by another one and derive it at the call site; move a column that is really a property of a page object onto that page object. Declare no interface or type alias for the row unless something references it - `as const` supplies the literal types. Row 9 shipped five fields where two carried information, and the reviewer caught every one of the other three.
+**A migrated data row carries only what varies.** A `DataTable` column is not automatically a field on the migrated row: drop one whose value is fully determined by another and derive it at the call site, and move one that is really a property of a page object onto that page object. `as const` supplies the literal types, so the row needs no interface. Apply this to every column in one pass - a human-readable label counts as determined even though its text differs per row, and it is the column that survives the first correction round and then draws a second one.
 
 **Duplication is not behavior.** When the source repeats a block across scenarios, extract it. Execution order and cross-scenario state handoff are the behavior and must not change; the repetition is not.
 
@@ -92,7 +92,7 @@ When the source needs behavior that **already exists** in Playwright code (POM, 
 2. Update existing internal callers in the same file to use that one implementation.
 3. Do **not** add a second public surface plus a private delegate/wrapper that only forwards to it.
 4. Do **not** duplicate the same logic in the test, a new helper, or a new abstraction when an existing one can be exposed.
-5. Do **not** add a **new** POM method with one call site when its locators are already public; inline it there. Applies to methods this migration introduces, at any length - a two-action sequence as much as a single click. Neither "other single-caller POM methods exist" nor "the source POM declared this method too" is a defence; the source's POM shape is not a preserved behavior. Exposing an *existing* method for reuse is rule 1, not this.
+5. Do **not** introduce a name that is used once. Inline it. The rule is about the indirection, not the syntax that carries it - a POM method with one call site (at any length, a two-action sequence as much as a single click), a `const` that exists only to be `.map()`ed into the array below it, an `interface` or type alias nothing references, a row field fully determined by another. Every one of those shapes has drawn a review comment on a migration PR, and the last one shipped because the rule named only methods. Neither "other single-caller methods exist here" nor "the source declared it too" is a defence; the source's file shape is not a preserved behavior. Exposing an *existing* method for reuse is rule 1, not this.
 
 ```ts
 // BAD - duplicate surface
@@ -117,7 +117,7 @@ Its `verifiedAgainst` version must match `e2e_tests/package.json`; `orchestratio
 The rules below are migration-specific and are not repeated there:
 
 - Reuse existing POMs, helpers, components, API clients, fixtures, and test data.
-- **A new page object matches the shape of its siblings in the same folder.** Read one before writing it. Row 9 declared `metrics` by mapping a separate `panelNames` const while every other dashboard in that folder declared the array inline; the reviewer asked the same question three times, once per file. An indirection no sibling uses is a new local idiom, and it needs a reason beyond taste.
+- **A new page object matches the shape of its siblings in the same folder.** Read one before writing it. An indirection no sibling uses is a new local idiom and needs a reason beyond taste - see Minimal reuse diffs rule 5, which is where that judgement lives.
 - When reusing existing code, follow section Minimal reuse diffs (expose in place; no duplicate delegates).
 - Port behavior, not CodeceptJS helper APIs.
 - Helpers should have one stable return type.
@@ -139,6 +139,7 @@ The rules below are migration-specific and are not repeated there:
   first. Row 6 added a two-line note on a one-line locator at an automated reviewer's request and the
   maintainer removed it on the next pass. The repo's own rule wins over a review suggestion, and the
   round trip is avoidable.
+- **When a human reviewer names a concrete end state, ship it here.** If the change is mechanical and verifiable in-repo, make it in this PR instead of declining it, offering a follow-up PR, or asking which variant they prefer; each of those costs a review round and the answer is nearly always "yes, now". Row 9 spent one round offering to move a column onto the page objects and another offering to retag other jobs' tests separately, and both landed in this PR in the end. Push back only where the request would break a migration invariant, and then say which one.
 - Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
 - Pin **every explicit source retry value exactly**, at the scope the source applied it; do not port `.retry(N)` as CodeceptJS syntax. No value of N survives being left unpinned: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so `.retry(1)` is not the CI default, `.retry(0)` silently gains 2, and any N > 2 silently loses retries. A source with no `.retry()` anywhere correctly inherits the config default.
