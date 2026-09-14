@@ -161,7 +161,7 @@ if __name__ == '__main__':
     grafana_cli = "grafana cli" if expected_pmm_minor_version >= 39 else "grafana-cli"
     if not is_ami:
         pmm_server_docker_container = verify_command(
-            """docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}'""")
+            """docker ps --format "{{.Names}}" | grep -x 'pmm-server'""")
         assert pmm_server_docker_container, "No docker container found!"
 
 
