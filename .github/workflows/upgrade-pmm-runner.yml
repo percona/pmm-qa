@@ -165,10 +165,10 @@ jobs:
               --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
           else
             docker run --detach --restart always --network pmm-qa \
-            -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
-            --publish 80:8080 --publish 443:8443 \
-            -e PMM_ENABLE_TELEMETRY=0 \
-            --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+              -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+              --publish 80:8080 --publish 443:8443 \
+              -e PMM_ENABLE_TELEMETRY=0 \
+              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
           fi
           
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
