@@ -57,7 +57,7 @@ jobs:
             | jq -R . | jq -sc .)
 
           UI_LOW=3.5.0
-          UI_HIGH=3.8.0
+          UI_HIGH=3.8.1
           UI_VERSIONS=$(echo "$TAGS" | sort -Vr | awk -v low="$UI_LOW" -v high="$UI_HIGH" '
             { split($0,a,"."); split(low,l,"."); split(high,h,".");
             v = a[1]*1000000 + a[2]*1000 + a[3];
