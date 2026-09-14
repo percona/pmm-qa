@@ -3,6 +3,8 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 pmmTest.describe('PMM server upgrade tests', () => {
+  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
+
   pmmTest.beforeEach(async ({ context, grafanaHelper, page }) => {
     if (!process.env.PMM_SERVER_LATEST?.trim()) {
       throw new Error('PMM_SERVER_LATEST env var is required for the upgrade version check');
