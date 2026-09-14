@@ -17,6 +17,10 @@ export default class HomeDashboard extends BasePage implements DashboardInterfac
     this.elements = {
       headerLocator: this.grafanaIframe().locator('//header//span[contains(text(),"Home")]'),
       homeDashboardLocator: this.grafanaIframe().locator('//*[contains(@class, "pmm-home-home-dashboard")]'),
+      monitoredServicesCounts: this.grafanaIframe()
+        .getByTestId('data-testid Panel header Monitored DB Services')
+        .getByTestId('data-testid panel content')
+        .locator('span'),
     };
   }
 

@@ -11,6 +11,7 @@ export enum ServiceType {
   mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
+  proxysql = 'proxysql',
   valkey = 'valkey',
 }
 
