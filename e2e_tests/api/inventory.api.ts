@@ -1,10 +1,21 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
+
+  deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
+    const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+  };
 
   getAgentById = async (agentId: string) => {
     const { services } = await this.getServices();
@@ -13,6 +24,19 @@ export default class InventoryApi {
     if (!agent) throw new Error(`Agent with id ${agentId} is not present`);
 
     return agent;
+  };
+
+  getAllNodes = async (): Promise<GetNode[]> => {
+    const response = await this.request.get(apiEndpoints.management.nodes, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get nodes API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return ((await response.json()) as { nodes?: GetNode[] }).nodes ?? [];
   };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {

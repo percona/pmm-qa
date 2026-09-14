@@ -24,19 +24,27 @@ import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
+import StatsAndLicensePage from '@pages/statsAndLicense.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import DataSourcesPage from '@pages/dataSources.page';
+import LoginPage from '@pages/login.page';
+import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
+import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   agentsPage: AgentsPage;
+  changePasswordPage: ChangePasswordPage;
   cliHelper: CliHelper;
   credentials: Credentials;
+  loginPage: LoginPage;
   dashboard: Dashboard;
+  dataSourcesPage: DataSourcesPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
@@ -47,6 +55,7 @@ const pmmTest = base.extend<{
   qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  serviceAccountsPage: ServiceAccountsPage;
   servicesPage: ServicesPage;
   tour: TourPage;
   mocks: Mocks;
@@ -56,6 +65,7 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
+  statsAndLicensePage: StatsAndLicensePage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -67,6 +77,7 @@ const pmmTest = base.extend<{
 
     await use(inventoryApi);
   },
+  changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 
@@ -109,6 +120,7 @@ const pmmTest = base.extend<{
 
     await use(dashboardPage);
   },
+  dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
@@ -129,6 +141,7 @@ const pmmTest = base.extend<{
     await use(k8sHelper);
   },
   leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
+  loginPage: async ({ page }, use) => await use(new LoginPage(page)),
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
 
@@ -162,8 +175,10 @@ const pmmTest = base.extend<{
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
+  serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
+  statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 

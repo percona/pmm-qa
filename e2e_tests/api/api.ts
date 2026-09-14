@@ -9,6 +9,7 @@ import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 import AnnotationApi from '@api/annotation.api';
 import HaApi from '@api/ha.api';
+import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
 import ManagementApi from '@api/management.api';
 
@@ -33,6 +34,7 @@ export default class Api {
     this.backupsApi = new BackupsApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);
+    this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);

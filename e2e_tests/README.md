@@ -103,6 +103,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@LBAC`
 - `@link`
+- `@localhost`
 - `@menu`
 - `@new-navigation`
 - `@nightly`
@@ -125,8 +126,10 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@psmdb-profiler-integration`
 - `@rds-integration`
 - `@rta`
+- `@service-account`
 - `@settings`
 - `@standalone`
+- `@user-password`
 - `@valkey-integration`
 
 <!-- E2E-TAGS-END -->

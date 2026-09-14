@@ -79,6 +79,23 @@ export default class GrafanaHelper {
     expect(response.status(), 'Promote user to Editor').toEqual(200);
   };
 
+  signInAs = async (username: string, password: string): Promise<GrafanaUser> => {
+    await this.unAuthorize();
+    await this.authorize(username, password);
+
+    const response = await this.page.request.get('graph/api/user', {
+      headers: GrafanaHelper.getAuthHeader(username, password),
+    });
+
+    expect(response.status(), `Sign in as "${username}"`).toEqual(200);
+
+    const user = (await response.json()) as GrafanaUser;
+
+    expect(user.login, `The session must belong to "${username}"`).toEqual(username);
+
+    return user;
+  };
+
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
     await this.page.context().clearCookies();
