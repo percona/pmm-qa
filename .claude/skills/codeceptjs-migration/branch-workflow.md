@@ -94,7 +94,7 @@ Every part of that form is load-bearing:
 - `git add -N` - an untracked new file is invisible to any `git diff` form until it is marked intent-to-add.
 - `--binary` - without it a changed binary file (an `image-renderer` snapshot baseline, say) produces an unappliable stub.
 - `-M` - without it a `git mv` (the source retirement) is invisible to the diff entirely.
-- `--output=` - never a `>` redirect or a `|` pipe. Both re-encode the bytes here with a UTF-8 BOM and CRLF, and `git apply` accepts the corrupted patch silently. `git diff --output=` writes the bytes itself and is safe in any shell.
+- `--output=` - never a `>` redirect or a `|` pipe; both corrupt the patch silently (`AGENTS.md` section Shell and tooling notes).
 
 `.claude/migration-observations/` is gitignored, so this is a checkpoint, not a commit. Note the snapshot on the timeline and delete it once the PR is open.
 
@@ -125,7 +125,7 @@ git worktree add ../pmm-qa-publish -b migrate-<category>-<test-name> origin/main
 cd ../pmm-qa-publish/e2e_tests && npm ci && cd -
 ```
 
-`npm ci` is a prerequisite of committing at all, not just of revalidation: the pre-commit hook shells into `e2e_tests/node_modules/lint-staged` and fails with `MODULE_NOT_FOUND` until the install completes.
+`npm ci` is a prerequisite of committing at all, not just of revalidation (`AGENTS.md` section Shell and tooling notes).
 
 ### Check for cross-migration dependencies first
 
@@ -137,11 +137,9 @@ git -C <control-worktree> diff --name-only
 git ls-tree --name-only origin/main -- <path>     # empty output = absent
 ```
 
-Use `git ls-tree`, never `git show origin/main:<path>`. Under MSYS2/Git Bash the `ref:path` argument
-is mangled to `origin\main;.github\workflows\...` and dies with "Not a valid object name". Wrapped in
-the obvious loop that maps a non-zero exit to "absent", that reports **every** path as absent, which
-under the rule below reads as "this migration depends on an unmerged sibling". `git ls-tree --name-only`
-takes the ref and the path as separate arguments and is immune.
+Use `git ls-tree`, never `git show origin/main:<path>`: the mangled form reports **every** path as
+absent, which under the rule below reads as "this migration depends on an unmerged sibling" - the most
+consequential wrong answer this check can produce (`AGENTS.md` section Shell and tooling notes).
 
 A path absent from `origin/main` depends on an earlier still-unmerged sibling migration - typically a shared helper. Decide explicitly whether to carry the full file into this PR or hold.
 
@@ -226,13 +224,8 @@ Also run `python support_scripts/generate_readme.py --check` from the publish wo
 
 If the test selects state by index, empty that state before this run as well - it is a second run against the same environment.
 
-A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` first.
-Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean run, and
-`.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged` MODULE_NOT_FOUND,
-including a docs-only one staging no `.ts`. Install rather than reaching for `--no-verify`.
-
-Do not read `$?` after a pipe: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks
-like a pass. Put the check on its own line, or use `PIPESTATUS`.
+A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` first,
+and do not read `$?` after a pipe (`AGENTS.md` section Shell and tooling notes).
 
 If the **parent** commits a fix onto the publish branch - which is legitimate; it is the parent's branch
 to correct - that commit has had no independent reviewer. Name it in the final-gate handoff as

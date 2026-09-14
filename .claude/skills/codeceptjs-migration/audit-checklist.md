@@ -103,13 +103,7 @@ Against `playwright-practices.md`. Check the changed files, not the whole reposi
 - [ ] No CodeceptJS `I.*` calls remain.
 - [ ] No arbitrary sleeps or unsupported shortcuts were added.
 - [ ] Helper APIs have no mode flags or union returns unless source behavior truly requires it.
-- [ ] Changed migration docs contain ASCII punctuation only, measured over **added lines only**. `grep -P` is unavailable here - it fails with "grep: -P supports only unibyte and UTF-8 locales" on every invocation, which in a per-file loop reads as N file failures rather than one unusable matcher. Scan the added lines instead:
-
-  ```bash
-  git diff -U0 origin/main..HEAD -- '*.md' | grep '^+' | grep -v '^+++'     | python -c "import sys; [print(repr(l)) for l in sys.stdin if any(ord(c) > 127 for c in l)]"
-  ```
-
-  A file-scoped scan flags pre-existing punctuation the migration never touched.
+- [ ] Changed migration docs contain ASCII punctuation only, measured over **added lines only** - use the scan in `AGENTS.md` section Shell and tooling notes.
 - [ ] Migrated test files contain zero comments, including ESLint disable comments.
 - [ ] No comment outside a test file narrates a decision. In a POM, helper, API client or workflow YAML, why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body. A one-line statement of a fact a reader cannot infer from the code stays (`SKILL.md` Native Playwright rules).
 - [ ] No block-level ESLint disable comments were added anywhere in migration-related code.

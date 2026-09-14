@@ -161,21 +161,11 @@ Before marking the tracker row `in-progress`, merge `origin/main` into control a
 
 Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. It starts in the background as soon as the environment bucket is confirmed, so it provisions while the writer migrates. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
 
-## Searching this repository
-
-Use the Grep tool with an explicit path scope and `output_mode`. A repo-wide `grep -rn` from the repository root exceeds the 120s Bash timeout here, and the retry has to be scoped anyway.
-
 ## Editing this skill
 
 A shell command written into these files as a check must be executed before it is committed, through the same quoting path the skill will use, with its output shown. `orchestration.md` requires `bash -n` on `.claude/scripts/*.sh`, but that only parses a script file and never reaches a command embedded in markdown.
 
-Prefer forms with no shell-escaping hazard. A carriage-return literal added here as a line-ending guard did not survive its own heredoc and reached both `branch-workflow.md` and `run.md` as an empty `grep` pattern, which matches every line - it then reported a 164-line CRLF flip on a file that was pure LF. A byte count says the same thing and cannot misfire:
-
-```bash
-python -c "print(open('<path>','rb').read().count(bytes([13])))"
-```
-
-`grep -P` is unavailable here and fails on every invocation; see the ASCII item in `audit-checklist.md` for the working form.
+Prefer forms with no shell-escaping hazard: `grep -P` is unavailable here and a carriage-return literal does not survive its own heredoc. `AGENTS.md` section Shell and tooling notes carries the working byte-count and ASCII-scan forms.
 
 ## Agent responsibilities
 

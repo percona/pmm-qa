@@ -18,7 +18,7 @@ read `/srv/logs/grafana.log` inside the pmm-server container or the files under
 wrong ones, so it can neither verify a password nor confirm that a password-changing test restored the
 original. The oracle is `/v1/users/me` (200 correct, 401 wrong) - one call, not a loop.
 
-Search contract for every phase: use the Grep tool with an explicit path scope and `output_mode`. A repo-wide `grep -rn` from the repository root exceeds the 120s Bash timeout in this repository and has to be re-run scoped anyway.
+Search contract for every phase: the Grep tool, an explicit path scope, an explicit `output_mode` (`AGENTS.md` section Shell and tooling notes).
 
 Steps 1, 2a, and 3 are the parent's; they are in `orchestration.md`. Only the parent commits on control, and only the tracker and the graphs.
 

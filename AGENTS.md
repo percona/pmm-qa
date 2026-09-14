@@ -270,6 +270,29 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 | `CLIENT_VERSION` | `latest-tarball` in `provisioning/` | PMM Client version or tarball URL for local provisioning |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |
 
+## Shell and tooling notes (Windows / Git Bash)
+
+Agents in this repository run under Git Bash on Windows. These bite whatever you are working on.
+
+- **Search with the Grep tool and an explicit path scope**, never a repo-wide `grep -rn` from the root: it exceeds the 120s Bash timeout and the retry has to be scoped anyway. Set `output_mode` explicitly.
+- **`grep -P` is unavailable.** It fails with "grep: -P supports only unibyte and UTF-8 locales" on every invocation; inside a per-file loop that reads as N file failures rather than one unusable matcher. To scan added lines for non-ASCII punctuation:
+
+  ```bash
+  git diff -U0 origin/main..HEAD -- '*.md' | grep '^+' | grep -v '^+++'     | python -c "import sys; [print(repr(l)) for l in sys.stdin if any(ord(c) > 127 for c in l)]"
+  ```
+
+  Scan added lines, not whole files - a file-scoped scan flags pre-existing punctuation the change never touched.
+- **Count carriage returns with a byte count, not a `grep` pattern.** A CR literal does not survive its own heredoc and reaches the file as an empty pattern, which matches every line and reports a whole-file CRLF flip on a pure-LF file:
+
+  ```bash
+  python -c "print(open('<path>','rb').read().count(bytes([13])))"
+  ```
+
+- **`git show <ref>:<path>` is path-mangled** - `origin/main:.github/workflows/x.yml` reaches git as `origin\main;.github\workflows\x.yml` and dies with "Not a valid object name". Quoting the argument does not help. Use `git ls-tree --name-only <ref> -- <path>`, which takes the ref and the path separately. Wrapped in the obvious loop that maps a non-zero exit to "absent", the mangled form reports **every** path as absent.
+- **Write a patch with `git diff --output=<file>`, never `>` or a pipe.** Both re-encode the bytes with a UTF-8 BOM and CRLF, and `git apply` then accepts the corrupted patch silently.
+- **A fresh `git worktree` has no `node_modules`** - run `npm ci` in its `e2e_tests/` first. Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean run, and `.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged` MODULE_NOT_FOUND, including a docs-only one staging no `.ts`. Install rather than reaching for `--no-verify`.
+- **Do not read `$?` after a pipe**: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks like a pass. Put the check on its own line, or use `PIPESTATUS`.
+
 ## Key Files to Reference
 
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
