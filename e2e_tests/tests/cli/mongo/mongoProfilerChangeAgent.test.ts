@@ -31,9 +31,7 @@ const restoreRs101Baseline = (cliHelper: CliHelper, container: string) => {
     cliHelper.execSilent(`docker exec ${container} pmm-admin remove mongodb ${service}`);
   }
 
-  // Re-register with the credentials configure-agents.sh uses (pmm/pmmpass) so
-  // the exporter and profiler agent come back non-TLS and reconnect to plaintext
-  // mongod. remove+add is the only way to drop the agents' sticky tls flag.
+  // remove+add is the only way to drop the agents' sticky tls flag.
   cliHelper
     .execSilent(
       `docker exec ${container} pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm --password=pmmpass --host=${container} --port=27017 ${container}`,
