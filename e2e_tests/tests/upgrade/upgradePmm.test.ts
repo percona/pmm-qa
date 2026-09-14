@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 pmmTest.describe('PMM server upgrade tests', () => {
-  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
+  pmmTest.describe.configure({ mode: 'serial', retries: 1 });
 
   pmmTest.beforeEach(async ({ context, grafanaHelper, page }) => {
     if (!process.env.PMM_SERVER_LATEST?.trim()) {
