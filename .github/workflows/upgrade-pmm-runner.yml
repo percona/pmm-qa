@@ -250,18 +250,6 @@ jobs:
         run: |
           npx playwright test --grep "@pre-upgrade"
 
-      - name: Checkout upgrade branch
-        working-directory: pmm-qa
-        run: |
-          git fetch origin "$PMM_QA_BRANCH"
-          git checkout FETCH_HEAD
-
-      - name: Prepare dependencies for upgrade branch
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          npm ci
-          npx playwright install --with-deps
-
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
@@ -285,6 +273,18 @@ jobs:
         run: |
           export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           npx playwright test --grep "@pmm-upgrade"
+
+      - name: Checkout upgrade branch
+        working-directory: pmm-qa
+        run: |
+          git fetch origin "$PMM_QA_BRANCH"
+          git checkout FETCH_HEAD
+
+      - name: Prepare dependencies for upgrade branch
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps
 
       - name: Post-server-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
