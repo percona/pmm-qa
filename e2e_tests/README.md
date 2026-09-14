@@ -116,6 +116,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@post-upgrade`
 - `@pre-upgrade`
 - `@rta`
+- `@service-account`
 - `@settings`
 - `@standalone`
 - `@user-password`

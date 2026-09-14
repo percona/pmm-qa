@@ -1,6 +1,7 @@
-import { APIRequestContext } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { AlertRule, AlertRulesResponse, TemplatedAlertRule } from '@interfaces/alerting';
 
 type Headers = Record<string, string>;
 
@@ -37,6 +38,20 @@ export default class AlertingApi {
   createRule = async (headers: Headers, data: CreateRuleBody) =>
     this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
+  createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
+    const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
+      folder_uid: rule.folderUid,
+      for: rule.pendingPeriod,
+      group: rule.group,
+      name: rule.name,
+      params: [{ float: rule.threshold, name: 'threshold', type: 'PARAM_TYPE_FLOAT' }],
+      severity: 'SEVERITY_WARNING',
+      template_name: rule.templateName,
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   createTemplate = async (headers: Headers, yamlBody: AlertTemplateBody) =>
     this.request.post(apiEndpoints.alerting.templates, { data: yamlBody, headers });
 
@@ -52,6 +67,18 @@ export default class AlertingApi {
     }
 
     return folder;
+  };
+
+  getRule = async (name: string): Promise<AlertRule | undefined> => {
+    const response = await this.request.get(apiEndpoints.grafana.prometheusRules, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return ((await response.json()) as AlertRulesResponse).data.groups
+      .flatMap((group) => group.rules)
+      .find((rule) => rule.name === name);
   };
 
   listFolders = async (headers?: Headers): Promise<FoldersResponseBody[]> => {

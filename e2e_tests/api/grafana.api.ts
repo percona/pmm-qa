@@ -1,6 +1,8 @@
 import { APIRequestContext, expect, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
 
 export default class GrafanaApi {
   constructor(
@@ -21,9 +23,86 @@ export default class GrafanaApi {
     ).toEqual(200);
   };
 
-  getDataSourceByName = async (name = 'Metrics') => {
+  createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
+    const response = await this.request.post(apiEndpoints.grafana.dashboards, {
+      data: {
+        dashboard: {
+          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, type: 'timeseries' }],
+          schemaVersion: 39,
+          title,
+        },
+        overwrite: false,
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()) as GrafanaDashboard;
+  };
+
+  createFolder = async (title: string): Promise<string> => {
+    const response = await this.request.post(apiEndpoints.grafana.folders, {
+      data: { title },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()).uid as string;
+  };
+
+  deleteDashboard = async (uid: string): Promise<void> => {
+    await expect(async () => {
+      const response = await this.request.delete(`${apiEndpoints.grafana.dashboardByUid}/${uid}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+
+      expect(response.status()).toEqual(200);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
+  deleteDataSource = async (uid: string): Promise<void> => {
+    await expect(async () => {
+      const response = await this.request.delete(`${apiEndpoints.grafana.datasourceByUid}/${uid}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+
+      expect(response.status()).toEqual(200);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
+  deleteFolder = async (uid: string): Promise<void> => {
+    await expect(async () => {
+      const response = await this.request.delete(`${apiEndpoints.grafana.folders}/${uid}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+        params: { forceDeleteRules: true },
+      });
+
+      expect(response.status()).toEqual(200);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
+  getActiveTargetByExternalGroup = async (externalGroup: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
-    const dataSources = await this.request.get('graph/api/datasources', { headers });
+    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+
+    expect(
+      response.status(),
+      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    const body = await response.json();
+
+    return body.data.activeTargets.find(
+      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
+    );
+  };
+
+  getDataSourceByName = async (name = 'Metrics') => {
+    const dataSources = await this.request.get(apiEndpoints.grafana.datasources, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
     expect(
       dataSources.status(),
@@ -50,7 +129,7 @@ export default class GrafanaApi {
       ],
       to: 'now',
     };
-    const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
+    const metric = await this.request.post(apiEndpoints.grafana.dsQuery, { data: requestBody, headers });
 
     expect(
       metric.status(),
@@ -60,20 +139,24 @@ export default class GrafanaApi {
     return await metric.json();
   };
 
-  getActiveTargetByExternalGroup = async (externalGroup: string) => {
-    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
-    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+  /** Runs `rawSql` through `/api/ds/query`, the same route Explore uses, and returns the first frame's columns. */
+  queryDataSource = async (uid: string, rawSql: string, type = 'grafana-postgresql-datasource') => {
+    const response = await this.request.post(apiEndpoints.grafana.dsQuery, {
+      data: {
+        from: 'now-5m',
+        queries: [{ datasource: { type, uid }, format: 'table', rawQuery: true, rawSql, refId: 'A' }],
+        to: 'now',
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
-    expect(
-      response.status(),
-      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
-    ).toEqual(200);
+    expect(response.status(), await response.text()).toEqual(200);
 
-    const body = await response.json();
+    const result = ((await response.json()) as GrafanaQueryResponse).results.A;
 
-    return body.data.activeTargets.find(
-      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
-    );
+    expect(result.error, `Query "${rawSql}" failed on data source "${uid}"`).toBeUndefined();
+
+    return result.frames[0]?.data.values ?? [];
   };
 
   waitForMetric = async (

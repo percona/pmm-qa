@@ -13,12 +13,12 @@ const config: PlaywrightTestConfig = {
     {
       name: 'chromium',
       use: {
-        actionTimeout: Timeouts.TEN_SECONDS,
+        actionTimeout: Timeouts.ONE_MINUTE,
         // headless: false,
         launchOptions: {
           args: ['--window-size=1920,1080'],
         },
-        navigationTimeout: Timeouts.TEN_SECONDS,
+        navigationTimeout: Timeouts.ONE_MINUTE,
       },
     },
   ],

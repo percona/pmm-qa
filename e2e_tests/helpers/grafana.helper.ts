@@ -16,6 +16,19 @@ export default class GrafanaHelper {
     return this.page;
   };
 
+  changePassword = async (oldPassword: string, newPassword: string) => {
+    const response = await this.page.request.put('graph/api/user/password', {
+      data: { confirmNew: newPassword, newPassword, oldPassword },
+      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
+      ignoreHTTPSErrors: true,
+    });
+
+    expect(
+      response.status(),
+      `Failed to change user account password! Response message is ${response.statusText()}`,
+    ).toEqual(200);
+  };
+
   createCustomDashboard = async (
     name: string,
     folderId: number,
@@ -296,6 +309,23 @@ export default class GrafanaHelper {
     return (await response.json()).id as number;
   };
 
+  signInAs = async (username: string, password: string): Promise<GrafanaUser> => {
+    await this.unAuthorize();
+    await this.authorize(username, password);
+
+    const response = await this.page.request.get('graph/api/user', {
+      headers: GrafanaHelper.getAuthHeader(username, password),
+    });
+
+    expect(response.status(), `Sign in as "${username}"`).toEqual(200);
+
+    const user = (await response.json()) as GrafanaUser;
+
+    expect(user.login, `The session must belong to "${username}"`).toEqual(username);
+
+    return user;
+  };
+
   starDashboard = async (uid: string) => {
     const authToken = GrafanaHelper.getToken();
     const response = await this.page.request.post(`graph/api/user/stars/dashboard/uid/${uid}`, {
@@ -316,18 +346,5 @@ export default class GrafanaHelper {
     await this.page.goto('', { waitUntil: 'domcontentloaded' }).catch(() => {
       /* PMM may redirect mid-load; we don't care about the cancel */
     });
-  };
-
-  changePassword = async (oldPassword: string, newPassword: string) => {
-    const response = await this.page.request.put('graph/api/user/password', {
-      data: { confirmNew: newPassword, newPassword, oldPassword },
-      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
-      ignoreHTTPSErrors: true,
-    });
-
-    expect(
-      response.status(),
-      `Failed to change user account password! Response message is ${response.statusText()}`,
-    ).toEqual(200);
   };
 }
