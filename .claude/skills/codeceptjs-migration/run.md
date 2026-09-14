@@ -124,7 +124,7 @@ Read it first, before any other work in the gate. Append one entry before return
 ```yaml
 - gate: initial | final
   attempt: 1
-  rowsCovered: []   # usually one row; several only for a batch (see the parent's batch mode)
+  rowsCovered: []   # the tracker row this gate covers
   subject:
     kind: worktree | branch   # initial gate is always worktree; final gate is branch, except worktree in test-run mode
     startRef:       # kind: branch only: the branch HEAD sha, measured before any review work. Omit for a worktree subject.

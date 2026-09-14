@@ -2,7 +2,7 @@
 
 The parent agent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Worker subagents do not read this file - their phase contracts are in `run.md`, and the canonical sequence below is the single copy of it.
 
-Run exactly one batch at a time, where a batch is one row by default and may be several rows only under section Batch mode. That batch owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow. Within a batch, rows are still migrated one at a time and each gets its own writer pass and its own live proof - batching changes what is published together, never what is verified independently.
+Run exactly one row at a time. That row owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow.
 
 Migration work happens and is tested in the control branch's own worktree. What is committed where, and why, is owned by `branch-workflow.md` section What is committed where - read it before this file if you have not already.
 
@@ -23,7 +23,7 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Enforce gates strictly: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before the code and its workflow coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists. There are no exceptions: every row gets both gates, in this order. A structure that drops the initial gate would contradict `SKILL.md` Required outcome items 2 and 3, which are authoritative.
 - **Nothing the migration produces is committed on control.** If a subagent reports a commit SHA on control for migration code, that is a defect: have it reset the commit and leave the change in the worktree.
 - Overlap only where gates allow: provisioning runs in the background while the writer migrates (step 2a); static review can start while PMM provisions; MCP locator checks begin after readyz passes. Everything else is serial. Candidates and their verdicts live in `parallelization-ledger.md`; do not add an overlap that is not recorded there as `implemented`.
-- Reuse one local PMM environment per batch (one row by default); never recreate it mid-workflow. Within a batch, reset test state between rows rather than reprovisioning - see section Batch mode.
+- Reuse one local PMM environment for the row; never recreate it mid-workflow.
 - Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local environment selected different values, and pass the same pair to every review and execution command. A UI-login test is exactly that exception and needs a non-default password - see step 3. State the pair explicitly in every handoff rather than letting a subagent assume `admin`; `.env` routinely points at an unrelated remote PMM, and only `PMM_MIGRATION=1` stops it overriding you (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`).
 - **Operations a subagent is not permitted to perform belong to the parent.** Environment teardown and test-state resets - for example emptying the Grafana annotation table between runs on a reused environment - are refused by the permission classifier inside a subagent. A subagent must stop and ask rather than route around the refusal by another means; the parent performs the operation and resumes it.
 - Locator verification goes through the Playwright MCP server, which `.mcp.json` declares repo-level so every subagent inherits it. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is not a general fallback - it hardcodes `/pmm-ui/help` on every code path and supports only `getByRole` plus an optional `a[href=...]`. Use it for that one preset; if MCP is unavailable, stop and report it rather than checking a different page.
@@ -53,7 +53,7 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
 `--search 'migrate in:title'` is wrong here: GitHub tokenizes the query, so it also matches unrelated PRs such as "Migrate QA cloud agents to Claude Code" and "PMM-7: Migrate upgrade tests". Since this step stops the workflow, one such PR blocks every future row with a reason that is not true.
 
-The cap is one open migration PR in total, so zero open before a new row starts: the nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR. Land or close the open PR before selecting a new row; a batch (section Batch mode) is how throughput is recovered under this cap, not a second PR.
+The cap is one open migration PR in total, so zero open before a new row starts: the nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR. Land or close the open PR before selecting a new row.
 
 Merge `origin/main` into control only once all three checks are clear, or an unrelated merge commit lands in an already-active migration's history.
 
@@ -98,35 +98,6 @@ The parent may explicitly designate a run as test-only (dry run). In that mode, 
 Because 5b is skipped, the final gate's subject is control's worktree rather than a branch. It then follows the initial gate's rule: `kind: worktree`, no `startRef`/`endRef`, and `STALE_SUBJECT` is never returned.
 
 All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects. Workflow coverage is designed and its greps verified as usual, but not committed, since there is no publish branch to commit it on.
-
-## Batch mode
-
-**Status: defined but not enabled.** Never batch rows by default - every migration is a single-row batch. `parallelization-ledger.md` records this candidate as `needs-evidence, trial-gated`, which the rule above forbids using as routine practice.
-
-Use batch mode only when the parent explicitly designates a run as a batch-mode trial, and record per-row phase timings and any cross-row state contamination on the timeline. After two trials the ledger row moves to `implemented` or `unsafe`.
-
-Provisioning overlap with the writer is already free - it cost zero net wall clock on the one migration measured. What is not free is the per-row cost that does not shrink with diff size: the final gate, the publish phase, the two graph refreshes, and the PR itself. Batch mode amortizes that fixed cost across several rows that already share a provisioned environment, instead of paying it once per row.
-
-Eligibility: consecutive `pending` rows (after any reordering needed so rows sharing a `Setup` string are adjacent) whose `Setup` column is character-for-character identical, capped at 5 rows per batch. Do not batch across a bucket boundary and do not batch a row whose test selects state by index on a reused environment (for example anything like `verifyAnnotations`) with any other row - state from one row's proof run must not leak into the next row's.
-
-Procedure:
-
-1. Provision once for the whole batch.
-2. Per row, in turn: writer, initial review gate, and that row's own live execution against the shared environment - each row still gets its own independent proof. Do not cut a publish worktree per row.
-3. Once every row has passed its own initial review and execution: cut one publish worktree and branch, move every row's changes across, commit the retirement and workflow coverage for the whole batch.
-4. Run one final review covering all rows, and open one PR listing every migrated row.
-5. Update every row's tracker status together, in one tracker-only commit, once the PR is open.
-
-State reset between rows in a batch must be explicit and recorded on the timeline (for example a Grafana annotation table reset) - do not assume one row's proof run left the environment in the state the next row's proof run needs.
-
-Tracker and recovery bookkeeping for a batch:
-
-- All rows in the batch go `pending` -> `in-progress` together, in one tracker-only commit, before any writer starts. That commit is the batch's active-row marker; record every row number it covers in the handoff and on the timeline. The step 1 "is another row already in-progress" check treats the whole batch as one occupant - several rows `in-progress` at once is expected inside a batch and a defect outside one.
-- Each row keeps its own recovery checkpoint at `.claude/migration-observations/<row>-<slug>.patch`, snapshotted after that row's own phases, never a single shared patch for the batch. Scope each row's checkpoint to that row's own exclusive paths plus, for any shared path it touched, only that row's hunks.
-- Maintain one timeline file per row, as usual, plus one gate-ledger entry per gate spawn recording which rows that gate covered.
-- **Classify every changed path before publishing, because rows in a batch routinely share files.** A path is *row-exclusive* if exactly one row in the batch changed it (typically the migrated test and any POM or helper only it needs). A path is *batch-shared* if two or more rows changed it - which is the normal case for the workflow-coverage YAML (each row appends a tag) and for `e2e_tests/README.md` (the pre-commit hook regenerates it for every commit touching `e2e_tests/tests/**/*.ts`), and can also happen for a helper or API client two rows both extend.
-- **Do not batch two rows that edit the same region of a shared code file.** Overlapping hunks in one helper cannot be separated later, so the rows cannot be dropped independently. Compare each row's changed-path list against the others' after its writer pass; on an overlapping-hunk collision, split the batch rather than continuing.
-- If one row fails and cannot be fixed, drop just that row. Do not fail the whole batch, and never carry a known-broken row into the shared PR. Restore only that row's *exclusive* paths - restoring a batch-shared path erases the survivors' changes to it. Then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, let the pre-commit hook regenerate `README.md`, and re-verify selectability for the survivors since that YAML changed. Revert the dropped row to `pending`.
 
 ## 2a. Start provisioning in the background
 
@@ -220,7 +191,7 @@ The parent's own obligations: create the file in step 1; pass its path on every 
 
 ```text
 pending
--> check no other row is in-progress (a whole batch counts as one occupant)
+-> check no other row is in-progress
 -> check no migration PR is open
 -> merge main into control
 -> refresh target graph on control

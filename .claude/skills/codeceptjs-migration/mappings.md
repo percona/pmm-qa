@@ -66,7 +66,7 @@ Confirm the account accepts connections from `client_container`. When the provis
 - Every locator this file spells out is a **floor, not a ceiling**. Where a higher rung of
   `playwright-practices.md`'s ladder resolves to the same element, use it - these strings predate the
   ladder and several are raw CSS. `[role="alert"],[role="status"]` is `getByRole('status').or(getByRole('alert'))`.
-  Row 6 declined that promotion at the gate on the grounds that this file prescribed the CSS form, and the
+  A gate once declined that promotion on the grounds that this file prescribed the CSS form, and the
   maintainer overruled it: a better locator is welcome even where it departs from the CodeceptJS original,
   as long as the logic is unchanged. Do not narrow a union to one role on inference alone - keep the union
   via `.or()` unless the surviving role was measured live.

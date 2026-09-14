@@ -2,7 +2,7 @@
 
 Migration work **happens and is tested** on the control branch's worktree, and is **never committed there**. Control commits only what is genuinely control-only: the `origin/main` merge, both graph refreshes, the two tracker status changes, and branch-local gardener lesson entries. The migrated code is moved to a fresh branch cut from `origin/main`, committed there, reviewed there, and PR'd against `main`. Control receives it later through an ordinary `merge origin/main`.
 
-Committing the code on control as well would author the same content twice and then take delivery of it a third time on the next merge from `main`. That is what produced cross-branch conflicts and what made a scrubbing step necessary; neither exists in this model.
+Committing the code on control too would author it twice and take delivery a third time on the next merge from `main` - the cross-branch conflicts and scrubbing step this model exists to avoid.
 
 ## What is committed where
 
@@ -137,17 +137,15 @@ git -C <control-worktree> diff --name-only
 git ls-tree --name-only origin/main -- <path>     # empty output = absent
 ```
 
-Use `git ls-tree`, never `git show origin/main:<path>`. Under MSYS2/Git Bash on Windows the
-`ref:path` argument is path-mangled - `origin/main:.github/workflows/fb-e2e-suite.yml` reaches git as
-`origin\main;.github\workflows\fb-e2e-suite.yml` - and dies with "Not a valid object name". Wrapped
-in the obvious loop that maps a non-zero exit to "absent", that reports **every** path as absent from
-`origin/main`, which under the rule below reads as "this migration depends on an unmerged sibling" -
-the most consequential wrong answer this check can produce. `git ls-tree --name-only` takes the ref
-and the path as separate arguments and is immune.
+Use `git ls-tree`, never `git show origin/main:<path>`. Under MSYS2/Git Bash the `ref:path` argument
+is mangled to `origin\main;.github\workflows\...` and dies with "Not a valid object name". Wrapped in
+the obvious loop that maps a non-zero exit to "absent", that reports **every** path as absent, which
+under the rule below reads as "this migration depends on an unmerged sibling". `git ls-tree --name-only`
+takes the ref and the path as separate arguments and is immune.
 
 A path absent from `origin/main` depends on an earlier still-unmerged sibling migration - typically a shared helper. Decide explicitly whether to carry the full file into this PR or hold.
 
-**File existence is not enough - compare the hunks.** For each changed path, read the region being edited with `git ls-tree` (or PowerShell). Quoting the whole `git show "origin/main:<path>"` argument does **not** defeat the MSYS2 mangling above - it still reaches git as `origin\main;...` and fails. A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it; the existence check reports the path as present and says nothing.
+**File existence is not enough - compare the hunks.** Read the region being edited with `git ls-tree` (or PowerShell); quoting `git show "origin/main:<path>"` does not defeat the mangling above. A file can exist on `origin/main` while the block this migration edits does not, because a sibling's unmerged PR introduced it - the existence check reports the path as present and says nothing.
 
 When the block is missing, treat it as a missing file: create it in this PR scoped to this migration's own needs, or hold. Never import the sibling's version - that pulls an unmerged migration's CI changes in and can reference tags with no tests behind them.
 
@@ -163,7 +161,7 @@ git -C ../pmm-qa-publish apply --3way <tmpfile>
 
 List the paths explicitly rather than taking the whole diff, so an unrelated edit sitting in control's worktree cannot ride along. Never pipe the diff into `apply` and never redirect it with `>` - write it with `--output=` and apply from that file, for the same reason given in "Checkpointing uncommitted work" above.
 
-Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep before writing it. Row 4's body named an API method that did not exist and POM sections that were byte-identical to `origin/main`; both were falsifiable in about 30 seconds each, and missing them cost a full amend cycle after the final gate had passed.
+Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep first: a body naming a method that does not exist, or a section byte-identical to `origin/main`, costs an amend cycle after the final gate has passed.
 
 A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
 
@@ -208,7 +206,8 @@ For `run-migration-single-test.sh`, invoke the test runner directly instead, aga
 
 ```bash
 cd ../pmm-qa-publish/e2e_tests
-PMM_MIGRATION=1 PMM_UI_URL='<the parent's PMM_UI_URL>' ADMIN_PASSWORD='<the parent's ADMIN_PASSWORD>' \n  npx playwright test <target-test-file> --workers=1
+PMM_MIGRATION=1 PMM_UI_URL='<the parent's PMM_UI_URL>' ADMIN_PASSWORD='<the parent's ADMIN_PASSWORD>' \
+  npx playwright test <target-test-file> --workers=1
 ```
 
 Both values are placeholders - use the pair the parent handed over, which is frequently NOT
@@ -220,27 +219,25 @@ silently overrides both values - and `.env` routinely points at an unrelated rem
 
 Before writing "could not be verified" into a PR body, check whether the repository's own CI already
 covers it. `.claude/hooks/lint-changed.sh` runs `actionlint` over `.github/workflows/*.yml` behind the
-`Lint` check, so a workflow added by a migration IS schema-checked on the PR even when `actionlint`
-cannot be installed locally. Row 6's PR body shipped that gap as an open risk and it was already closed.
-A false open risk costs reviewer attention and understates the evidence.
+`Lint` check, so a migration's workflow IS schema-checked on the PR even when `actionlint` cannot be
+installed locally. A false open risk costs reviewer attention and understates the evidence.
 
 Also run `python support_scripts/generate_readme.py --check` from the publish worktree's root. There is no npm script for it; `npm run readme:check` does not exist and its missing-script exit 1 reads like a failing check.
 
 If the test selects state by index, empty that state before this run as well - it is a second run against the same environment.
 
-A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` as the first
-thing you do in it. Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean
-run, and `.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged`
-MODULE_NOT_FOUND - including a docs-only one that stages no `.ts` at all. Install rather than reaching for
-`--no-verify`. And do
-not read `$?` after a pipe: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks
+A freshly created `git worktree` has **no `node_modules`** - run `npm ci` in its `e2e_tests/` first.
+Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean run, and
+`.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged` MODULE_NOT_FOUND,
+including a docs-only one staging no `.ts`. Install rather than reaching for `--no-verify`.
+
+Do not read `$?` after a pipe: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks
 like a pass. Put the check on its own line, or use `PIPESTATUS`.
 
 If the **parent** commits a fix onto the publish branch - which is legitimate; it is the parent's branch
-to correct - that commit has had no independent reviewer. Name it explicitly in the final-gate handoff
-as parent-authored and unreviewed, and ask the gate to check it as critically as the rest. Two of row 6's
-five commits were the parent's, and the gate validated one and found nothing wrong with it only because
-it was told to look.
+to correct - that commit has had no independent reviewer. Name it in the final-gate handoff as
+parent-authored and unreviewed, and ask the gate to check it as critically as the rest. A gate only
+scrutinises such a commit when it is told to.
 
 ## Workflow coverage
 
@@ -257,12 +254,11 @@ When this migration retires the last CodeceptJS consumer of a **runner** workflo
 Playwright one beside it. Adding one leaves the original with no caller, duplicates whatever server
 setup it owns, and forces a keep-or-delete argument in review that the conversion never raises.
 
-Row 6 learned this the expensive way. It added `runner-e2e-tests-playwright-podman.yml` next to
-`runner-e2e-tests-podman.yml`, and the maintainer's review reversed it in one line: podman was used by
-that one test and nowhere else. The cost of the detour was a duplicated systemd unit, a PR-body
-paragraph defending a dead workflow, an extra review round, and a hand-built `CLIENT_VERSION` bug that
-could not have existed in the original file, which already had it. The converted runner keeps the
-podman parent's `--pmm-server-ip` topology for free, for the same reason.
+A migration that added `runner-e2e-tests-playwright-podman.yml` next to `runner-e2e-tests-podman.yml`
+was reversed by the maintainer in one line: podman was used by that one test and nowhere else. The
+detour cost a duplicated systemd unit, a PR-body paragraph defending a dead workflow, an extra review
+round, and a hand-built `CLIENT_VERSION` bug that could not have existed in the original file. A
+converted runner keeps the podman parent's `--pmm-server-ip` topology for free, for the same reason.
 
 Convert when the retired test is the runner's only consumer. Add a new runner only when the old one
 still has other callers, and say which they are.
@@ -292,7 +288,7 @@ fixing one file asymmetrically.
 When coverage requires a new workflow assembled from two existing ones, the first check is a **parsed
 set diff of their `env:` blocks**, not a top-to-bottom read. Any key present in **both** parents and
 absent from the child is a defect until proven otherwise: it is exactly the shape that survives review,
-passes CI, and does the wrong thing quietly. Row 6's new podman runner omitted `CLIENT_VERSION`, so
+passes CI, and does the wrong thing quietly. A new podman runner omitted `CLIENT_VERSION`, so
 `pmm-framework`'s `resolve_value` fell through to `database_default_value` and the clients installed
 stock `3-dev-latest` instead of the FB build's - a green job monitoring the wrong artifact, which is the
 one thing an FB job exists to prevent.
@@ -322,7 +318,7 @@ When retiring a CodeceptJS source, check every job whose grep matches its title 
 
 An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever. Cross-check the number against a plain tag grep before acting on it. A wrong count looks entirely plausible - a `^`-anchored regex without the `m` flag reported 8 `@nightly` scenarios on row 9 where the true figure was 53 - and nothing downstream contradicts it.
 
-**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR, on a job whose failures may page someone. When the tag is a broad bucket other jobs' tests also carry, the right fix is usually a narrower sub-bucket tag - the CodeceptJS side already does this with `@valkey-nightly`, `@pbm-nightly` and friends - rather than a wider grep. Row 9 widened `@dashboards` and pulled in 10 valkey tests whose own job had been commented out since it was added, so they had never run in CI at all. Make the retag in this PR rather than offering it as a follow-up - the reviewer rejected both greps, and the fix was one line in the workflow plus a one-tag edit in five specs the migration did not otherwise touch.
+**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR, on a job whose failures may page someone. When the tag is a broad bucket other jobs' tests also carry, the right fix is usually a narrower sub-bucket tag - the CodeceptJS side already does this with `@valkey-nightly`, `@pbm-nightly` and friends - rather than a wider grep. One migration widened `@dashboards` and pulled in 10 valkey tests whose own job had been commented out since it was added, so they had never run in CI at all. Make the retag in this PR rather than offering it as a follow-up - the reviewer rejected both greps, and the fix was one line in the workflow plus a one-tag edit in five specs the migration did not otherwise touch.
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 

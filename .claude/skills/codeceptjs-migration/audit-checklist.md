@@ -4,6 +4,16 @@ The reviewer performs this checklist twice: before execution and after execution
 
 ## Initial review
 
+Work the whole list, but clear these first. Every finding a human reviewer has raised on a migration PR
+to date falls into one of them, and each is already a checkbox below:
+
+1. A name used once, in any shape - method, `const` mapped once, interface, type alias, row field.
+2. A comment outside a test file that narrates a decision.
+3. A data row or generated title carrying more than what varies.
+4. A source defect ported verbatim - dead scenario, duplicated block, bottom-of-ladder locator, unchecked response status.
+5. A grep or tag edit that switches on tests this migration does not own.
+6. An assertion that cannot fail where it stands.
+
 ### Source coverage
 
 - [ ] Every active executable scenario is migrated.
@@ -25,8 +35,8 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Cleanup is correct on **every** path, not only the one that does not need it. A hook that restores
       shared state by reading a variable the test sets *later* only works when nothing failed in between -
       and its failure is usually swallowed (`tryTo` -> `.catch(() => undefined)`), so the environment is
-      left mutated and the next test dies with an error hiding the real one. Row 6 shipped exactly this
-      past both gates: `afterEach` authenticated a password restore with `process.env.ADMIN_PASSWORD`,
+      left mutated and the next test dies with an error hiding the real one. This has shipped past both
+      gates before: an `afterEach` authenticating a password restore with `process.env.ADMIN_PASSWORD`,
       which only became the new password after a logout and an assertion. Prefer restoring from the
       constant the test would have set (the redundant call fails harmlessly when the change never
       happened) over reading mid-test state. Porting the source's own latent version of this bug is not
@@ -101,6 +111,7 @@ Against `playwright-practices.md`. Check the changed files, not the whole reposi
 
   A file-scoped scan flags pre-existing punctuation the migration never touched.
 - [ ] Migrated test files contain zero comments, including ESLint disable comments.
+- [ ] No comment outside a test file narrates a decision. In a POM, helper, API client or workflow YAML, why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body. A one-line statement of a fact a reader cannot infer from the code stays (`SKILL.md` Native Playwright rules).
 - [ ] No block-level ESLint disable comments were added anywhere in migration-related code.
 - [ ] Changed-file ESLint passes.
 - [ ] No new TypeScript or full-project ESLint failures were introduced.

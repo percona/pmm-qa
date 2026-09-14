@@ -5,7 +5,7 @@ description: Migrate one CodeceptJS test to native Playwright, provision its PMM
 
 # CodeceptJS to Playwright Migration
 
-Migrate exactly one CodeceptJS source test at a time. Several such migrations may be *published together* as one batch when they share an identical environment setup - see `orchestration.md` section Batch mode - but each source test is still migrated, reviewed, and proved on its own.
+Migrate exactly one CodeceptJS source test at a time. Each one is migrated, reviewed, and proved on its own.
 
 ## Required outcome
 
@@ -136,10 +136,9 @@ The rules below are migration-specific and are not repeated there:
 - Do not suppress `playwright/expect-expect` to compensate for hidden assertions.
 - Do not add comments of any kind in migrated test files (`*.test.ts`), except the required skip-policy comments in `mappings.md`.
 - When a reviewer asks for an explanatory comment, check the repository's house style in `CLAUDE.md`
-  first. Row 6 added a two-line note on a one-line locator at an automated reviewer's request and the
-  maintainer removed it on the next pass. The repo's own rule wins over a review suggestion, and the
-  round trip is avoidable.
-- **When a human reviewer names a concrete end state, ship it here.** If the change is mechanical and verifiable in-repo, make it in this PR instead of declining it, offering a follow-up PR, or asking which variant they prefer; each of those costs a review round and the answer is nearly always "yes, now". Row 9 spent one round offering to move a column onto the page objects and another offering to retag other jobs' tests separately, and both landed in this PR in the end. Push back only where the request would break a migration invariant, and then say which one.
+  first. The repo's own rule wins over a review suggestion: a two-line note added on a one-line locator
+  at an automated reviewer's request was removed by the maintainer on the next pass.
+- **When a human reviewer names a concrete end state, ship it here.** If the change is mechanical and verifiable in-repo, make it in this PR instead of declining it, offering a follow-up PR, or asking which variant they prefer; each of those costs a review round and the answer is nearly always "yes, now". One migration spent a round offering to move a column onto the page objects and another offering to retag other jobs' tests separately; both landed in that PR anyway. Push back only where the request would break a migration invariant, and then say which one.
 - Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
 - Pin **every explicit source retry value exactly**, at the scope the source applied it; do not port `.retry(N)` as CodeceptJS syntax. No value of N survives being left unpinned: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so `.retry(1)` is not the CI default, `.retry(0)` silently gains 2, and any N > 2 silently loses retries. A source with no `.retry()` anywhere correctly inherits the config default.
