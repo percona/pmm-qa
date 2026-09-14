@@ -1,7 +1,5 @@
-import { APIRequestContext, expect, Page, Locator } from '@playwright/test';
-import apiEndpoints from '@helpers/apiEndpoints';
+import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import GrafanaHelper from '@helpers/grafana.helper';
 
 export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
 
@@ -56,15 +54,6 @@ export default abstract class BasePage {
   };
 
   protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
-
-  haEnableCheck = async (request: APIRequestContext): Promise<void> => {
-    const haResponse = await request.get(apiEndpoints.ha.status, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-    const haStatus = (await haResponse.json()) as { status: string };
-
-    expect(haStatus.status).toEqual('Enabled');
-  };
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
     await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });

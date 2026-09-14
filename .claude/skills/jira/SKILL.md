@@ -118,7 +118,10 @@ so newlines/quotes escape cleanly.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
-# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# X-Actor is your GitHub login. Resolve it from the GitHub MCP get_me (.login) as the
+# FIRST call of this batch — never derive it from the session's user email, display
+# name, or Jira account: the roster keys on the GitHub login, which routinely differs
+# from the email local-part, and a guess returns 403 identity_not_authorized.
 # gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
 command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
 [ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
@@ -147,6 +150,11 @@ J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
 # maxResults<=100 (default 20); fields optional. Use THIS, never the Atlassian MCP.
 J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != Done ORDER BY updated DESC' \
       '{jql:$q, maxResults:20, fields:"summary,status,issuetype,updated"}')"
+# The response body is {"issues": [...], "total": N} — read .issues[] and .total, not
+# .body.issues[]. A jq path mismatch and a genuinely clean dedup both print nothing,
+# and `?` swallows the difference: four queries read as "no tracking ticket exists"
+# while the raw payload held the ticket. Look at the unfiltered payload once before
+# trusting a zero-row search.
 
 # search does NOT paginate: startAt and the returned nextPageToken are both ignored,
 # so six calls for a 219-issue result silently returned the same first 100 each time.
