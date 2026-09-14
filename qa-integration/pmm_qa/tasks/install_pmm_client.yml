@@ -218,7 +218,7 @@
     use_encrypted_client_config: >-
       {{
         (encrypted_client_config | default(false) | bool) and (
-          client_version in ['3-dev-latest', 'pmm3-rc', 'pmm3-latest'] or
+          client_version in ['3-dev-latest', 'pmm3-rc', 'pmm3-latest', 'latest-tarball'] or
           (client_version is match('^3\\.[0-9]+\\.[0-9]+$') and client_version is version('3.7.0', '>=')) or
           (client_version | regex_search('^https?://') is not none)
         )
