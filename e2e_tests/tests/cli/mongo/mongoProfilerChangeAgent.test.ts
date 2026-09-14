@@ -1,6 +1,45 @@
 import pmmTest from '@fixtures/pmmTest';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+
+const mongodConfPath = '/etc/mongod/mongod.conf';
+// The last test in this serial suite (T1010) switches rs101's mongod to
+// requireTLS by editing the bind-mounted mongod.conf and reconfigures the agents
+// with --tls, and never reverts either. The agent tls flag cannot be cleared via
+// `pmm-admin inventory change agent`, so a plain retry is stuck: T1001 connects
+// to the now-requireTLS mongod without TLS and burns its readiness gate with
+// ECONNREFUSED. As the group re-runs from beforeAll on every serial retry,
+// detect that leftover state and restore rs101 to its clean provisioned baseline
+// (plaintext mongod + non-TLS agents) before the readiness gate runs.
+const rs101HasLeftoverTls = (cliHelper: CliHelper, container: string) =>
+  cliHelper
+    .execSilent(`docker exec ${container} grep -c 'mode: requireTLS' ${mongodConfPath}`)
+    .stdout.trim() !== '0';
+
+const restoreRs101Baseline = (cliHelper: CliHelper, container: string) => {
+  cliHelper.execSilent(`docker exec ${container} sed -i '/^  tls:/,/CAFile:/d' ${mongodConfPath}`);
+  cliHelper.execSilent(`docker exec ${container} systemctl restart mongod`).assertSuccess();
+
+  const service = cliHelper
+    .execSilent(
+      `docker exec ${container} pmm-admin list | grep MongoDB | grep ${container} | head -1 | awk -F' ' '{print $2}'`,
+    )
+    .stdout.trim();
+
+  if (service) {
+    cliHelper.execSilent(`docker exec ${container} pmm-admin remove mongodb ${service}`);
+  }
+
+  // Re-register with the credentials configure-agents.sh uses (pmm/pmmpass) so
+  // the exporter and profiler agent come back non-TLS and reconnect to plaintext
+  // mongod. remove+add is the only way to drop the agents' sticky tls flag.
+  cliHelper
+    .execSilent(
+      `docker exec ${container} pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm --password=pmmpass --host=${container} --port=27017 ${container}`,
+    )
+    .assertSuccess();
+};
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -17,6 +56,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep rs101`).stdout.trim();
+
+    // Recover from a previous (poisoned) attempt of this serial suite before
+    // reading the inventory, so a retry starts from a clean plaintext rs101.
+    if (rs101HasLeftoverTls(cliHelper, containerName)) {
+      restoreRs101Baseline(cliHelper, containerName);
+    }
+
     serviceName = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep rs101 | head -1 | awk -F' ' '{print $2}'`,
@@ -37,6 +83,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mongodb_profiler_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
+  });
+
+  pmmTest.afterAll(async ({ cliHelper }) => {
+    // T1010 leaves rs101 on requireTLS with TLS-configured agents and mutates the
+    // bind-mounted (tracked) mongod.conf. Revert to the clean provisioned state so
+    // the repo file is not left modified and the next run/attempt starts fresh.
+    if (containerName && rs101HasLeftoverTls(cliHelper, containerName)) {
+      restoreRs101Baseline(cliHelper, containerName);
+    }
   });
 
   pmmTest(
@@ -61,6 +116,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           )
           .assertSuccess();
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+      // A previous attempt of this serial suite may already have created the user,
+      // so drop it first to keep createUser idempotent across retries.
+      cliHelper.execSilent(
+        mongoEval(`try { db.getSiblingDB("admin").dropUser("${newUsername}") } catch (e) {}`),
+      );
 
       cliHelper
         .execSilent(

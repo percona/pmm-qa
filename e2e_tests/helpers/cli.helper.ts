@@ -41,7 +41,8 @@ export default class CliHelper {
       // Container base OS varies by DB (Debian for MySQL/PG/Valkey, RHEL for PSMDB), so cover both package managers.
       `${prefix} bash -c "command -v git >/dev/null 2>&1 || apt-get install -y git || dnf install -y git"`,
       `${prefix} mkdir -p /certs`,
-      `${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`,
+      // Remove any clone left by a prior attempt so a serial retry can re-run this.
+      `${prefix} bash -c "rm -rf /easy-rsa && git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa"`,
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`,
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full pmm-server nopass`,
