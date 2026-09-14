@@ -21,7 +21,7 @@ if [ -z "$pmm_server_ip" ]; then
 fi
 
 if [ -z "$client_version" ]; then
-    export client_version=dev-latest
+    export client_version=3-dev-latest
 fi
 
 if [ -z "$install_client" ]; then
@@ -49,6 +49,20 @@ port=8443
 if [[  "$pmm_server_ip" =~ \. ]]; then
   port=443
 fi
+
+# The install branches below are bare `if`s with no else, so an unrecognised
+# client_version installs nothing and only surfaces later as
+# `pmm-agent: executable file not found in $PATH`. Name it here instead.
+case "$client_version" in
+    3-dev-latest|pmm3-rc|pmm3-latest|latest-tarball|http*) ;;
+    *)
+        if [[ ! "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: unrecognised client_version '$client_version'." >&2
+            echo "Expected: 3-dev-latest, pmm3-rc, pmm3-latest, latest-tarball, an exact 3.x.y version, or an http(s) tarball URL." >&2
+            exit 1
+        fi
+        ;;
+esac
 
 apt-get update
 apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
