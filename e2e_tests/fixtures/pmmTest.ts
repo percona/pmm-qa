@@ -104,7 +104,7 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) =>
+    await context.route(apiEndpoints.server.updates, (route) =>
       route.fulfill({
         body: JSON.stringify({
           installed: {},
