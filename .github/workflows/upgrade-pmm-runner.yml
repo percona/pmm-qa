@@ -151,20 +151,26 @@ jobs:
               -e WATCHTOWER_DEBUG=1 \
               -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
               -e WATCHTOWER_HTTP_API_UPDATE=1 \
-              -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ inputs.upgrade_tag }} \
               --volume /var/run/docker.sock:/var/run/docker.sock \
               --name watchtower \
-              "${{ inputs.docker_tag }}"
-          fi
-          docker run --detach --restart always --network pmm-qa \
+              perconalab/watchtower:dev-latest
+          
+            docker run --detach --restart always --network pmm-qa \
+              -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+              --publish 80:8080 --publish 443:8443 \
+              -e PMM_ENABLE_TELEMETRY=0 \
+              -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ inputs.upgrade_tag }} \
+              -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
+              -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
+              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+          else
+            docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
             -e PMM_ENABLE_TELEMETRY=0 \
-            -e PMM_DEV_UPDATE_DOCKER_IMAGE=$UPGRADE_TAG \
-            -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
-            -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
-            -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
             --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+          fi
+          
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
