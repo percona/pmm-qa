@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     '--env', 'MINIO_ROOT_USER=minioadmin', '--env', 'MINIO_ROOT_PASSWORD=minioadmin',
     config.image, 'server', '/data', '--console-address', ':9001']));
   await retry('MinIO', () => docker(['exec', NAME, 'curl', '-fsS', 'http://127.0.0.1:9000/minio/health/live'], true), (result) => result.stdout.length === 0 && result.stderr.length === 0);
-  await step('Create buckets', () => docker(['run', '--rm', '--network', NETWORK, '--entrypoint', 'sh', 'minio/mc:latest', '-ceu',
+  await step('Create buckets', () => docker(['run', '--rm', '--network', NETWORK, '--entrypoint', 'sh', 'quay.io/minio/mc:latest', '-ceu',
     `mc alias set local http://${NAME}:9000 minioadmin minioadmin; ${config.buckets.map((bucket) => `mc mb --ignore-existing local/${bucket}`).join('; ')}`]));
 }
 
