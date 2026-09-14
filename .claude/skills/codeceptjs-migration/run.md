@@ -92,7 +92,7 @@ Failure routing:
 
 - locator failure -> reviewer;
 - migration logic failure -> writer;
-- environment or product failure -> keep `in-progress` and record the reason;
+- environment or product failure -> keep `in-progress` and record the reason. **Run the unmigrated source against the same environment before classifying a failure this way.** "The source would fail here too" is the whole claim, it is one command, and it decides whether the row stops or ships - on row 9 it converted an asserted diagnosis into a proved one and simultaneously exposed a real fidelity defect the gates had waved through (source counted 4 where the migration counted 6). If the source passes where the migration fails, the failure is yours;
 - stale environment state -> reset the state and rerun; this is not a code failure and does not re-enter review.
 
 Any code change requires the relevant review again before rerunning. Do not clean or recreate the environment after a failure.

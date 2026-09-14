@@ -147,7 +147,7 @@ and the path as separate arguments and is immune.
 
 A path absent from `origin/main` depends on an earlier still-unmerged sibling migration - typically a shared helper. Decide explicitly whether to carry the full file into this PR or hold.
 
-**File existence is not enough - compare the hunks.** For each changed path, read the region being edited with `git show "origin/main:<path>"` (quote the whole argument, or the MSYS2 mangling above applies). A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it; the existence check reports the path as present and says nothing.
+**File existence is not enough - compare the hunks.** For each changed path, read the region being edited with `git ls-tree` (or PowerShell). Quoting the whole `git show "origin/main:<path>"` argument does **not** defeat the MSYS2 mangling above - it still reaches git as `origin\main;...` and fails. A file can exist on `origin/main` while the specific block this migration edits does not, because a sibling's unmerged PR introduced it; the existence check reports the path as present and says nothing.
 
 When the block is missing, treat it as a missing file: create it in this PR scoped to this migration's own needs, or hold. Never import the sibling's version - that pulls an unmerged migration's CI changes in and can reference tags with no tests behind them.
 
@@ -320,7 +320,9 @@ When two coverage shapes are arguable, stop reasoning in prose and read the prec
 
 When retiring a CodeceptJS source, check every job whose grep matches its title tags, not only the one this migration touches. Report the tagged and active counts, counting by tag rather than by file and matching `Scenario(`, `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(`. If no active matches remain, delete the job in the same commit as the replacement Playwright coverage - empty selections otherwise pass silently.
 
-An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever.
+An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever. Cross-check the number against a plain tag grep before acting on it. A wrong count looks entirely plausible - a `^`-anchored regex without the `m` flag reported 8 `@nightly` scenarios on row 9 where the true figure was 53 - and nothing downstream contradicts it.
+
+**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR, on a job whose failures may page someone. When the tag is a broad bucket other jobs' tests also carry, the right fix is usually a narrower sub-bucket tag - the CodeceptJS side already does this with `@valkey-nightly`, `@pbm-nightly` and friends - rather than a wider grep. Row 9 widened `@dashboards` and pulled in 10 valkey tests whose own job had been commented out since it was added, so they had never run in CI at all.
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
@@ -429,7 +431,7 @@ RUN_URL=$(gh run list --workflow e2e-tests-matrix.yml --branch "$(git branch --s
 [ -n "$RUN_URL" ] && gh pr comment "$PR_NUM" --body "GitHub Actions: ${RUN_URL}"
 ```
 
-Include the run URL in the tracker Notes. Do not wait for CI to finish before marking `done`.
+Include the run URL in the PR body. Do not wait for CI to finish before marking `done`.
 
 ## Tracker completion and cleanup
 

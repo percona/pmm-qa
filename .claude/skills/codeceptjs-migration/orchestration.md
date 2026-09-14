@@ -63,7 +63,7 @@ The tell is `git merge-base HEAD origin/main` empty while control already carrie
 
 `tracker.md` runs to tens of kilobytes. Never read it whole: select the row with a scoped `grep`/`head` over the status column, and read only that row plus whichever header section you actually need.
 
-Before selecting a row, check the tracker for drift against the filesystem: list `codeceptjs-e2e/tests/**/*_test.js` and diff it against the tracker's `Source` column. Any file with no matching row is untracked drift - append it as a new `pending` row (Bucket/Env/Setup left blank pending confirmation from its `Before`/`BeforeSuite`/`Data(...)` hooks, Notes noting it was added by drift check) in its own tracker-only commit before proceeding. In test-run mode, report the drift without editing the tracker. Do not silently skip untracked files.
+Before selecting a row, check the tracker for drift against the filesystem: list `codeceptjs-e2e/tests/**/*_test.js` and diff it against the tracker's `Source` column. Any file with no matching row is untracked drift - append it as a new `pending` row (Bucket/Env/Setup left blank pending confirmation from its `Before`/`BeforeSuite`/`Data(...)` hooks) in its own tracker-only commit before proceeding. In test-run mode, report the drift without editing the tracker. Do not silently skip untracked files.
 
 Use this extraction verbatim rather than improvising one. `grep -P` is not reliably available here, and a `sed` backslash expression fails outright on Windows - either way the call exits with an empty result that reads exactly like a valid "no drift" answer:
 
@@ -90,7 +90,7 @@ Create this migration's timeline file (`mkdir -p .claude/migration-observations`
 
 The parent may explicitly designate a run as test-only (dry run). In that mode, use the existing graphs read-only and skip only:
 
-- the tracker `pending` -> `in-progress` -> `done` status writes and Notes updates;
+- the tracker `pending` -> `in-progress` -> `done` status writes;
 - the control-branch graph refreshes and commits;
 - Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR); and
 - the step 1 open-migration-PR check, which exists to prevent a publish-branch collision that cannot occur when no publish branch is cut. The `in-progress` and foreign-resource checks still apply.
@@ -126,7 +126,7 @@ Tracker and recovery bookkeeping for a batch:
 - Maintain one timeline file per row, as usual, plus one gate-ledger entry per gate spawn recording which rows that gate covered.
 - **Classify every changed path before publishing, because rows in a batch routinely share files.** A path is *row-exclusive* if exactly one row in the batch changed it (typically the migrated test and any POM or helper only it needs). A path is *batch-shared* if two or more rows changed it - which is the normal case for the workflow-coverage YAML (each row appends a tag) and for `e2e_tests/README.md` (the pre-commit hook regenerates it for every commit touching `e2e_tests/tests/**/*.ts`), and can also happen for a helper or API client two rows both extend.
 - **Do not batch two rows that edit the same region of a shared code file.** Overlapping hunks in one helper cannot be separated later, so the rows cannot be dropped independently. Compare each row's changed-path list against the others' after its writer pass; on an overlapping-hunk collision, split the batch rather than continuing.
-- If one row fails and cannot be fixed, drop just that row. Do not fail the whole batch, and never carry a known-broken row into the shared PR. Restore only that row's *exclusive* paths - restoring a batch-shared path erases the survivors' changes to it. Then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, let the pre-commit hook regenerate `README.md`, and re-verify selectability for the survivors since that YAML changed. Revert the dropped row to `pending` with a Notes entry.
+- If one row fails and cannot be fixed, drop just that row. Do not fail the whole batch, and never carry a known-broken row into the shared PR. Restore only that row's *exclusive* paths - restoring a batch-shared path erases the survivors' changes to it. Then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, let the pre-commit hook regenerate `README.md`, and re-verify selectability for the survivors since that YAML changed. Revert the dropped row to `pending`.
 
 ## 2a. Start provisioning in the background
 
@@ -189,7 +189,7 @@ Then verify the prepared environment:
 PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only
 ```
 
-After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If the environment becomes unreachable, keep the tracker `in-progress`, record the blocker and `provisioning-artifacts/` path in Notes, and stop instead of recreating it.
+After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If the environment becomes unreachable, keep the tracker `in-progress`, record the blocker and `provisioning-artifacts/` path on this migration's timeline, and stop instead of recreating it.
 
 ## Phase timeline
 

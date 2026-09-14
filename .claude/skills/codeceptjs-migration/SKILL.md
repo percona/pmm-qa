@@ -39,7 +39,7 @@ Preserve exactly:
 
 That list is exhaustive. A synchronization wait is a means, not one of the preserved behaviors, so which element it watches is governed by the locator ladder like any other locator - re-anchoring a load guard is not a fidelity change and needs no reviewer dispensation. What a wait does carry is its timeout budget; see Drop what is inert below.
 
-Titles are byte-identical **through the gates**, and that is what the invariant buys: a programmatic diff of the two title lists proves no scenario or data row was silently dropped or renamed. It is a migration-time check, not a permanent constraint on the file. Once both gates have passed, a reviewer may explicitly approve a clearer title. Make such a change only on an explicit reviewer request, in its own commit, and record it in the tracker Notes. Never retitle on your own judgement mid-migration: that is the silent rename the invariant exists to catch.
+Titles are byte-identical **through the gates**, and that is what the invariant buys: a programmatic diff of the two title lists proves no scenario or data row was silently dropped or renamed. It is a migration-time check, not a permanent constraint on the file. Once both gates have passed, a reviewer may explicitly approve a clearer title. Make such a change only on an explicit reviewer request, in its own commit, and record it in the PR body. Never retitle on your own judgement mid-migration: that is the silent rename the invariant exists to catch.
 
 Two parts of a title are load-bearing at runtime and survive any retitle verbatim:
 
@@ -48,10 +48,14 @@ Two parts of a title are load-bearing at runtime and survive any retitle verbati
 
 Only the descriptive middle is free text. Launchable does not key on it either, since it subsets by file rather than by test name. A data-driven suffix that imitates CodeceptJS's `DataTable` output is the usual thing worth rewriting, and hand-building that JSON is its own hazard: nothing escapes it, so a row whose value contains a quote or backslash diverges silently.
 
+Once both gates have passed, reduce a data-driven suffix to the single value that distinguishes the row - `| Disk Space Total`, not a JSON restatement of every field. A full-row suffix is long enough that artifact viewers cannot render the title, and it repeats data the row already carries. Row 9's reviewer asked for exactly this, and it is the normal end state rather than an exception.
+
 Do not add, remove, weaken, or improve coverage during migration.
 Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
 When unsure, keep the source syntax.
 That applies to syntax, never to locator form. A ported locator is migrated at the level of the **element**, not the selector string: once the live environment exists, re-derive each one at the highest rung of `playwright-practices.md`'s ladder that resolves to the same element, and keep the source selector only when nothing higher does. That the source uses it and is green today is evidence the **element** is right, never that the selector form is - CodeceptJS sources predate the ladder entirely, and a resolving locator is not the same thing as a well-formed one.
+
+**A migrated data row carries only what varies.** A `DataTable` column is not automatically a field on the migrated row. Drop a column whose value is fully determined by another one and derive it at the call site; move a column that is really a property of a page object onto that page object. Declare no interface or type alias for the row unless something references it - `as const` supplies the literal types. Row 9 shipped five fields where two carried information, and the reviewer caught every one of the other three.
 
 **Duplication is not behavior.** When the source repeats a block across scenarios, extract it. Execution order and cross-scenario state handoff are the behavior and must not change; the repetition is not.
 
@@ -113,6 +117,7 @@ Its `verifiedAgainst` version must match `e2e_tests/package.json`; `orchestratio
 The rules below are migration-specific and are not repeated there:
 
 - Reuse existing POMs, helpers, components, API clients, fixtures, and test data.
+- **A new page object matches the shape of its siblings in the same folder.** Read one before writing it. Row 9 declared `metrics` by mapping a separate `panelNames` const while every other dashboard in that folder declared the array inline; the reviewer asked the same question three times, once per file. An indirection no sibling uses is a new local idiom, and it needs a reason beyond taste.
 - When reusing existing code, follow section Minimal reuse diffs (expose in place; no duplicate delegates).
 - Port behavior, not CodeceptJS helper APIs.
 - Helpers should have one stable return type.
@@ -134,7 +139,7 @@ The rules below are migration-specific and are not repeated there:
   first. Row 6 added a two-line note on a one-line locator at an automated reviewer's request and the
   maintainer removed it on the next pass. The repo's own rule wins over a review suggestion, and the
   round trip is avoidable.
-- Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body and the tracker Notes, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
+- Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
 - Pin **every explicit source retry value exactly**, at the scope the source applied it; do not port `.retry(N)` as CodeceptJS syntax. No value of N survives being left unpinned: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so `.retry(1)` is not the CI default, `.retry(0)` silently gains 2, and any N > 2 silently loses retries. A source with no `.retry()` anywhere correctly inherits the config default.
   Scope matters, because Playwright has no per-test `retries` option and `pmmTest.describe.configure({ retries: N })` applies to everything in its enclosing scope:
@@ -142,7 +147,8 @@ The rules below are migration-specific and are not repeated there:
   - **Scenario-level** (`}).retry(N)` on an individual `Scenario`/`Data` block) where every retrying scenario in the file shares the same N and no scenario is meant to differ: file-scope `configure` is still equivalent, and is preferred over wrapping.
   - **Scenario-level with differing N across scenarios in one file**: wrap each affected scenario, or each group sharing one N, in its own `pmmTest.describe` with `configure({ retries: N })`. Never let a wrapper added for one scenario's retry count change a sibling's - that is the failure mode a file-scope `configure` causes here.
   A describe wrapper prefixes the test's full title. Keep the scenario title string byte-identical inside it, and re-run the per-scenario selectability check afterwards (`run.md` step 8): the destination grep matches against the full title, so a wrapper must be proven not to have broken selection.
-  Record the source N and the scope you applied it at in the tracker Notes. This is the "preserve exactly" invariant applied to retries, not a judgement call.
+  Record the source N and the scope you applied it at in the PR body. This is the "preserve exactly" invariant applied to retries, not a judgement call.
+- **An advisory or review finding copied into shipped prose keeps its hedges verbatim.** This repository squash-merges, so commit bodies land in `main` and outlive every memory of the conversation. On row 9 a gate advisory reading "its *only plausible* caller is cross-repository", naming no repository, was relayed as a flat fact naming one - and the named pipeline turned out to be the one that never ran the retiring scenarios. That cost two full final-gate rounds. Verify an attribution in-repo before writing it into a commit body, and if the evidence only supports a hedge, ship the hedge.
 - Do not migrate commented-out scenarios.
 - Migrate an explicitly skipped active scenario only according to the repository's established Playwright skip policy. Stop when no policy exists rather than inventing one.
 - Before migrating an `xScenario`, establish that it is still worth migrating, and record the answers: is its blocking ticket still open; is the behavior already covered elsewhere in either suite; does its assertion still match current product behavior. If any of the three fails, propose dropping it with that evidence instead of porting dead coverage - `tracker.md` already has a `retired` status for obsolete coverage, and this is its per-scenario counterpart. A skip carried forward on the source's authority alone can outlive its reason by years.

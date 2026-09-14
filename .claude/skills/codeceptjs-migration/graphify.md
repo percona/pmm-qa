@@ -31,6 +31,12 @@ It is not one. Per `.claude/skills/graphify/SKILL.md`, graphify needs no API key
   list, not `collect_files()`, so the doc/image `source_file`s are not pruned and their semantic nodes
   survive - then `build_merge([ast], graph_path=<existing>, prune_sources=<deleted files>, root='.')`.
   Pass `prune_sources` or a renamed/retired source leaves a ghost node behind.
+- **On the CodeceptJS side, run the injection-edge enrichment before merging.** graphify's own
+  `SKILL.md` runs `scripts/codeceptjs_injection_edges.py <ast.json> <root> <graph.json>` directly after
+  the AST step, and it is not optional here: CodeceptJS resolves page objects through runtime injection
+  rather than imports, so the AST pass alone cannot see them. Skipping it silently dropped 634 edges on
+  row 9 (3101 -> 2471) and the result still looked like a successful refresh. Re-running with the
+  enrichment restored exactly 3101. It mutates the AST json in place and is idempotent.
   A full pass legitimately shrinks the node count when it collapses exact duplicates the incremental
   path accumulated, and `to_json`'s shrink guard then refuses the write. Account for every node before
   overriding: on row 6 the -5 was exactly -5 duplicates, -1 pruned retired source, +1 renamed

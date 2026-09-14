@@ -13,7 +13,7 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
 - The `Tags` cell is a per-file **union** and is not what CI selects on - a source file's scenarios rarely all carry the same tag set. Before provisioning starts, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the row's `Tags` cell if the union was wrong or incomplete, and record the expansion on this migration's timeline. This is the same confirmation duty as `Env` and `Setup`, extended to the column every coverage decision starts from - a scenario whose real tags differ from the file's union is exactly what has already cost a full migration three extra final-review passes.
 - `Setup` is the planned `setup_services` argument set passed to `provisioning/setup.ts` (see `context.md` section Provisioning). Its `--database` spellings are accepted unchanged. Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
-  Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run and record the derived value in Notes. It does **not** map to a provisioner argument - `--db client` does not exist; see `orchestration.md` step 3 for what a `setupClient: true` row actually needs.
+  Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run and record the derived value in the PR body. It does **not** map to a provisioner argument - `--db client` does not exist; see `orchestration.md` step 3 for what a `setupClient: true` row actually needs.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
   each migration still owns and tears down its local Docker environment. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
@@ -22,7 +22,7 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
 Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
 `context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
 
-Merge `origin/main` into control and refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit. What is committed where after this point is owned by `branch-workflow.md` section What is committed where. After the migration's PR is opened, update the row on control and record the PR and pre-migration graph-refresh result in Notes.
+Merge `origin/main` into control and refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit. What is committed where after this point is owned by `branch-workflow.md` section What is committed where. After the migration's PR is opened, update the row on control with its status and PR link only; the pre-migration graph-refresh result and every other detail belong in the PR body.
 
 ## Status legend
 
@@ -161,4 +161,4 @@ Best-fit rule (Target column is a hint, not a mandate): `context.md` section 2a.
   instead of duplicating. Rows #13/#14 (Insight dashboards root vs dashboards/) are likely
   near-duplicates - reconcile into one target.
 - Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the local Docker PMM.
-  They stay `pending`; keep the required infrastructure in Notes until it is available.
+  They stay `pending`; name the required infrastructure in the row's Env column until it is available.
