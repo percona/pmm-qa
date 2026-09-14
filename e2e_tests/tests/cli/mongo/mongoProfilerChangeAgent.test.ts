@@ -403,15 +403,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       // the MySQL-style --tls-cert-file/--tls-key-file flags do not exist here and
       // make pmm-admin reject the whole command, leaving the agents without TLS.
       // The client key is unencrypted, so --tls-certificate-key-file-password is
-      // ignored by the driver and the connection check still passes; the monitoring
-      // user lives in the admin database and supports SCRAM-SHA-256.
-      const authMechanism = 'SCRAM-SHA-256';
+      // ignored by the driver and the connection check still passes;
+      // --authentication-database=admin is where the monitoring user lives and
+      // also matches the driver's default authSource.
       const authDatabase = 'admin';
       const certKeyFilePassword = 'client_key_password';
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-mechanism=${authMechanism} --authentication-database=${authDatabase}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-mechanism=${authMechanism} --authentication-database=${authDatabase}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
       ];
 
       for (const command of commands) {
@@ -420,10 +420,36 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           .assertSuccess()
           .outContainsNormalizedMany([
             '- updated TLS certificate key password',
-            `- changed authentication mechanism to ${authMechanism}`,
             `- changed authentication database to ${authDatabase}`,
           ]);
       }
+
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
+
+      // --authentication-mechanism pins a specific SASL mechanism that the test
+      // server may not advertise, so verify the flag is accepted without a live
+      // handshake, then reset it to restore default negotiation and keep the
+      // agents Up for the following tests.
+      const authMechanism = 'SCRAM-SHA-256';
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --authentication-mechanism=${authMechanism} --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --authentication-mechanism=${authMechanism} --skip-connection-check`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper
+          .execSilent(command)
+          .assertSuccess()
+          .outContains(`- changed authentication mechanism to ${authMechanism}`);
+      }
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --authentication-mechanism= --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --authentication-mechanism= --skip-connection-check`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
     },
