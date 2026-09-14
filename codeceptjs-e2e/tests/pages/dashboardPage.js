@@ -27,7 +27,6 @@ const ValkeyPersistenceDetailsDashboard = require('../pages/dashboards/valkey/va
 const ValkeyReplicationDashboard = require('../pages/dashboards/valkey/valkeyReplicationDashboard');
 const ValkeySlowlogDashboard = require('../pages/dashboards/valkey/valkeySlowlogDashboard');
 
-
 module.exports = {
   // insert your locators and methods here
   // setting locators
