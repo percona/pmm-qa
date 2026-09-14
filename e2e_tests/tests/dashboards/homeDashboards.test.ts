@@ -3,74 +3,15 @@ import pmmTest from '@fixtures/pmmTest';
 import { GetService, ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 
-type OsDashboardKey = 'diskDetails' | 'memoryDetails' | 'nodesOverview';
-
-interface PanelRow {
-  dashboard: OsDashboardKey;
-  dashboardName: string;
-  dashboardType: 'multipleNodes' | 'singleNode';
-  panelName: string;
-  titleSuffix: string;
-}
-
-const panels: PanelRow[] = [
-  {
-    dashboard: 'diskDetails',
-    dashboardName: 'Disk Details',
-    dashboardType: 'singleNode',
-    panelName: 'Disk Space Total',
-    titleSuffix:
-      '{"panelName":"Disk Space Total","dashboardType":"singleNode","dashboardName":"Disk Details","dashboard":"osDiskDetails"}',
-  },
-  {
-    dashboard: 'diskDetails',
-    dashboardName: 'Disk Details',
-    dashboardType: 'singleNode',
-    panelName: 'Disk Reads',
-    titleSuffix:
-      '{"panelName":"Disk Reads","dashboardType":"singleNode","dashboardName":"Disk Details","dashboard":"osDiskDetails"}',
-  },
-  {
-    dashboard: 'diskDetails',
-    dashboardName: 'Disk Details',
-    dashboardType: 'singleNode',
-    panelName: 'Disk Writes',
-    titleSuffix:
-      '{"panelName":"Disk Writes","dashboardType":"singleNode","dashboardName":"Disk Details","dashboard":"osDiskDetails"}',
-  },
-  {
-    dashboard: 'memoryDetails',
-    dashboardName: 'Memory Details',
-    dashboardType: 'singleNode',
-    panelName: 'Total RAM',
-    titleSuffix:
-      '{"panelName":"Total RAM","dashboardType":"singleNode","dashboardName":"Memory Details","dashboard":"osMemoryDetails"}',
-  },
-  {
-    dashboard: 'nodesOverview',
-    dashboardName: 'Nodes Overview',
-    dashboardType: 'multipleNodes',
-    panelName: 'Virtual Memory Total',
-    titleSuffix:
-      '{"panelName":"Virtual Memory Total","dashboardType":"multipleNodes","dashboardName":"Nodes Overview","dashboard":"osNodesOverview"}',
-  },
-  {
-    dashboard: 'nodesOverview',
-    dashboardName: 'Nodes Overview',
-    dashboardType: 'multipleNodes',
-    panelName: 'Monitored Nodes',
-    titleSuffix:
-      '{"panelName":"Monitored Nodes","dashboardType":"multipleNodes","dashboardName":"Nodes Overview","dashboard":"osNodesOverview"}',
-  },
-  {
-    dashboard: 'nodesOverview',
-    dashboardName: 'Nodes Overview',
-    dashboardType: 'multipleNodes',
-    panelName: 'Total Virtual CPUs',
-    titleSuffix:
-      '{"panelName":"Total Virtual CPUs","dashboardType":"multipleNodes","dashboardName":"Nodes Overview","dashboard":"osNodesOverview"}',
-  },
-];
+const panels = [
+  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Space Total' },
+  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Reads' },
+  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Writes' },
+  { dashboard: 'memoryDetails', dashboardName: 'Memory Details', panelName: 'Total RAM' },
+  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Virtual Memory Total' },
+  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Monitored Nodes' },
+  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Total Virtual CPUs' },
+] as const;
 const countServicesOfType = (services: GetService[], serviceType: ServiceType) =>
   services.filter((service) => service.service_type === serviceType).length;
 
@@ -83,9 +24,10 @@ pmmTest.describe(() => {
 
   for (const panel of panels) {
     pmmTest(
-      `PMM-T1565 - Verify ability to access OS dashboards with correct filter setup from Home Dashboard @nightly  @dashboards | ${panel.titleSuffix}`,
+      `PMM-T1565 - Verify ability to access OS dashboards with correct filter setup from Home Dashboard @nightly  @dashboards | ${panel.panelName}`,
       async ({ dashboard, page, urlHelper }) => {
         const osDashboard = dashboard.os[panel.dashboard];
+        const isSingleNode = panel.dashboard !== 'nodesOverview';
         const panelDataLink = dashboard.builders
           .panelByExactName(panel.panelName)
           .getByTestId('data-testid Data link');
@@ -108,12 +50,11 @@ pmmTest.describe(() => {
           });
         });
 
-        const expectedNodeNames =
-          panel.dashboardType === 'singleNode'
-            ? [...nodeNames].sort()[0]
-            : (await dashboard.builders.selectedVariableValues('Node Name').allTextContents()).join('');
+        const expectedNodeNames = isSingleNode
+          ? [...nodeNames].sort()[0]
+          : (await dashboard.builders.selectedVariableValues('Node Name').allTextContents()).join('');
         const nodeFilterMatches = (selectedValues: string[]) =>
-          panel.dashboardType === 'singleNode'
+          isSingleNode
             ? selectedValues.join('').includes(expectedNodeNames)
             : selectedValues.join('') === expectedNodeNames;
         const popupPromise = page.waitForEvent('popup');
