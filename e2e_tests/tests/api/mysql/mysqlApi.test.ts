@@ -7,7 +7,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2095 - Verify all agents for Mysql have status Running @nightly @pmm-ps-integration',
+  'PMM-T2095 - Verify all agents for Mysql have status Running @pmm-ps-integration',
   async ({ api }) => {
     const serviceList = await api.inventoryApi.getServicesByType(ServiceType.mysql);
 
