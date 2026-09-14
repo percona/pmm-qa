@@ -151,9 +151,10 @@ jobs:
               -e WATCHTOWER_DEBUG=1 \
               -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
               -e WATCHTOWER_HTTP_API_UPDATE=1 \
+              -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ inputs.upgrade_tag }} \
               --volume /var/run/docker.sock:/var/run/docker.sock \
               --name watchtower \
-              perconalab/watchtower:dev-latest
+              "${{ inputs.docker_tag }}"
           fi
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
