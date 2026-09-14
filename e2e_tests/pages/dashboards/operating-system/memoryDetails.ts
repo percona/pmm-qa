@@ -44,5 +44,6 @@ export default class MemoryDetailsDashboard implements DashboardInterface {
     { name: 'Steal Direct', type: 'unknown' },
     { name: 'Steal Kswapd', type: 'unknown' },
   ];
+  name = 'Memory Details';
   noDataMetrics: string[] = [];
 }

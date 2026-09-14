@@ -4,13 +4,13 @@ import { GetService, ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 
 const panels = [
-  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Space Total' },
-  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Reads' },
-  { dashboard: 'diskDetails', dashboardName: 'Disk Details', panelName: 'Disk Writes' },
-  { dashboard: 'memoryDetails', dashboardName: 'Memory Details', panelName: 'Total RAM' },
-  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Virtual Memory Total' },
-  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Monitored Nodes' },
-  { dashboard: 'nodesOverview', dashboardName: 'Nodes Overview', panelName: 'Total Virtual CPUs' },
+  { dashboard: 'diskDetails', panelName: 'Disk Space Total' },
+  { dashboard: 'diskDetails', panelName: 'Disk Reads' },
+  { dashboard: 'diskDetails', panelName: 'Disk Writes' },
+  { dashboard: 'memoryDetails', panelName: 'Total RAM' },
+  { dashboard: 'nodesOverview', panelName: 'Virtual Memory Total' },
+  { dashboard: 'nodesOverview', panelName: 'Monitored Nodes' },
+  { dashboard: 'nodesOverview', panelName: 'Total Virtual CPUs' },
 ] as const;
 const countServicesOfType = (services: GetService[], serviceType: ServiceType) =>
   services.filter((service) => service.service_type === serviceType).length;
@@ -69,7 +69,7 @@ pmmTest.describe(() => {
 
         await popup.close();
         await page.goto(osDashboardUrl);
-        await expect(dashboard.builders.dashboardTitle(panel.dashboardName)).not.toHaveCount(0, {
+        await expect(dashboard.builders.dashboardTitle(osDashboard.name)).not.toHaveCount(0, {
           timeout: Timeouts.ONE_MINUTE,
         });
         await expect
@@ -79,7 +79,7 @@ pmmTest.describe(() => {
                 await dashboard.builders.selectedVariableValues('Node Name').allTextContents(),
               ),
             {
-              message: `${panel.dashboardName} should keep the Node Name filter "${expectedNodeNames}" selected`,
+              message: `${osDashboard.name} should keep the Node Name filter "${expectedNodeNames}" selected`,
               timeout: Timeouts.TWENTY_SECONDS,
             },
           )

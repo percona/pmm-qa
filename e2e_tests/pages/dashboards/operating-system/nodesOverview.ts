@@ -87,5 +87,6 @@ export default class NodesOverviewDashboard implements DashboardInterface {
     { name: 'Top 5 Local Network Drop', type: 'unknown' },
     { name: 'Drop', type: 'unknown' },
   ];
+  name = 'Nodes Overview';
   noDataMetrics: string[] = [];
 }

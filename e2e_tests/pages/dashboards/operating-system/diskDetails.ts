@@ -14,5 +14,6 @@ export default class DiskDetailsDashboard implements DashboardInterface {
     { name: 'Avg Disks Operations Merge Ratio', type: 'unknown' },
     { name: 'Disk IO Size', type: 'unknown' },
   ];
+  name = 'Disk Details';
   noDataMetrics: string[] = [];
 }
