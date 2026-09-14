@@ -154,14 +154,22 @@ Keep candidates only when **all** conditions hold:
    Assert a deterministic public result at the layer where the defect matters: API response, persisted state, CLI result, permission decision, exporter flag, metric, supported UI behavior, or other owning layer.
 
 5. **Value exceeds cost**
-   User/product impact justifies setup, runtime, credentials, and maintenance burden. If valuable but automation cost is the only blocker, route to Manual only and name the blocker.
+   User/product impact justifies setup, runtime, credentials, and maintenance burden. If valuable but automation cost is the only blocker, mark it Manual and name the blocker.
 
 6. **Blast-radius relevance**
    The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.
 
 Reject candidates that test an upstream component rather than PMM's contract with it, or values PMM only passes through without adding a contract. Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break," and assertions such as "works," "page loads," "success," "non-zero exit," or "error appears." This gate is the authoritative refusal policy.
 
-Each surviving case must have controlled preconditions, bounded waits, cleanup when it changes state, and one primary failure signal.
+Each surviving case must be deterministic and outcome-focused. All five hold, for a manual case as much as an automated one:
+
+1. **Verify its preconditions.** Assert the starting state rather than assuming it. A case that silently runs from the wrong state reports a defect that is not there, or hides one that is.
+2. **Modify only explicitly identified test-owned state.** Name the exact row, service, agent, or file the case created, and address it by an identifier the case itself captured. `select max(id)`, "the most recent row", "the first service in the list" and similar are races against anything else using the environment — capture the identifier at setup and use it.
+3. **Synchronize on observable events, not fixed sleeps.** Wait for the request, the status transition, the log line, or the metric to appear. When asserting an absence, bound the window with an observable event too — a completed poll cycle, a settled network, a second request that has since succeeded — and say which.
+4. **Assert the intended result and the prohibited side effects.** The result alone passes when the product reaches it the wrong way. Name what must *not* happen: no redirect, no second write, no error notification, no extra request, no state left behind.
+5. **Restore the original state in cleanup, including when the case fails.** Put restoration where a failure cannot skip it, and say what it restores. A case that changes state only on the happy path poisons every later case in the same environment.
+
+One primary failure signal per case still applies. A case that cannot meet all five without contriving its setup is telling you the behavior is not deterministically testable at that layer — mark it Manual and say which point it fails, or move the assertion to a layer where it holds.
 
 For each surviving case, confirm on the base branch that every pre-existing metric, label, field, endpoint, or other oracle input exists. Read the base branch only for inputs in files the change did not touch; a diff already read shows the base side of the rest. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
 
@@ -175,55 +183,47 @@ Assign priority from failure impact, not ticket priority:
 
 Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test.
 
+Then mark each case `Needs automation` or `Manual`. Automation is a standing maintenance cost, so it is the exception, not the reward for a good case.
+
+Mark `Needs automation` only when all of these hold:
+
+- the setup and the oracle are deterministic, with no timing race and no dependence on a restart, upgrade, or other multi-minute wait;
+- it runs in the cheapest environment that can host it, and the suite for that environment already exists;
+- existing helpers and page objects already reach the setup and the oracle, or the gap is one small helper;
+- the behavior will keep changing, so the test keeps earning its upkeep.
+
+Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; it depends on a race, a restart, or wall-clock waiting; or it is a one-off verification for this ticket that no later change will regress.
+
 ### 9. Produce the review draft and stop
 
 Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case.
+
+The draft is the cases plus the few lines a reader needs to trust them. The impact and failure model, the behavior inventory, the existing-coverage search, and the drop reasons are working notes: they decide what gets written, and they stay out of the draft unless the user asks for them.
 
 Use this review structure:
 
 ```markdown
 ## <PMM-XXXX or feature> — test cases
 
-Basis: <ticket summary or feature> · PRs: <repo#number or none> · Version: <version>
+<Two to five lines of prose. What the change actually is in behavior terms; any correction to
+the ticket's own How to test; any coverage the search could not reach. Nothing else — no
+headings, no tables, no restating a case the reader is about to read.>
 
-### Findings
+| # | Case | Pri | Env | Status |
+| --- | --- | --- | --- | --- |
+| <N> | <short title> | <High \| Normal \| Low> | <Docker \| HA \| CLI \| …> | <Needs automation \| Manual> |
 
-- <contract conflict, ambiguity, missing behavior, inaccessible dependency, or unsupported assumption>
+---
 
-### Impact and failure model
-
-| Behavior | Affected path / dependency | Failure hypothesis | Evidence |
-| --- | --- | --- | --- |
-| <changed behavior> | <trigger -> state -> consumer> | <specific defect> | <AC / PR / bug / invariant> |
-
-### Implementation coverage
-
-| Behavior | Source | Accounted for |
-| --- | --- | --- |
-| <what changed, in behavior terms> | <repo#PR — file or symbol / implementation unavailable> | <proposed-case title / PMM-T key / dropped: reason> |
-
-### Existing coverage
-
-- <covered behavior> — <PMM-T key or path:line> — <assertion or missing assertion to extend>
-
-### Proposed cases
-
-<one test-case-template block per new case>
-
-### Manual only
-
-<one test-case-template block per manual case, followed by `Automation blocker: <reason>`>
-
-### Considered and dropped
-
-- <candidate> — <covered / duplicate mechanism / no evidence / nondeterministic / cost exceeds value>
+<one test-case-template block per case, numbered and ordered as in the table>
 ```
 
-Keep the impact table concise: include only changed behaviors and failure hypotheses that materially influenced coverage decisions.
+Keep the prose honest and short: a wrong command in the ticket, a rejected root-cause hypothesis, or an unreachable evidence source is worth a line each; nothing else is.
 
-Implementation coverage must contain one row per behavior inventory entry and resolve it to the exact proposed-case title, existing coverage, or a stated drop reason.
-
-Omit empty Findings, Existing coverage, Proposed cases, Manual only, and Considered and dropped sections. Always include Impact and failure model and Implementation coverage.
+Every behavior inventory entry must still resolve to a case in the table, to named existing
+coverage, or to a drop reason you can state on request. Say in one line that cases were dropped
+and why in the aggregate — "the rest of the PR is unit-covered and does not earn an e2e" — rather
+than listing each candidate.
 
 Zero proposed cases is valid when existing coverage already catches every meaningful identified defect.
 

@@ -45,7 +45,7 @@ Where the value is observable only at runtime, resolve it as a design-time prefl
 
 Check the candidate test's tags against `.github/workflows/`. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
 
-A lane must also produce the required engine/client version, dataset shape, topology, and tools. Put version and data requirements in Preconditions. If no lane can run the case at all, report that as a Finding and route the case to Manual only rather than dropping it.
+A lane must also produce the required engine/client version, dataset shape, topology, and tools. Put version and data requirements in Preconditions. If no lane can run the case at all, report that as a Finding and mark the case Manual rather than dropping it.
 
 ## Zephyr
 
