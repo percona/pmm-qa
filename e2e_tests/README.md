@@ -117,7 +117,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@settings`
 - `@standalone`
 - `@user-password`
-- `@valkey-nightly`
 
 <!-- E2E-TAGS-END -->
 

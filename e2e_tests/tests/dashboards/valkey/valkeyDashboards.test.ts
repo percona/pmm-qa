@@ -10,7 +10,7 @@ const valkeyDashboardNames = Object.keys(ValkeyDashboards) as (keyof typeof Valk
 
 for (const dashboardName of valkeyDashboardNames) {
   pmmTest(
-    `PMM-T2087 - ${dashboardName} dashboard metrics @valkey-nightly @dashboards @pmm-valkey-integration`,
+    `PMM-T2087 - ${dashboardName} dashboard metrics @nightly @dashboards @pmm-valkey-integration`,
     async ({ api, dashboard, page, urlHelper }) => {
       const serviceList = await api.inventoryApi.getServicesByType(ServiceType.valkey);
       const cluster = serviceList[0].cluster;

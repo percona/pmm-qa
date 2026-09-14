@@ -138,9 +138,8 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
 
-  # Migrated CodeceptJS scenarios keep their original nightly tag so coverage
-  # stays equivalent once the CodeceptJS source retires. Database-specific
-  # nightly tests use their own tags and remain outside this generic bucket.
+  # Migrated CodeceptJS scenarios and existing Playwright nightly tests share
+  # the @nightly tag, so one Playwright bucket selects all of them.
   test_execution_playwright:
     # Name must start with "test execution / " -- the setup shards' own wait
     # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
