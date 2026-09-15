@@ -145,29 +145,24 @@ export default class GrafanaApi {
     return result.frames[0]?.data.values ?? [];
   };
 
-  waitForAnyMetric = async (metricNames: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     const deadline = Date.now() + timeout;
 
     while (true) {
-      for (const metricName of metricNames) {
-        const metric = await this.getMetric(metricName);
+      const metric = await this.getMetric(metricName);
 
-        if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
-      }
+      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 
-      // Against the wall clock, not a sleep counter: each pass issues one query per name, so
-      // counting only the sleeps overshoots the timeout by however long the queries took.
+      // Against the wall clock, not a count of sleeps, which leaves the time spent in
+      // getMetric outside the budget.
       const remaining = deadline - Date.now();
 
       if (remaining <= 0) {
-        throw new Error(`Timed out waiting for metric data for any of: ${metricNames.join(', ')}`);
+        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
       }
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
       await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
     }
   };
-
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) =>
-    this.waitForAnyMetric([metricName], timeout);
 }
