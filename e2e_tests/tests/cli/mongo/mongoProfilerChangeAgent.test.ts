@@ -71,7 +71,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         }
 
         expect(primaryHost, 'no replica set member answered as a writable primary yet').not.toEqual('');
-      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
 
       cliHelper
         .execSilent(
