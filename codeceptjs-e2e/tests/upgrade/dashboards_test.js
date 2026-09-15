@@ -9,8 +9,8 @@ Before(async ({ I }) => {
 Scenario(
   'PMM-T391 + PMM-T1818 - Verify user is able to create and set custom home dashboard @pre-dashboards-upgrade',
   async ({
-           I, grafanaAPI, dashboardPage, searchDashboardsModal,
-         }) => {
+    I, grafanaAPI, dashboardPage, searchDashboardsModal,
+  }) => {
     const insightFolder = await grafanaAPI.lookupFolderByName(searchDashboardsModal.folders.insight.name);
 
     await grafanaAPI.createCustomDashboard(grafanaAPI.randomDashboardName, insightFolder.id, null, ['pmm-qa', grafanaAPI.randomTag]);
@@ -41,8 +41,8 @@ Scenario(
 Scenario(
   'PMM-12587-1 Verify duplicate dashboards dont break after upgrade @pre-dashboards-upgrade',
   async ({
-           I, grafanaAPI, searchDashboardsModal,
-         }) => {
+    I, grafanaAPI, searchDashboardsModal,
+  }) => {
     const insightFolder = await grafanaAPI.lookupFolderByName(searchDashboardsModal.folders.insight.name);
     const experimentalFolder = await grafanaAPI.lookupFolderByName(searchDashboardsModal.folders.experimental.name);
 
@@ -90,8 +90,8 @@ Scenario(
 Scenario(
   'PMM-T998 - Verify dashboard folders after upgrade @post-dashboards-upgrade',
   async ({
-           I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
-         }) => {
+    I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
+  }) => {
     await homePage.open();
     I.waitForVisible(locate('a').withText('Dashboards'));
     I.click(locate('a').withText('Dashboards'));
@@ -107,8 +107,8 @@ Scenario(
 Scenario(
   'PMM-T1091 - Verify PMM Dashboards folders are correct @post-dashboards-upgrade',
   async ({
-           I, searchDashboardsModal,
-         }) => {
+    I, searchDashboardsModal,
+  }) => {
     I.amOnPage(searchDashboardsModal.url);
 
     searchDashboardsModal.waitForOpened();
@@ -124,8 +124,8 @@ Scenario(
 Scenario(
   'PMM-T1003 - Verify UI upgrade with Custom dashboard @post-dashboards-upgrade',
   async ({
-           I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
-         }) => {
+    I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
+  }) => {
     await homePage.open();
     I.waitForVisible(locate('a').withText('Dashboards'), 10);
     I.click(locate('a').withText('Dashboards'));
@@ -154,8 +154,8 @@ Scenario(
 Scenario(
   'PMM-12587-2 Verify duplicate dashboards dont break after upgrade @post-dashboards-upgrade',
   async ({
-           I, grafanaAPI, dashboardPage,
-         }) => {
+    I, grafanaAPI, dashboardPage,
+  }) => {
     const resp = JSON.parse(await I.readFileSync('/home/ec2-user/workspace/pmm3-upgrade-test-runner/dashboard.json', false));
 
     const resp1 = await grafanaAPI.getDashboard(resp.DASHBOARD1_UID);

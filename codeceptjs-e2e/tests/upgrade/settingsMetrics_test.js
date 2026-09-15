@@ -55,10 +55,10 @@ Data(clientDbServices)
   .Scenario(
     'Check Metrics for Client Nodes [critical] @post-settings-metrics-upgrade @post-client-upgrade',
     async ({
-             inventoryAPI,
-             grafanaAPI,
-             current,
-           }) => {
+      inventoryAPI,
+      grafanaAPI,
+      current,
+    }) => {
       const metricName = current.metric;
       const apiServiceDetails = await inventoryAPI.getServiceDetailsByPartialName(current.name);
 

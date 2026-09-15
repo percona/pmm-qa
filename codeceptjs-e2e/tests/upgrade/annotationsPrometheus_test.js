@@ -18,8 +18,8 @@ Before(async ({ I }) => {
 Data(clientDbServices).Scenario(
   'Adding annotation before upgrade At service Level @pre-annotations-prometheus-upgrade',
   async ({
-           annotationAPI, inventoryAPI, current,
-         }) => {
+    annotationAPI, inventoryAPI, current,
+  }) => {
     const {
       serviceType, name, annotationName,
     } = current;
@@ -35,8 +35,8 @@ Data(clientDbServices).Scenario(
 Data(clientDbServices).Scenario(
   'Verify added Annotations at service level, also available post upgrade @post-client-upgrade @post-annotations-prometheus-upgrade',
   async ({
-           I, dashboardPage, current, inventoryAPI,
-         }) => {
+    I, dashboardPage, current, inventoryAPI,
+  }) => {
     const {
       serviceType, name, annotationName, dashboard,
     } = current;

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { SERVICE_TYPE, isOvFAmiJenkinsJob} = require('../helper/constants');
+const { SERVICE_TYPE, isOvFAmiJenkinsJob } = require('../helper/constants');
 
 Feature('PMM upgrade tests for custom password');
 const { dashboardPage } = inject();
@@ -13,8 +13,8 @@ clientDbServices.add([SERVICE_TYPE.MONGODB, 'rs101', 'mongodb_connections', 'ann
 Data(clientDbServices).Scenario(
   'Adding custom agent password, custom label before upgrade at service Level @pre-custom-password-upgrade',
   async ({
-           I, inventoryAPI, current, credentials,
-         }) => {
+    I, inventoryAPI, current, credentials,
+  }) => {
     const {
       serviceType, name, upgrade_service,
     } = current;
@@ -54,8 +54,8 @@ Data(clientDbServices).Scenario(
 Data(clientDbServices).Scenario(
   'Verify if Agents added with custom password and custom label work as expected Post Upgrade @post-client-upgrade @post-custom-password-upgrade',
   async ({
-           current, inventoryAPI, grafanaAPI,
-         }) => {
+    current, inventoryAPI, grafanaAPI,
+  }) => {
     const {
       serviceType, metric, upgrade_service,
     } = current;

@@ -13,8 +13,8 @@ const redisServiceName = 'pmm-ui-tests-redis-external-remote';
 Scenario(
   'Adding Redis as external Service before Upgrade @pre-external-upgrade',
   async ({
-           I, addInstanceAPI,
-         }) => {
+    I, addInstanceAPI,
+  }) => {
     await addInstanceAPI.addExternalService(redisServiceName);
     await I.verifyCommand(
       `docker exec external_pmm pmm-admin add external --listen-port=42200 --group="redis" --custom-labels="testing=redis" --service-name=${redisServiceName}-2`,
@@ -38,8 +38,8 @@ Data(remoteUpgradeInstances).Scenario(
 Scenario(
   'Verify Redis as external Service Works After Upgrade @post-external-upgrade @post-client-upgrade',
   async ({
-           I, grafanaAPI, remoteInstancesHelper,
-         }) => {
+    I, grafanaAPI, remoteInstancesHelper,
+  }) => {
     const metricName = 'redis_uptime_in_seconds';
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
 

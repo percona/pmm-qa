@@ -15,8 +15,8 @@ Before(async ({ I }) => {
 Scenario(
   'PMM-T577 - Verify user is able to see IA alerts before upgrade @pre-advisors-alerting-upgrade',
   async ({
-           settingsAPI, rulesAPI, alertsAPI,
-         }) => {
+    settingsAPI, rulesAPI, alertsAPI,
+  }) => {
     await settingsAPI.changeSettings({ alerting: true });
     await rulesAPI.removeAllAlertRules(true);
     const ruleFolder = 'MySQL';
@@ -31,9 +31,9 @@ Scenario(
 Scenario(
   'Change advisors intervals before the upgrade @pre-advisors-alerting-upgrade',
   async ({
-           I,
-           advisorsPage,
-         }) => {
+    I,
+    advisorsPage,
+  }) => {
     I.amOnPage(advisorsPage.urlConfiguration);
     I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
     I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -45,9 +45,9 @@ Scenario(
 );
 
 Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async ({
-                                                                                   I,
-                                                                                   advisorsPage,
-                                                                                 }) => {
+  I,
+  advisorsPage,
+}) => {
   if (beforeUpgradePmmVersion > 340) {
     I.amOnPage(advisorsPage.urlConfiguration);
     I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -61,9 +61,9 @@ Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async 
 Scenario(
   'Verify advisors intervals remain the same after upgrade @post-advisors-alerting-upgrade',
   async ({
-           I,
-           advisorsPage,
-         }) => {
+    I,
+    advisorsPage,
+  }) => {
     I.amOnPage(advisorsPage.urlConfiguration);
     I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
     I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -76,9 +76,9 @@ Scenario(
 Scenario(
   'Verify disabled advisor remain disabled after upgrade @post-advisors-alerting-upgrade',
   async ({
-           I,
-           advisorsPage,
-         }) => {
+    I,
+    advisorsPage,
+  }) => {
     if (beforeUpgradePmmVersion > 340) {
       I.amOnPage(advisorsPage.urlConfiguration);
       I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -97,9 +97,9 @@ const frequentInterval = '2';
 Scenario(
   'Set settings for intervals before the upgrade @pre-advisors-alerting-upgrade',
   async ({
-           I,
-           pmmSettingsPage,
-         }) => {
+    I,
+    pmmSettingsPage,
+  }) => {
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
     I.fillField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
@@ -115,9 +115,9 @@ Scenario(
 Scenario(
   'Verify settings for intervals remain the same after upgrade @post-advisors-alerting-upgrade',
   async ({
-           I,
-           pmmSettingsPage,
-         }) => {
+    I,
+    pmmSettingsPage,
+  }) => {
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.switchTo();
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
@@ -131,8 +131,8 @@ Scenario(
 Scenario(
   'PMM-T577 Verify user can see IA alerts after upgrade @post-advisors-alerting-upgrade',
   async ({
-           I, alertsPage, alertsAPI,
-         }) => {
+    I, alertsPage, alertsAPI,
+  }) => {
     const alertName = 'Node high CPU load';
 
     I.amOnPage(alertsPage.url);
@@ -150,8 +150,8 @@ Scenario(
 Scenario(
   'PMM-T268 - Verify Failed check singlestats after upgrade from old versions @post-advisors-alerting-upgrade',
   async ({
-           I, homePage,
-         }) => {
+    I, homePage,
+  }) => {
     await homePage.open();
     I.dontSeeElement(homePage.fields.sttDisabledFailedChecksPanelSelector);
     I.waitForVisible(homePage.fields.failedChecksPanelContent, 30);
