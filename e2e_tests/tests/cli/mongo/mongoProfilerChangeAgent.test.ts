@@ -42,29 +42,41 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1001 - Verify Change agent username and password @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
+      const replicaSetMembers = ['rs101', 'rs102', 'rs103'];
       const monitoringRoles =
         '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
-      const mongoEval = (js: string) =>
-        `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval '${js}'`;
+      // Direct connection to a specific member sidesteps replica-set discovery,
+      // which from inside the container resolves the primary to loopback and makes
+      // mongosh abort with "ECONNREFUSED 127.0.0.1:27017" during an election.
+      const mongoEval = (host: string, js: string) =>
+        `docker exec ${containerName} mongo "mongodb://root:root@${host}:27017/?authSource=admin&directConnection=true" --quiet --eval '${js}'`;
+      // createUser must run on the primary, but rs101 (priority 2) is not always
+      // the primary when the suite starts -- a mongod restart/election can leave it
+      // down or a secondary while another member holds the primary. Find whichever
+      // member currently answers as the writable primary rather than assuming rs101.
+      let primaryHost = '';
 
-      // Talk straight to rs101 (the priority-2 primary) with a direct connection
-      // instead of driving replica-set discovery: from inside the container the
-      // discovered primary resolves to loopback, so a mongod restart/election makes
-      // mongosh abort the whole command with "ECONNREFUSED 127.0.0.1:27017" even
-      // when the local mongod is up. createUser must run on the primary, so wait
-      // until rs101 answers as a writable primary before creating the user.
       await expect(() => {
-        cliHelper
-          .execSilent(
-            mongoEval('if (!db.hello().isWritablePrimary) throw new Error("rs101 is not primary yet")'),
-          )
-          .assertSuccess();
+        primaryHost = '';
+
+        for (const host of replicaSetMembers) {
+          const result = cliHelper.execSilent(
+            mongoEval(host, 'if (db.hello().isWritablePrimary) { print("isWritablePrimary") }'),
+          );
+
+          if (result.code === 0 && result.stdout.includes('isWritablePrimary')) {
+            primaryHost = host;
+            break;
+          }
+        }
+
+        expect(primaryHost, 'no replica set member answered as a writable primary yet').not.toEqual('');
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
 
       cliHelper
         .execSilent(
           mongoEval(
+            primaryHost,
             `db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`,
           ),
         )
@@ -78,7 +90,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).outContains('Authentication failed'));
 
       cliHelper.execSilent(
-        mongoEval(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`),
+        mongoEval(
+          primaryHost,
+          `db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`,
+        ),
       );
 
       commands = [
