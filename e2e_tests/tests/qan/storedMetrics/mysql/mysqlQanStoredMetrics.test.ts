@@ -8,7 +8,8 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   // --skip-comments is required: the 8.4 client preserves comments by default (older ones
   // stripped them), so the seed file's comment lines reach the slow log as statements with an
   // empty fingerprint and QAN then reports one query more than the file actually contains.
-  const result = cliHelper.execSilent(`docker exec -i ${containerName} mysql --skip-comments -h 127.0.0.1 --port 3306 \
+  const result =
+    cliHelper.execSilent(`docker exec -i ${containerName} mysql --skip-comments -h 127.0.0.1 --port 3306 \
                                                           -u ${credentials.perconaServer.ps_84.username} \
                                                           -p${credentials.perconaServer.ps_84.password} \
                                                           < \${PWD}/testdata/PMM-T1897.sql`);

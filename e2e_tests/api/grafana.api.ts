@@ -149,8 +149,9 @@ export default class GrafanaApi {
     let iterator = 0;
 
     while (true) {
-      if (iterator > timeout)
+      if (iterator > timeout) {
         throw new Error(`Timed out waiting for metric data for any of: ${metricNames.join(', ')}`);
+      }
 
       for (const metricName of metricNames) {
         const metric = await this.getMetric(metricName);
