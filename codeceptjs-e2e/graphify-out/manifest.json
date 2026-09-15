@@ -439,11 +439,6 @@
     "ast_hash": "33a48853442f47cfd1d205806003d601",
     "semantic_hash": "33a48853442f47cfd1d205806003d601"
   },
-  "tests/dashboards/verifyHomeDashboards_test.js": {
-    "mtime": 1784571729.1448226,
-    "ast_hash": "f47d45e5b1be6888b86cb954f1d1f02b",
-    "semantic_hash": "f47d45e5b1be6888b86cb954f1d1f02b"
-  },
   "tests/dashboards/verifyInsightDashboards_test.js": {
     "mtime": 1784571729.1468308,
     "ast_hash": "38d1a7cb0162dfba66584b5002a653a3",
@@ -800,9 +795,9 @@
     "semantic_hash": "63d18840f42a8c5c3673da0bf4b2ef9c"
   },
   "tests/pages/dashboardPage.js": {
-    "mtime": 1788988052.9515824,
-    "ast_hash": "e7d046edda2d1e5ce23076ac26cf0aef",
-    "semantic_hash": "e7d046edda2d1e5ce23076ac26cf0aef"
+    "mtime": 1789506477.6458046,
+    "ast_hash": "0353a06e631ffcdbea548e16839cc2da",
+    "semantic_hash": "0353a06e631ffcdbea548e16839cc2da"
   },
   "tests/pages/dashboards/components/DashboardPanelMenu.js": {
     "mtime": 1784571729.2285361,
@@ -1190,9 +1185,9 @@
     "semantic_hash": "6b78d579b47a0d2b8b043121cea02ebb"
   },
   "tests/verifyTLSMySQLRemoteInstance_test.js": {
-    "mtime": 1787233825.2762764,
-    "ast_hash": "fdebc0bb24012a13cf4651a680ab3b28",
-    "semantic_hash": "fdebc0bb24012a13cf4651a680ab3b28"
+    "mtime": 1789506477.6478112,
+    "ast_hash": "eb29e17f470f69d5193fb74e1a0d797a",
+    "semantic_hash": "eb29e17f470f69d5193fb74e1a0d797a"
   },
   "tests/verifyTLSPostgresRemoteInstance_test.js": {
     "mtime": 1784571729.3868754,
@@ -1413,5 +1408,10 @@
     "mtime": 1789157278.2597563,
     "ast_hash": "72481a4188838ffb39fd764cb37a9467",
     "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
+  },
+  "tests/dashboards/verifyHomeDashboards_migrated.js": {
+    "mtime": 1789506477.6458046,
+    "ast_hash": "f47d45e5b1be6888b86cb954f1d1f02b",
+    "semantic_hash": "f47d45e5b1be6888b86cb954f1d1f02b"
   }
 }
