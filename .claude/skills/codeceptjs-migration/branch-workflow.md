@@ -389,18 +389,20 @@ gh pr create \
   --body-file <scratchpad>/migration-pr.md
 ```
 
-The PR body must include:
+The PR body is this template and nothing more, 25 lines and 1,500 characters at most. Evidence, reasoning, review history, environment stories and accepted deviations stay in the ledger and the timeline; a reviewer who wants them asks. A body over the cap is a finding at the final gate.
 
-- source path;
-- actual target path;
-- migrated scenarios and preserved tags;
-- source and target files queried from existing graphs;
-- setup used;
-- static validation result;
-- MCP locator verification result;
-- execution commands and results;
-- workflow-coverage changes and their grep verification;
-- final review result.
+```markdown
+Migrates `<source path>` to `<target path>`.
+
+**Scenarios:** PMM-Txxxx, PMM-Tyyyy (N rows) - tags `@a @b` preserved.
+**Setup:** `<setup_services>`; local Docker via provisioning/.
+**Coverage:** <one line: which job/tag selects them now, e.g. "appended @x to nightly Playwright matrix; FB job `settings` added">.
+**Retired:** `<source>_test.js` -> `_migrated.js`; <job deleted, if any>.
+**Deviations:** <one line per deliberate change from the source, or "none">.
+**Run:** <Actions run URL>
+```
+
+Write it from the diff, not from the handoff. No emoji headings, no "worth reading" sections, no restating what the diff shows.
 
 ## Attach CI execution
 

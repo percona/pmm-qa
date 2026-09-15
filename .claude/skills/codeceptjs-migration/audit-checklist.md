@@ -99,6 +99,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] Publish branch was cut from `origin/main` and carries only migrated code, coverage YAML and the source retirement; control carries only the merge, graph refreshes and tracker commits, worktree clean.
 - [ ] `e2e_tests/README.md` generated regions came from `support_scripts/generate_readme.py`.
 - [ ] No debug code, no unrelated files, source safe to retire.
+- [ ] The drafted PR body follows the template in `branch-workflow.md` Push and open the PR: 25 lines and 1,500 characters at most, no evidence or review history. Over the cap is a finding.
 
 ## Final decision
 
