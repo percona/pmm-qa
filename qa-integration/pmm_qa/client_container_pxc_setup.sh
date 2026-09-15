@@ -63,6 +63,18 @@ cd PXC || exit 1
 
 ## start PXC
 bash ../pxc-startup.sh
+
+# PXC 8.4 ships mysql_native_password disabled by default, but the admin and
+# read_user accounts below (and ProxySQL's monitor) are created with it, so
+# enable the plugin on every node. 5.7 and 8.0 load it by default.
+case "$pxc_version" in
+  5.7 | 8.0) ;;
+  *)
+    grep -q '^PXC_MYEXTRA=""' start_pxc || { echo "start_pxc: PXC_MYEXTRA anchor not found"; exit 1; }
+    sed -i 's/^PXC_MYEXTRA=""/PXC_MYEXTRA="--mysql-native-password=ON"/' start_pxc
+    ;;
+esac
+
 bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt
 touch sysbench_run_node1_read_write.txt
