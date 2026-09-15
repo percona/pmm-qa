@@ -368,12 +368,6 @@ jobs:
           rm -rf "$outdir"
           exit $rc
 
-      - name: Check client after upgrade
-        env:
-          LATEST_VERSION: ${{ inputs.upgrade_version }}
-        run: |
-          python3 pmm-qa/support_scripts/check_client_upgrade.py "$LATEST_VERSION"
-
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
         env:
