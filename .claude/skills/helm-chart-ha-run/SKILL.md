@@ -123,9 +123,16 @@ A pmm-qa session has **no access** to `percona/percona-helm-charts` — MCP read
 `"push_check": "refused"`, meaning git pushes are refused because the Claude GitHub App is
 not installed there for the org.
 
-Nothing here needs a clone or a push — only API reads plus one comment. Whether the comment
-itself is accepted depends on that same app installation, so treat a refused write as a
-real possibility and handle it per **Post the comment** below.
+Nothing here needs a clone or a push — only API reads plus one comment. **That comment is
+currently refused**, verified on PR #954: `add_issue_comment` returns `403 Resource not
+accessible by integration`, and `gh api -X POST …/issues/<n>/comments` returns the same 403
+because the proxy hands it the same app credential. `push_check: "refused"` on the
+`add_repo` result predicts this — it reports the app is not installed for the repo, which
+gates API writes and git pushes alike.
+
+So plan for the run to end with a handoff rather than a comment, and say so up front when
+someone asks for results to be posted there. Do not spend a second attempt on `gh` after the
+MCP call is refused; it is one credential, not two.
 
 ## Trigger
 
@@ -232,6 +239,9 @@ run where it does not, say which commit ran.
 State in the comment which question the run answered, per gate 5 — a regression check
 reported as a verification of the fix is a false green on someone's PR.
 
-If the write is refused, relay the exact message, hand the user the rendered body, and name
-the remedy: an org admin installs the Claude GitHub App on `percona/percona-helm-charts`,
-or the user reconnects GitHub in claude.ai settings.
+When the write is refused (the current default — see **GitHub reach** above), relay the
+exact message, write the rendered body to a file and send it with `SendUserFile` so it can
+be pasted as-is, and name the remedy: an org admin installs the Claude GitHub App on
+`percona/percona-helm-charts` (https://github.com/apps/claude/installations/select_target),
+or the user reconnects GitHub in claude.ai settings. A verdict handed over is the delivered
+result, not a failed run — the cluster time still bought the answer.
