@@ -91,6 +91,14 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[PXC_NODES]} == 3 ]]
 }
 
+@test "PXC 8.4 dispatches with its version" {
+  parse_database_spec 'PXC=8.4'
+  dispatch_setup
+
+  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
+  [[ ${CAPTURE_ENV[PXC_VERSION]} == 8.4 ]]
+}
+
 @test "Valkey sentinel alias selects sentinel playbook" {
   parse_database_spec 'valkey=8,SETUP_TYPE=sentinels'
   dispatch_setup
