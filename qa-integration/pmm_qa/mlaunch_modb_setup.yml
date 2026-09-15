@@ -29,6 +29,11 @@
       -p 27017:27017
       phusion/baseimage:focal-1.2.0
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ modb_container }}"
+
   - name: Copy all required Artifacts to the docker modb_container
     shell: "{{ item }}"
     with_items:

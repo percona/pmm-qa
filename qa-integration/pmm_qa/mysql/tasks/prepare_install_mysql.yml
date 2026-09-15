@@ -35,6 +35,11 @@
       antmelekhin/docker-systemd:ubuntu-22.04
   when: mysql_version | replace('_', '') | int < 80
 
+- name: Configure apt inside the container
+  include_tasks: ../tasks/configure_container_apt.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ index }}"
+
 - name: Install dependencies
   shell: |
     docker exec {{ container_prefix }}{{ index }} apt-get update

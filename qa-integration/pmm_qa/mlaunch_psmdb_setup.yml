@@ -29,6 +29,11 @@
       -p 27017:27017
       phusion/baseimage:jammy-1.0.1
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ psmdb_container }}"
+
   - name: Copy all required Artifacts to the docker psmdb_container
     shell: "{{ item }}"
     with_items:
