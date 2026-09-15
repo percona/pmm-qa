@@ -19,7 +19,6 @@ pmmTest(
 
 // MySQL 8.4 renamed the SHOW SLAVE STATUS columns, so mysqld_exporter exports
 // mysql_slave_status_replica_* there and mysql_slave_status_slave_* on 8.0 and below.
-// The tag runs whichever PS version pmm-framework defaults to, so accept either name.
 const replicaStatusAliases: Record<string, string> = {
   mysql_slave_status_slave_io_running: 'mysql_slave_status_replica_io_running',
   mysql_slave_status_slave_sql_running: 'mysql_slave_status_replica_sql_running',
