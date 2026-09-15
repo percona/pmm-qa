@@ -56,11 +56,14 @@ export default class SettingsPage extends BasePage {
   };
   inputs = {
     dataRetention: this.page.getByTestId('retention-number-input'),
-    high: this.page.getByTestId('hr-number-input'),
-    low: this.page.getByTestId('lr-number-input'),
-    medium: this.page.getByTestId('mr-number-input'),
-    publicAddress: this.page.getByTestId('publicAddress-text-input'),
-    sshKey: this.page.getByTestId('ssh-key'),
+    frequentAdvisorInterval: this.page.getByTestId('frequentInterval-number-input'),
+    high: this.page.locator('[name="hr"]'),
+    low: this.page.locator('[name="lr"]'),
+    medium: this.page.locator('[name="mr"]'),
+    publicAddress: this.page.getByTestId('text-input-public-address'),
+    rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
+    sshKey: this.page.getByTestId('text-input-ssh-key'),
+    standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
   };
   messages = {};
 

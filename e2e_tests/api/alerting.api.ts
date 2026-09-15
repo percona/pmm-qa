@@ -9,11 +9,34 @@ export interface AlertTemplateBody {
   yaml: string;
 }
 
+export interface CreateRuleBody {
+  for?: string;
+  interval?: string;
+  severity?: string;
+  template_name: string;
+  name?: string;
+  params?: [{ name: string; type: string; float: number }];
+  group?: string;
+  folder_uid?: string;
+  filters?: {
+    label: string;
+    regexp: string;
+    type: 'FILTER_TYPE_MATCH' | 'FILTER_TYPE_MISMATCH';
+  }[];
+}
+
+export interface FoldersResponseBody {
+  id: number;
+  uid: string;
+  title: string;
+  managedBy: string;
+}
+
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
-  createRule = async (headers: Headers, body: Record<string, unknown>) =>
-    this.request.post(apiEndpoints.alerting.rules, { data: body, headers });
+  createRule = async (headers: Headers, data: CreateRuleBody) =>
+    this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
@@ -35,6 +58,17 @@ export default class AlertingApi {
   deleteTemplate = async (headers: Headers, templateName: string) =>
     this.request.delete(`${apiEndpoints.alerting.templates}/${templateName}`, { headers });
 
+  getFolderByName = async (folderName: string, headers?: Headers): Promise<FoldersResponseBody> => {
+    const folders = await this.listFolders(headers);
+    const folder = folders.find((folder) => folder.title === folderName);
+
+    if (!folder) {
+      throw new Error(`Folder with name: ${folderName} not found`);
+    }
+
+    return folder;
+  };
+
   getRule = async (name: string): Promise<AlertRule | undefined> => {
     const response = await this.request.get(apiEndpoints.grafana.prometheusRules, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -45,6 +79,12 @@ export default class AlertingApi {
     return ((await response.json()) as AlertRulesResponse).data.groups
       .flatMap((group) => group.rules)
       .find((rule) => rule.name === name);
+  };
+
+  listFolders = async (headers?: Headers): Promise<FoldersResponseBody[]> => {
+    const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
+
+    return await (await this.request.get(apiEndpoints.alerting.folders, { headers: authHeaders })).json();
   };
 
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });

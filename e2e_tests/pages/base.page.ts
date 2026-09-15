@@ -1,5 +1,6 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import SnackbarComponent from '@components/snackbar.component';
 
 export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
 
@@ -13,6 +14,7 @@ export type NestedLocator = Locator | NestedLocators;
 export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
+  snackBar = new SnackbarComponent(this.page);
   abstract builders: Record<string, (...args: string[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
