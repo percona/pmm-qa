@@ -31,8 +31,8 @@ Entry points: [pmm-framework/README.md](../../../../qa-integration/pmm_qa/pmm-fr
 - No secrets in playbooks, `user_data`, or committed state.
 - Compose files: `docker compose config -q` validates them; there is no linter. Distinct container names per parallel job — a collision is what makes tests need `serial` mode.
 - Dockerfiles (3, all under `qa-integration/pmm_psmdb-pbm_setup/`): `hadolint`.
-- Before asserting a container attribute is **never** set anywhere, grep every provisioning form: `qa-integration/pmm_psmdb-pbm_setup/docker-compose-*.yaml` pins `hostname:` (`rs101`…`rs203`) where no `docker run` playbook passes `--hostname`, which makes a hostname branch unsafe rather than dead — those two setups land on different shards against one server.
-- A relative include in a file under `pmm_qa/<feature>/tasks/` resolves from `pmm_qa/<feature>/`, so `../tasks/x.yml` correctly reaches `pmm_qa/tasks/x.yml`. Cite a run log's `task path:` line before calling one broken; "it should be `../../tasks/`" has been wrong here and would have broken working includes.
+- Before asserting a container attribute is **never** set, grep every provisioning form — the playbooks' `docker run` flags and `qa-integration/pmm_psmdb-pbm_setup/docker-compose-*.yaml`, which pins `hostname:` (`rs101`…`rs203`) where no playbook passes `--hostname`. A branch dead in one form may be live in another.
+- A relative include under `pmm_qa/<feature>/tasks/` resolves from `pmm_qa/<feature>/`, so `../tasks/x.yml` reaches `pmm_qa/tasks/x.yml`. Cite a run log's `task path:` line before calling an include path broken.
 
 ## Terraform
 

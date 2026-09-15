@@ -42,3 +42,5 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 - Resolve a target conflict by taking `ours` or `theirs` mechanically; re-read both sides, re-review the lesson, rerun validation
 - Change product or test code, or anything outside the targets the skill lists
 - Leave an entry you acted on in place
+- Paste an entry's Evidence into a target — the target gets the generalized imperative, the PR body gets the evidence
+- Grow a target that is over its word budget — merge, delete, or move a section to `references/` in the same commit
