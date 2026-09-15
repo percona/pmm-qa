@@ -62,6 +62,7 @@ Structure:
 
 Workflows:
 - A new or retagged test is reachable from a workflow in the same PR; prefer an existing tag and runner. Widening a `--grep` to rescue a test missing its own tag is 🔴.
+- A retired source carrying a tag from the consumer table in `branch-workflow.md` (Jenkins `pmm/v3` pipelines, `percona/grafana` `ui-tests.yml`) names that consumer in the commit body and whether its Playwright side exists on the ref the job runs; "no workflow consumer" for such a tag is 🔴.
 - Nightly rendezvous: setup jobs start `setup / `, test jobs `test execution / `, the poll step is named exactly `Waiting for tests execution`, `expected_setup_jobs` equals the shard count and `expected_test_jobs` equals the consumer count. A rename out of prefix or a counter that no longer matches is 🔴. A no-DB test gets a job named outside the prefix. 🟡
 - `|| true` on the test step means `if: failure()` on the report upload never fires; use `always()`. A path where a missing `LAUNCHABLE_TOKEN` yields a green job with zero tests is 🔴. Launchable `--test-suite` distinguishes `playwright` from `codeceptjs`. 🟡
 - Env vars are read in `run:` as `"$VAR"`, never `${{ env.VAR }}`. Actions pinned consistently within a file. No hardcoded branch name. Every declared secret is consumed. No copied block over about 50 lines; extract a composite action. 🟡

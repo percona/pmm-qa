@@ -292,7 +292,25 @@ Every coverage decision below depends on this, so establish it before deciding a
 
 Name the **workflow file**, never the word "nightly" - it denotes two different workflows. `e2e-tests-matrix.yml` carries both a `pull_request` trigger and a `schedule: cron '0 2 * * *'`, so its jobs run nightly too; `nightly-e2e-tests-matrix.yml` is `workflow_dispatch`-only, fired by Jenkins against an externally-managed PMM Server. Both run on a nightly cadence by different mechanisms. State each candidate job's trigger block as read, and check for a job-level `if:` gate rather than assuming a scheduled job is gated.
 
-Consumers also exist **outside** `.github/workflows/`. `codeceptjs-e2e/package.json` defines per-tag scripts (`e2e:grafana-pr` runs `codeceptjs run -c pr.codecept.js --grep '@grafana-pr'`) plus a catch-all `e2e` script that excludes only `@not-ui-pipeline`/`@not-pr-pipeline`. Nothing inside pmm-qa invokes those, so the caller is cross-repository - percona/grafana CI running PMM's suite. Such a script invokes CodeceptJS only, so retiring the source drops coverage a new Playwright job cannot restore.
+Consumers also exist **outside** `.github/workflows/`: Jenkins pipelines in `Percona-Lab/jenkins-pipelines` `pmm/v3/` and `percona/grafana`'s `ui-tests.yml`, which invokes `codeceptjs-e2e/package.json`'s `e2e:grafana-pr` script and the Playwright `@grafana-pr` grep. The table below is the enumeration; the commands above it re-derive it.
+
+Consumers outside `.github/workflows/`, enumerated 2026-09-15. Re-derive before relying on it:
+
+```bash
+# Jenkins: every CodeceptJS and Playwright grep in PMM's pipelines
+git clone -q --depth 1 --filter=blob:none --sparse https://github.com/Percona-Lab/jenkins-pipelines.git <scratch>/jp   && git -C <scratch>/jp sparse-checkout set pmm/v3   && grep -rnoE "(codeceptjs run|playwright test)[^'\"]*--grep [\"'][^\"']+[\"']" <scratch>/jp/pmm/v3/*.groovy
+# percona/grafana: runs pmm-qa on every Grafana PR
+curl -sf https://raw.githubusercontent.com/percona/grafana/main/.github/workflows/ui-tests.yml | grep -nE 'grafana-pr|--grep'
+```
+
+| Tag | Consumer | Playwright side |
+| --- | --- | --- |
+| `@gssapi-nightly` | Jenkins `pmm3-ui-tests-nightly-gssapi.groovy` (cron, GSSAPI-enabled server) | `Run Playwright UI Tests` stage, same grep, once the jenkins-pipelines PR adding it merges; before that, retiring the source loses GSSAPI coverage |
+| `@grafana-pr` | `percona/grafana` `.github/workflows/ui-tests.yml` | already runs `npx playwright test --grep @grafana-pr --pass-with-no-tests` beside `npm run e2e:grafana-pr` |
+| `@qan`, `@nightly`, `@menu` | Jenkins `pmm3-ui-tests-nightly.groovy`, CodeceptJS only | dead: no cron, no caller in `pmm/`, last builds failed in under a second. The live nightly is `pmm3-ui-tests-nightly-gha.groovy`, which dispatches `nightly-e2e-tests-matrix.yml` |
+| `@ami-upgrade`, `@ami-ovf-*`, `@pmm-upgrade`, `@pmm-migration`, `@pmm-pre-migration` | Jenkins upgrade and migration pipelines | none; no migrated test carries them yet. The first that does needs a Playwright step in that pipeline before the source retires |
+
+A tag in this table is never reported as "no workflow consumer". Name the pipeline or workflow, and whether its Playwright side exists on the ref the job runs.
 
 So for each migrated tag, state either its consumers or that a cross-repository caller could not be ruled out. **A tag with no workflow consumer must not be reported as having no consumer** - that is what makes a live tag look decorative.
 
