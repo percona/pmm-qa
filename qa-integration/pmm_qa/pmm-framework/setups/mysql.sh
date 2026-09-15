@@ -19,6 +19,10 @@
 # Reads, in every function: DB_VERSION and DB_CONFIG (set by
 # parse_database_spec), PMM_SERVER_HOST, CLIENT_DEBUG.
 
+# Upstream ProxySQL used for PXC 8.4+ (see setup_pxc); its monitor supports
+# caching_sha2_password backends, unlike Percona's proxysql-admin.
+PROXYSQL_UPSTREAM_PACKAGE='https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql_3.0.11-ubuntu22_amd64.deb'
+
 # Percona Server for MySQL.
 #
 # SETUP_TYPE selects the topology inside the playbook ('' single, gr, replication).
@@ -105,17 +109,24 @@ setup_ssl_mysql() {
 # The empty proxysql_config array exists only to satisfy resolve_value's
 # signature -- there is no PROXYSQL spec to read options from.
 setup_pxc() {
-  local version proxysql_version client
+  local version proxysql_version client proxysql_package
   version=$(resolved_version PXC_VERSION PXC "$DB_VERSION")
   proxysql_version=${PROXYSQL_VERSION:-$(database_default_version PROXYSQL)}
   client=$(resolved_client_version PXC DB_CONFIG)
   declare -A proxysql_config=()
+  proxysql_package=$(resolve_value PROXYSQL PACKAGE proxysql_config)
+  # Percona's proxysql-admin needs mysql_native_password, which PXC 8.4 disables
+  # by default, so from 8.4 the playbook fronts the cluster with upstream ProxySQL.
+  case "$version" in
+    5.7 | 8.0) ;;
+    *) [[ -n $proxysql_package ]] || proxysql_package=$PROXYSQL_UPSTREAM_PACKAGE ;;
+  esac
   declare -A env_map=(
     [PXC_NODES]=3
     [PXC_VERSION]="$version"
     [PROXYSQL_VERSION]="$proxysql_version"
     [PXC_TARBALL]="$(resolve_value PXC TARBALL DB_CONFIG)"
-    [PROXYSQL_PACKAGE]="$(resolve_value PROXYSQL PACKAGE proxysql_config)"
+    [PROXYSQL_PACKAGE]="$proxysql_package"
     [PMM_SERVER_IP]="$PMM_SERVER_HOST"
     [PXC_CONTAINER]="pxc_proxysql_pmm_$version"
     [CLIENT_VERSION]="$client"

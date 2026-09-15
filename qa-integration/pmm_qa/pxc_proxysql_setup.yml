@@ -41,6 +41,7 @@
       - docker exec {{ pxc_container }} mkdir -p artifacts
       - docker cp ./client_container_pxc_setup.sh {{ pxc_container }}:/
       - docker cp ./client_container_proxysql_setup.sh {{ pxc_container }}:/
+      - docker cp ./client_container_proxysql_upstream_setup.sh {{ pxc_container }}:/
       - docker cp ./pmm3-client-setup.sh {{ pxc_container }}:/
 
   - name: Get PXC Product tarball URL based on the version
@@ -113,7 +114,7 @@
     set_fact:
       random_number: "{{ (10000 | random) | int }}"
 
-  - name: Start ProxySQL inside the PXC extra_pxc_container
+  - name: Start Percona ProxySQL inside the PXC extra_pxc_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -c 'sed -i s#3306#'"\$(grep 'port' /home/pxc/PXC/node1.cnf | cut -d= -f2)"'# /etc/proxysql.cnf'
@@ -127,6 +128,7 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SAVE ADMIN VARIABLES TO DISK;"
       - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
     register: proxysql_start
+    when: not (pxc_version is version('8.4', '>='))
     # The proxysql2 package's postinst can auto-start the daemon during
     # install (observed non-deterministically), so the explicit `proxysql -c
     # ...` start above sometimes finds it already running -- that is the
@@ -135,6 +137,21 @@
     failed_when: >-
       proxysql_start.rc != 0 and
       'Daemon already running' not in (proxysql_start.stderr | default(''))
+
+  - name: Start upstream ProxySQL inside the PXC extra_pxc_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} proxysql -c /etc/proxysql.cnf
+      - docker exec {{ pxc_container }} sleep 20
+      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_proxysql_upstream_setup.sh {{ number_of_nodes }}
+      - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
+    register: proxysql_upstream_start
+    when: pxc_version is version('8.4', '>=')
+    # Upstream ProxySQL's postinst can auto-start the daemon, so an explicit
+    # `proxysql -c ...` may find it already running -- the desired end state.
+    failed_when: >-
+      proxysql_upstream_start.rc != 0 and
+      'Daemon already running' not in (proxysql_upstream_start.stderr | default(''))
 
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
