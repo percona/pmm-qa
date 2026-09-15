@@ -11,8 +11,8 @@ Entries are anchored to functions, not line numbers, which drift.
 ## Contents
 
 - [Background jobs, job control and signals](#background-jobs-job-control-and-signals)
-- [Namerefs: the third name](#namerefs-the-third-name)
-- [Value resolution: the tier §4 added](#value-resolution-the-tier-4-added)
+- [Namerefs](#namerefs)
+- [Value resolution: two things not to "fix"](#value-resolution-two-things-not-to-fix)
 
 ---
 
@@ -72,40 +72,24 @@ entry can be neither trapped nor reset. If a manual test backgrounds
 the test, not `cleanup_parallel_jobs`. Use `SIGTERM`, or `setsid` + `killpg` to
 simulate a real terminal signal instead.
 
-## Namerefs: the third name
+## Namerefs
 
-§7 warns against naming a local `env_ref` or `map_ref`. There are **four**
-nameref sites and **three** distinct names:
+§7 names the three namerefs a caller must never shadow. The convention that
+keeps you clear of them: every `setup_*` function in this repo calls its
+associative array `env_map`. Keep that when adding one, and the collision
+cannot arise.
 
-| Function | File | Nameref |
-|---|---|---|
-| `print_env_map` | `lib/ansible.sh` | `map_ref` |
-| `run_playbook` | `lib/ansible.sh` | `env_ref` |
-| `run_setup_script` | `lib/runners.sh` | `env_ref` |
-| `resolve_value` | `lib/config.sh` | `config_ref` |
+## Value resolution: two things not to "fix"
 
-`config_ref` is the one §7 omits, and `resolve_value` is called from inside
-almost every `setup_*` function — so a local named `config_ref` there is the
-easiest of the three to hit. Bash raises a circular-reference error, not a
-clean type error. Every `setup_*` function in this repo names its array
-`env_map` specifically to avoid the collision; keep that convention.
+ARCHITECTURE.md §4 has the precedence chain and the table contrasting the two
+resolvers. Both look like bugs and are not:
 
-## Value resolution: the tier §4 added
-
-§4's table contrasts the two resolvers on the empty-env-var case. Two things
-it is thin on:
-
-**Precedence has four tiers, and the top one is newer than most of the code.**
-`resolve_value` checks `GLOBAL_CLIENT_VERSION` *before* the environment, but
-only for `CLIENT_VERSION`. Every other key still starts at the environment.
-A change that "simplifies" the first branch away silently demotes
-`--client-version` below an inherited env var.
-
-**Don't reconcile the two resolvers.** `resolve_value` (`lib/config.sh`, spec
-options) uses `[[ -v $key ]]`, so an exported-but-empty variable **wins** and
-yields `''` — Python's `os.environ.get`. `resolved_version` (`lib/runners.sh`,
-versions) uses `[[ -n ${!env_name:-} ]]`, so an exported-but-empty variable is
-**skipped** — Python's `os.getenv(X) or ...`. They look like they should agree.
-Making them agree silently changes precedence for real CI callers. If you add a
-third resolver, pick a rule deliberately and say which, the way
-`resolve_value`'s doc comment already does.
+- **Don't reconcile `resolve_value` with `resolved_version`.** They disagree on
+  the exported-but-empty variable on purpose (§4's table says which way each
+  goes). Making them agree silently changes precedence for real CI callers. A
+  third resolver should pick a rule deliberately and say which, the way
+  `resolve_value`'s doc comment already does.
+- **Don't collapse `resolve_value`'s first branch.** The `GLOBAL_CLIENT_VERSION`
+  check that runs before the environment lookup applies to `CLIENT_VERSION`
+  only, which reads like a special case worth tidying away — removing it demotes
+  `--client-version` below an inherited environment variable.

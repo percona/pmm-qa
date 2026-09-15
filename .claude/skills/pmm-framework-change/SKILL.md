@@ -55,6 +55,7 @@ thing, with the cheapest check that would actually **fail** if you were wrong.
 | Fixed a bug in `lib/execution.sh` | The failing case passes **and** reverting the fix fails the *specific* test again | [#mutation](references/verification-recipes.md#mutation-testing) |
 | Touched `run_parallel_setups`, `set -m`, traps, `should_dump_successful_logs` | Drive it through a real pty / real process group | [#pty](references/verification-recipes.md#driving-parallel-mode-under-a-real-pty) |
 | Changed argument parsing or the catalogue | Replay every `--database` shape CI actually sends | [#real-inputs](references/verification-recipes.md#exercising-real-caller-inputs-from-ci-workflows) |
+| Touched `preflight_database_setups` or the conflict rules | Classify every pair as refused / sequential / parallel — all three, both orderings | [#preflight](references/verification-recipes.md#preflight-conflict-outcomes) |
 
 A check that passes before *and* after your change tells you nothing. If you
 cannot construct one that would have caught the mistake, you don't yet
@@ -87,38 +88,6 @@ Ctrl-C and `kill <pid>` are **different scenarios and both need checking** — s
 [bash-pitfalls.md](references/bash-pitfalls.md#background-jobs-job-control-and-signals).
 In this codebase Ctrl-C worked *before* the process-group fix; it was the
 single-pid case (what a CI timeout sends) that leaked `ansible-playbook`.
-
-## Beyond ARCHITECTURE.md §7
-
-The conventions doc covers `local x=$(cmd)`, namerefs, the 4.4-vs-5.1 version
-gate drift, and the two value resolvers. Two additions:
-
-- **The nameref names to avoid are `env_ref`, `map_ref` *and* `config_ref`.**
-  §7 names the first two; `resolve_value` in `lib/config.sh` adds the third.
-  A `setup_<name>` local with any of those names collides with the callee's
-  `local -n` and raises a circular-reference error, not a clean type error.
-- **`resolve_value`'s precedence gained a tier** (global flag beats environment
-  variable, `CLIENT_VERSION` only). §4's diagram has it; the `resolve_value`
-  doc comment is the authority.
-
-**`preflight_database_setups` has three outcomes, not two** — check all of
-them. A pair can be refused outright (`die`, "cannot share a host"), demoted to
-sequential (a warning, run continues), or left to parallelize. A check that
-only greps for `Running setups sequentially` scores a hard refusal as
-"parallel" and reports a pass. Assert on all three:
-
-| Outcome | Signal | Example |
-|---|---|---|
-| refused | `ERROR: ... cannot share a host` | two `PSMDB`; `EXTERNAL` + `VALKEY` |
-| sequential | `WARNING: Running setups sequentially` | two `PS`; `PS` + `MYSQL` |
-| parallel | neither | `PSMDB` + `SSL_PSMDB` |
-
-The cheapest harness sources the modules in a bash script, stubs
-`resolve_pmm_server` / `require_command` / `ensure_docker_collection`, then
-classifies preflight's stderr per `--database` combination.
-`tests/preflight.bats` covers the current matrix. §3 is the authority on which
-pairs fall where — if the code disagrees with it, one of them is a bug; find
-out which before changing either.
 
 ## Flags are where CI silently drifts
 

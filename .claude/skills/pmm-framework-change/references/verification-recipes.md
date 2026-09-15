@@ -22,6 +22,7 @@ an empty input set and a silent all-clear.
 - [Refactoring the config catalogue](#refactoring-the-config-catalogue)
 - [Changing a setup function env map](#changing-a-setup-function-env-map)
 - [CLI surface and exit codes](#cli-surface-and-exit-codes)
+- [Preflight conflict outcomes](#preflight-conflict-outcomes)
 - [Mutation testing](#mutation-testing)
 - [Driving parallel mode under a real pty](#driving-parallel-mode-under-a-real-pty)
 - [Exercising real caller inputs from CI workflows](#exercising-real-caller-inputs-from-ci-workflows)
@@ -159,6 +160,72 @@ If the `--help` diff comes back empty when you expected a difference, check that
 `HEAD` is where you think it is — a commit made mid-session moves the baseline
 out from under this check.
 
+## Preflight conflict outcomes
+
+The claim: `preflight_database_setups` still sorts every `--database`
+combination into the right bucket. It has **three** outcomes, and a check that
+greps only for the sequential warning scores a hard refusal as "parallel" and
+reports a pass:
+
+| Outcome | Signal on stderr |
+|---|---|
+| refused (`die`) | `ERROR: ... cannot share a host` |
+| demoted to sequential | `WARNING: Running setups sequentially` |
+| parallel | neither |
+
+ARCHITECTURE.md §3 is the authority on which pairs fall where; this recipe
+checks the code against it. Stub the side effects preflight performs *after*
+the conflict decision, or it will try to reach a real PMM Server.
+
+```bash
+SCRATCH=${TMPDIR:-/tmp}/pmm-framework-verify && mkdir -p "$SCRATCH"
+cat > "$SCRATCH/conflictcheck.sh" <<'SCRIPT'
+#!/usr/bin/env bash
+set -uo pipefail
+FW=$1
+export FRAMEWORK_DIR=$FW PMM_QA_ROOT=$FW/.. QA_INTEGRATION_ROOT=$FW/../..
+for m in lib/common lib/config lib/cli lib/docker lib/ansible lib/runners \
+         setups/mysql setups/postgresql setups/mongodb setups/services \
+         setups/dispatch lib/execution; do source "$FW/$m.sh"; done
+resolve_pmm_server() { :; }; require_command() { :; }
+ensure_docker_collection() { :; }; configure_ansible_python() { :; }
+
+pass=0; fail=0
+check() {
+  local expect=$1; shift
+  local out got
+  out=$( ( parse_args "$@"; preflight_database_setups ) 2>&1 )
+  if grep -q 'cannot share a host' <<<"$out"; then got=REFUSED
+  elif grep -q 'Running setups sequentially' <<<"$out"; then got=SEQUENTIAL
+  else got=PARALLEL; fi
+  if [[ $got == "$expect" ]]; then ((pass++)); printf '  ok    %-10s %s\n' "$got" "$*"
+  else ((fail++)); printf '  FAIL  expected=%s got=%s :: %s\n' "$expect" "$got" "$*"; fi
+}
+
+check REFUSED    --parallel --database psmdb,SETUP_TYPE=pss --database psmdb,SETUP_TYPE=sharding
+check REFUSED    --parallel --database psmdb --database psmdb
+check REFUSED    --parallel --database external --database valkey
+check REFUSED    --database external --database valkey        # refused with or without --parallel
+check SEQUENTIAL --parallel --database ps --database ps
+check SEQUENTIAL --parallel --database ps --database mysql
+check SEQUENTIAL --parallel --database pdpgsql --database pgsql,SETUP_TYPE=replication
+check SEQUENTIAL --parallel --database ssl_psmdb --database ssl_psmdb
+check PARALLEL   --parallel --database psmdb --database ssl_psmdb
+check PARALLEL   --parallel --database pdpgsql --database pgsql
+check PARALLEL   --parallel --database valkey=8 --database pgsql=16
+
+printf '\n%d passed, %d failed\n' "$pass" "$fail"; (( fail == 0 ))
+SCRIPT
+chmod +x "$SCRATCH/conflictcheck.sh"
+"$SCRATCH/conflictcheck.sh" "$PWD"
+```
+
+Cover **all three** outcomes whenever you touch the conflict logic. A one-sided
+check passes while you silently serialize all of CI, or while a pair that can
+never share a host is waved through to fail later inside Docker. Order matters
+too — a pair must be caught whichever spec comes first, which is why the
+`EXTERNAL`/`VALKEY` case appears in both directions above.
+
 ## Mutation testing
 
 The claim: the bats suite actually covers the bug you fixed, not just that it
@@ -263,8 +330,12 @@ n=$(wc -l < "$SCRATCH/shapes.txt"); echo "shapes found: $n"
 
 The `^[[:space:]]*` anchor drops entries commented out in the workflow
 (`#      setup_services: ...`); those aren't live callers and a "failure" there
-is noise. At the time of writing this yields 63 unique shapes — if you get
-substantially fewer, the pattern has drifted from how the workflows are written.
+is noise.
+
+Don't calibrate against a frozen number — the matrix is regrouped periodically
+(a4d8fe77 merged fourteen nightly shards into five and moved the count from 63
+to 59 in a single commit). Expect *dozens*: a single-digit or zero result means
+the pattern or the path has drifted, not that the matrix shrank.
 
 ```bash
 cat > "$SCRATCH/parsecheck.sh" <<'SCRIPT'
