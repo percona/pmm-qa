@@ -137,7 +137,11 @@ Read it first, before any other work in the gate. Append one entry before return
       evidence:
       status: open | fixed-by:<commit-or-note> | withdrawn
   advisories: []
+  conventionScriptOutput: |   # verbatim, on a passing entry
+  shape: {}                   # the populated shape block, on a passing entry
 ```
+
+A re-spawned gate is a fresh instance with no transcript, so it can recover nothing from an earlier attempt except through this file. Store the evidence itself on a passing entry, not a summary of it; an MCP pass or an execution log summarised as "5 advisories on lines 73, 92" cannot be carried forward.
 
 Scoping rule:
 

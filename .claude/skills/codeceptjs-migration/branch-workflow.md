@@ -159,7 +159,7 @@ git -C ../pmm-qa-publish apply --3way <tmpfile>
 
 List the paths explicitly rather than taking the whole diff, so an unrelated edit sitting in control's worktree cannot ride along. Never pipe the diff into `apply` and never redirect it with `>` - write it with `--output=` and apply from that file, for the same reason given in "Checkpointing uncommitted work" above.
 
-Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep first: a body naming a method that does not exist, or a section byte-identical to `origin/main`, costs an amend cycle after the final gate has passed.
+Before the final gate, re-measure every number, filename, trigger and line reference in each commit body against the tree and state the command used; a correct number about the wrong tag is still wrong, and a message-only amend after the gate moves HEAD and costs a fresh gate attempt. Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep first: a body naming a method that does not exist, or a section byte-identical to `origin/main`, costs an amend cycle after the final gate has passed.
 
 A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
 
@@ -302,7 +302,7 @@ When retiring a CodeceptJS source, check every job whose grep matches its title 
 
 An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever. Cross-check the number against a plain tag grep before acting on it; a `^`-anchored regex without the `m` flag under-counts by an order of magnitude and nothing downstream contradicts it.
 
-**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR. When the tag is a broad bucket other jobs' tests also carry, use a narrower sub-bucket tag (`@valkey-nightly`, `@pbm-nightly`) rather than a wider grep, and make that retag in this PR, not as a follow-up. Never add `@nightly` itself to the Playwright alternation (`SKILL.md` Workflow coverage). Never route a load-generating test (a 10k-request log warm-up, say) at the shared Jenkins-managed nightly server; run it in FB and PR CI only.
+**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR. When the tag is a broad bucket other jobs' tests also carry, use a narrower sub-bucket tag (`@valkey-nightly`, `@pbm-nightly`) rather than a wider grep, and make that retag in this PR, not as a follow-up. `@nightly` is the Playwright nightly alternation on `main`; confirm on `origin/main` before editing, and check what it selects rather than adding to it (`SKILL.md` Workflow coverage). Never route a load-generating test (a 10k-request log warm-up, say) at the shared Jenkins-managed nightly server; run it in FB and PR CI only.
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
@@ -341,6 +341,10 @@ A source file's scenarios rarely all carry the same tags, so the file's union of
 
 - every migrated scenario is now selected by some Playwright job; and
 - every tag the edited job already carried still selects exactly what it selected before.
+
+Capture each `--list --grep` selection to a sorted file and report the added and removed sets from `comm -13`/`comm -23`, never two totals: a union that grows by one can hide N pre-existing overlaps, and the same two totals cannot say which files a job newly acquired. List any newly added alternative on its own as well as in the union.
+
+Two counting forms return a plausible wrong number with exit 0: `git grep <rev> -- 'codeceptjs-e2e/tests/**/*_test.js'` (git's default pathspec `**` does not span directories; use a directory pathspec filtered with `grep '_test\.js$'`), and parsing `--list` output for `Total: N tests`, which misses the singular `Total: 1 test`. Measure every tag or file count twice by different mechanisms and state both.
 
 Bound the reverse direction first. Run `git diff --name-status origin/main HEAD -- e2e_tests/tests/`: when it shows no modified test file (only additions), no existing expression's selection can change except by newly matching the added file, so the whole reverse check reduces to listing each existing expression once and confirming zero hits for that filename. Do not re-derive per-scenario selections for expressions nothing could have moved.
 
@@ -422,7 +426,8 @@ After the PR exists, on control's own checkout (never switched away from - only 
 
 1. update the row to `done`;
 2. record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and pre-migration graph-refresh results;
-3. commit and push only the tracker change. Edit the row as an **anchored substring replacement**, never a whole-file rewrite - `tracker.md` is LF-only and a whole-file write flips every line to CRLF here. Before staging, require `git diff --numstat -- <tracker>` to show `1 1`, and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`. Never use a shell CR literal to check this: it does not survive quoting or a heredoc, and the resulting empty grep pattern matches every line, reading as a total CRLF flip that never happened; and
+3. commit and push only the tracker change. Edit the row as an **anchored substring replacement**, never a whole-file rewrite, and byte-level: `open(..., 'rb')`/`replace`/`open(..., 'wb')` or `sed -i`, never Python `read_text`/`write_text`, which translate `
+` to `os.linesep` on Windows and flip every line of the LF-only `tracker.md` to CRLF with only the insertion count as the tell. Before staging, require `git diff --numstat -- <tracker>` to show `1 1`, and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`. Never use a shell CR literal to check this: it does not survive quoting or a heredoc, and the resulting empty grep pattern matches every line, reading as a total CRLF flip that never happened; and
 4. restore control's worktree to clean.
 
 Step 4 is not optional. The migration's edits are still sitting there uncommitted, and leaving them means the next migration starts on top of them and sweeps them into its own patch:
