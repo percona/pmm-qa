@@ -8,30 +8,30 @@ print(arguments)
 containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def verify_agent_status(list, service_name):
-    if any('Waiting' in name or 'Done' in name or 'Unknown' in name or 'Initialization Error' in name or 'Stopping' in name for name in list):
+  if any('Waiting' in name or 'Done' in name or 'Unknown' in name or 'Initialization Error' in name or 'Stopping' in name for name in list):
       errors.append(f"Agent status contains wrong status in {service_name} container. Error in: {list}")
-    if all('Running' not in name for name in list):
+  if all('Running' not in name for name in list):
       errors.append(f"Agent status does not contain running status in {service_name} container. Error in: {list}")
 
 def get_pmm_admin_status(service_type):
-    container_name = containers[i][containers[i].index(service_type):]
-    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True, check=False).stdout.splitlines()
+  container_name = containers[i][containers[i].index(service_type):]
+  return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def get_pmm_admin_list(service_type):
-    container_name = containers[i][containers[i].index(service_type):]
-    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True, check=False).stdout.splitlines()
+  container_name = containers[i][containers[i].index(service_type):]
+  return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True, check=False).stdout.splitlines()
 
 def get_admin_version(service_type):
-    container_name = containers[i][containers[i].index(service_type):]
-    agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
+  container_name = containers[i][containers[i].index(service_type):]
+  agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
 
-    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
+  return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
 
 def get_agent_version(service_type):
-    container_name = containers[i][containers[i].index(service_type):]
-    agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-agent | awk \'{{print \\$3}}\'"'
+  container_name = containers[i][containers[i].index(service_type):]
+  agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-agent | awk \'{{print \\$3}}\'"'
 
-    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
+  return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True, check=False).stdout.replace("\\r\\n", "").strip()
 
 psContainerStatus = []
 pgContainerStatus = []
@@ -98,39 +98,39 @@ for i in range(len(containers)):
     agent_version = get_agent_version("psmdb-server")
 
 if len(psContainerStatus) > 0:
-    verify_agent_status(psContainerStatus, "Percona Server")
-    verify_agent_status(psContainerList, "Percona Server")
+  verify_agent_status(psContainerStatus, "Percona Server")
+  verify_agent_status(psContainerList, "Percona Server")
 
 if len(pgContainerStatus) > 0:
-    verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
-    verify_agent_status(pgContainerList, "Percona Distribution for PostgreSQL")
+  verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
+  verify_agent_status(pgContainerList, "Percona Distribution for PostgreSQL")
 
 if len(psSSLStatus) > 0:
-    verify_agent_status(psSSLStatus, "Percona Server SSl")
-    verify_agent_status(psSSLList, "Percona Server SSl")
+  verify_agent_status(psSSLStatus, "Percona Server SSl")
+  verify_agent_status(psSSLList, "Percona Server SSl")
 
 if len(pdpgsqlSSLStatus) > 0:
-    verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
-    verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
+  verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
+  verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
 
 if len(psmdbSSLStatus) > 0:
-    verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL status")
-    verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL list")
+  verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL status")
+  verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL list")
 
 if len(firstMongoReplicaStatus) > 0:
-    verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
-    verify_agent_status(firstMongoReplicaList, "Percona Server for MongoDB instance 1")
+  verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
+  verify_agent_status(firstMongoReplicaList, "Percona Server for MongoDB instance 1")
 
 if len(secondMongoReplicaStatus) > 0:
-    verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
-    verify_agent_status(secondMongoReplicaList, "Percona Server for MongoDB instance 2")
+  verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
+  verify_agent_status(secondMongoReplicaList, "Percona Server for MongoDB instance 2")
 
 if len(thirdMongoReplicaStatus) > 0:
-    verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
-    verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
+  verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
+  verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
 
 if len(errors) > 0:
-    raise RuntimeError("Some errors in pmm-admin status: ".join(errors))
+  raise RuntimeError("Some errors in pmm-admin status: ".join(errors))
 
 expected_version=arguments[1].replace("\\r\\n", "")
 
