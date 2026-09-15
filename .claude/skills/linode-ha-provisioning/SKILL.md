@@ -65,6 +65,12 @@ if jq -e .kubeconfig_b64 "$RUN_DIR/provision.json" >/dev/null 2>&1; then
   jq -r .kubeconfig_b64 "$RUN_DIR/provision.json" | base64 -d >"$RUN_DIR/kubeconfig.yaml"; chmod 600 "$RUN_DIR/kubeconfig.yaml"
   jq -r .cluster_id     "$RUN_DIR/provision.json" >"$RUN_DIR/lke"       # holds cluster_id (teardown also works by run_id)
   export KUBECONFIG="$PWD/$RUN_DIR/kubeconfig.yaml"
+  # provision.json records no node_type, and the cluster is gone after teardown —
+  # save the node plan now or "how much CPU/RAM per node?" becomes unanswerable.
+  kubectl get nodes -o wide                                        >"$RUN_DIR/nodes.txt"
+  kubectl get nodes -o json | jq '[.items[] | {name: .metadata.name,
+    labels: .metadata.labels, capacity: .status.capacity,
+    allocatable: .status.allocatable}]'                            >"$RUN_DIR/nodes-capacity.json"
   jq -r '"URL: \(.url)\nadmin password: \(.passwords.pmm_admin_password)"' "$RUN_DIR/provision.json"
 else
   echo "no kubeconfig — tear the run down (step: Teardown) before retrying"
@@ -79,7 +85,7 @@ so re-polling the same `run_id` always returns the current state. The cluster +
 operators + PMM + HAProxy + LoadBalancer usually take 10–20 min. `kubectl`/`helm`
 then work locally against `$KUBECONFIG`. Defaults (all
 overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
-`node_count=3` (Raft quorum, tolerates one node down); `k8s_version` defaults to the latest LKE offers (versions roll — a retired pin 400s).
+`node_count=3` (Raft quorum, tolerates one node down); `k8s_version` defaults to the latest LKE offers (versions roll — a retired pin 400s). Treat `node_type` here as documentation rather than authority — one run's nodes measured ≈5.95 cores and ≈13.0 GiB allocatable (a 6 vCPU / 16 GB plan), which is not `g6-standard-4`; read the real plan from the cluster, which is what the capture above is for.
 
 **Running the `@pmm-ha` suite? Ask for `"node_count":4`.** The default 3 sizes the
 cluster for exactly what the chart installs — each PMM pod requests 2 CPU and the
@@ -148,11 +154,38 @@ up, swap in the chart yourself against the returned `$KUBECONFIG`:
 [ -d /tmp/phc ] || git clone -b "$CHART_BRANCH" --depth 1 \
   https://github.com/percona/percona-helm-charts /tmp/phc
 # keys per that chart's values.yaml — read it, don't assume
-helm upgrade --install pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reuse-values \
+helm upgrade --install pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reset-then-reuse-values \
   --set image.repository=perconalab/pmm-server,image.tag=<fb-tag>
 kubectl rollout status statefulset/pmm-ha -n pmm --timeout=20m
 # if the dependencies chart also changed: helm upgrade pmm-operators /tmp/phc/charts/pmm-ha-dependencies ...
 ```
+
+`--reset-then-reuse-values`, not `--reuse-values`: the branch chart routinely adds
+top-level values keys the installed release never had, and `--reuse-values` drops the
+new chart's defaults for them, failing the render with
+`at <.Values.pmmClient.replicas>: nil pointer evaluating interface {}.replicas`.
+
+Three things the swap breaks that a green `helm upgrade` hides:
+
+- **HAProxy does not roll.** The released chart's pods carry a *required*
+  `podAntiAffinity` on `kubernetes.io/hostname`, so with one pod per node and the
+  Deployment's default `maxUnavailable: 0` the replacement stays `Pending`
+  (`1 node(s) didn't satisfy existing pods anti-affinity rules`) while Helm reports
+  `STATUS: deployed`. Check `kubectl get pods -l app.kubernetes.io/name=haproxy` and
+  delete the superseded ReplicaSet to release the nodes.
+- **The external URL dies.** The relay sets `pmm-ha-haproxy` to type LoadBalancer
+  outside Helm, so the upgrade reconciles it back to ClusterIP, the NodeBalancer goes
+  away, and every request to the `url` in `provision.json` fails with
+  `SSL_connect: SSL_ERROR_SYSCALL` even though HAProxy is healthy in-cluster. Reach PMM
+  with `kubectl port-forward svc/pmm-ha-haproxy 18443:443` and
+  `PMM_URL=https://127.0.0.1:18443` for `ui-evidence`.
+- **The default 3 nodes no longer fit.** The `PMM-HA-GA` chart (1.6.2) adds a 3-pod
+  `pmm-ha-client` StatefulSet, so a plain 3-replica run leaves `pmm-ha-1` `Pending` with
+  `3 Insufficient cpu, 3 Insufficient memory` at the chart's default 2 CPU / 4Gi
+  `pmmResources` request — `node_count: 4` is worth asking for here too, not only for
+  the 5-pod PMM-T2124 case. If you reduce the requests instead, **delete the `Pending`
+  pod by hand**: the StatefulSet controller does not re-create it on a template change,
+  so it keeps its old request forever.
 
 ### Testing the released chart — only when explicitly asked
 
@@ -232,7 +265,21 @@ correct leaf. The trust boundary for this call is the proxy and the LKE control 
 the leaf cert; don't send these credentials over a path you don't already trust for
 `kubectl`.
 
-On 401, reset Grafana's admin inside a pmm pod:
+**Check Grafana's brute-force lockout before concluding the password is wrong.** The
+chart's crash-looping `pmm-ha-pmm-token-init` job leaves rows in Grafana's
+`login_attempt` table, and five of them make every login 401 with `password-auth.failed`
+for the correct secret — a reset that prints "Admin password changed successfully" and
+moves the `user` row's `updated` timestamp while nothing else changes is the signature of
+the lockout, not of a wrong database. Clear them with `psql` from inside a pmm pod using
+that pod's own `GF_DATABASE_*` env, and the same credentials return 200 immediately:
+
+```bash
+kubectl exec -n pmm statefulset/pmm-ha -- bash -c 'PGPASSWORD="$GF_DATABASE_PASSWORD" psql \
+  -h "$GF_DATABASE_HOST" -U "$GF_DATABASE_USER" -d "$GF_DATABASE_NAME" \
+  -c "DELETE FROM login_attempt;"'
+```
+
+On a genuine 401, reset Grafana's admin inside a pmm pod:
 
 ```bash
 # grafana-cli does NOT read the GF_DATABASE_* env the server runs on, so without explicit

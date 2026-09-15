@@ -210,7 +210,7 @@ load helpers/test_helper
   local -A expected=(
     [PSMDB]=latest [SSL_PSMDB]=latest
     [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
-    [MYSQL]=9.7 [PS]=8.0 [SSL_MYSQL]=8.0
+    [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
     [PXC]=8.0 [PROXYSQL]=2 [VALKEY]=8
   )
