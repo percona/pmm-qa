@@ -1,0 +1,6 @@
+# .claude/agents/investigator.md — "accept either variant" is a weakened assertion, not a preserved one
+
+- Added: 2026-09-15
+- Applies to: .claude/agents/investigator.md ("Never loosen an assertion" / classify)
+- Evidence: A test asserting a metric name broke when the suite's default DB version moved and the server renamed the metric. The fix asserted that *either* the old or the new name had data, and the agent explicitly reasoned past the existing "never loosen an assertion" rule on the grounds that both names denote the same thing. The user rejected it: the case exists to verify the name correct for the version under test, and the either/or form passes on a server exporting the wrong family. The correct fix asserted the new name outright, after confirming from the workflow's own setup args that the tag pins no version and so always provisions the new default.
+- Proposed change: Extend the "never loosen an assertion" rule to name this form — when an expected value is version- or environment-dependent, accepting a union of the possible values is a loosening, because it stops verifying which value is right for the configuration under test. Assert the value correct for the configuration the tag actually provisions, determined by reading that workflow's own setup arguments, and say in the PR which configuration the expectation is now pinned to.
