@@ -145,19 +145,25 @@ export default class GrafanaApi {
     return result.frames[0]?.data.values ?? [];
   };
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  waitForAnyMetric = async (metricNames: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     let iterator = 0;
 
     while (true) {
-      if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
+      if (iterator > timeout)
+        throw new Error(`Timed out waiting for metric data for any of: ${metricNames.join(', ')}`);
 
-      const metric = await this.getMetric(metricName);
+      for (const metricName of metricNames) {
+        const metric = await this.getMetric(metricName);
 
-      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
+        if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
+      }
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
       await this.page.waitForTimeout(Timeouts.ONE_SECOND);
       iterator += Timeouts.ONE_SECOND;
     }
   };
+
+  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) =>
+    this.waitForAnyMetric([metricName], timeout);
 }
