@@ -103,7 +103,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@LBAC`
 - `@link`
-- `@localhost`
 - `@menu`
 - `@new-navigation`
 - `@nightly`
