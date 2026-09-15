@@ -43,26 +43,29 @@ suite, and destroys the cluster in post actions.
 `OCP_VERSION` is read only for `OpenShift` and `K8S_VERSION` only for `EKS`; the unused
 platform's provisioning stage reports `NOT_EXECUTED`, which is normal and not a failure.
 
-## Pre-flight — five cheap gates before spending a cluster
+## Pre-flight — six cheap gates before spending a cluster
 
-**1. The branch must exist in the *upstream* repo.** Both cluster jobs clone a hardcoded
+**1. Resolve the PR first, and reject a fork head.** Both cluster jobs clone a hardcoded
 URL — `git poll: false, branch: params.HELM_CHART_BRANCH, url:
-'https://github.com/percona/percona-helm-charts.git'` — so a branch that exists only in a
-contributor's fork cannot be tested, and most chart PRs are fork PRs (#970 and #967 both
-head from `theTibi/percona-helm-charts`, and neither branch resolves upstream). Verify:
+'https://github.com/percona/percona-helm-charts.git'` — the shorthand step, whose default
+refspec fetches `refs/heads/*` only. A fork's branch is not in there, so **a fork PR cannot
+be tested by this job at all**. Most chart PRs are fork PRs (#970, #967 and #964 all head
+from `theTibi/percona-helm-charts`), so check the head repo before anything else:
 
-```bash
-git ls-remote --heads https://github.com/percona/percona-helm-charts "refs/heads/<branch>"
+```text
+pull_request_read  method: "get", owner: "percona", repo: "percona-helm-charts",
+                   pullNumber: <n>        → head.repo.full_name, head.ref, head.sha
 ```
 
-No output means stop and say so — the fix is a maintainer pushing that branch to
-`percona/percona-helm-charts`, not a parameter you can adjust. Record the SHA it prints:
-that, not the PR head, is the chart commit the run actually tests, and on a fork PR the two
-differ.
+`head.repo.full_name` other than `percona/percona-helm-charts` is a **hard stop**. Say so
+plainly: the only fix is someone with upstream push putting that branch on
+`percona/percona-helm-charts`; it is not a parameter you can adjust. Do not reach for
+`refs/pull/<n>/head` — GitHub does mirror it upstream (verified on #964), but the default
+refspec never fetches it, so neither that ref nor the bare head SHA resolves in the job.
 
-**2. Find the PR before the run, not after.** Fork heads make the `head:` *filter* on
-`list_pull_requests` useless (`percona:<branch>` matches same-repo branches only). The
-search qualifier crosses forks:
+Starting from a branch name instead of a PR number, find the PR the same way — the `head:`
+*filter* on `list_pull_requests` only matches same-repo branches, so it misses exactly the
+fork PRs this gate exists to catch:
 
 ```text
 search_pull_requests  query: "repo:percona/percona-helm-charts head:<branch>"
@@ -70,6 +73,18 @@ search_pull_requests  query: "repo:percona/percona-helm-charts head:<branch>"
 
 No PR, or more than one, is a question for the user now — not a discovery made after 80
 minutes of cluster time, with a verdict and nowhere to put it.
+
+**2. The upstream branch must exist *and* be the commit under review.** A same-repo head
+still has to resolve, and its SHA still has to be the PR's:
+
+```bash
+git ls-remote --heads https://github.com/percona/percona-helm-charts "refs/heads/<branch>"
+```
+
+Empty output stops the run. A SHA that differs from `head.sha` also stops it — the branch
+has moved since, and the job would test a commit nobody asked about. This pairing is what
+catches the nastiest case: a fork branch whose name collides with an unrelated upstream
+branch, where the name alone resolves happily and the run silently tests the wrong code.
 
 **3. Probe Jenkins write access without side effects.** `build_item` needs the
 `jenkins-mcp-writers` group, and the only way to find out you lack it should not be a
@@ -86,7 +101,18 @@ XML back means triggering will work; a permission error means report that and st
 `HELM_CHART_BRANCH`. A run already in flight for this branch is the answer — wait on it
 instead of starting a second cluster.
 
-**5. Confirm with the user** before triggering, quoting the resolved parameters and the
+**5. Check the job actually exercises the change.** The cluster job pins parts of the
+install — notably `--set secret.create=false` against a `pmm-secret` it pre-creates itself.
+A chart change confined to a path the job pins that way cannot be verified here however
+green the run comes back (PR #964 fixes the `secret.create: true` path and states the
+`false` path is untouched). Read the PR's diff against the install arguments in
+`pmm/v3/pmm3-ha-rosa.groovy` and say which of the two this run is before spending it: a
+verification of the change, or a regression check on shared templates it rewires
+(`statefulset.yaml` and `vmauth.yaml` render on both paths, and a credential mismatch there
+drops metrics with 401s rather than failing the install). Both are worth running; only one
+of them answers "does this fix work", and the PR comment must not claim the other.
+
+**6. Confirm with the user** before triggering, quoting the resolved parameters and the
 cost. This creates real cloud infrastructure; it is not a cheap retry.
 
 ## GitHub reach for percona-helm-charts
@@ -111,21 +137,24 @@ build_item  fullname: "pmm3-ha-tests", master: "pmm", build_type: "buildWithPara
 `build_type` must be `buildWithParameters` — the job is parameterised. Note the wall-clock
 time of the call; the next step needs it.
 
-> The response body of `build_item` is **unverified** — authoring this skill stopped short
-> of provisioning a real cluster. Print it once on the first real run and correct this line;
-> do not invent field names for it.
+It returns a bare queue id and nothing else — `{"result": 128334}` on the run that verified
+this. Not a build number, not a URL.
 
 ## Find the build you started
 
-Not from the queue item. `get_queue_item` returns `{id, inQueueSince, url, why, task}` and
-carries **no `executable`** while queued, so there is no verified queue→build-number hop.
+Not from the queue id `build_item` hands back. `get_queue_item` returns `{id, inQueueSince,
+url, task}` and exposes **no `executable`** — checked again on a queue item whose build was
+already running, so this is the tool's projection, not a timing artifact. There is no
+queue→build-number hop.
+
 Resolve it from the job instead: poll `get_build_history` for a build whose `timestamp` is
 at or after the trigger call, then confirm with `get_build_parameters` that its
 `HELM_CHART_BRANCH` is yours. Confirm the parameters even when only one new build appeared
 — the nightly cron and other requesters share this job.
 
-While the build is still queued, `get_queue_item`'s `why` is the honest status to relay
-("There are no nodes with the label …"), not a failure.
+A `why` key appears on the queue item only while something blocks it ("There are no nodes
+with the label …"); that is the honest status to relay, not a failure. Its absence means
+the item is not blocked.
 
 ## Wait
 
@@ -196,8 +225,12 @@ attribution footer:
 _Generated by [Claude Code](https://claude.ai/code)_
 ```
 
-Say `<branch> @ <sha>` from the `git ls-remote` in gate 1, not the PR head SHA — on a fork
-PR they are different commits and the run tested the upstream one.
+Say `<branch> @ <sha>` from the `git ls-remote` in gate 2 — the commit the job checked out.
+Gates 1 and 2 have already established that it equals the PR head; if you are reporting a
+run where it does not, say which commit ran.
+
+State in the comment which question the run answered, per gate 5 — a regression check
+reported as a verification of the fix is a false green on someone's PR.
 
 If the write is refused, relay the exact message, hand the user the rendered body, and name
 the remedy: an org admin installs the Claude GitHub App on `percona/percona-helm-charts`,
