@@ -23,7 +23,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
 
 pmmTest(
-  'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-integration',
   async ({ api, page, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(replicaServiceRegex);
 

@@ -140,6 +140,13 @@ jobs:
 
   # Migrated CodeceptJS scenarios and existing Playwright nightly tests share
   # the @nightly tag, so one Playwright bucket selects all of them.
+  #
+  # This job runs on a bare runner: the databases live on the `setup` shards
+  # above, which are separate runners, and PMM Server is remote. A test that
+  # reaches a database directly from the test process -- `cliHelper` exec'ing
+  # into a DB container, or `mongoDbHelper`/`mySqlDbHelper` on 127.0.0.1 --
+  # therefore cannot run here and must not carry @nightly; its own
+  # @pmm-*-integration tag already runs it where the database is local.
   test_execution_playwright:
     # Name must start with "test execution / " -- the setup shards' own wait
     # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
