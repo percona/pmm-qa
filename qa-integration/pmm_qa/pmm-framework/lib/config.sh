@@ -133,7 +133,7 @@ register_database SSL_PDPGSQL \
 register_database PXC \
   '5.7 8.0 8.4' \
   'CLIENT_VERSION QUERY_SOURCE TARBALL' \
-  'DEFAULT_VERSION=8.0' \
+  'DEFAULT_VERSION=8.4' \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
