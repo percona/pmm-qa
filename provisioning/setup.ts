@@ -34,6 +34,7 @@ export interface Config {
   metricsMode: string;
   clientDebug: boolean;
   encryptedClientConfig: boolean;
+  idleDiskLoad: boolean;
   reuseServer: boolean;
   sequential: boolean;
   verbose: boolean;
@@ -187,6 +188,7 @@ const HELP = `Usage: node provisioning/setup.ts [--db DESCRIPTOR] [--db DESCRIPT
   --metrics-mode MODE        PMM metrics mode (default: auto)
   --client-debug
   --encrypted-client-config
+  --idle-disk-load           poll every block device so Disk Details panels have data
   --reuse-server             discover and reuse a running pmm-server instead of creating one
   --sequential                provision databases one at a time instead of concurrently
   --verbose                   also print buffered output for successful provisioning jobs
@@ -327,6 +329,7 @@ export function parseConfig(
       'metrics-mode': { type: 'string' },
       'client-debug': { type: 'boolean' },
       'encrypted-client-config': { type: 'boolean' },
+      'idle-disk-load': { type: 'boolean' },
       'reuse-server': { type: 'boolean' },
       sequential: { type: 'boolean' },
       verbose: { type: 'boolean' },
@@ -375,6 +378,7 @@ export function parseConfig(
     metricsMode: values['metrics-mode'] ?? 'auto',
     clientDebug: values['client-debug'] ?? false,
     encryptedClientConfig: values['encrypted-client-config'] ?? false,
+    idleDiskLoad: values['idle-disk-load'] ?? false,
     reuseServer: values['reuse-server'] ?? false,
     sequential: values.sequential ?? false,
     verbose: values.verbose ?? false,
@@ -640,6 +644,29 @@ export async function createServer(
   ]);
 }
 
+async function startDiskLoad(image: string, runner: Runner): Promise<void> {
+  const list = await runner(
+    CONTAINER_RUNTIME,
+    ['run', '--rm', '--entrypoint', 'sh', image, '-c', "awk '$3 ~ /^sd[a-z]$/ {print $3}' /proc/diskstats"],
+    true,
+    true,
+  );
+  const devices = list.stdout.split(/\s+/).filter(Boolean);
+  if (!devices.length) return;
+  await runner(CONTAINER_RUNTIME, [
+    'run',
+    '--rm',
+    '--user',
+    '0',
+    '--entrypoint',
+    'sh',
+    ...devices.flatMap((device) => ['--device', `/dev/${device}:/dev/${device}:r`]),
+    image,
+    '-c',
+    `i=0; while [ $i -lt 6 ]; do for d in ${devices.join(' ')}; do dd if=/dev/$d of=/dev/null bs=4k count=16 iflag=direct >/dev/null 2>&1; done; i=$((i+1)); sleep 5; done`,
+  ]);
+}
+
 export async function waitForServer(
   runner: Runner,
   pause: (milliseconds: number) => Promise<unknown> = sleep,
@@ -860,6 +887,7 @@ export async function orchestrate(
   const haproxy = config.databases.filter((database) => database.type === 'haproxy');
   await provisionDatabases(config.databases.filter((database) => database.type !== 'haproxy'), provision, config.sequential);
   await provisionDatabases(haproxy, provision, config.sequential);
+  if (config.idleDiskLoad) await step('Seed disk activity', () => startDiskLoad(config.serverImage, runner));
 }
 
 export async function resolveClientArgs(

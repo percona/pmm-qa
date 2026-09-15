@@ -605,7 +605,7 @@ async function registerMysqlWithPmm(config: Config, names: string[]): Promise<vo
         args.push(`--environment=${pmm.single.environment}`, `--cluster=${pmm.single.cluster}`);
       }
       args.push('--debug', `${name}_${suffix}`, '127.0.0.1:3306');
-      return docker(args);
+      return registerPmmService(args);
     }),
   );
 
