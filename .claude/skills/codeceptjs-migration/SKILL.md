@@ -5,178 +5,80 @@ description: Migrate one CodeceptJS test to native Playwright, provision its PMM
 
 # CodeceptJS to Playwright Migration
 
-Migrate exactly one CodeceptJS source test at a time. Each one is migrated, reviewed, and proved on its own.
+Migrate exactly one CodeceptJS source at a time. `done` means the PR is open against `main`; merge is not required. Publish branches are cut from `origin/main` and never merge into control, so every open migration PR is a collision target for the files all migrations touch (the nightly Playwright matrix, `e2e_tests/README.md`). `orchestration.md` step 1 caps how many may be open before a new row is selected.
 
 ## Required outcome
 
-A migration is complete only when:
+1. All active behaviour from the source is represented in Playwright.
+2. The initial independent review passes.
+3. Migration-related locators are verified through MCP.
+4. The migrated test passes; the whole target file passes when an existing file was modified.
+5. Every migrated scenario is selected by some Playwright job, committed on the PR branch.
+6. The final independent review passes.
+7. A PR targeting `main` is open and the tracker row is `done`.
 
-1. all active behavior from the selected CodeceptJS source is represented in Playwright;
-2. the initial independent review passes;
-3. migration-related locators are verified through MCP;
-4. the migrated test passes;
-5. the complete target file passes when an existing file was modified;
-6. every migrated scenario is selected by some Playwright job, and that coverage is committed on the PR branch;
-7. the final independent review passes;
-8. a PR targeting `main` is opened; and
-9. the tracker row is updated to `done`.
+## Before migrating: is it worth porting?
 
-For this workflow, `done` means the PR is open for review. Merge is not required.
+For every scenario, not only `xScenario`, establish and record: the ticket or behaviour it verifies still ships; the value it asserts is still the product default; the behaviour is not already covered in `e2e_tests`; every branch is reachable on the destination runner (a `JOB_NAME` check only Jenkins satisfies is dead in GitHub Actions). If any fails, propose `retired` for that scenario in the tracker with the evidence instead of porting dead coverage. A skip or a two-year-old ticket carried on the source's authority alone is not evidence.
 
-Because every publish branch is cut from `origin/main` and none of them merge into control, an open migration PR is a liability that every later row inherits until it merges: `main` never carries it, so nothing after it can see it, and it stays a live target for collision on any file more than one migration PR touches (the nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR). `orchestration.md` step 1 therefore caps how many migration PRs may be open at once before a new row is selected - see that file.
+## Port behaviour, simplify shape
 
-## Migration invariants
+The source is the authority on **what** is checked, never on **how** the code is shaped. Preserve exactly: every active scenario, every `PMM-Txxxx` id and tag, hooks and cleanup, one test per data row, assertion strictness, API/CLI/UI/download/file behaviour, and order where it affects behaviour. Do not add, remove, weaken or improve coverage. Everything else you simplify, and reviewers expect it:
 
-Preserve exactly:
+- **Nothing used once.** No POM method, helper, `const`, interface, type alias, row field or file with one consumer. Inline it; `as const` types the rows. "The source declared it too" and "siblings do it" are not defences. Exposing an existing method for reuse is fine.
+- **A data row carries only what varies.** One distinguishing value per row; derive the rest at the call site or move it onto the page object. Title: `PMM-Txxxx - <description> <tags> | <that one value>`. Never imitate CodeceptJS's `DataTable` JSON suffix.
+- **Zero comments in `*.test.ts`**, except the skip-policy pair in `mappings.md`. Outside tests, no comment narrates a decision (why an option was rejected, which job consumes a tag); that goes in the PR body. `CLAUDE.md` house style outranks a reviewer bot asking for a comment.
+- **Drop what is inert.** A wait on a locator the step already acted on, a second assertion of an established condition, a navigation nothing after it needs, an unfiltered `goto` immediately replaced by the filtered one, a parameter no call site exercises, a type or registry entry with no consumer, an unreachable branch. Record each removal; keep anything you cannot show is outcome-neutral.
+- **Best locator wins.** Re-derive every locator at the highest rung of the `playwright-practices.md` ladder that resolves to the same element. A green source selector proves the element, not the form. Never splice text into selector source; `getByText` and `getByRole` take the value as data. Generated CSS classes break on the next Grafana bump. A load-guard wait is a means, not a preserved behaviour: re-anchoring it to a better element is not a fidelity change. URLs stay in the existing POM structure.
+- **Assertions must be able to fail where they stand.** No absence check straight after the click that would produce the element; no locator value awaited into a variable and asserted once (web-first matcher or `expect.poll`); no `pmmTest.step` around a single `expect`; every new API method asserts status or returns the raw `APIResponse` like its siblings, never neither.
+- **Cleanup on every path.** Restore shared state from the constant the test would have set, not from a variable set mid-test. A swallowed restore failure poisons the next spec in the same worker.
+- **Duplication is not behaviour.** A block repeated across scenarios has two callers, so it has earned a POM or helper method; extract it there, never as a function declared in the spec file, because a test file holds tests. Assertions stay in the test body: extract the steps around them. Keep per-scenario asymmetry. Prove by counting each assertion and call category before and after. Shell command strings differing only in runs of spaces share one builder; `cli.helper.ts` hands them to `/bin/sh`, which collapses them.
+- **No `private`, no one-click wrappers, no waits in the POM.** A new `private` method needs a stated reason; without one, fold it into its caller. A method that wraps a single click is replaced by the locator at the call site. Waits and one-off actions live in the test; locators live in the POM as class properties, never raw inside a method or a test.
+- **Reuse with the smallest diff.** Drop `private` in place instead of renaming or wrapping; never a public method plus a forwarding delegate. Check `base.page.ts` (`selectTimeRange`, `selectVariableValue`, `getVariableValues`, `grafanaIframe`, `duplicateCurrentPage`, `haEnableCheck`) before adding anything. A new page object matches its folder siblings. Do not repeat config in tests (`ignoreHTTPSErrors` is set in `playwright.config.ts`); use path aliases, not relative imports.
+- **Helpers return one shape.** No mode flags that change the return type. Assertions stay in test bodies; a CodeceptJS custom step that asserts becomes a helper returning a value plus an `expect` in the test. Never extend `assertFunctionNames` to satisfy `playwright/expect-expect`.
 
-- every active executable scenario;
-- every `PMM-Txxxx` id and every tag;
-- hooks, suite setup, and cleanup;
-- data-driven rows, one generated test per row;
-- assertions and assertion strictness;
-- API, CLI, UI, download, and file-check behavior;
-- ordering when it affects behavior.
+Run `bash .claude/scripts/check-migration-conventions.sh <every changed file>` before handing off and paste its output. It fails on every shape above that can be grepped; the reviewer re-runs it.
 
-That list is exhaustive. A synchronization wait is a means, not one of the preserved behaviors, so which element it watches is governed by the locator ladder like any other locator - re-anchoring a load guard is not a fidelity change and needs no reviewer dispensation. What a wait does carry is its timeout budget; see Drop what is inert below.
+## Title, tags, ids
 
-**Write the title in the destination idiom from the first commit**, and never retitle after it: `PMM-Txxxx - <description> <tags>`, plus ` | <the one value that distinguishes the row>` for a data-driven scenario. Do not imitate CodeceptJS's `DataTable` suffix. Reviewers have rejected that imitation on two separate rows five weeks apart - it is too long for an artifact viewer to render, it restates data the row already carries, and hand-building the JSON escapes nothing, so a row containing a quote or backslash diverges silently anyway.
+Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Both survive verbatim. The rest is free text. The gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality.
 
-What the gates prove is **completeness, not string equality**: that no scenario and no data row was silently dropped or renamed. Compare the two runners' listings on the parts that carry identity - scenario count, row count per scenario, each `PMM-Txxxx` id, each tag set, and each row's distinguishing value - never on the whole title string. A descriptive middle that reads better in the destination is not a silent rename; a missing row is, and this comparison still catches it.
+## Waits and retries
 
-Two parts of a title are load-bearing at runtime and survive any retitle verbatim:
+- `I.wait(N)` becomes a web-first assertion or `expect.poll`. Budget, in order: an existing poll in the file on the same operation; the source's explicit waiter for it; N as the floor. Never two polls on one command with different timeouts. Raising above the floor is not a weakening.
+- Sequential waits on different locators sum; state the sum when collapsing them.
+- Pin every `.retry(N)` exactly. `Feature.retry` -> file-scope `pmmTest.describe.configure({ retries: N })`; scenario-level -> the same when all agree, else one `describe` wrapper per group sharing N. The config default is `CI ? 2 : 0`, so no N survives unpinned. A wrapper prefixes the full title: re-run the selectability check (`run.md` step 8). Record N and scope in the PR body.
+- Source version conditionals -> `helpers/versionGates.ts` plus the `versionGate` fixture, keyed by the `PMM-T` id, never inline.
+- Where a helper branches on server configuration, read the running server's env and state which branch the green run took.
 
-- **Every tag.** CI selects with `npx playwright test --grep`, and the tags live inside the title string.
-- **The `PMM-Txxxx` token.** `e2e_tests/fixtures/pmmTest.ts` extracts it with `testInfo.title.match(/PMM-T\d+/)` and keys `minPmmVersion` off it to gate the test by server version. Drop or mangle the id and the gate silently stops firing - the test then runs on every version and fails somewhere unrelated, with nothing pointing back at the title.
+## Skips
 
-Everything else in the title is free text. Launchable does not key on it either, since it subsets by file rather than by test name.
+Do not migrate commented-out scenarios. An `xScenario` follows the fixture-based skip policy in `mappings.md`; stop if no policy fits rather than inventing one.
 
-Do not add, remove, weaken, or improve coverage during migration.
-Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
-When unsure, keep the source syntax.
-That applies to syntax, never to locator form. A ported locator is migrated at the level of the **element**, not the selector string: once the live environment exists, re-derive each one at the highest rung of `playwright-practices.md`'s ladder that resolves to the same element, and keep the source selector only when nothing higher does. That the source uses it and is green today is evidence the **element** is right, never that the selector form is - CodeceptJS sources predate the ladder entirely, and a resolving locator is not the same thing as a well-formed one.
+## Workflow coverage
 
-**A migrated data row carries only what varies.** A `DataTable` column is not automatically a field on the migrated row: drop one whose value is fully determined by another and derive it at the call site, and move one that is really a property of a page object onto that page object. `as const` supplies the literal types, so the row needs no interface. Apply this to every column in one pass - a human-readable label counts as determined even though its text differs per row, and it is the column that survives the first correction round and then draws a second one.
+`branch-workflow.md` section Workflow coverage is normative. Short form: enumerate every surface the source ran on before adding any, `fb-e2e-suite.yml` included; append the migrated tag to the existing `test_execution_playwright` alternation, never a new matrix entry; add an FB job mirroring the retiring source's `setup_services` when an `@fb-*` CodeceptJS grep selected the scenario; `e2e-tests-matrix.yml` already calls `fb-e2e-suite.yml`, so never add a second job that runs the same tests in one PR run; state `expected_test_jobs` before and after; delete a CodeceptJS job the retirement emptied; never point a load-generating test at the shared nightly server. Never add `@nightly` to the Playwright alternation: that tag also marks tests owned by jobs whose services the nightly shards never provision. Retagging true nightly tests with `@nightly` plus per-database `@*-nightly` tags is a separate PR, not a migration.
 
-**Duplication is not behavior.** When the source repeats a block across scenarios, extract it. Execution order and cross-scenario state handoff are the behavior and must not change; the repetition is not.
+## Review comments
 
-- Extract into module-scope functions in the migrated test file, not into a POM or shared helper module. Those functions orchestrate POM and helper calls; raw locators, element waits and navigation still belong in the POM.
-- Prove the extraction by expansion arithmetic: per assertion/call category, the new literal count expanded by each function's call-site multiplicity must equal the pre-refactor count exactly. Do not verify a large reflow by reading the diff.
-- Keep any asymmetry between the scenarios. If one polls an exporter the other does not, or one passes `service_name` where the other passes `node_name`, a shared function must not grant both the union - that is added coverage.
-- Runs of spaces between arguments in a shell command string are not a difference: `cli.helper.ts` hands the string to `/bin/sh`, which collapses them. Call sites differing only that way share one builder.
-
-**Drop what is inert in Playwright.** The test: if removing it cannot change the outcome for any migrated value, remove it. This is not a coverage change - inert code asserts nothing, so removing it removes nothing - and it is the one place where fidelity to the source is the wrong answer. Shapes seen so far:
-
-- a wait on a locator the same step has already acted on (`waitFor({ state: 'attached' })` after `clear()`/`fill()`);
-- a second assertion of a condition the first already established;
-- a parameter no migrated call site exercises;
-- a type or registry entry with no consumer;
-- a branch unreachable on the target's library version.
-
-Record each removal and why it is inert. If you cannot show that removal is outcome-neutral, keep it.
-
-Waits are the one shape where that proof is arithmetic rather than judgement. Sequential source waits on **different** locators sum, so collapsing them into a single assertion timeout is outcome-neutral only when that timeout is at least the sum - folding a 60s page-load wait and a 30s cell wait into one 60s assertion silently cuts the worst case from 90s to 60s. State the sum when you collapse. A wait on a locator the same step already acted on is the genuinely inert case, because it adds no budget the following web-first assertion does not already have.
-
-**The sum is a floor, not the answer.** A bare `I.wait(N)` could not fail, so turning it into an `expect.poll` deadline adds a failure mode the source never had - and `N` is then the tightest possible bound on an operation the source never bounded. Source the budget in this order:
-
-1. another scenario in the same file polling the identical command or locator - reuse its budget verbatim;
-2. the source's own explicit waiter for that operation elsewhere (`I.asyncWaitFor(..., 60)`);
-3. the slept value, as the floor.
-
-Never leave two polls on the same command with different timeouts in one file. Raising a deadline above the floor is not a weakening: the assertion is unchanged and a poll exits on success, so the happy path does not slow down.
-
-## Minimal reuse diffs
-
-When the source needs behavior that **already exists** in Playwright code (POM, helper, API client, component, fixture), reuse it with the **smallest** change:
-
-1. Prefer renaming or making the existing implementation public in place; match the source name when practical.
-2. Update existing internal callers in the same file to use that one implementation.
-3. Do **not** add a second public surface plus a private delegate/wrapper that only forwards to it.
-4. Do **not** duplicate the same logic in the test, a new helper, or a new abstraction when an existing one can be exposed.
-5. Do **not** introduce a name that is used once. Inline it. The rule is about the indirection, not the syntax that carries it - a POM method with one call site (at any length, a two-action sequence as much as a single click), a `const` that exists only to be `.map()`ed into the array below it, an `interface` or type alias nothing references, a row field fully determined by another. Every one of those shapes has drawn a review comment on a migration PR, and the last one shipped because the rule named only methods. Neither "other single-caller methods exist here" nor "the source declared it too" is a defence; the source's file shape is not a preserved behavior. Exposing an *existing* method for reuse is rule 1, not this.
-
-```ts
-// BAD - duplicate surface
-doThing = async () => { ... };
-private legacyDoThing = async () => this.doThing();
-
-// GOOD - one method, internal + migrated test callers share it
-doThing = async () => { ... };
-```
-
-Inline in the test only when no suitable existing abstraction exists. Creating a new file is the last resort, not the default.
-
-When you add a method to an existing API client, POM, or helper, match what its siblings already do - status handling, locator strategy, return shape - and name the sibling you matched. In `e2e_tests/api/`, 14 of 25 request-issuing methods assert the status with `expect`, and most of the rest deliberately return the raw `APIResponse` so the caller asserts (`alerting.api.ts`, `annotation.api.ts`). Either is correct; doing neither is not.
-
-## Native Playwright rules
-
-`playwright-practices.md` is authoritative for how migrated code is written: locator ladder,
-web-first assertions, the modern API to prefer over a CodeceptJS transliteration, removed APIs,
-structure, and the repository's deliberate deviations from upstream. Read it before migrating.
-Its `verifiedAgainst` version must match `e2e_tests/package.json`; `orchestration.md` step 1 checks this.
-
-The rules below are migration-specific and are not repeated there:
-
-- Reuse existing POMs, helpers, components, API clients, fixtures, and test data.
-- **A new page object matches the shape of its siblings in the same folder.** Read one before writing it. An indirection no sibling uses is a new local idiom and needs a reason beyond taste - see Minimal reuse diffs rule 5, which is where that judgement lives.
-- When reusing existing code, follow section Minimal reuse diffs (expose in place; no duplicate delegates).
-- Port behavior, not CodeceptJS helper APIs.
-- Helpers should have one stable return type.
-- Do not use boolean mode flags that change helper return shape.
-- Keep migration docs ASCII-only.
-- Add target registrations only when required.
-- Keep URLs in the repository's existing POM structure.
-- Do not retain CodeceptJS `I.*` calls or recreate an actor abstraction.
-- Do not hide assertions inside POMs or helpers; a CodeceptJS custom step that asserts becomes a
-  helper that returns a value plus an assertion in the test body. "Helper" means a shared module under
-  `e2e_tests/helpers/`, `pages/`, `api/` or `components/` - something another spec can import; a
-  module-scope function in the migrated spec file is not one. Such a function may carry an assertion
-  only when the assertion sits *between* other steps, so hoisting it would reinstate the duplication
-  the extraction removed. Every scenario must still hold a direct assertion, and never add the
-  function to `assertFunctionNames` to satisfy `playwright/expect-expect`.
-- Do not suppress `playwright/expect-expect` to compensate for hidden assertions.
-- Do not add comments of any kind in migrated test files (`*.test.ts`), except the required skip-policy comments in `mappings.md`.
-- When a reviewer asks for an explanatory comment, check the repository's house style in `CLAUDE.md`
-  first. The repo's own rule wins over a review suggestion: a two-line note added on a one-line locator
-  at an automated reviewer's request was removed by the maintainer on the next pass.
-- **When a human reviewer names a concrete end state, ship it here.** If the change is mechanical and verifiable in-repo, make it in this PR instead of declining it, offering a follow-up PR, or asking which variant they prefer; each of those costs a review round and the answer is nearly always "yes, now". One migration spent a round offering to move a column onto the page objects and another offering to retag other jobs' tests separately; both landed in that PR anyway. Push back only where the request would break a migration invariant, and then say which one.
-- Outside migrated tests - POMs, helpers, API clients, and workflow YAML - do not narrate a decision. Reasoning about why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body, where it is searchable and does not age in place beside the code. A one-line statement of a fact a reader cannot infer from the code stays.
-- If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
-- Pin **every explicit source retry value exactly**, at the scope the source applied it; do not port `.retry(N)` as CodeceptJS syntax. No value of N survives being left unpinned: `playwright.config.ts` sets `retries: process.env.CI ? 2 : 0`, so `.retry(1)` is not the CI default, `.retry(0)` silently gains 2, and any N > 2 silently loses retries. A source with no `.retry()` anywhere correctly inherits the config default.
-  Scope matters, because Playwright has no per-test `retries` option and `pmmTest.describe.configure({ retries: N })` applies to everything in its enclosing scope:
-  - **Feature-level** (`Feature('...').retry(N)`): one `pmmTest.describe.configure({ retries: N })` at file scope. This is the direct equivalent - the source applied it to the whole file too.
-  - **Scenario-level** (`}).retry(N)` on an individual `Scenario`/`Data` block) where every retrying scenario in the file shares the same N and no scenario is meant to differ: file-scope `configure` is still equivalent, and is preferred over wrapping.
-  - **Scenario-level with differing N across scenarios in one file**: wrap each affected scenario, or each group sharing one N, in its own `pmmTest.describe` with `configure({ retries: N })`. Never let a wrapper added for one scenario's retry count change a sibling's - that is the failure mode a file-scope `configure` causes here.
-  A describe wrapper prefixes the test's full title. Keep the scenario title string byte-identical inside it, and re-run the per-scenario selectability check afterwards (`run.md` step 8): the destination grep matches against the full title, so a wrapper must be proven not to have broken selection.
-  Record the source N and the scope you applied it at in the PR body. This is the "preserve exactly" invariant applied to retries, not a judgement call.
-- **An advisory or review finding copied into shipped prose keeps its hedges verbatim.** This repository squash-merges, so commit bodies land in `main` and outlive every memory of the conversation. On row 9 a gate advisory reading "its *only plausible* caller is cross-repository", naming no repository, was relayed as a flat fact naming one - and the named pipeline turned out to be the one that never ran the retiring scenarios. That cost two full final-gate rounds. Verify an attribution in-repo before writing it into a commit body, and if the evidence only supports a hedge, ship the hedge.
-- Do not migrate commented-out scenarios.
-- Migrate an explicitly skipped active scenario only according to the repository's established Playwright skip policy. Stop when no policy exists rather than inventing one.
-- Before migrating an `xScenario`, establish that it is still worth migrating, and record the answers: is its blocking ticket still open; is the behavior already covered elsewhere in either suite; does its assertion still match current product behavior. If any of the three fails, propose dropping it with that evidence instead of porting dead coverage - `tracker.md` already has a `retired` status for obsolete coverage, and this is its per-scenario counterpart. A skip carried forward on the source's authority alone can outlive its reason by years.
+When a human reviewer names a concrete end state, ship it in this PR; do not offer a follow-up or ask which variant. Push back only when the request breaks an invariant above, and name it. Answer every open bot thread either way. This repo squash-merges commit messages, not the PR body, into `main`: verify every attribution before it enters a commit body, and keep a hedged finding hedged.
 
 ## Graphify rule
 
-Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` through the `graphify` skill's update flow, each from its own root, each its own commit on control. Never regenerate either graph during migration. A missing LLM API key is never a reason to stop or to fall back to `--code-only`; see `graphify.md`. What is committed where after this point is owned by `branch-workflow.md` section What is committed where.
+Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` through the `graphify` skill's update flow, each from its own root, each its own commit on control. Never regenerate during migration. A missing LLM API key is never a reason to stop or use `--code-only`; see `graphify.md`. What is committed where is owned by `branch-workflow.md`.
 
 ## Local provisioning rule
 
-Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. It starts in the background as soon as the environment bucket is confirmed, so it provisions while the writer migrates. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
+One local Docker environment per migration through `provisioning/setup.ts`, started in the background as soon as the environment bucket is confirmed, reused through both reviews and execution, torn down through the same entry point. No Linode or `qa-integration` provisioners here. See `context.md` and `run.md`.
 
 ## Editing this skill
 
-A shell command written into these files as a check must be executed before it is committed, through the same quoting path the skill will use, with its output shown. `orchestration.md` requires `bash -n` on `.claude/scripts/*.sh`, but that only parses a script file and never reaches a command embedded in markdown.
-
-Prefer forms with no shell-escaping hazard: `grep -P` is unavailable here and a carriage-return literal does not survive its own heredoc. `AGENTS.md` section Shell and tooling notes carries the working byte-count and ASCII-scan forms.
+Execute any shell command you write into these files before committing it, through the same quoting path the skill will use, with its output shown. `grep -P` is unavailable and a carriage-return literal does not survive its own heredoc; `AGENTS.md` section Shell and tooling notes has the working forms. Rules are short imperatives; incident history goes in the tracker Notes.
 
 ## Agent responsibilities
 
-- `pmm-migration-writer`: graph discovery, migration, per-scenario selectability check, and static validation.
-- `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, and final review.
-- `pmm-migration-runner`: execution, failure evidence, workflow coverage, publication, PR creation, and tracker completion.
+- `pmm-migration-writer`: graph discovery, migration, per-scenario selectability check, convention script, static validation.
+- `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, final review.
+- `pmm-migration-runner`: execution, failure evidence, workflow coverage, publication, PR creation, tracker completion.
 
-The parent spawns every review gate. No worker subagent spawns another subagent - one that does, and then waits on the reply, deadlocks.
-
-Each of the three appends its own row to this migration's timeline in
-`.claude/migration-observations/` before returning. `skill-gardener` reads those rows to audit the
-workflow and to fill in `parallelization-ledger.md`.
-
-Phase contracts are defined in `run.md`; the parent's steps and the canonical sequence are in `orchestration.md`.
+The parent spawns every review gate; a worker that spawns a subagent and waits on it deadlocks. Each agent appends its row to `.claude/migration-observations/` before returning. Phase contracts are in `run.md`; the parent's sequence is in `orchestration.md`.

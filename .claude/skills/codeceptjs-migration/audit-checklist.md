@@ -1,132 +1,75 @@
 # Migration Review Checklist
 
-The reviewer performs this checklist twice: before execution and after execution.
+The reviewer works this twice: before execution and after. Every human comment on a migration PR to date falls in the Shape block; clear it first.
 
 ## Initial review
 
-Work the whole list, but clear these first. Every finding a human reviewer has raised on a migration PR
-to date falls into one of them, and each is already a checkbox below:
+### Shape
 
-1. A name used once, in any shape - method, `const` mapped once, interface, type alias, row field.
-2. A comment outside a test file that narrates a decision.
-3. A data row or generated title carrying more than what varies.
-4. A source defect ported verbatim - dead scenario, duplicated block, bottom-of-ladder locator, unchecked response status.
-5. A grep or tag edit that switches on tests this migration does not own.
-6. An assertion that cannot fail where it stands.
+- [ ] `bash .claude/scripts/check-migration-conventions.sh <every changed file>` was run by the reviewer, output pasted, zero failures, every advisory answered.
+- [ ] No name with one consumer anywhere in the diff: method, `const`, interface, type alias, row field, helper file. Cross-file call counts, not single-file. Pre-existing methods exposed for reuse are not findings; `e2e_tests/eslint.config.mjs` whitelists single-caller assertion helpers by name. Advisories on pre-existing lines are not blockers.
+- [ ] Data rows carry only what varies; the title suffix is the one distinguishing value, no `DataTable` JSON imitation.
+- [ ] Zero comments in `*.test.ts`; no added comment outside tests narrates a decision.
+- [ ] Nothing inert was ported (`SKILL.md` Port behaviour, simplify shape); each removal is recorded and outcome-neutral.
+- [ ] Every scenario passed the worth-porting gate with evidence (`SKILL.md` Before migrating).
+- [ ] Every assertion can fail where it stands; the riskiest one was proven by mutating its expected value and re-running (inverting a matcher is not a mutation). Through MCP, `expect` is unavailable: emulate and label the evidence. Locator values go through web-first matchers or `expect.poll` (`e2e_tests/tests/changeTheme.test.ts:61-65`); bare `expect` stays correct for API status, CLI stdout and parsed files.
+- [ ] Every locator is at the highest resolving ladder rung. For each CSS-by-class locator the reviewer showed nothing higher resolves. No text spliced into selector source.
+- [ ] No `pmmTest.step` around a single `expect`. Each construct with an alternative (locator form, step granularity, navigation, POM shape, assertion style) matches the dominant `e2e_tests` form or the deviation is justified. Count, do not argue.
+- [ ] Cleanup restores from constants and works on every path, including a failure between the mutation and the variable the source read.
+- [ ] No relative imports, no config repeated in tests, no fixed pauses in any file.
+- [ ] No function or method declared in a `*.test.ts`; repeated blocks became a POM or helper method with the assertions left in the test. No new `private` without a stated reason; no wrapper around a single click; no waits inside a POM.
+- [ ] The reviewer's Maintainer's rules section was applied to the diff and every hit is in `findings` with its severity.
 
-### Source coverage
+### Completeness
 
-- [ ] Every active executable scenario is migrated.
-- [ ] For `already-covered`, every active executable scenario is mapped to existing Playwright coverage.
-- [ ] Commented-out scenarios are excluded.
-- [ ] Nothing inert in Playwright was carried over: a wait on a locator the step already acted on, a second assertion of a condition the first established, a parameter no call site exercises, a type or entry with no consumer, a branch unreachable on this library version. See `SKILL.md` Migration invariants - removing inert code is not a coverage change.
-- [ ] Every `PMM-Txxxx` id and every original tag is preserved. A destination execution tag may be added; it never replaces a source tag. Both are load-bearing at runtime - `--grep` matches tags inside the title, and `fixtures/pmmTest.ts` parses the id to drive the version gate.
-- [ ] Scenario and row **completeness** was proved by extracting both runners' listings programmatically and comparing counts, ids, tag sets and each row's distinguishing value - not by reading the two files, and not by diffing whole title strings. The titles themselves are written in the destination idiom (`SKILL.md` Migration invariants); a better-reading description is expected, a missing row is the finding. Take the Playwright list from the **`list` reporter**: the `json` reporter does not preserve declaration order - it emits file-level specs before describe-block specs - so a file with a `describe` wrapper (any retry-pinned file) comes back rotated. Commented-out and skipped scenarios appear in that output too.
-- [ ] For a data-driven scenario, expected titles came from the real runner: `npx codeceptjs dry-run` from `codeceptjs-e2e/`. That also proves the source still parses and is still discovered. It will **not** run against the tracked `pr.codecept.js`, whatever `--grep` or file argument you pass: that config globs `tests/**/*_test.js`, and `tests/configuration/verifyPMMSettingsPageFunctionality_test.js` requires a missing `codeceptjs/effects`, which aborts the whole listing. Per the house style, copy the config to the scratchpad and point `--config` at the copy - never edit the tracked one. Three things the copy needs: `NODE_PATH` set to `codeceptjs-e2e/node_modules` or it cannot resolve `dotenv`; `include` and every `helpers.*.require` absolutised against the repository root, because codeceptjs resolves them against the *config's* directory; and bare npm package names such as `codeceptjs-postgresqlhelper` left alone, since absolutising those breaks helper loading.
-- [ ] The data-row suffix is the single value that distinguishes the row (`| Disk Space Total`), not `JSON.stringify(row)` and not a hand-built imitation of CodeceptJS's `${title} | ${dataRow.data}`. Both forms have drawn review comments; neither is consumed by anything on the Playwright path.
-- [ ] Every data row produces its own test, and each is distinguishable from the others by its title.
-- [ ] For each migrated `xScenario`, the writer established it is still worth migrating: blocking ticket still open, behavior not already covered elsewhere in either suite, assertion still matching current product behavior. A skip carried forward on the source's authority alone is not evidence.
-- [ ] The writer's `scenarioSelectability` report is re-derived, not trusted: every scenario either already matches an existing job's grep, or carries `destinationTagNeeded: true` with a stated plan for what tag or job the runner will add at step 5b. No scenario is left unresolved with no plan.
+- [ ] Every active scenario is migrated; commented-out ones are excluded. For `already-covered`, each scenario is mapped to existing Playwright coverage.
+- [ ] Every `PMM-Txxxx` id and every original tag is preserved. A destination tag may be added, never substituted.
+- [ ] Completeness was proved by comparing both runners' listings programmatically on count, rows per scenario, ids, tag sets and each row's distinguishing value. Playwright side from the `list` reporter (the `json` reporter reorders describe-wrapped specs). CodeceptJS side from `npx codeceptjs dry-run` on a scratchpad copy of `pr.codecept.js` with `NODE_PATH=codeceptjs-e2e/node_modules`, `include` and `helpers.*.require` absolutised, bare npm helper names left alone; the tracked config aborts on a missing `codeceptjs/effects`.
+- [ ] One generated test per data row, each distinguishable by title; never a loop inside one test.
+- [ ] The writer's `scenarioSelectability` report was re-derived: every scenario matches an existing job's grep or carries `destinationTagNeeded: true` with a plan for step 5b.
 
-### Source fidelity
+### Fidelity
 
-- [ ] Hooks and suite setup are preserved.
-- [ ] Cleanup is preserved.
-- [ ] Cleanup is correct on **every** path, not only the one that does not need it. A hook that restores
-      shared state by reading a variable the test sets *later* only works when nothing failed in between -
-      and its failure is usually swallowed (`tryTo` -> `.catch(() => undefined)`), so the environment is
-      left mutated and the next test dies with an error hiding the real one. This has shipped past both
-      gates before: an `afterEach` authenticating a password restore with `process.env.ADMIN_PASSWORD`,
-      which only became the new password after a logout and an assertion. Prefer restoring from the
-      constant the test would have set (the redundant call fails harmlessly when the change never
-      happened) over reading mid-test state. Porting the source's own latent version of this bug is not
-      fidelity - the source leaks into one CodeceptJS run, while a Playwright worker is reused across spec
-      files.
-- [ ] Every assertion is present with equivalent strictness.
-- [ ] UI, API, CLI, download, and file behavior is preserved.
-- [ ] Reachable custom steps were inspected and mapped.
-- [ ] No behavior was added, removed, weakened, or improved.
-- [ ] Where a migrated helper branches on server configuration, the running server's environment was read (`docker exec pmm-server env`) and the evidence states which branch the green run actually took. Code alone cannot show it, so a ported fallback can look exercised when it never ran, or look dead when it is the only live path.
-- [ ] Data-driven rows generate one test each, not a loop inside one test - a loop hides which row failed, stops at the first, and collapses N selectable titles into one.
-- [ ] Source version conditionals are ported to `helpers/versionGates.ts` plus the `versionGate` fixture, keyed by the `PMM-T` id, never an inline `if (version...)`.
-- [ ] Zip entry assertions were re-derived, not copied: `codeceptjs-e2e/tests/custom_steps.js` maps `entryName` to the basename while `e2e_tests/helpers/archive.helper.ts` returns the full path, so a copied assertion changes meaning and stays green. `logs.zip` really contains both `pmm-agent.log` and `client/pmm-agent/pmm-agent.log`.
-- [ ] Every migrated assertion was checked for whether it can fail at the point it is evaluated, and the one most at risk was proven able to fail by mutating its expected value and re-running. Inverting a matcher is not a mutation. When that proof is run through the Playwright MCP server rather than the test runner, `expect` is unavailable in that process - emulate the matcher, label the evidence as an emulation, and see `locator-fix.md`.
-- [ ] No assertion of absence sits immediately after the action that would produce the thing. `toBeHidden(errorAlert)` placed straight after a click passes before the request has round-tripped and can never fail; it belongs after something that proves the action completed.
-- [ ] No locator-derived value is awaited into a variable and then asserted - that samples once and never retries. Use the web-first matcher, or `expect.poll` when the value must be computed (`e2e_tests/tests/changeTheme.test.ts:61-65`). Bare `expect` stays correct for non-locator data: API status, CLI stdout, parsed files.
-
-### Migration rules compliance
-
-- [ ] Every new or edited invocation in migration-related files was checked against `mappings.md` Helpers, CodeceptSyntax, SafeOmission, and Skip policy.
-- [ ] No explicit default arguments or options remain when `SKILL.md` or SafeOmission requires omission.
-- [ ] No `eslint-disable` was added to work around a rule that must be fixed in code.
-- [ ] Assertions remain in test bodies; helpers contain no hidden `expect()` unless `mappings.md` explicitly allows it.
+- [ ] Hooks, suite setup, cleanup, assertion strictness, and UI/API/CLI/download/file behaviour are preserved. Reachable custom steps were inspected and mapped.
+- [ ] Explicit `.retry(N)` is pinned at the source's scope (`SKILL.md` Waits and retries); version conditionals use `versionGates.ts`.
+- [ ] Where a helper branches on server configuration, `docker exec pmm-server env` was read and the evidence names the branch the green run took.
+- [ ] Zip entry assertions were re-derived: `custom_steps.js` maps `entryName` to the basename, `archive.helper.ts` returns the full path.
+- [ ] Every new or edited invocation was checked against `mappings.md` Helpers, CodeceptSyntax, SafeOmission and Skip policy. No `eslint-disable` added to dodge a rule fixable in code.
 
 #### SafeOmission registry
 
 | Pattern | Rule |
 | --- | --- |
-| `parseInt(x, 10)` | Use `parseInt(x)` for decimal version segments. |
-| `expect()` inside changed helpers | Only `readZipArchive`-style utilities belong in helpers; assertions stay inline in tests. A module-scope function in the spec file is not a helper for this rule - see `SKILL.md` Native Playwright rules. |
-| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` section Skip policy. |
-| Copied PR patterns without a rule check | Flag when old code conflicts with current `mappings.md`. |
-
-- [ ] Ran `.claude/scripts/check-migration-conventions.sh` against the changed migration files.
+| `parseInt(x, 10)` | `parseInt(x)` for decimal version segments. |
+| `expect()` inside changed helpers | Assertions stay in tests. |
+| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` Skip policy. |
+| Copied PR patterns | Flag when old code conflicts with current `mappings.md`. |
 
 ### Dependencies
 
-- [ ] Source Graphify-linked files were independently inspected.
-- [ ] Target Graphify-linked files were independently inspected.
-- [ ] Both graphs were refreshed and committed on control before the tracker row was marked `in-progress`.
-- [ ] Missing or stale graph edges were accounted for.
-- [ ] Existing Playwright abstractions were reused where applicable.
-- [ ] Reuse changes follow `SKILL.md` section Minimal reuse diffs (expose in place; no duplicate public+private delegates).
-- [ ] New fixtures, POMs, API clients, or endpoints are registered.
+- [ ] Source and target Graphify-linked files were independently inspected; both graphs were refreshed and committed on control before `in-progress`; stale edges accounted for.
+- [ ] Existing abstractions reused per `SKILL.md` Reuse with the smallest diff; new fixtures, POMs, API clients or endpoints registered only when required.
 
 ### Playwright practices
 
-Against `playwright-practices.md`. Check the changed files, not the whole repository.
+Against `playwright-practices.md`, changed files only.
 
-- [ ] `verifiedAgainst` in `playwright-practices.md` matches `@playwright/test` in `e2e_tests/package.json`.
-- [ ] Locators follow the priority ladder; CSS is confined to MUI/Grafana internals and XPath to positional cells and the Grafana iframe. "MUI/Grafana internals" is a last resort, not a blanket permission: for every CSS-by-class locator, the reviewer showed that nothing higher on the ladder resolves to the same element. A framework-hashed class such as `css-<hash>-title-info-container` is the case this exists to catch - it resolves perfectly today and breaks on the next Grafana bump, as a failure that names the wrong cause.
-- [ ] Every construct the migration introduces that has an alternative - locator form, step granularity, navigation idiom, POM shape, assertion style - was counted against the rest of `e2e_tests` and matches the dominant form, or the deviation is justified. Count, do not argue: the ratio settles in a minute what prose does not settle at all. Two shapes are already known to pass both gates and then draw a review comment - a ported CodeceptJS selector that resolves but sits at the bottom of the ladder, and a `pmmTest.step` wrapping a single bare `expect`.
-- [ ] Each new `nth()`, `first()`, or `last()` is deliberate indexing or a positional cell, not a strict-mode workaround. Advisories on pre-existing lines are not blockers.
-- [ ] Every POM entry is a `Locator` object, not a selector string.
-- [ ] No manual-predicate assertion (`expect(await x.isVisible()).toBe(true)`) and no hand-rolled polling loop.
-- [ ] `toHaveCount`, `toBeHidden`, `toHaveCSS`, `toContainClass` used where they apply; non-locator assertions carry a message.
-- [ ] Where section PreferModernApi applies, the modern API was used rather than the literal CodeceptJS transliteration.
-- [ ] No removed or deprecated API introduced (`page.accessibility`, `backgroundPages()`, `?`/`[]` route globs, `-gv`).
-- [ ] The documented deviations were preserved, not "corrected": tags stay inside the title string, explicit `Timeouts.X` on assertions that need longer than the default.
-- [ ] `playwright.config.ts` and the pinned Playwright version are unchanged.
-
-### Playwright quality
-
-- [ ] No CodeceptJS `I.*` calls remain.
-- [ ] No arbitrary sleeps or unsupported shortcuts were added.
-- [ ] Helper APIs have no mode flags or union returns unless source behavior truly requires it.
-- [ ] Changed migration docs contain ASCII punctuation only, measured over **added lines only** - use the scan in `AGENTS.md` section Shell and tooling notes.
-- [ ] Migrated test files contain zero comments, including ESLint disable comments.
-- [ ] No comment outside a test file narrates a decision. In a POM, helper, API client or workflow YAML, why an option was rejected, which consumer depends on a tag, or what would happen if something were removed belongs in the PR body. A one-line statement of a fact a reader cannot infer from the code stays (`SKILL.md` Native Playwright rules).
-- [ ] No block-level ESLint disable comments were added anywhere in migration-related code.
-- [ ] Changed-file ESLint passes.
-- [ ] No new TypeScript or full-project ESLint failures were introduced.
-- [ ] No newly added POM or helper method has zero callers, and no newly added POM method has exactly one call site - inline it at that call site, making its locators public if they are not already. Any length, not just a single click. `SKILL.md` Minimal reuse diffs rule 5 is normative; this is the check.
-- [ ] No method, new or pre-existing, wraps a fixed pause or duplicates what a web-first matcher already does. Both are findings whatever the caller count.
-- [ ] Neither "other single-caller POM methods exist" nor "the source POM declared it too" was accepted as a defence. Pre-existing methods are out of scope: exposing one for reuse is not a finding, and `e2e_tests/eslint.config.mjs` whitelists single-caller assertion helpers by name.
-- [ ] `e2e_tests/pages/base.page.ts` was checked before any method was added: `selectTimeRange`, `selectVariableValue`, `getVariableValues`, `grafanaIframe`, `duplicateCurrentPage`, and `haEnableCheck` already exist.
-- [ ] No page interaction is buried in a `*.test.ts` function that belongs in a POM - locators, element waits and navigation are the POM's job. Module-scope functions in the spec file are otherwise allowed, and are how `SKILL.md`'s deduplication rule is satisfied: command builders and extracted prologues. Not a blanket ban.
+- [ ] `verifiedAgainst` matches `@playwright/test` in `e2e_tests/package.json`; `playwright.config.ts` and the pinned version are unchanged.
+- [ ] Every POM entry is a `Locator`, not a string. No manual-predicate assertion or hand-rolled polling loop. `toHaveCount`, `toBeHidden`, `toHaveCSS`, `toContainClass` used where they apply; non-locator assertions carry a message.
+- [ ] Each `nth()`, `first()`, `last()` is deliberate indexing, not a strict-mode workaround.
+- [ ] PreferModernApi applied; no removed API (`page.accessibility`, `backgroundPages()`, `?`/`[]` route globs, `-gv`).
+- [ ] Documented deviations preserved: tags inside the title, explicit `Timeouts.X` where needed.
+- [ ] No `I.*` calls remain; changed-file ESLint and `tsc --noEmit` introduce zero new failures; changed docs are ASCII-only over added lines.
 
 ### MCP locator verification
 
-- [ ] Every new locator is verified.
-- [ ] Every changed locator is verified.
-- [ ] Ambiguous reused locators are verified.
-- [ ] Locator match count and element identity are correct.
-- [ ] Iframe boundaries are correct.
-- [ ] No invalid or ambiguous locator remains.
+- [ ] Every new, changed, or ambiguous reused locator is verified: match count, element identity, iframe boundary.
 
 ## Initial decision
 
 ```text
+Shape findings: 0
+Convention script failures: 0
 Missing scenarios: 0
 Missing assertions: 0
 Missing hooks or cleanup: 0
@@ -145,34 +88,17 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 
 ## Final post-run review
 
-- [ ] Required executions or already-covered regression passed against the final code.
-- [ ] Runtime fixes did not weaken or change behavior.
-- [ ] Locator fixes still match source intent.
-- [ ] The final source and target dependency graphs were checked.
-- [ ] No required source dependency was omitted.
-- [ ] No target registration is missing.
-- [ ] Every original CodeceptJS tag remains on the migrated Playwright scenarios.
-- [ ] Existing CodeceptJS jobs and grep expressions remain unchanged, unless retirement emptied one - in which case that job was deleted in this PR (see `branch-workflow.md` section Workflow coverage), not left in place reporting green on zero tests.
-- [ ] Every surface the *source* ran on was enumerated before any coverage was added, and each migrated tag's consumers were named per workflow file - `fb-e2e-suite.yml` explicitly included, never folded into the word "nightly".
-- [ ] A `nightly-e2e-tests-matrix.yml` entry was added **only** where the source's own tags were already in a nightly grep. Manufactured nightly coverage - a tag appended to `test_execution_playwright` that the source never ran under - is a failure, not a safe default (see `branch-workflow.md` section Workflow coverage).
-- [ ] Where a migrated scenario carried a tag selected by a CodeceptJS job in `fb-e2e-suite.yml`, a Playwright job was added to that file mirroring the retiring source's `setup_services`. A still-green `@fb-*` CodeceptJS job is not evidence: it stays green on its remaining files while this migration's scenarios go unselected.
-- [ ] Otherwise, each migrated tag is appended to the existing `test_execution_playwright` matrix entry with no new job block added, unless no compatible job exists anywhere for this migration's CI surface - in which case a new job was created mirroring the retiring CodeceptJS job's setup.
-- [ ] `expected_test_jobs` matches the actual number of nightly `"test execution / "` consumer jobs after this PR's edits: unchanged when a tag was merely appended, incremented when a nightly consumer was added, decremented when one was deleted (including a CodeceptJS job this migration emptied). The before/after count is stated, not inferred.
-- [ ] Every migrated scenario title is selected by some Playwright job, proven with `npx playwright test --list --grep '<expression>'` and a title count - not merely believed selected because the file's union of tags looks right.
-- [ ] Every tag the edited job already carried still selects exactly what it selected before the edit (the same command, run against the pre-edit grep).
-- [ ] Any grep expression touched or added contains no unescaped `|` that was meant to be literal: `e2e_tests/launchable-prepare.js` and `codeceptjs-e2e/launchable-prepare.js` both compile a `|`-containing expression as a regular expression, not a string match - a string-matched intent here silently selects nothing while the job still reports green.
-- [ ] The publish branch was cut from `origin/main` and carries only the migrated code, its workflow coverage, and the source retirement - no tracker, `graphify-out/`, `parallelization-ledger.md`, or `.claude/migration-observations/` paths, because none were ever committed on it.
-- [ ] No migration code was committed on control; control carries only the `origin/main` merge, the two graph refreshes, and the two tracker status commits.
-- [ ] Control's worktree was restored to clean after publication.
-- [ ] Runtime and locator fixes still satisfy section Playwright practices.
-- [ ] No debug or temporary code remains.
-- [ ] No unrelated files or behavior are included.
-- [ ] Static validation still introduces zero new failures.
-- [ ] The selected CodeceptJS source can be safely retired.
-- [ ] `expected_setup_jobs` matches the number of setup shards, and no job this PR added or renamed falls outside its required prefix: setup jobs start with `setup / `, nightly consumer jobs with `test execution / `, and the poll step is named exactly `Waiting for tests execution`. A job renamed out of its prefix is invisible to the poller - the shard finishes and a running consumer loses its client.
-- [ ] A migrated no-DB (B1) row was given a job named outside the `test execution / ` prefix, so the setup shards do not wait on it.
-- [ ] Any Launchable job this PR added passes a `--test-suite` name that distinguishes `playwright` from `codeceptjs`; the two use different path formats and a shared name poisons the model. `launchable subset` selects at file granularity, so a tag decision is a per-file decision.
-- [ ] Regions of `e2e_tests/README.md` between `<!-- *-START -->` and `<!-- *-END -->` were produced by `support_scripts/generate_readme.py`, not hand-edited, even where the text happens to be right.
+- [ ] Required executions or already-covered regression passed against the final code; runtime and locator fixes did not change behaviour and still satisfy the Shape and Practices blocks.
+- [ ] Final source and target graphs checked; no source dependency omitted; no target registration missing.
+- [ ] Every original tag remains. Existing CodeceptJS jobs and greps are unchanged, except a job the retirement emptied, which is deleted in this PR.
+- [ ] Every surface the source ran on was enumerated per workflow file, `fb-e2e-suite.yml` named explicitly. Where an `@fb-*` CodeceptJS grep selected a scenario, a Playwright job mirroring the retiring source's `setup_services` was added there.
+- [ ] A nightly entry exists only where the source's own tags were already in a nightly grep, appended to the existing `test_execution_playwright` alternation, no new matrix entry. No test runs twice in one PR run.
+- [ ] `expected_test_jobs` matches the nightly `"test execution / "` matrix entries after the edit, before/after stated from the script's info line. `expected_setup_jobs` matches the shards. Setup jobs start with `setup / `, nightly consumers with `test execution / `, the poll step is named exactly `Waiting for tests execution`; a job renamed out of its prefix is invisible to the poller. A no-DB row's job is named outside `test execution / `.
+- [ ] Every migrated title is selected, proven with `npx playwright test --list --grep '<expression>'` and a count; every tag the edited job already carried still selects what it did. No unescaped literal `|` in a grep (`launchable-prepare.js` compiles it as a regex).
+- [ ] Any added Launchable job passes a `--test-suite` distinguishing `playwright` from `codeceptjs`.
+- [ ] Publish branch was cut from `origin/main` and carries only migrated code, coverage YAML and the source retirement; control carries only the merge, graph refreshes and tracker commits, worktree clean.
+- [ ] `e2e_tests/README.md` generated regions came from `support_scripts/generate_readme.py`.
+- [ ] No debug code, no unrelated files, source safe to retire.
 
 ## Final decision
 

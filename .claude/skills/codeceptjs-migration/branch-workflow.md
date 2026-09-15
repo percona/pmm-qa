@@ -163,7 +163,7 @@ Write the commit body from `git diff origin/main HEAD --stat` plus the per-file 
 
 A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
 
-**This repository squash-merges, and the squash body is the concatenation of the branch's commit messages - not the PR body** (`4d5e8427` carries all five of its branch commits as `* ` bullets and none of the PR body). A false statement in a commit body therefore reaches `main` verbatim; the PR body does not. Consequences:
+**This repository squash-merges, and the squash body is the concatenation of the branch's commit messages - not the PR body.** A false statement in a commit body reaches `main` verbatim; the PR body does not. Consequences:
 
 - Correct a defect in an already-pushed **non-tip** commit body in the *next* commit's body, naming the commit and quoting the false clause - squash concatenates both, so the claim and its retraction cannot be separated. Do not force-push for this. Amending a tip commit is allowed, but weigh it against cancelling an in-flight CI matrix.
 - Re-read the PR body against `git diff -M origin/main..HEAD` before requesting review, and again after any push that changes what shipped. A corrective commit silently falsifies it.
@@ -190,14 +190,14 @@ Then commit workflow coverage, per the section below.
 
 Rerun static validation (lint/typecheck/build) and the migrated test itself in the publish worktree before pushing. A migration can call something an unmerged sibling added to a shared file without touching that file itself, which no dependency check above will catch.
 
-Most of `.claude/` is on `origin/main` and present in this worktree: `settings.json`, `hooks/`, `agents/`, and most of `scripts/` (`pmm-ui-login.js`, `pw-record.js`, `pw-screenshot.js`, `skill-gardener-counter.sh`, and their `lib/`).
+Most of `.claude/` is on `origin/main` and present in this worktree: `settings.json`, `hooks/`, `agents/`, and `scripts/` (`pmm-ui-login.js`, `pw-record.js`, `pw-screenshot.js`, and their `lib/`).
 
 Control-only, and therefore absent here: `check-migration-conventions.sh`, `run-migration-single-test.sh`, `verify-migration-locator.mjs`, `validate-migration-scripts.sh`, plus the `codeceptjs-migration` skill and its three agents.
 
-Invoke any of those four scripts by absolute path on the control worktree, pointed at the target file here - never assume a local copy:
+Invoke any of those four scripts by absolute path on the control worktree, pointed at the target files here - never assume a local copy. Pass every changed file, workflow YAML included; the script's diff-scoped checks compare each file against `origin/main` inside its own worktree and refuse to run when that ref is missing:
 
 ```bash
-bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" ../pmm-qa-publish/e2e_tests/tests/<file>.test.ts
+bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" ../pmm-qa-publish/e2e_tests/tests/<file>.test.ts ../pmm-qa-publish/e2e_tests/pages/<pom>.ts ../pmm-qa-publish/.github/workflows/<edited>.yml
 ```
 
 For `run-migration-single-test.sh`, invoke the test runner directly instead, against the same live environment and credential pair:
@@ -247,12 +247,6 @@ When this migration retires the last CodeceptJS consumer of a **runner** workflo
 Playwright one beside it. Adding one leaves the original with no caller, duplicates whatever server
 setup it owns, and forces a keep-or-delete argument in review that the conversion never raises.
 
-A migration that added `runner-e2e-tests-playwright-podman.yml` next to `runner-e2e-tests-podman.yml`
-was reversed by the maintainer in one line: podman was used by that one test and nowhere else. The
-detour cost a duplicated systemd unit, a PR-body paragraph defending a dead workflow, an extra review
-round, and a hand-built `CLIENT_VERSION` bug that could not have existed in the original file. A
-converted runner keeps the podman parent's `--pmm-server-ip` topology for free, for the same reason.
-
 Convert when the retired test is the runner's only consumer. Add a new runner only when the old one
 still has other callers, and say which they are.
 
@@ -280,11 +274,8 @@ fixing one file asymmetrically.
 
 When coverage requires a new workflow assembled from two existing ones, the first check is a **parsed
 set diff of their `env:` blocks**, not a top-to-bottom read. Any key present in **both** parents and
-absent from the child is a defect until proven otherwise: it is exactly the shape that survives review,
-passes CI, and does the wrong thing quietly. A new podman runner omitted `CLIENT_VERSION`, so
-`pmm-framework`'s `resolve_value` fell through to `database_default_value` and the clients installed
-stock `3-dev-latest` instead of the FB build's - a green job monitoring the wrong artifact, which is the
-one thing an FB job exists to prevent.
+absent from the child is a defect until proven otherwise: a missing `CLIENT_VERSION` makes
+`pmm-framework` fall back to stock `3-dev-latest`, so an FB job goes green while testing the wrong build.
 
 Then widen it to the real superset: **referenced but never defined**. Walk every `${{ env.X }}` in the
 child and confirm X is declared. Parse with a YAML library across workflow-, job- and step-level `env:`
@@ -309,9 +300,9 @@ When two coverage shapes are arguable, stop reasoning in prose and read the prec
 
 When retiring a CodeceptJS source, check every job whose grep matches its title tags, not only the one this migration touches. Report the tagged and active counts, counting by tag rather than by file and matching `Scenario(`, `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(`. If no active matches remain, delete the job in the same commit as the replacement Playwright coverage - empty selections otherwise pass silently.
 
-An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever. Cross-check the number against a plain tag grep before acting on it. A wrong count looks entirely plausible - a `^`-anchored regex without the `m` flag reported 8 `@nightly` scenarios on row 9 where the true figure was 53 - and nothing downstream contradicts it.
+An under-count deletes a job that still tests something; an over-count leaves a vacuous job reporting green forever. Cross-check the number against a plain tag grep before acting on it; a `^`-anchored regex without the `m` flag under-counts by an order of magnitude and nothing downstream contradicts it.
 
-**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR, on a job whose failures may page someone. When the tag is a broad bucket other jobs' tests also carry, the right fix is usually a narrower sub-bucket tag - the CodeceptJS side already does this with `@valkey-nightly`, `@pbm-nightly` and friends - rather than a wider grep. One migration widened `@dashboards` and pulled in 10 valkey tests whose own job had been commented out since it was added, so they had never run in CI at all. Make the retag in this PR rather than offering it as a follow-up - the reviewer rejected both greps, and the fix was one line in the workflow plus a one-tag edit in five specs the migration did not otherwise touch.
+**Before widening a job's grep, list what else the new tag selects and who owns it.** `--list --grep` the current expression, then the widened one, and account for every test in the difference: any that belong to another job are being switched on by this PR. When the tag is a broad bucket other jobs' tests also carry, use a narrower sub-bucket tag (`@valkey-nightly`, `@pbm-nightly`) rather than a wider grep, and make that retag in this PR, not as a follow-up. Never add `@nightly` itself to the Playwright alternation (`SKILL.md` Workflow coverage). Never route a load-generating test (a 10k-request log warm-up, say) at the shared Jenkins-managed nightly server; run it in FB and PR CI only.
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
@@ -339,7 +330,8 @@ So when any migrated scenario carries a tag selected by a CodeceptJS job in `fb-
 
 - add a Playwright job to `fb-e2e-suite.yml` for that tag, mirroring the retiring source's `setup_services`. The `alerting` job there is the precedent for calling `runner-e2e-tests-playwright.yml` from this file; copy its shape, including `launchable_confidence` and the `pmm_qa_branch` expression;
 - leave the CodeceptJS job in place unless retirement emptied it completely - it normally still has live files behind the same grep; and
-- state the tag's FB consumers, before and after the edit, in the handoff.
+- state the tag's FB consumers, before and after the edit, in the handoff; and
+- do not also add the tag to `e2e-tests-matrix.yml`: it already calls `fb-e2e-suite.yml` as `fb_tests` on every PR run, so a second entry runs the same tests twice.
 
 Do not treat "the `@fb-settings` job still runs" as evidence of coverage. The question is whether *this migration's scenarios* are still selected somewhere in that file, which only `--list --grep` against the job's own expression answers.
 

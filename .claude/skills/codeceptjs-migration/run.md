@@ -26,15 +26,16 @@ Steps 1, 2a, and 3 are the parent's; they are in `orchestration.md`. Only the pa
 
 The writer:
 
-1. reads the source test;
+1. reads the source test and applies the worth-porting gate to every scenario (`SKILL.md` Before migrating), recording the evidence;
 2. queries the existing source graph with `graphify query`/`graphify path`/`graphify explain`, or a targeted filter as described in `.claude/skills/graphify/references/query.md` (no graph generation and never loading the full `graph.json`); CodeceptJS fixture injection (`async ({ I, somePage }) => ...`) is not a static import, so graphify's AST pass will not have an edge for it - always also check the scenario's injected parameter names directly against `codeceptjs-e2e/tests/**/pages/*.js` regardless of what the graph shows;
 3. opens and verifies the actual linked source files;
 4. queries the refreshed `e2e_tests/graphify-out/graph.json` to find reusable Playwright files (no graph generation);
 5. opens and verifies the actual target candidates;
 6. derives environment setup from source behavior;
 7. migrates the test to native Playwright;
-8. checks destination selectability **per scenario**; and
-9. runs static validation.
+8. checks destination selectability **per scenario**;
+9. runs `bash .claude/scripts/check-migration-conventions.sh` on every changed file, fixes every failure, and pastes the output in the handoff; and
+10. runs static validation.
 
 On step 8, check per scenario against jobs as they exist **today** - the workflow-coverage YAML is not edited until step 5b (the runner's). A file's scenarios do not all carry the same tags, so the file's union is not what CI selects on.
 
@@ -48,7 +49,7 @@ Count both job kinds. CodeceptJS jobs grep under `tags_for_tests`, Playwright jo
 
 Do not edit workflow YAML. `destinationTagNeeded: true` is not a defect on its own, but do not return `MIGRATION_READY` while any scenario's tag need is unresolved - either it already matches an existing job's grep, or the report names the tag or job the runner must add at step 5b.
 
-On step 9: if any migrated tag does not already appear anywhere under `e2e_tests`, regenerate `e2e_tests/README.md` and re-run `python support_scripts/generate_readme.py --check` before returning `MIGRATION_READY`. Run it from the repository root, not `e2e_tests/`. There is no npm script behind it - `npm run readme:check` exits 1 with a missing-script error that reads like a failing check rather than a missing one; `.husky/pre-commit` invokes the Python generator directly. A new tag makes that check stale repo-wide, so it fails every later gate rather than only the publish step.
+On step 10: if any migrated tag does not already appear anywhere under `e2e_tests`, regenerate `e2e_tests/README.md` and re-run `python support_scripts/generate_readme.py --check` before returning `MIGRATION_READY`. Run it from the repository root, not `e2e_tests/`. There is no npm script behind it - `npm run readme:check` exits 1 with a missing-script error that reads like a failing check rather than a missing one; `.husky/pre-commit` invokes the Python generator directly. A new tag makes that check stale repo-wide, so it fails every later gate rather than only the publish step.
 
 Leave the changes uncommitted and report the changed paths. Do not commit on control.
 
@@ -92,7 +93,7 @@ Failure routing:
 
 - locator failure -> reviewer;
 - migration logic failure -> writer;
-- environment or product failure -> keep `in-progress` and record the reason. **Run the unmigrated source against the same environment before classifying a failure this way.** "The source would fail here too" is the whole claim, it is one command, and it decides whether the row stops or ships - on row 9 it converted an asserted diagnosis into a proved one and simultaneously exposed a real fidelity defect the gates had waved through (source counted 4 where the migration counted 6). If the source passes where the migration fails, the failure is yours;
+- environment or product failure -> keep `in-progress` and record the reason. **Run the unmigrated source against the same environment first.** "The source would fail here too" is the whole claim and one command proves or refutes it; if the source passes where the migration fails, the failure is yours;
 - stale environment state -> reset the state and rerun; this is not a code failure and does not re-enter review.
 
 Any code change requires the relevant review again before rerunning. Do not clean or recreate the environment after a failure.
@@ -157,10 +158,7 @@ Only after `FINAL_REVIEW_PASS`, the runner:
 
 1. revalidates the publish worktree (lint/typecheck/build/test), every time - the four migration-specific scripts under `.claude/scripts/` are control-only and absent from a tree cut from `origin/main` (see `branch-workflow.md` "Revalidate, every time"), so the test runner is invoked directly and any of those four scripts still needed here is invoked by its absolute path on the control worktree;
 2. pushes the publish branch, opens a PR targeting `main`, and attaches the E2E tests Matrix Actions run URL per `branch-workflow.md`;
-3. on control's own checkout (never switched away), updates the tracker row to `done` with the PR link and pre-migration graph-refresh result, then commits and pushes only the tracker change:
-   - edit the row as an anchored substring replacement, never a whole-file rewrite - `tracker.md` is LF-only and a whole-file write flips every line to CRLF here;
-   - before staging, require `git diff --numstat` to show `1 1` and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`;
-   - never use a shell CR literal for that check - it does not survive quoting or a heredoc, and the resulting empty grep pattern matches every line, reading as a total CRLF flip that never happened; and
+3. on control's own checkout (never switched away), updates the tracker row to `done` with the PR link and pre-migration graph-refresh result, then commits and pushes only the tracker change, following the anchored-edit and CRLF checks in `branch-workflow.md` section Tracker completion and cleanup; and
 4. restores control's worktree to clean and verifies `git status --short` is empty.
 
 Do not merge the publish branch into control. A later merge of `main` into control delivers the migration after its PR merges - which is the whole point of not committing it on control in the first place.

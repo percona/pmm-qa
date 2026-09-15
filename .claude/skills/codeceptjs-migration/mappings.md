@@ -22,7 +22,7 @@ When a source test with `setupClient=true` runs a bare or `sudo`-prefixed `pmm-a
 
 SafeOmission: `parseInt(versionPart, 10)`->`parseInt(versionPart)` for normal decimal version segments.
 
-`codeceptjs-e2e/tests/**/pages/api/*API.js` -> existing `e2e_tests/api/*.api.ts` via `api.*Api` fixture, or `new *Api(request)` in `beforeAll` when `page` is unavailable. When exposing a formerly private method, follow `SKILL.md` section Minimal reuse diffs.
+`codeceptjs-e2e/tests/**/pages/api/*API.js` -> existing `e2e_tests/api/*.api.ts` via `api.*Api` fixture, or `new *Api(request)` in `beforeAll` when `page` is unavailable. When exposing a formerly private method, follow `SKILL.md` Reuse with the smallest diff.
 
 ## CodeceptSyntax
 
@@ -71,7 +71,7 @@ Confirm the account accepts connections from `client_container`. When the provis
   as long as the logic is unchanged. Do not narrow a union to one role on inference alone - keep the union
   via `.or()` unless the surviving role was measured live.
 - If a component is created, keep it **dumb**: it exposes the locator (`[role="alert"],[role="status"]`) and a `close()` method (click `[aria-label="Close alert"]`). It does NOT assert.
-- The `expect(pom.messages.successPopUp).toContainText(message)` or `expect(component.message).toContainText(message)` call MUST be written inline in the test body - never hidden inside the POM/component. This is a `NoExpectsInHelpers` case (see `SKILL.md` section Native Playwright rules and `playwright-practices.md` section Web-first assertions).
+- The `expect(pom.messages.successPopUp).toContainText(message)` or `expect(component.message).toContainText(message)` call MUST be written inline in the test body - never hidden inside the POM/component. This is a `NoExpectsInHelpers` case (see `SKILL.md` Port behaviour, simplify shape and `playwright-practices.md` section Web-first assertions).
 - `verifyWarning` asserts on `[data-testid="data-testid Alert warning"]` instead of the generic alert locator.
 
 `verifyInvisible(sel, t)` -> `await expect(locator).toBeHidden({ timeout })`.
