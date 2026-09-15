@@ -587,8 +587,10 @@ jobs:
       - ps-57-tests
       - ps-80-tests
       - ps-84-tests
+      - ps-97-tests
       - mysql-80-tests
       - mysql-84-tests
+      - mysql-97-tests
       - pdpgsql-14-tests
       - pdpgsql-15-tests
       - pdpgsql-16-tests
