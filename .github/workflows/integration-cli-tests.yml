@@ -193,6 +193,22 @@ jobs:
       services_list: '--database ps=8.4'
       test_name: 'Percona Server 8.4'
 
+  ps-97-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@percona-server'
+      services_list: '--database ps=9.7'
+      test_name: 'Percona Server 9.7'
+
   mysql-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -224,6 +240,22 @@ jobs:
       cli_tag: '@mysql|@mysql-conf-file'
       services_list: '--database mysql=8.4'
       test_name: 'MySQL 8.4'
+
+  mysql-97-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@mysql|@mysql-conf-file'
+      services_list: '--database mysql=9.7'
+      test_name: 'MySQL 9.7'
 
   pdpgsql-14-tests:
     name: 'CLI / Integration'
@@ -539,8 +571,10 @@ jobs:
       - ps-57-tests
       - ps-80-tests
       - ps-84-tests
+      - ps-97-tests
       - mysql-80-tests
       - mysql-84-tests
+      - mysql-97-tests
       - pdpgsql-14-tests
       - pdpgsql-15-tests
       - pdpgsql-16-tests
