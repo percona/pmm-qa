@@ -8,7 +8,7 @@
     redis_version: "{{ lookup('vars', 'extra_redis_version', default=lookup('env','REDIS_EXPORTER_VERSION') | default('0.7.5', true) ) }}"
     nodeprocess_version: "{{ lookup('vars', 'extra_nodeprocess_version', default=lookup('env','NODE_PROCESS_EXPORTER_VERSION') | default('0.7.5', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
 
