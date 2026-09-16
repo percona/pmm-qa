@@ -47,6 +47,13 @@ if [ "$pxc_version" != "5.7" ]; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
 fi
 
+# PXC 9.x removed wsrep_slave_threads (renamed to wsrep_applier_threads); the
+# node configs pxc-startup.sh generates still use the old name, which aborts
+# mysqld on 9.0+.
+if [ "${pxc_version%%.*}" -ge 9 ] 2>/dev/null; then
+  sed -i 's/wsrep_slave_threads/wsrep_applier_threads/g' pxc-startup.sh
+fi
+
 curl ${pxc_tarball} -o Percona-XtraDB-Cluster.tar.gz
 sleep 10
 tar -xzf Percona-XtraDB-Cluster.tar.gz
