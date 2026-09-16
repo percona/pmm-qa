@@ -39,6 +39,10 @@ class ExplorePage {
   // editor actually ended up holding.
   async setSqlQuery(query) {
     I.waitForVisible(this.elements.sqlBuilder, 30);
+    // The datasource writes its own default query into the editor when the SQL Editor
+    // tab opens, and does it a beat after the tab renders -- clearing before that lands
+    // is what makes this intermittent rather than always broken.
+    I.wait(2);
     I.appendField(this.elements.sqlBuilder, '');
     I.pressKey(['Control', 'a']);
     I.pressKey('Backspace');
