@@ -1,10 +1,7 @@
 SHELL := /usr/bin/env bash
 
-# `bash -n` parses only its first file argument -- the rest become positional
-# parameters -- so syntax loops instead of passing a list. .bats files are
-# excluded from it because `@test "..." {` is not valid bash; shellcheck reads
-# them fine. $(wildcard) drops a pattern that matches nothing, which a literal
-# `*.sh` would otherwise hand to shellcheck as a filename.
+# `bash -n` only parses its first file argument, so syntax has to loop. .bats is
+# excluded from it -- `@test "..." {` is not valid bash; shellcheck reads it fine.
 BASH_SOURCES := pmm-framework $(wildcard *.sh lib/*.sh setups/*.sh tests/helpers/*.bash)
 LINT_SOURCES := $(BASH_SOURCES) $(wildcard tests/*.bats)
 
