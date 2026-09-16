@@ -58,35 +58,35 @@ apt-get update
 export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
 mv -v /artifacts/* .
 
-# Percona's CDN/repo occasionally serves inconsistent metadata during builds,
-# which makes apt-get abort. The mismatch usually clears within a minute, so retry.
-retry_apt_install() {
-    local n=3
-    local i
-    for i in $(seq 1 $n); do
-        apt-get -y install "$@" && break
-        echo "apt-get install failed (attempt $i/$n); retrying in 30s..."
-        sleep 30
-        apt-get update
-    done
-    return 1
+# repo.percona.com publishes the apt index and the pool file non-atomically, and
+# the two disagree for 6-8 minutes at a time (measured), not the minute the old
+# three-attempt retry here assumed. Resolve the package against the index, wait
+# cheaply until the server agrees, verify the SHA256, then install that file.
+install_pmm_client_from_repo() {
+    local component=$1 deb
+    percona-release enable-only pmm3-client "$component"
+    apt-get update
+    deb=$("$(dirname "$0")/scripts/fetch-pmm-client-deb.sh" "$component" "$(lsb_release -sc)") || return 1
+    apt-get -y install "$deb"
+}
+
+# Without this the script used to walk on after a failed install and only die
+# later on a missing pmm-admin, reporting rc=127 instead of the real cause.
+die_on_install_failure() {
+    echo "pmm-client could not be installed; aborting client setup" >&2
+    exit 1
 }
 
 if [[ "$client_version" == "3-dev-latest" ]]; then
-    percona-release enable-only pmm3-client experimental
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo experimental || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-rc" ]]; then
-    percona-release enable-only pmm3-client testing
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo testing || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-latest" ]]; then
-    percona-release enable-only pmm3-client release
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo release || die_on_install_failure
     apt-get -y update
     percona-release enable-only pmm3-client experimental
 fi

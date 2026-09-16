@@ -46,15 +46,23 @@ resolve_from_index() { # -> "version size sha256 filename", empty on failure
 served_size() { curl -sSI --max-time 60 "$BASE/$1" | awk 'tolower($1)=="content-length:"{print $2}' | tr -d '\r'; }
 
 fetch_verified() {
-  local deadline=$(( $(date +%s) + BUDGET )) attempt=0
+  local deadline=$(( $(date +%s) + BUDGET )) attempt=0 no_index_streak=0
   local version size sha file served reason=unknown
   while :; do
     attempt=$((attempt + 1))
     read -r version size sha file < <(resolve_from_index) || true
     if [ -z "${file:-}" ]; then
       reason='no-index'
+      no_index_streak=$((no_index_streak + 1))
       log "could not read pmm-client from the $CODENAME/$COMPONENT index (attempt $attempt)"
+      # A missing index is a wrong codename/component or an unreachable repo, not
+      # the publishing race, so spending the whole wait budget on it buys nothing.
+      # Tolerate a few in a row for a transient blip, then stop.
+      if [ "$no_index_streak" -ge 4 ]; then
+        deadline=0
+      fi
     else
+      no_index_streak=0
       served=$(served_size "$file" || true)
       if [ "${served:-}" = "$size" ]; then
         # Sizes agree; the SHA256 below is what actually decides.
