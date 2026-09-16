@@ -31,9 +31,18 @@ export default class HighAvailabilityPage extends BasePage {
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
   };
 
-  /** Opens "PMM HA" -> "Overview", the only navigation route to the HA health dashboard. */
+  /**
+   * Opens "PMM HA" -> "Overview". Deliberately not built on
+   * {@link expandHaNavItem}, which waits for the "Leader:" row the HA menu no
+   * longer carries once it has children.
+   */
   openOverviewDashboard = async (): Promise<void> => {
-    await this.expandHaNavItem();
+    await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
+
+    if (!(await this.buttons.overviewNavItem.isVisible())) {
+      await this.buttons.haNavItemToggle.click({ timeout: Timeouts.TEN_SECONDS });
+    }
+
     await this.buttons.overviewNavItem.click({ timeout: Timeouts.TEN_SECONDS });
   };
 

@@ -49,7 +49,7 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
     { name: 'HAProxy Instances', type: 'table' },
     { name: 'HAProxy Backend Servers', type: 'table' },
   ];
-  // Empty on a cluster nothing has restarted in the dashboard's time range.
+  // Empty on a cluster nothing has restarted within the dashboard's time range.
   noDataMetrics: string[] = [haHealthOverviewPanels.podsWithRestarts];
   builders = {};
   buttons = {};
@@ -71,22 +71,24 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
     return Number(value);
   };
 
-  panelText = async (panelName: string): Promise<string> => {
-    const panel = this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`);
+  /** The panel's rendered value, waited for: the dashboard never re-queries on its own. */
+  panelText = async (panelName: string, timeout: Timeouts = Timeouts.ONE_MINUTE): Promise<string> => {
+    const content = await this.mountPanel(panelName, timeout);
 
-    await panel.scrollIntoViewIfNeeded();
+    await expect(content, `Panel "${panelName}" rendered no value`).not.toBeEmpty({ timeout });
 
-    return await panel.innerText();
+    return await content.innerText();
   };
 
   /**
    * One string per rendered row, e.g. `pmm-ha-0 UP Leader`. Read row-wise rather
-   * than cell-wise so a row keeps pod, status and role together.
+   * than cell-wise so a row keeps its pod, status and role together.
    */
-  tableRows = async (panelName: string): Promise<string[]> => {
-    const table = this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`).getByRole('grid');
+  tableRows = async (panelName: string, timeout: Timeouts = Timeouts.ONE_MINUTE): Promise<string[]> => {
+    const table = (await this.mountPanel(panelName, timeout)).getByRole('grid');
 
-    await table.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+    // The first cell, not the grid: the grid is in the DOM while its rows still load.
+    await table.getByRole('gridcell').first().waitFor({ state: 'visible', timeout });
 
     const rows = (await table.getByRole('row').allInnerTexts())
       .map((row) => row.replace(/\s+/g, ' ').trim())
@@ -99,12 +101,12 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
 
   verifyLeaderPmmInstance = async (leader: string): Promise<void> =>
     await pmmTest.step(`Verify "${haHealthOverviewPanels.leaderPmmInstance}" names "${leader}"`, async () => {
-      // Polled: the dashboard reads pmm_ha_leader_status, so it trails the pods
-      // by a scrape interval after an election.
+      // Reloaded, not just polled: the panel trails the pods by a scrape interval
+      // after an election, and this dashboard re-queries only on a page load.
       await expect(async () => {
         await this.page.reload();
         expect(await this.panelText(haHealthOverviewPanels.leaderPmmInstance)).toContain(leader);
-      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     });
 
   /** Every pod present, `leader` the only Leader, every other pod a Follower. */
@@ -137,7 +139,34 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
             rows.filter((row) => leaderRole.test(row)),
             'Exactly one pod may be shown as Leader',
           ).toHaveLength(1);
-        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       },
     );
+
+  /**
+   * Grafana mounts a panel only once it has been scrolled to, so after a reload a
+   * panel below the fold is not in the DOM at all.
+   *
+   * @returns the panel's content element, the panel without its title
+   */
+  private mountPanel = async (panelName: string, timeout: Timeouts) => {
+    const header = this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`);
+    const gridItems = this.grafanaIframe().locator('.react-grid-item');
+
+    await gridItems.first().waitFor({ state: 'visible', timeout });
+
+    const itemCount = await gridItems.count();
+
+    for (let i = 0; i < itemCount && (await header.count()) === 0; i++) {
+      const expandRow = gridItems.nth(i).getByLabel('Expand row');
+
+      await gridItems.nth(i).scrollIntoViewIfNeeded();
+
+      if (await expandRow.isVisible()) await expandRow.click();
+    }
+
+    await header.waitFor({ state: 'visible', timeout });
+
+    return header.getByTestId('data-testid panel content');
+  };
 }
