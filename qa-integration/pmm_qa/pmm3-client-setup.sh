@@ -68,14 +68,19 @@ mv -v /artifacts/* .
 
 # repo.percona.com publishes the apt index and the pool file non-atomically, and
 # the two disagree for 6-8 minutes at a time (measured), not the minute the old
-# three-attempt retry here assumed. Resolve the package against the index, wait
-# cheaply until the server agrees, verify the SHA256, then install that file.
+# three-attempt retry here assumed. This script is docker-cp'd into containers on
+# its own, so it cannot call the host-side fetch helper -- keep retrying here, but
+# over a span that can actually outlast a window.
 install_pmm_client_from_repo() {
-    local component=$1 deb
+    local component=$1 attempt
     percona-release enable-only pmm3-client "$component"
-    apt-get update
-    deb=$("$(dirname "$0")/scripts/fetch-pmm-client-deb.sh" "$component" "$(lsb_release -sc)") || return 1
-    apt-get -y install "$deb"
+    for attempt in 1 2 3 4 5; do
+        apt-get update
+        apt-get -y install pmm-client && return 0
+        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
+        sleep 90
+    done
+    return 1
 }
 
 # Without this the script used to walk on after a failed install and only die

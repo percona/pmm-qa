@@ -147,7 +147,10 @@ run_playbook() {
 
   (
     cd "$PMM_QA_ROOT"
-    env "${env_args[@]}" ansible-playbook \
+    # Playbooks in subdirectories run their shell tasks with that subdirectory as
+    # the working directory, so anything under pmm_qa/ has to be addressed
+    # absolutely from here rather than relative to the playbook.
+    env "PMM_QA_ROOT=$PMM_QA_ROOT" "${env_args[@]}" ansible-playbook \
       -i 'localhost,' \
       --connection=local \
       --extra-vars '@vars/pinned_images.yml' \

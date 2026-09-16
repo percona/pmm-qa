@@ -112,7 +112,7 @@
 
     - name: Fetch and verify the pmm-client package on the host
       shell: >
-        ./scripts/fetch-pmm-client-deb.sh
+        {{ lookup('env', 'PMM_QA_ROOT') }}/scripts/fetch-pmm-client-deb.sh
         {{ pmm_client_component | quote }}
         {{ container_codename.stdout | trim | quote }}
         {{ pmm_client_cache_dir | default('/tmp/pmm-client-cache') | quote }}
