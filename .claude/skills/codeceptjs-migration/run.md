@@ -63,7 +63,7 @@ The reviewer independently:
 2. compares all source behavior with the migrated implementation;
 3. confirms nothing is missing or weakened;
 4. confirms the writer's per-scenario selectability check, re-deriving it rather than trusting it;
-5. verifies every new or changed locator through MCP against the prepared PMM environment;
+5. verifies every new or changed locator through MCP against the prepared PMM environment, counting over the fully rendered DOM (`locator-fix.md` Lazy rendering);
 6. fixes locator definitions only when live DOM evidence proves the correction; and
 7. reruns static validation after locator changes.
 

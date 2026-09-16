@@ -393,7 +393,8 @@ git rev-parse <old-commit>^{tree} <new-commit>^{tree}   # must match at the amen
 git log -1 --format=%B <new-tip>                  # tip message unchanged
 ```
 
-Write every commit message with `git commit -F -` and a quoted heredoc, never `-m "..."`. Migration
+Write every commit message with `git commit -F -` and a quoted heredoc, never `-m "..."`. The subject is
+`<type>(<scope>): <summary>`; `update` is not a subject, and the squash carries it into `main`. Migration
 messages routinely name backticked identifiers, and bash command-substitutes a backtick inside a
 double-quoted `-m` argument: the message is mangled, the shell reports a syntax error from the middle of
 your prose, and the leftover words are passed to git as pathspecs.
@@ -436,7 +437,7 @@ RUN_URL=$(gh run list --workflow e2e-tests-matrix.yml --branch "$(git branch --s
 [ -n "$RUN_URL" ] && gh pr comment "$PR_NUM" --body "GitHub Actions: ${RUN_URL}"
 ```
 
-The linked run must select the migrated scenarios; `--list --grep` each of its job expressions against the branch and name the job that does. A scenario only the `@nightly` Playwright bucket selects has no PR-CI run: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>`, which dispatches `nightly-e2e-tests-matrix.yml` against it, and link that Actions run; if that is not possible, the `Run:` line says "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" rather than linking a run that never ran the test.
+The linked run must select the migrated scenarios; `--list --grep` each of its job expressions against the branch, list the run's jobs (`gh run view <id> --json jobs`) and name the one that executed the test. A cancelled run, or one whose jobs grep other tags, is not a link. A scenario only the `@nightly` Playwright bucket selects has no PR-CI run: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>`, which dispatches `nightly-e2e-tests-matrix.yml` against it, and link that Actions run; if that is not possible, the `Run:` line says "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" rather than linking a run that never ran the test.
 
 Include the run URL in the PR body. Do not wait for CI to finish before marking `done`.
 

@@ -162,3 +162,4 @@ Best-fit rule (Target column is a hint, not a mandate): `context.md` section 2a.
   near-duplicates - reconcile into one target.
 - Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the local Docker PMM.
   They stay `pending`; name the required infrastructure in the row's Env column until it is available.
+- Row 10 (PR #1437): a duplicate-title finding was refuted twice on counts of 1 taken over a default load; `loadAllPanels()` showed 81 sections and four titles at 2. The agent then split the test per panel after declining that split, and added `statusPanels`/`panelId` outside `DashboardInterface`; both were reverted on review. The retirement body's `@gssapi-nightly` claim needed two correction commits.

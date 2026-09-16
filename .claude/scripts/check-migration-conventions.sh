@@ -276,6 +276,14 @@ for file in "$@"; do
     failures=1
   fi
   if [[ $file == *.test.ts ]]; then
+    if added_lines "$file" | grep -Eq '\.(getBy[A-Za-z]+|locator)[[:space:]]*\('; then
+      echo "$file: raw locator in a test - make it a page-object property or builder (SKILL.md Port behaviour, simplify shape)" >&2
+      failures=1
+    fi
+    if added_lines "$file" | grep -Eq 'new [A-Z][A-Za-z]*(Dashboard|Page)[[:space:]]*\('; then
+      echo "$file: page object instantiated in a test - iterate through the fixture (SKILL.md Port behaviour, simplify shape)" >&2
+      failures=1
+    fi
     report_matches 'title: the data-row suffix is the one distinguishing value, not a JSON restatement' '\|[[:space:]]*\$?\{"' "$file"
     report_advisory 'title: prefer the one distinguishing value over JSON.stringify(row)' 'JSON[[:space:]]*\.[[:space:]]*stringify' "$file"
     report_advisory 'practices: a locator value awaited into a variable is asserted once and never retries - use a web-first matcher or expect.poll' '=[[:space:]]*await[^;]*\.(textContent|innerText|inputValue|getAttribute|allTextContents|allInnerTexts|isVisible|isHidden|count)[[:space:]]*\(' "$file"

@@ -19,6 +19,10 @@ After a substantial POM fix, rerun changed-file ESLint/TypeScript validation and
 - **Credentials in the URL bypass the PMM shell.** `pmmLogin.md` already forbids it; this is the consequence that makes the failure recognizable. Navigating to `https://<user>:<pass>@<host>/graph/...` serves Grafana at top level with no `#grafana-iframe` at all, so a correct iframe-scoped locator counts 0 and reads as broken. A clean navigation reproduces the redirect into `/pmm-ui/...` and the iframe. If a locator that should be inside the frame resolves at top level, or the frame is missing entirely, suspect the navigation before the locator.
 - **`expect` is not loadable inside the Playwright MCP server process**, so the mutation proof the audit checklist requires cannot be run there literally - `require` of both `@playwright/test` and `playwright/test` fails. Emulate the matcher instead (for `toHaveText`: strict single-node resolution plus whitespace-normalized `textContent` equality) and say in the evidence that it is an emulation, never a bare PASS/FAIL. When the fix was to narrow an ambiguous locator, prefer the stronger form: compare the un-narrowed locator's `allTextContents()` with the narrowed one's. That names the node the narrowing dropped, where a mutation only shows that some assertion moved.
 
+## Lazy rendering
+
+A count taken on a default load covers only what Grafana has rendered: panels below the fold render on scroll (`graph/d/pmm-health` renders 19 of 81 sections on load, and four titles that count 1 there count 2 after `loadAllPanels()`). Run every uniqueness count after `loadAllPanels()` or a full scroll and report both numbers, sections rendered and matches per locator. A passing strict-mode run is not evidence of uniqueness. Where a title genuinely repeats, scope by `[data-griditem-key="grid-item-<panelId>"]` plus the title through a builder, without fields outside `DashboardInterface`; `.first()` is positional and fails silently.
+
 ## Locator rules
 
 - All POM entries must be Playwright `Locator` objects (`this.page.getByTestId(...)`, etc.), not strings.
