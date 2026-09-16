@@ -96,6 +96,8 @@ invisible in a manual read of a 15-line `declare -A`.
 SCRATCH=${TMPDIR:-/tmp}/pmm-framework-verify && mkdir -p "$SCRATCH"
 fn=setup_pdpgsql; file=setups/postgresql.sh          # adjust these two
 
+(                                    # subshell, so the aborts below can be real
+set -uo pipefail
 awk -v f="^$fn\\\\(\\\\)" '$0 ~ f,/^}/' "$file" \
   | grep -oE '\[[A-Z_]+\]' | tr -d '[]' | sort -u > "$SCRATCH/sent.txt"
 
@@ -103,17 +105,28 @@ awk -v f="^$fn\\\\(\\\\)" '$0 ~ f,/^}/' "$file" \
 # a directory. Match on '*.yml' because the call can span lines.
 playbook=$(awk -v f="^$fn\\\\(\\\\)" '$0 ~ f,/^}/' "$file" \
   | grep -oE "'[^']+\.yml'" | tr -d "'" | head -1)
-[[ -n $playbook ]] || { echo "ABORT: no playbook found in $fn"; }
-playbook_dir=$(dirname "../$playbook")               # PMM_QA_ROOT is one level up
-[[ -d $playbook_dir ]] || { echo "ABORT: $playbook_dir does not exist"; }
+[[ -n $playbook ]] || { echo "ABORT: no playbook found in $fn"; exit 1; }
+playbook_path="../$playbook"                         # PMM_QA_ROOT is one level up
+[[ -f $playbook_path ]] || { echo "ABORT: $playbook_path does not exist"; exit 1; }
 
-grep -rohE "lookup\('env', *'[A-Z_]+'" "$playbook_dir" \
+# That playbook and the task files it includes -- never its directory.
+pbdir=$(dirname "$playbook_path")
+scan=("$playbook_path")
+while IFS= read -r inc; do
+  [[ -f $pbdir/$inc ]] && scan+=("$pbdir/$inc")
+done < <(grep -ohE 'include_tasks:[[:space:]]*\S+' "$playbook_path" \
+           | awk '{print $NF}' | tr -d "'\"")
+printf 'scanning %d file(s):\n' "${#scan[@]}"; printf '  %s\n' "${scan[@]}"
+
+grep -ohE "lookup\('env', *'[A-Z_]+'" "${scan[@]}" \
   | grep -oE "'[A-Z_]+'" | tr -d "'" | sort -u > "$SCRATCH/read.txt"
 printf 'sent=%s read=%s\n' "$(wc -l < "$SCRATCH/sent.txt")" "$(wc -l < "$SCRATCH/read.txt")"
+(( $(wc -l < "$SCRATCH/read.txt") > 0 )) || { echo "ABORT: no env lookups found"; exit 1; }
 
 echo "--- sent but never read ---"; comm -23 "$SCRATCH/sent.txt" "$SCRATCH/read.txt"
 echo "--- read but never sent (playbook falls back to its own default) ---"
 comm -13 "$SCRATCH/sent.txt" "$SCRATCH/read.txt"
+)
 ```
 
 Read the two halves differently:
@@ -121,15 +134,20 @@ Read the two halves differently:
 - **read-but-not-sent** is usually fine — the playbook has a `| default(...)`
   and the framework is deliberately not overriding it. Confirm the default is
   what you want; don't add the key reflexively.
-- **sent-but-not-read** deserves more suspicion, but check the playbook's
-  *actual* directory tree before concluding it's dead. A stale sibling playbook
-  that nothing in `setups/dispatch.sh` calls can reference the same variable
-  names and give a false sense that they're consumed. (`setup_pdpgsql` sends
+- **sent-but-not-read** deserves more suspicion. (`setup_pdpgsql` sends
   `DISTRIBUTION`, `PDPGSQL_PGSM_PORT`, `PGSTAT_MONITOR_BRANCH`,
   `PMM_QA_GIT_BRANCH`, `PDPGSQL_PGSM_CONTAINER` and `USE_SOCKET`, none of which
   the playbook it calls reads. They appear in `pdpgsql_pgsm_setup.yml` at the
   `pmm_qa/` root, which nothing dispatches to. Worth a second look, not
   something to silently delete.)
+
+Scope the scan to the playbook and its includes, never to the directory holding
+it. Most of these playbooks sit at the `pmm_qa/` root beside ten unrelated ones,
+so a directory scan collects ~60 keys instead of the handful the playbook really
+reads, the sent-but-not-read list comes back empty, and a key nothing consumes
+looks consumed — `setup_haproxy` hides `CLIENT_DEBUG` exactly that way.
+`setup_pdpgsql` is the example that makes a directory scan look sound: it is the
+one playbook with a private directory of its own, so both scopes agree on it.
 
 ## CLI surface and exit codes
 
@@ -177,6 +195,10 @@ ARCHITECTURE.md §3 is the authority on which pairs fall where; this recipe
 checks the code against it. Stub the side effects preflight performs *after*
 the conflict decision, or it will try to reach a real PMM Server.
 
+`PARALLEL` is the one bucket inferred from the *absence* of a message, so a
+harness that fails to source, parse or stub falls into it and scores a pass on
+the three rows that expect it. Check the exit status before that fallthrough.
+
 ```bash
 SCRATCH=${TMPDIR:-/tmp}/pmm-framework-verify && mkdir -p "$SCRATCH"
 cat > "$SCRATCH/conflictcheck.sh" <<'SCRIPT'
@@ -193,10 +215,11 @@ ensure_docker_collection() { :; }; configure_ansible_python() { :; }
 pass=0; fail=0
 check() {
   local expect=$1; shift
-  local out got
-  out=$( ( parse_args "$@"; preflight_database_setups ) 2>&1 )
+  local out got rc
+  out=$( ( parse_args "$@"; preflight_database_setups ) 2>&1 ); rc=$?
   if grep -q 'cannot share a host' <<<"$out"; then got=REFUSED
   elif grep -q 'Running setups sequentially' <<<"$out"; then got=SEQUENTIAL
+  elif (( rc != 0 )); then got="ERROR(rc=$rc)"; printf '%s\n' "$out" | tail -5
   else got=PARALLEL; fi
   if [[ $got == "$expect" ]]; then ((pass++)); printf '  ok    %-10s %s\n' "$got" "$*"
   else ((fail++)); printf '  FAIL  expected=%s got=%s :: %s\n' "$expect" "$got" "$*"; fi
@@ -242,13 +265,26 @@ trap 'cp "$SCRATCH/execution.ok" lib/execution.sh; echo restored' EXIT
 
 perl -0pi -e 's/<the fixed condition>/<the condition before your fix>/s' lib/execution.sh
 git diff --stat lib/execution.sh          # confirm the mutation actually applied
-bats tests 2>&1 | grep -E '^not ok' || echo "NOTHING FAILED -- test does not cover the fix"
+
+out=$(bats tests 2>&1); rc=$?
+if grep -qE '^not ok' <<<"$out"; then
+  grep -E '^not ok' <<<"$out"
+elif (( rc != 0 )); then
+  echo "BATS ERRORED (rc=$rc) -- the suite never ran; this says nothing about coverage"
+  tail -20 <<<"$out"
+else
+  echo "NOTHING FAILED -- test does not cover the fix"
+fi
 ```
 
-Two failure shapes to watch for:
+Three failure shapes to watch for:
 
 - **nothing fails** — the test you added doesn't exercise the fix; strengthen
   the assertion
+- **`bats` itself errors** — likely here, because the mutation edits a sourced
+  file and can leave it unparseable. There is no `not ok` line then, so piping
+  straight into `grep` reports "nothing failed" and sends you off strengthening
+  a test that was fine. Capture the status, don't read it through the pipe.
 - **unrelated tests fail too** — the mutation (or the fix) is broader than
   intended. This caught the parallel-log regression, where reverting the
   `should_dump_successful_logs` gate failed `cli.bats` and `integration.bats`
@@ -266,18 +302,50 @@ terminal signal delivery, or job-control (`set -m`) effects — exactly where
 before it ships.
 
 ```python
-import os, pty
+import os, pty, select, signal, subprocess, time
+
 S = "/path/to/stub/bin"
-os.environ["PATH"] = S + ":" + os.environ["PATH"]   # BEFORE pty.spawn, not after
-out = []
-pty.spawn(
-    ["./pmm-framework", "--parallel", "--pmm-server-ip", "1.2.3.4",
-     "--database", "valkey=8", "--database", "pgsql=16"],
-    lambda fd: (lambda d: (out.append(d), d)[1])(os.read(fd, 4096)),
-)
-text = b"".join(out).decode(errors="replace")
-print("stopped (T) processes:", text.count("state='T'"), flush=True)  # if you also poll `ps -o state=`
+os.environ["PATH"] = S + ":" + os.environ["PATH"]   # BEFORE the fork, not after
+ARGV = ["./pmm-framework", "--parallel", "--pmm-server-ip", "1.2.3.4",
+        "--database", "valkey=8", "--database", "pgsql=16"]
+
+pid, fd = pty.fork()          # fork, not pty.spawn -- spawn never hands back a pid
+if pid == 0:
+    os.execv(ARGV[0], ARGV)
+
+def stopped_in_group(pgid):   # pty.fork() child is a session leader, so pgid == pid
+    ps = subprocess.run(["ps", "-eo", "pid=,pgid=,stat="],
+                        capture_output=True, text=True).stdout
+    return [ln.strip() for ln in ps.splitlines()
+            if (f := ln.split()) and len(f) >= 3 and f[1] == str(pgid)
+            and f[2][0] in "Tt"]
+
+out, stopped, deadline = [], [], time.time() + 300
+while time.time() < deadline:
+    if select.select([fd], [], [], 0.5)[0]:
+        try:
+            data = os.read(fd, 4096)
+        except OSError:       # EIO: the child is gone
+            break
+        if not data:
+            break
+        out.append(data)
+    stopped += stopped_in_group(pid)
+else:
+    print("TIMED OUT", flush=True)
+    os.killpg(pid, signal.SIGKILL)
+
+_, status = os.waitpid(pid, 0)
+print(b"".join(out).decode(errors="replace"), flush=True)
+print("stopped (T/t):", sorted(set(stopped)) or "none", flush=True)
+print("exit:", os.waitstatus_to_exitcode(status), flush=True)   # negative == signal
 ```
+
+Read the verdict off all three prints together: a non-empty `stopped` list is the
+`SIGTTIN` hang, `TIMED OUT` with an empty one is some other stall, and a clean
+run has to show the expected completion output *and* a zero exit. Poll `ps` for
+the state — the framework's own stdout never contains process state, so a check
+that greps the captured text for it can only ever report zero.
 
 Stub `docker`, `ansible-playbook`, `ansible-galaxy` and `curl` under `S` before
 running this — `tests/integration.bats` already has the exact stub shapes this
@@ -309,10 +377,11 @@ script look hung.
 
 ## Exercising real caller inputs from CI workflows
 
-Every `--database ...` shape actually used lives in `.github/workflows/*.yml` as
-`services_list:` / `setup_services:` strings. When changing argument parsing,
+Every `--database ...` shape CI actually runs lives in `.github/workflows/*.yml`
+as `services_list:` / `setup_services:` strings. When changing argument parsing,
 the catalogue, or a flag, run every real shape through the parser — don't invent
-inputs.
+inputs. (CI is not the only caller — `percona/pmm`'s dev docs and manual runs
+use shapes of their own — but it is the set that breaks the build.)
 
 The workflows directory is **three** levels up from `pmm-framework/`
 (`pmm-framework` → `pmm_qa` → `qa-integration` → repo root). Get that wrong and
@@ -349,7 +418,11 @@ checked=0
 while IFS= read -r shape; do
   [[ -z ${shape// } ]] && continue
   ((checked++))
-  if ( eval "parse_args $shape" ) >/dev/null 2>&1; then
+  # read -ra, not eval: these strings come from the branch under review, and
+  # eval would run any shell syntax a workflow value happens to contain (it
+  # would glob a bare '*' against cwd, too).
+  read -ra args <<<"$shape"
+  if ( parse_args "${args[@]}" ) >/dev/null 2>&1; then
     printf '  ok   %s\n' "$shape"
   else
     printf '  FAIL %s\n' "$shape"
