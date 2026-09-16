@@ -102,12 +102,18 @@ setup_ssl_mysql() {
 #
 # ProxySQL is not separately requestable (dispatch_setup rejects it), so its
 # version and package come from the PROXYSQL registration instead of a spec.
-# The empty proxysql_config array exists only to satisfy resolve_value's
-# signature -- there is no PROXYSQL spec to read options from.
+# PXC 8.4 disabled mysql_native_password by default, which Percona's
+# proxysql-admin still requires, so from 8.4 the cluster is fronted by upstream
+# ProxySQL 3 (its monitor handles caching_sha2_password backends). The empty
+# proxysql_config array exists only to satisfy resolve_value's signature --
+# there is no PROXYSQL spec to read options from.
 setup_pxc() {
   local version proxysql_version client
   version=$(resolved_version PXC_VERSION PXC "$DB_VERSION")
   proxysql_version=${PROXYSQL_VERSION:-$(database_default_version PROXYSQL)}
+  if [[ -z ${PROXYSQL_VERSION:-} && $version != 5.7 && $version != 8.0 ]]; then
+    proxysql_version=3
+  fi
   client=$(resolved_client_version PXC DB_CONFIG)
   declare -A proxysql_config=()
   declare -A env_map=(
