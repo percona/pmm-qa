@@ -205,6 +205,14 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           docker network create pmm-qa || true
+          # Pull separately and retry: the compose file fetches nine images, several
+          # unauthenticated from Docker Hub, and a token failure there aborts the whole
+          # `up` before any container starts. `up -d` then finds the images locally.
+          for attempt in 1 2 3; do
+            PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} pull --quiet && break
+            echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
+            sleep 15
+          done
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
           # shellcheck disable=SC2016
           # Deliberately unexpanded: the inner bash -c does the expanding, and
@@ -261,9 +269,10 @@ jobs:
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
+        continue-on-error: true
         run: |
             curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
-            unzip logs.zip -d logs
+            unzip logs.zip -d logs || true
 
       - name: Record launchable test results
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
