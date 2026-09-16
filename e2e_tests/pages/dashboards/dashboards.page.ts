@@ -10,6 +10,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
@@ -30,7 +31,7 @@ export default class Dashboards extends BasePage {
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
-  readonly pmmHealth = { url: 'graph/d/pmm-health/pmm-health' };
+  readonly pmmHealth = new PmmHealthDashboard();
   readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   elements = {

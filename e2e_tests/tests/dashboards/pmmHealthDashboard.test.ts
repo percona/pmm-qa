@@ -2,16 +2,6 @@ import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
-const statusPanels = [
-  'ManageD Status',
-  'VictoriaMetrics Status',
-  'PostgreSQL Status',
-  'QAN API Status',
-  'Grafana Status',
-  'Node Status',
-  'Clickhouse Status',
-] as const;
-
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
@@ -21,9 +11,9 @@ pmmTest(
   async ({ dashboard, page }) => {
     await page.goto(dashboard.pmmHealth.url);
 
-    for (const panelName of statusPanels) {
+    for (const panel of dashboard.pmmHealth.metrics) {
       const panelContent = dashboard.builders
-        .panelByExactName(panelName)
+        .panelByExactName(panel.name)
         .getByTestId('data-testid panel content');
 
       await expect(panelContent).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
