@@ -30,6 +30,7 @@ export default class Dashboards extends BasePage {
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
+  readonly pmmHealth = { url: 'graph/d/pmm-health/pmm-health' };
   readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   elements = {
