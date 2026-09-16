@@ -43,8 +43,15 @@ sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 sed -i 's+${MID} --datadir+${MID} --socket=\\${node}/socket.sock --port=\\${RBASE1} --datadir+g' pxc-startup.sh
 
 ## Download right PXC version
-if echo "$pxc_version" | grep '8'; then
+if [ "$pxc_version" != "5.7" ]; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
+fi
+
+# PXC 9.x removed wsrep_slave_threads (renamed to wsrep_applier_threads); the
+# node configs pxc-startup.sh generates still use the old name, which aborts
+# mysqld on 9.0+.
+if [ "${pxc_version%%.*}" -ge 9 ] 2>/dev/null; then
+  sed -i 's/wsrep_slave_threads/wsrep_applier_threads/g' pxc-startup.sh
 fi
 
 curl ${pxc_tarball} -o Percona-XtraDB-Cluster.tar.gz
@@ -60,6 +67,16 @@ mv Percona-XtraDB-Cluster* PXC
 sed -i 's#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe)#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe || true)#' PXC/bin/wsrep_sst_common
 
 cd PXC || exit 1
+
+# PXC 8.4 disabled mysql_native_password by default and Percona's proxysql-admin
+# still requires it, so from 8.4 we authenticate accounts with caching_sha2_password
+# and front the cluster with upstream ProxySQL (which monitors sha2 backends).
+auth_plugin=mysql_native_password
+proxysql_upstream=false
+case "$pxc_version" in
+  5.7 | 8.0) ;;
+  *) auth_plugin=caching_sha2_password; proxysql_upstream=true ;;
+esac
 
 ## start PXC
 bash ../pxc-startup.sh
@@ -80,10 +97,20 @@ if [ "$query_source" == "slowlog" ]; then
   done
 fi
 
-bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'admin'@'%' identified with mysql_native_password by 'admin';"
-bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'read_user'@'%' identified with mysql_native_password by 'read_user';"
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'admin'@'%' identified with $auth_plugin by 'admin';"
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'read_user'@'%' identified with $auth_plugin by 'read_user';"
 bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant all on *.* to 'admin'@'%';"
 bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant select on *.* to 'read_user'@'%';"
+
+# Upstream ProxySQL has no proxysql-admin to bootstrap its accounts, so create
+# the monitor and application users here. ProxySQL connects to the backends over
+# 127.0.0.1, hence the '127.%' host.
+if [ "$proxysql_upstream" = true ]; then
+  bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'monitor'@'127.%' identified with $auth_plugin by 'monitor';"
+  bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant usage, replication client on *.* to 'monitor'@'127.%';"
+  bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'proxysql_user'@'127.%' identified with $auth_plugin by 'passw0rd';"
+  bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant all on *.* to 'proxysql_user'@'127.%';"
+fi
 
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 for j in `seq 1  ${number_of_nodes}`;do

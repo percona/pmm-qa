@@ -53,8 +53,6 @@ services:
       - ../pmm_psmdb-pbm_setup/conf/datagen:/etc/datagen:ro
     privileged: true
     cgroup: host
-    ports:
-      - "43000-43020:43000-43020"
     healthcheck:
       test: |
        test $$(mongo --quiet --eval "try { rs.initiate().ok } catch (_) {} rs.status().ok") -eq 1
