@@ -84,19 +84,20 @@ check_single_use_names() {
           name = line[n]
           sub(/^(interface|type)[[:space:]]+/, "", name)
           sub(/[^A-Za-z0-9_].*$/, "", name)
-        } else if (match(line[n], /^const[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(:[^=]*)?=[[:space:]]*\[/)) {
-          kind = "const array"
+        } else if (match(line[n], /^([[:space:]][[:space:]])?(const[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(:[^=]*)?=[[:space:]]*\[/)) {
+          # A class field is another module`s to use; only the mapped-once shape is judged here.
+          kind = (line[n] ~ /^[[:space:]]/) ? "field array" : "const array"
           name = line[n]
-          sub(/^const[[:space:]]+/, "", name)
+          sub(/^[[:space:]]*(const[[:space:]]+)?/, "", name)
           sub(/[^A-Za-z0-9_].*$/, "", name)
         }
         if (name == "") continue
 
         uses = seen[name]
-        if (uses <= 1) {
+        if (uses <= 1 && kind != "field array") {
           printf "%s:%d: %s `%s` is declared and never used - delete it (SKILL.md Port behaviour, simplify shape)\n", file, n, kind, name > "/dev/stderr"
           failed = 1
-        } else if (uses == 2 && kind == "const array" && mapped[name]) {
+        } else if (uses == 2 && kind ~ /array/ && mapped[name]) {
           printf "%s:%d: const array `%s` exists only to be mapped once - inline it (SKILL.md Port behaviour, simplify shape)\n", file, n, name > "/dev/stderr"
           failed = 1
         } else if (uses == 2 && is_test && kind != "const array") {

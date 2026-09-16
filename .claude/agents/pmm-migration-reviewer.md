@@ -35,6 +35,7 @@ Shape:
 - No wrapper around one click; use the locator in the test. No waits or one-off actions in a POM. No raw locator inside a method or a test; locators are class properties. 🟡
 - `base.page.ts` already has `selectTimeRange`, `selectVariableValue`, `getVariableValues`, `grafanaIframe`, `duplicateCurrentPage`, `haEnableCheck`; a re-implementation is a finding. 🟡
 - Duplicated blocks, two tests where one covers the regression, a new tag where an existing one fits. 🟡
+- A dashboard test carrying panel names, or a dashboard page object building `metrics` from a mapped `const`, instead of one `DashboardInterface` file per dashboard with an inline `metrics` literal (`pages/dashboards/valkey/`). A locator or field added in response to a bot finding that was later withdrawn. 🟡
 - A new `eslint-disable` whose `--` reason is not a real invariant; `TODO` as the reason means not ready. 🟡
 - A `string` parameter with a closed value set becomes a union (`DropdownName` in `base.page.ts`). 🟡
 

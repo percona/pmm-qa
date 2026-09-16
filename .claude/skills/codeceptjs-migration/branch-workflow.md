@@ -436,6 +436,8 @@ RUN_URL=$(gh run list --workflow e2e-tests-matrix.yml --branch "$(git branch --s
 [ -n "$RUN_URL" ] && gh pr comment "$PR_NUM" --body "GitHub Actions: ${RUN_URL}"
 ```
 
+The linked run must select the migrated scenarios; `--list --grep` each of its job expressions against the branch and name the job that does. A scenario only the `@nightly` Playwright bucket selects has no PR-CI run: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>`, which dispatches `nightly-e2e-tests-matrix.yml` against it, and link that Actions run; if that is not possible, the `Run:` line says "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" rather than linking a run that never ran the test.
+
 Include the run URL in the PR body. Do not wait for CI to finish before marking `done`.
 
 ## Tracker completion and cleanup
