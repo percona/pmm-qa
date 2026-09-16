@@ -39,6 +39,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
+  // PMM-T1010 appends a requireTLS block to /etc/mongod/mongod.conf, which is a
+  // tracked file bind-mounted into every replica set member. Left in place it
+  // stops mongod from starting on the next provisioning's fresh containers --
+  // they have none of the certs T1010 created -- so the whole set comes up with
+  // no primary and every later run fails at connection time. Strip the block so
+  // a reused checkout provisions cleanly. Idempotent and safe when T1010 was
+  // skipped: the sed matches nothing on an unmodified config.
+  pmmTest.afterAll(({ cliHelper }) => {
+    if (containerName) {
+      cliHelper.execSilent(
+        `docker exec ${containerName} sed -i '/^  tls:/,/CAFile:/d' /etc/mongod/mongod.conf`,
+      );
+    }
+  });
+
   pmmTest(
     'PMM-T1001 - Verify Change agent username and password @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
