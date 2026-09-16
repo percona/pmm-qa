@@ -1,0 +1,6 @@
+# .claude/skills/linode-docker-provisioning/SKILL.md — a compose `ports` override needs `!override`, and host 443 is nginx's
+
+- Added: 2026-09-16
+- Applies to: .claude/skills/linode-docker-provisioning/SKILL.md
+- Evidence: Reproducing a codeceptjs CI leg brings PMM Server up the way `runner-e2e-tests-codeceptjs.yml` does, with `codeceptjs-e2e/docker-compose.yml`, which publishes `443:8443`. On the repro box nginx already owns 443, so the container died with `failed to bind host port 0.0.0.0:443/tcp: address already in use`. The obvious fix — a second `-f` file listing the wanted ports — changed nothing: Compose merges list-valued fields like `ports` by appending, so `443:8443` survived and the identical bind error came back after a second full setup run. `ports: !override` in the extra file worked, and `docker compose -f a.yml -f b.yml config` parsed for the resolved ports proved it before launching.
+- Proposed change: In the step 2 note that already says `-p 8443:8443, not 443:8443`, add the compose path: when PMM Server comes up via `codeceptjs-e2e/docker-compose.yml`, pass an extra `-f` file whose `pmm-server.ports` carries the `!override` tag (a plain list is appended, not replaced), and confirm the result with `docker compose -f … -f … config` rather than by re-running the failing `up`.
