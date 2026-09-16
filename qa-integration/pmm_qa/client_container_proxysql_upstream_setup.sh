@@ -1,8 +1,10 @@
 #!/bin/bash
-# Configure upstream ProxySQL for a PXC cluster via the admin interface (6032).
-# Percona's proxysql-admin is not shipped with upstream ProxySQL, so this does
-# the equivalent minimum: register every PXC node in one hostgroup, set the
-# monitor credentials, and add the application user that sysbench routes through.
+# Configure upstream ProxySQL for a PXC cluster via its admin interface (6032):
+# Percona's proxysql-admin, which does this on the 5.7/8.0 path, is not shipped
+# with upstream ProxySQL. admin-stats_credentials is set for read_user because
+# the CLI tests add the ProxySQL service as that user.
+
+set -euo pipefail
 
 number_of_nodes=${1:-3}
 
@@ -26,6 +28,10 @@ SAVE MYSQL SERVERS TO DISK;
 UPDATE global_variables SET variable_value='monitor' WHERE variable_name IN ('mysql-monitor_username','mysql-monitor_password');
 LOAD MYSQL VARIABLES TO RUNTIME;
 SAVE MYSQL VARIABLES TO DISK;
+
+UPDATE global_variables SET variable_value='read_user:read_user' WHERE variable_name='admin-stats_credentials';
+LOAD ADMIN VARIABLES TO RUNTIME;
+SAVE ADMIN VARIABLES TO DISK;
 
 DELETE FROM mysql_users;
 INSERT INTO mysql_users (username, password, default_hostgroup) VALUES ('proxysql_user','passw0rd',0);

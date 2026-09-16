@@ -19,10 +19,6 @@
 # Reads, in every function: DB_VERSION and DB_CONFIG (set by
 # parse_database_spec), PMM_SERVER_HOST, CLIENT_DEBUG.
 
-# Upstream ProxySQL used for PXC 8.4+ (see setup_pxc); its monitor supports
-# caching_sha2_password backends, unlike Percona's proxysql-admin.
-PROXYSQL_UPSTREAM_PACKAGE='https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql_3.0.11-ubuntu22_amd64.deb'
-
 # Percona Server for MySQL.
 #
 # SETUP_TYPE selects the topology inside the playbook ('' single, gr, replication).
@@ -106,27 +102,26 @@ setup_ssl_mysql() {
 #
 # ProxySQL is not separately requestable (dispatch_setup rejects it), so its
 # version and package come from the PROXYSQL registration instead of a spec.
-# The empty proxysql_config array exists only to satisfy resolve_value's
-# signature -- there is no PROXYSQL spec to read options from.
+# PXC 8.4 disabled mysql_native_password by default, which Percona's
+# proxysql-admin still requires, so from 8.4 the cluster is fronted by upstream
+# ProxySQL 3 (its monitor handles caching_sha2_password backends). The empty
+# proxysql_config array exists only to satisfy resolve_value's signature --
+# there is no PROXYSQL spec to read options from.
 setup_pxc() {
-  local version proxysql_version client proxysql_package
+  local version proxysql_version client
   version=$(resolved_version PXC_VERSION PXC "$DB_VERSION")
   proxysql_version=${PROXYSQL_VERSION:-$(database_default_version PROXYSQL)}
+  if [[ -z ${PROXYSQL_VERSION:-} && $version != 5.7 && $version != 8.0 ]]; then
+    proxysql_version=3
+  fi
   client=$(resolved_client_version PXC DB_CONFIG)
   declare -A proxysql_config=()
-  proxysql_package=$(resolve_value PROXYSQL PACKAGE proxysql_config)
-  # Percona's proxysql-admin needs mysql_native_password, which PXC 8.4 disables
-  # by default, so from 8.4 the playbook fronts the cluster with upstream ProxySQL.
-  case "$version" in
-    5.7 | 8.0) ;;
-    *) [[ -n $proxysql_package ]] || proxysql_package=$PROXYSQL_UPSTREAM_PACKAGE ;;
-  esac
   declare -A env_map=(
     [PXC_NODES]=3
     [PXC_VERSION]="$version"
     [PROXYSQL_VERSION]="$proxysql_version"
     [PXC_TARBALL]="$(resolve_value PXC TARBALL DB_CONFIG)"
-    [PROXYSQL_PACKAGE]="$proxysql_package"
+    [PROXYSQL_PACKAGE]="$(resolve_value PROXYSQL PACKAGE proxysql_config)"
     [PMM_SERVER_IP]="$PMM_SERVER_HOST"
     [PXC_CONTAINER]="pxc_proxysql_pmm_$version"
     [CLIENT_VERSION]="$client"
