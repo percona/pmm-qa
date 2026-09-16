@@ -91,9 +91,20 @@ load helpers/test_helper
   [[ $output == *"Unknown option '--prebaked-ps-image'"* ]]
 }
 
-@test "normalizes latest-tarball client version" {
+@test "normalizes latest-tarball client version on x86_64" {
+  # shellcheck disable=SC2329
+  uname() { printf 'x86_64\n'; }
+
   [[ $(normalize_client_version latest-tarball) == \
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz' ]]
+}
+
+@test "normalizes latest-tarball client version on arm64" {
+  # shellcheck disable=SC2329
+  uname() { printf 'aarch64\n'; }
+
+  [[ $(normalize_client_version latest-tarball) == \
+    'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
 @test "resolves latest PSMDB patch without Python" {

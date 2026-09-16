@@ -3,6 +3,11 @@
 load helpers/test_helper
 
 @test "PS GR selects the existing playbook and exact environment" {
+  # The tarball URL below is architecture-specific, so pin the arch rather than
+  # inherit whatever the developer's machine happens to be.
+  # shellcheck disable=SC2329
+  uname() { printf 'x86_64\n'; }
+
   parse_database_spec 'ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=latest-tarball
   CLIENT_DEBUG=true
