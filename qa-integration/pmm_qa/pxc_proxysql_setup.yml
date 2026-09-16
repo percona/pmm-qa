@@ -9,7 +9,7 @@
     proxysql_package: "{{ lookup('vars', 'extra_proxysql_package', default=lookup('env','PROXYSQL_PACKAGE') | default('', true) ) }}"
     pxc_container: "{{ lookup('vars', 'extra_pxc_container', default=lookup('env','PXC_CONTAINER') | default('pxc_container', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('host.docker.internal', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PXC_NODES') | default('3', true) ) }}"
@@ -41,6 +41,7 @@
       - docker exec {{ pxc_container }} mkdir -p artifacts
       - docker cp ./client_container_pxc_setup.sh {{ pxc_container }}:/
       - docker cp ./client_container_proxysql_setup.sh {{ pxc_container }}:/
+      - docker cp ./client_container_proxysql_upstream_setup.sh {{ pxc_container }}:/
       - docker cp ./pmm3-client-setup.sh {{ pxc_container }}:/
 
   - name: Get PXC Product tarball URL based on the version
@@ -53,7 +54,7 @@
       pxc_tarball: "{{tarball.stdout | default(pxc_tarball,true)}}"
 
   - name: Get ProxySQL Product package URL based on the version
-    shell: cat product_version_download_helper | grep proxysql | grep "\-{{ proxysql_version }}" | head -1 | awk -F'# ' '{print $3}'
+    shell: cat product_version_download_helper | grep proxysql | grep "# {{ proxysql_version }}" | head -1 | awk -F'# ' '{print $3}'
     register: package
     when: lookup('env', 'PROXYSQL_PACKAGE') == ''
 
@@ -118,7 +119,7 @@
     set_fact:
       random_number: "{{ (10000 | random) | int }}"
 
-  - name: Start ProxySQL inside the PXC extra_pxc_container
+  - name: Start Percona ProxySQL inside the PXC extra_pxc_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -c 'sed -i s#3306#'"\$(grep 'port' /home/pxc/PXC/node1.cnf | cut -d= -f2)"'# /etc/proxysql.cnf'
@@ -132,6 +133,7 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SAVE ADMIN VARIABLES TO DISK;"
       - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
     register: proxysql_start
+    when: pxc_version is version('8.4', '<')
     # The proxysql2 package's postinst can auto-start the daemon during
     # install (observed non-deterministically), so the explicit `proxysql -c
     # ...` start above sometimes finds it already running -- that is the
@@ -140,6 +142,14 @@
     failed_when: >-
       proxysql_start.rc != 0 and
       'Daemon already running' not in (proxysql_start.stderr | default(''))
+
+  - name: Start upstream ProxySQL inside the PXC extra_pxc_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} proxysql -c /etc/proxysql.cnf
+      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_proxysql_upstream_setup.sh {{ number_of_nodes }}
+      - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
+    when: pxc_version is version('8.4', '>=')
 
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"

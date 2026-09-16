@@ -143,6 +143,13 @@ When you do write one:
   renders the old Grafana page in an iframe, so a `f.url().includes('/graph/…')` match
   also hits the outer shell frame. Require `/graph/` **and** exclude `/pmm-ui/`.
 
+## Before publishing a static page of your own
+
+A page you are about to publish or hand off (a Pages dashboard, a report, an artifact preview) gets rendered here first — `python3 -m http.server` in its directory, then `pw-screenshot.js` against the local URL. A syntax check misses runtime failures, and the render is what shows them:
+
+- **Treat every CDN-loaded library as optional.** This sandbox cannot reach a CDN, which is exactly the condition a viewer may hit: an unguarded `new Chart(...)` threw and left the runs table blank as well, while `if (window.Chart) try { … } catch` kept the page's core content rendering. Give the widget a visible fallback where it would have been. Vendor the script locally for the sandbox render, and add `integrity`/`crossorigin` to the published tag.
+- **Render at the volume the page will realistically hold**, not with three sample rows. A fixture of 30+ items with the widest row shape and a regression-then-recovery pattern exposed three defects at once that the small sample hid — a trend heuristic reading run-to-run noise as "regressing", a nowrap column overflowing, and a long table with no filter. Screenshot both renders.
+
 ## Artifacts
 
 Name files with the ticket key (e.g. `PMM-15196-settings.png`). Save under `/tmp` and reference the path in Jira Developers-only comments when the role requires it.
