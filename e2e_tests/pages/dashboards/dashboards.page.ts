@@ -62,6 +62,8 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelContentByExactName: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
