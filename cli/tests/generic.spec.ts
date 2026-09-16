@@ -607,7 +607,11 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
     await oldVersion.outContains(latestReleasedVersion);
-    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
+    const arch = (await cli.exec(`docker exec ${containerName} uname -m`)).stdout.trim();
+    const bucket = arch === 'aarch64' ? 'pmm-client-arm' : 'pmm-client';
+    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http')
+      ? process.env.PMM_CLIENT_VERSION
+      : `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz`;
 
     const upgrade = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
 
