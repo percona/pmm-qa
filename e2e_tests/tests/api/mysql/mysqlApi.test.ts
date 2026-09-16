@@ -17,6 +17,8 @@ pmmTest(
   },
 );
 
+// MySQL 8.4 renamed the SHOW SLAVE STATUS columns, so mysqld_exporter exports these under
+// mysql_slave_status_replica_* where 8.0 and below used mysql_slave_status_slave_*.
 const metrics: string[] = ['mysql_slave_status_replica_io_running', 'mysql_slave_status_replica_sql_running'];
 
 data(metrics).pmmTest(
