@@ -10,6 +10,7 @@ export default class HighAvailabilityPage extends BasePage {
   buttons = {
     // Expands without navigating; the item itself links to a child with no url.
     haNavItemToggle: this.page.getByTestId('navitem-high-availability-toggle'),
+    overviewNavItem: this.page.getByTestId('navitem-high-availability-overview'),
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),
@@ -28,6 +29,12 @@ export default class HighAvailabilityPage extends BasePage {
     await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
     await this.buttons.haNavItemToggle.click({ timeout: Timeouts.TEN_SECONDS });
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+  };
+
+  /** Opens "PMM HA" -> "Overview", the only navigation route to the HA health dashboard. */
+  openOverviewDashboard = async (): Promise<void> => {
+    await this.expandHaNavItem();
+    await this.buttons.overviewNavItem.click({ timeout: Timeouts.TEN_SECONDS });
   };
 
   /**
