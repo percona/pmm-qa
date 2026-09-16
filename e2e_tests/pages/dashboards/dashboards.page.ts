@@ -10,6 +10,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import HaHealthOverviewDashboard from '@pages/dashboards/ha/haHealthOverview';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
@@ -26,6 +27,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
+  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page);
   readonly home = new HomeDashboard(this.page);
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;

@@ -1,7 +1,7 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
+export type DropdownName = 'Service Name' | 'Node Name' | 'Environment' | 'Namespace';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
