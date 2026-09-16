@@ -18,7 +18,7 @@ export default class K8sHelper {
   readonly namespace: string;
   private cliHelper = new CliHelper();
 
-  constructor(namespace = 'pmm') {
+  constructor(namespace = process.env.PMM_KUBERNETES_NAMESPACE || 'pmm') {
     this.namespace = namespace;
   }
 
