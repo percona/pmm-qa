@@ -5,18 +5,11 @@ verifiedAgainst: 1.62.1
 source: https://playwright.dev/docs/best-practices plus release notes 1.52-1.62
 ```
 
-How migrated code is written. `SKILL.md` stays authoritative for migration rules (fidelity,
-reuse, tracker); this file is authoritative for Playwright idiom. When the two disagree about
-whether a behavior may change, `SKILL.md` wins: practices govern how behavior is expressed, never
-whether it is preserved.
-
-`verifiedAgainst` must match the `@playwright/test` version in `e2e_tests/package.json`.
-`orchestration.md` step 1 checks this. On drift, refresh this file against the release notes before
-migrating.
+How migrated code is written. `SKILL.md` decides whether behaviour is preserved; this file decides how it is expressed. `verifiedAgainst` must match `@playwright/test` in `e2e_tests/package.json`; `orchestration.md` step 1 checks it, and on drift this file is refreshed against the release notes before migrating. A migration never upgrades Playwright and never edits `playwright.config.ts`.
 
 ## Locators
 
-Priority ladder, highest first:
+Ladder, highest first:
 
 1. `getByTestId`
 2. `getByRole`
@@ -24,45 +17,28 @@ Priority ladder, highest first:
 4. `getByPlaceholder`
 5. `getByText` / `getByTitle`
 
-Test id comes first here, contrary to upstream's role-first advice, because Grafana ships its own
-`data-testid` values and the config sets no `testIdAttribute` override, so they are matched by
-their literal value including the prefix: `getByTestId('data-testid Panel header <name>')`.
+Test id outranks role here because Grafana ships its own `data-testid` values and the config sets no `testIdAttribute`, so they match by literal value including the prefix: `getByTestId('data-testid Panel header <name>')`.
 
-- CSS only for MUI and Grafana internals that expose no stable test id or role
-  (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`).
-- XPath only for positional table cells and the Grafana iframe (`frameLocator`).
-- Every POM entry is a `Locator` object, never a selector string.
-- Avoid `nth()`, `first()`, and `last()`. Resolve a strict-mode violation by narrowing the locator
-  itself: chain `.locator()` to scope it, or `.filter({ hasText })` to select it. They remain
-  legitimate for deliberate indexed iteration over a known collection and for positional table
-  cells; justify each use. `check-migration-conventions.sh` reports these as advisories, not
-  failures, because they predate this rule in many existing files.
-- Chain and scope rather than writing one long selector.
-- `locator.describe('...')` (1.53) on an otherwise opaque locator so traces and reports name it.
-- **An existing POM entry with no consumers is unproven code, not a convention.** When it disagrees
-  with a currently-green source test, prefer the source-proven selector, verify both through MCP, and
-  rewrite it in place - with nothing consuming it, that is a minimal-reuse diff, not a breaking
-  change. Keep the existing convention only when a second source independently attests it, and record
-  why.
+- `getByRole(role, { name, description })`: `description` (1.60) matches the accessible description when several controls share a name.
+- CSS only for MUI and Grafana internals with no stable test id or role (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`). XPath only for positional table cells and the Grafana iframe (`frameLocator`).
+- Every POM entry is a `Locator`, never a selector string. Chain and scope rather than writing one long selector; `locator.describe('...')` on an otherwise opaque locator.
+- Resolve a strict-mode violation by narrowing the locator (`.locator()` to scope, `.filter({ hasText })` to select), not with `nth()`, `first()` or `last()`. Those remain legitimate for deliberate indexed iteration and positional table cells, justified in one line; the convention script reports them as advisories.
+- An existing POM entry with no consumers is unproven. When it disagrees with a currently-green source selector, verify both through MCP and rewrite it in place; keep the existing form only when a second source attests it.
 
 ## Web-first assertions
 
 Assertions auto-wait and retry; manual predicates do not.
 
-- Never `expect(await x.isVisible()).toBe(true)`. Use `await expect(x).toBeVisible()`.
-- Never a hand-rolled polling loop. Use `expect.poll(fn, { message, timeout })`.
-- `await expect(x).toHaveCount(n)`, not `expect(await x.count()).toBe(n)`.
+- `await expect(x).toBeVisible()`, never `expect(await x.isVisible()).toBe(true)`. `await expect(x).toHaveCount(n)`, never `expect(await x.count()).toBe(n)`.
+- A locator-derived value awaited into a variable and asserted once never retries; use the web-first matcher, `expect.poll(fn, { message, timeout })` for one computed value, or `expect(async () => { ... }).toPass({ intervals: [Timeouts.X], timeout })` for a block of assertions. Never a hand-rolled polling loop.
 - `toBeHidden()` when absence is meant; `not.toBeVisible()` only when the distinction matters.
-- A **locator-derived** value awaited into a variable and then asserted samples once and never retries - `const t = await x.textContent(); expect(t).toBe(...)` is the same defect as `expect(await x.isVisible())`, just spread over two lines. Use the web-first matcher, or `expect.poll` when the value must be computed.
-- Attach a message to every non-locator assertion: `expect(value, 'why this must hold').toBe(...)`. Bare `expect` is correct there - API status, CLI stdout, parsed files have nothing to retry against.
-- `waitForTimeout` is an ESLint error and stays one.
-- `locator.waitFor({ state })` only as a genuine precondition, never in place of an assertion.
-- Assertions stay in test bodies. Helpers return values; they do not assert.
+- Every non-locator assertion carries a message: `expect(value, 'why this must hold').toBe(...)`. Bare `expect` is correct for API status, CLI stdout and parsed files.
+- `waitForTimeout` is an ESLint error. `locator.waitFor({ state })` only as a genuine precondition, never in place of an assertion.
+- New helpers and POM methods return values and do not assert; the existing POM `verify*` methods are reused, not extended. A POM method waits only for what its own action needs.
 
 ## Prefer the modern API
 
-Each of these is available at 1.62.1. Reach for the right-hand column when writing new code; a
-CodeceptJS call that transliterates into the left-hand column is a signal to look here first.
+All available at 1.62.1 and barely used in the repo yet, so this table is the target form, not a description of existing code. A CodeceptJS call that transliterates into the left column is written as the right column.
 
 | Instead of | Use | Since |
 | --- | --- | --- |
@@ -73,53 +49,33 @@ CodeceptJS call that transliterates into the left-hand column is a signal to loo
 | a long chain of structural DOM assertions | `expect(page).toMatchAriaSnapshot()` | 1.60 |
 | a manual truthiness wait on page state | `locator.waitForFunction()` | 1.62 |
 
-## Do not introduce
+Since 1.59 and 1.62, for code this suite writes:
 
-Removed or deprecated upstream:
+- A `page.route` handler registered inside a test body is scoped with `await using` (1.59, `target: ESNext` in `tsconfig.json` supports it), so it unregisters when the block ends; a mock shared across tests lives in the `mocks` fixture.
+- Console checks use `page.clearConsoleMessages()` before the action and `page.consoleMessages({ filter })` after it (1.59), never a `page.on('console')` listener.
+- A locator found by CSS or XPath is run through `locator.normalize()` (1.59) in a scratch script against the live server to propose its test-id or role form; the proposal is then verified through MCP like any other rung.
+- `expect.soft.poll` (1.62) is not used: this suite has no soft assertions, and a migration adds none.
 
-- `page.accessibility` - removed in 1.57; use an external accessibility library.
-- `browserContext.on('backgroundpage')` and `backgroundPages()` - deprecated in 1.56.
-- `?` and `[]` glob patterns in `page.route()` - removed in 1.52. Relevant to the `context`
-  override in `e2e_tests/fixtures/pmmTest.ts`; use a regular expression instead.
-- `-gv` shorthand - removed in 1.54; use `--grep-invert`.
+Do not introduce, removed or deprecated upstream: `page.accessibility` (1.57); `browserContext.on('backgroundpage')` and `backgroundPages()` (1.56); `?` and `[]` globs in `page.route()` (1.52, use a regular expression, relevant to the `context` override in `e2e_tests/fixtures/pmmTest.ts`); `-gv` (1.54, use `--grep-invert`).
 
 ## Structure
 
-- `import pmmTest from '@fixtures/pmmTest';` and `import { expect } from '@playwright/test';`.
-  Never a bare `test` in a `*.test.ts`.
-- Wrap meaningful phases in `await pmmTest.step('<sentence>', async () => { ... })`, including
-  value-returning steps. A phase is two or more actions or assertions, or one action together with
-  the assertion that checks it. A step around a single bare `expect` is not a phase: `expect` reports
-  itself, so the wrapper only adds a duplicate nested entry. Across `e2e_tests` 4 of 168 steps take
-  that shape, and `playwright/expect-expect` does not flag it either way, so lint will not catch it.
-- Timeouts always come from `@helpers/timeouts`, never a bare number.
-- Every POM, helper, API client, and component used by a test is registered in
-  `e2e_tests/fixtures/pmmTest.ts` and destructured alphabetically in the test signature.
-- Arrow functions only; `func-style` and `no-restricted-syntax` enforce it.
-- Each test is self-contained: no state carried between tests, cleanup in `finally`.
+- `import pmmTest from '@fixtures/pmmTest';` and `import { expect } from '@playwright/test';`. Never a bare `test`.
+- Wrap meaningful phases in `await pmmTest.step('<sentence>', async () => { ... })`, the sentence verb-first as 160 of the 174 existing steps are. A phase is two or more actions or assertions, or one action with the assertion that checks it. A step around a single bare `expect` only duplicates the report entry.
+- Timeouts come from `@helpers/timeouts`, never a bare number.
+- Every POM, helper, API client and component a test uses is registered in `e2e_tests/fixtures/pmmTest.ts` and destructured alphabetically in the test signature.
+- Arrow functions only (`func-style`, `no-restricted-syntax`).
+- Each test is self-contained: no state carried between tests unless the source carries it (`SKILL.md` Port behaviour); cleanup in `afterEach`.
 
-## Deviations from upstream, deliberate
+## Deliberate deviations from upstream
 
-Do not "correct" these. They are load-bearing.
-
-- **Tags live inside the title string**, not the native `{ tag: [...] }` option, because
-  `.github/workflows/*e2e-tests-matrix*.yml` greps titles. `playwright/valid-test-tags` is `off`
-  for this reason. Migration must preserve every original CodeceptJS tag verbatim.
-- **No `expect` timeout in `playwright.config.ts`**, so the default 5s applies and individual
-  assertions carry an explicit `Timeouts.X` where they need longer.
-- **`fullyParallel: true`, with `workers: 1` only as the CI default** - `playwright.config.ts` reads
-  `WORKERS`, so never treat single-worker execution as guaranteed. Do not assume cross-test
-  parallelism, and equally do not assume its absence: any `beforeAll` that is expensive or mutates
-  shared server state must be pinned with `describe.configure({ mode: 'default' })` or moved to a
-  worker-scoped fixture, because `beforeAll` runs once per worker.
-
-A migration never upgrades Playwright and never edits `playwright.config.ts`.
+- Tags live inside the title string, not the native `{ tag: [...] }` option, because the matrix workflows grep titles; `playwright/valid-test-tags` is `off`. Every original CodeceptJS tag is preserved verbatim.
+- No `expect` timeout in `playwright.config.ts`: the default 5s applies and an assertion that needs longer carries an explicit `Timeouts.X`.
+- `fullyParallel: true` with `WORKERS` read from the environment (`workers: 1` is only the CI default). Never assume cross-test parallelism or its absence: a `beforeAll` that is expensive or mutates shared server state is pinned with `describe.configure({ mode: 'default' })` or moved to a worker-scoped fixture, because `beforeAll` runs once per worker.
 
 ## Companions
 
-Read alongside, not duplicated here:
-
-- `e2e_tests/CONTRIBUTING.md` - POM, fixture, and test templates.
-- `.agents/workflows/pomRules.md` - POM structure and locator rules.
-- `AGENTS.md` - repository-wide do and do-not list.
-- `e2e_tests/eslint.config.mjs` - the rules that are actually enforced.
+- `e2e_tests/CONTRIBUTING.md`: POM, fixture and test templates.
+- `.agents/workflows/pomRules.md`: POM structure and locator rules.
+- `AGENTS.md`: repository-wide do and do-not list.
+- `e2e_tests/eslint.config.mjs`: the rules actually enforced.

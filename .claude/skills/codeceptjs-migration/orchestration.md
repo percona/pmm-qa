@@ -1,73 +1,58 @@
 # Migration Orchestration (parent only)
 
-The parent agent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Worker subagents do not read this file - their phase contracts are in `run.md`, and the canonical sequence below is the single copy of it.
+The parent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Workers read `run.md`, not this file.
 
-Run exactly one row at a time. That row owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow.
+Run exactly one row at a time. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout is never switched away from, publication uses an isolated `git worktree`. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
 
-Migration work happens and is tested in the control branch's own worktree. What is committed where, and why, is owned by `branch-workflow.md` section What is committed where - read it before this file if you have not already.
+## Parent rules
 
-Step 7 (Publish) touches that second ref via an isolated `git worktree`; control's own checkout is never switched away from, through the entire workflow.
+**Subagents**
 
-Use WSL/Git Bash for `.claude/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .claude/scripts/*.sh` after editing them.
+- Launch each subagent and wait on its completion notification; no long sleeps polling terminal output.
+- Only the parent spawns review gates. A worker that spawns a subagent and waits on it deadlocks: the runner returns its evidence and stops, the parent spawns the reviewer.
+- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent.
+- Each subagent appends its row to the timeline before returning. `.claude/hooks/migration-phase-observe.sh` fires at subagent launch, not completion, so treat it as a reminder; batch `skill-gardener` capture passes to the end of the migration while any subagent is live. Do not rely on the `PostToolUse`/`Skill` hook, which fires as soon as an inline skill loads.
 
-## Parent orchestration
+**Gates**
 
-The parent agent coordinates writer, reviewer, and runner subagents. To avoid idle time:
+- Order is fixed and every row gets both gates: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before code and coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, no tracker `done` before a PR exists.
+- Never two reviewers on the same subject at once. Confirm no gate is live before spawning one; reviewer cost is flat per spawn, so fewer spawns is the only lever.
+- Nothing writes to control's worktree while an initial gate is live: no writer re-spawn, no state reset, no unrelated edit. The initial gate has no staleness detection of its own.
+- `STALE_SUBJECT` (final gate only) means the publish branch moved under the reviewer. It is neither a pass nor a failure: re-spawn the same gate scoped to the delta between the ledger entry's `startRef` and the branch HEAD, and stop whatever is committing to the branch. These re-spawns do not count as attempts.
+- A gate return without evidence is not a verdict. Reject a return whose `conventionScriptOutput` is missing, or whose `shape` block has empty `newNames`, `worthPortingGate`, `assertionMutationProof` or `locatorLadder` while the diff has new names, scenarios, assertions or locators; re-spawn scoped to the missing evidence. To verify a finding yourself, widen its scope (drop the path filter, count the whole repository), never re-run its command.
+- Five attempts per gate, counted by the ledger's `attempt`. After a fifth non-pass: keep the row `in-progress`, run teardown, report the open blockers verbatim with the ledger path. A five-round disagreement is a rule conflict for a human.
+- Pass the gate ledger path (`.claude/migration-observations/<row>-<slug>.gates.yaml`) on every gate spawn; the reviewer reads and appends it itself (`run.md` section Gate ledger). A `FINAL_REVIEW_FAILED` entry whose blockers are all `open` routes work to the writer or runner, not to a re-spawn.
+- Overlap only what `parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, MCP checks after readyz. Everything else is serial.
 
-- Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10-15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
-- **The parent, and only the parent, spawns review gates.** A worker subagent that spawns another subagent and then blocks waiting for its reply deadlocks. Do not give the runner, or any worker, the job of requesting a review: the runner returns its execution evidence and stops, and the parent spawns the reviewer.
-- **Never run two reviewers against the same commit.** Before spawning a gate, confirm no reviewer is still live for it. Reviewer cost is roughly flat per spawn regardless of scope, so the only lever on gate cost is spawning fewer of them; a duplicated final review is the largest single avoidable cost in this workflow.
-- **A `STALE_SUBJECT` verdict is not a failure and is never a pass.** It comes only from the final gate, and means the publish branch moved underneath the reviewer, so the verdict cannot apply to anything. Do not treat it as `FINAL_REVIEW_FAILED` and route it to the writer; re-spawn the same gate, scoped to the delta between the ledger entry's `startRef` and the branch's current HEAD. If you are seeing it repeatedly, something is committing to the publish branch while the gate is live - stop doing that first.
-- **The initial gate has no staleness detection, so the invariant is yours to hold.** Its subject is control's uncommitted worktree, which has no ref to compare against (`run.md` section Gate ledger explains why the phase `.patch` hash cannot substitute). Nothing may write to control's worktree while an initial gate is live - no writer re-spawn, no parent state reset, no unrelated edit. A gate that silently reviewed a tree you changed underneath it will report a pass on work nobody checked.
-- **A gate return without its evidence is not a verdict.** Reject any reviewer return whose `conventionScriptOutput` is missing or whose `shape` block has empty `newNames`, `worthPortingGate`, `assertionMutationProof` or `locatorLadder` while the diff plainly contains new names, scenarios, assertions or locators. Re-spawn the same gate scoped to the missing evidence; do not proceed to execution or publish on it. When you verify a gate finding yourself, widen the scope rather than reproduce the command: drop the path filter and the glob, count the whole repository, then explain the excess. Re-running the reviewer's own scoped command only confirms it typed it correctly.
-- **Five attempts per gate, then stop.** The ledger's `attempt` counter is the authority. When a gate's fifth entry is still not a pass, do not spawn a sixth: keep the row `in-progress`, run the teardown obligation, and report the open blockers verbatim to the user with the ledger path. A writer and reviewer that disagree for five rounds have a rule conflict for a human to settle, not a sixth attempt to make. `STALE_SUBJECT` entries do not count toward the five; they are re-spawns of the same attempt.
-- **A re-requested gate reads its own gate ledger (section Gate ledger, below) before doing anything else.** Include the ledger path in the handoff, but do not rely on retyping the prior verdict into prose - the ledger is what the reviewer is required to check itself, precisely so a parent omission cannot cause a full re-derivation of an unchanged finding.
-- Enforce gates strictly: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before the code and its workflow coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists. There are no exceptions: every row gets both gates, in this order. A structure that drops the initial gate would contradict `SKILL.md` Required outcome items 2 and 3, which are authoritative.
-- **Nothing the migration produces is committed on control.** If a subagent reports a commit SHA on control for migration code, that is a defect: have it reset the commit and leave the change in the worktree.
-- Overlap only where gates allow: provisioning runs in the background while the writer migrates (step 2a); static review can start while PMM provisions; MCP locator checks begin after readyz passes. Everything else is serial. Candidates and their verdicts live in `parallelization-ledger.md`; do not add an overlap that is not recorded there as `implemented`.
-- Reuse one local PMM environment for the row; never recreate it mid-workflow.
-- Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local environment selected different values, and pass the same pair to every review and execution command. A UI-login test is exactly that exception and needs a non-default password - see step 3. State the pair explicitly in every handoff rather than letting a subagent assume `admin`; `.env` routinely points at an unrelated remote PMM, and only `PMM_MIGRATION=1` stops it overriding you (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`).
-- **Operations a subagent is not permitted to perform belong to the parent.** Environment teardown and test-state resets - for example emptying the Grafana annotation table between runs on a reused environment - are refused by the permission classifier inside a subagent. A subagent must stop and ask rather than route around the refusal by another means; the parent performs the operation and resumes it.
-- Locator verification goes through the Playwright MCP server, which `.mcp.json` declares repo-level so every subagent inherits it. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is not a general fallback - it hardcodes `/pmm-ui/help` on every code path and supports only `getByRole` plus an optional `a[href=...]`. Use it for that one preset; if MCP is unavailable, stop and report it rather than checking a different page.
-- Once the background provisioning command starts in step 2a, if the workflow stops before the runner is invoked (including a provisioning failure or a gate reaching its fifth failed attempt), the parent runs `node provisioning/setup.ts --teardown` before stopping. The runner owns cleanup for every path it reaches in step 8.
-- Maintain this migration's timeline at `.claude/migration-observations/<row>-<slug>.md`; see section Phase timeline. The parent creates it in step 1 and appends rows for provisioning, gate transitions, and publish. Each subagent appends its own row before returning.
-- After each subagent phase completes, `.claude/hooks/migration-phase-observe.sh` requests a `skill-gardener` Capture pass for that phase. The hook fires when a subagent is launched, not when it finishes, so treat it as a reminder rather than a signal. Batch the passes to the end of the migration whenever another subagent is still live - editing skill files underneath a running subagent is worse than a late capture.
-- Do not rely on the `PostToolUse`/`Skill` hook for this workflow. It fires against the `Skill` tool call, which for an inline-loading skill returns as soon as the instructions load.
-- Record the tracker `in-progress` commit SHA in the handoff so a resumed session can recover which row is active. It is a marker only; it no longer defines a commit range, because nothing is cherry-picked.
-- **Checkpoint the uncommitted worktree after each phase** to `.claude/migration-observations/<row>-<slug>.patch`, using the exact command form in `branch-workflow.md` section Checkpointing uncommitted work - `git add -N` over currently-existing paths, then `git diff HEAD --binary -M --output=`. Do not improvise a `git diff > file` variant; every part of that form is load-bearing. That directory is gitignored, so this is a recovery point and not a commit. Delete it once the PR is open. Without it a multi-hour run has nothing to fall back on.
-- **Restore control's worktree to clean after publication.** The migration's edits are still sitting there; leaving them means the next migration starts on top of them.
+**Environment and control**
+
+- Never edit `e2e_tests/.env`. Pass `PMM_UI_URL` (default `https://127.0.0.1/`) and `ADMIN_PASSWORD` (default `admin`, non-default for UI-login tests, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them.
+- Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
+- If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
+- Once provisioning starts, any terminal path before the runner is invoked runs `node provisioning/setup.ts --teardown` from the parent. The runner owns cleanup on every path it reaches.
+- Record the tracker `in-progress` commit SHA in the handoff as the active-row marker.
+- Restore control's worktree to clean after publication (`branch-workflow.md` Tracker completion and cleanup).
 
 ## 1. Select and prepare
 
-On the control branch, run three preflight checks. Stop on any of them and report which one tripped:
+Three preflight checks on control, before the `origin/main` merge and the `in-progress` commit. Stop and name the one that tripped:
 
-1. another tracker row already `in-progress`;
-2. **any** migration PR currently open;
-3. Node.js older than 22.18, Docker unavailable, or any fixed local resource already present - `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (which `provisioning/` never creates; it belongs to the older `qa-integration` framework, so finding it means a foreign environment).
-
-Treat every matching resource as foreign unless this migration created it earlier in the same run. Never adopt, replace or tear down another environment.
-
-All three are preflight stop conditions, so all three run here - before the `origin/main` merge, both graph refreshes, and the `in-progress` tracker commit. A foreign environment found at step 2a instead would strand a committed `in-progress` row behind a provision that cannot start. Match on the `migrate(<scope>):` title prefix every migration PR uses, not on a full-text title search:
+1. another tracker row `in-progress`;
+2. any migration PR open. The cap is zero open before a new row starts, because every migration PR touches the nightly matrix and `e2e_tests/README.md`:
 
 ```bash
 gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | select(.title | startswith("migrate("))]'
 ```
 
-Not `--search 'migrate in:title'`: GitHub tokenizes it and matches unrelated PRs whose titles contain the word, and a false match here blocks every future row.
+   Not `--search 'migrate in:title'`, which matches unrelated titles containing the word.
 
-The cap is one open migration PR in total, so zero open before a new row starts: the nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR. Land or close the open PR before selecting a new row.
+3. Node.js older than 22.18, Docker unavailable, or a fixed local resource already present: `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (never created by `provisioning/`; it means a foreign `qa-integration` environment). Treat any match as foreign unless this run created it; never adopt, replace or tear one down.
 
-Merge `origin/main` into control only once all three checks are clear, or an unrelated merge commit lands in an already-active migration's history.
+Then merge `origin/main` into control (`branch-workflow.md` Control branch preflight). If the merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow: confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, merge again. Never `--allow-unrelated-histories`.
 
-If that merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow. Confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, then merge again. Never reach for `--allow-unrelated-histories`: it grafts two disjoint histories together and cannot be undone.
+`tracker.md` is tens of kilobytes; never read it whole. Select with a scoped `grep`/`head` over the status column and read only that row and the header section you need.
 
-The tell is `git merge-base HEAD origin/main` empty while control already carries earlier merge commits from `origin/main`, and `git rev-list --max-parents=0 origin/main` reporting a recent commit with an ordinary PR subject - a shallow boundary, not a root commit.
-
-`tracker.md` runs to tens of kilobytes. Never read it whole: select the row with a scoped `grep`/`head` over the status column, and read only that row plus whichever header section you actually need.
-
-Before selecting a row, check the tracker for drift against the filesystem: list `codeceptjs-e2e/tests/**/*_test.js` and diff it against the tracker's `Source` column. Any file with no matching row is untracked drift - append it as a new `pending` row (Bucket/Env/Setup left blank pending confirmation from its `Before`/`BeforeSuite`/`Data(...)` hooks) in its own tracker-only commit before proceeding. In test-run mode, report the drift without editing the tracker. Do not silently skip untracked files.
-
-Use this extraction verbatim rather than improvising one. `grep -P` is not reliably available here, and a `sed` backslash expression fails outright on Windows - either way the call exits with an empty result that reads exactly like a valid "no drift" answer:
+Check tracker drift with exactly this form (`grep -P` and `sed` backslash expressions fail silently here and read as "no drift"):
 
 ```bash
 comm -23 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
@@ -78,97 +63,52 @@ comm -13 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
              .claude/skills/codeceptjs-migration/tracker.md | sort -u)   # tracked but absent
 ```
 
-No `sed`, no path post-processing. Compare both directions and state the two counts.
+State both counts. Append each untracked file as a `pending` row (Bucket/Env/Setup blank until confirmed from its hooks and `Data(...)`) in its own tracker-only commit; in test-run mode, report without editing.
 
-Check practices freshness: read `@playwright/test` from `e2e_tests/package.json` and compare it with `verifiedAgainst` in `playwright-practices.md`. If they differ, stop and refresh that file against the Playwright release notes before migrating; a stale practices file silently authorizes outdated idiom for every later row.
+Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, refresh that file against the release notes before migrating.
 
-Select the first `pending` tracker row - `tracker.md`'s status legend already excludes B13 rows from `pending` (they carry `blocked-infra`), so no separate bucket check is needed here. Refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` per `graphify.md`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight commands. Record that commit's SHA as the active-row marker.
-
-Do not begin migration work until the control merge and both graph refreshes are complete. Confirm the worktree is clean first - a previous migration that failed to restore it leaves edits that would be swept into this migration's patch. From here everything the migration produces stays uncommitted in control's worktree until publish (step 7).
-
-Create this migration's timeline file (`mkdir -p .claude/migration-observations` first; the directory is gitignored and may not exist) and record the selection, the confirmed bucket, and the active-row marker commit.
+Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .claude/migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
 ## Test-run mode
 
-The parent may explicitly designate a run as test-only (dry run). In that mode, use the existing graphs read-only and skip only:
-
-- the tracker `pending` -> `in-progress` -> `done` status writes;
-- the control-branch graph refreshes and commits;
-- Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR); and
-- the step 1 open-migration-PR check, which exists to prevent a publish-branch collision that cannot occur when no publish branch is cut. The `in-progress` and foreign-resource checks still apply.
-
-Because 5b is skipped, the final gate's subject is control's worktree rather than a branch. It then follows the initial gate's rule: `kind: worktree`, no `startRef`/`endRef`, and `STALE_SUBJECT` is never returned.
-
-All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects. Workflow coverage is designed and its greps verified as usual, but not committed, since there is no publish branch to commit it on.
+When the parent designates a dry run, skip only: tracker status writes, step 5b and 7 (publish branch, retirement, coverage commit, push, PR), and the open-PR preflight check. Every gate still runs. The final gate's subject is then control's worktree: `kind: worktree`, no `startRef`/`endRef`, never `STALE_SUBJECT`. Coverage is designed and its greps verified but not committed.
 
 ## 2a. Start provisioning in the background
 
-This runs before step 2 and overlaps it. Provisioning is the long pole and the environment bucket is already known: the tracker row proposes it and step 1 confirms it against the source's `Before`/`BeforeSuite` hooks and `Data(...)`. Waiting for the writer first wastes that time.
+Before launching the writer. The parent confirms the bucket: the tracker's `Setup` is a planned default that is regularly wrong, so derive the real service set from what the source's `Before`/`BeforeSuite` hooks, `Data(...)` rows and shell commands name, correct the tracker row if it differs, and cross-check against the destination Playwright job's `setup_services`, never the retiring CodeceptJS job's (a union grep over-provisions).
 
-The parent, not the writer, owns the confirmation, and the tracker's `Setup` is a planned default that is regularly wrong. Derive the real set from the services the source's data rows, hooks, and shell commands actually name, then correct the tracker row when it differs - a row can just as easily name a database the test never touches as omit one it needs.
-
-Cross-check the derived set against the **destination** Playwright job's `setup_services` before provisioning - free, since the writer's step 8 selectability check already opens those workflow files. Never cross-check against the **retiring CodeceptJS job's** `setup_services`: a union grep provisions for every tag in the union, over-stating what any single migrated scenario needs.
-
-The local-resource inspection that gates provisioning is a step 1 preflight check, not a step 2a one - see step 1. Do not repeat it here; by this point it has already passed.
-
-Start `provisioning/setup.ts` in the background with the confirmed setup and launch the writer immediately. Record the exact provisioning command and the start time in the handoff and on the timeline. From this moment the teardown obligation is live: any terminal path runs `node provisioning/setup.ts --teardown`.
-
-If the writer's derived `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision with the corrected setup, and record the mismatch on the timeline. That record is the evidence that decides whether this overlap keeps paying for itself.
+Start `provisioning/setup.ts` in the background with the confirmed setup, launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 
 ## 3. Wait for the environment and verify it
 
-After `MIGRATION_READY`, wait for the step 2a background provision to finish. Do not start a second one.
-
-The provisioning command runs from control's worktree and accepts the tracker's existing `--database` grammar. Omit tracker-only `-h`/`--help` no-op values. Examples:
+After `MIGRATION_READY`, wait for the step 2a provision; never start a second one. The command runs from control's worktree with the tracker's `--database` grammar and no `-h`/`--help` values; no database arguments means server-only:
 
 ```bash
 node provisioning/setup.ts
 node provisioning/setup.ts --database ps=8.4 --database psmdb
 ```
 
-Use no database arguments for server-only setup.
-
-**`--db client` does not exist - never pass it.** `node provisioning/setup.ts --help` is the authority on accepted `--db` types; `dockerclients` is the nearest name and provisions nothing.
-
-A source with `setupClient: true` - one running `pmm-admin`/`pmm-agent` on the **host** rather than inside a database container - is not served by this entry point. Install the host client the way CI does, from `qa-integration/pmm_qa`:
+`--db client` does not exist; `node provisioning/setup.ts --help` is the authority. A source with `setupClient: true` (host `pmm-admin`/`pmm-agent`) needs the CI client install, Linux-only, under WSL2 or in CI, and the timeline records which:
 
 ```bash
 sudo bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password <p> --use_metrics_mode no
 ```
 
-This step is Linux-only: run such a row under WSL2 or route it to CI, and record which. Derive `setupClient` from the source before provisioning; a host `pmm-admin` invocation is the tell.
+A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial whose URL matches neither `help` nor `home-dashboard`, so the login page objects time out. CI avoids it with `ADMIN_PASSWORD: 'admin-password'` in every runner workflow. `provisioning/setup.ts --admin-password` is not the fix (agent registrations then fail with "Invalid username or password"). Provision with the default, change it with `PUT /graph/api/user/password` `{oldPassword,newPassword,confirmNew}`, verify once with `/v1/users/me`, and hand the new value to every later phase. This is an environment precondition, not a migration defect.
 
-**A test that logs in through the UI needs a NON-DEFAULT admin password.** With the provisioner's
-default `admin`, PMM forces an "Update your password" interstitial after every UI login, and its URL
-matches neither `help` nor `home-dashboard` - the predicate the login page objects wait on - so the
-test times out at its first step and can never reach the change-password step that would clear the
-condition. The CodeceptJS source fails identically, so this is an environment precondition, not a
-migration defect: do not route it to the writer or the reviewer. CI never hits it because
-`runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml` and `runner-e2e-tests-podman.yml`
-all hard-code `ADMIN_PASSWORD: 'admin-password'`.
+`PMM_DEBUG=1` is the provisioner default; override with `--server-env PMM_DEBUG=0` only when a test needs quieter logs.
 
-`provisioning/setup.ts --admin-password` is NOT the fix. It sets `GF_SECURITY_ADMIN_PASSWORD` on a
-fresh server, but every pmm-agent registration then fails with "Invalid username or password" and all
-database jobs fail. What works: provision with the default, then change the password over the API -
-`PUT /graph/api/user/password` with `{oldPassword,newPassword,confirmNew}` - and hand the new value to
-every later phase. Verify with one `/v1/users/me` call. This is the same operation the password tests
-themselves perform, and registered services survive it.
-
-`PMM_DEBUG=1` is a provisioner default, matching every other PMM test environment in this repository, so source tests that assert on log volume work without extra flags. Override it only when a test needs quieter logs: `--server-env PMM_DEBUG=0`.
-
-Then verify the prepared environment:
+Verify:
 
 ```bash
 PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only
 ```
 
-After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If the environment becomes unreachable, keep the tracker `in-progress`, record the blocker and `provisioning-artifacts/` path on this migration's timeline, and stop instead of recreating it.
+Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and `provisioning-artifacts/` path on the timeline, and stop.
 
 ## Phase timeline
 
-One file per migration at `.claude/migration-observations/<row>-<slug>.md`, appended to and never rewritten. It is local evidence, gitignored, and excluded from the publish PR. Prune to the last ten migrations.
-
-It exists because a subagent's internals are invisible to the parent, which receives only a final YAML block. Without it, `skill-gardener` has nothing to audit for the writer, reviewer, and runner phases, and no basis for judging whether a step can be overlapped.
+One file per migration at `.claude/migration-observations/<row>-<slug>.md`, appended and never rewritten, gitignored, excluded from the PR, pruned to the last ten migrations:
 
 ```markdown
 # <row> <source> -> <target>
@@ -179,15 +119,7 @@ It exists because a subagent's internals are invisible to the parent, which rece
 | writer | 14:02 | 14:31 | MIGRATION_READY | 1 | 0 | 3 static-validation reruns |
 ```
 
-Times come from `date -Is`, truncated to `HH:MM`. Each phase adds one row plus one short line saying what cost time and what it was blocked on; a phase cannot be judged parallelizable without that. Record no raw command transcript, no secrets, and no environment credentials.
-
-## Gate ledger
-
-Every gate spawn appends one entry to `.claude/migration-observations/<row>-<slug>.gates.yaml`. The parent creates that file alongside the timeline file in step 1 (same gitignore, same pruning) and includes its path in every gate handoff. The reviewer reads and appends to it itself.
-
-The entry schema and the scoping rule the reviewer must follow live in `run.md` section Gate ledger, because the reviewer reads `run.md` and must not read this file. Do not restate the schema here.
-
-The parent's own obligations: create the file in step 1; pass its path on every gate spawn; never spawn a second gate for a subject while one is still live for it; and treat a `FINAL_REVIEW_FAILED` entry whose blockers are all still `open` as a signal to route work to the writer or runner, not to re-spawn the same gate unchanged.
+Times from `date -Is` truncated to `HH:MM`. One row per phase plus one line on what cost time. No command transcripts, secrets or credentials.
 
 ## Canonical sequence
 
@@ -196,10 +128,8 @@ pending
 -> check no other row is in-progress
 -> check no migration PR is open
 -> merge main into control
--> refresh target graph on control
--> refresh source graph on control
 -> in-progress (tracker-only commit; marks the active row)
--> refreshed graph discovery (read-only)
+-> linked-file discovery
 -> inspect local resources, then start provisioning in the background
    |
    +-- concurrently: migration, directly on control

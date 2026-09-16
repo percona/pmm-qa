@@ -11,18 +11,14 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
 - Pick the first row (top-to-bottom) with `status = pending`. B13 rows carry `status = blocked-infra`, not `pending`, and are never selected by this rule - see the status legend.
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
-- The `Tags` cell is a per-file **union** and is not what CI selects on - a source file's scenarios rarely all carry the same tag set. Before provisioning starts, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the row's `Tags` cell if the union was wrong or incomplete, and record the expansion on this migration's timeline. This is the same confirmation duty as `Env` and `Setup`, extended to the column every coverage decision starts from - a scenario whose real tags differ from the file's union is exactly what has already cost a full migration three extra final-review passes.
-- `Setup` is the planned `setup_services` argument set passed to `provisioning/setup.ts` (see `context.md` section Provisioning). Its `--database` spellings are accepted unchanged. Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
-  Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run and record the derived value in the PR body. It does **not** map to a provisioner argument - `--db client` does not exist; see `orchestration.md` step 3 for what a `setupClient: true` row actually needs.
+- The `Tags` cell is a per-file union and is not what CI selects on. Before provisioning, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the cell if the union was wrong, and record the expansion on the timeline.
+- `Setup` is the planned `--database` argument set for `provisioning/setup.ts` (`orchestration.md` step 3); empty means server only. The source test wins over the tracker and over broad tags such as `@settings`. `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
   each migration still owns and tears down its local Docker environment. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
-- Local Docker through `provisioning/setup.ts` is the default execution environment. Rows that need vendor cloud resources, appliance images, or pmm-demo access stay `pending`; local provisioning does not provide those dependencies.
+- Local Docker through `provisioning/setup.ts` is the only execution environment. Rows needing vendor cloud resources, appliance images, or pmm-demo access are `blocked-infra`.
 
-Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
-`context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
-
-Merge `origin/main` into control and refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit. What is committed where after this point is owned by `branch-workflow.md` section What is committed where. After the migration's PR is opened, update the row on control with its status and PR link only; the pre-migration graph-refresh result and every other detail belong in the PR body.
+Target selection, source rename, branch and PR mechanics, and what is committed where: `orchestration.md` and `branch-workflow.md`. After the PR opens, update the row with its status and PR link only.
 
 ## Status legend
 
@@ -153,7 +149,7 @@ Row selection only ever picks a `pending` row. A row in any other status is not 
 
 ## Notes on reconciliation
 
-Best-fit rule (Target column is a hint, not a mandate): `context.md` section 2a. Tracker-specific data below.
+Best-fit rule (Target column is a hint, not a mandate): `SKILL.md` Repository map. Tracker-specific data below.
 
 - Some targets may already partially exist in `e2e_tests/tests/` (e.g. QAN under `tests/qan/rta/`,
   valkey dashboards, docker `srvFolder.test.ts`, `clickHouse.test.ts`). On the migration day, first
@@ -161,5 +157,5 @@ Best-fit rule (Target column is a hint, not a mandate): `context.md` section 2a.
   instead of duplicating. Rows #13/#14 (Insight dashboards root vs dashboards/) are likely
   near-duplicates - reconcile into one target.
 - Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the local Docker PMM.
-  They stay `pending`; name the required infrastructure in the row's Env column until it is available.
+  They carry `blocked-infra`, with the required infrastructure named in the Env column.
 - Row 10 (PR #1437): a duplicate-title finding was refuted twice on counts of 1 taken over a default load; `loadAllPanels()` showed 81 sections and four titles at 2. The agent then split the test per panel after declining that split, and added `statusPanels`/`panelId` outside `DashboardInterface`; both were reverted on review. The retirement body's `@gssapi-nightly` claim needed two correction commits.

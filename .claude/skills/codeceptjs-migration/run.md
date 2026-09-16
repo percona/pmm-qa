@@ -1,57 +1,38 @@
 # Migration Phase Contracts
 
-What each worker phase does and what gate it returns. The parent's half of the workflow - row selection, preflight, provisioning, gate ownership, the phase timeline, and the canonical sequence - lives in `orchestration.md`; worker subagents do not need it and should not read it.
+What each worker phase does and what it returns. The parent's steps 1, 2a and 3, gate ownership and the timeline are in `orchestration.md`; workers do not read it.
 
-Working phases edit the control branch's own worktree and **commit nothing there**. Everything the migration produces stays uncommitted until publish (step 7), which moves it to a branch cut from `origin/main` in an isolated `git worktree` and commits it there. Control's own checkout is never switched away from. If you find yourself about to `git commit` migration code on control, stop - that is the one thing this workflow does not do.
+Every phase edits control's worktree and commits nothing there; only the parent commits on control, and only the tracker. Publication (step 7) moves the work to a branch cut from `origin/main` in an isolated worktree.
 
-Environment contract for every phase that touches a running PMM: reuse the prepared local environment, never recreate or clean it, and pass the same `PMM_UI_URL` and `ADMIN_PASSWORD` the parent hands over (default `https://127.0.0.1/` and `admin`) to every command. Never edit `e2e_tests/.env`.
+Environment contract: reuse the prepared local PMM, never recreate or clean it, pass the parent's `PMM_UI_URL` and `ADMIN_PASSWORD` to every command, never edit `e2e_tests/.env`. Never send a request with a wrong password: Grafana blocks `admin` after 5 failed logins in a rolling 5-minute window, for basic auth and the UI form alike, and every retry re-arms it. Read the password state from `/srv/logs/grafana.log` in the pmm-server container or `provisioning-artifacts/`. `/v1/server/readyz` is unauthenticated and proves nothing about credentials; the oracle is one call to `/v1/users/me` (200 correct, 401 wrong).
 
-**Never send a request with a wrong password.** Grafana blocks the `admin` user after 5 consecutive
-failed logins in a rolling 5-minute window, and the block covers BOTH basic auth and the UI login
-form, so it fails the migrated test too. Every "is it unblocked yet" retry is itself a failure that
-re-arms the window. Probing cost one migration ~11 minutes and invalidated a whole execution attempt;
-a second probe run later corrupted the diagnosis of an unrelated failure. To learn the password state,
-read `/srv/logs/grafana.log` inside the pmm-server container or the files under
-`provisioning-artifacts/` - never a credential probe.
-
-**`/v1/server/readyz` is UNAUTHENTICATED.** It returns 200 for any credentials, including deliberately
-wrong ones, so it can neither verify a password nor confirm that a password-changing test restored the
-original. The oracle is `/v1/users/me` (200 correct, 401 wrong) - one call, not a loop.
-
-Search contract for every phase: the Grep tool, an explicit path scope, an explicit `output_mode` (`AGENTS.md` section Shell and tooling notes).
-
-Steps 1, 2a, and 3 are the parent's; they are in `orchestration.md`. Only the parent commits on control, and only the tracker and the graphs.
+Search contract: the Grep tool, an explicit path scope, an explicit `output_mode`.
 
 ## 2. Discover and migrate
 
 The writer:
 
 1. reads the source test and applies the worth-porting gate to every scenario (`SKILL.md` Before migrating), recording the evidence;
-2. queries the existing source graph with `graphify query`/`graphify path`/`graphify explain`, or a targeted filter as described in `.claude/skills/graphify/references/query.md` (no graph generation and never loading the full `graph.json`); CodeceptJS fixture injection (`async ({ I, somePage }) => ...`) is not a static import, so graphify's AST pass will not have an edge for it - always also check the scenario's injected parameter names directly against `codeceptjs-e2e/tests/**/pages/*.js` regardless of what the graph shows;
-3. opens and verifies the actual linked source files;
-4. queries the refreshed `e2e_tests/graphify-out/graph.json` to find reusable Playwright files (no graph generation);
+2. resolves every name the source destructures in `Scenario`, `Before` and `After` (`async ({ I, somePage }) =>`) through the `include` map in `codeceptjs-e2e/codeceptConfigHelper.js`; injection is not an import, so nothing else lists these files;
+3. opens the resolved files and follows their `require` chains: hooks, page objects, `custom_steps.js`, helpers, API objects, test data;
+4. greps `e2e_tests/pages`, `api`, `helpers`, `fixtures` and `tests` for the page or feature name to find reusable Playwright files;
 5. opens and verifies the actual target candidates;
 6. derives environment setup from source behavior;
 7. migrates the test to native Playwright;
-8. checks destination selectability **per scenario**;
-9. runs `bash .claude/scripts/check-migration-conventions.sh` on every changed file, fixes every failure, and pastes the output in the handoff; and
+8. checks destination selectability per scenario;
+9. runs `bash .claude/scripts/check-migration-conventions.sh` on every changed file, fixes every failure, and pastes the output in the handoff;
 10. runs static validation.
 
-On step 8, check per scenario against jobs as they exist **today** - the workflow-coverage YAML is not edited until step 5b (the runner's). A file's scenarios do not all carry the same tags, so the file's union is not what CI selects on.
+Step 8, against jobs as they exist today (coverage YAML is edited only at step 5b):
 
-- List the migrated scenario titles and diff them against each destination job's existing grep, with `npx playwright test --list --grep '<expression>'` per job.
-- Report any scenario matching no existing job's grep as `destinationTagNeeded: true`.
-- For a scenario that **does** match, state that job's `setup_services` and compare it with your derived `setupServices`. A mismatch is either a wrong bucket or a job that cannot execute what it selects, and both are cheaper to find here than after provisioning.
+- Per job, `npx playwright test --list --grep '<expression>'` over the migrated titles. Identify each job's runner by its `uses:` line, not by its input key: `nightly-e2e-tests-matrix.yml` keys its Playwright job `tags_for_tests` and maps it onto the runner's `pmm_test_flag`. Report the CodeceptJS and Playwright job counts.
+- A scenario matching no job is `destinationTagNeeded: true`; the report names the tag or job the runner must add. A tag no `.github` job selects is checked against the consumer table in `branch-workflow.md` Workflow coverage before it is called unconsumed, and named in the report either way. Naming the tag or job the runner must add resolves the need; the writer edits no workflow and adds no tag to a title. Do not return `MIGRATION_READY` while any scenario's need is unresolved.
+- A scenario that matches: state that job's `setup_services` against your derived `setupServices`; a mismatch is a wrong bucket or a job that cannot execute what it selects.
+- A single `--list --grep` over the `|`-union of every expression is valid only to prove the negative (zero matches). Once anything matches, fall back to the per-job loop. State which form was used.
 
-A single `--list --grep` over the `|`-union of every active job expression may replace the per-job loop **only** to establish the negative: zero matches from the migrated file means every scenario in it needs a tag, and one command proves it. The moment the union matches anything, the union cannot say *which* job is the home, and `destinationTagNeeded` is a per-scenario-per-job verdict - so fall back to the per-job loop for the matching scenarios. State which form was used and its result count.
+Step 10: if a migrated tag does not already appear under `e2e_tests`, run `python support_scripts/generate_readme.py` then `--check` from the repository root before returning; there is no npm script for it. It rewrites the `qa-integration`, `e2e_tests` and `cli` READMEs; a change outside `e2e_tests/README.md` is pre-existing drift, not this migration's.
 
-Count both job kinds. CodeceptJS jobs grep under `tags_for_tests`, Playwright jobs under `pmm_test_flag`, and both kinds live in the same workflow files. Report each count before any per-scenario verdict (e.g. "7 `tags_for_tests` jobs, 5 `pmm_test_flag` jobs, active only"); a count of 0 for either key means the parse is wrong, not that coverage is absent.
-
-Do not edit workflow YAML. `destinationTagNeeded: true` is not a defect on its own, but do not return `MIGRATION_READY` while any scenario's tag need is unresolved - either it already matches an existing job's grep, or the report names the tag or job the runner must add at step 5b.
-
-On step 10: if any migrated tag does not already appear anywhere under `e2e_tests`, regenerate `e2e_tests/README.md` and re-run `python support_scripts/generate_readme.py --check` before returning `MIGRATION_READY`. Run it from the repository root, not `e2e_tests/`. There is no npm script behind it - `npm run readme:check` exits 1 with a missing-script error that reads like a failing check rather than a missing one; `.husky/pre-commit` invokes the Python generator directly. A new tag makes that check stale repo-wide, so it fails every later gate rather than only the publish step.
-
-Leave the changes uncommitted and report the changed paths. Do not commit on control.
+Leave the changes uncommitted and report the changed paths.
 
 Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 
@@ -59,68 +40,50 @@ Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 
 The reviewer independently:
 
-1. queries the existing source and refreshed target graphs to derive dependency lists (no graph generation);
+1. re-derives the source's linked files through the `codeceptConfigHelper.js` include map and `require` chains, and the target's reusable files by grep;
 2. compares all source behavior with the migrated implementation;
 3. confirms nothing is missing or weakened;
-4. confirms the writer's per-scenario selectability check, re-deriving it rather than trusting it;
-5. verifies every new or changed locator through MCP against the prepared PMM environment, counting over the fully rendered DOM (`locator-fix.md` Lazy rendering);
-6. fixes locator definitions only when live DOM evidence proves the correction; and
+4. re-derives the writer's per-scenario selectability check;
+5. verifies every new or changed locator through MCP against the prepared environment, counting over the fully rendered DOM (`locator-fix.md` Lazy rendering);
+6. fixes locator definitions only when live DOM evidence proves the correction;
 7. reruns static validation after locator changes.
 
-Review the working tree, not a commit range. Any locator fix you make also stays uncommitted.
+Review the working tree, not a commit range; locator fixes stay uncommitted. Non-locator findings return to the writer, and changed code is reviewed again.
 
 Reviewer output: `READY_TO_RUN`, `REVIEW_FAILED`, or `LOCATOR_FIX_REQUIRED`.
 
-Non-locator findings return to the writer. Any changed code must be reviewed again.
-
-If HEAD moves while a review is in flight, say so in the handoff. A commit landing under a reviewer is otherwise invisible, and it silently invalidates whatever the review already checked.
-
 ## 5. Execute
 
-The runner executes the migrated scenarios or existing coverage against the prepared local environment, reusing the same `PMM_UI_URL`/`ADMIN_PASSWORD` for every proof and regression command.
+The runner, against the prepared environment with the same credential pair:
 
-- For a new target file containing only migrated scenarios, run the complete file once.
-- For an appended existing target file, first run only the migrated scenarios, then run the complete target file.
-- For `targetMode: already-covered`, skip the new-scenario proof run and run the existing target file or matched existing test titles as regression evidence.
+- new target file with only migrated scenarios: run the complete file once;
+- appended existing file: run the migrated scenarios, then the complete file;
+- `targetMode: already-covered`: run the existing target file or matched titles as regression evidence.
 
-Run the file in declaration order unless the source proves the scenarios are independent; a migrated scenario may depend on state an earlier one created, faithfully to the source.
-
-A test that selects state by index is not rerunnable on a reused environment without resetting that state first. Establish the precondition before the run and state it in the evidence. If the reset is refused by the permission classifier, stop and ask the parent - do not achieve the same effect by another route.
-
-The hazard is state a test *reads* without establishing, not state a test *leaves*. Check where the reset runs before escalating one: a file whose `beforeEach` restores its own precondition is self-preconditioning and needs no external reset, however dirty its last scenario leaves the environment.
+Run in declaration order unless the source proves the scenarios independent. A test that reads state by index needs that state reset before a run on a reused environment; a file whose `beforeEach` restores its own precondition needs no external reset. If a reset is classifier-refused, stop and ask the parent.
 
 Failure routing:
 
-- locator failure -> reviewer;
-- migration logic failure -> writer;
-- environment or product failure -> keep `in-progress` and record the reason. **Run the unmigrated source against the same environment first.** "The source would fail here too" is the whole claim and one command proves or refutes it; if the source passes where the migration fails, the failure is yours;
-- stale environment state -> reset the state and rerun; this is not a code failure and does not re-enter review.
+- locator failure: reviewer;
+- migration logic failure: writer;
+- environment or product failure: run the unmigrated source against the same environment first. If the source passes where the migration fails, the failure is the migration's; otherwise keep `in-progress` and record the reason;
+- stale environment state: reset and rerun, no review needed.
 
-Any code change requires the relevant review again before rerunning. Do not clean or recreate the environment after a failure.
+Any code change is reviewed again before rerunning. Never clean or recreate the environment after a failure.
 
 ## 5b. Cut the publish branch, move the work, add coverage
 
-After execution passes and **before** the final review, the runner cuts a worktree and branch from `origin/main`, moves control's uncommitted changes into it, commits them there, then performs the source retirement and the workflow-coverage edits in that same worktree. Full commands in `branch-workflow.md`.
-
-This ordering is deliberate: the final review has to verify committed content, and a coverage plan described only in prose cannot be verified at all.
-
-Coverage rules, the per-scenario check across every consumer job (not only the one edited), and the two CI traps (the `|` regex trap and the `expected_test_jobs` counter) are all in `branch-workflow.md` section Workflow coverage - apply it in full; it is not restated here.
-
-After the coverage edit, run the reverse direction too: re-list the highest-traffic existing expressions and confirm their selections are unchanged. Do this **even when the edit only added a job** and "no existing expression changed" is true by construction - it costs one batched `--list` command and is the only thing separating a verified claim from a believed one.
+After execution passes and before the final review, the runner cuts the worktree and branch from `origin/main`, moves control's uncommitted changes across, commits them, then retires the source and edits workflow coverage in that worktree. Commands and coverage rules: `branch-workflow.md`, sections Cut the publish branch and Workflow coverage, applied in full.
 
 ## 6. Final review
 
-After the required tests pass and the publish branch carries the code, the retirement, and the workflow coverage, the reviewer performs a final complete review of that branch plus the execution evidence.
-
-The parent spawns this gate. The runner does not.
+Once the publish branch carries the code, the retirement and the coverage, the parent spawns the reviewer for a complete review of that branch plus the execution evidence.
 
 Reviewer output: `FINAL_REVIEW_PASS` or `FINAL_REVIEW_FAILED`.
 
 ## Gate ledger
 
-Applies to both gates (step 4 and step 6). The parent creates `.claude/migration-observations/<row>-<slug>.gates.yaml` and passes its path on every gate spawn; the reviewer reads it and appends to it itself, so a missing or incomplete prose handoff can never silently cause a full re-derivation.
-
-Read it first, before any other work in the gate. Append one entry before returning:
+Both gates. The parent passes the path of `.claude/migration-observations/<row>-<slug>.gates.yaml`; read it before any other work and append one entry before returning:
 
 ```yaml
 - gate: initial | final
@@ -128,8 +91,8 @@ Read it first, before any other work in the gate. Append one entry before return
   rowsCovered: []   # the tracker row this gate covers
   subject:
     kind: worktree | branch   # initial gate is always worktree; final gate is branch, except worktree in test-run mode
-    startRef:       # kind: branch only: the branch HEAD sha, measured before any review work. Omit for a worktree subject.
-    endRef:         # kind: branch only: the branch HEAD sha again, measured immediately before returning; must equal startRef for a passing verdict. Omit for a worktree subject.
+    startRef:       # kind: branch only: the branch HEAD sha, measured before any review work
+    endRef:         # kind: branch only: the branch HEAD sha again, measured immediately before returning; must equal startRef for a passing verdict
   verdict: READY_TO_RUN | REVIEW_FAILED | LOCATOR_FIX_REQUIRED | STALE_SUBJECT | FINAL_REVIEW_PASS | FINAL_REVIEW_FAILED
   blockers:
     - id: B1
@@ -141,38 +104,29 @@ Read it first, before any other work in the gate. Append one entry before return
   shape: {}                   # the populated shape block, on a passing entry
 ```
 
-A re-spawned gate is a fresh instance with no transcript, so it can recover nothing from an earlier attempt except through this file. Store the evidence itself on a passing entry, not a summary of it; an MCP pass or an execution log summarised as "5 advisories on lines 73, 92" cannot be carried forward.
+Store the evidence itself on a passing entry, not a summary; a re-spawned gate has no transcript and recovers nothing except through this file.
 
-Scoping rule:
+Scope:
 
-- No entry for this gate: attempt 1, the full `audit-checklist.md` applies.
-- Last entry is not a pass and carries `status: open` blockers: scope to those ids plus whatever changed on the subject since that entry's `endRef`. Do not re-derive the full checklist. An advisory recorded `withdrawn` needs no re-derivation unless the code it was about changed.
-- Only `open` items and the delta are ever in scope, whatever a prose handoff asks for.
-- Cannot determine the delta (silent handoff, `endRef` you cannot diff): stop and report that gap. A missing delta is not licence to re-derive everything.
+- No entry for this gate: attempt 1, the full `audit-checklist.md`.
+- Last entry not a pass with `open` blockers: those ids plus what changed on the subject since its `endRef`. `withdrawn` items are not re-derived unless their code changed. Only `open` items and the delta are in scope, whatever a prose handoff asks.
+- Delta undeterminable (no `endRef` to diff): stop and report the gap; do not re-derive everything.
 
-Subject stability, final gate only. The final gate's subject is the publish branch, so measure its HEAD sha before doing any review work and again immediately before returning. If they differ, the subject changed underneath you: record both values, return `STALE_SUBJECT`, and do not return a passing verdict on a branch that no longer exists as reviewed. The parent then re-spawns the gate scoped to the delta.
-
-A gate whose subject is a worktree omits `startRef`/`endRef` and never returns `STALE_SUBJECT`. The subject kind decides this, not which gate it is - a **final** gate in test-run mode has a worktree subject too, because step 5b is skipped.
-
-There is no staleness check to run there: an uncommitted worktree has no ref to compare, and the obvious stand-in, the phase `.patch` file's hash, is written by the parent between phases and never regenerated during a gate - so both measurements are equal by construction whatever happened to the tree. What protects a worktree subject is the parent's invariant, not the reviewer's: nothing may write to a subject while its gate is live (`orchestration.md`).
+Subject stability, `kind: branch` only: measure HEAD before any review work and again before returning. If they differ, record both, return `STALE_SUBJECT`, never a pass. A worktree subject omits the refs and never returns `STALE_SUBJECT`; the parent's invariant that nothing writes to a subject under a live gate is its only protection.
 
 ## 7. Publish
 
 Only after `FINAL_REVIEW_PASS`, the runner:
 
-1. revalidates the publish worktree (lint/typecheck/build/test), every time - the four migration-specific scripts under `.claude/scripts/` are control-only and absent from a tree cut from `origin/main` (see `branch-workflow.md` "Revalidate, every time"), so the test runner is invoked directly and any of those four scripts still needed here is invoked by its absolute path on the control worktree;
-2. pushes the publish branch, opens a PR targeting `main`, and attaches the E2E tests Matrix Actions run URL per `branch-workflow.md`;
-3. on control's own checkout (never switched away), updates the tracker row to `done` with the PR link and pre-migration graph-refresh result, then commits and pushes only the tracker change, following the anchored-edit and CRLF checks in `branch-workflow.md` section Tracker completion and cleanup; and
+1. revalidates the publish worktree (`branch-workflow.md` Revalidate, every time; the migration scripts are control-only and invoked by absolute path);
+2. pushes, opens the PR against `main`, and attaches the Actions run (`branch-workflow.md` Push and open the PR, Attach CI execution);
+3. on control's own checkout, updates the tracker row to `done` with the PR link and commits and pushes only the tracker (`branch-workflow.md` Tracker completion and cleanup);
 4. restores control's worktree to clean and verifies `git status --short` is empty.
 
-Do not merge the publish branch into control. A later merge of `main` into control delivers the migration after its PR merges - which is the whole point of not committing it on control in the first place.
-
-For this workflow, `done` means the PR was opened successfully.
+Do not merge the publish branch into control. `done` means the PR was opened.
 
 ## 8. Cleanup
 
-Run `node provisioning/setup.ts --teardown` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. This removes the migration's provisioned containers, volumes, and network. Also remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, delete the `.patch` checkpoint, and leave control's worktree clean.
+Run `node provisioning/setup.ts --teardown` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
 
-On a terminal path that stops before publication, control's worktree still holds the uncommitted work. Say so explicitly in the handoff, and keep the `.patch` checkpoint rather than discarding either.
-
-Teardown is classifier-blocked inside a subagent. When it is refused, report it in the handoff and leave the environment running for the parent rather than working around the refusal.
+On a terminal path before publication, control's worktree still holds the uncommitted work: say so in the handoff and do not discard it. Teardown is classifier-blocked inside a subagent: when refused, report it and leave the environment for the parent.

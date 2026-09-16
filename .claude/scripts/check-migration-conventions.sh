@@ -170,9 +170,9 @@ count_uses() {
   local dir
   dir=$(repo_root "$2")/e2e_tests
   if command -v rg >/dev/null 2>&1; then
-    rg -c --glob '!**/node_modules/**' -- "$1" "$dir" 2>/dev/null | awk -F: '{ s += $NF } END { print s + 0 }'
+    { rg -c --glob '!**/node_modules/**' -- "$1" "$dir" 2>/dev/null || true; } | awk -F: '{ s += $NF } END { print s + 0 }'
   else
-    grep -rEc --exclude-dir=node_modules -- "$1" "$dir" 2>/dev/null | awk -F: '{ s += $NF } END { print s + 0 }'
+    { grep -rEc --exclude-dir=node_modules -- "$1" "$dir" 2>/dev/null || true; } | awk -F: '{ s += $NF } END { print s + 0 }'
   fi
 }
 
