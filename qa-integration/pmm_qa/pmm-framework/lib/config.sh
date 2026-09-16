@@ -131,7 +131,7 @@ register_database SSL_PDPGSQL \
   'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET='
 
 register_database PXC \
-  '5.7 8.0 8.4' \
+  '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION QUERY_SOURCE TARBALL' \
   'DEFAULT_VERSION=8.4' \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='

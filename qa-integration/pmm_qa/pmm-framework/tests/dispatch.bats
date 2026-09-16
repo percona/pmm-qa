@@ -101,6 +101,15 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[PROXYSQL_PACKAGE]} == *sysown/proxysql*3.0.11* ]]
 }
 
+@test "PXC 9.7 dispatches with its version and upstream ProxySQL" {
+  parse_database_spec 'PXC=9.7'
+  dispatch_setup
+
+  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
+  [[ ${CAPTURE_ENV[PXC_VERSION]} == 9.7 ]]
+  [[ ${CAPTURE_ENV[PROXYSQL_PACKAGE]} == *sysown/proxysql*3.0.11* ]]
+}
+
 @test "Valkey sentinel alias selects sentinel playbook" {
   parse_database_spec 'valkey=8,SETUP_TYPE=sentinels'
   dispatch_setup

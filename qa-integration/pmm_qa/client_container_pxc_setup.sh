@@ -43,7 +43,7 @@ sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 sed -i 's+${MID} --datadir+${MID} --socket=\\${node}/socket.sock --port=\\${RBASE1} --datadir+g' pxc-startup.sh
 
 ## Download right PXC version
-if echo "$pxc_version" | grep '8'; then
+if [ "$pxc_version" != "5.7" ]; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
 fi
 
