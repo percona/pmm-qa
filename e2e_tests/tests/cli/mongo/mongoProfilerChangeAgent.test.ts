@@ -48,6 +48,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       // Direct connection to a specific member sidesteps replica-set discovery,
       // which from inside the container resolves the primary to loopback and makes
       // mongosh abort with "ECONNREFUSED 127.0.0.1:27017" during an election.
+      // db.hello() answers before authentication, so probe for the primary without
+      // credentials: discovery then stays correct even while the monitoring user or
+      // the server's auth mechanisms are momentarily out of sync across members.
+      const helloEval = (host: string) =>
+        `docker exec ${containerName} mongo "mongodb://${host}:27017/?directConnection=true" --quiet --eval 'if (db.hello().isWritablePrimary) { print("isWritablePrimary") }'`;
       const mongoEval = (host: string, js: string) =>
         `docker exec ${containerName} mongo "mongodb://root:root@${host}:27017/?authSource=admin&directConnection=true" --quiet --eval '${js}'`;
       // createUser must run on the primary, but rs101 (priority 2) is not always
@@ -59,18 +64,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(() => {
         primaryHost = '';
 
+        const attempts: string[] = [];
+
         for (const host of replicaSetMembers) {
-          const result = cliHelper.execSilent(
-            mongoEval(host, 'if (db.hello().isWritablePrimary) { print("isWritablePrimary") }'),
-          );
+          const result = cliHelper.execSilent(helloEval(host));
 
           if (result.code === 0 && result.stdout.includes('isWritablePrimary')) {
             primaryHost = host;
             break;
           }
+
+          attempts.push(
+            `${host}: ${result.code === 0 ? 'not primary' : (result.stderr || result.stdout).trim().split('\n')[0] || `exit ${result.code}`}`,
+          );
         }
 
-        expect(primaryHost, 'no replica set member answered as a writable primary yet').not.toEqual('');
+        expect(primaryHost, `no writable primary in replica set [${attempts.join('; ')}]`).not.toEqual('');
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
 
       cliHelper
