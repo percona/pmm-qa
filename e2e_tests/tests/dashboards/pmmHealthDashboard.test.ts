@@ -11,9 +11,10 @@ pmmTest(
   async ({ dashboard, page }) => {
     await page.goto(dashboard.pmmHealth.url);
 
-    for (const panel of dashboard.pmmHealth.metrics) {
+    for (const panel of dashboard.pmmHealth.statusPanels) {
       const panelContent = dashboard.builders
-        .panelByExactName(panel.name)
+        .gridItemByPanelId(panel.panelId)
+        .getByTestId(`data-testid Panel header ${panel.name}`)
         .getByTestId('data-testid panel content');
 
       await expect(panelContent).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
