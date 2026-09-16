@@ -22,6 +22,10 @@ gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
 - **Latest FB build only** — older comments/checks are invalid
 - Ignore JNKPercona "API tests have succeded/failed" comments
 
+A **green conclusion on a pmm-qa e2e job is evidence of a pass only if its `steps[]` show the "Execute e2e tests" step concluded `success`**, not `skipped`. The steps are already in the `actions/runs/<id>/jobs?per_page=100&filter=latest` payload, so this costs no extra call. A 2–3-minute green job whose "Check if launchable subset is empty" → "Skip notice" succeeded while "Setup PMM Server", "Setup PMM-Client" and "Execute e2e tests" were all skipped is an empty Launchable subset and proves nothing; real runs of the same job take 15–19.5 minutes.
+
+A run-level `status` of `queued`, or jobs carrying no `runner_id` in `list_workflow_jobs`, is **runner-concurrency exhaustion**, not a failing test. When several runs look identical at job level, `get_workflow_job`'s per-step `started_at`/`completed_at` is the cheapest way to find which step actually wedged — four such runs had wedged in two different steps. `runs-on: ubuntu-*` means GitHub-hosted, which rules out shared-egress and NAT explanations before you start measuring.
+
 Read the run's **`run_attempt`** too. Above 1, compare the jobs *across* attempts — `actions_list` → `list_workflow_jobs` with **`filter: all`**, since it defaults to `latest` and would hand you only the newest attempt, then `actions_get` → `get_workflow_job` for step-level conclusions: one run had attempt 1 dying at `Run Setup for E2E Tests` with the test step skipped and attempt 2 failing inside the test — the same job name covering two different failures. The attempt count also tells you how many re-runs have already been spent before you arrived.
 
 ## JNKPercona build comment (latest only)
@@ -37,6 +41,8 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 | Watchtower docker | `WATCHTOWER_VERSION` |
 | Client tarball | `CLIENT_VERSION` |
 | Client docker | **ignore** for `CLIENT_VERSION` |
+
+Before using that image as "the build under test", compare its Docker Hub `last_updated` against the **earliest fix commit** on the linked pmm PR: an image pushed at 08:46Z against a first fix commit at 09:17Z the same day contains none of the change, and needs a rebuild. The familiar caution (a product fix merged *after* the build) is only half of it — the image can also simply predate the commits.
 
 ## Map failures to workflows
 
@@ -85,6 +91,8 @@ REST 1000-result cap — windowing recovered all 1816 runs where a flat loop sto
 through `xargs -P 10`. `gh api --jq` takes no `--arg`, so add fields like the run id in a
 second `jq` pass.
 
+For a job that is **slow rather than failed**, aggregated step timings mislead — they made a 57-minute setup look uniformly slow and produced two wrong hypotheses. Grep the apt/wget `Fetched <size> in <time> (<rate>)` lines and compare rates against a known-fast run of the same job: the same 32.6 MB index ran at 7.9–13.2 MB/s in one and 1.2 MB/s decaying to 44.1 kB/s in the other. More than one external host degrading together rules out a single-mirror throttle, and comparing two jobs *inside* one run (7m23s vs 50 min) or re-running the slow one (2m27s) separates a per-VM network problem from a time-of-day or repo-wide one.
+
 Redirecting a job-log fetch to a file gives **0 bytes** unless escape sequences are
 allowed — the only hint is a stderr note about terminal escapes:
 
@@ -94,6 +102,13 @@ gh api --allow-escape-sequences "repos/Percona-Lab/pmm-submodules/actions/jobs/<
 ```
 
 Then grep it for `✘`, `.failed.png` and `FAILED` to name the failing test.
+
+Always pass `per_page=100` on the run-jobs listing (`actions/runs/<id>/jobs?per_page=100&filter=latest`): the REST default of 30 silently truncates these 32–37-job matrix runs, and comparing `total_count` against `(.jobs|length)` is the cheap guard — cheaper than a speculative `page=2`. Through the MCP tools the same call reliably **spills to a file** (213–215 KB per run) with the nested shape `{"jobs": {"total_count": N, "jobs": [...]}}`, unlike the flat `list_workflow_runs` response; batch those calls in parallel and filter the spilled JSON with one small script rather than reading it in character spans. That payload already embeds every job's full `steps` array with each step's `conclusion`, `started_at` and `completed_at`, so the per-job `get_workflow_job` above is needed only when a job listing is unavailable.
+
+Two corrections when computing anything from those timings:
+
+- Segment by the **step's own `conclusion`** first. `skipped` steps are always 0 s (139 of 990 rows in one survey) and inverted a fast-vs-slow comparison until they were dropped; `cancelled` steps are truncated rather than representative, so flag them.
+- `runner_name` is a per-job ephemeral id for GitHub-hosted runners — 850 distinct values across 850 jobs — so "does the same runner recur among the slow jobs" cannot be asked by name. Correlate by `labels`/`runner_group_name`, by run and concurrency, or by wall-clock time of day.
 
 ## Flaky triage
 

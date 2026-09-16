@@ -21,7 +21,7 @@ if [ -z "$pmm_server_ip" ]; then
 fi
 
 if [ -z "$client_version" ]; then
-    export client_version=dev-latest
+    export client_version=3-dev-latest
 fi
 
 if [ -z "$install_client" ]; then
@@ -48,6 +48,14 @@ fi
 port=8443
 if [[  "$pmm_server_ip" =~ \. ]]; then
   port=443
+fi
+
+# The install branches below are bare `if`s with no else, so an unrecognised
+# client_version would install nothing at all.
+if ! [[ "$client_version" =~ ^(3-dev-latest|pmm3-rc|pmm3-latest|latest-tarball|3\.[0-9]+\.[0-9]+|https?://.*)$ ]]; then
+    echo "ERROR: unrecognised client_version '$client_version'." >&2
+    echo "Expected: 3-dev-latest, pmm3-rc, pmm3-latest, latest-tarball, an exact 3.x.y version, or an http(s) tarball URL." >&2
+    exit 1
 fi
 
 apt-get update
