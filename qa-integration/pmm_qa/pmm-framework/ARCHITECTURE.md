@@ -353,8 +353,12 @@ it to stdout with no trailing newline; one that answers a question returns 0/1.
 
 **Arrays are passed by name.** Bash cannot pass an associative array by value,
 so `run_playbook 'x.yml' env_map` takes the *name* and re-binds it with
-`local -n`. That is why a caller must never name a local `env_ref` or
-`map_ref` — it would collide with the nameref and error.
+`local -n`. That is why a caller must never name a local `env_ref`, `map_ref`
+or `config_ref` — each is a nameref in a callee (`run_playbook` and
+`run_setup_script`, `print_env_map`, and `resolve_value` respectively), and a
+caller local of the same name collides with it, raising a circular-reference
+error rather than a clean type error. `resolve_value` is the easiest of the
+three to hit, since nearly every `setup_*` function calls it.
 
 **Env maps are written out in full.** The repetition across setup functions is
 deliberate; the differences between them are real (`setup_external` omits
