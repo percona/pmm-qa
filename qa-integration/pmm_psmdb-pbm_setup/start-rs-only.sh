@@ -27,6 +27,19 @@ if [ "$mongo_storage_engine" = "inmemory" ]; then
     export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
 else
     mongo_storage_engine="wiredTiger"
+
+    # Mount a throwaway copy of the config rather than the tracked source. The
+    # T1010 change-agent test rewrites the mounted mongod.conf to require TLS; a
+    # writable bind mount of ./conf/mongod-rs persists that edit into the checkout,
+    # so the next run's fresh containers can't start mongod (they have none of the
+    # certs T1010 created) and the replica set comes up with no primary. Stripping
+    # any leftover TLS block also self-heals a checkout a pre-fix run dirtied.
+    generated_config_dir="/tmp/pmm-qa-mongod-rs"
+    rm -rf "$generated_config_dir"
+    mkdir -p "$generated_config_dir"
+    cp ./conf/mongod-rs/mongod.conf "$generated_config_dir/mongod.conf"
+    sed -i '/^  tls:/,/CAFile:/d' "$generated_config_dir/mongod.conf"
+    export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
 fi
 
 docker network create qa-integration || true
