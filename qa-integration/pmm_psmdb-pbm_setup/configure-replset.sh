@@ -1,12 +1,15 @@
 #!/bin/bash
 set -e
 
+source "$(dirname "${BASH_SOURCE[0]}")/wait-for-mongod.sh"
+
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
 
 echo
+wait_for_mongod docker-compose-rs.yaml rs101
 echo "configuring replicaset with members priorities"
 docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
     config = {
@@ -32,7 +35,7 @@ docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
       rs.initiate(config);
 EOF
 echo
-sleep 60
+wait_for_primary docker-compose-rs.yaml rs101
 echo
 echo "configuring root user on primary"
 docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF

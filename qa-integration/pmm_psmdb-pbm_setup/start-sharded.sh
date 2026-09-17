@@ -2,6 +2,7 @@
 set -e
 
 source "$(dirname "${BASH_SOURCE[0]}")/wait-for-pmm-agent.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/wait-for-mongod.sh"
 
 pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
@@ -35,13 +36,11 @@ fi
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo
-echo "waiting 60 seconds for replica set members to start"
-sleep 60
-echo
 nodes="rs101 rs201"
 for node in $nodes
 do
     rs=$(echo $node | awk -F "0" '{print $1}')
+    wait_for_mongod docker-compose-sharded.yaml "$node"
     echo "configuring replicaset ${rs} with members priorities"
     docker compose -f docker-compose-sharded.yaml exec -T $node mongo --quiet << EOF
         config = {
@@ -66,7 +65,7 @@ do
           };
           rs.initiate(config);
 EOF
-    sleep 60
+    wait_for_primary docker-compose-sharded.yaml "$node"
     echo
     echo "configuring root user on primary $node replicaset $rs"
     docker compose -f docker-compose-sharded.yaml exec -T $node mongo --quiet << EOF
@@ -137,6 +136,7 @@ EOF
 EOF
 done
 
+wait_for_mongod docker-compose-sharded.yaml rscfg01
 echo "configuring configserver replicaset with members priorities"
 docker compose -f docker-compose-sharded.yaml exec -T rscfg01 mongo --quiet << EOF
     config = {
@@ -161,7 +161,7 @@ docker compose -f docker-compose-sharded.yaml exec -T rscfg01 mongo --quiet << E
       };
       rs.initiate(config);
 EOF
-sleep 60
+wait_for_primary docker-compose-sharded.yaml rscfg01
 echo
 echo "configuring root user on primary rscfg01 configserver replicaset"
 docker compose -f docker-compose-sharded.yaml exec -T rscfg01 mongo --quiet << EOF
@@ -232,6 +232,7 @@ db.getSiblingDB("admin").createUser({
 EOF
 echo
 echo "adding shards and creating global mongo user"
+wait_for_mongod docker-compose-sharded.yaml mongos
 docker compose -f docker-compose-sharded.yaml exec -T mongos mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
 EOF
