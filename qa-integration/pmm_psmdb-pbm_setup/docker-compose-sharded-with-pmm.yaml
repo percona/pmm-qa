@@ -34,6 +34,7 @@ services:
     hostname: rs101
     ports:
       - "27027:27017"
+      - "42000-42100:42000-42100"
     networks:
       - test-network
 
