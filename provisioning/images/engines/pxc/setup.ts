@@ -1,5 +1,6 @@
 import { parseArgs } from 'node:util';
 import {
+  checkWorkload,
   configurePmm,
   docker,
   envFlag,
@@ -8,6 +9,7 @@ import {
   preparePmm,
   requireDockerImage,
   registerPmmService,
+  startWorkload,
   step,
   type PmmClientConfig,
   retry,
@@ -359,9 +361,7 @@ async function runWorkload(config: Config, first: string): Promise<void> {
     `CREATE DATABASE IF NOT EXISTS sbtest;
      GRANT ALL PRIVILEGES ON sbtest.* TO 'proxysql_user'@'%';`,
   );
-  const args = [
-    'exec',
-    first,
+  const sysbench = [
     'sysbench',
     '/usr/share/sysbench/oltp_read_write.lua',
     `--mysql-host=${PROXY}`,
@@ -371,9 +371,13 @@ async function runWorkload(config: Config, first: string): Promise<void> {
     '--mysql-db=sbtest',
     '--tables=10',
     '--table-size=1000',
-  ];
-  await docker([...args, 'prepare']);
-  await docker([...args, '--threads=16', `--time=${config.workloadSeconds}`, 'run']);
+  ].join(' ');
+  await startWorkload(
+    first,
+    `${sysbench} prepare &&
+     ${sysbench} --threads=16 --time=${config.workloadSeconds} run`,
+  );
+  await checkWorkload(first);
 }
 
 async function main(): Promise<void> {

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { access, mkdir, readdir, rename, stat, unlink, utimes } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -409,10 +409,65 @@ export async function resolveClientTarball(
   return cached;
 }
 
+export const CLIENT_CACHE = 'pmm-client-cache';
+
+const WORKLOAD_LOG = '/tmp/workload.log';
+const WORKLOAD_RC = '/tmp/workload.rc';
+
+export async function startWorkload(name: string, script: string): Promise<void> {
+  await docker([
+    'exec',
+    '--detach',
+    name,
+    'sh',
+    '-c',
+    `{ ${script}
+     } > ${WORKLOAD_LOG} 2>&1
+     echo $? > ${WORKLOAD_RC}`,
+  ]);
+}
+
+export async function checkWorkload(name: string): Promise<void> {
+  await docker([
+    'exec',
+    name,
+    'sh',
+    '-c',
+    `i=0
+     while [ $i -lt 10 ]; do
+       rc="$(cat ${WORKLOAD_RC} 2>/dev/null)"
+       [ -n "$rc" ] && break
+       pgrep -x sysbench >/dev/null && break
+       i=$((i+1))
+       sleep 1
+     done
+     rc="$(cat ${WORKLOAD_RC} 2>/dev/null)"
+     if [ -n "$rc" ] && [ "$rc" != 0 ]; then
+       echo "sysbench workload failed on ${name} (exit $rc)"
+       tail -20 ${WORKLOAD_LOG}
+       exit 1
+     fi
+     if [ -z "$rc" ] && ! pgrep -x sysbench >/dev/null; then
+       echo "sysbench workload is not running on ${name} and left no exit status"
+       tail -20 ${WORKLOAD_LOG} 2>/dev/null
+       exit 1
+     fi`,
+  ]);
+}
+
+async function fetchClientTarball(tarball: string, name: string): Promise<void> {
+  try {
+    await docker(['exec', '--user', 'root', name, 'curl', '-fsS', '-o', '/tmp/pmm-client.tar.gz',
+      `http://${CLIENT_CACHE}/${basename(tarball)}`]);
+  } catch {
+    await docker(['cp', tarball, `${name}:/tmp/pmm-client.tar.gz`]);
+  }
+}
+
 async function installClientTarball(tarball: string, names: string[]): Promise<void> {
   await Promise.all(
     names.map(async (name) => {
-      await docker(['cp', tarball, `${name}:/tmp/pmm-client.tar.gz`]);
+      await fetchClientTarball(tarball, name);
       await docker([
         'exec',
         '--user',
@@ -420,13 +475,25 @@ async function installClientTarball(tarball: string, names: string[]): Promise<v
         name,
         'sh',
         '-ceu',
-        `rm -rf /tmp/pmm-client-extract
-         mkdir -p /tmp/pmm-client-extract
+        `rm -rf /tmp/pmm-client-extract /tmp/pmm-client-shim
+         mkdir -p /tmp/pmm-client-extract /tmp/pmm-client-shim
          tar -xzf /tmp/pmm-client.tar.gz -C /tmp/pmm-client-extract
          installer="$(find /tmp/pmm-client-extract -type f -name install_tarball -print -quit)"
          test -n "$installer"
+         REAL_INSTALL="$(command -v install)"
+         export REAL_INSTALL
+         cat > /tmp/pmm-client-shim/install <<'SHIM'
+#!/bin/sh
+if [ "$1" = "-m" ] && [ $# -eq 4 ] && [ -f "$3" ]; then
+  dest="$4"
+  [ -d "$dest" ] && dest="$dest/$(basename "$3")"
+  if rm -f "$dest" && ln "$3" "$dest" 2>/dev/null; then chmod "$2" "$dest"; exit 0; fi
+fi
+exec "$REAL_INSTALL" "$@"
+SHIM
+         chmod +x /tmp/pmm-client-shim/install
          cd "$(dirname "$installer")"
-         bash ./install_tarball
+         PATH=/tmp/pmm-client-shim:$PATH bash ./install_tarball
          ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/local/bin/pmm-admin
          ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/local/bin/pmm-agent
          pmm-admin --version`,

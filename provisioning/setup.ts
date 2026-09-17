@@ -1,11 +1,11 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { access, mkdir, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { CONTAINER_RUNTIME, connectDockerNetwork, discoverPmmServer, resolveClientTarball, retry, step, stepTimings, type StepTiming } from './pmm-client.ts';
+import { CLIENT_CACHE, CONTAINER_RUNTIME, connectDockerNetwork, discoverPmmServer, resolveClientTarball, retry, step, stepTimings, type StepTiming } from './pmm-client.ts';
 import { containerName as mysqlContainerName } from './images/setup.ts';
 import { containerName as pxcContainerName } from './images/engines/pxc/setup.ts';
 import { MINIMUM_NODES } from './images/lib/engines.ts';
@@ -558,6 +558,18 @@ export async function teardown(runner: Runner = runCommand): Promise<void> {
   await runner(CONTAINER_RUNTIME, ['network', 'rm', NETWORK], true);
 }
 
+export async function publishClientTarball(tarball: string, runner: Runner): Promise<void> {
+  await ensureNetwork(runner);
+  const name = basename(tarball);
+  await runner(CONTAINER_RUNTIME, ['run', '--detach', '--name', CLIENT_CACHE, '--label',
+    'pmm-qa.orchestrator=server', '--network', NETWORK, 'busybox',
+    'sh', '-ceu', 'mkdir -p /www && exec httpd -f -p 80 -h /www'], true, true);
+  await runner(CONTAINER_RUNTIME, ['start', CLIENT_CACHE], true, true);
+  const cached = await runner(CONTAINER_RUNTIME, ['exec', CLIENT_CACHE, 'ls', `/www/${name}`], true, true);
+  if (cached.code === 0) return;
+  await runner(CONTAINER_RUNTIME, ['cp', tarball, `${CLIENT_CACHE}:/www/${name}`]);
+}
+
 async function ensureNetwork(runner: Runner): Promise<void> {
   if ((await runner(CONTAINER_RUNTIME, ['network', 'inspect', NETWORK], true, true)).code !== 0) {
     await runner(CONTAINER_RUNTIME, ['network', 'create', NETWORK]);
@@ -858,11 +870,16 @@ export async function orchestrate(
   }
   const [clientArgs] = await prefetch;
   if (config.databases.length === 0) return;
+  const publish = async (args: string[]): Promise<string[]> => {
+    if (args[0] === '--client-tarball') await step('Publish PMM client', () => publishClientTarball(args[1], runner));
+    return args;
+  };
+  await publish(clientArgs);
   const provision = (database: DatabaseConfig) =>
     step(`Provision ${database.type.toUpperCase()} ${database.version}`, async () => {
       const label = `${database.type.toUpperCase()} ${database.version}`;
       const databaseClientArgs = database.clientVersion
-        ? await step(`Resolve PMM Client for ${label}`, () => resolveClientArgs(database.clientVersion!, resolveTarball))
+        ? await publish(await step(`Resolve PMM Client for ${label}`, () => resolveClientArgs(database.clientVersion!, resolveTarball)))
         : clientArgs;
       const result = await runner(
         process.execPath,

@@ -22,6 +22,7 @@ import {
   provisionDatabases,
   provisionerArgs,
   reportProvisionResult,
+  publishClientTarball,
   resolveClientArgs,
   serverImageFreshness,
   teardown,
@@ -339,8 +340,8 @@ test('pulls the server image unless the local digest matches the registry', asyn
 test('spawns the database provisioners without waiting for server readiness', async () => {
   const order: string[] = [];
   const runner: Runner = async (file, args): Promise<CommandResult> => {
-    if (file === 'docker' && args[0] === 'run') order.push('server created');
-    if (file === 'docker' && args[0] === 'exec') order.push('readiness check');
+    if (file === 'docker' && args[0] === 'run' && args.includes('pmm-server')) order.push('server created');
+    if (file === 'docker' && args[0] === 'exec' && args.includes('pmm-server')) order.push('readiness check');
     if (file === process.execPath) order.push('provisioner');
     return { code: 0, stdout: '', stderr: '' };
   };
@@ -512,7 +513,7 @@ test('orchestrate discovers and reuses an existing PMM Server with --reuse-serve
   let connected = '';
   let provisionerServer = '';
   const runner: Runner = async (file, args): Promise<CommandResult> => {
-    if (file === 'docker' && args[0] === 'run') serverStarted = true;
+    if (file === 'docker' && args[0] === 'run' && args.includes('pmm-server')) serverStarted = true;
     if (file === process.execPath) provisionerServer = args[args.indexOf('--pmm-server') + 1];
     return { code: 0, stdout: '', stderr: '' };
   };
@@ -633,11 +634,39 @@ test('server-only orchestration skips client resolution and database provisioner
   assert.equal(provisioners, 0);
 });
 
+test('publishes the client tarball once and reuses it on the next run', async () => {
+  const calls: string[][] = [];
+  const runner = (cached: boolean): Runner => async (_file, args): Promise<CommandResult> => {
+    calls.push(args);
+    const listing = args[0] === 'exec' && args[2] === 'ls';
+    return { code: listing && !cached ? 1 : 0, stdout: '', stderr: '' };
+  };
+
+  await publishClientTarball('/tmp/cache/pmm-client-abc.tar.gz', runner(false));
+  assert.deepEqual(calls.at(-1), ['cp', '/tmp/cache/pmm-client-abc.tar.gz', 'pmm-client-cache:/www/pmm-client-abc.tar.gz']);
+  assert.ok(calls.some((args) => args[0] === 'run' && args.includes('pmm-client-cache')));
+
+  calls.length = 0;
+  await publishClientTarball('/tmp/cache/pmm-client-abc.tar.gz', runner(true));
+  assert.equal(calls.some((args) => args[0] === 'cp'), false);
+});
+
+test('orchestrate publishes the client tarball before spawning the provisioners', async () => {
+  const order: string[] = [];
+  const runner: Runner = async (file, args): Promise<CommandResult> => {
+    if (file === 'docker' && args[0] === 'run' && args.includes('pmm-client-cache')) order.push('published');
+    if (file === process.execPath) order.push('provisioner');
+    return { code: 0, stdout: '', stderr: '' };
+  };
+  await orchestrate(parseConfig(['--db', 'ps']), runner, async () => '/tmp/cache/pmm-client-abc.tar.gz');
+  assert.deepEqual(order, ['published', 'provisioner']);
+});
+
 test('uses an existing PMM Server without recreating it', async () => {
   let serverRuns = 0;
   let provisionerServer = '';
   const runner: Runner = async (file, args): Promise<CommandResult> => {
-    if (file === 'docker' && args[0] === 'run') serverRuns += 1;
+    if (file === 'docker' && args[0] === 'run' && args.includes('pmm-server')) serverRuns += 1;
     if (file === process.execPath) provisionerServer = args[args.indexOf('--pmm-server') + 1];
     return { code: 0, stdout: '', stderr: '' };
   };

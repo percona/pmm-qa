@@ -599,9 +599,11 @@ async function main(): Promise<void> {
   const [pmmServer, tarball] = await preparePmm(config, config.image, 'npm run build -- <version>');
   await step('Clean previous run', () => cleanup(config));
   await step('Start Kerberos', () => startKerberos(config));
+  const minio = config.engine === 'psmdb' ? step('Start MinIO', () => startMinio(config)) : undefined;
+  minio?.catch(() => undefined);
   const nodes = await step(`Start and configure ${config.engine} topology`, () => startTopology(config));
-  if (config.engine === 'psmdb') {
-    await step('Start MinIO', () => startMinio(config));
+  if (minio) {
+    await minio;
     await step('Configure PBM', () => configurePbm(config, nodes));
   }
   const names = nodes.map((node) => node.name);

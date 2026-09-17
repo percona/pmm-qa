@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
+  checkWorkload,
   configurePmm,
   docker,
   envFlag,
@@ -10,6 +11,7 @@ import {
   pmmClientConfig,
   preparePmm,
   registerPmmService,
+  startWorkload,
   step,
   type PmmClientConfig,
   retry,
@@ -631,9 +633,7 @@ async function runWorkload(config: Config, names: string[]): Promise<void> {
          FLUSH PRIVILEGES;`,
       );
 
-      const args = [
-        'exec',
-        name,
+      const sysbench = [
         'sysbench',
         '/usr/share/sysbench/oltp_read_write.lua',
         '--mysql-host=127.0.0.1',
@@ -643,14 +643,12 @@ async function runWorkload(config: Config, names: string[]): Promise<void> {
         '--mysql-db=sbtest',
         '--tables=10',
         '--table-size=100000',
-      ];
-      await docker([...args, '--threads=10', 'prepare']);
-      await docker([
-        ...args,
-        '--threads=16',
-        `--time=${config.workloadSeconds}`,
-        'run',
-      ]);
+      ].join(' ');
+      await startWorkload(
+        name,
+        `${sysbench} --threads=10 prepare &&
+         ${sysbench} --threads=16 --time=${config.workloadSeconds} run`,
+      );
     }),
   );
 
@@ -660,6 +658,8 @@ async function runWorkload(config: Config, names: string[]): Promise<void> {
       mysql(name, config.rootPassword, `CREATE DATABASE school; USE school;\n${schoolLoad}`),
     ),
   );
+
+  await Promise.all(targets.map((name) => checkWorkload(name)));
 }
 
 async function provision(
