@@ -21,6 +21,7 @@ import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
+import PostgresqlInstancesOverview from '@pages/dashboards/postgresql/postgresqlInstancesOverview';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
@@ -66,6 +67,7 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
+  postgresqlInstancesOverviewPage: PostgresqlInstancesOverview;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -163,6 +165,7 @@ const pmmTest = base.extend<{
 
     await use(portalRemoval);
   },
+  postgresqlInstancesOverviewPage: async ({ page }, use) => await use(new PostgresqlInstancesOverview(page)),
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);
 
