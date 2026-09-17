@@ -35,7 +35,7 @@ load helpers/test_helper
   parse_database_spec 'ps=99'
 
   [[ -z $DB_VERSION ]]
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "value precedence is global flag then environment then database then default" {
@@ -63,7 +63,7 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 
   DB_VERSION=''
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "optional-value flags do not consume the following option" {
@@ -91,9 +91,20 @@ load helpers/test_helper
   [[ $output == *"Unknown option '--prebaked-ps-image'"* ]]
 }
 
-@test "normalizes latest-tarball client version" {
+@test "normalizes latest-tarball client version on x86_64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'x86_64\n'; }
+
   [[ $(normalize_client_version latest-tarball) == \
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz' ]]
+}
+
+@test "normalizes latest-tarball client version on arm64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'aarch64\n'; }
+
+  [[ $(normalize_client_version latest-tarball) == \
+    'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
 @test "resolves latest PSMDB patch without Python" {
@@ -126,9 +137,9 @@ load helpers/test_helper
   PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
   # Invoked indirectly by name through configure_ansible_python's candidate
   # loop, which shellcheck can't trace.
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() { [[ $1 == -c ]]; }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -144,9 +155,9 @@ load helpers/test_helper
   printf '#!/usr/bin/env bash\nexit 0\n' >"$venv_python"
   chmod +x "$venv_python"
 
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() { [[ $1 == -c ]] && return 1; echo "python3 should not be invoked to recreate an existing venv" >&2; return 1; }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -158,7 +169,7 @@ load helpers/test_helper
   PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
   local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
 
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() {
     if [[ $1 == -c ]]; then
       return 1
@@ -170,7 +181,7 @@ load helpers/test_helper
     fi
     return 1
   }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -210,9 +221,9 @@ load helpers/test_helper
   local -A expected=(
     [PSMDB]=latest [SSL_PSMDB]=latest
     [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
-    [MYSQL]=9.7 [PS]=8.0 [SSL_MYSQL]=8.0
+    [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.0 [PROXYSQL]=2 [VALKEY]=8
+    [PXC]=8.4 [PROXYSQL]=2 [VALKEY]=8
   )
   local type actual
   for type in "${!expected[@]}"; do
