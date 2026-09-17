@@ -23,7 +23,7 @@ pmmTest(
 
 for (const folder of FOLDER_DASHBOARDS) {
   pmmTest(
-    `PMM-T1086 - Verify PMM Dashboards collections are present in correct folders @nightly  @dashboards @post-upgrade | ${folder.name}`,
+    `PMM-T1086 - Verify PMM Dashboards collections are present in correct folders @nightly  @dashboards | ${folder.name}`,
     async ({ page, searchDashboardsPage }) => {
       await pmmTest.step(`Expand the "${folder.name}" folder`, async () => {
         await searchDashboardsPage.builders.expandFolderButton(folder.name).click();
