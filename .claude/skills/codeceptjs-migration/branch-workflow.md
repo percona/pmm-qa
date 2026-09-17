@@ -238,6 +238,6 @@ git -C <control-worktree> status --short        # must be empty
 `restore --staged --worktree` relies on the intent-to-add entries from `git add -N`; never `git reset` first (the restore then aborts on the untracked file and leaves every other path dirty), and never `git clean -fd` (it removes whole directories). Inspect any path still showing by name before removing it.
 
 3. Do not merge the publish branch into control; the next `main` merge delivers it.
-4. Remove the publish worktree alongside `provisioning/setup.ts --teardown`: `git worktree remove ../pmm-qa-publish`.
+4. Once the PR exists and `git rev-list --count HEAD ^origin/<branch>` prints 0, `git worktree remove ../pmm-qa-publish`. Review comments are fixed with `git switch <branch>` in control's own checkout, never in a new worktree; if `git status --short` is not empty first, stop and hand the uncommitted changes to the user for review, never stash, discard or carry them. If Windows reports `Permission denied`, retry later.
 
 If the PR opened but the tracker update failed, report publication as incomplete.
