@@ -265,26 +265,3 @@
           bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} GET k$i >/dev/null || true; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null || true; done"
       loop: "{{ replica_nodes }}"
       ignore_errors: yes
-
-    # The workloads above are one-shot. Every other database setup leaves a load
-    # running instead (sysbench --time=0), and the command panels on the Valkey
-    # dashboards plot irate(...[1m]) filtered to != 0, so with no traffic they
-    # hold no series at all. A nightly test job starts only once every setup
-    # shard has finished, which tonight was up to 50 minutes later, and by then
-    # those panels are empty. Keep the same commands trickling so they are not.
-    - name: Keep a light workload running so the per-second panels hold data
-      shell: >-
-        docker exec -d {{ item }} bash -c
-        'while true; do
-        valkey-cli -a {{ valkey_password }} SET keepalive v >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} GET keepalive >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} HSET keepalive_h f v >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} LPUSH keepalive_l a >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} RPUSH keepalive_l b >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} LRANGE keepalive_l 0 -1 >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} LPOP keepalive_l >/dev/null 2>&1;
-        valkey-cli -a {{ valkey_password }} RPOP keepalive_l >/dev/null 2>&1;
-        sleep 5;
-        done'
-      loop: "{{ primary_nodes + replica_nodes }}"
-      ignore_errors: yes
