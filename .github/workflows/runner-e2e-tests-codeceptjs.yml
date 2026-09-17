@@ -272,7 +272,7 @@ jobs:
         continue-on-error: true
         run: |
             curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
-            unzip logs.zip -d logs || true
+            unzip logs.zip -d logs
 
       - name: Record launchable test results
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}

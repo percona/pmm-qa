@@ -187,18 +187,6 @@ cat_setup_log() {
   fi
 }
 
-# Report one finished parallel setup.
-#
-# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
-#
-# A failed setup always dumps its buffered log; a successful one prints just a
-# summary line unless --verbose asked for more. Only ever used by the parallel
-# path -- sequential setups write straight to the console and need no
-# buffering. Because a log is emitted in one go, concurrent setups never
-# interleave mid-line.
-#
-# Stdout: a summary line, plus the buffered log when the setup failed or when
-#         --verbose was given
 # Compact elapsed time for the setup reports: 452 -> 7m32s, 45 -> 45s.
 format_duration() {
   local seconds=$1
@@ -209,13 +197,22 @@ format_duration() {
   fi
 }
 
+# Report one finished parallel setup.
+#
+# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE [ELAPSED_SECONDS]
+#
+# A failed setup always dumps its buffered log; a successful one prints just a
+# summary line unless --verbose asked for more. Only ever used by the parallel
+# path -- sequential setups write straight to the console and need no
+# buffering. Because a log is emitted in one go, concurrent setups never
+# interleave mid-line.
+#
+# Stdout: a summary line, plus the buffered log when the setup failed or when
+#         --verbose was given
 print_setup_log() {
   local index=$1 total=$2 spec=$3 status=$4 log_file=$5 elapsed=${6:-}
   local took=''
 
-  # A shard that takes an hour says nothing about which of its specs took it,
-  # and the parallel path deletes the per-spec logs on success, so without this
-  # the time is unattributable after the fact.
   if [[ -n $elapsed ]]; then
     took=" in $(format_duration "$elapsed")"
   fi

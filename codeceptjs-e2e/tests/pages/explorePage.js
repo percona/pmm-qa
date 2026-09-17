@@ -31,17 +31,11 @@ class ExplorePage {
     I.pressKey('Enter');
   }
 
-  // The query editor is Monaco, and the textarea the locator reaches holds only the
-  // slice of the document around the cursor. clearField therefore empties that slice
-  // and not the editor, and fillField splices the new query into whatever default the
-  // datasource left behind -- ClickHouse then rejects the result as two statements in
-  // one query. Select and delete through real key events instead, and check what the
-  // editor actually ended up holding.
+  // Monaco's textarea holds only the slice of the document around the cursor, so
+  // clearField empties the slice and fillField splices into the datasource default.
   async setSqlQuery(query) {
     I.waitForVisible(this.elements.sqlBuilder, 30);
-    // The datasource writes its own default query into the editor when the SQL Editor
-    // tab opens, and does it a beat after the tab renders -- clearing before that lands
-    // is what makes this intermittent rather than always broken.
+    // The datasource writes its default query a beat after the tab renders.
     I.wait(2);
     I.appendField(this.elements.sqlBuilder, '');
     I.pressKey(['Control', 'a']);
