@@ -1,4 +1,5 @@
-import { FrameLocator, Locator } from '@playwright/test';
+import { expect, FrameLocator, Locator } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 import DashboardInterface from '@interfaces/dashboard';
 import BasePage from '@pages/base.page';
 
@@ -78,5 +79,18 @@ export default class PostgresqlInstancesOverview extends BasePage implements Das
     if (!total) throw new Error(`Could not read a row total out of the table footer: '${summary}'`);
 
     return Number.parseInt(total[1].replaceAll(',', ''), 10);
+  };
+
+  /**
+   * QAN writes on its own collection cycle, so a run that starts right after provisioning
+   * can reach the panel before any query rows exist. Poll rather than assert immediately.
+   */
+  waitForQueryRows = async (timeout: number = Timeouts.FIVE_MINUTES): Promise<void> => {
+    await expect
+      .poll(
+        async () => ((await this.elements.topSlowQueriesPagination.count()) > 0 ? this.totalRowCount() : 0),
+        { message: 'No QAN query rows reached the Top slow queries panel', timeout },
+      )
+      .toBeGreaterThan(0);
   };
 }

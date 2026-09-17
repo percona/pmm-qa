@@ -8,19 +8,24 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2296 - Verify Top slow queries panel ranks by execution time @nightly @dashboards',
+  'PMM-T2296 - Verify Top slow queries panel ranks by execution time @dashboards @pmm-pdpgsql-integration',
   async ({ api, page, postgresqlInstancesOverviewPage, urlHelper }) => {
     const services = await api.inventoryApi.getServicesByType(ServiceType.postgresql);
 
     expect(services.length, 'No PostgreSQL services are registered').toBeGreaterThan(0);
 
     await page.goto(
-      urlHelper.buildUrlWithParameters(postgresqlInstancesOverviewPage.url, { from: 'now-3h', to: 'now' }),
+      urlHelper.buildUrlWithParameters(postgresqlInstancesOverviewPage.url, {
+        from: 'now-3h',
+        refresh: '10s',
+        to: 'now',
+      }),
     );
 
     const { elements, topSlowQueriesColumns, topSlowQueriesRowLimit } = postgresqlInstancesOverviewPage;
 
     await expect(elements.topSlowQueriesGrid).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
+    await postgresqlInstancesOverviewPage.waitForQueryRows();
 
     await pmmTest.step('Panel exposes the columns the top-N view needs', async () => {
       for (const column of topSlowQueriesColumns) {
@@ -36,7 +41,6 @@ pmmTest(
       expect(totalRows, 'Panel is capped at the top 500 slowest queries').toBeLessThanOrEqual(
         topSlowQueriesRowLimit,
       );
-      expect(totalRows, 'Panel returned no queries at all').toBeGreaterThan(0);
     });
 
     await pmmTest.step('Execution Time is ordered slowest first', async () => {

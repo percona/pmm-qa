@@ -180,7 +180,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       setup_services: '--database pdpgsql'
-      pmm_test_flag: '@inventory|@image-renderer'
+      pmm_test_flag: '@inventory|@image-renderer|@pmm-pdpgsql-integration'
 
   access-control:
     name: Access control tests
