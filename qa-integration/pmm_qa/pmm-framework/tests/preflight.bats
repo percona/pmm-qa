@@ -11,7 +11,7 @@ setup() {
   resolve_pmm_server() { :; }
   require_command() { :; }
   configure_ansible_python() { :; }
-  ensure_docker_collection() { :; }
+  ensure_ansible_collections() { :; }
   WARNINGS=''
   log_warn() { WARNINGS+="$*"$'\n'; }
 }

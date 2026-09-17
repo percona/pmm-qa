@@ -351,3 +351,86 @@ stub_docker_ps() {
   [[ $status -eq 0 ]]
   [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
 }
+
+@test "the slowest tasks inside a setup are reported, worst first" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  cat >"$log" <<'EOF'
+PLAY RECAP *********************************************************************
+===============================================================================
+Install PMM Client packages ------------------------------------------- 421.07s
+Start PS container ----------------------------------------------------- 70.55s
+Gathering Facts ---------------------------------------------------------- 0.45s
+EOF
+
+  run print_slowest_tasks "$log"
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
+  [[ ${lines[1]} == *'1m11s  Start PS container' ]]
+  [[ $output != *'Gathering Facts'* ]]
+}
+
+@test "slowest tasks are pooled across the playbooks one spec runs" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  cat >"$log" <<'EOF'
+===============================================================================
+Start PS container ----------------------------------------------------- 70.55s
+PLAY [Install client] **********************************************************
+===============================================================================
+Install PMM Client packages ------------------------------------------- 421.07s
+EOF
+
+  run print_slowest_tasks "$log" 1
+
+  [[ $status -eq 0 ]]
+  [[ ${#lines[@]} -eq 1 ]]
+  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
+}
+
+@test "a log without task profiling reports no timings" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'PLAY RECAP\nlocalhost : ok=12 changed=4\nnot -- a duration\n' >"$log"
+
+  run print_slowest_tasks "$log"
+
+  [[ $status -eq 0 ]]
+  [[ -z $output ]]
+
+  run print_slowest_tasks "$BATS_TEST_TMPDIR/missing.log"
+
+  [[ $status -eq 0 ]]
+  [[ -z $output ]]
+}
+
+@test "a successful setup reports its slowest tasks before its log is discarded" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'Install PMM Client packages ------------------------------------------- 421.07s\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == "[1/2] ps=8.4: OK in 7m32s (log: $log)" ]]
+  [[ ${lines[1]} == *'7m01s  Install PMM Client packages' ]]
+}
+
+@test "a collection is detected from the listing, not from ansible-galaxy's exit code" {
+  local stub_bin=$BATS_TEST_TMPDIR/bin
+  mkdir -p "$stub_bin"
+  # ansible-core exits 0 for a collection it does not have, printing only the
+  # table header, so the exit code alone can never answer this.
+  cat >"$stub_bin/ansible-galaxy" <<'EOF'
+#!/usr/bin/env bash
+printf '# /usr/lib/python3/dist-packages/ansible_collections\n'
+printf 'Collection      Version\n--------------- -------\n'
+[[ $3 == ansible.posix ]] && printf 'ansible.posix   1.5.4\n'
+exit 0
+EOF
+  chmod +x "$stub_bin/ansible-galaxy"
+  PATH=$stub_bin:$PATH
+
+  run collection_installed ansible.posix
+  [[ $status -eq 0 ]]
+
+  run collection_installed community.docker
+  [[ $status -eq 1 ]]
+}
