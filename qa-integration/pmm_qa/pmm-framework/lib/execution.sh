@@ -249,7 +249,7 @@ run_parallel_setups() {
   # provisioning work running.
   set -m
 
-  # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
+  # shellcheck disable=SC2329,SC2317 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
     local pid slot
     for pid in "${pids[@]}"; do
