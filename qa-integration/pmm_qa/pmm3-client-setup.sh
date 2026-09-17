@@ -63,7 +63,10 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
+# A random name per run means a re-provisioned container registers under a new
+# node, and its old series keep the previous name alive in every dashboard
+# filter built from label_values. Callers pass the container name instead.
+export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
 mv -v /artifacts/* .
 
 # repo.percona.com publishes the apt index and the pool file non-atomically, and
