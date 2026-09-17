@@ -96,7 +96,7 @@ PMM_MIGRATION=1 PMM_UI_URL='<parent's PMM_UI_URL>' ADMIN_PASSWORD='<parent's ADM
   npx playwright test <target-test-file> --workers=1
 ```
 
-`PMM_MIGRATION=1` stops `e2e_tests/.env` from overriding both values (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`). The password is the parent's, frequently not `admin`. If the test selects state by index, empty that state first; this is a second run against the same environment.
+`PMM_MIGRATION=1` stops `e2e_tests/.env` from overriding both values (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`). The password is the parent's, frequently not `admin`. If the test selects state by index, empty that state first; this is a second run against the same environment. A test that creates a named external resource fails its own rerun: an argument-less `pmm-admin config` registers a node under the machine hostname, so run 1 makes run 2 exit 1. Deleting the node is not a clean reset on its own: the agent keeps pushing under the deleted identity, so a metric wait on the new label is pre-satisfied and that step proves nothing on the rerun. Stop the agent as well, or record that the rerun proves the transplant and not the wait; expect the delete itself to need the user (`orchestration.md` Parent rules).
 
 `.claude/hooks/lint-changed.sh` runs `actionlint` on the PR behind the `Lint` check, so a workflow edit is schema-checked in CI even when `actionlint` is unavailable locally; do not report it as unverified.
 

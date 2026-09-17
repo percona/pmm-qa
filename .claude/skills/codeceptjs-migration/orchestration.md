@@ -10,7 +10,7 @@ Run exactly one row at a time. The row owns one local Docker PMM environment fro
 
 - Launch each subagent and wait on its completion notification; no long sleeps polling terminal output.
 - Only the parent spawns review gates. A worker that spawns a subagent and waits on it deadlocks: the runner returns its evidence and stops, the parent spawns the reviewer.
-- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent.
+- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `node provisioning/setup.ts --teardown` ran there. Then stop and hand the user the exact command; never reword it to get past the classifier.
 - Each subagent appends its row to the timeline before returning. `.claude/hooks/migration-phase-observe.sh` fires at subagent launch, not completion, so treat it as a reminder; batch `skill-gardener` capture passes to the end of the migration while any subagent is live. Do not rely on the `PostToolUse`/`Skill` hook, which fires as soon as an inline skill loads.
 
 **Gates**
@@ -94,6 +94,10 @@ node provisioning/setup.ts --database ps=8.4 --database psmdb
 sudo bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password <p> --use_metrics_mode no
 ```
 
+That script registers the node as `PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))` (line 66) while an argument-less `pmm-admin config` registers under the machine hostname, so the two create different nodes and a conflict predicted from the script's name is wrong. The hostname node never pre-exists on a fresh runner, which is why such a test is green in CI and still fails its own second local run.
+
+Inside `wsl -d <distro> -- bash -lc '<string>'` nothing `$`-shaped in that string can be trusted: a variable assigned and read there returns empty, `$?` returns `0` after a command that failed, and `${PIPESTATUS[0]}` returns empty, though `$(...)` does run in WSL. Capture the status outside instead (`out=$(wsl ...); rc=$?`, verified by `exit 7` giving `7`), or redirect to a log and count its markers.
+
 A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial whose URL matches neither `help` nor `home-dashboard`, so the login page objects time out. CI avoids it with `ADMIN_PASSWORD: 'admin-password'` in every runner workflow. `provisioning/setup.ts --admin-password` is not the fix (agent registrations then fail with "Invalid username or password"). Provision with the default, change it with `PUT /graph/api/user/password` `{oldPassword,newPassword,confirmNew}`, verify once with `/v1/users/me`, and hand the new value to every later phase. This is an environment precondition, not a migration defect.
 
 `PMM_DEBUG=1` is the provisioner default; override with `--server-env PMM_DEBUG=0` only when a test needs quieter logs.
@@ -119,7 +123,7 @@ One file per migration at `.claude/migration-observations/<row>-<slug>.md`, appe
 | writer | 14:02 | 14:31 | MIGRATION_READY | 1 | 0 | 3 static-validation reruns |
 ```
 
-Times from `date -Is` truncated to `HH:MM`. Close an open row in place; never append a parallel one or insert mid-table. One row per phase plus one line on what cost time. No command transcripts, secrets or credentials.
+Read `date -Is` before writing a row and truncate it to `HH:MM`; an estimated time is always wrong and costs a correcting edit. The parent opens no row for a phase a worker will record, and each worker appends its own closed row: the two conventions collided in rows 11 and 12. Close an open row in place; never append a parallel one or insert mid-table. One row per phase plus one line on what cost time. No command transcripts, secrets or credentials.
 
 ## Canonical sequence
 
