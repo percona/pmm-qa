@@ -104,7 +104,7 @@ Both gates. The parent passes the path of `.claude/migration-observations/<row>-
   shape: {}                   # the populated shape block, on a passing entry
 ```
 
-Store the evidence itself on a passing entry, not a summary; a re-spawned gate has no transcript and recovers nothing except through this file.
+Parse-check the file before returning; a locator written bare (`getByRole('button', { name: 'x' })`) is a YAML mapping-value error, so quote every value holding a `:`. Store the evidence itself on a passing entry, not a summary; a re-spawned gate has no transcript and recovers nothing except through this file.
 
 Scope:
 

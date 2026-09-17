@@ -22,7 +22,7 @@ Test id outranks role here because Grafana ships its own `data-testid` values an
 - `getByRole(role, { name, description })`: `description` (1.60) matches the accessible description when several controls share a name.
 - CSS only for MUI and Grafana internals with no stable test id or role (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`). XPath only for positional table cells and the Grafana iframe (`frameLocator`).
 - Every POM entry is a `Locator`, never a selector string. Chain and scope rather than writing one long selector; `locator.describe('...')` on an otherwise opaque locator.
-- Resolve a strict-mode violation by narrowing the locator (`.locator()` to scope, `.filter({ hasText })` to select), not with `nth()`, `first()` or `last()`. Those remain legitimate for deliberate indexed iteration and positional table cells, justified in one line; the convention script reports them as advisories.
+- Resolve a strict-mode violation by narrowing the locator (`.locator()` to scope, `.filter({ hasText })` or `.filter({ has })` to select), not with `nth()`, `first()` or `last()`. Those remain legitimate for deliberate indexed iteration and positional table cells, justified in one line; the convention script reports them as advisories. A `filter({ has })` inner locator is matched relative to each outer match, so it is rooted at `page` and never re-enters `frameLocator`; nesting the frame hop inside it relies on a tolerance `playwright-core` guards against elsewhere.
 - An existing POM entry with no consumers is unproven. When it disagrees with a currently-green source selector, verify both through MCP and rewrite it in place; keep the existing form only when a second source attests it.
 
 ## Web-first assertions

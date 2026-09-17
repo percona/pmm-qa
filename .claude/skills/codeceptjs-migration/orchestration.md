@@ -101,7 +101,7 @@ A test that logs in through the UI needs a non-default admin password: with `adm
 Verify:
 
 ```bash
-PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only
+PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only   # path relative to e2e_tests/, not the repo root
 ```
 
 Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and `provisioning-artifacts/` path on the timeline, and stop.
@@ -119,7 +119,7 @@ One file per migration at `.claude/migration-observations/<row>-<slug>.md`, appe
 | writer | 14:02 | 14:31 | MIGRATION_READY | 1 | 0 | 3 static-validation reruns |
 ```
 
-Times from `date -Is` truncated to `HH:MM`. One row per phase plus one line on what cost time. No command transcripts, secrets or credentials.
+Times from `date -Is` truncated to `HH:MM`. Close an open row in place; never append a parallel one or insert mid-table. One row per phase plus one line on what cost time. No command transcripts, secrets or credentials.
 
 ## Canonical sequence
 
