@@ -205,4 +205,4 @@ Examples:
 
 A UI badge alone is usually insufficient when the owning state is server-side.
 
-Apply the authoritative strong-case and refusal gate in `SKILL.md` after candidate generation.
+Apply the strong-case gate in `strong-case-gate.md` after candidate generation.

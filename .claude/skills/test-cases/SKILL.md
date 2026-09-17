@@ -1,7 +1,7 @@
 ---
 name: test-cases
-description: Design evidence-backed test cases for a PMM Jira ticket, or audit test coverage of an existing PMM feature. Use when asked what to test or verify for PMM-XXXXX, for a test plan or QA plan, where Zephyr or pmm-qa automation coverage has gaps, or whether proposed cases are sufficient, even when the user only pastes a ticket key or pull request and asks how to check it. Produces a review draft first. Only after the user approves it, creates the cases in Zephyr and links them to the ticket. Reads Jira but never writes it. Never executes tests or provisions environments.
-compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git and rg in a pmm-qa checkout.
+description: Design evidence-backed test cases for a PMM Jira ticket, or audit test coverage of an existing PMM feature. Use when asked what to test or verify for PMM-XXXXX, for a test plan or QA plan, where Zephyr or pmm-qa automation coverage has gaps, or whether proposed cases are sufficient, even when the user only pastes a ticket key or pull request and asks how to check it. Produces a review draft first. Only after the user approves it, creates the cases in Zephyr and links them to the ticket. Reads Jira but never writes it. Never executes tests or provisions environments. Not for getting a PMM-T key for a test already being written; use the zephyr skill for that.
+compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git, rg, curl and jq in a pmm-qa checkout, and RELAY_KEY for the Zephyr publishing step.
 ---
 
 # Test cases
@@ -25,6 +25,9 @@ Load no reference up front. Read it only when its workflow step applies:
 - Worked reasoning examples only when the model or case boundaries remain unclear: [references/examples.md](references/examples.md)
 - Coverage search and suite placement: [references/coverage.md](references/coverage.md)
 - Test-case format: [references/test-case-template.md](references/test-case-template.md)
+- Strong-case gate, the refusal policy for every candidate: [references/strong-case-gate.md](references/strong-case-gate.md)
+- Zephyr folder choice and publishing after approval: [references/publish.md](references/publish.md)
+- Missing, inaccessible, or conflicting evidence: [references/edge-cases.md](references/edge-cases.md)
 
 The references above are prompts for reasoning, not quotas. A technique, historical bug, or risk category never justifies a test by itself.
 
@@ -36,7 +39,7 @@ When another agent or skill invokes this one, skip whatever that session already
 
 For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with `jira` using `fieldsCsv:"*all"` when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
 
-The Jira relay cannot read the Development panel. Use linked pull requests already present in the supplied ticket context when available; otherwise search the repositories implied by the component and behavior for the ticket key. Report that Development-panel discovery was unavailable, because repository search can miss a linked pull request whose title and branch omit the key.
+Take linked pull requests from the supplied ticket context. When none were supplied, read [edge-cases.md](references/edge-cases.md) for discovery.
 
 For a coverage audit, name one narrow feature, then derive its public behavior from current code, API schemas, CLI help, configuration, documentation, and relevant historical bugs. Do not audit all of PMM at once.
 
@@ -54,15 +57,7 @@ Do not invent expected behavior to repair a weak ticket.
 
 Do not silently treat implementation as the source of truth. The implementation is the subject under test.
 
-Treat an AI-triage comment's root-cause analysis and recommended fix as unverified hypotheses. Use them to guide inspection, never as test basis; verify them against the linked or shipped implementation and record a mismatch as a Finding.
-
-When ticket fields, documentation, API/CLI contracts, historical behavior, triage claims, PR acceptance notes, or implementation disagree:
-
-1. record each source and what it claims;
-2. identify which behavior is externally observable;
-3. mark the mismatch as a Finding;
-4. avoid asserting the disputed expectation as fact unless a controlling contract is explicit;
-5. when useful, propose a test that exposes the mismatch rather than assuming one side is correct.
+When ticket fields, documentation, contracts, triage comments, or implementation disagree, read [edge-cases.md](references/edge-cases.md) and record the mismatch as a Finding.
 
 ### 2. Inspect implementation and build a behavior inventory
 
@@ -86,13 +81,7 @@ For each inventory entry record:
 
 Inventory a wiring or registration change only when it changes execution, ordering, or availability.
 
-Search every repository implied by the component and behavior when linked pull requests were not supplied. For HA/chart work include `percona/percona-helm-charts`; for exporter behavior include the relevant exporter repository. List the repositories searched when none contains the implementation.
-
-For a ticket predating repository consolidation, use the feature build's Custom branches list to identify and inspect the archived upstream repository. A feature-build pull request is not the implementation.
-
-An inaccessible linked repository is not "no implementation." Report the access gap.
-
-When a ticket's fix version predates the current major and the implementation is absent from every plausible current repository, verify whether the feature still exists before designing implementation-dependent cases.
+When a linked repository is inaccessible, the ticket predates repository consolidation or the current major, or no implementation can be found, read [edge-cases.md](references/edge-cases.md) before continuing.
 
 For chart or HA work, inspect effective chart configuration: templates, default values, image/version pins, and feature gates.
 
@@ -103,8 +92,6 @@ Compare requirements and implementation in both directions:
 - requirement with no implementation -> Finding;
 - implementation with no requirement -> Finding or candidate if it changes a public contract;
 - developer tests -> existing lower-layer evidence, not automatic reasons for another end-to-end case.
-
-If no implementation is available, continue from the requirements. List the repositories searched or the access gap, mark implementation-dependent expectations as unverified, and do not present implementation-derived behavior as fact. Build the inventory from externally stated contracts and record `implementation unavailable` as its source.
 
 ### 3. Build the change-impact and failure model
 
@@ -140,39 +127,7 @@ Use the coverage classifications and decisions in `coverage.md`; they are author
 
 ### 7. Apply the strong-case gate
 
-Keep candidates only when **all** conditions hold:
-
-1. **Traceable evidence**
-   Name the acceptance criterion, implementation branch, invariant, historical defect mechanism, or explicit customer behavior that justifies it.
-
-2. **Named defect**
-   State the plausible defect and confirm the case would fail if that defect existed.
-
-3. **Unique coverage**
-   No existing assertion already catches the same defect. Otherwise classify as covered or extend.
-
-4. **Reliable oracle**
-   Assert a deterministic public result at the layer where the defect matters: API response, persisted state, CLI result, permission decision, exporter flag, metric, supported UI behavior, or other owning layer.
-
-5. **Value exceeds cost**
-   User/product impact justifies setup, runtime, credentials, and maintenance burden. If valuable but automation cost is the only blocker, mark it Manual and name the blocker.
-
-6. **Blast-radius relevance**
-   The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.
-
-Reject candidates that test an upstream component rather than PMM's contract with it, or values PMM only passes through without adding a contract. Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break," and assertions such as "works," "page loads," "success," "non-zero exit," or "error appears." This gate is the authoritative refusal policy.
-
-Each surviving case must be deterministic and outcome-focused. All five hold, for a manual case as much as an automated one:
-
-1. **Verify its preconditions.** Assert the starting state rather than assuming it. A case that silently runs from the wrong state reports a defect that is not there, or hides one that is.
-2. **Modify only explicitly identified test-owned state.** Name the exact row, service, agent, or file the case created, and address it by an identifier the case itself captured. `select max(id)`, "the most recent row", "the first service in the list" and similar are races against anything else using the environment — capture the identifier at setup and use it.
-3. **Synchronize on observable events, not fixed sleeps.** Wait for the request, the status transition, the log line, or the metric to appear. When asserting an absence, bound the window with an observable event too — a completed poll cycle, a settled network, a second request that has since succeeded — and say which.
-4. **Assert the intended result and the prohibited side effects.** The result alone passes when the product reaches it the wrong way. Name what must *not* happen: no redirect, no second write, no error notification, no extra request, no state left behind.
-5. **Restore the original state in cleanup, including when the case fails.** Put restoration where a failure cannot skip it, and say what it restores. A case that changes state only on the happy path poisons every later case in the same environment.
-
-One primary failure signal per case still applies. A case that cannot meet all five without contriving its setup is telling you the behavior is not deterministically testable at that layer — mark it Manual and say which point it fails, or move the assertion to a layer where it holds.
-
-For each surviving case, confirm on the base branch that every pre-existing metric, label, field, endpoint, or other oracle input exists. Read the base branch only for inputs in files the change did not touch; a diff already read shows the base side of the rest. Give anything introduced by the change its own existence assertion; do not let a missing input masquerade as the behavior under test.
+Read [strong-case-gate.md](references/strong-case-gate.md). Keep a candidate only when it passes all six gate conditions and all five determinism rules; mark it Manual, move its assertion to another layer, or drop it otherwise.
 
 ### 8. Rank and write
 
@@ -221,7 +176,7 @@ headings, no tables, no restating a case the reader is about to read.>
 
 Keep the prose honest and short: a wrong command in the ticket, a rejected root-cause hypothesis, or an unreachable evidence source is worth a line each; nothing else is.
 
-Folder is the Zephyr folder the case will be created in, so the reviewer approves its placement with the case. The path is `PMM<major>.x Tests / <area>`, where the major is the first number of the fix version and the area names the feature under test in one or two words, reusing an existing subfolder when one matches (`HA`, `RTA`, `Dashboards`, `Inventory`, `QAN`, `Backup`, `Alerting`, `Settings`, `CLI`, `API`, `Upgrade`, …). Read the `zephyr` skill's `folders` before choosing: when the project already has a separate top-level home for that major and area, such as `PMM3.x HA Tests`, use it rather than creating a second one.
+Choose each case's Folder with the rule in [publish.md](references/publish.md), so the reviewer approves its placement with the case.
 
 Every behavior inventory entry must still resolve to a case in the table, to named existing
 coverage, or to a drop reason you can state on request. Say in one line that cases were dropped
@@ -234,13 +189,4 @@ Do not execute cases, create/update Zephyr entries, or begin automation without 
 
 ### 10. Publish the approved cases
 
-Run only when a user invoked this skill directly and explicitly approves the reviewed draft — "approve", "publish", "create them", or a list of case numbers. A question, an edit request, or no reply is not approval. Publish only the cases the approval names, with any requested edits applied to the draft first.
-
-Read the `zephyr` skill for the relay setup and the `Z` helper. The fix version is the ticket's; with several, use the earliest, and with none, ask before publishing. For each approved case, in order:
-
-1. `Z folders '{}'` once, then resolve each case's Folder path to a `folderId` by walking `name` and `parentId` from the root. Create what is missing, level by level: `Z create-folder` with the version folder name at the project root, then the area with the version folder's `id` as `parentId`, using each returned `id`. Zephyr allows duplicate names, so re-check `folders` before each create. Never place a case in another major's folder or at the project root.
-2. `Z create` with `name` (the title without its number), `objective` (the Catches/Evidence line), `precondition` when the draft has one, `priorityName`, `statusName` (`Needs Automation` for Needs automation, `Manual Only` for Manual), `customFields {"Version of the Product": <fix version>}`, and `folderId`. Capture the returned `key`.
-3. `Z steps` on that key, one step per table row: `description` from Step, `testData` from Data (unset when the cell is empty), `expectedResult` from Expected, each with the leading `- ` stripped. Append the Cleanup line as the last step with no expected result.
-4. `Z link-issue` from the key to the ticket. Skip for a coverage audit with no ticket.
-
-Then print one line per case: `<N>` → `PMM-Txxxx`, status, folder path. If `create` succeeds and a later call fails, report the key with what is still missing and finish that key on the next attempt; do not create the case again — Zephyr has no delete, so a duplicate can only be marked `Deprecated`.
+Only when a user invoked this skill directly and explicitly approved the reviewed draft: read [publish.md](references/publish.md) and follow it for the approved cases.

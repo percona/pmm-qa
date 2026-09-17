@@ -240,4 +240,4 @@ Split when candidates:
 - have different failure mechanisms;
 - require different oracles.
 
-Apply the authoritative strong-case and refusal gate in `SKILL.md` after candidate generation.
+Apply the strong-case gate in `strong-case-gate.md` after candidate generation.

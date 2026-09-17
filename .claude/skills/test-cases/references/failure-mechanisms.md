@@ -1,6 +1,6 @@
 # Failure mechanisms
 
-Use these prompts only when the ticket or implementation makes the mechanism reachable. Each candidate must still pass the strong-case gate in `SKILL.md`.
+Use these prompts only when the ticket or implementation makes the mechanism reachable. Each candidate must still pass the strong-case gate in `strong-case-gate.md`.
 
 ## False greens
 
