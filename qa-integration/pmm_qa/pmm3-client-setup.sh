@@ -63,6 +63,9 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
+# --force above: with a stable node name, re-provisioning the same container
+# hits "Node with name ... already exists" and the setup fails.
+#
 # A random name per run means a re-provisioned container registers under a new
 # node, and its old series keep the previous name alive in every dashboard
 # filter built from label_values. Callers pass the container name instead.
@@ -162,10 +165,10 @@ if [[ -z "$upgrade" ]]; then
         for i in $(seq 1 $n); do
             if [[ "$use_metrics_mode" == "yes" ]]; then
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
             else
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
             fi
             echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
             sleep 30
