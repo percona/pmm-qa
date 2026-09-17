@@ -75,9 +75,10 @@ Scenario(
 
     if (!isOvFAmiJenkinsJob) {
       // grep exits 1 when it matches nothing, which here is the healthy case -- a
-      // grafana.log with no error lines at all. Without this the test fails exactly
-      // when the server is clean.
-      errorLogs = await I.verifyCommand('docker exec pmm-server cat /srv/logs/grafana.log | grep "level=error" || true');
+      // grafana.log with no error lines at all -- so the test must not fail on it.
+      // Exit 2, a log it could not read, still has to fail: swallowing that would
+      // let this scenario pass without checking anything.
+      errorLogs = await I.verifyCommand("docker exec pmm-server sh -c 'grep level=error /srv/logs/grafana.log; [ $? -le 1 ]'");
 
       const loadingLibraryErrorLine = errorLogs.split('\n')
         .filter((line) => line.includes('Error while loading library panels'));
