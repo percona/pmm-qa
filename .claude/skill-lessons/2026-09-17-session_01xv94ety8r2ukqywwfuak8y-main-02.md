@@ -1,0 +1,6 @@
+# .claude/skills/linode-docker-provisioning/SKILL.md — the scratch Playwright config must take its launch options from lib/proxy.js
+
+- Added: 2026-09-17
+- Applies to: target only ("4. UI", the `e2e_tests/` scratch-config recipe)
+- Evidence: A scratch config built exactly as the skill describes — `use.proxy.server` set to `$HTTPS_PROXY` and `executablePath: '/opt/pw-browsers/chromium'` — failed twice: the top-level `executablePath` was ignored and the run died with "Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<rev>", and once that was moved under `launchOptions` every UI navigation rendered only "upstream request failed" while the suite's API fixture worked. Taking `{ args, proxy }` from the repo's own `proxyLaunchOptions({})` in `.claude/scripts/lib/proxy.js` made the same suite pass.
+- Proposed change: In the scratch-config recipe, require `executablePath` under `use.launchOptions`, build the proxy settings from `require('../.claude/scripts/lib/proxy.js').proxyLaunchOptions({})` rather than hand-setting `use.proxy.server` (it also supplies `--ssl-version-max=tls1.2` and the interception-CA SPKI pins the bare setting omits), and raise `navigationTimeout`/`actionTimeout` well above the config's 10 s defaults for the proxied hop.
