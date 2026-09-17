@@ -1,0 +1,6 @@
+# .claude/skills/fb-tests/SKILL.md — an FB image can be months behind its PR head, so it is not the code under review
+
+- Added: 2026-09-17
+- Applies to: .claude/skills/fb-tests/SKILL.md, and .claude/agents/test-runner.md step 2
+- Evidence: A ticket's FB server image was built two months before the linked percona/pmm PR's head commit, and shipped a materially earlier revision of the dashboard JSON under test — different panel titles, targets missing an `avg by (service_name,event_name)` aggregation and an `irate` fallback, and the new row positioned below two collapsed rows instead of above them. The ticket's *How to test* field still named the old panel titles, so the stale image and the stale field agreed with each other and the mismatch read as confirmation. The same build's client tarball had also expired from the build cache and returned 404.
+- Proposed change: In the step that reads the JNKPercona comment for build images, require comparing that comment's date and the image tag's short sha against the linked PR's `head.sha` and `updated_at`; when they diverge, state it in the report and validate the PR head directly (for a dashboard, import the head JSON from raw.githubusercontent.com as a second dashboard rather than replacing the shipped copy) instead of reporting the FB image as the change.
