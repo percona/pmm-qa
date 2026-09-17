@@ -67,9 +67,8 @@ Scenario('PMM-T2018 - Verify internal clickhouse is not running when using exter
 });
 
 Scenario('PMM-T2019 - Verify pmm managed logs do not contain errors about clickhouse @docker-configuration', async ({ I, explorePage }) => {
-  // A log with no clickhouse lines at all satisfies the assertions below, but grep
-  // exits 1 on no match and verifyCommand treats that as a failed command. Exit 2 --
-  // a log that could not be read -- still fails, so the checks cannot pass vacuously.
+  // grep exits 1 on no match -- a log with no clickhouse lines -- which must pass;
+  // exit 2, a log it could not read, must still fail.
   const pmmManagedLogs = await I.verifyCommand("docker exec pmm-server-external-clickhouse sh -c 'grep clickhouse /srv/logs/pmm-managed.log; [ $? -le 1 ]'");
   const qanLogs = await I.verifyCommand("docker exec pmm-server-external-clickhouse sh -c 'grep clickhouse /srv/logs/qan-api2.log; [ $? -le 1 ]'");
 

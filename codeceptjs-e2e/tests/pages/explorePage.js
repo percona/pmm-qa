@@ -46,7 +46,7 @@ class ExplorePage {
     const [editorContent = ''] = await I.grabTextFromAll(this.elements.sqlEditorContent);
 
     assert.strictEqual(
-      editorContent.replace(/\u00a0/g, ' ').trim(),
+      editorContent.replace(/\s+/g, ' ').trim(),
       query,
       'The SQL editor does not hold the query under test',
     );
