@@ -134,7 +134,7 @@ preflight_database_setups() {
   # same Ansible collection.
   if [[ $PARALLEL == true && $needs_ansible == true ]]; then
     configure_ansible_python
-    ensure_docker_collection
+    ensure_ansible_collections
   fi
 }
 
@@ -197,6 +197,43 @@ format_duration() {
   fi
 }
 
+# Print the slowest Ansible tasks recorded in a buffered setup log.
+#
+# Usage: print_slowest_tasks LOG_FILE [COUNT] [FLOOR_SECONDS]
+#
+# ansible.posix.profile_tasks (enabled in run_playbook) ends every playbook with
+# a `task name ------ 12.34s` summary. A spec usually runs more than one
+# playbook, so the lines from all of them are pooled and re-sorted rather than
+# read off a single block.
+#
+# Without this the report says only that a spec was slow; a database whose
+# pmm-client install took most of the time is otherwise indistinguishable from a
+# genuinely slow database.
+#
+# Stdout: one `  <elapsed>  <task name>` line per task, slowest first, and
+#         nothing at all when the log has no profiling in it
+print_slowest_tasks() {
+  local log_file=$1 count=${2:-5} floor=${3:-5}
+  [[ -r $log_file ]] || return 0
+
+  local seconds name
+  while read -r seconds name; do
+    printf '  %7s  %s\n' "$(format_duration "$seconds")" "$name"
+  done < <(
+    awk -v floor="$floor" '
+      { gsub(/\033\[[0-9;]*m/, ""); sub(/\r$/, "") }
+      match($0, /-----+[[:space:]]*[0-9]+\.[0-9]+s$/) {
+        elapsed = $NF
+        sub(/s$/, "", elapsed)
+        if (elapsed + 0 < floor) next
+        name = substr($0, 1, RSTART - 1)
+        sub(/[[:space:]]+$/, "", name)
+        if (name != "") printf "%d %s\n", elapsed + 0.5, name
+      }
+    ' "$log_file" | sort -rn -k1,1 | head -n "$count"
+  )
+}
+
 # Report one finished parallel setup.
 #
 # Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE [ELAPSED_SECONDS]
@@ -219,6 +256,9 @@ print_setup_log() {
 
   if ((status == 0)); then
     printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
+    # The log itself is about to be deleted on a green run, so the timings have
+    # to be lifted out of it here or they are lost.
+    print_slowest_tasks "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
       cat_setup_log "$log_file"
