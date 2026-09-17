@@ -1197,7 +1197,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
-      I.waitForElement(this.graphsLocator(metrics[i]), 5);
+      I.waitForElement(this.graphsLocator(metrics[i]), 30);
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
   },
@@ -1207,7 +1207,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
+      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
     }
   },

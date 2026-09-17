@@ -133,7 +133,9 @@ the whole run and is readable by other users on the host via `ps`. On shared
 runners, export `ADMIN_PASSWORD` instead; it takes precedence over the flag and
 is not exposed in the command line.
 
-`latest-tarball` is normalized to the current PMM Client build-cache URL.
+`latest-tarball` is normalized to the current PMM Client build-cache URL for the
+host architecture — `PR-BUILDS/pmm-client` on x86_64, `PR-BUILDS/pmm-client-arm`
+on arm64.
 PSMDB patch lookup uses `curl`; it does not require Python or `requests`.
 
 ## Side-by-side validation

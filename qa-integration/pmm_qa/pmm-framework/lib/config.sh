@@ -93,21 +93,21 @@ register_database SSL_PSMDB \
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL ENCRYPTED_CLIENT_CONFIG' \
-  'DEFAULT_VERSION=9.7' \
+  'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
   'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
-  'DEFAULT_VERSION=8.0' \
+  'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
   'TARBALL=' 'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL' \
-  'DEFAULT_VERSION=8.0' \
+  'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' 'TARBALL='
 
 register_database PGSQL \
@@ -131,14 +131,15 @@ register_database SSL_PDPGSQL \
   'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET='
 
 register_database PXC \
-  '5.7 8.0' \
+  '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION QUERY_SOURCE TARBALL' \
-  'DEFAULT_VERSION=8.0' \
+  'DEFAULT_VERSION=8.4' \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
 # PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
-register_database PROXYSQL '2' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
+# Version 2 is Percona's proxysql2 (PXC 5.7/8.0); 3 is upstream ProxySQL (8.4+).
+register_database PROXYSQL '2 3' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
 # logs a note under --verbose and falls back to the (empty) default.
