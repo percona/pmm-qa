@@ -1,14 +1,14 @@
 const assert = require('assert');
-const { SERVICE_TYPE, isOvFAmiJenkinsJob} = require('../helper/constants');
+const { SERVICE_TYPE, isOvFAmiJenkinsJob } = require('../helper/constants');
 
 Feature('PMM upgrade tests for custom password');
 const { dashboardPage } = inject();
 
-const clientDbServices = new DataTable(['serviceType', 'name', 'metric', 'annotationName', 'dashboard', 'upgrade_service']);
+const clientDbServices = new DataTable(['serviceType', 'name', 'metric', 'annotationName', 'dashboard', 'upgrade_service', 'containerFilter']);
 
-clientDbServices.add([SERVICE_TYPE.MYSQL, 'ps_pmm_', 'mysql_global_status_max_used_connections', 'annotation-for-mysql', dashboardPage.mysqlInstanceSummaryDashboard.url, 'mysql']);
-clientDbServices.add([SERVICE_TYPE.POSTGRESQL, 'pgsql_pgss_pmm', 'pg_stat_database_xact_rollback', 'annotation-for-postgres', dashboardPage.postgresqlInstanceSummaryDashboard.url, 'postgresql']);
-clientDbServices.add([SERVICE_TYPE.MONGODB, 'rs101', 'mongodb_connections', 'annotation-for-mongo', dashboardPage.mongoDbInstanceSummaryDashboard.url, 'mongodb']);
+clientDbServices.add([SERVICE_TYPE.MYSQL, 'ps_pmm_', 'mysql_global_status_max_used_connections', 'annotation-for-mysql', dashboardPage.mysqlInstanceSummaryDashboard.url, 'mysql', 'ps_pmm']);
+clientDbServices.add([SERVICE_TYPE.POSTGRESQL, 'pgsql_pgss_pmm', 'pg_stat_database_xact_rollback', 'annotation-for-postgres', dashboardPage.postgresqlInstanceSummaryDashboard.url, 'postgresql', 'pgsql_pgss']);
+clientDbServices.add([SERVICE_TYPE.MONGODB, 'rs101', 'mongodb_connections', 'annotation-for-mongo', dashboardPage.mongoDbInstanceSummaryDashboard.url, 'mongodb', 'rs101']);
 
 Data(clientDbServices).Scenario(
   'Adding custom agent password, custom label before upgrade at service Level @pre-custom-password-upgrade',
@@ -16,7 +16,7 @@ Data(clientDbServices).Scenario(
     I, inventoryAPI, current, credentials,
   }) => {
     const {
-      serviceType, name, upgrade_service,
+      serviceType, name, upgrade_service, containerFilter,
     } = current;
     let {
       // eslint-disable-next-line prefer-const
@@ -30,20 +30,32 @@ Data(clientDbServices).Scenario(
       address = '127.0.0.1';
     }
 
+    // pmm-admin lives with the agent, inside the container -- the upgrade pipeline
+    // never installs a client on the Jenkins agent itself. The AMI/OVF job is the
+    // one place the binary is on the host, so it keeps running there.
+    let execPrefix = '';
+
+    if (!isOvFAmiJenkinsJob) {
+      const container = await I.verifyCommand(`docker ps -f name=${containerFilter} --format "{{.Names}}" | head -n1`);
+
+      assert.ok(container, `No running container matched "${containerFilter}" for ${serviceType}`);
+      execPrefix = `docker exec ${container} `;
+    }
+
     switch (serviceType) {
       case SERVICE_TYPE.MYSQL:
         output = await I.verifyCommand(
-          `pmm-admin add mysql --node-id=${node_id} --pmm-agent-id=${pmm_agent_id} --port=${port} --password=${credentials.perconaServer.root.password} --host=${address} --query-source=perfschema --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
+          `${execPrefix}pmm-admin add mysql --node-id=${node_id} --pmm-agent-id=${pmm_agent_id} --port=${port} --password=${credentials.perconaServer.root.password} --host=${address} --query-source=perfschema --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
         );
         break;
       case SERVICE_TYPE.POSTGRESQL:
         output = await I.verifyCommand(
-          `pmm-admin add postgresql --username=${credentials.pdpgsql.username} --password=${credentials.pdpgsql.password} --node-id=${node_id} --pmm-agent-id=${pmm_agent_id} --port=${port} --host=${address} --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
+          `${execPrefix}pmm-admin add postgresql --username=${credentials.pdpgsql.username} --password=${credentials.pdpgsql.password} --node-id=${node_id} --pmm-agent-id=${pmm_agent_id} --port=${port} --host=${address} --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
         );
         break;
       case SERVICE_TYPE.MONGODB:
         output = await I.verifyCommand(
-          `pmm-admin add mongodb --username=${credentials.mongoReplicaPrimaryForBackups.username} --password="${credentials.mongoReplicaPrimaryForBackups.password}" --port=${credentials.mongoReplicaPrimaryForBackups.port} --host=127.0.0.1 --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
+          `${execPrefix}pmm-admin add mongodb --username=${credentials.mongoReplicaPrimaryForBackups.username} --password="${credentials.mongoReplicaPrimaryForBackups.password}" --port=${credentials.mongoReplicaPrimaryForBackups.port} --host=127.0.0.1 --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${upgrade_service}`,
         );
         break;
       default:
