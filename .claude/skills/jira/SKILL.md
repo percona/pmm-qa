@@ -101,7 +101,7 @@ Example wiki body:
 
 ## Ask before writing
 
-Unless the user explicitly requested the Jira update, confirm before writing to production tickets.
+Unless the user explicitly requested the Jira update, confirm before writing to production tickets. Test cases and test plans never go into How to test or a comment; they belong in Zephyr (`zephyr` skill), linked to the ticket.
 
 **One standing exception:** the Investigator agent `create`s a `Bug` (auto-flagged Found by Automation) for a product regression it has *reproduced* and classified — that autonomous create is the agent's defined job and its dedup step already guards against duplicates, so it needs no extra confirmation. Every other write — comments, transitions, field edits on existing tickets — still follows the confirm rule above.
 
@@ -160,7 +160,7 @@ J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != D
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"
 
-# field — e.g. update the FB screenshot field (customfield_10492) or How to test
+# field — e.g. update the FB screenshot field (customfield_10492)
 J field "$(jq -n --arg i PMM-15188 --arg v "...wiki markup..." '{issue:$i,fields:{customfield_10492:$v}}')"
 
 # transitions — list, then transition by id

@@ -1,6 +1,7 @@
 ---
 name: test-cases
-description: Design concise, evidence-backed test cases for a PMM Jira ticket or audit coverage of an existing PMM feature. Use when asked what should be tested for PMM-XXXXX, where existing coverage has gaps, or whether proposed coverage is sufficient. Compare requirements, implementation, historical defects, and current Zephyr/pmm-qa coverage; build a change-impact and failure model before proposing cases. Do not execute tests or write to Jira or Zephyr.
+description: Design evidence-backed test cases for a PMM Jira ticket, or audit test coverage of an existing PMM feature. Use when asked what to test or verify for PMM-XXXXX, for a test plan or QA plan, where Zephyr or pmm-qa automation coverage has gaps, or whether proposed cases are sufficient, even when the user only pastes a ticket key or pull request and asks how to check it. Produces a review draft first. Only after the user approves it, creates the cases in Zephyr and links them to the ticket. Reads Jira but never writes it. Never executes tests or provisions environments.
+compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git and rg in a pmm-qa checkout.
 ---
 
 # Test cases
@@ -13,10 +14,10 @@ Do not generate tests from category checklists alone. First understand the chang
 
 Load no reference up front. Read it only when its workflow step applies:
 
-- Ticket context: `../jira/SKILL.md`
-- Linked implementation: `../git-diff/SKILL.md`
-- Existing manual cases: `../zephyr/SKILL.md`
-- Environment dimensions when relevant: `../test-scope/SKILL.md`
+- Ticket context: the `jira` skill
+- Linked implementation: the `git-diff` skill
+- Existing manual cases: the `zephyr` skill
+- Environment dimensions when relevant: the `test-scope` skill
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
 - Known failure shapes when the initial model needs challenging: [references/failure-mechanisms.md](references/failure-mechanisms.md)
@@ -27,7 +28,7 @@ Load no reference up front. Read it only when its workflow step applies:
 
 The references above are prompts for reasoning, not quotas. A technique, historical bug, or risk category never justifies a test by itself.
 
-When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. The workflow below assumes a fresh session with nothing supplied.
+When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. Hand the finished draft back after step 9 and skip step 10: the caller owns execution and any Zephyr writes. Step 10 runs only when a user invoked this skill directly. The workflow below assumes that direct invocation in a fresh session with nothing supplied.
 
 ## Workflow
 
@@ -181,7 +182,7 @@ Assign priority from failure impact, not ticket priority:
 - **Normal:** meaningful user-visible failure with a workaround;
 - **Low:** cheap supporting coverage that should usually be merged into a stronger case.
 
-Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test.
+Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test. Write each Step as the action a person performs, at the layer a user of the feature uses — UI for UI behavior, `pmm-admin` for CLI behavior, the API only when the API is the contract under test; the exact command, query, or value goes in Data.
 
 Then mark each case `Needs automation` or `Manual`. Automation is a standing maintenance cost, so it is the exception, not the reward for a good case.
 
@@ -194,7 +195,7 @@ Mark `Needs automation` only when all of these hold:
 
 Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; it depends on a race, a restart, or wall-clock waiting; or it is a one-off verification for this ticket that no later change will regress.
 
-### 9. Produce the review draft and stop
+### 9. Produce the review draft and wait for approval
 
 Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case.
 
@@ -209,9 +210,9 @@ Use this review structure:
 the ticket's own How to test; any coverage the search could not reach. Nothing else — no
 headings, no tables, no restating a case the reader is about to read.>
 
-| # | Case | Pri | Env | Status |
-| --- | --- | --- | --- | --- |
-| <N> | <short title> | <High \| Normal \| Low> | <Docker \| HA \| CLI \| …> | <Needs automation \| Manual> |
+| # | Case | Pri | Env | Status | Folder |
+| --- | --- | --- | --- | --- | --- |
+| <N> | <short title> | <High \| Normal \| Low> | <Docker \| HA \| CLI \| …> | <Needs automation \| Manual> | <Zephyr folder path> |
 
 ---
 
@@ -220,6 +221,8 @@ headings, no tables, no restating a case the reader is about to read.>
 
 Keep the prose honest and short: a wrong command in the ticket, a rejected root-cause hypothesis, or an unreachable evidence source is worth a line each; nothing else is.
 
+Folder is the Zephyr folder the case will be created in, so the reviewer approves its placement with the case. The path is `PMM<major>.x Tests / <area>`, where the major is the first number of the fix version and the area names the feature under test in one or two words, reusing an existing subfolder when one matches (`HA`, `RTA`, `Dashboards`, `Inventory`, `QAN`, `Backup`, `Alerting`, `Settings`, `CLI`, `API`, `Upgrade`, …). Read the `zephyr` skill's `folders` before choosing: when the project already has a separate top-level home for that major and area, such as `PMM3.x HA Tests`, use it rather than creating a second one.
+
 Every behavior inventory entry must still resolve to a case in the table, to named existing
 coverage, or to a drop reason you can state on request. Say in one line that cases were dropped
 and why in the aggregate — "the rest of the PR is unit-covered and does not earn an e2e" — rather
@@ -227,4 +230,17 @@ than listing each candidate.
 
 Zero proposed cases is valid when existing coverage already catches every meaningful identified defect.
 
-Do not execute cases, create/update Zephyr entries, modify Jira, or begin automation without explicit user approval after review.
+Do not execute cases, create/update Zephyr entries, or begin automation without explicit user approval after review. Approval unlocks Zephyr only (`create`, `steps`, `link-issue`): never post the draft or the cases as a Jira comment, and never write How to test or any other Jira field — the coverage link from step 10 is the ticket's record. Stop here and wait; when another agent invoked this skill, return the draft to it instead.
+
+### 10. Publish the approved cases
+
+Run only when a user invoked this skill directly and explicitly approves the reviewed draft — "approve", "publish", "create them", or a list of case numbers. A question, an edit request, or no reply is not approval. Publish only the cases the approval names, with any requested edits applied to the draft first.
+
+Read the `zephyr` skill for the relay setup and the `Z` helper. The fix version is the ticket's; with several, use the earliest, and with none, ask before publishing. For each approved case, in order:
+
+1. `Z folders '{}'` once, then resolve each case's Folder path to a `folderId` by walking `name` and `parentId` from the root. Create what is missing, level by level: `Z create-folder` with the version folder name at the project root, then the area with the version folder's `id` as `parentId`, using each returned `id`. Zephyr allows duplicate names, so re-check `folders` before each create. Never place a case in another major's folder or at the project root.
+2. `Z create` with `name` (the title without its number), `objective` (the Catches/Evidence line), `precondition` when the draft has one, `priorityName`, `statusName` (`Needs Automation` for Needs automation, `Manual Only` for Manual), `customFields {"Version of the Product": <fix version>}`, and `folderId`. Capture the returned `key`.
+3. `Z steps` on that key, one step per table row: `description` from Step, `testData` from Data (unset when the cell is empty), `expectedResult` from Expected, each with the leading `- ` stripped. Append the Cleanup line as the last step with no expected result.
+4. `Z link-issue` from the key to the ticket. Skip for a coverage audit with no ticket.
+
+Then print one line per case: `<N>` → `PMM-Txxxx`, status, folder path. If `create` succeeds and a later call fails, report the key with what is still missing and finish that key on the next attempt; do not create the case again — Zephyr has no delete, so a duplicate can only be marked `Deprecated`.

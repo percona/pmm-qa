@@ -4,12 +4,6 @@ Generate candidates only after the change-impact and failure model exists.
 
 Categories are not quotas. Pick a technique because it matches the behavior or failure mechanism.
 
-## Contents
-
-- [Technique selection](#technique-selection)
-- [Candidate rules](#candidate-rules)
-- [Merge vs split](#merge-vs-split)
-
 ## Technique selection
 
 | Situation | Primary technique | What to derive |
@@ -246,4 +240,4 @@ Split when candidates:
 - have different failure mechanisms;
 - require different oracles.
 
-Apply the authoritative strong-case and refusal gate in `../SKILL.md` after candidate generation.
+Apply the authoritative strong-case and refusal gate in `SKILL.md` after candidate generation.

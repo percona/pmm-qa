@@ -4,14 +4,6 @@ Use this before generating test cases.
 
 The goal is to convert a code/ticket change into a model of **where it can fail and what else it can damage**. Do not start from "happy / negative / edge." Start from product flow and failure mechanisms.
 
-## Contents
-
-- [Trace the real path](#1-trace-the-real-path)
-- [Build the blast-radius map](#2-build-the-blast-radius-map)
-- [Derive invariants](#3-derive-invariants)
-- [Generate failure hypotheses](#4-generate-failure-hypotheses)
-- [Choose where a defect becomes meaningful](#5-choose-where-a-defect-becomes-meaningful)
-
 ## 1. Trace the real path
 
 For every changed public behavior, trace:
@@ -213,4 +205,4 @@ Examples:
 
 A UI badge alone is usually insufficient when the owning state is server-side.
 
-Apply the authoritative strong-case and refusal gate in `../SKILL.md` after candidate generation.
+Apply the authoritative strong-case and refusal gate in `SKILL.md` after candidate generation.
