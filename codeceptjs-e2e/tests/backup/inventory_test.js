@@ -108,7 +108,14 @@ Before(async ({
       break;
     } catch (error) {
       if (attempt === 10) {
-        throw error;
+        // Ten attempts over six minutes means mongod did not come back, and the
+        // driver's "Server selection timed out" says nothing about why. Its own
+        // log does, and CI keeps none of the container's state afterwards.
+        const log = await I.verifyCommand(
+          'docker exec rs101 tail -n 40 /var/log/mongo/mongod.log 2>&1 || docker logs --tail 40 rs101 2>&1',
+        );
+
+        throw new Error(`${error.message}\nLast 40 lines of rs101 mongod log:\n${log}`);
       }
 
       await I.wait(10);
