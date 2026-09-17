@@ -96,6 +96,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
+- `@gssapi-nightly`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
@@ -103,14 +104,19 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@new-navigation`
 - `@nightly`
 - `@pmm-ha`
+- `@pmm-helm-mid-upgrade`
+- `@pmm-helm-post-upgrade`
+- `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-valkey-integration`
 - `@post-release`
 - `@rta`
+- `@service-account`
 - `@settings`
 - `@standalone`
+- `@user-password`
 
 <!-- E2E-TAGS-END -->
 

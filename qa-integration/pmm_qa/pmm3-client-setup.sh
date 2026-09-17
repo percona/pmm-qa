@@ -21,7 +21,7 @@ if [ -z "$pmm_server_ip" ]; then
 fi
 
 if [ -z "$client_version" ]; then
-    export client_version=dev-latest
+    export client_version=3-dev-latest
 fi
 
 if [ -z "$install_client" ]; then
@@ -48,6 +48,14 @@ fi
 port=8443
 if [[  "$pmm_server_ip" =~ \. ]]; then
   port=443
+fi
+
+# The install branches below are bare `if`s with no else, so an unrecognised
+# client_version would install nothing at all.
+if ! [[ "$client_version" =~ ^(3-dev-latest|pmm3-rc|pmm3-latest|latest-tarball|3\.[0-9]+\.[0-9]+|https?://.*)$ ]]; then
+    echo "ERROR: unrecognised client_version '$client_version'." >&2
+    echo "Expected: 3-dev-latest, pmm3-rc, pmm3-latest, latest-tarball, an exact 3.x.y version, or an http(s) tarball URL." >&2
+    exit 1
 fi
 
 apt-get update
@@ -92,7 +100,12 @@ if [[ "$client_version" == "pmm3-latest" ]]; then
 fi
 
 if [[ "$client_version" == "latest-tarball" ]]; then
-    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
+    # arm64 builds are published under their own bucket prefix.
+    bucket=pmm-client
+    case "$(dpkg --print-architecture)" in
+      arm64) bucket=pmm-client-arm ;;
+    esac
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
 fi
 
 ## Only supported for debian based systems for now
@@ -105,8 +118,10 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
-  dpkg -i pmm-client.deb
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
+  dpkg -i "${deb_file}"
 fi
 
 ## Default Binary path
@@ -117,7 +132,8 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz

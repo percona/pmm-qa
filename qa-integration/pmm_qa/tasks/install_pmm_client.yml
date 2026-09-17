@@ -1,3 +1,18 @@
+# Every install task below is a `when:` with no else, so an unrecognised
+# client_version would install nothing at all.
+- name: Check client_version is one this file can install
+  assert:
+    that:
+      - >-
+        client_version in ['3-dev-latest', 'pmm3-rc', 'pmm3-latest']
+        or client_version is match('^3\\.[0-9]+\\.[0-9]+$')
+        or client_version | regex_search('^https?://.*\\.tar\\.gz$') is not none
+    fail_msg: >-
+      Unrecognised client_version '{{ client_version }}'. Expected one of:
+      3-dev-latest, pmm3-rc, pmm3-latest, an exact 3.x.y version, or a
+      http(s)://... .tar.gz URL.
+    quiet: true
+
 - name: Set default metrics mode
   set_fact:
     metrics_mode: 'auto'
@@ -148,7 +163,9 @@
       elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
         build_number=1
       fi
-      wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+      rm -f /pmm-client.deb
+      wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+        -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
     '
     docker exec --user root {{ container_name }} dpkg -i /pmm-client.deb
   when:
@@ -167,7 +184,9 @@
       elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
         build_number=1
       fi
-      wget -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+      rm -f /pmm-client.rpm
+      wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+        -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/$(uname -m)/pmm-client-${client_version}-${build_number}.el9.$(uname -m).rpm"
     '
     docker exec --user root {{ container_name }} rpm -i /pmm-client.rpm
   when:
@@ -177,7 +196,7 @@
 - name: Install tarball PMM client version
   shell: |
     docker exec --user root {{ container_name }} sh -c '
-      wget -O /pmm-client.tar.gz "{{ client_version }}" &&
+      wget --timeout=60 --waitretry=15 --progress=dot:giga -O /pmm-client.tar.gz "{{ client_version }}" &&
       tar -zxpf /pmm-client.tar.gz &&
       PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1` &&
       echo ${PMM_CLIENT} &&

@@ -8,9 +8,9 @@ Naming: `runner-*` is a reusable workflow for one suite, `fb-*` wraps a runner a
 
 | Contract | Where |
 |---|---|
-| Setup job names start with `setup / ` | consumed at `runner-e2e-tests-codeceptjs-remote-nightly-tests.yml:76` |
+| Setup job names start with `setup / ` | consumed at `runner-e2e-tests-codeceptjs-remote-nightly-tests.yml:78` |
 | Test job names start with `test execution / ` | consumed at `runner-e2e-tests-codeceptjs-remote-nightly-setup.yml:55` |
-| Step named exactly `Waiting for tests execution` | defined at `…-setup.yml:141`, polled by the test job |
+| Step named exactly `Waiting for tests execution` | defined at `…-setup.yml:150`, polled by the test job |
 | `expected_setup_jobs` = number of setup shards | passed per test job |
 | `expected_test_jobs` = number of consumer jobs | passed per setup shard |
 

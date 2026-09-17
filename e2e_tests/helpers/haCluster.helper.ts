@@ -4,8 +4,9 @@ import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { HaNodesResponse } from '@interfaces/ha';
+import { HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
 import { expect } from '@playwright/test';
+import pmmTest from '@fixtures/pmmTest';
 
 const leaderLogLine = 'I am the leader!';
 const pmmManagedLog = '/srv/logs/pmm-managed.log';
@@ -13,7 +14,24 @@ const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 /** The `pmm-ha` chart default. */
-const defaultReplicas = 3;
+export const defaultReplicas = 3;
+/** The `pmm-ha` chart default for `clickhouse.keeper.replicasCount`. */
+export const clickHouseKeeperReplicas = 3;
+// /v1/version needs credentials even from inside the pod.
+const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
+// POSIX single-quote escaping, so a password containing a quote cannot end the
+// quoted string: close, escape the quote, reopen.
+const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+const curlCredentials = (): string => shellQuote(`admin:${adminPassword()}`);
+
+/** The `version` field, or undefined when the body is not the JSON we expect. */
+const parseVersion = (body: string): unknown => {
+  try {
+    return (JSON.parse(body) as { version?: unknown }).version;
+  } catch {
+    return undefined;
+  }
+};
 
 /**
  * PMM HA leadership asked of each pod directly, so tests can assert the UI and
@@ -60,11 +78,47 @@ export default class HaClusterHelper {
 
     await this.waitForReadyPods(replicas);
 
-    // Ready pods, and even an elected leader, are not yet reachable: HAProxy has
-    // to re-run its health check and re-point first.
-    await expect(async () => {
-      expect(await haApi.getStatus()).toEqual('Enabled');
-    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    await this.waitForApiServing(haApi);
+  };
+
+  /** Restarts the current leader and returns the pod that takes over, once the API serves again. */
+  failoverLeader = async (haApi: HaApi, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<string> => {
+    const initialLeader = await this.waitForLeaderChange(undefined, timeout);
+
+    this.k8sHelper.deletePod(initialLeader).assertSuccess();
+
+    const newLeader = await this.waitForLeaderChange(initialLeader, timeout);
+
+    await this.waitForApiServing(haApi, timeout);
+
+    return newLeader;
+  };
+
+  /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */
+  grafanaDatabaseEnv = (podName: string): Record<string, string> => {
+    const { stdout } = this.k8sHelper.execInPod(podName, 'env', { silent: true });
+    const variables = stdout
+      .split('\n')
+      .map((line) => /^(GF_DATABASE_[A-Z_]+)=(.*)$/.exec(line))
+      .filter((match) => match !== null)
+      .map((match) => [match[1], match[2].trim()]);
+
+    if (variables.length === 0) {
+      throw new Error(`Pod "${podName}" exports no GF_DATABASE_* variables`);
+    }
+
+    return Object.fromEntries(variables);
+  };
+
+  /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
+  haStatusFromPod = (podName: string): string => {
+    const { stdout } = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      { silent: true },
+    );
+
+    return (JSON.parse(stdout) as HaStatusResponse).status;
   };
 
   /**
@@ -141,6 +195,68 @@ export default class HaClusterHelper {
     }
 
     return names[0];
+  };
+
+  verifyHaEnabled = async (haApi: HaApi): Promise<void> =>
+    await pmmTest.step('Verify HA mode is enabled', async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    });
+
+  /**
+   * One leader, agreed on by all three sources: the per-pod health check, the
+   * `pmm_ha_leader_status` sum and `/v1/ha/nodes`.
+   *
+   * @param   podNames  every pod that must be in the cluster
+   * @returns the pod that leads
+   */
+  verifySingleLeader = async (haApi: HaApi, podNames: string[]): Promise<string> =>
+    await pmmTest.step('Verify the cluster has exactly one leader', async () => {
+      const leader = await this.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+
+      await haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
+      expect(await haApi.getNodeNames(), 'Every pod must be in the HA cluster').toEqual(podNames);
+      expect(
+        (await haApi.getLeaderNode())?.node_name,
+        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
+      ).toEqual(leader);
+
+      return leader;
+    });
+
+  /**
+   * Asked of the pod itself rather than through HAProxy, which only ever answers
+   * from the leader - so this is what each replica actually serves.
+   */
+  versionFromPod = (podName: string): string => {
+    // --fail, because without it curl exits 0 on a 401 or 503 whose body is still
+    // JSON: `version` then comes back undefined and the caller reports a version
+    // mismatch instead of a pod that refused the request.
+    const result = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk --fail -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.version}`,
+      { silent: true },
+    );
+    const body = result.stdout.trim();
+    const version = parseVersion(body);
+
+    if (typeof version !== 'string') {
+      throw new Error(
+        `Pod "${podName}" did not serve ${apiEndpoints.server.version}: curl exited ${result.code}, ` +
+          `body ${body || '(empty)'}${result.stderr.trim() ? `, stderr ${result.stderr.trim()}` : ''}`,
+      );
+    }
+
+    return version;
+  };
+
+  /**
+   * Ready pods, and even an elected leader, are not yet reachable: HAProxy has to
+   * re-run its health check and re-point first.
+   */
+  waitForApiServing = async (haApi: HaApi, timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<void> => {
+    await expect(async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 
   /**

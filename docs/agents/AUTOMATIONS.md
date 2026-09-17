@@ -2,7 +2,7 @@
 
 Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
-## The six agents
+## The seven agents
 
 | Agent | Watches / invoked by | Trigger | Does | Never |
 | ------- | ---------------------- | --------- | ------ | ------- |
@@ -11,6 +11,7 @@ Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this rep
 | [fb-reporter](../../.claude/agents/fb-reporter.md) | Referenced by `test-runner`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Gets a clean FB Tests screenshot for a ticket's linked submodules PR, retrying past flakiness (`gh run rerun --failed`, up to twice), attaches to Jira | Diagnose or fix a genuine (non-flaky) failure — that's `investigator`'s job |
 | [router](../../.claude/agents/router.md) | The `PMM AI` Routine, fired by a Slack `@pmm-ai` mention | Slack-only — see "PMM AI" below | Matches the mention to test-runner / investigator / fb-reporter by description and hands off, or answers directly if it's just a question | Guess a ticket key/PR number that wasn't in the message, do the matched agent's work itself |
 | [pr-maintainer](../../.claude/agents/pr-maintainer.md) | Every open `percona/pmm-qa` PR | Scheduled — a daily weekday Routine | Reads each open PR and sorts it into ready / unblocked / needs-review / blocked / needs-work / needs-a-human, maintains a `blocked` label, and posts a **PR Digest** to Slack `#qa-automation` via the relay bot | Merge, close, approve, or edit any PR — the `blocked` label is the only thing it changes |
+| [review-feedback-gardener](../../.claude/agents/review-feedback-gardener.md) | Human comments on `percona/pmm-qa` PRs that `qa-code-review` reviewed | Scheduled — a daily Routine, 20:00 UTC | Reads the last 26h of comments, drops everything Claude or a bot wrote, judges what generalizes about the review skill, and hands each surviving lesson to **skill-gardener Capture** — which puts it on that week's lesson branch for the Sunday publisher | Comment on or reply to a PR, write a lesson entry or edit a skill itself, open a PR, sweep any repo but pmm-qa |
 | [skill-gardener-publisher](../../.claude/agents/skill-gardener-publisher.md) | The current ISO week's `skill-gardener/<YYYY>-W<WW>` lesson branch | Scheduled — a weekly Routine, Sundays | Reviews the week's entries, applies the worthwhile ones to skills, agents, hooks, or instruction docs **on that same branch** and deletes the entries it acted on, then opens the branch's single PR against `main` | Open a PR in a week with no lesson branch, read a branch other than the current week's (bar a stranded one), delete the branch (it's the PR head), merge or approve anything, change product or test code |
 
 There's no separate "watcher" agent in front of Investigator. An earlier draft had one (detect the failure, hand off to a shared fixer) — dropped once it became clear the "detect" step was too thin to be its own agent: parsing a trigger payload and extracting a failure list is just Investigator's own first step, not a separable concern the way `fb-reporter`'s screenshot-and-retry job genuinely is.
@@ -210,6 +211,57 @@ One branch, one PR **per week**: the current ISO week's lesson branch is the inp
 
 **Routine**: weekly on **Sunday**, in the shared qa-linode environment, fresh session per fire, prompt pointing at `.claude/agents/skill-gardener-publisher.md`. The prompt must match the one-branch-one-PR model — one carrying the old Promote step would open a competing lessons-only PR on the very branch the publisher needs for its own, and one still requiring an entry to be merged into `main` first would deadlock, since entries never reach `main` any more. Fire at **Sunday 23:00 UTC — 16:00 MST / 17:00 MDT**: ISO weeks run Mon–Sun, so Sunday is still inside the week being published, and 23:00 is the latest slot that finishes before the week rolls over at Monday 00:00 UTC. `<YYYY>-W<WW>` is resolved in UTC by the run itself (`date -u +%G-W%V`), so if the scheduler only accepts local time, Sunday 17:00 is correct while MDT is in effect and must move to 16:00 when the clocks fall back — otherwise it lands on **Monday 00:00 UTC**, the one time that must never be used: the run resolves the brand-new week, finds its branch empty or absent, no-ops silently, and leaves the finished week's full branch to the stranded-branch recovery — every week, permanently a week behind. A lesson captured between the Sunday fire and the rollover lands on the just-published branch: it rides into that still-open PR, or, if the PR already merged and took the branch with it, re-lands on next week's branch — a week late, not lost. That second path is why Capture checks the week's branch name for a merged PR before recreating it: a recreated name would carry that merged PR into the publisher's stranded-branch test, which reads a name whose PR is already closed as finished, and the late entry would never be published at all.
 
+## Review Feedback Gardener — daily human-feedback sweep (Routine live; no-ops until this agent is on `main`)
+
+`qa-code-review` reviews every PR; humans then reject findings it raised and raise findings it
+missed. Sections 3.7, 3.13 and 3.14 of that skill are lessons someone folded in **by hand** from
+exactly this signal. [`.claude/agents/review-feedback-gardener.md`](../../.claude/agents/review-feedback-gardener.md)
+automates the reading half of that loop; its daily Routine was created 2026-09-09 and fires at
+20:00 UTC. Until the agent file reaches `main`, every fire stops at its own guard and captures
+nothing — the schedule is live, the sweep starts the day the PR adding it merges.
+
+**The agent names no repository, no reviewing skill and no schedule.** That is deliberate, and it
+is what review asked for: hard-coding `pmm-qa`, or a section number in another file, breaks
+silently the moment either moves, and it would stop the agent being reusable for a review skill
+that is not this one. It takes the repository from the git remote, the window from its caller, and
+carries its own comment filter rather than pointing at somebody else's. This document is the
+pmm-qa-specific half — the agent is not.
+
+**It captures nothing itself.** It sweeps, filters and judges; the entry file, the week branch and
+the push all belong to **Capture** in
+[`skill-gardener/SKILL.md`](../../.claude/skills/skill-gardener/SKILL.md), and applying the entries
+belongs to the Sunday publisher above. The agent exists only because the gardener's evidence is the
+observable session sequence — it has no notion of reading a PR comment.
+
+**Telling a person from the reviewer is the whole trick, and it is not the footer.** A login ending
+in `[bot]` is a machine; everything else is a person, including someone who drafted their reply
+through Claude — dropping those on the attribution footer would discard real feedback, and a bare
+` ```suggestion ` block is feedback too, not noise. One case is discarded: the reviewing skill's own
+output posted under its operator's login, which a local run produces. Its shape gives it away — it
+opens a thread instead of replying in one, and leads with a 🔴/🟡/🔵 severity marker. Without that
+carve-out the sweep reads a review as feedback about itself.
+
+**Daily, not weekly**, on a 26h window: the two-hour margin absorbs a run that fires *late* — not one
+that never fired, which loses its window outright and needs a hand re-run with a wider `SINCE`. The
+comment permalink on each entry's `Evidence:` line keeps the overlap from double-capturing, and it is
+checked against the previous week's queue as well as the current one, since a Monday window reaches
+back across the week boundary the publisher has already cut. The Monday–Sunday grouping is not the
+sweep's doing — it falls out of the gardener resolving `skill-gardener/<YYYY>-W<WW>` per run.
+
+**Routine**: daily at **20:00 UTC**, fresh session per fire, thin prompt pointing at the agent file
+so the logic stays versioned in the repo. The one constraint that matters is that Sunday's fire land
+before the publisher's, so the week's last day is inside the PR the publisher opens; a comment made
+after that fire rides the next run onto the following week's branch, a week late but not lost. The
+prompt opens with a guard: no agent file on `main` means capture nothing and stop, so the Routine
+could be created before the agent merged.
+
+Unlike the publisher's, this Routine was created through the meta-MCP `create_trigger`, which
+exposes no `sources`, `model` or `allowed_tools` — its stored `config.sources` is empty where the
+publisher's names `percona/pmm-qa` explicitly. A fired session did pick up `claude-opus-5` and
+`permission_mode: auto` by default, so defaults do fill in, but **whether the clone arrives the same
+way is unverified**: the first fire after this merges is what proves it. If it reports no
+repository, recreate the Routine from the claude.ai Routines UI, where sources are explicit.
+
 ## Secrets architecture — relay-brokered (built; prod cutover pending)
 
 > **Status (2026-08-12):** the broker (`/<service>/<action>`) is implemented and **validated end-to-end on a staging relay**: `/linode/provision` → `{ip, exec_token, exec_cert_pem}`; `/linode/destroy` → `ok` (works with the events-read Linode token); `/jira/read` → the ticket; and the identity gate rejects a missing `X-Actor` (401), a non-roster actor (403), and a wrong `RELAY_KEY` (403). Identity is a single mechanism (`X-Actor`, roster from the people files — no extra env vars). Remaining human step: prod cutover — an admin sets `RELAY_KEY` in the qa-linode shared env (Davi can't set shared-env vars), then a session deploys the current relay code, then `LINODE_TOKEN`/`JIRA_*` come off the shared env.
@@ -306,6 +358,11 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [x] `RELAY_KEY` set in the shared env + relay redeployed (2026-08-17). The Routine authenticates with `RELAY_KEY` + its `X-Actor` login (roster already in the people files). *Nothing PR-maintainer-specific remains: `POST /slack/announce` still can't reach Slack until the Slack app is live (bot token in the relay `.env`) — see the Slack section above. Until then the daily Routine runs and its announce call errors harmlessly.*
 - [x] `/invite @pmm-ai` into `#qa-automation` (part of the Slack-app go-live) (done 2026-08-24)
 - [x] Create the daily **PR Maintainer** Routine (done — it will error on `/slack/announce` until the relay runs the new code, `RELAY_KEY` is set, and the Slack app is live; harmless until then).
+
+**Review Feedback Gardener (daily human-feedback sweep):**
+
+- [x] Create the daily **Review Feedback Gardener** Routine — 20:00 UTC, fresh session per fire, prompt pointing at [`.claude/agents/review-feedback-gardener.md`](../../.claude/agents/review-feedback-gardener.md) (done 2026-09-09). Sunday's fire lands before the publisher's, so the week's last day makes that week's PR.
+- [ ] **Confirm the fired session gets a `percona/pmm-qa` clone.** `create_trigger` stored an empty `config.sources`; the publisher's Routine names the repo explicitly. A plumbing fire on 2026-09-09 succeeded but its report was not readable from the creating session. Read the first fire after the agent lands on `main`: a run that says the agent file is missing proves the clone; a run that says there is no repository means recreate the Routine from the claude.ai Routines UI.
 
 **Later / optional:**
 

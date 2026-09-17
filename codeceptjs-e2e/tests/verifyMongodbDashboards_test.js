@@ -134,7 +134,7 @@ Scenario(
     dashboardPage.mongodbInstancesCompareDashboard.unselectCluster();
 
     dashboardPage.mongodbInstancesCompareDashboard.selectReplicationSet('rs');
-    I.waitInUrl('&var-replication_set=rs', 2);
+    I.waitForURL(/[?&]var-replication_set=rs(&|$)/, { timeout: 10000 });
     dashboardPage.mongodbInstancesCompareDashboard.unselectReplicationSet();
 
     dashboardPage.mongodbInstancesCompareDashboard.selectNode([mongoServices[0]]);

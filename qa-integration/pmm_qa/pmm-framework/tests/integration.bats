@@ -31,6 +31,10 @@ if [[ ${PARALLEL_TEST:-false} == true ]]; then
     echo 'PGSQL parallel log'
   fi
 fi
+if [[ -n ${HANG_SECONDS:-} ]]; then
+  echo 'setup is working'
+  sleep "$HANG_SECONDS"
+fi
 if [[ ${FAIL_PS:-false} == true && -n ${PS_VERSION:-} ]]; then
   echo 'PS failed as requested'
   exit 9
@@ -227,6 +231,25 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
+@test "a host conflict is refused before anything is provisioned" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database external \
+      --database valkey
+
+  # Unlike the downgrades above, rejected -- and rejected before either
+  # setup started.
+  [[ $status -eq 1 ]]
+  [[ $output == *'EXTERNAL and VALKEY setups'* ]]
+  [[ $output == *'host port 6379'* ]]
+  [[ $output != *'Running setups sequentially'* ]]
+  [[ ! -e "$RECORD_FILE" ]]
+}
+
 @test "parallel mode stays parallel for PDPGSQL and non-replication PGSQL" {
   run env \
     PATH="$TEST_BIN:$PATH" \
@@ -283,4 +306,77 @@ EOF
   [[ $output == *'FAILED (exit=1)'* ]]
   [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
+}
+
+@test "a signalled parallel run dumps the buffered logs instead of deleting them" {
+  local out="$BATS_TEST_TMPDIR/signalled.out" waited=0 fw_pid fw_status=0
+
+  env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    HANG_SECONDS=120 \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16 >"$out" 2>&1 &
+  fw_pid=$!
+
+  # Both setups must have written to their buffers before the signal, or the
+  # test would pass on an empty dump.
+  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 2 ]]; do
+    ((waited += 1))
+    [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
+    sleep 0.2
+  done
+  sleep 1
+
+  kill -TERM "$fw_pid"
+  wait "$fw_pid" || fw_status=$?
+  run cat "$out"
+
+  [[ $fw_status -eq 130 ]]
+  [[ $output == *'===== [1/2] ps=8.4 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [2/2] pgsql=16 INTERRUPTED ====='* ]]
+  [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
+  [[ $output == *'Parallel setup logs kept at:'* ]]
+
+  local log_dir
+  log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")
+  [[ -d $log_dir ]]
+  rm -rf "$log_dir"
+}
+
+@test "a signalled single-setup parallel run dumps its buffer too" {
+  local out="$BATS_TEST_TMPDIR/signalled-one.out" waited=0 fw_pid fw_status=0
+
+  env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    HANG_SECONDS=120 \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 >"$out" 2>&1 &
+  fw_pid=$!
+
+  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
+    ((waited += 1))
+    [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
+    sleep 0.2
+  done
+  sleep 1
+
+  kill -TERM "$fw_pid"
+  wait "$fw_pid" || fw_status=$?
+  run cat "$out"
+
+  [[ $fw_status -eq 130 ]]
+  [[ $output == *'===== [1/1] ps=8.4 INTERRUPTED ====='* ]]
+  [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
+
+  local log_dir
+  log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")
+  [[ -d $log_dir ]]
+  rm -rf "$log_dir"
 }

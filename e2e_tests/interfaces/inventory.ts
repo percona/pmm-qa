@@ -1,3 +1,8 @@
+export interface GetNode {
+  node_id: string;
+  node_name: string;
+}
+
 export interface GetServices {
   services: GetService[];
 }
@@ -6,6 +11,7 @@ export enum ServiceType {
   mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
+  proxysql = 'proxysql',
   valkey = 'valkey',
 }
 
@@ -109,4 +115,22 @@ export interface GetService {
   ];
   status: string;
   version: string;
+}
+
+export interface AddRdsParameters {
+  address: string;
+  awsAccessKey: string;
+  awsSecretKey: string;
+  instanceId: string;
+  password: string;
+  serviceName: string;
+  username: string;
+}
+
+export interface AddRdsResponse {
+  rds: {
+    mysql: {
+      service_id: string;
+    };
+  };
 }
