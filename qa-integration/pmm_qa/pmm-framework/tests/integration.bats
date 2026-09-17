@@ -100,11 +100,8 @@ EOF
   [[ $status -eq 0 ]]
   [[ $output == *'Starting [1/2] ps=8.4'* ]]
   [[ $output == *'Starting [2/2] pgsql=16'* ]]
-  [[ $output == *'[1/2] ps=8.4: OK in '* ]]
-  [[ $output == *'[2/2] pgsql=16: OK in '* ]]
-  [[ $output == *'(log:'* ]]
-  # The elapsed time is the only thing that attributes a slow shard to a spec.
-  [[ $output =~ \[1/2\]\ ps=8\.4:\ OK\ in\ [0-9]+ ]]
+  [[ $output =~ \[1/2\]\ ps=8\.4:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output =~ \[2/2\]\ pgsql=16:\ OK\ in\ [0-9ms]+\ \(log: ]]
   [[ $output == *'All 2 setups finished in '* ]]
   [[ $output != *'PS parallel log'* ]]
   [[ $output != *'PGSQL parallel log'* ]]
