@@ -5,9 +5,10 @@ Feature('PMM upgrade tests for SSL');
 
 const { adminPage, dashboardPage } = inject();
 const pathToPMMFramework = adminPage.pathToPMMTests;
-// The upgrade pipeline runs `--database ssl_mysql` with no version, so this tracks
-// SSL_MYSQL's DEFAULT_VERSION in qa-integration/pmm_qa/pmm-framework/lib/config.sh.
-const mysqlSslVersion = '8.4';
+// Tracks SSL_MYSQL's DEFAULT_VERSION in qa-integration/pmm_qa/pmm-framework/lib/config.sh.
+// The upgrade pipeline overrides it: its pre-upgrade half comes from pmm-ui-tests at the
+// release being upgraded from, which still expects mysql_ssl_8.0.
+const mysqlSslVersion = process.env.SSL_MYSQL_VERSION || '8.4';
 
 const sslinstances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric', 'dashboard', 'databaseType']);
 
