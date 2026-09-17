@@ -199,11 +199,29 @@ cat_setup_log() {
 #
 # Stdout: a summary line, plus the buffered log when the setup failed or when
 #         --verbose was given
+# Compact elapsed time for the setup reports: 452 -> 7m32s, 45 -> 45s.
+format_duration() {
+  local seconds=$1
+  if ((seconds >= 60)); then
+    printf '%dm%02ds' "$((seconds / 60))" "$((seconds % 60))"
+  else
+    printf '%ds' "$seconds"
+  fi
+}
+
 print_setup_log() {
-  local index=$1 total=$2 spec=$3 status=$4 log_file=$5
+  local index=$1 total=$2 spec=$3 status=$4 log_file=$5 elapsed=${6:-}
+  local took=''
+
+  # A shard that takes an hour says nothing about which of its specs took it,
+  # and the parallel path deletes the per-spec logs on success, so without this
+  # the time is unattributable after the fact.
+  if [[ -n $elapsed ]]; then
+    took=" in $(format_duration "$elapsed")"
+  fi
 
   if ((status == 0)); then
-    printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
+    printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
       cat_setup_log "$log_file"
@@ -212,8 +230,8 @@ print_setup_log() {
     return
   fi
 
-  printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
-    "$index" "$total" "$spec" "$status"
+  printf '\n===== [%d/%d] %s FAILED (exit=%d)%s =====\n' \
+    "$index" "$total" "$spec" "$status" "$took"
   printf 'log: %s\n' "$log_file"
   cat_setup_log "$log_file"
   printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
@@ -238,8 +256,9 @@ print_setup_log() {
 # Returns:  0 when every setup succeeded, 1 when any failed
 # Exits:    130 from the INT/TERM trap
 run_parallel_setups() {
-  local log_dir total index spec status overall_status=0
-  local -a pids=() logs=()
+  local log_dir total index spec status overall_status=0 batch_start
+  local -a pids=() logs=() starts=()
+  batch_start=$(date +%s)
   log_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-parallel.XXXXXX")
   total=${#DATABASE_SPECS[@]}
 
@@ -279,6 +298,7 @@ run_parallel_setups() {
   for ((index = 0; index < total; index++)); do
     spec=${DATABASE_SPECS[index]}
     logs[index]=$log_dir/setup-$index.log
+    starts[index]=$(date +%s)
     printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
     # stdin must come from /dev/null: job control puts each setup in a
     # background process group, where reading the terminal raises SIGTTIN and
@@ -307,7 +327,7 @@ run_parallel_setups() {
         ((status == 0)) || overall_status=1
         print_setup_log \
           "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
-          "$status" "${logs[index]}"
+          "$status" "${logs[index]}" "$(($(date +%s) - starts[index]))"
         pids[index]=
         matched=true
         break
@@ -324,6 +344,8 @@ run_parallel_setups() {
 
   trap - INT TERM
   set +m
+  printf 'All %d setups finished in %s\n' "$total" \
+    "$(format_duration "$(($(date +%s) - batch_start))")"
   if ((overall_status == 0)); then
     rm -rf "$log_dir"
   else
@@ -349,8 +371,10 @@ run_database_setups() {
     return
   fi
 
-  local spec
+  local spec start
   for spec in "${DATABASE_SPECS[@]}"; do
+    start=$(date +%s)
     run_database_spec "$spec"
+    printf '%s: OK in %s\n' "$spec" "$(format_duration "$(($(date +%s) - start))")"
   done
 }

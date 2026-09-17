@@ -322,3 +322,32 @@ stub_docker_ps() {
   [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) ====='* ]]
   [[ $output == *$'no trailing newline\n===== END [1/2] ps=8.4 ====='* ]]
 }
+
+@test "format_duration renders seconds below a minute and mm/ss above" {
+  [[ $(format_duration 0) == '0s' ]]
+  [[ $(format_duration 45) == '45s' ]]
+  [[ $(format_duration 59) == '59s' ]]
+  [[ $(format_duration 60) == '1m00s' ]]
+  [[ $(format_duration 452) == '7m32s' ]]
+  [[ $(format_duration 3142) == '52m22s' ]]
+}
+
+@test "a reported setup carries how long it took" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'first line\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
+
+  [[ $status -eq 0 ]]
+  [[ $output == *"[1/2] ps=8.4: OK in 7m32s (log: $log)"* ]]
+}
+
+@test "a failed setup carries how long it took" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'first line\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 1 "$log" 45
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
+}
