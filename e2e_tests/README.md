@@ -112,7 +112,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-psmdb-integration`
 - `@pmm-valkey-integration`
 - `@post-release`
-- `@post-upgrade`
 - `@rta`
 - `@service-account`
 - `@settings`
