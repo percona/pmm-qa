@@ -35,7 +35,7 @@ load helpers/test_helper
   parse_database_spec 'ps=99'
 
   [[ -z $DB_VERSION ]]
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "value precedence is global flag then environment then database then default" {
@@ -63,7 +63,7 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 
   DB_VERSION=''
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "optional-value flags do not consume the following option" {
@@ -212,7 +212,7 @@ load helpers/test_helper
     [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
     [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.0 [PROXYSQL]=2 [VALKEY]=8
+    [PXC]=8.4 [PROXYSQL]=2 [VALKEY]=8
   )
   local type actual
   for type in "${!expected[@]}"; do
