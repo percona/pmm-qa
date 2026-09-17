@@ -13,6 +13,14 @@
       http(s)://... .tar.gz URL.
     quiet: true
 
+# A folded scalar (>-) does not process YAML escapes, so `\\.` inside a {{ }}
+# expression there reaches the regex as two characters and matches nothing --
+# unlike a bare `when:` conditional, where the same spelling works. Match once
+# here, in a double-quoted scalar, and test this boolean below instead.
+- name: Classify the requested client version
+  set_fact:
+    client_version_is_exact: "{{ client_version is match('^3\\.[0-9]+\\.[0-9]+$') }}"
+
 - name: Set default metrics mode
   set_fact:
     metrics_mode: 'auto'
@@ -100,14 +108,14 @@
     pmm_client_component: >-
       {{ 'experimental' if client_version == '3-dev-latest'
          else 'testing' if client_version == 'pmm3-rc'
-         else 'main' if client_version == 'pmm3-latest' or client_version is match('^3\\.[0-9]+\\.[0-9]+$')
+         else 'main' if client_version == 'pmm3-latest' or client_version_is_exact | bool
          else '' }}
     pmm_client_release_component: >-
       {{ 'experimental' if client_version == '3-dev-latest'
          else 'testing' if client_version == 'pmm3-rc'
          else 'release' }}
     pmm_client_pinned_version: >-
-      {{ client_version if client_version is match('^3\\.[0-9]+\\.[0-9]+$') else '' }}
+      {{ client_version if client_version_is_exact | bool else '' }}
 
 # One verified download per codename serves every container. Doing it per
 # container multiplied both the bandwidth and the chances of landing in one of
@@ -221,7 +229,7 @@
       {{
         (encrypted_client_config | default(false) | bool) and (
           client_version in ['3-dev-latest', 'pmm3-rc', 'pmm3-latest', 'latest-tarball'] or
-          (client_version is match('^3\\.[0-9]+\\.[0-9]+$') and client_version is version('3.7.0', '>=')) or
+          (client_version_is_exact | bool and client_version is version('3.7.0', '>=')) or
           (client_version | regex_search('^https?://') is not none)
         )
       }}
