@@ -117,12 +117,7 @@ Scenario(
 
     await dashboardPage.expandFilters('Node Namegroup');
     I.waitForElement(locateOptions, 5);
-    // label_values(proxysql_connection_pool_status, hostgroup), with includeAll
-    // off. Measured on a provisioned PXC 8.4 fronted by upstream ProxySQL 3:
-    // hostgroups 10 (writer), 11 (reader) and 12 (backup writer) carry pool
-    // status, and 13 (offline) only does while a node is down. The 4 this
-    // expected came from the proxysql-admin setup PXC 8.0 used.
-    I.seeNumberOfVisibleElements(locateOptions, 3);
+    I.seeNumberOfVisibleElements(locateOptions, 4);
   },
 );
 
