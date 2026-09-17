@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2296 - Verify Top slow queries panel ranks by execution time @dashboards @pmm-pdpgsql-integration',
+  'PMM-T2296 - Verify Top slow queries panel ranks by execution time @dashboards @postgresql-dashboards',
   async ({ api, page, postgresqlInstancesOverviewPage, urlHelper }) => {
     const services = await api.inventoryApi.getServicesByType(ServiceType.postgresql);
 

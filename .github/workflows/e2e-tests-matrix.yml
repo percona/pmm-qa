@@ -192,7 +192,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       setup_services: '--database pdpgsql'
-      pmm_test_flag: '@pmm-pdpgsql-integration'
+      pmm_test_flag: '@postgresql-dashboards'
 
   access-control:
     name: Access control tests
