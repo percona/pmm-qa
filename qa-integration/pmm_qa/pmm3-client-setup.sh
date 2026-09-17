@@ -100,7 +100,12 @@ if [[ "$client_version" == "pmm3-latest" ]]; then
 fi
 
 if [[ "$client_version" == "latest-tarball" ]]; then
-    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
+    # arm64 builds are published under their own bucket prefix.
+    bucket=pmm-client
+    case "$(dpkg --print-architecture)" in
+      arm64) bucket=pmm-client-arm ;;
+    esac
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
 fi
 
 ## Only supported for debian based systems for now
@@ -113,7 +118,7 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
     -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   dpkg -i "${deb_file}"

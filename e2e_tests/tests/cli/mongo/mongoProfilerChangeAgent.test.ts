@@ -265,40 +265,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1009 - Verify Change agent disable collectors @psmdb-profiler-integration',
     async ({ api, cliHelper }) => {
-      const collectorsToDisable = ['perf_schema.eventsstatements', 'perf_schema.tablelocks'];
+      const collectorsToDisable = ['diagnosticdata', 'replicasetstatus'];
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
         )
         .assertSuccess()
         .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
 
-      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+      const agent = await api.inventoryApi.getAgentById(mongoExporterId);
 
       expect(
         agent.disabled_collectors,
-        'Disabled collectors were not persisted on the mysqld_exporter agent',
+        'Disabled collectors were not persisted on the mongodb_exporter agent',
       ).toEqual(collectorsToDisable);
-    },
-  );
-
-  pmmTest(
-    'PMM-T1014 - Verify Change agent disable query examples @ps-integration',
-    async ({ api, cliHelper }) => {
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --disable-query-examples`,
-        )
-        .assertSuccess()
-        .outContains('- disabled query examples');
-
-      const agent = await api.inventoryApi.getAgentById(mysqldPerfschemaAgentId);
-
-      expect(
-        agent.query_examples_disabled,
-        'Query examples were not disabled on the qan_mysql_perfschema_agent',
-      ).toEqual(true);
     },
   );
 
@@ -347,27 +328,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
-    },
-  );
-
-  pmmTest(
-    'PMM-T1012 - Verify Change agent tablestats group table limit @ps-integration',
-    async ({ api, cliHelper }) => {
-      const tablestatsGroupTableLimit = 2_000;
-
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tablestats-group-table-limit=${tablestatsGroupTableLimit}`,
-        )
-        .assertSuccess()
-        .outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
-
-      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
-
-      expect(
-        agent.table_count_tablestats_group_limit,
-        'Tablestats group table limit was not persisted on the mysqld_exporter agent',
-      ).toEqual(tablestatsGroupTableLimit);
     },
   );
 
