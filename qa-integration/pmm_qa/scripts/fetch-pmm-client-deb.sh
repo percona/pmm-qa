@@ -8,38 +8,50 @@
 # unexpected size (180478124 != 180478168). Mirror sync in progress?"). Checking
 # agreement with a HEAD costs ~6 kB, so waiting beats downloading into a window.
 #
-# Usage: fetch-pmm-client-deb.sh <component> <codename> [cache_dir] [budget_seconds]
+# Usage: fetch-pmm-client-deb.sh <component> <codename> [cache_dir] [budget_seconds] [version]
+#   COMPONENT is the apt *index* component (main|testing|experimental). GA
+#   packages live under main; percona-release calls that same channel "release",
+#   and dists/<codename>/release/ does not exist.
+#   VERSION pins an exact upstream version (3.9.1); empty takes the highest.
 # Stdout: the path of the verified .deb (nothing else — callers capture it)
 set -euo pipefail
 
-COMPONENT=${1:?component (experimental|testing|release) required}
+COMPONENT=${1:?index component (main|testing|experimental) required}
 CODENAME=${2:?distro codename (noble|jammy|…) required}
 CACHE_DIR=${3:-/tmp/pmm-client-cache}
-BUDGET=${4:-600}
+BUDGET=${4:-1800}
+VERSION=${5:-}
 
 BASE=http://repo.percona.com/pmm3-client/apt
 ARCH=$(dpkg --print-architecture 2>/dev/null || echo amd64)
-DEST_DIR=$CACHE_DIR/$COMPONENT/$CODENAME/$ARCH
+DEST_DIR=$CACHE_DIR/$COMPONENT/$CODENAME/$ARCH/${VERSION:-latest}
 DEB=$DEST_DIR/pmm-client.deb
-LOCK=$CACHE_DIR/.lock-$COMPONENT-$CODENAME-$ARCH
+LOCK=$CACHE_DIR/.lock-$COMPONENT-$CODENAME-$ARCH-${VERSION:-latest}
 
 mkdir -p "$DEST_DIR" "$CACHE_DIR"
 
 log() { printf '[fetch-pmm-client-deb] %s\n' "$*" >&2; }
 
-# Highest version wins, matching what `apt-get install pmm-client` would pick.
-# The index lists every version still in the pool, in no guaranteed order.
+# Highest version wins, matching what `apt-get install pmm-client` would pick,
+# unless VERSION pins one. The index lists every version still in the pool, in
+# no guaranteed order, as <upstream>-<build>.<codename> — so a pin matches on
+# the upstream part alone and the build number never has to be guessed.
 resolve_from_index() { # -> "version size sha256 filename", empty on failure
   local pkgs
   pkgs=$(curl -sS --max-time 60 "$BASE/dists/$CODENAME/$COMPONENT/binary-$ARCH/Packages") || return 1
-  printf '%s\n' "$pkgs" | awk '
+  printf '%s\n' "$pkgs" | awk -v pin="$VERSION" '
     /^Package: pmm-client$/ { inpkg=1; v=s=h=f=""; next }
     inpkg && /^Version: /   { v=$2 }
     inpkg && /^Size: /      { s=$2 }
     inpkg && /^SHA256: /    { h=$2 }
     inpkg && /^Filename: /  { f=$2 }
-    inpkg && /^$/           { if (v && s && h && f) print v, s, h, f; inpkg=0 }
-    END                     { if (inpkg && v && s && h && f) print v, s, h, f }
+    inpkg && /^$/           { emit(); inpkg=0 }
+    END                     { if (inpkg) emit() }
+    function emit() {
+      if (!(v && s && h && f)) return
+      if (pin != "" && index(v, pin "-") != 1) return
+      print v, s, h, f
+    }
   ' | sort -rV | head -1
 }
 
@@ -54,7 +66,7 @@ fetch_verified() {
     if [ -z "${file:-}" ]; then
       reason='no-index'
       no_index_streak=$((no_index_streak + 1))
-      log "could not read pmm-client from the $CODENAME/$COMPONENT index (attempt $attempt)"
+      log "no pmm-client${VERSION:+ $VERSION} in the $CODENAME/$COMPONENT index (attempt $attempt)"
       # A missing index is a wrong codename/component or an unreachable repo, not
       # the publishing race, so spending the whole wait budget on it buys nothing.
       # Tolerate a few in a row for a transient blip, then stop.
@@ -66,20 +78,29 @@ fetch_verified() {
       served=$(served_size "$file" || true)
       if [ "${served:-}" = "$size" ]; then
         # Sizes agree; the SHA256 below is what actually decides.
-        if curl -sS --max-time 900 -o "$DEB.part" "$BASE/$file"; then
+        # Bound the transfer by the budget that is actually left and by stalling,
+        # not by a fixed timeout: a fixed one longer than the budget turns a slow
+        # mirror into a single doomed attempt, which is how a 180 MB download at
+        # 190 kB/s spent 15 minutes and then gave up with no retry left.
+        if curl -sS --fail -C - \
+          --connect-timeout 30 --speed-limit 51200 --speed-time 120 \
+          --max-time "$(( deadline - $(date +%s) ))" \
+          -o "$DEB.part" "$BASE/$file"; then
           if echo "$sha  $DEB.part" | sha256sum -c --quiet -; then
             mv "$DEB.part" "$DEB"
             printf '%s\n' "$version" >"$DEST_DIR/version"
             log "cached pmm-client $version ($size bytes) for $CODENAME/$COMPONENT"
             return 0
           fi
+          # Wrong bytes, so the partial is worthless and must not be resumed.
           reason='sha-mismatch'
           log "sha256 mismatch after download — the repository changed mid-fetch (attempt $attempt)"
+          rm -f "$DEB.part"
         else
+          # Cut short rather than wrong: keep it, the next attempt resumes.
           reason='download-failed'
-          log "download failed (attempt $attempt)"
+          log "download interrupted at $(stat -c%s "$DEB.part" 2>/dev/null || echo 0)/$size bytes (attempt $attempt)"
         fi
-        rm -f "$DEB.part"
       else
         reason=inconsistent
         log "repository inconsistent: index says $size, server serves ${served:-<none>} (attempt $attempt)"
@@ -99,9 +120,9 @@ EOF
             ;;
           no-index)
             cat <<EOF
-  Could not read pmm-client out of the $CODENAME/$COMPONENT index at all. Check
-  that the codename and component exist and that the repository is reachable —
-  this is not the publishing race.
+  Could not read pmm-client${VERSION:+ $VERSION} out of the $CODENAME/$COMPONENT
+  index. Check that the codename, component and version exist and that the
+  repository is reachable — this is not the publishing race.
 EOF
             ;;
           *)

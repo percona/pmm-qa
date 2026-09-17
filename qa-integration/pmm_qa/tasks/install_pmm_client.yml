@@ -92,13 +92,22 @@
   when: distro_family == 'rhel'
   ignore_errors: true
 
-- name: Map the client version to a pmm3-client repository component
+# The apt index and percona-release name the GA channel differently: the
+# packages are published under dists/<codename>/main, while percona-release
+# calls it "release" and dists/<codename>/release/ returns 404.
+- name: Map the client version to its pmm3-client repository components
   set_fact:
     pmm_client_component: >-
       {{ 'experimental' if client_version == '3-dev-latest'
          else 'testing' if client_version == 'pmm3-rc'
-         else 'release' if client_version == 'pmm3-latest'
+         else 'main' if client_version == 'pmm3-latest' or client_version is match('^3\\.[0-9]+\\.[0-9]+$')
          else '' }}
+    pmm_client_release_component: >-
+      {{ 'experimental' if client_version == '3-dev-latest'
+         else 'testing' if client_version == 'pmm3-rc'
+         else 'release' }}
+    pmm_client_pinned_version: >-
+      {{ client_version if client_version is match('^3\\.[0-9]+\\.[0-9]+$') else '' }}
 
 # One verified download per codename serves every container. Doing it per
 # container multiplied both the bandwidth and the chances of landing in one of
@@ -116,7 +125,8 @@
         {{ pmm_client_component | quote }}
         {{ container_codename.stdout | trim | quote }}
         {{ pmm_client_cache_dir | default('/tmp/pmm-client-cache') | quote }}
-        {{ pmm_client_fetch_budget | default(600) | quote }}
+        {{ pmm_client_fetch_budget | default(1800) | quote }}
+        {{ pmm_client_pinned_version | trim | quote }}
       register: pmm_client_deb
       changed_when: false
   when:
@@ -126,7 +136,7 @@
 - name: Install pmm client from the verified package on Debian-family containers
   shell: |
     set -e
-    docker exec --user root {{ container_name }} percona-release enable-only pmm3-client {{ pmm_client_component }}
+    docker exec --user root {{ container_name }} percona-release enable-only pmm3-client {{ pmm_client_release_component }}
     docker cp {{ pmm_client_deb.stdout_lines[-1] | trim | quote }} {{ container_name }}:/tmp/pmm-client.deb
     docker exec --user root {{ container_name }} apt-get update
     docker exec --user root {{ container_name }} apt-get install -y /tmp/pmm-client.deb
@@ -163,27 +173,6 @@
   delay: 30
   until: dnf_install_result.rc == 0
   when: distro_family == "rhel" and client_version == "pmm3-latest"
-
-- name: Install specific PMM client version on Debian-family containers
-  shell: |
-    docker exec --user root {{ container_name }} bash -c '
-      build_number=7
-      client_version="{{ client_version }}"
-      minor_version=${client_version#3.}
-      minor_version=${minor_version%%.*}
-      if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
-        build_number=8
-      elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
-        build_number=1
-      fi
-      rm -f /pmm-client.deb
-      wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-        -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
-    '
-    docker exec --user root {{ container_name }} dpkg -i /pmm-client.deb
-  when:
-    - distro_family == 'debian'
-    - client_version is match('^3\\.[0-9]+\\.[0-9]+$')
 
 - name: Install specific PMM client version on RHEL-family containers
   shell: |
