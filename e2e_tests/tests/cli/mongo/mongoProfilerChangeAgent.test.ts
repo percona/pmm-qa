@@ -221,7 +221,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.waitForTimeout(Timeouts.ONE_MINUTE);
       await cliHelper
         .execSilent(
-          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+          `docker exec ${containerName} curl -u pmm:${pgExporterPassword} http://127.0.0.1:${pgExporterPort}/metrics`,
         )
         .assertSuccess()
         .outContains('mongodb_up');
