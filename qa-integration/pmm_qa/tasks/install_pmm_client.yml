@@ -98,21 +98,6 @@
   when: distro_family == "rhel"
   ignore_errors: true
 
-- name: Install percona release on Debian-family containers
-  shell: |
-    docker exec --user root {{ container_name }} wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-    docker exec --user root {{ container_name }} apt install -y ./percona-release_latest.generic_all.deb
-  when:
-    - distro_family == 'debian'
-  ignore_errors: true
-
-- name: Install percona release on RHEL-family containers
-  shell: |
-    docker exec --user root {{ container_name }} wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-    docker exec --user root {{ container_name }} microdnf -y install ./percona-release-latest.noarch.rpm
-  when: distro_family == 'rhel'
-  ignore_errors: true
-
 # The apt index and percona-release name the GA channel differently: the
 # packages are published under dists/<codename>/main, while percona-release
 # calls it "release" and dists/<codename>/release/ returns 404.
@@ -129,6 +114,24 @@
          else 'release' }}
     pmm_client_pinned_version: >-
       {{ client_version if client_version_is_exact | bool else '' }}
+
+- name: Install percona release on Debian-family containers
+  shell: |
+    docker exec --user root {{ container_name }} wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+    docker exec --user root {{ container_name }} apt install -y ./percona-release_latest.generic_all.deb
+  when:
+    - distro_family == 'debian'
+    - pmm_client_component | length > 0
+  ignore_errors: true
+
+- name: Install percona release on RHEL-family containers
+  shell: |
+    docker exec --user root {{ container_name }} wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    docker exec --user root {{ container_name }} microdnf -y install ./percona-release-latest.noarch.rpm
+  when:
+    - distro_family == 'rhel'
+    - pmm_client_component | length > 0
+  ignore_errors: true
 
 # One verified download per codename serves every container. Doing it per
 # container multiplied both the bandwidth and the chances of landing in one of
