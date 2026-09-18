@@ -129,22 +129,13 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  # scripts/ only exists when this script runs from the checkout on the runner;
-  # it is docker-cp'd into containers on its own. On the runner, reuse the same
-  # verified cache the Ansible client install fills, so one runner downloads the
-  # 180 MB package once instead of once per consumer -- and gets the index/payload
-  # agreement check for free. The helper resolves the architecture itself.
-  fetch_helper="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
-  deb_file=""
-  if [[ -x "$fetch_helper" ]]; then
-    deb_file=$("$fetch_helper" main "$(lsb_release -sc)" \
-      "${PMM_CLIENT_CACHE_DIR:-/tmp/pmm-client-cache}" 1800 "$client_version" | tail -1) || deb_file=""
-  fi
-  if [[ ! -s "$deb_file" ]]; then
-    deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
-    wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-      -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
-  fi
+  # Deliberately not routed through scripts/fetch-pmm-client-deb.sh: this script
+  # runs under sudo, so it would create /tmp/pmm-client-cache root-owned and the
+  # Ansible client install, which runs as the build user and shares that cache,
+  # could no longer write into it.
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   dpkg -i "${deb_file}"
 fi
 

@@ -3,6 +3,11 @@
   vars:
     port_start: 3306
 
+- name: Remove node containers left by a previous run
+  shell: docker rm -fv {{ container_prefix }}{{ item }} || true
+  changed_when: false
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
 - name: Prepare Container for Percona Server for MySQL 8.0+
   shell: |
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
