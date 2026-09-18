@@ -1411,6 +1411,14 @@ module.exports = {
   },
 
   async expandEachDashboardRow() {
+    // A freshly opened dashboard only lays out what is near the top, so a count
+    // taken right here finds none of the collapsed rows further down and the loop
+    // below exits having expanded nothing -- every metric inside a collapsed row
+    // is then reported missing. Go to the bottom first, which is where the loop
+    // works from anyway, and let the scene render the rest before counting.
+    I.pressKey('End');
+    I.wait(2);
+
     let collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
     let maxTries = 20;
 
