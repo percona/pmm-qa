@@ -407,7 +407,7 @@ jobs:
           # shellcheck disable=SC2046
           # The launchable subset is a whitespace-separated list of test files,
           # so it has to split into separate arguments.
-          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}")
 
       - name: Download PMM Server logs
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -417,18 +417,26 @@ jobs:
           curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
-      # `launchable gate` is what actually reports a red suite -- the Playwright
-      # run ends in `|| true`, so its own exit code never says anything. Its
-      # failure is deferred to the last step for the same reason the test steps
-      # are: this runner still owns databases the other buckets are querying.
+      # The two frameworks write their reports to different places: CodeceptJS to
+      # tests/output/result.xml, Playwright to output/results.json (see
+      # e2e_tests/playwright.config.ts). Recording both from the CodeceptJS path
+      # left every Playwright session empty, so `launchable gate` passed shards
+      # that had failing tests.
+      #
+      # The gate's failure is deferred to the last step for the same reason the
+      # test steps are: this runner still owns databases the other buckets query.
       - name: Record launchable test results
         id: launchable_gate
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ${{ env.TESTS_DIR }}
         continue-on-error: true
         run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session "$(cat launchable-session.txt)" ${{ matrix.tests_framework }} tests/output/result.xml || true
+          if [ "${{ matrix.tests_framework }}" = 'playwright' ]; then
+            launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json || true
+          else
+            sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+            launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
+          fi
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs on failure
@@ -446,18 +454,29 @@ jobs:
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
         with:
-          name: "artifacts_${{ steps.tags_processed.outputs.result }}"
+          # Two shards run the same tag bucket in different frameworks, so the
+          # tag string is not a unique artifact name -- the second upload of a
+          # duplicate name fails, and continue-on-error hides it. The paths cover
+          # both frameworks; the ones the shard's framework does not write are
+          # expected to be missing.
+          name: "artifacts_${{ matrix.shard_name }}"
+          if-no-files-found: ignore
           path: |
             ${{ env.TESTS_DIR }}/tests/output/*.png
             ${{ env.TESTS_DIR }}/tests/output/trace/*.zip
+            ${{ env.TESTS_DIR }}/playwright-report
+            ${{ env.TESTS_DIR }}/test-results
             ${{ env.TESTS_DIR }}/logs
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
         with:
-          name: "junit_${{ steps.tags_processed.outputs.result }}"
-          path: ${{ env.TESTS_DIR }}/tests/output/result.xml
+          name: "junit_${{ matrix.shard_name }}"
+          if-no-files-found: ignore
+          path: |
+            ${{ env.TESTS_DIR }}/tests/output/result.xml
+            ${{ env.TESTS_DIR }}/output/junit.xml
 
       # Only the shards that actually ran tests reach this; a database-only shard
       # skips it, which is how the wait below tells the two apart.
