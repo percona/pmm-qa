@@ -14,10 +14,10 @@ export default class MysqlGroupReplicationSummary implements DashboardInterface 
     { name: 'Transaction Time Inside the Local Queue', type: 'timeSeries' },
     { name: 'Checked Transactions', type: 'timeSeries' },
     { name: 'Transactions Row Validating', type: 'timeSeries' },
-    { name: 'Applied Transactions ', type: 'timeSeries' },
-    { name: 'Sent Transactions ', type: 'timeSeries' },
+    { name: 'Applied Transactions', type: 'timeSeries' },
+    { name: 'Sent Transactions', type: 'timeSeries' },
     { name: 'Received Transactions Queue', type: 'timeSeries' },
-    { name: 'Rolled Back Transactions ', type: 'timeSeries' },
+    { name: 'Rolled Back Transactions', type: 'timeSeries' },
     { name: 'Transactions in the Queue for Checking', type: 'timeSeries' },
     { name: 'Detected Conflicts', type: 'timeSeries' },
   ];

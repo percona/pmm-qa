@@ -60,20 +60,20 @@ export default class NodesOverviewDashboard implements DashboardInterface {
     { name: 'Top 5 Swap Out (Writes)', type: 'unknown' },
     { name: 'Min Free Space Available', type: 'unknown' },
     { name: 'Top I/O Load', type: 'unknown' },
-    { name: ' Top Disk Latency', type: 'unknown' },
-    { name: ' Top Disk Operations', type: 'unknown' },
-    { name: ' Top Disk Bandwidth', type: 'unknown' },
-    { name: ' Top I/O Activity', type: 'unknown' },
+    { name: 'Top Disk Latency', type: 'unknown' },
+    { name: 'Top Disk Operations', type: 'unknown' },
+    { name: 'Top Disk Bandwidth', type: 'unknown' },
+    { name: 'Top I/O Activity', type: 'unknown' },
     { name: 'Top 5 Disk I/O Load', type: 'unknown' },
     { name: 'Disk I/O Load', type: 'unknown' },
     { name: 'Top 5 Disk Latency', type: 'unknown' },
-    { name: ' Disk Latency', type: 'unknown' },
+    { name: 'Disk Latency', type: 'unknown' },
     { name: 'Top 5 Disk Bandwidth', type: 'unknown' },
-    { name: ' Disk Bandwidth', type: 'unknown' },
+    { name: 'Disk Bandwidth', type: 'unknown' },
     { name: 'Top 5 I/O Activity', type: 'unknown' },
     { name: 'I/O Activity', type: 'unknown' },
-    { name: ' Top Receive Network Traffic', type: 'unknown' },
-    { name: ' Top Transmit Network Traffic', type: 'unknown' },
+    { name: 'Top Receive Network Traffic', type: 'unknown' },
+    { name: 'Top Transmit Network Traffic', type: 'unknown' },
     { name: 'Top Errors', type: 'unknown' },
     { name: 'Top Drop', type: 'unknown' },
     { name: 'Top Retransmission', type: 'unknown' },
@@ -88,5 +88,5 @@ export default class NodesOverviewDashboard implements DashboardInterface {
     { name: 'Drop', type: 'unknown' },
   ];
   name = 'Nodes Overview';
-  noDataMetrics: string[] = [];
+  noDataMetrics: string[] = ['DB Instances', 'Min DB Uptime', 'Top Disk Latency', 'Top 5 Disk Latency'];
 }
