@@ -1201,7 +1201,7 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
-      I.waitForElement(this.graphsLocator(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocator(metrics[i]));
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
   },
@@ -1212,8 +1212,23 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocatorPartialMatch(metrics[i]));
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+    }
+  },
+
+  // Expanding once per walk fixed the scroll position, but it also removed the
+  // re-render the per-metric expand was accidentally buying: a service-repeated
+  // panel materialises as its series arrive and has been seen to take minutes,
+  // which a flat 30s wait then called missing. Keep the short wait for the common
+  // case and give a straggler one re-expand and a long wait before failing it.
+  async waitForPanelToMount(panelLocator) {
+    try {
+      await I.waitForElement(panelLocator, 30);
+    } catch (error) {
+      await this.expandEachDashboardRow();
+      await this.scrollBackToPanel(panelLocator);
+      await I.waitForElement(panelLocator, 120);
     }
   },
 
