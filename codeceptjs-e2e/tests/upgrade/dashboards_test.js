@@ -74,7 +74,9 @@ Scenario(
     let errorLogs;
 
     if (!isOvFAmiJenkinsJob) {
-      errorLogs = await I.verifyCommand('docker exec pmm-server cat /srv/logs/grafana.log | grep "level=error"');
+      // grep exits 1 on no match -- a clean grafana.log -- which must pass; exit 2,
+      // a log it could not read, must still fail.
+      errorLogs = await I.verifyCommand("docker exec pmm-server sh -c 'grep level=error /srv/logs/grafana.log; [ $? -le 1 ]'");
 
       const loadingLibraryErrorLine = errorLogs.split('\n')
         .filter((line) => line.includes('Error while loading library panels'));

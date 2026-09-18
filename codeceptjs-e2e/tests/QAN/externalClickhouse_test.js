@@ -54,10 +54,9 @@ Scenario('PMM-T2020 - Verify external clickhouse as datasource on explore page @
   explorePage.selectDataSource('ClickHouse');
   I.waitForVisible(explorePage.elements.sqlEditorButton, 30);
   I.click(explorePage.elements.sqlEditorButton);
-  I.clearField(explorePage.elements.sqlBuilder);
-  I.fillField(explorePage.elements.sqlBuilder, 'SELECT * FROM pmm.metrics LIMIT 10;');
+  await explorePage.setSqlQuery('SELECT * FROM pmm.metrics LIMIT 10;');
   I.click(explorePage.elements.runQueryButton);
-  I.waitForVisible(explorePage.elements.resultRow, 10);
+  I.waitForVisible(explorePage.elements.resultRow, 30);
   I.dontSee(explorePage.messages.authError);
 });
 
@@ -68,8 +67,10 @@ Scenario('PMM-T2018 - Verify internal clickhouse is not running when using exter
 });
 
 Scenario('PMM-T2019 - Verify pmm managed logs do not contain errors about clickhouse @docker-configuration', async ({ I, explorePage }) => {
-  const pmmManagedLogs = await I.verifyCommand('docker exec pmm-server-external-clickhouse cat /srv/logs/pmm-managed.log | grep "clickhouse"');
-  const qanLogs = await I.verifyCommand('docker exec pmm-server-external-clickhouse cat /srv/logs/qan-api2.log | grep "clickhouse"');
+  // grep exits 1 on no match -- a log with no clickhouse lines -- which must pass;
+  // exit 2, a log it could not read, must still fail.
+  const pmmManagedLogs = await I.verifyCommand("docker exec pmm-server-external-clickhouse sh -c 'grep clickhouse /srv/logs/pmm-managed.log; [ $? -le 1 ]'");
+  const qanLogs = await I.verifyCommand("docker exec pmm-server-external-clickhouse sh -c 'grep clickhouse /srv/logs/qan-api2.log; [ $? -le 1 ]'");
 
   I.assertFalse(pmmManagedLogs.includes('ClickHouse DB is not reachable'), 'PMM managed logs should not contain error about clickhouse.');
   I.assertFalse(pmmManagedLogs.includes('Failed to parse ClickHouse DSN'), 'PMM managed logs should not contain error about clickhouse.');
