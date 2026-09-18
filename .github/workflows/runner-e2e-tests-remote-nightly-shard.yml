@@ -1,4 +1,4 @@
-name: _runner-e2e-tests-codeceptjs-remote-nightly-setup
+name: _runner-e2e-tests-remote-nightly-shard
 
 on:
   workflow_call:
@@ -67,8 +67,12 @@ on:
         required: false
 
 jobs:
-  setup:
-    name: "setup / ${{ inputs.shard_name }}"
+  # A shard provisions its databases and, when it was given a tag bucket, runs
+  # that bucket itself against them. The caller's job name already says which is
+  # which, so this one only has to stay short -- GitHub prefixes it with the
+  # caller's.
+  shard:
+    name: run
     runs-on: ubuntu-22.04
     timeout-minutes: 210
     env:
@@ -91,7 +95,6 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       TESTS_DIR: ${{ inputs.tests_framework == 'playwright' && 'pmm-qa/e2e_tests' || 'pmm-qa/codeceptjs-e2e' }}
       SUBSET_FILE_NAME: ${{ inputs.tests_framework == 'playwright' && 'launchable-subset.txt' || 'launchable-subset.json' }}
-      SETUP_JOB_PREFIX: 'setup / '
       SETUP_BARRIER_STEP: 'Barrier: setup complete'
       TEST_BARRIER_STEP: 'Barrier: tests complete'
       EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 5 }}
@@ -196,7 +199,6 @@ jobs:
             const expectedSetupJobs = Number(process.env.EXPECTED_SETUP_JOBS);
             const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
             const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
-            const setupPrefix = process.env.SETUP_JOB_PREFIX;
             const barrierStep = process.env.SETUP_BARRIER_STEP;
             const startedAt = Date.now();
 
@@ -226,7 +228,10 @@ jobs:
 
             while (true) {
               const jobs = await listJobs();
-              const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix));
+              // Every shard posts the setup barrier and nothing else in the run
+              // does, so the step is a better filter than a job-name prefix --
+              // renaming the jobs cannot silently empty this list.
+              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
               const detailed = setupJobs;
 
               // A shard whose setup failed never reaches the barrier, so waiting
@@ -427,7 +432,6 @@ jobs:
             const expectedTestShards = Number(process.env.EXPECTED_TEST_SHARDS);
             const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
             const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
-            const setupPrefix = process.env.SETUP_JOB_PREFIX;
             const barrierStep = process.env.TEST_BARRIER_STEP;
             const startedAt = Date.now();
 
@@ -454,7 +458,10 @@ jobs:
 
             while (true) {
               const jobs = await listJobs();
-              const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix));
+              // Every shard posts the setup barrier and nothing else in the run
+              // does, so the step is a better filter than a job-name prefix --
+              // renaming the jobs cannot silently empty this list.
+              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
               const detailed = setupJobs;
 
               // A cancelled shard never posts its barrier, and its runner is gone

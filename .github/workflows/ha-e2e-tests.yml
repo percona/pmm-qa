@@ -159,7 +159,7 @@ jobs:
               --use_metrics_mode no
 
       # --setup-retries retries only the setups that failed; see the equivalent
-      # step in runner-e2e-tests-codeceptjs-remote-nightly-setup.yml.
+      # step in runner-e2e-tests-remote-nightly-shard.yml.
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ env.WIZARD_ARGS != '' }}
         timeout-minutes: 35

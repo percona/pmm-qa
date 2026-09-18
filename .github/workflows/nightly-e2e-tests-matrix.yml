@@ -90,8 +90,10 @@ jobs:
   # still stops every bucket: nothing runs tests until all five shards pass
   # 'Barrier: setup complete', and that wait aborts the moment a sibling's setup
   # job ends in failure.
-  setup:
-    name: "setup / ${{ matrix.shard_name }}"
+  shard:
+    # The box in the UI has to say what the shard runs, not just which databases
+    # it hosts -- three of these also run a tag bucket.
+    name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +119,7 @@ jobs:
             tags_for_tests: ''
             tests_framework: ''
 
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-setup.yml
+    uses: ./.github/workflows/runner-e2e-tests-remote-nightly-shard.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -144,7 +146,7 @@ jobs:
   notify_investigator:
     name: Fire Investigator routine
     needs:
-      - setup
+      - shard
     if: >
       !cancelled() &&
       github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&
