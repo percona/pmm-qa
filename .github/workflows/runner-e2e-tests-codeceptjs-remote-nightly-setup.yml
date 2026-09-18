@@ -119,32 +119,21 @@ jobs:
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
+      # --setup-retries retries only the setups that failed. The step used to be
+      # wrapped in an all-or-nothing action retry that tore down every container
+      # first, so one flaky setup re-provisioned the whole shard from scratch.
       - name: Run setup for E2E tests (start client services on this runner)
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 45
-          retry_wait_seconds: '10'
-          max_attempts: 2
-          retry_on: 'any'
-          command: |
-            cd pmm-qa/qa-integration/pmm_qa
-            mkdir -m 777 -p /tmp/backup_data || true
-            timeout -k 30 44m ./pmm-framework/pmm-framework \
-              --parallel \
-              --pmm-server-ip "${SERVER_IP}" \
-              --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
-              --client-version "${{ env.PMM_CLIENT_VERSION }}" \
-              ${{ env.WIZARD_ARGS }}
-          on_retry_command: |
-            # Removing a container does not unregister its node from the remote server.
-            for c in $(docker ps -q); do
-              docker exec "$c" sh -c 'command -v pmm-admin' >/dev/null 2>&1 || continue
-              timeout 60 docker exec "$c" pmm-admin unregister --force ||
-                echo "pmm-admin unregister FAILED for $c - its node may still be registered"
-            done
-            docker rm -f $(docker ps -a -q) || true
-            docker volume rm -f $(docker volume ls -q) || true
-            docker network rm -f $(docker network ls -q) || true
+        timeout-minutes: 60
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -m 777 -p /tmp/backup_data || true
+          timeout -k 30 59m ./pmm-framework/pmm-framework \
+            --parallel \
+            --setup-retries 1 \
+            --pmm-server-ip "${SERVER_IP}" \
+            --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
+            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
+            ${{ env.WIZARD_ARGS }}
 
       - name: Waiting for tests execution
         uses: actions/github-script@v7

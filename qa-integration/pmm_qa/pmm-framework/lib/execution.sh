@@ -12,6 +12,9 @@
 #               log file so concurrent runs cannot interleave. All setups are
 #               allowed to finish and the run fails if any of them did.
 #
+# Either strategy retries a failed setup --setup-retries more times, and only
+# that setup: a batch retry would tear down neighbours that already succeeded.
+#
 # Preflight may downgrade parallel to sequential -- see the conflict rules in
 # preflight_database_setups().
 
@@ -293,8 +296,8 @@ print_setup_log() {
 # Returns:  0 when every setup succeeded, 1 when any failed
 # Exits:    130 from the INT/TERM trap
 run_parallel_setups() {
-  local log_dir total index spec status overall_status=0 batch_start
-  local -a pids=() logs=() starts=()
+  local log_dir total index spec status overall_status=0 batch_start attempt
+  local -a pids=() logs=() starts=() pending=() failed=()
   batch_start=$(date +%s)
   log_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-parallel.XXXXXX")
   total=${#DATABASE_SPECS[@]}
@@ -333,51 +336,80 @@ run_parallel_setups() {
   trap cleanup_parallel_jobs INT TERM
 
   for ((index = 0; index < total; index++)); do
-    spec=${DATABASE_SPECS[index]}
-    logs[index]=$log_dir/setup-$index.log
-    starts[index]=$(date +%s)
-    printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
-    # stdin must come from /dev/null: job control puts each setup in a
-    # background process group, where reading the terminal raises SIGTTIN and
-    # stops the job forever. Parallel setups have no usable stdin anyway.
-    (
-      run_database_spec "$spec"
-    ) >"${logs[index]}" 2>&1 </dev/null &
-    pids[index]=$!
+    pending+=("$index")
   done
 
-  # Report each setup as soon as it finishes. Waiting in argument order made
-  # completed jobs look stuck behind a slower neighbor (and hid progress when
-  # Docker or a playbook hung).
-  local -a active_pids=("${pids[@]}")
-  local finished_pid matched
-  while ((${#active_pids[@]} > 0)); do
-    status=0
-    finished_pid=
-    wait -n -p finished_pid "${active_pids[@]}" || status=$?
-    [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+  # Only the setups that failed are re-run. Re-running the whole batch throws
+  # away every setup that had already succeeded -- the cost the outer CI retry
+  # used to pay -- and each setup removes its own containers before
+  # provisioning, so repeating just that one is safe.
+  for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+    ((${#pending[@]} > 0)) || break
+    if ((attempt > 0)); then
+      printf '\nRetrying %d failed setup(s), attempt %d of %d\n' \
+        "${#pending[@]}" "$((attempt + 1))" "$((SETUP_RETRIES + 1))"
+    fi
 
-    # Map the reaped pid back to its slot so the report names the right spec.
-    matched=false
-    for ((index = 0; index < total; index++)); do
-      if [[ ${pids[index]} == "$finished_pid" ]]; then
-        ((status == 0)) || overall_status=1
-        print_setup_log \
-          "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
-          "$status" "${logs[index]}" "$(($(date +%s) - starts[index]))"
-        pids[index]=
-        matched=true
-        break
+    pids=()
+    failed=()
+    for index in "${pending[@]}"; do
+      spec=${DATABASE_SPECS[index]}
+      if ((attempt == 0)); then
+        logs[index]=$log_dir/setup-$index.log
+      else
+        logs[index]=$log_dir/setup-$index-retry$attempt.log
       fi
+      starts[index]=$(date +%s)
+      printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
+      # stdin must come from /dev/null: job control puts each setup in a
+      # background process group, where reading the terminal raises SIGTTIN and
+      # stops the job forever. Parallel setups have no usable stdin anyway.
+      (
+        run_database_spec "$spec"
+      ) >"${logs[index]}" 2>&1 </dev/null &
+      pids[index]=$!
     done
-    [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
 
-    # Rebuild the still-running set; cleared slots drop out.
-    active_pids=()
-    for ((index = 0; index < total; index++)); do
-      [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+    # Report each setup as soon as it finishes. Waiting in argument order made
+    # completed jobs look stuck behind a slower neighbor (and hid progress when
+    # Docker or a playbook hung).
+    local -a active_pids=()
+    local finished_pid matched
+    for index in "${pending[@]}"; do
+      active_pids+=("${pids[index]}")
     done
+    while ((${#active_pids[@]} > 0)); do
+      status=0
+      finished_pid=
+      wait -n -p finished_pid "${active_pids[@]}" || status=$?
+      [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+
+      # Map the reaped pid back to its slot so the report names the right spec.
+      matched=false
+      for index in "${pending[@]}"; do
+        if [[ ${pids[index]} == "$finished_pid" ]]; then
+          ((status == 0)) || failed+=("$index")
+          print_setup_log \
+            "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
+            "$status" "${logs[index]}" "$(($(date +%s) - starts[index]))"
+          pids[index]=
+          matched=true
+          break
+        fi
+      done
+      [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
+
+      # Rebuild the still-running set; cleared slots drop out.
+      active_pids=()
+      for index in "${pending[@]}"; do
+        [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+      done
+    done
+
+    pending=("${failed[@]}")
   done
+
+  ((${#pending[@]} == 0)) || overall_status=1
 
   trap - INT TERM
   set +m
@@ -408,10 +440,19 @@ run_database_setups() {
     return
   fi
 
-  local spec start
+  local spec start attempt status
   for spec in "${DATABASE_SPECS[@]}"; do
     start=$(date +%s)
-    run_database_spec "$spec"
+    for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+      ((attempt == 0)) ||
+        log_warn "Retrying $spec, attempt $((attempt + 1)) of $((SETUP_RETRIES + 1))."
+      status=0
+      # The subshell keeps die() inside the setup from aborting the run before
+      # the retry can happen; a spec that exhausts its attempts still does.
+      (run_database_spec "$spec") || status=$?
+      ((status == 0)) && break
+    done
+    ((status == 0)) || die "$spec failed after $((SETUP_RETRIES + 1)) attempt(s)."
     printf '%s: OK in %s\n' "$spec" "$(format_duration "$(($(date +%s) - start))")"
   done
 }
