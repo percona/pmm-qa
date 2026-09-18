@@ -27,8 +27,14 @@ Scenario(
 
 Scenario(
   'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
-  async ({ I, dashboardPage }) => {
-    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.url, {
+  async ({ I, dashboardPage, inventoryAPI }) => {
+    // A setup retry leaves its unregistered nodes in label_values(), and their
+    // hex names sort ahead of every real one, so the dashboard's own default
+    // picks a node that stopped reporting. Take a live one from inventory.
+    const liveNodes = (await inventoryAPI.getAllNodes())
+      .filter((node) => node.node_type === 'generic' || node.node_type === 'container');
+    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.cleanUrl, {
+      node_name: liveNodes[0].node_name,
       from: 'now-1h',
     });
 
