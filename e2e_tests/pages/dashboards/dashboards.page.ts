@@ -244,40 +244,6 @@ export default class Dashboards extends BasePage {
     });
   };
 
-  scrollUntilPanelMounts = async (
-    locator: Locator,
-    timeout: Timeouts = Timeouts.ONE_MINUTE,
-  ): Promise<boolean> => {
-    const anchor = this.elements.gridItems.first();
-    const scrollTo = async (top: number | 'step') =>
-      anchor.evaluate((el, to) => {
-        const scroller = el.ownerDocument.scrollingElement;
-
-        if (!scroller) return true;
-
-        const before = scroller.scrollTop;
-
-        scroller.scrollTop = to === 'step' ? before + scroller.clientHeight / 2 : to;
-
-        return scroller.scrollTop === before;
-      }, top);
-    const deadline = Date.now() + timeout;
-
-    while (Date.now() < deadline) {
-      await scrollTo(0);
-
-      for (let atBottom = false; !atBottom && Date.now() < deadline;) {
-        if ((await locator.count()) > 0) return true;
-
-        atBottom = await scrollTo('step');
-        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
-        await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      }
-    }
-
-    return (await locator.count()) > 0;
-  };
-
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
@@ -305,23 +271,18 @@ export default class Dashboards extends BasePage {
 
     await this.loadAllPanels();
 
-    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
-    const notSwept = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
-    const missingMetrics: string[] = [];
+    let missing = expectedMetricsNames;
 
-    // The sweep is a snapshot, and a repeated panel can still be mounting when the step
-    // that passed over it ends: on one run the sixth Valkey instance took the CodeceptJS
-    // suite 5m17s to appear on the same dashboard, on the same server. Give each
-    // straggler more passes -- but scrolling ones. An off-screen panel is not in the DOM
-    // at all, so waiting for it from wherever the sweep stopped can never mount it, which
-    // is how one repeat of six was reported missing on three consecutive attempts.
-    for (const metric of notSwept) {
-      if (!(await this.scrollUntilPanelMounts(this.builders.panelByExactName(metric)))) {
-        missingMetrics.push(metric);
-      }
+    // A repeated panel can still be mounting when the step that passes over it ends, and
+    // it unmounts again once off-screen -- so a straggler has to be swept for again, not
+    // waited for where the last sweep stopped.
+    for (let sweep = 0; sweep < 3 && missing.length > 0; sweep++) {
+      const found = await this.collectTextsAcrossScroll(this.elements.panelName);
+
+      missing = missing.filter((metric) => !found.includes(metric));
     }
 
-    expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
+    expect.soft(missing, `Missing dashboard panels: ${missing.join(', ')}`).toHaveLength(0);
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {
