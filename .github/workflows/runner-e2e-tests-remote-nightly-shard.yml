@@ -99,7 +99,7 @@ jobs:
       TEST_BARRIER_STEP: 'Barrier: tests complete'
       EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 5 }}
       EXPECTED_TEST_SHARDS: ${{ inputs.expected_test_shards || 3 }}
-      WAIT_POLL_INTERVAL_SECONDS: 600
+      WAIT_POLL_INTERVAL_SECONDS: 300
       WAIT_TIMEOUT_SECONDS: 10800
 
     steps:

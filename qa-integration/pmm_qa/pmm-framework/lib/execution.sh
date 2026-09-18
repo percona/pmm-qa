@@ -139,6 +139,48 @@ preflight_database_setups() {
     configure_ansible_python
     ensure_ansible_collections
   fi
+  [[ $PARALLEL == true ]] && prepull_base_images
+  return 0
+}
+
+# The generic systemd containers nearly every setup builds on. Forked setups
+# otherwise reach for the registry at the same moment: four of them died
+# together on `connection reset by peer` from Docker Hub's CDN, and a slower
+# version of the same contention turned 5-minute setups into 50-minute ones.
+#
+# Pulling them once here is best effort in both directions -- an image missing
+# from this list, or a pull that fails anyway, leaves that setup to pull it
+# exactly as it does today, so drift costs nothing but the speed-up.
+readonly BASE_IMAGES=(
+  'phusion/baseimage:jammy-1.0.1'
+  'antmelekhin/docker-systemd:ubuntu-24.04'
+  'antmelekhin/docker-systemd:ubuntu-22.04'
+)
+
+prepull_base_images() {
+  command -v docker >/dev/null 2>&1 || return 0
+
+  local image attempt pulled
+  for image in "${BASE_IMAGES[@]}"; do
+    if docker image inspect "$image" >/dev/null 2>&1; then
+      continue
+    fi
+
+    pulled=false
+    for ((attempt = 1; attempt <= 3; attempt++)); do
+      if docker pull --quiet "$image" >/dev/null 2>&1; then
+        pulled=true
+        break
+      fi
+      sleep 5
+    done
+
+    if [[ $pulled == false ]]; then
+      log_warn "Could not pre-pull $image; its setup will pull it instead."
+    fi
+  done
+
+  return 0
 }
 
 # Expand one spec and provision it.
