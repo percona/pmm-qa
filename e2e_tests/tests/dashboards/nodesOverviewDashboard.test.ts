@@ -10,7 +10,9 @@ pmmTest(
   async ({ api, cliHelper, dashboard, page, urlHelper }) => {
     const environment = 'dev';
 
-    cliHelper.execute(`sudo pmm-admin config --custom-labels=environment=${environment}`).assertSuccess();
+    cliHelper
+      .execute(`sudo pmm-admin config --force --custom-labels=environment=${environment}`)
+      .assertSuccess();
     await api.grafanaApi.waitForMetric(
       `node_boot_time_seconds{environment="${environment}"}`,
       Timeouts.TWO_MINUTES,
