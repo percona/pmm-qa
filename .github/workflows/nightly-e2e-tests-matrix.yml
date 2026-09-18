@@ -82,7 +82,9 @@ jobs:
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
-      fail-fast: true
+      # One shard giving up must not cancel the other four: they provision
+      # independent services and their test lanes are still worth running.
+      fail-fast: false
       matrix:
         include:
           - shard_name: mysql-psmdb-pgsql
