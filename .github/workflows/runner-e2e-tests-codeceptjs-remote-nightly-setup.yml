@@ -96,7 +96,7 @@ jobs:
       TEST_BARRIER_STEP: 'Barrier: tests complete'
       EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 5 }}
       EXPECTED_TEST_SHARDS: ${{ inputs.expected_test_shards || 3 }}
-      WAIT_POLL_INTERVAL_SECONDS: 60
+      WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 
     steps:
@@ -204,6 +204,10 @@ jobs:
               return new Promise((resolve) => setTimeout(resolve, ms));
             }
 
+            // This listing already carries each job's steps, so the barrier can be
+            // read straight off it. Fetching every sibling individually multiplied
+            // one poll by the shard count, and five shards across the matrix runs
+            // in flight exhausted the installation's REST quota.
             async function listJobs() {
               return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 owner,
@@ -215,16 +219,6 @@ jobs:
               });
             }
 
-            async function getJob(job) {
-              const response = await github.rest.actions.getJobForWorkflowRun({
-                owner,
-                repo,
-                job_id: job.id,
-                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
-              });
-              return response.data;
-            }
-
             function passedBarrier(job) {
               const step = (job.steps || []).find((s) => s.name === barrierStep);
               return step?.status === 'completed' && step?.conclusion === 'success';
@@ -233,7 +227,7 @@ jobs:
             while (true) {
               const jobs = await listJobs();
               const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix));
-              const detailed = await Promise.all(setupJobs.map(getJob));
+              const detailed = setupJobs;
 
               // A shard whose setup failed never reaches the barrier, so waiting
               // for it would burn the whole timeout before anyone is told why.
@@ -452,16 +446,6 @@ jobs:
               });
             }
 
-            async function getJob(job) {
-              const response = await github.rest.actions.getJobForWorkflowRun({
-                owner,
-                repo,
-                job_id: job.id,
-                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
-              });
-              return response.data;
-            }
-
             // A skipped barrier is a database-only shard, not a finished one.
             function ranTestsAndFinished(job) {
               const step = (job.steps || []).find((s) => s.name === barrierStep);
@@ -471,7 +455,7 @@ jobs:
             while (true) {
               const jobs = await listJobs();
               const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix));
-              const detailed = await Promise.all(setupJobs.map(getJob));
+              const detailed = setupJobs;
 
               // A cancelled shard never posts its barrier, and its runner is gone
               // anyway, so holding the databases for it only burns the timeout.
