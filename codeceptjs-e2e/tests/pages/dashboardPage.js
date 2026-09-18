@@ -1193,9 +1193,13 @@ module.exports = {
     I.click(this.fields.reportTitle);
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
+    // Expanded once, not per metric: expandEachDashboardRow presses End, so calling it
+    // inside the loop jumped to the bottom of the page before every lookup and left
+    // scrollBackToPanel's three PageUps to climb back. The callers already expand first.
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
       I.waitForElement(this.graphsLocator(metrics[i]), 30);
       I.scrollTo(this.graphsLocator(metrics[i]));
@@ -1203,9 +1207,10 @@ module.exports = {
   },
 
   async verifyMetricsExistencePartialMatch(metrics) {
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
       I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));

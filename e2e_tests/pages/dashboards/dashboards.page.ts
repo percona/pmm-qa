@@ -268,11 +268,20 @@ export default class Dashboards extends BasePage {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
+    let missingMetrics: string[] = [];
 
-    await this.loadAllPanels();
+    // A repeated panel mounts as the sweep scrolls past it, and one instance of six has
+    // been seen still mounting when the sweep ends. Sweep again before failing: a panel
+    // that is genuinely absent is still absent on the second pass.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await this.loadAllPanels();
 
-    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
-    const missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
+      const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+
+      missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
+
+      if (missingMetrics.length === 0) break;
+    }
 
     expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };
