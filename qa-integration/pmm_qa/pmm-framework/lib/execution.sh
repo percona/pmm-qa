@@ -339,10 +339,13 @@ run_parallel_setups() {
     pending+=("$index")
   done
 
-  # Only the setups that failed are re-run. Re-running the whole batch throws
-  # away every setup that had already succeeded -- the cost the outer CI retry
-  # used to pay -- and each setup removes its own containers before
-  # provisioning, so repeating just that one is safe.
+  # Only the setups that failed are re-run: re-running the whole batch throws
+  # away every setup that had already succeeded, which is what the outer CI
+  # retry used to cost. Retrying in place rests on two invariants -- a setup
+  # tears down its own containers and volumes before provisioning, and the node
+  # name it registers is stable, so `pmm-agent setup --force` replaces the
+  # earlier registration instead of leaving a second one behind. A setup that
+  # holds neither cannot be retried this way.
   for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
     ((${#pending[@]} > 0)) || break
     if ((attempt > 0)); then

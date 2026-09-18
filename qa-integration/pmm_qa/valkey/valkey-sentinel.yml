@@ -24,6 +24,39 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
+    # Nothing else removes these, so a re-run lands on a primary that still
+    # carries the previous replication state. No-ops on a first run.
+    - name: Remove the primary container left by a previous run
+      community.docker.docker_container:
+        name: valkey-primary
+        state: absent
+        force_kill: true
+
+    - name: Remove replica containers left by a previous run
+      community.docker.docker_container:
+        name: "valkey-replica-{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Remove sentinel containers left by a previous run
+      community.docker.docker_container:
+        name: "sentinel-{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Remove the primary volume left by a previous run
+      community.docker.docker_volume:
+        name: valkey-primary-data
+        state: absent
+
+    - name: Remove replica volumes left by a previous run
+      community.docker.docker_volume:
+        name: "valkey-replica-{{ item }}-data"
+        state: absent
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
     - name: Create Docker network
       community.docker.docker_network:
         name: "{{ valkey_network_name }}"
