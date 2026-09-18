@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -23,12 +22,6 @@ pmmTest(
         to: 'now',
       }),
     );
-    await dashboard.loadAllPanels();
-    await expect
-      .poll(() => dashboard.elements.noDataPanelName.count(), {
-        message: `Nodes Overview filtered by environment=${environment} should show at most 4 panels without data`,
-        timeout: Timeouts.ONE_MINUTE,
-      })
-      .toBeLessThanOrEqual(4);
+    await dashboard.verifyAllPanelsHaveData(dashboard.os.nodesOverview.noDataMetrics);
   },
 );
