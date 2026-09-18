@@ -15,6 +15,7 @@
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PS_NODES') | default('3', true) ) }}"
     ps_port: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PS_PORT') | default('3317', true) ) }}"
     group_replication: "{{ lookup('vars', 'extra_group_replication', default=lookup('env','GROUP_REPLICATION') | default('', true) ) }}"
+    shard_node_name: "{{ ps_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -68,8 +69,8 @@
     with_items:
       - docker network connect pmm-qa {{ ps_container }}
       - >-
-        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ ps_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }} {{ ps_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode
-        no
+        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ shard_node_name }} {{ ps_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }}
+        --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Execute Setup script inside the ps ps_container
     shell: "{{ item }}"

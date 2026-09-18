@@ -126,7 +126,8 @@ jobs:
         timeout-minutes: 60
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data || true
+          mkdir -p /tmp/backup_data || true
+          chmod 777 /tmp/backup_data || true
           timeout -k 30 59m ./pmm-framework/pmm-framework \
             --parallel \
             --setup-retries 1 \

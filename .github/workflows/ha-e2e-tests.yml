@@ -165,7 +165,11 @@ jobs:
         timeout-minutes: 35
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data || true
+          mkdir -p /tmp/backup_data || true
+          chmod 777 /tmp/backup_data || true
+          # shellcheck disable=SC2086
+          # WIZARD_ARGS holds several --database flags and has to split into
+          # separate arguments.
           timeout -k 30 34m ./pmm-framework/pmm-framework \
             --parallel \
             --setup-retries 1 \

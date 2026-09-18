@@ -10,6 +10,7 @@
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('v3', true) ) }}"
+    shard_node_name: "{{ modb_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -53,8 +54,8 @@
     with_items:
       - docker network connect pmm-qa {{ modb_container }}
       - >-
-        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ modb_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }} {{ modb_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
-        --use_metrics_mode no
+        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ shard_node_name }} {{ modb_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }}
+        --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Setup modb for monitoring
     shell: "{{ item }}"
