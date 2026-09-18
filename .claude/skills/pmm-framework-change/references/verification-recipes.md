@@ -137,9 +137,10 @@ Read the two halves differently:
 - **sent-but-not-read** deserves more suspicion. (`setup_pdpgsql` sends
   `DISTRIBUTION`, `PDPGSQL_PGSM_PORT`, `PGSTAT_MONITOR_BRANCH`,
   `PMM_QA_GIT_BRANCH`, `PDPGSQL_PGSM_CONTAINER` and `USE_SOCKET`, none of which
-  the playbook it calls reads. They appear in `pdpgsql_pgsm_setup.yml` at the
-  `pmm_qa/` root, which nothing dispatches to. Worth a second look, not
-  something to silently delete.)
+  the playbook it calls reads. They used to be read by `pdpgsql_pgsm_setup.yml`
+  at the `pmm_qa/` root, which nothing dispatched to and which has since been
+  deleted, so today they are sent and consumed by nothing at all. Worth a
+  second look, not something to silently delete.)
 
 Scope the scan to the playbook and its includes, never to the directory holding
 it. Most of these playbooks sit at the `pmm_qa/` root beside ten unrelated ones,

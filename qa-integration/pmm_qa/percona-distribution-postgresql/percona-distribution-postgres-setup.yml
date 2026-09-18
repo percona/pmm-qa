@@ -1,48 +1,301 @@
 ---
-# Percona Distribution Postgresql Replication
+# Percona Distribution for PostgreSQL: single, replication and patroni.
+#
+# Starts the prebaked pmm-qa/pdpgsql image rather than installing PostgreSQL
+# into a bare Ubuntu systemd container at setup time. The image already ships
+# postgres, pg_stat_monitor, patroni, etcd, pgbackrest and percona-release, so
+# there are no package installs here, no systemd, and no host bind mounts --
+# settings go in as `-c` flags and postgres runs as PID 1.
 - name: Setup Postgresql replication
   hosts: localhost
   connection: local
   gather_facts: yes
   vars:
     pdpgsql_version: "{{ lookup('env', 'PDPGSQL_VERSION') | default('17', true) }}"
-    replication_user: "repl_user"
-    replication_password: "GRgrO9301RuF"
+    setup_type: "{{ lookup('env', 'SETUP_TYPE') | default('single', true) }}"
     root_password: "GRgrO9301RuF"
-    pdpgsql_port: 5432
-    nodes_count: "{{ (lookup('env', 'NODES_COUNT') | default('1', true)) | int }}"
+    replication_user: "replicator"
+    replication_password: "replPasswd"
     network_name: "pmm-qa"
-    data_dir: "{{ lookup('env', 'HOME') }}/pgsql_cluster_data"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
-    query_source: "{{ lookup('env', 'QUERY_SOURCE') | default('pgstatements', true) }}"
     metrics_mode: "auto"
-    setup_type: "{{ lookup('env', 'SETUP_TYPE') }}"
-    random_service_name_value: "_{{ 9999 | random + 1 }}"
-    docker_repo: "percona/percona-distribution-postgresql"
-    container_prefix: "pdpgsql_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ pdpgsql_version }}_"
-    pgsm_branch: "{{ lookup('env', 'PGSM_BRANCH') }}"
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
+    pgsm_branch: "{{ lookup('env', 'PGSM_BRANCH') }}"
+    random_service_name_value: "_{{ 9999 | random + 1 }}"
+    prebaked_image: "{{ lookup('env', 'PDPGSQL_IMAGE') | default('pmm-qa/pdpgsql:' ~ pdpgsql_version, true) }}"
+    etcd_container: "pdpgsql-etcd"
+    pgdata: "/var/lib/postgresql/data"
+    default_nodes:
+      single: 1
+      replication: 2
+      patroni: 3
+    nodes_count: "{{ lookup('env', 'NODES_COUNT') | default(default_nodes[setup_type], true) | int }}"
+    container_prefix: "pdpgsql_pmm{{ (setup_type != 'single') | ternary('_' ~ setup_type, '') }}_{{ pdpgsql_version }}_"
+    all_nodes: "{{ range(1, nodes_count | int + 1) | list }}"
+    replica_nodes: "{{ range(2, nodes_count | int + 1) | list }}"
 
   tasks:
     - name: Display setup type selected
       debug:
         msg: "{{ setup_type }}"
 
+    - name: Check the setup type is one this playbook handles
+      assert:
+        that: setup_type in ['single', 'replication', 'patroni']
+        fail_msg: "SETUP_TYPE must be single, replication or patroni (got '{{ setup_type }}')"
+        quiet: true
+
+    # pg_stat_monitor comes from the image, so a branch has to be selected when the
+    # image is built. Failing here beats silently monitoring the wrong build.
+    - name: Reject PGSM_BRANCH, which is now an image build option
+      assert:
+        that: pgsm_branch | length == 0
+        fail_msg: >-
+          PGSM_BRANCH is selected when the image is built, not at setup time.
+          Build it with: npm run build -- pdpgsql={{ pdpgsql_version }},pgsm-branch={{ pgsm_branch }}
+        quiet: true
+
+    - name: Check the prebaked image is present
+      shell: docker image inspect {{ prebaked_image }}
+      register: image_present
+      failed_when: image_present.rc != 0
+      changed_when: false
+
     - name: Create Docker network
       shell: docker network create {{ network_name }}
       ignore_errors: yes
 
-    - name: Install Percona Distribution for Postgres
-      include_tasks: tasks/install-percona-distribution-postgresql-single.yml
-      when: setup_type != "replication" and setup_type != "patroni"
+    - name: Cleanup existing Percona Distribution for Postgresql containers
+      shell: docker rm -fv {{ container_prefix }}{{ item }} {{ etcd_container }}
+      loop: "{{ all_nodes }}"
+      ignore_errors: true
 
-    - name: Install Percona Distribution for Postgres with Replication
-      include_tasks: tasks/percona-distribution-postgres-replication-setup.yml
-      when: setup_type == "replication"
+    # --------------------------------------------------- single / replication
+    - name: Start containers for Percona Distribution for Postgresql
+      shell: |
+        docker run -d \
+          --name={{ container_prefix }}1 \
+          --hostname={{ container_prefix }}1 \
+          --network {{ network_name }} \
+          -e POSTGRES_PASSWORD={{ root_password }} \
+          -e PGDATA={{ pgdata }} \
+          {{ prebaked_image }} \
+          -c shared_preload_libraries=pg_stat_monitor \
+          -c wal_level=replica \
+          -c max_wal_senders={{ [10, nodes_count | int] | max }} \
+          {{ (setup_type == 'replication') | ternary('-c wal_keep_size=512MB', '') }}
+      when: setup_type != 'patroni'
 
-    - name: Install Percona Distribution for Postgres with Patroni replication
-      include_tasks: tasks/percona-distribution-postgres-patroni-setup.yml
-      when: setup_type == "patroni"
+    # --------------------------------------------------------------- patroni
+    - name: Start etcd
+      shell: |
+        docker run -d \
+          --name={{ etcd_container }} \
+          --hostname={{ etcd_container }} \
+          --network {{ network_name }} \
+          --entrypoint etcd \
+          {{ prebaked_image }} \
+          --data-dir=/tmp/etcd \
+          --listen-client-urls=http://0.0.0.0:2379 \
+          --advertise-client-urls=http://{{ etcd_container }}:2379
+      when: setup_type == 'patroni'
+
+    - name: Wait until etcd reports healthy
+      shell: docker exec {{ etcd_container }} etcdctl endpoint health
+      register: etcd_health
+      until: etcd_health.rc == 0 and 'healthy' in etcd_health.stdout + etcd_health.stderr
+      retries: 60
+      delay: 1
+      when: setup_type == 'patroni'
+      changed_when: false
+
+    - name: Start patroni nodes
+      shell: |
+        docker run -d \
+          --name={{ container_prefix }}{{ item }} \
+          --hostname={{ container_prefix }}{{ item }} \
+          --network {{ network_name }} \
+          -e POSTGRES_PASSWORD={{ root_password }} \
+          -e PGDATA={{ pgdata }} \
+          -e PATRONI_SCOPE=pdpgsql-{{ pdpgsql_version }} \
+          -e PATRONI_NAME={{ container_prefix }}{{ item }} \
+          -e PATRONI_RESTAPI_CONNECT_ADDRESS={{ container_prefix }}{{ item }}:8008 \
+          -e PATRONI_RESTAPI_LISTEN=0.0.0.0:8008 \
+          -e PATRONI_POSTGRESQL_CONNECT_ADDRESS={{ container_prefix }}{{ item }}:5432 \
+          -e PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432 \
+          -e PATRONI_POSTGRESQL_DATA_DIR={{ pgdata }} \
+          -e PATRONI_SUPERUSER_USERNAME=postgres \
+          -e PATRONI_SUPERUSER_PASSWORD={{ root_password }} \
+          -e PATRONI_REPLICATION_USERNAME={{ replication_user }} \
+          -e PATRONI_REPLICATION_PASSWORD={{ replication_password }} \
+          -e PATRONI_ETCD3_HOST={{ etcd_container }}:2379 \
+          --entrypoint sh \
+          {{ prebaked_image }} -ceu '
+        cat > /tmp/patroni.yml <<EOF
+        bootstrap:
+          dcs:
+            ttl: 30
+            loop_wait: 10
+            retry_timeout: 10
+            postgresql:
+              use_pg_rewind: true
+              parameters:
+                shared_preload_libraries: pg_stat_monitor
+                max_wal_senders: {{ [10, nodes_count | int] | max }}
+                max_replication_slots: {{ [10, nodes_count | int] | max }}
+          initdb:
+            - encoding: UTF8
+            - data-checksums
+          pg_hba:
+            - host all all 0.0.0.0/0 scram-sha-256
+            - host replication {{ replication_user }} 0.0.0.0/0 scram-sha-256
+        EOF
+        exec patroni /tmp/patroni.yml'
+      loop: "{{ all_nodes }}"
+      when: setup_type == 'patroni'
+
+    # ------------------------------------------------------- common readiness
+    - name: Wait until PostgreSQL is ready
+      shell: docker exec {{ container_prefix }}1 psql -U postgres -Atc 'SELECT 1'
+      register: pg_ready
+      until: pg_ready.rc == 0 and pg_ready.stdout == '1'
+      retries: 90
+      delay: 1
+      changed_when: false
+
+    - name: Create pg_stat_monitor extension and PostgreSQL user 'pmm'
+      shell: |
+        docker exec -u postgres {{ container_prefix }}1 psql -U postgres -v ON_ERROR_STOP=1 -c "
+          CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'pmm') THEN
+              CREATE ROLE pmm LOGIN PASSWORD 'pmm';
+            END IF;
+            GRANT pg_monitor TO pmm;
+          END
+          \$\$;
+        "
+
+    # ----------------------------------------------------------- replication
+    - name: Create replication user
+      shell: |
+        docker exec -u postgres {{ container_prefix }}1 psql -U postgres -v ON_ERROR_STOP=1 -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{{ replication_user }}') THEN
+              CREATE ROLE {{ replication_user }} WITH REPLICATION LOGIN PASSWORD '{{ replication_password }}';
+            END IF;
+          END
+          \$\$;
+        "
+        docker exec -u postgres {{ container_prefix }}1 sh -ceu '
+          printf "%s\n" "host replication {{ replication_user }} 0.0.0.0/0 scram-sha-256" >> "$PGDATA/pg_hba.conf"
+          pg_ctl reload -D "$PGDATA"'
+      when: setup_type == 'replication'
+
+    - name: Run pg_basebackup from primary to replica
+      shell: |
+        docker run -d \
+          --name={{ container_prefix }}{{ item }} \
+          --hostname={{ container_prefix }}{{ item }} \
+          --network {{ network_name }} \
+          -e POSTGRES_PASSWORD={{ root_password }} \
+          -e PGDATA={{ pgdata }} \
+          --entrypoint sh \
+          {{ prebaked_image }} -ceu '
+        rm -rf "$PGDATA"/*
+        PGPASSWORD={{ replication_password }} pg_basebackup -h {{ container_prefix }}1 -U {{ replication_user }} -D "$PGDATA" -R -X stream
+        exec postgres -c shared_preload_libraries=pg_stat_monitor -c hot_standby=on'
+      loop: "{{ replica_nodes }}"
+      when: setup_type == 'replication'
+
+    - name: Wait until PostgreSQL replicas are streaming
+      shell: docker exec {{ container_prefix }}{{ item }} psql -U postgres -Atc 'SELECT pg_is_in_recovery()'
+      register: replica_ready
+      until: replica_ready.rc == 0 and replica_ready.stdout == 't'
+      retries: 90
+      delay: 1
+      loop: "{{ replica_nodes }}"
+      when: setup_type == 'replication'
+      changed_when: false
+
+    - name: Wait until PostgreSQL nodes are ready
+      shell: docker exec {{ container_prefix }}{{ item }} psql -U postgres -Atc 'SELECT 1'
+      register: patroni_ready
+      until: patroni_ready.rc == 0 and patroni_ready.stdout == '1'
+      retries: 90
+      delay: 1
+      loop: "{{ replica_nodes }}"
+      when: setup_type == 'patroni'
+      changed_when: false
+
+    # pg1-path comes from PGDATA: the prebaked image keeps the cluster in
+    # /var/lib/postgresql/data, not Debian's /var/lib/postgresql/<v>/main.
+    - name: Create the pgbackrest stanza on the patroni primary
+      shell: |
+        docker exec -u root {{ container_prefix }}1 sh -ceu '
+          mkdir -p /var/lib/pgbackrest/archive/patroni_backup
+          chown -R postgres:postgres /var/lib/pgbackrest'
+        docker exec -u postgres {{ container_prefix }}1 sh -ceu '
+          pgbackrest --stanza=patroni_backup --pg1-path="$PGDATA" \
+            --repo1-path=/var/lib/pgbackrest stanza-create'
+      when: setup_type == 'patroni'
+
+    # -------------------------------------------------------------- PMM
+    - name: Install and add pmm client.
+      include_tasks: ../tasks/install_pmm_client.yml
+      vars:
+        container_name: "{{ container_prefix }}{{ item }}"
+      loop: "{{ all_nodes }}"
+
+    - name: Add service to pmm server
+      shell: |
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=pmm --password=pmm \
+          --query-source=pgstatmonitor --environment=pdpgsql-dev --cluster=pdpgsql-{{ setup_type }} \
+          {{ container_prefix }}{{ item }}{{ random_service_name_value }} 127.0.0.1:5432
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=pmm --password=pmm \
+          --query-source=pgstatmonitor --environment=pdpgsql-dev --cluster=pdpgsql-{{ setup_type }} \
+          --socket=/tmp socket_{{ container_prefix }}{{ item }}{{ random_service_name_value }}
+      loop: "{{ all_nodes }}"
+
+    - name: Add the patroni REST API as an external service
+      shell: |
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add external --listen-port=8008 \
+          --cluster=pdpgsql-patroni --service-name=patroni_{{ item }}{{ random_service_name_value }}
+      loop: "{{ all_nodes }}"
+      when: setup_type == 'patroni'
+
+    # Each node registers a TCP and a socket service, so two postgres_exporters.
+    # Without this the playbook can return while a node's exporters are still
+    # starting, and a test that asserts on exporter state right after setup flakes.
+    - name: Wait until every node's exporters are running
+      include_tasks: ../tasks/wait_pmm_exporters_ready.yml
+      vars:
+        container_name: "{{ container_prefix }}{{ item }}"
+        exporter_name: postgres_exporter
+        exporter_count: 2
+      loop: "{{ all_nodes }}"
+
+    # ----------------------------------------------------------- workload
+    - name: Copy query load scripts into the container
+      shell: |
+        docker cp ./data/pgsql_load.sql {{ container_prefix }}1:/pgsql_load.sql
+        docker cp ./data/pdpgsql_run_queries.sh {{ container_prefix }}1:/pdpgsql_run_queries.sh
+
+    - name: Create database if it doesn't exist
+      shell: docker exec {{ container_prefix }}1 psql -U postgres -c "CREATE DATABASE school;"
+      ignore_errors: true
+
+    - name: Run SQL script using docker exec
+      shell: docker exec {{ container_prefix }}1 psql -U postgres -d school -f /pgsql_load.sql > /dev/null
+
+    - name: Run queries for generating data
+      shell: docker exec -d {{ container_prefix }}1 bash /pdpgsql_run_queries.sh
+
+    - name: Change postgres user password
+      shell: |
+        docker exec -u postgres {{ container_prefix }}1 psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'pass+this';"

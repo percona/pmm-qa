@@ -1,0 +1,21 @@
+# Wait until the exporters for a registered service are actually running.
+#
+# wait_pmm_agent_ready.yml only waits for pmm-agent to connect; its exporters
+# start afterwards, so a playbook that returns straight after `pmm-admin add`
+# can hand back a node whose exporters are still coming up. A test that asserts
+# on exporter state immediately after setup then flakes.
+#
+# Expects: container_name
+# Optional: exporter_name (default postgres_exporter), exporter_count (default 1)
+- name: Wait until {{ exporter_count | default(1) }} {{ exporter_name | default('postgres_exporter') }} are running in {{ container_name }}
+  shell: |
+    docker exec --user root {{ container_name }} sh -c '
+      pmm-admin status 2>/dev/null |
+        grep -E "{{ exporter_name | default('postgres_exporter') }}" |
+        grep -cEi "\b(running|waiting)\b"
+    '
+  register: pmm_exporters_ready
+  retries: "{{ pmm_exporters_ready_retries | default(60) }}"
+  delay: "{{ pmm_exporters_ready_delay | default(1) }}"
+  until: pmm_exporters_ready.rc == 0 and (pmm_exporters_ready.stdout | int) >= (exporter_count | default(1) | int)
+  changed_when: false
