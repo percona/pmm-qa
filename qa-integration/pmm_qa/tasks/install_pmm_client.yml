@@ -26,6 +26,19 @@
     metrics_mode: 'auto'
   when: metrics_mode is not defined
 
+# `pmm-agent setup`'s single positional is the node ADDRESS; the node name falls
+# back to the container's hostname, which is its docker short ID when the
+# container was created without one -- a new inventory entry on every
+# re-provision, and one that survives in label_values() after `unregister`.
+# SHARD_NAME disambiguates two setup shards that run the same database spec
+# against one PMM Server.
+- name: Derive a node name that is stable per shard
+  set_fact:
+    pmm_node_name: >-
+      {{ container_name }}{{ ('-' ~ shard_name) if shard_name else '' }}
+  vars:
+    shard_name: "{{ lookup('env', 'SHARD_NAME') | default('', true) }}"
+
 - name: Get PMM server address
   shell: 'docker ps -f name=-server --format "{{ "{{" }}.Names{{ "}}" }}"'
   register: pmm_server_ip_output
@@ -241,8 +254,8 @@
 
 - name: Connect pmm client to pmm server using metrics mode without encrypted client config
   shell: |
-    docker exec --user root {{ container_name }} \
-      pmm-agent setup \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
+      pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --server-insecure-tls \
@@ -256,8 +269,8 @@
 
 - name: Connect pmm client to pmm server using default metrics mode without encrypted client config
   shell: |
-    docker exec --user root {{ container_name }} \
-      pmm-agent setup \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
+      pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --server-insecure-tls \
@@ -270,8 +283,8 @@
 
 - name: Connect pmm client to pmm server using default metrics mode with encrypted client config
   shell: |
-    docker exec --user root {{ container_name }} \
-      pmm-agent setup \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
+      pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --custom-labels="role=pmm-client, encrypted=true, password=true" \
@@ -287,8 +300,8 @@
 
 - name: Connect pmm client to pmm server using metrics mode with encrypted client config
   shell: |
-    docker exec --user root {{ container_name }} \
-      pmm-agent setup \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
+      pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --custom-labels="role=pmm-client, encrypted=true, password=true" \
