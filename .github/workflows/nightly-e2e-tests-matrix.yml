@@ -79,26 +79,48 @@ on:
         required: false
 
 jobs:
+  # One runner per shard, and three of the five also run a tag bucket instead of
+  # sitting idle while separate test runners do it. The databases live on the
+  # shard's own runner, so a test bucket placed here is already next to data it
+  # would otherwise reach over the network -- and the three runners that used to
+  # host nothing but a browser are gone.
+  #
+  # fail-fast is off because a bucket failing its tests must not cancel the
+  # shards whose databases the other buckets are still querying. A failed setup
+  # still stops every bucket: nothing runs tests until all five shards pass
+  # 'Barrier: setup complete', and that wait aborts the moment a sibling's setup
+  # job ends in failure.
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - shard_name: mysql-psmdb-pgsql
             setup_services: '--database mysql --database psmdb,SETUP_TYPE=pss --database pgsql'
+            tags_for_tests: '@qan|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            tests_framework: codeceptjs
           - shard_name: ps-gr-pxc-valkey
             setup_services: '--database ps,SETUP_TYPE=gr --database pxc --database valkey'
+            tags_for_tests: '@nightly'
+            tests_framework: codeceptjs
           - shard_name: ps-replication-psmdb-sharded
             setup_services: '--database ps,SETUP_TYPE=replication --database psmdb,SETUP_TYPE=sharding'
+            tags_for_tests: '@nightly'
+            tests_framework: playwright
           - shard_name: ps-myrocks-pdpgsql-patroni-external
             setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true --database pdpgsql,SETUP_TYPE=patroni --database external'
+            tags_for_tests: ''
+            tests_framework: ''
           - shard_name: extra-pxc-pdpgsql-haproxy
             setup_services: '--database pxc --database pdpgsql --database haproxy'
+            tags_for_tests: ''
+            tests_framework: ''
 
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-setup.yml
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_address: ${{ inputs.pmm_server_address }}
       admin_password: ${{ inputs.admin_password || 'admin' }}
@@ -107,72 +129,22 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: ${{ matrix.setup_services }}
       shard_name: ${{ matrix.shard_name }}
-      # 3: the two CodeceptJS `test_execution / ...` jobs plus the Playwright
-      # `test_execution / playwright ...` job below. The setup shards poll by
-      # job-name prefix "test execution / " to know when it's safe to finish
-      # waiting -- undercounting here lets a shard finish (and its runner
-      # terminate) while a still-running consumer job needs it.
-      expected_test_jobs: 3
-
-  test_execution:
-    name: "test execution / ${{ matrix.tags_for_tests }}"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - tags_for_tests: '@qan|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
-          - tags_for_tests: '@nightly'
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
-    secrets:
-      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-    with:
-      pmm_server_address: ${{ inputs.pmm_server_address }}
-      admin_password: ${{ inputs.admin_password || 'admin' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       tags_for_tests: ${{ matrix.tags_for_tests }}
-      expected_setup_jobs: 5
-      workers: 1
+      tests_framework: ${{ matrix.tests_framework }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
-
-  # Migrated CodeceptJS scenarios and existing Playwright nightly tests share
-  # the @nightly tag, so one Playwright bucket selects all of them.
-  test_execution_playwright:
-    # Name must start with "test execution / " -- the setup shards' own wait
-    # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
-    # by that literal prefix to count consumers; anything else is invisible
-    # to it and the shard can finish/terminate while this job still needs it.
-    name: "test execution / playwright ${{ matrix.tags_for_tests }}"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - tags_for_tests: '@nightly'
-    uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
-    secrets:
-      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-    with:
-      pmm_server_address: ${{ inputs.pmm_server_address }}
-      admin_password: ${{ inputs.admin_password || 'admin' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      tags_for_tests: ${{ matrix.tags_for_tests }}
-      expected_setup_jobs: 5
       workers: 1
-      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      installation_type: ${{ inputs.installation_type || 'docker' }}
+      # Both counts are read by the two barrier waits. Undercutting the first
+      # lets a bucket start against a half-provisioned fleet; undercutting the
+      # second lets a shard finish -- terminating its runner and its databases --
+      # while another bucket is still querying them.
+      expected_setup_jobs: 5
+      expected_test_shards: 3
 
   notify_investigator:
     name: Fire Investigator routine
     needs:
       - setup
-      - test_execution
-      - test_execution_playwright
     if: >
       !cancelled() &&
       github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&
