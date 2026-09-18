@@ -39,6 +39,14 @@ if [[ ${FAIL_PS:-false} == true && -n ${PS_VERSION:-} ]]; then
   echo 'PS failed as requested'
   exit 9
 fi
+if [[ -n ${FAIL_PS_ONCE:-} && -n ${PS_VERSION:-} ]]; then
+  if [[ ! -e $FAIL_PS_ONCE ]]; then
+    : >"$FAIL_PS_ONCE"
+    echo 'PS failed on its first attempt'
+    exit 9
+  fi
+  echo 'PS succeeded on its second attempt'
+fi
 EOF
   cat >"$TEST_BIN/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -130,6 +138,63 @@ EOF
   [[ $output == *'[2/2] pgsql=16: OK in '* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
+@test "a failed parallel setup is retried on its own" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    FAIL_PS_ONCE="$BATS_TEST_TMPDIR/ps-attempted" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --setup-retries 1 \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in '* ]]
+  [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
+  [[ $output == *'[1/2] ps=8.4: OK in '* ]]
+  # pgsql provisioned once: the retry must not touch a setup that succeeded.
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
+  [[ $output != *'Parallel setup logs kept at:'* ]]
+}
+
+@test "a parallel setup that keeps failing exhausts its retries" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    FAIL_PS=true \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --setup-retries 1 \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  [[ $status -ne 0 ]]
+  [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
+  [[ $output == *'Parallel setup logs kept at:'* ]]
+}
+
+@test "a failed sequential setup is retried in place" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    FAIL_PS_ONCE="$BATS_TEST_TMPDIR/ps-attempted" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --setup-retries 1 \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'Retrying ps=8.4, attempt 2 of 2'* ]]
+  [[ $output == *'ps=8.4: OK in '* ]]
+  [[ $output == *'pgsql=16: OK in '* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
 }
 
 @test "parallel mode job control emits no job-status noise" {

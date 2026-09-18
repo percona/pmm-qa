@@ -111,7 +111,12 @@ if [[ "$client_version" == "pmm3-latest" ]]; then
 fi
 
 if [[ "$client_version" == "latest-tarball" ]]; then
-    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
+    # arm64 builds are published under their own bucket prefix.
+    bucket=pmm-client
+    case "$(dpkg --print-architecture)" in
+      arm64) bucket=pmm-client-arm ;;
+    esac
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
 fi
 
 ## Only supported for debian based systems for now
@@ -128,7 +133,7 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   # it is docker-cp'd into containers on its own. On the runner, reuse the same
   # verified cache the Ansible client install fills, so one runner downloads the
   # 180 MB package once instead of once per consumer -- and gets the index/payload
-  # agreement check for free.
+  # agreement check for free. The helper resolves the architecture itself.
   fetch_helper="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
   deb_file=""
   if [[ -x "$fetch_helper" ]]; then
@@ -136,7 +141,7 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
       "${PMM_CLIENT_CACHE_DIR:-/tmp/pmm-client-cache}" 1800 "$client_version" | tail -1) || deb_file=""
   fi
   if [[ ! -s "$deb_file" ]]; then
-    deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+    deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
     wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
       -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   fi
