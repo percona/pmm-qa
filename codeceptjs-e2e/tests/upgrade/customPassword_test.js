@@ -81,9 +81,19 @@ Scenario(
     const newPass = process.env.NEW_ADMIN_PASSWORD || 'admin1';
 
     await I.unAuthorize();
-    await profileAPI.changePassword('admin', process.env.ADMIN_PASSWORD, newPass);
-    await I.Authorize('admin', newPass);
-    await homePage.open();
-    await profileAPI.changePassword('admin', newPass, process.env.ADMIN_PASSWORD);
+
+    try {
+      await profileAPI.changePassword('admin', process.env.ADMIN_PASSWORD, newPass);
+      await I.Authorize('admin', newPass);
+      await homePage.open();
+    } finally {
+      // Restoring the password revokes the session opened with the temporary one,
+      // so this test used to hand the next one a browser and an API helper holding
+      // dead credentials -- it passed while everything after it failed on
+      // "Invalid username or password" and a login page where the app should be.
+      await profileAPI.changePassword('admin', newPass, process.env.ADMIN_PASSWORD);
+      await I.unAuthorize();
+      await I.Authorize();
+    }
   },
 );
