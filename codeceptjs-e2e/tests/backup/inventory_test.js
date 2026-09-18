@@ -30,28 +30,6 @@ let mongoClient;
 
 const replicaSetMembers = ['rs101', 'rs102', 'rs103'];
 
-// Ten attempts over six minutes means the replica set did not come back, and the
-// driver's "Server selection timed out" says nothing about which member is at
-// fault. These containers set systemLog.destination: syslog, so journald holds
-// the log and /var/log/mongo/mongod.log never exists; sysconfig sends only fatal
-// and pre-logging output to the .stdout/.stderr pair. Exit 0 so a missing sink
-// cannot make verifyCommand throw over the real error.
-async function grabReplicaSetLogs(I) {
-  const logs = await Promise.all(replicaSetMembers.map(async (member) => {
-    const log = await I.verifyCommand(
-      `docker exec ${member} sh -c "`
-      + 'systemctl --no-pager -l status mongod 2>&1 | tail -n 20; '
-      + 'journalctl --no-pager -u mongod -n 40 2>&1; '
-      + 'tail -n 40 /var/log/mongo/mongod.stdout /var/log/mongo/mongod.stderr 2>&1'
-      + `"; docker logs --tail 40 ${member} 2>&1; exit 0`,
-    );
-
-    return `Last 40 lines of ${member} mongod log:\n${log}`;
-  }));
-
-  return logs.join('\n');
-}
-
 const mongoConnection = {
   username: 'pmm',
   password: 'pmmpass',
@@ -135,7 +113,25 @@ Before(async ({
       break;
     } catch (error) {
       if (attempt === 10) {
-        throw new Error(`${error.message}\n${await grabReplicaSetLogs(I)}`);
+        // The driver's "Server selection timed out" says nothing about which member
+        // is at fault. These containers set systemLog.destination: syslog, so
+        // journald holds the log and /var/log/mongo/mongod.log never exists;
+        // sysconfig sends only fatal and pre-logging output to the .stdout/.stderr
+        // pair. Exit 0 so a missing sink cannot make verifyCommand throw over the
+        // real error.
+        const logs = await Promise.all(replicaSetMembers.map(async (member) => {
+          const log = await I.verifyCommand(
+            `docker exec ${member} sh -c "`
+            + 'systemctl --no-pager -l status mongod 2>&1 | tail -n 20; '
+            + 'journalctl --no-pager -u mongod -n 40 2>&1; '
+            + 'tail -n 40 /var/log/mongo/mongod.stdout /var/log/mongo/mongod.stderr 2>&1'
+            + `"; docker logs --tail 40 ${member} 2>&1; exit 0`,
+          );
+
+          return `Last 40 lines of ${member} mongod log:\n${log}`;
+        }));
+
+        throw new Error(`${error.message}\n${logs.join('\n')}`);
       }
 
       await I.wait(10);
