@@ -1,0 +1,60 @@
+name: PMM perf server - reap expired
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  LINODE_CLI_TOKEN: ${{ secrets.LINODE_TOKEN }}
+
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install linode-cli
+        run: pipx install linode-cli
+
+      - name: Delete perf servers past their expires- tag
+        run: |
+          set -euo pipefail
+          DRY='${{ inputs.dry_run }}'
+          [ "${{ github.event_name }}" = schedule ] && DRY=false
+
+          # linode-cli lists account-wide, one 100-row page by default; walk pages
+          # at the 500 max so a busy account can't hide instances from the sweep.
+          list_all() {
+            local page=1 got
+            while :; do
+              got="$(linode-cli linodes list --json --page "$page" --page-size 500)"
+              printf '%s' "$got" | jq -c '.[]'
+              [ "$(printf '%s' "$got" | jq 'length')" -lt 500 ] && break
+              page=$((page + 1))
+            done
+          }
+
+          NOW=$(date +%s)
+          # index() matches the tag as an exact array element -- a substring match
+          # would let pmm-qa-perf also catch pmm-qa-perf-run:<id>.
+          rows="$(list_all | jq -r --argjson now "$NOW" '
+            select((.tags // []) | index("pmm-qa-perf"))
+            | . as $l
+            | (($l.tags[] | select(startswith("expires-")) | ltrimstr("expires-") | tonumber) // empty) as $exp
+            | select($exp < $now)
+            | [$l.id, $l.label, $exp] | @tsv')"
+
+          [ -z "$rows" ] && { echo "nothing expired"; exit 0; }
+
+          while IFS=$'\t' read -r id label exp; do
+            echo "expired $(date -u -d "@$exp" +%FT%TZ): $label ($id)"
+            [ "$DRY" = true ] || linode-cli linodes delete "$id"
+          done <<<"$rows"
+
+          if [ "$DRY" = true ]; then echo "(dry run -- nothing deleted)"; fi
