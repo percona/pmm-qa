@@ -85,30 +85,34 @@ export default class Dashboards extends BasePage {
   readonly panels = () => Panels(this.page);
 
   collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
-    const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
     const collected = new Set<string>();
     const collect = async () =>
       (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
-    const itemCount = await this.elements.gridItems.count();
+    // A repeated panel puts every repeat instance inside one .react-grid-item, and
+    // each instance mounts only once it intersects the viewport -- so scrolling the
+    // container into view mounts only the instances that happen to land on screen.
+    // Step the scrollport instead, half a viewport at a time.
+    const anchor = this.elements.gridItems.first();
+    const step = async () =>
+      anchor.evaluate((el) => {
+        const scroller = el.ownerDocument.scrollingElement;
 
-    const visit = async (i: number) => {
-      const item = this.elements.gridItems.nth(i);
-      const previousScrollTop = await item.evaluate(getScrollTop);
+        if (!scroller) return true;
 
-      await item.scrollIntoViewIfNeeded();
+        const before = scroller.scrollTop;
 
-      if ((await item.evaluate(getScrollTop)) !== previousScrollTop) {
-        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
-        await this.page.waitForTimeout(Timeouts.HALF_SECOND);
-      }
+        scroller.scrollTop = before + scroller.clientHeight / 2;
 
-      await collect();
-    };
+        return scroller.scrollTop === before;
+      });
 
     await collect();
 
-    for (let i = 0; i < itemCount; i++) {
-      await visit(i);
+    for (let done = false; !done;) {
+      done = await step();
+      //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      await collect();
     }
 
     return Array.from(collected);
