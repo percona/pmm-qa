@@ -41,13 +41,14 @@ async function verifySupportedDBTabs({
       await queryAnalyticsPage.queryDetails.verifyExamples(parameters);
     }
 
-    // Explain is not for PostgreSQL, nor for CREATE. db.runCommand is excluded for the
-    // same reason: MongoDB explains only aggregate, count, distinct, find, findAndModify,
-    // delete, mapReduce and update, while that search matches whatever command QAN
-    // captured -- the top row has been a drop, and "cannot explain this type of query" is
-    // then the server being right.
-    if (!serviceName.includes('pgsql_') && !query.includes('CREATE') && !query.includes('runCommand')) {
-      await queryAnalyticsPage.queryDetails.verifyExplain(parameters);
+    // Explain is not for PostgreSQL, nor for CREATE. A db.runCommand search matches
+    // whatever command QAN captured, and MongoDB explains only aggregate, count,
+    // distinct, find, findAndModify, delete, mapReduce and update -- so that one search
+    // tolerates the server refusing the command family, and nothing else.
+    if (!serviceName.includes('pgsql_') && !query.includes('CREATE')) {
+      await queryAnalyticsPage.queryDetails.verifyExplain(parameters, {
+        allowUnsupported: query.includes('runCommand'),
+      });
     }
 
     if (serviceName.includes('pgsql_') && !query.includes('CREATE')) {

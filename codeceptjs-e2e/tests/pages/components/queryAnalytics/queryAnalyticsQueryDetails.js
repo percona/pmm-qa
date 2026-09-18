@@ -120,7 +120,7 @@ class QueryAnalyticsQueryDetails {
     I.waitForVisible(this.elements.noExamples, 30);
   }
 
-  async verifyExplain(parameters = {}) {
+  async verifyExplain(parameters = {}, { allowUnsupported = false } = {}) {
     I.waitForVisible(this.buttons.tab('Explain'), 30);
     I.click(this.buttons.tab('Explain'));
     queryAnalyticsPage.waitForLoaded();
@@ -131,8 +131,19 @@ class QueryAnalyticsQueryDetails {
 
     if (await I.isElementDisplayed(this.elements.explainError, 1)) {
       const [message = ''] = await I.grabTextFromAll(this.elements.explainError);
+      const text = message.trim();
 
-      throw new Error(`No explain visible for parameters: ${JSON.stringify(parameters)}: ${message.trim()}`);
+      // MongoDB explains only aggregate, count, distinct, find, findAndModify, delete,
+      // mapReduce and update. A caller whose search cannot choose the command family --
+      // db.runCommand matches whatever QAN captured -- opts out of that one refusal, and
+      // still fails on every other explain error.
+      if (allowUnsupported && /not supported for explain|cannot explain this type of query/i.test(text)) {
+        I.say(`Explain is not supported for the selected query: ${text}`);
+
+        return;
+      }
+
+      throw new Error(`No explain visible for parameters: ${JSON.stringify(parameters)}: ${text}`);
     }
   }
 
