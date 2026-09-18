@@ -77,6 +77,8 @@ on:
         required: false
       INVESTIGATOR_ROUTINE_TOKEN:
         required: false
+      ZEPHYR_PMM_API_KEY:
+        required: false
 
 jobs:
   # One runner per shard, and three of the five also run a tag bucket instead of
@@ -100,7 +102,7 @@ jobs:
         include:
           - shard_name: mysql-psmdb-pgsql
             setup_services: '--database mysql --database psmdb,SETUP_TYPE=pss --database pgsql'
-            tags_for_tests: '@qan|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            tags_for_tests: '@qan|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
             tests_framework: codeceptjs
           - shard_name: ps-gr-pxc-valkey
             setup_services: '--database ps,SETUP_TYPE=gr --database pxc --database valkey'
@@ -119,29 +121,431 @@ jobs:
             tags_for_tests: ''
             tests_framework: ''
 
-    uses: ./.github/workflows/runner-e2e-tests-remote-nightly-shard.yml
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 210
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
+      PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      WIZARD_ARGS: ${{ matrix.setup_services }}
+      SHARD_NAME: ${{ matrix.shard_name }}
+      TAGS_FOR_TESTS: ${{ matrix.tags_for_tests }}
+      PMM_TEST_FLAG: ${{ matrix.tags_for_tests }}
+      WORKERS: ${{ 1 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      INSTALLATION_TYPE: ${{ inputs.installation_type || 'docker' }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-    with:
-      pmm_server_address: ${{ inputs.pmm_server_address }}
-      admin_password: ${{ inputs.admin_password || 'admin' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      setup_services: ${{ matrix.setup_services }}
-      shard_name: ${{ matrix.shard_name }}
-      tags_for_tests: ${{ matrix.tags_for_tests }}
-      tests_framework: ${{ matrix.tests_framework }}
-      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      installation_type: ${{ inputs.installation_type || 'docker' }}
-      workers: 1
-      # Both counts are read by the two barrier waits. Undercutting the first
-      # lets a bucket start against a half-provisioned fleet; undercutting the
-      # second lets a shard finish -- terminating its runner and its databases --
-      # while another bucket is still querying them.
-      expected_setup_jobs: 5
-      expected_test_shards: 3
+      ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
+      TESTS_DIR: ${{ matrix.tests_framework == 'playwright' && 'pmm-qa/e2e_tests' || 'pmm-qa/codeceptjs-e2e' }}
+      SUBSET_FILE_NAME: ${{ matrix.tests_framework == 'playwright' && 'launchable-subset.txt' || 'launchable-subset.json' }}
+      SETUP_BARRIER_STEP: 'Barrier: setup complete'
+      TEST_BARRIER_STEP: 'Barrier: tests complete'
+      EXPECTED_SETUP_JOBS: ${{ 5 }}
+      EXPECTED_TEST_SHARDS: ${{ 3 }}
+      WAIT_POLL_INTERVAL_SECONDS: 300
+      WAIT_TIMEOUT_SECONDS: 10800
+
+    steps:
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Resolve PMM Server URLs
+        id: pmm_urls
+        run: |
+          ADDR="${{ env.PMM_SERVER_ADDRESS }}"
+          ADDR_NO_SCHEME=${ADDR#http://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
+
+      - name: Sanity check remote PMM Server reachability
+        run: |
+          set -eux
+          for i in $(seq 1 30); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${SERVER_IP}/v1/server/readyz" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Remote PMM Server is ready"
+              exit 0
+            fi
+            echo "Attempt $i: PMM Server not ready (http=$code), sleeping 5s"
+            sleep 5
+          done
+          echo "Remote PMM Server did not become ready in time" >&2
+          exit 1
+
+      - name: Export path to qa-integration repo
+        working-directory: pmm-qa/qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
+
+      - name: Setup PMM-Client against remote PMM Server
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 20
+          retry_wait_seconds: '10'
+          max_attempts: 2
+          retry_on: 'any'
+          command: |
+            cd pmm-qa/qa-integration/pmm_qa
+            sudo timeout -k 30 19m bash -x pmm3-client-setup.sh \
+              --pmm_server_ip "${SERVER_IP}" \
+              --client_version "${{ env.PMM_CLIENT_VERSION }}" \
+              --admin_password "${{ env.ADMIN_PASSWORD }}" \
+              --use_metrics_mode no
+
+      # --setup-retries retries only the setups that failed. The step used to be
+      # wrapped in an all-or-nothing action retry that tore down every container
+      # first, so one flaky setup re-provisioned the whole shard from scratch.
+      - name: Run setup for E2E tests (start client services on this runner)
+        timeout-minutes: 60
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -p /tmp/backup_data || true
+          chmod 777 /tmp/backup_data || true
+          timeout -k 30 59m ./pmm-framework/pmm-framework \
+            --parallel \
+            --setup-retries 1 \
+            --pmm-server-ip "${SERVER_IP}" \
+            --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
+            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
+            ${{ env.WIZARD_ARGS }}
+
+      # Every shard passes this, test-bearing or not. It is the signal the test
+      # shards wait on, and it replaces the old "is parked in its wait step"
+      # handshake, which a shard that runs tests itself can never satisfy.
+      - name: 'Barrier: setup complete'
+        id: setup_barrier
+        run: echo "Setup finished on shard ${SHARD_NAME}."
+
+      - name: Wait for every setup shard
+        if: ${{ matrix.tags_for_tests != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run_id = context.runId;
+            const expectedSetupJobs = Number(process.env.EXPECTED_SETUP_JOBS);
+            const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
+            const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
+            const barrierStep = process.env.SETUP_BARRIER_STEP;
+            const startedAt = Date.now();
+
+            async function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            // This listing already carries each job's steps, so the barrier can be
+            // read straight off it. Fetching every sibling individually multiplied
+            // one poll by the shard count, and five shards across the matrix runs
+            // in flight exhausted the installation's REST quota.
+            async function listJobs() {
+              return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner,
+                repo,
+                run_id,
+                filter: 'latest',
+                per_page: 100,
+                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+              });
+            }
+
+            function passedBarrier(job) {
+              const step = (job.steps || []).find((s) => s.name === barrierStep);
+              return step?.status === 'completed' && step?.conclusion === 'success';
+            }
+
+            while (true) {
+              const jobs = await listJobs();
+              // Every shard posts the setup barrier and nothing else in the run
+              // does, so the step is a better filter than a job-name prefix --
+              // renaming the jobs cannot silently empty this list.
+              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
+              const detailed = setupJobs;
+
+              // A shard whose setup failed never reaches the barrier, so waiting
+              // for it would burn the whole timeout before anyone is told why.
+              const broken = detailed.filter((job) => ['failure', 'cancelled'].includes(job.conclusion));
+              if (broken.length > 0) {
+                throw new Error(`Not running tests: setup failed on ${broken.map((job) => job.name).join(', ')}.`);
+              }
+
+              const ready = detailed.filter(passedBarrier);
+              core.info(`Setup shards past the barrier: ${ready.length}/${expectedSetupJobs}`);
+
+              if (ready.length >= expectedSetupJobs) {
+                core.info('Every setup shard is ready.');
+                return;
+              }
+
+              if (Date.now() - startedAt > timeoutMs) {
+                throw new Error(`Timed out waiting for ${expectedSetupJobs} setup shards to reach '${barrierStep}'.`);
+              }
+
+              await sleep(pollIntervalMs);
+            }
+
+      - name: Setup npm modules for CodeceptJS tests
+        if: ${{ matrix.tests_framework == 'codeceptjs' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          envsubst < env.list > env.generated.list
+
+      - name: Setup npm modules for Playwright tests
+        if: ${{ matrix.tests_framework == 'playwright' }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install-deps
+          npx playwright install chromium
+
+      - uses: actions/github-script@v7
+        if: ${{ matrix.tags_for_tests != '' }}
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
+      - name: Prepare launchable for CodeceptJS
+        if: ${{ matrix.tests_framework == 'codeceptjs' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch codeceptjs < test_list.txt > "${{ env.SUBSET_FILE_NAME }}" || true
+          cat "${{ env.SUBSET_FILE_NAME }}" || true
+
+      - name: Prepare launchable for Playwright
+        if: ${{ matrix.tests_framework == 'playwright' }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch playwright < test_list.txt > "${{ env.SUBSET_FILE_NAME }}" || true
+          cat "${{ env.SUBSET_FILE_NAME }}" || true
+
+      - name: Check if launchable subset is empty
+        if: ${{ matrix.tags_for_tests != '' }}
+        id: check_launchable_subset
+        working-directory: ${{ env.TESTS_DIR }}
+        run: |
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Test execution will be skipped."
+          fi
+
+      - name: Wait for metrics to be collected
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        run: sleep 60
+
+      - name: Execute CodeceptJS e2e tests
+        if: ${{ matrix.tests_framework == 'codeceptjs' && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        continue-on-error: true
+        id: codeceptjs_tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+          sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+
+          npx codeceptjs run-workers ${{ env.WORKERS }} \
+            -c pr.codecept.js \
+            --grep "${{ env.TAGS_FOR_TESTS }}" \
+            --reporter mocha-multi \
+            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+
+      - name: Execute Playwright e2e tests
+        if: ${{ matrix.tests_framework == 'playwright' && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        continue-on-error: true
+        id: playwright_tests
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+
+      - name: Download PMM Server logs
+        if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ${{ env.TESTS_DIR }}
+        continue-on-error: true
+        run: |
+          curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
+          unzip logs.zip -d logs || true
+
+      # `launchable gate` is what actually reports a red suite -- the Playwright
+      # run ends in `|| true`, so its own exit code never says anything. Its
+      # failure is deferred to the last step for the same reason the test steps
+      # are: this runner still owns databases the other buckets are querying.
+      - name: Record launchable test results
+        id: launchable_gate
+        if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ${{ env.TESTS_DIR }}
+        continue-on-error: true
+        run: |
+          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+          launchable record tests --session "$(cat launchable-session.txt)" ${{ matrix.tests_framework }} tests/output/result.xml || true
+          launchable gate --session "$(cat launchable-session.txt)"
+
+      - name: Record launchable logs on failure
+        if: >-
+          always() && steps.check_launchable_subset.outputs.has_subset == 'true' &&
+          (steps.launchable_gate.outcome == 'failure' ||
+           steps.codeceptjs_tests.outcome == 'failure' ||
+           steps.playwright_tests.outcome == 'failure')
+        working-directory: ${{ env.TESTS_DIR }}
+        continue-on-error: true
+        run: |
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        continue-on-error: true
+        with:
+          name: "artifacts_${{ steps.tags_processed.outputs.result }}"
+          path: |
+            ${{ env.TESTS_DIR }}/tests/output/*.png
+            ${{ env.TESTS_DIR }}/tests/output/trace/*.zip
+            ${{ env.TESTS_DIR }}/logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        continue-on-error: true
+        with:
+          name: "junit_${{ steps.tags_processed.outputs.result }}"
+          path: ${{ env.TESTS_DIR }}/tests/output/result.xml
+
+      # Only the shards that actually ran tests reach this; a database-only shard
+      # skips it, which is how the wait below tells the two apart.
+      - name: 'Barrier: tests complete'
+        if: ${{ always() && matrix.tags_for_tests != '' }}
+        run: echo "Tests finished on shard ${SHARD_NAME}."
+
+      # The databases live on this runner, so it has to outlive every shard that
+      # queries them -- including the shards running tests beside this one.
+      # Skipped when this shard's own setup failed: there are no databases left
+      # to hold, and the other shards abort on their own barrier wait anyway.
+      - name: Waiting for tests execution
+        if: ${{ always() && steps.setup_barrier.outcome == 'success' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run_id = context.runId;
+            const expectedTestShards = Number(process.env.EXPECTED_TEST_SHARDS);
+            const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
+            const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
+            const barrierStep = process.env.TEST_BARRIER_STEP;
+            const startedAt = Date.now();
+
+            async function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            async function listJobs() {
+              return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner,
+                repo,
+                run_id,
+                filter: 'latest',
+                per_page: 100,
+                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+              });
+            }
+
+            // A skipped barrier is a database-only shard, not a finished one.
+            function ranTestsAndFinished(job) {
+              const step = (job.steps || []).find((s) => s.name === barrierStep);
+              return step?.status === 'completed' && step?.conclusion !== 'skipped';
+            }
+
+            while (true) {
+              const jobs = await listJobs();
+              // Every shard posts the setup barrier and nothing else in the run
+              // does, so the step is a better filter than a job-name prefix --
+              // renaming the jobs cannot silently empty this list.
+              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
+              const detailed = setupJobs;
+
+              // A cancelled shard never posts its barrier, and its runner is gone
+              // anyway, so holding the databases for it only burns the timeout.
+              const cancelled = detailed.filter((job) => job.conclusion === 'cancelled');
+              if (cancelled.length > 0) {
+                core.warning(`Not waiting any longer: ${cancelled.map((job) => job.name).join(', ')} were cancelled.`);
+                return;
+              }
+
+              const finished = detailed.filter(ranTestsAndFinished);
+              core.info(`Shards done testing: ${finished.length}/${expectedTestShards}`);
+              for (const job of finished) {
+                core.info(`- ${job.name}: ${job.conclusion || 'in progress'}`);
+              }
+
+              if (finished.length >= expectedTestShards) {
+                core.info('Every test-bearing shard has finished.');
+                return;
+              }
+
+              if (Date.now() - startedAt > timeoutMs) {
+                throw new Error(`Timed out waiting for ${expectedTestShards} shards to reach '${barrierStep}'.`);
+              }
+
+              await sleep(pollIntervalMs);
+            }
+
+      - name: Fail the shard if its own tests failed
+        if: >-
+          steps.codeceptjs_tests.outcome == 'failure' ||
+          steps.playwright_tests.outcome == 'failure' ||
+          steps.launchable_gate.outcome == 'failure'
+        run: |
+          echo "Test execution failed on shard ${SHARD_NAME} (${TAGS_FOR_TESTS})." >&2
+          exit 1
 
   notify_investigator:
     name: Fire Investigator routine
