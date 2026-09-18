@@ -83,8 +83,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
+    // Not expanded: the collapsed rows hold text, pt-summary and polystat panels, which
+    // have no "No data" state, so verifyThatAllGraphsNoData counts every one of them as a
+    // panel with data. The tolerances below are calibrated for the always-visible panels.
     await dashboardPage.verifyThatAllGraphsNoData(5);
 
     await I.unAuthorize();
@@ -92,8 +93,6 @@ Scenario(
     await I.Authorize(newPgUser.username, newPgUser.password);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(2);
 
@@ -122,8 +121,6 @@ Scenario(
       environment: psRole.value,
       from: 'now-1m',
     }));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },

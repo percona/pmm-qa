@@ -1430,10 +1430,6 @@ module.exports = {
       // eslint-disable-next-line no-plusplus
       maxTries--; // eslint-disable-line no-plusplus
     }
-
-    // The panels a row holds start loading only once it opens, and one still loading
-    // shows neither data nor "No data" -- which the no-data counts read as data.
-    I.waitForDetached(this.fields.loadingElement, 60);
   },
 
   async expandDashboardRow(rowName) {
