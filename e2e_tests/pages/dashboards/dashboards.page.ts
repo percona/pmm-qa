@@ -268,19 +268,23 @@ export default class Dashboards extends BasePage {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
-    let missingMetrics: string[] = [];
 
-    // A repeated panel mounts as the sweep scrolls past it, and one instance of six has
-    // been seen still mounting when the sweep ends. Sweep again before failing: a panel
-    // that is genuinely absent is still absent on the second pass.
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      await this.loadAllPanels();
+    await this.loadAllPanels();
 
-      const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+    const notSwept = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
+    const missingMetrics: string[] = [];
 
-      missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
-
-      if (missingMetrics.length === 0) break;
+    // The sweep is a snapshot, and a repeated panel can still be mounting when it ends:
+    // on one run the sixth Valkey instance took the CodeceptJS suite 5m17s to appear on
+    // the same dashboard, on the same server, where a single sweep here reported it
+    // missing. Wait for each straggler by name before calling it absent.
+    for (const metric of notSwept) {
+      try {
+        await this.builders.panelByExactName(metric).first().waitFor({ timeout: Timeouts.ONE_MINUTE });
+      } catch {
+        missingMetrics.push(metric);
+      }
     }
 
     expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
