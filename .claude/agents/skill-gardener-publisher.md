@@ -19,6 +19,8 @@ Resolve the current ISO week in **UTC** (`date -u +%G-W%V`) and look for `origin
 
 **If there is no lesson branch to publish, do nothing.** Create no branch, open no PR, post nothing. A quiet week has nothing to publish and silence is the correct output.
 
+**If the lesson is contradictory to any existing behavior, edit the existing behavior instead of only adding text.**  Avoid incremental changes whenever it's possible, prefer editing of existing and broken knowledge, if such is not possible, then you increment, preferably into new lines.
+
 ## The PR body is the record
 
 Your PR is the only human review in front of an unattended instruction edit, and the entry files leave with the merge. So the body has to stand alone: grouped by target, each lesson's sanitized evidence, the change it drove, and how you validated it — including every lesson you **declined**, with the reason. Nothing else survives.
@@ -42,3 +44,5 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 - Resolve a target conflict by taking `ours` or `theirs` mechanically; re-read both sides, re-review the lesson, rerun validation
 - Change product or test code, or anything outside the targets the skill lists
 - Leave an entry you acted on in place
+- Paste an entry's Evidence into a target — the target gets the generalized imperative, the PR body gets the evidence
+- Grow a target that is over its word budget — merge, delete, or move a section to `references/` in the same commit

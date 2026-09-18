@@ -187,15 +187,13 @@ npx playwright test --grep "@pmm-ha"
 point at the HA cluster. **Do not pass `--reporter=`** — a CLI reporter replaces
 the config list, including the `junit` reporter Jenkins consumes.
 
-From a **cloud session** that command needs two overrides, carried in a scratch config
-passed with `--config` (never by editing the tracked one): `executablePath:
-'/opt/pw-browsers/chromium'`, because the workspace pins a `@playwright/test` whose
-browser revision the sandbox does not ship, and `proxy: { server: process.env.HTTPS_PROXY }`.
+From a **cloud session** that command needs two overrides in a scratch config passed
+with `--config` (never by editing the tracked one): `executablePath:
+'/opt/pw-browsers/chromium'`, because the sandbox does not ship the pinned
+`@playwright/test` browser revision, and `proxy: { server: process.env.HTTPS_PROXY }`.
 Without the proxy, `ensureServing` times out on an HTTP 503 whose body reads
-`upstream connect error or disconnect/reset before headers` — that is the egress gateway,
-not a broken cluster, and the same request through `curl` or a proxied request context
-returns 200. Two four-minute cluster runs were misdiagnosed as instability before that was
-checked.
+`upstream connect error or disconnect/reset before headers` — the egress gateway, not a
+broken cluster; `curl` or a proxied request context returns 200.
 
 The Helm upgrade tests in `e2e_tests/tests/ha/upgrade/` are ordered, tagged one per
 phase, and hand each other a baseline file. **`e2e_tests/tests/ha/upgrade/AGENTS.md`

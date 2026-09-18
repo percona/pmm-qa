@@ -28,12 +28,12 @@ Both share port 443 (nginx routes by SNI hostname) and are reachable at the same
 
 ### Calling `run.sh`
 
-- **Absolute path, always** — `/workspace/pmm-qa/terraform/linode-runner/run.sh`. The examples below are repo-relative for readability, but any compound command that writes a script somewhere else first leaves the working directory outside the repo, and the call dies with `No such file or directory`. The rule covers every **local file read into the command** as well (`admin_password`, `ip`, `pmm_cert.pem`): `ADMIN_PASSWORD="$(cat terraform/…/admin_password)"` against a reset working directory does not error — it interpolates *empty*, and the remote suite runs a full scenario before failing on "Invalid username or password".
-- **Ship anything non-trivial as a file, not as an inline string.** Each of the three shell layers (local, `run.sh`'s `bash -c`, any `docker exec … sh -c`) strips one level of quoting, and the mangled command can still exit 0 — a `sed -i -E` carrying a URL regex rewrote a container's apt sources into garbage that only surfaced on the next `apt-get update`. Anything with a loop, a regex, a `$`, or more than one level of quoting goes over as `base64 -w0` locally → decode on the box → invoke the file, and reaches a container on stdin (`docker exec -i <c> sh -s <args> < /root/s.sh`).
-- **One `run.sh` in flight per `run_id`.** A second exec call issued while a poll loop is still running dies with `curl: (52) Empty reply from server` or `(56) Recv failure`, which reads as a dead box but is exec-server contention — the detached remote job is unaffected and its log keeps growing. Let the poll reach its sentinel, or kill it, before issuing another call.
-- **Keep an in-command `sleep` under ~240s, and chunk the polling.** The 600s exec-server cap is not the usable budget: on a loaded box (load ~15 on 6 vCPUs) `sleep 480`/`sleep 540` polls both died with "Empty reply from server" while `sleep 240` returned normally. One *Bash tool call* is bounded the same way, so a poll loop written as one long `for` loop is moved to the background at 600s and its later polls are lost — split polling across several calls of roughly five polls each.
+- **Absolute path, always** — `/workspace/pmm-qa/terraform/linode-runner/run.sh`. The examples below are repo-relative for readability, but any compound command that writes a script somewhere else first leaves the working directory outside the repo, and the call dies with `No such file or directory`. The same goes for every **local file read into the command** (`admin_password`, `ip`, `pmm_cert.pem`): `$(cat terraform/…/admin_password)` against a reset working directory interpolates *empty* instead of erroring.
+- **Ship anything non-trivial as a file, not as an inline string.** Each of the three shell layers (local, `run.sh`'s `bash -c`, any `docker exec … sh -c`) strips one level of quoting, and a mangled command can still exit 0. Anything with a loop, a regex, a `$`, or more than one level of quoting goes over as `base64 -w0` locally → decode on the box → invoke the file, and reaches a container on stdin (`docker exec -i <c> sh -s <args> < /root/s.sh`).
+- **One `run.sh` in flight per `run_id`.** A second exec call issued while a poll loop is still running dies with `curl: (52) Empty reply from server` or `(56) Recv failure` — exec-server contention, not a dead box; the detached remote job is unaffected. Let the poll reach its sentinel, or kill it, before issuing another call.
+- **Keep an in-command `sleep` under ~240s, and chunk the polling.** The 600s exec-server cap is not the usable budget: on a loaded box longer sleeps die with "Empty reply from server". One *Bash tool call* is bounded the same way, so a single long poll loop is backgrounded at 600s and its later polls are lost — split polling across several calls of roughly five polls each.
 - **The exec channel provides no `HOME`** (`run.sh <run_id> -- "echo HOME=$HOME"` prints empty). Start every script that runs on the box with `export HOME=/root`, including inside a detached one — the export does not carry over from the `run.sh` invocation. Without it `minikube start` wrote its kubeconfig and certs under the CWD, and every later `kubectl`/`helm` call failed on a missing `ca.crt`.
-- **Poll a sentinel, never `pgrep -f`.** End a detached script with a sentinel line (`echo DONE_MARKER=$?` appended to its log) and poll the log for it. `pgrep -f <script>` reports RUNNING forever — the pattern matches the exec-server's own wrapper carrying the poll — which burned two full 10-minute waits on a job that had already exited 0. The same self-match makes `pkill -9 -f <pattern>` kill the shell carrying it, so the rest of that compound command never runs: target a pidfile or an exact program path, and confirm a launch or a kill by the state it changed (a log file growing, containers gone), never by a process count on that pattern.
+- **Poll a sentinel, never `pgrep -f`.** End a detached script with a sentinel line (`echo DONE_MARKER=$?` appended to its log) and poll the log for it. `pgrep -f <script>` reports RUNNING forever — the pattern matches the exec-server's own wrapper carrying the poll — which burned two full 10-minute waits on a job that had already exited 0. The same self-match makes `pkill -9 -f <pattern>` kill the shell carrying it, aborting the rest of the compound command: target a pidfile or an exact program path, and confirm a launch or a kill by the state it changed (log growing, containers gone), never by a process count on that pattern.
 
 **`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
 to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_STRLEN`
@@ -68,7 +68,7 @@ one round trip each and is not a bulk transfer channel.
 
 The cap is the **exec-server's own 600s command timeout** — `run.sh:61` sends only `{"cmd": …}`, never a `timeout`, so the server falls back to its default (`cloud-init.yaml.tftpl:115`, `timeout = body.get("timeout", 600)`, fed to `subprocess.run`). It kills its direct `bash -c` child at 600s while any grandchild survives holding the captured stdout pipe, and `run.sh`'s own `curl -m 620` then aborts with "failed to reach exec-server" — the symptom you see, twenty seconds after the cause. A longer client timeout therefore buys nothing, and the remote process keeps going regardless. A second run then shares the PMM Server with that orphan and the two suites' setup hooks destroy each other's fixtures — a worthless result from both. So launch a long test suite or playbook detached and poll it:
 
-Write the work to a **script file** on the box and launch it with its file descriptors detached — `nohup … &` is not enough, because the grandchild still holds the exec-server's captured stdout pipe, so the server never sees EOF and the call hangs until the harness backgrounds it (the setup itself runs fine, which is what makes this confusing). A shell redirect written on the same line as a `&` launch can also leave no log file at all:
+Write the work to a **script file** on the box and launch it with its file descriptors detached — `nohup … &` is not enough: the grandchild keeps the exec-server's captured stdout pipe open, so the call hangs until the harness backgrounds it even though the work itself runs fine. Redirect stdin and both outputs explicitly as below, or the launch can leave no log file at all:
 
 ```bash
 # 1. ship the script (see "Ship anything non-trivial as a file" above), then:
@@ -83,9 +83,9 @@ terraform/linode-runner/run.sh <run_id> -- "
 terraform/linode-runner/run.sh <run_id> -- "tail -3 /root/<name>.log; grep -c DONE_MARKER /root/<name>.log"
 ```
 
-A sentinel of `DONE_MARKER=130` — or any `128+N` — means the detach did not hold and the exec-server's teardown reached the job: relaunch it detached rather than investigating the command. `nohup … &` can look fine on a short `docker pull` and only fail past the first round trip, so use the `setsid` form for everything long.
+A sentinel of `DONE_MARKER=130` — or any `128+N` — means the detach did not hold and the exec-server's teardown reached the job: relaunch with the `setsid` form rather than investigating the command. `nohup … &` only fails past the first round trip, so a short command proves nothing about it.
 
-Tee a long wait's progress to the scratchpad as well as the box (`… |& tee -a "$SCRATCH/pmm-framework.log"`): a container restart leaves a harness background task's output as nothing but `[killed]`, while scratchpad files survive — check that log before concluding anything about how far a setup got, and before re-provisioning. A `codeceptjs` run whose value *is* its measurements needs `--verbose`, or the `I.say` lines never appear and the whole detached run has to be repeated.
+Tee a long wait's progress to the scratchpad as well as the box (`… |& tee -a "$SCRATCH/pmm-framework.log"`): a harness background task killed by a container restart reports only `[killed]`, while the scratchpad file survives — read it before judging how far a setup got or re-provisioning. Run `codeceptjs` with `--verbose` when its `I.say` measurements are the result, or they never reach the log.
 
 Before starting a new run, check for and kill any orphan a timed-out attempt left behind. Kill by the PID you printed, or with a self-excluding pattern (`pkill -f 'codecept[j]s'`): a plain `pkill -f codeceptjs` also matches the exec-server's own `bash -c "… codeceptjs …"` wrapper carrying the pkill, so it kills the calling remote shell (exit 241) and leaves the orphan running.
 
@@ -95,9 +95,9 @@ Judge a detached run's progress from side effects — screenshot/artifact mtimes
 
 Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
 
-Carry the failing workflow's **GitHub run number** in the id (`nightly-e2e-run337`), not only a date: one night's failures fire the Investigator Routine several times, and a date-only id collides between sibling sessions.
+Carry the failing workflow's **GitHub run number** in the id (`nightly-e2e-run337`), not only a date: sibling Investigator sessions fired by the same night's failures collide on a date-only id.
 
-Those forms repeat across investigations of the same PR, so provisioning can come back `502` with `run_id '<id>' already has a state file`, or `409 {"status":"provisioning","hint":"already running — poll /linode/provision-result"}`. Both mean the id is **claimed**; the 409's hint is wrong for this purpose — polling it hands back a box another session is actively using, and recreating `pmm-server` there invalidates both reproductions. Treat either code the same way: pick a distinct suffix (`heal-<pr>-<test>`) and report the orphaned state in your run summary — never destroy it to free the name. If you are ever handed a box for an id you did not just create, `ls /root` and `docker ps -a` before touching anything: scripts and containers this session never made mean it belongs to someone else.
+Those forms repeat across investigations of the same PR, so provisioning can come back `502` with `run_id '<id>' already has a state file`, or `409 {"status":"provisioning","hint":"already running — poll /linode/provision-result"}`. Both mean the id is **claimed**, possibly by a live VM another session is using — do not follow the 409's poll hint. Pick a distinct suffix (`heal-<pr>-<test>`) and report the orphaned state in your run summary — never destroy it to free the name. Handed a box for an id you did not just create, `ls /root` and `docker ps -a` before touching anything: scripts and containers this session never made mean it belongs to someone else.
 
 ## 1. Provision the VM (via the relay)
 
@@ -228,11 +228,11 @@ terraform/linode-runner/run.sh <run_id> -- "
 terraform/linode-runner/run.sh <run_id> -- "docker exec pmm-server change-admin-password '$ADMIN_PASSWORD'"
 ```
 
-(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Never pipe it through `tail`/`head` — its "Admin password changed successfully" line is the only confirmation the change landed. When you are **reproducing a pipeline**, use the credential that pipeline sets (the CI jobs use `admin`) rather than generating one; a generated password against a released image that rejects it costs a round of failed registrations and trips the lockout below.
+(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Keep its full output — the "Admin password changed successfully" line is the only confirmation the change landed. When **reproducing a pipeline**, use the credential that pipeline sets (the CI jobs use `admin`) rather than generating one, or every registration fails and trips the lockout below.
 
-Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes. The lockout is **time-based and self-clearing**, so the recovery is to stop issuing auth requests entirely for ~5 minutes and then check once — not to re-reset the password (which appears to succeed and changes nothing observable) and not to rebuild the server. While it is active every later auth probe is uninformative, so treat evidence gathered during one as void.
+Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes. It is time-based and self-clearing: stop all auth requests for ~5 minutes and check once — re-resetting the password or rebuilding the server changes nothing — and discard any auth evidence gathered while it was active.
 
-**Recreating `pmm-server` on the same `pmm-data` volume: `docker stop` before `docker rm`.** A `docker rm -f` leaves `/srv/postgres18/postmaster.pid` naming a PID the next container reuses, PostgreSQL then fails every retry with `FATAL: lock file "postmaster.pid" already exists`, and readyz serves an nginx 500 with nothing in the pmm-managed log. Recovery on a box already in that state: `rm /srv/postgres18/postmaster.pid` then `supervisorctl start postgresql`.
+**Recreating `pmm-server` on the same `pmm-data` volume: `docker stop` before `docker rm`.** `docker rm -f` leaves a stale `/srv/postgres18/postmaster.pid`, PostgreSQL fails with `FATAL: lock file "postmaster.pid" already exists`, and readyz serves an nginx 500 with nothing in the pmm-managed log. Recovery: `rm /srv/postgres18/postmaster.pid` then `supervisorctl start postgresql`.
 
 Once ready, fetch PMM's own TLS cert over the already cert-pinned exec channel and save it locally — this lets step 4's browser scripts pin PMM's cert too instead of trusting any cert on the connection:
 
@@ -271,24 +271,24 @@ The password reaches the box inside the command string, which the exec-server ru
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
-The server address has to be reachable **from inside the client container**: use `--pmm-server-ip pmm-server` (the shared `pmm-qa` network hostname) or the VM's own IP. `127.0.0.1` reaches it only from host-networked setups — `pdpgsql` registered fine while `haproxy` and `pgsql` failed at "Install pmm3-client", and the framework still exited after the other setup reported OK, so the failure is easy to miss.
+The server address has to be reachable **from inside the client container**: use `--pmm-server-ip pmm-server` (the shared `pmm-qa` network hostname) or the VM's own IP, never `127.0.0.1`, which only host-networked setups reach. One setup failing at "Install pmm3-client" does not fail the framework run, so check every setup's own result.
 
-**Checking what actually registered.** `/v1/inventory/{nodes,services,agents}` group by type, so a flat `jq -r '.nodes[]?'` prints nothing on a fully registered box and reads as "nothing registered":
+**Checking what actually registered.** `/v1/inventory/{nodes,services,agents}` group by type, so a flat `jq -r '.nodes[]?'` prints nothing on a fully registered box:
 
 ```bash
 curl -ksS -u "admin:$ADMIN_PASSWORD" https://127.0.0.1:8443/v1/inventory/agents \
   | jq -r 'to_entries[] | .key as $t | (.value[]? | "\($t) \(.agent_id) \(.connected)")'
 ```
 
-The pmm-agent connectivity field there is `connected`; the `is_connected` the codeceptjs inventory tests read comes from `GET /v1/management/services` instead. `pmm-admin` lives at `/usr/sbin/pmm-admin` in the QA database containers, so probe with `command -v pmm-admin` rather than a fixed path, and note that `pmm-admin unregister --force` without `--node-name` targets the agent's own registered node (from its `NodeID`), which is often not the container hostname.
+The pmm-agent connectivity field there is `connected`; the `is_connected` the codeceptjs inventory tests read comes from `GET /v1/management/services` instead. Probe for `pmm-admin` with `command -v`, not a fixed path (the QA database containers have it at `/usr/sbin/pmm-admin`); `pmm-admin unregister --force` without `--node-name` targets the agent's own registered node, often not the container hostname.
 
-**Replaying a CI cleanup step has a different blast radius here.** A workflow's `on_retry_command` of `docker rm -f $(docker ps -a -q)` is safe on a runner whose PMM Server is remote and destroys this box's `pmm-server` and its `pmm-data` volume. Scope such a replay to the client containers and say so in the evidence:
+**Scope a replayed CI cleanup step to the client containers, and say so in the evidence.** A workflow's `on_retry_command` of `docker rm -f $(docker ps -a -q)` assumes a remote PMM Server; here it destroys `pmm-server` and its `pmm-data` volume:
 
 ```bash
 docker ps -q | grep -v "$(docker inspect -f '{{.Id}}' pmm-server | cut -c1-12)" | xargs -r docker rm -f
 ```
 
-**A comparison run must prove which code each arm ran.** `git fetch origin <branch>` creates no remote-tracking ref, so a following `git checkout origin/<branch>` fails with `pathspec … did not match` mid-log and that arm silently runs baseline code for a full run. Use `git fetch origin <branch> && git checkout FETCH_HEAD`, and have each arm print its resolved commit sha plus a `grep -c` of the changed symbol before it starts — a checkout error scrolls past in a long detached log, and an arm running the wrong code yields a confidently wrong result.
+**A comparison run must prove which code each arm ran.** Check out with `git fetch origin <branch> && git checkout FETCH_HEAD` — `git fetch origin <branch>` creates no remote-tracking ref, so `git checkout origin/<branch>` fails with `pathspec … did not match` and the arm silently runs baseline code — and have each arm print its resolved sha plus a `grep -c` of the changed symbol before it starts; a checkout error scrolls past in a long detached log.
 
 ## 4. UI
 
@@ -317,13 +317,11 @@ suite go through it explicitly: extend `playwright.config.ts` in a scratch confi
 `npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
 have direct egress and the override would break them.
 
-Two details decide whether that scratch config does anything at all. The base config's
-`projects[0].use` wins over a top-level `use`, so map the overrides over `base.projects` as
-well as the top level; and `testDir: './tests'` resolves relative to the scratch file, so it
-must be made absolute or Playwright reports "No tests found". Pin
-`executablePath: '/opt/pw-browsers/chromium'` in the same override — Playwright's
-bundled-browser resolution points at a revision that is not installed and fails with
-`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<rev>`.
+In that scratch config, map the overrides over `base.projects` as well as the top level
+(`projects[0].use` wins over a top-level `use`); make `testDir` absolute (`'./tests'`
+resolves relative to the scratch file and Playwright reports "No tests found"); and pin
+`executablePath: '/opt/pw-browsers/chromium'`, since the bundled-browser revision is not
+installed (`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<rev>`).
 
 That session-side recipe only covers suites that drive the UI over HTTP. **Anything touching Docker, `pmm-admin`, or the local filesystem must run on the VM, the way the workflow runs it** — install Node and the suite on the box and run the same `npx playwright test --grep`; `e2e_tests` needs only `PMM_UI_URL` and `ADMIN_PASSWORD`. Tests calling `docker exec <container> pmm-admin annotate` cannot work from this session at all (Docker runs only on the VM), and a session-side run of them reached the login redirect and never the dashboard. An ad-hoc spec must also sit under the config's `testDir` (`./tests`), or Playwright reports "No tests found".
 
