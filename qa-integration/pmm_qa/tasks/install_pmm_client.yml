@@ -26,17 +26,29 @@
     metrics_mode: 'auto'
   when: metrics_mode is not defined
 
-# `pmm-agent setup`'s single positional is the node ADDRESS; the node name falls
-# back to the container's hostname, which is its docker short ID when the
-# container was created without one -- a new inventory entry on every
-# re-provision, and one that survives in label_values() after `unregister`.
-# SHARD_NAME disambiguates two setup shards that run the same database spec
-# against one PMM Server.
-- name: Derive a node name that is stable per shard
+- name: Read the container's hostname
+  shell: docker inspect -f '{{ "{{" }}.Config.Hostname{{ "}}" }}' {{ container_name }}
+  register: container_hostname
+  changed_when: false
+
+# `pmm-agent setup`'s single positional is the node ADDRESS, so the node name
+# falls back to the container's hostname. Created without --hostname that is a
+# 12-hex-digit docker id, which mints a new inventory entry on every
+# re-provision and survives in label_values() after `unregister`; fall back to
+# the container name there, suffixed with SHARD_NAME so two shards running the
+# same spec cannot claim one node.
+#
+# A hostname the playbook set deliberately is kept verbatim: it is the name
+# dashboards repeat panels by, and tests refer to it literally (valkey's
+# `<host> - Commands by Type`). Such a name is also chosen per container, so it
+# does not collide across shards and needs no suffix.
+- name: Derive a stable node name
   set_fact:
     pmm_node_name: >-
-      {{ container_name }}{{ ('-' ~ shard_name) if shard_name else '' }}
+      {{ hostname if hostname is not match('^[0-9a-f]{12}$')
+         else container_name ~ (('-' ~ shard_name) if shard_name else '') }}
   vars:
+    hostname: "{{ container_hostname.stdout | trim }}"
     shard_name: "{{ lookup('env', 'SHARD_NAME') | default('', true) }}"
 
 - name: Get PMM server address
