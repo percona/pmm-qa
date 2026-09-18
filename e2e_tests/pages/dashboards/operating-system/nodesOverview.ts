@@ -88,5 +88,5 @@ export default class NodesOverviewDashboard implements DashboardInterface {
     { name: 'Drop', type: 'unknown' },
   ];
   name = 'Nodes Overview';
-  noDataMetrics: string[] = ['DB Instances', 'Min DB Uptime'];
+  noDataMetrics: string[] = ['DB Instances', 'Min DB Uptime', 'Top Disk Latency', 'Top 5 Disk Latency'];
 }
