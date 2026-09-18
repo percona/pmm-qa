@@ -1223,13 +1223,23 @@ module.exports = {
   // which a flat 30s wait then called missing. Keep the short wait for the common
   // case and give a straggler one re-expand and a long wait before failing it.
   async waitForPanelToMount(panelLocator) {
-    try {
-      await I.waitForElement(panelLocator, 30);
-    } catch (error) {
-      await this.expandEachDashboardRow();
-      await this.scrollBackToPanel(panelLocator);
-      await I.waitForElement(panelLocator, 120);
+    // Not a try/catch around waitForElement: CodeceptJS drives steps through its
+    // own recorder, so a failing wait rejects the test rather than the catch
+    // around it. Probe with a grab, which returns 0 instead of throwing, and
+    // only commit to a wait that can fail once the slow path has had its turn.
+    /* eslint-disable no-await-in-loop */
+    for (let waited = 0; waited < 30; waited += 5) {
+      if (await I.grabNumberOfVisibleElements(panelLocator) > 0) {
+        return;
+      }
+
+      I.wait(5);
     }
+    /* eslint-enable no-await-in-loop */
+
+    await this.expandEachDashboardRow();
+    await this.scrollBackToPanel(panelLocator);
+    I.waitForElement(panelLocator, 120);
   },
 
   // The metric walk pages down blindly and Grafana unmounts whatever is off-screen, so a
