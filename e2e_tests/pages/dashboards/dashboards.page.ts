@@ -84,6 +84,39 @@ export default class Dashboards extends BasePage {
 
   readonly panels = () => Panels(this.page);
 
+  // Deliberately narrower than collectTextsAcrossScroll: it visits one grid item
+  // at a time, so it never reaches the later instances of a vertically repeated
+  // panel. The no-data allow-lists on the dashboard page objects were calibrated
+  // against exactly this traversal, and widening it fails dashboards on repeated
+  // panels nobody has audited -- a true statement about the dashboard, but not
+  // the regression these tests exist to catch. Raising that bar needs the
+  // allow-lists revisited against a live server first.
+  collectTextsAcrossGridItems = async (locator: Locator): Promise<string[]> => {
+    const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const itemCount = await this.elements.gridItems.count();
+
+    await collect();
+
+    for (let i = 0; i < itemCount; i++) {
+      const item = this.elements.gridItems.nth(i);
+      const previousScrollTop = await item.evaluate(getScrollTop);
+
+      await item.scrollIntoViewIfNeeded();
+
+      if ((await item.evaluate(getScrollTop)) !== previousScrollTop) {
+        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+        await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      }
+
+      await collect();
+    }
+
+    return Array.from(collected);
+  };
+
   collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
     const collected = new Set<string>();
     const collect = async () =>
@@ -218,7 +251,7 @@ export default class Dashboards extends BasePage {
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+      const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
 
       missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
