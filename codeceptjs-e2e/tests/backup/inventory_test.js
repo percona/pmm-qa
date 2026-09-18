@@ -109,10 +109,17 @@ Before(async ({
     } catch (error) {
       if (attempt === 10) {
         // Ten attempts over six minutes means mongod did not come back, and the
-        // driver's "Server selection timed out" says nothing about why. Its own
-        // log does, and CI keeps none of the container's state afterwards.
+        // driver's "Server selection timed out" says nothing about why. These
+        // containers set systemLog.destination: syslog, so journald holds the
+        // log and /var/log/mongo/mongod.log never exists; sysconfig sends only
+        // fatal and pre-logging output to the .stdout/.stderr pair. Exit 0 so a
+        // missing sink cannot make verifyCommand throw over the real error.
         const log = await I.verifyCommand(
-          'docker exec rs101 tail -n 40 /var/log/mongo/mongod.log 2>&1 || docker logs --tail 40 rs101 2>&1',
+          'docker exec rs101 sh -c "'
+          + 'systemctl --no-pager -l status mongod 2>&1 | tail -n 20; '
+          + 'journalctl --no-pager -u mongod -n 40 2>&1; '
+          + 'tail -n 40 /var/log/mongo/mongod.stdout /var/log/mongo/mongod.stderr 2>&1'
+          + '"; docker logs --tail 40 rs101 2>&1; exit 0',
         );
 
         throw new Error(`${error.message}\nLast 40 lines of rs101 mongod log:\n${log}`);
