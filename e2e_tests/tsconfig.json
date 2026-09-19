@@ -51,6 +51,7 @@
     "interfaces/**/*.ts",
     "pages/**/*.ts",
     "tests/**/*.ts",
+    "exploratory/**/*.ts",
     "playwright.config.ts"
   ]
 }
