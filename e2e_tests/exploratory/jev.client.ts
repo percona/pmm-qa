@@ -70,6 +70,37 @@ export class JevExplorer {
     };
   };
 
+  judge = async (s: {
+    consoleErrors: string[];
+    failedRequests: string[];
+    title: string;
+    url: string;
+    visibleText: string;
+  }): Promise<{ broken: number; latencyMs: number; noData: number }> => {
+    const started = Date.now();
+    const { answers } = await this.client.systemOne({
+      questions: {
+        broken: noul('This PMM dashboard is in a broken state', BROKEN_CRITERIA),
+        no_data: noul('Every panel on this dashboard is empty', {
+          false: 'At least one panel renders a real measurement',
+          true: 'The panels show "No data", "N/A", dashes or nothing at all, so the dashboard carries no measurement',
+        }),
+      },
+      state: {
+        console_errors: s.consoleErrors,
+        dashboard: s.title,
+        failed_requests: s.failedRequests,
+        screen: s.visibleText,
+        url: s.url,
+      },
+    });
+    const latencyMs = Date.now() - started;
+
+    this.latencies.push(latencyMs);
+
+    return { broken: answers.broken.noul, latencyMs, noData: answers.no_data.noul };
+  };
+
   stats = () => {
     const sorted = [...this.latencies].sort((a, b) => a - b);
     const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0;

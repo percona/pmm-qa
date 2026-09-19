@@ -3,12 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import LoginPage from '@pages/login.page';
 import { JevExplorer } from './jev.client';
-import { fingerprint, snapshot } from './perception';
+import { dismissOverlays, fingerprint, snapshot } from './perception';
 import { StepRecord, writeFilmstrip } from './report';
 
 const BUDGET_MS = Number(process.env.CRAWL_BUDGET_MS ?? 5 * 60 * 1_000);
 const BROKEN_THRESHOLD = Number(process.env.CRAWL_BROKEN_THRESHOLD ?? 0.93);
 const MIN_CONFIDENCE = Number(process.env.CRAWL_MIN_CONFIDENCE ?? 0.5);
+const STUCK_LIMIT = Number(process.env.CRAWL_STUCK_LIMIT ?? 3);
 const ARTIFACTS = path.resolve(__dirname, 'findings');
 
 test('exploratory crawl of the PMM UI', async ({ page }) => {
@@ -27,6 +28,15 @@ test('exploratory crawl of the PMM UI', async ({ page }) => {
   await page.goto('/');
   await new LoginPage(page).login(process.env.ADMIN_PASSWORD ?? 'admin');
 
+  // Both tours are a real user setting, so completing them beats mocking the route.
+  await page.request
+    .put('/v1/users/me', { data: { alerting_tour_completed: true, product_tour_completed: true } })
+    .catch(() => undefined);
+
+  const search = await page.request.get('/graph/api/search?type=dash-db&limit=200').catch(() => undefined);
+  const frontier: string[] = search
+    ? ((await search.json()) as { url: string }[]).map((d) => d.url)
+    : ['/graph/d/pmm-home/home-dashboard'];
   const jev = new JevExplorer();
   const visited: string[] = [];
   const findings: Record<string, unknown>[] = [];
@@ -36,8 +46,13 @@ test('exploratory crawl of the PMM UI', async ({ page }) => {
   const deadline = Date.now() + BUDGET_MS;
   let steps = 0;
   let fallbacks = 0;
+  let unstucks = 0;
+  let repeats = 0;
+  let previous = '';
 
   while (Date.now() < deadline) {
+    await dismissOverlays(page);
+
     const t0 = Date.now();
     const state = await snapshot(page, visited, consoleErrors, failedRequests);
 
@@ -49,10 +64,25 @@ test('exploratory crawl of the PMM UI', async ({ page }) => {
       continue;
     }
 
+    const here = fingerprint(state);
+
+    repeats = here === previous ? repeats + 1 : 0;
+    previous = here;
+
+    // Rigid unstick: a screen that will not change is a navigation problem, not a judgement call.
+    if (repeats >= STUCK_LIMIT) {
+      const next = frontier[(unstucks += 1) % frontier.length];
+
+      repeats = 0;
+      await page.goto(`${next}?from=now-3h&to=now`).catch(() => undefined);
+
+      continue;
+    }
+
     const verdict = await jev.decide(state);
 
     steps += 1;
-    visited.push(fingerprint(state));
+    visited.push(here);
 
     const shot = `shots/step-${String(steps).padStart(3, '0')}.jpg`;
 
@@ -116,6 +146,7 @@ test('exploratory crawl of the PMM UI', async ({ page }) => {
     jev: jev.stats(),
     perceptionMeanMs: mean(perceptionMs),
     steps,
+    unstucks,
   };
 
   fs.writeFileSync(`${ARTIFACTS}/report.json`, JSON.stringify({ ...summary, findings }, null, 2));

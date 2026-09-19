@@ -34,6 +34,30 @@ const parseAria = (yaml: string, frameIndex: number, seed: number): Candidate[] 
   return out;
 };
 
+// The PMM product tour and any modal render an overlay that swallows every click,
+// which is how the first run spent 376 of 446 steps on one screen.
+export const dismissOverlays = async (page: Page): Promise<boolean> => {
+  const closers = [
+    page.getByTestId('tour-close-button'),
+    page.getByTestId('tour-end-tour-button'),
+    page.locator('[role="dialog"] button[aria-label="Close"]'),
+  ];
+  let closed = false;
+
+  for (const closer of closers) {
+    const target = closer.first();
+
+    if (await target.isVisible({ timeout: 500 }).catch(() => false)) {
+      await target.click({ timeout: 2_000 }).catch(() => undefined);
+      closed = true;
+    }
+  }
+
+  if (!closed) await page.keyboard.press('Escape').catch(() => undefined);
+
+  return closed;
+};
+
 export const snapshot = async (
   page: Page,
   visited: string[],
@@ -44,7 +68,10 @@ export const snapshot = async (
   let visibleText = '';
 
   for (const [frameIndex, frame] of page.frames().entries()) {
-    const body = frame.locator('body');
+    // A modal owns the interaction while it is open, so it alone supplies the candidates.
+    const dialog = frame.locator('[role="dialog"]').first();
+    const modal = await dialog.isVisible({ timeout: 300 }).catch(() => false);
+    const body = modal ? dialog : frame.locator('body');
 
     try {
       const [text, aria] = await Promise.all([
