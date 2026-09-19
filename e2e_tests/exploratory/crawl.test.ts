@@ -65,9 +65,11 @@ test('exploratory crawl of the PMM UI', async ({ page }) => {
     }
 
     const here = fingerprint(state);
+    // Panels loading change the control list, so only the path tells a stuck screen apart.
+    const path = new URL(state.url).pathname;
 
-    repeats = here === previous ? repeats + 1 : 0;
-    previous = here;
+    repeats = path === previous ? repeats + 1 : 0;
+    previous = path;
 
     // Rigid unstick: a screen that will not change is a navigation problem, not a judgement call.
     if (repeats >= STUCK_LIMIT) {
