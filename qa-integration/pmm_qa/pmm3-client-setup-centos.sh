@@ -53,6 +53,13 @@ rpm -i ./percona-release-latest.noarch.rpm
 # filter built from label_values. Callers pass the container name instead.
 export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
 
+# Grafana regex-escapes a multi-value variable even when one value is selected, so a
+# dot in the node name turns a dashboard's node_name="$node_name" into a query for
+# `pxc_proxysql_pmm_8\.4`, which matches nothing (MySQL Instances Compare, Network
+# Traffic). Callers pass the container name, and those carry the version.
+PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
+export PMM_AGENT_SETUP_NODE_NAME
+
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
 # which makes microdnf abort. The mismatch usually clears within a minute, so retry.
 retry_microdnf_install() {
