@@ -71,6 +71,29 @@ class MongodbBackupDetailsDashboard {
       return actualValue !== 'N/A' && actualValue !== '';
     }, 120, 'Last Successful Backup panel still has no value');
   }
+
+  // Last Successful Backup goes green off a different series than the graphs do, so
+  // waiting on it says nothing about Backup Sizes -- the panel behind
+  // mongodb_pbm_backup_size_bytes. The PITR variant spends longer getting its base
+  // snapshot in place and lost this in the mysql-psmdb-pgsql lane while the snapshot
+  // variant passed on the same dashboard minutes earlier. Poll with the same
+  // scroll-and-refresh the stat panels use; dashboardPage's own wait helper polls but
+  // never re-runs the query, and this dashboard is opened without &refresh=.
+  async waitForGraphPanelData(panelTitle) {
+    const I = actor();
+    const panel = locate(`//section[contains(@data-testid, "${panelTitle}")]`);
+    // Same text set dashboardPage.reportTitleWithNA matches on. A poll that cleared on
+    // anything narrower could go green on a panel the assertion after it still counts.
+    const noDataText = '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]';
+
+    I.waitForVisible(panel, 15);
+    await I.asyncWaitFor(async () => {
+      I.scrollTo(panel);
+      I.click(this.elements.refresh);
+
+      return await I.grabNumberOfVisibleElements(panel.find(noDataText)) === 0;
+    }, 120, `"${panelTitle}" panel still shows No data`);
+  }
 }
 
 module.exports = new MongodbBackupDetailsDashboard();
