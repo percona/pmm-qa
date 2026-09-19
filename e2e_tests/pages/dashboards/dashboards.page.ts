@@ -139,6 +139,11 @@ export default class Dashboards extends BasePage {
         return scroller.scrollTop === before;
       });
 
+    // loadAllPanels leaves the page at its bottom, and an instance that missed its
+    // load window sits above it -- so every sweep has to begin at the top.
+    await anchor.evaluate((el) => el.ownerDocument.scrollingElement?.scrollTo({ top: 0 }));
+    //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
     await collect();
 
     for (let done = false; !done;) {
