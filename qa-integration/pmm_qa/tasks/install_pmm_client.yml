@@ -42,11 +42,18 @@
 # dashboards repeat panels by, and tests refer to it literally (valkey's
 # `<host> - Commands by Type`). Such a name is also chosen per container, so it
 # does not collide across shards and needs no suffix.
+#
+# The fallback keeps to [A-Za-z0-9_-]: a container name carrying the version
+# (`pxc_proxysql_pmm_8.4`) puts a dot in the node name, and Grafana regex-escapes
+# a multi-value variable even when one value is selected, so a dashboard's
+# `node_name="$node_name"` then asks for `pxc_proxysql_pmm_8\.4` and matches
+# nothing (MySQL Instances Compare, Network Traffic).
 - name: Derive a stable node name
   set_fact:
     pmm_node_name: >-
       {{ hostname if hostname is not match('^[0-9a-f]{12}$')
-         else container_name ~ (('-' ~ shard_name) if shard_name else '') }}
+         else (container_name | regex_replace('[^A-Za-z0-9_-]', '_'))
+              ~ (('-' ~ shard_name) if shard_name else '') }}
   vars:
     hostname: "{{ container_hostname.stdout | trim }}"
     shard_name: "{{ lookup('env', 'SHARD_NAME') | default('', true) }}"
