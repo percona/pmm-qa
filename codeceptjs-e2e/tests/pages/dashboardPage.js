@@ -1193,23 +1193,53 @@ module.exports = {
     I.click(this.fields.reportTitle);
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
+    // Expanded once, not per metric: expandEachDashboardRow presses End, so calling it
+    // inside the loop jumped to the bottom of the page before every lookup and left
+    // scrollBackToPanel's three PageUps to climb back. The callers already expand first.
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
-      I.waitForElement(this.graphsLocator(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocator(metrics[i]));
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
   },
 
   async verifyMetricsExistencePartialMatch(metrics) {
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocatorPartialMatch(metrics[i]));
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
     }
+  },
+
+  // Expanding once per walk fixed the scroll position, but it also removed the
+  // re-render the per-metric expand was accidentally buying: a service-repeated
+  // panel materialises as its series arrive and has been seen to take minutes,
+  // which a flat 30s wait then called missing. Keep the short wait for the common
+  // case and give a straggler one re-expand and a long wait before failing it.
+  async waitForPanelToMount(panelLocator) {
+    // Not a try/catch around waitForElement: CodeceptJS drives steps through its
+    // own recorder, so a failing wait rejects the test rather than the catch
+    // around it. Probe with a grab, which returns 0 instead of throwing, and
+    // only commit to a wait that can fail once the slow path has had its turn.
+    /* eslint-disable no-await-in-loop */
+    for (let waited = 0; waited < 30; waited += 5) {
+      if (await I.grabNumberOfVisibleElements(panelLocator) > 0) {
+        return;
+      }
+
+      I.wait(5);
+    }
+    /* eslint-enable no-await-in-loop */
+
+    await this.expandEachDashboardRow();
+    await this.scrollBackToPanel(panelLocator);
+    I.waitForElement(panelLocator, 120);
   },
 
   // The metric walk pages down blindly and Grafana unmounts whatever is off-screen, so a
@@ -1381,6 +1411,14 @@ module.exports = {
   },
 
   async expandEachDashboardRow() {
+    // A freshly opened dashboard only lays out what is near the top, so a count
+    // taken right here finds none of the collapsed rows further down and the loop
+    // below exits having expanded nothing -- every metric inside a collapsed row
+    // is then reported missing. Go to the bottom first, which is where the loop
+    // works from anyway, and let the scene render the rest before counting.
+    I.pressKey('End');
+    I.wait(2);
+
     let collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
     let maxTries = 20;
 

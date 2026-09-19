@@ -41,9 +41,14 @@ async function verifySupportedDBTabs({
       await queryAnalyticsPage.queryDetails.verifyExamples(parameters);
     }
 
+    // Explain is not for PostgreSQL, nor for CREATE. A db.runCommand search matches
+    // whatever command QAN captured, and MongoDB explains only aggregate, count,
+    // distinct, find, findAndModify, delete, mapReduce and update -- so that one search
+    // tolerates the server refusing the command family, and nothing else.
     if (!serviceName.includes('pgsql_') && !query.includes('CREATE')) {
-      // Explain is not for PostgreSQL and also not available for CREATE operations
-      await queryAnalyticsPage.queryDetails.verifyExplain(parameters);
+      await queryAnalyticsPage.queryDetails.verifyExplain(parameters, {
+        allowUnsupported: query.includes('runCommand'),
+      });
     }
 
     if (serviceName.includes('pgsql_') && !query.includes('CREATE')) {

@@ -63,38 +63,56 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
+# --force above: with a stable node name, re-provisioning the same container
+# hits "Node with name ... already exists" and the setup fails.
+#
+# A random name per run means a re-provisioned container registers under a new
+# node, and its old series keep the previous name alive in every dashboard
+# filter built from label_values. Callers pass the container name instead.
+export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
+
+# Grafana regex-escapes a multi-value variable even when one value is selected, so a
+# dot in the node name turns a dashboard's node_name="$node_name" into a query for
+# `pxc_proxysql_pmm_8\.4`, which matches nothing (MySQL Instances Compare, Network
+# Traffic). Callers pass the container name, and those carry the version.
+PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
+export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-# Percona's CDN/repo occasionally serves inconsistent metadata during builds,
-# which makes apt-get abort. The mismatch usually clears within a minute, so retry.
-retry_apt_install() {
-    local n=3
-    local i
-    for i in $(seq 1 $n); do
-        apt-get -y install "$@" && break
-        echo "apt-get install failed (attempt $i/$n); retrying in 30s..."
-        sleep 30
+# repo.percona.com publishes the apt index and the pool file non-atomically, and
+# the two disagree for 6-8 minutes at a time (measured), not the minute the old
+# three-attempt retry here assumed. This script is docker-cp'd into containers on
+# its own, so it cannot call the host-side fetch helper -- keep retrying here, but
+# over a span that can actually outlast a window.
+install_pmm_client_from_repo() {
+    local component=$1 attempt
+    percona-release enable-only pmm3-client "$component"
+    for attempt in 1 2 3 4 5; do
         apt-get update
+        apt-get -y install pmm-client && return 0
+        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
+        sleep 90
     done
     return 1
 }
 
+# Without this the script used to walk on after a failed install and only die
+# later on a missing pmm-admin, reporting rc=127 instead of the real cause.
+die_on_install_failure() {
+    echo "pmm-client could not be installed; aborting client setup" >&2
+    exit 1
+}
+
 if [[ "$client_version" == "3-dev-latest" ]]; then
-    percona-release enable-only pmm3-client experimental
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo experimental || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-rc" ]]; then
-    percona-release enable-only pmm3-client testing
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo testing || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-latest" ]]; then
-    percona-release enable-only pmm3-client release
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo release || die_on_install_failure
     apt-get -y update
     percona-release enable-only pmm3-client experimental
 fi
@@ -118,6 +136,10 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
+  # Deliberately not routed through scripts/fetch-pmm-client-deb.sh: this script
+  # runs under sudo, so it would create /tmp/pmm-client-cache root-owned and the
+  # Ansible client install, which runs as the build user and shares that cache,
+  # could no longer write into it.
   deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
     -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
@@ -159,10 +181,10 @@ if [[ -z "$upgrade" ]]; then
         for i in $(seq 1 $n); do
             if [[ "$use_metrics_mode" == "yes" ]]; then
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
             else
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
             fi
             echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
             sleep 30

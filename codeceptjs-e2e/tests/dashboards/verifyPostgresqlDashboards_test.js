@@ -1,6 +1,6 @@
 const { SERVICE_TYPE } = require('../helper/constants');
 
-const { inventoryAPI } = inject();
+const { inventoryAPI, serverApi } = inject();
 const serviceList = [];
 
 Feature('Test Dashboards inside the PostgreSQL Folder');
@@ -43,7 +43,9 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifySlowQueriesPanel('5 minutes');
     await dashboardPage.expandEachDashboardRow();
-    await dashboardPage.verifyMetricsExistence(dashboardPage.postgresqlInstanceOverviewDashboard.metrics);
+    await dashboardPage.verifyMetricsExistence(
+      dashboardPage.postgresqlInstanceOverviewDashboard.metricsFor(await serverApi.getPmmVersion()),
+    );
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
   },
 );
@@ -51,12 +53,15 @@ Scenario(
 Scenario(
   'PMM-T394 - PostgreSQL Instance Compare Dashboard metrics @nightly @dashboards',
   async ({ I, dashboardPage, adminPage }) => {
+    // The service_name variable is multi-select and Grafana defaults it from
+    // label_values(), which still offers services left behind by a previous
+    // provisioning attempt. Pin it to what inventory actually reports.
     const url = I.buildUrlWithParams(
       dashboardPage.postgresqlInstanceCompareDashboard.cleanUrl,
       {
         from: 'now-5m',
       },
-    );
+    ) + serviceList.map((service) => `&var-service_name=${encodeURIComponent(service)}`).join('');
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();

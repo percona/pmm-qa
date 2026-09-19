@@ -15,6 +15,11 @@
 # Guard so the collection check runs at most once per process.
 ANSIBLE_COLLECTION_CHECKED=false
 
+# Whether ansible.posix -- and with it the profile_tasks callback that times
+# individual tasks -- turned out to be installable. Set by
+# ensure_ansible_collections().
+PROFILE_TASKS_AVAILABLE=false
+
 # Point Ansible modules at a Python that has `requests`, if one is available.
 #
 # community.docker modules need `requests`; the interpreter Ansible discovers by
@@ -72,21 +77,45 @@ ansible_python_interpreter() {
     printf '%s' "$venv_python"
 }
 
-# Install the community.docker collection unless it is already present.
+# Install the Ansible collections the run needs, unless they are already there.
+#
+# community.docker is a hard requirement -- the playbooks are built on it.
+# ansible.posix only carries the profile_tasks callback, which turns a setup's
+# log into per-task timings, so a host that cannot install it still provisions
+# fine; it just reports less.
 #
 # Checked once per process, and pre-warmed by preflight before parallel setups
 # so several concurrent jobs cannot race to install the same collection.
 #
-# Writes: ANSIBLE_COLLECTION_CHECKED
-# Exits:  via die() when the install fails
-ensure_docker_collection() {
+# Writes: ANSIBLE_COLLECTION_CHECKED, PROFILE_TASKS_AVAILABLE
+# Exits:  via die() when the community.docker install fails
+ensure_ansible_collections() {
   [[ $ANSIBLE_COLLECTION_CHECKED == true ]] && return
-  if ! ansible-galaxy collection list community.docker >/dev/null 2>&1; then
+  if ! collection_installed community.docker; then
     log_info "Installing Ansible collection community.docker..."
     ansible-galaxy collection install community.docker ||
       die "Failed to install Ansible collection community.docker."
   fi
+
+  if collection_installed ansible.posix ||
+    ansible-galaxy collection install ansible.posix >/dev/null 2>&1; then
+    PROFILE_TASKS_AVAILABLE=true
+  else
+    log_warn "Ansible collection ansible.posix is unavailable; setups will not report per-task timings."
+  fi
   ANSIBLE_COLLECTION_CHECKED=true
+}
+
+# Is an Ansible collection installed?
+#
+# `ansible-galaxy collection list <name>` exits 0 whether or not the collection
+# is there (ansible-core 2.16), so the listing itself has to be matched: an
+# installed collection is one `<name>  <version>` row under the table header.
+#
+# Returns: 0 when the collection is installed, 1 otherwise
+collection_installed() {
+  ansible-galaxy collection list "$1" 2>/dev/null |
+    grep -qiE "^${1//./\\.}[[:space:]]"
 }
 
 # Print an env map as sorted `  KEY=value` lines, shell-quoted.
@@ -122,13 +151,13 @@ print_env_map() {
 # third-party image versions (e.g. busybox_image) have one place to bump
 # instead of a literal repeated in each playbook that needs one.
 #
-# Reads:  PMM_QA_ROOT, VERBOSE, VERBOSITY_LEVEL
+# Reads:  PMM_QA_ROOT, VERBOSE, VERBOSITY_LEVEL, PROFILE_TASKS_AVAILABLE
 # Exits:  via die() when the playbook fails
 run_playbook() {
   local playbook=$1 map_name=$2
   local -n env_ref=$map_name
   configure_ansible_python
-  ensure_docker_collection
+  ensure_ansible_collections
 
   local -a env_args=()
   local key
@@ -142,12 +171,23 @@ run_playbook() {
     verbosity_args+=(-v)
   done
 
+  # Per-task timings. A spec's own elapsed time only says which database was
+  # slow; these say which task inside it was, so a slow pmm-client install is
+  # not read as a slow database.
+  local -a callback_args=()
+  if [[ $PROFILE_TASKS_AVAILABLE == true ]]; then
+    callback_args=(ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks)
+  fi
+
   log_verbose "Running playbook $playbook with:"
   [[ $VERBOSE == true ]] && print_env_map "$map_name"
 
   (
     cd "$PMM_QA_ROOT"
-    env "${env_args[@]}" ansible-playbook \
+    # Playbooks in subdirectories run their shell tasks with that subdirectory as
+    # the working directory, so anything under pmm_qa/ has to be addressed
+    # absolutely from here rather than relative to the playbook.
+    env "PMM_QA_ROOT=$PMM_QA_ROOT" "${callback_args[@]}" "${env_args[@]}" ansible-playbook \
       -i 'localhost,' \
       --connection=local \
       --extra-vars '@vars/pinned_images.yml' \

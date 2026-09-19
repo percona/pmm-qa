@@ -51,7 +51,22 @@ sleep 10
 # Install the PG server from selected distribution
 if [[ $distribution == "PGDG" ]];
 then
-      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      # postgresql.org has answered this with an empty body often enough to kill
+      # the whole setup: apt-key reports "no valid OpenPGP data found", and under
+      # bash -e that ends the run before PostgreSQL is ever installed. Fetch to a
+      # file so a short read is caught here rather than by apt-key, and retry.
+      for attempt in 1 2 3; do
+        if wget --timeout=30 --tries=2 -O /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+          && grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/pgdg.asc; then
+          break
+        fi
+        if [ "$attempt" = 3 ]; then
+          echo "Failed to download the PGDG signing key after 3 attempts" >&2
+          exit 1
+        fi
+        sleep 15
+      done
+      apt-key add /tmp/pgdg.asc
       sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
       apt update
       apt -y install postgresql-${pgsql_version} postgresql-server-dev-${pgsql_version}

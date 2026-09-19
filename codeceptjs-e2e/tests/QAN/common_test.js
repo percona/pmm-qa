@@ -49,6 +49,11 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
   queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
   I.wait(3);
+  // The filter list is virtualised (react-viewport-list inside a 200px scroll box), so a
+  // checked service that sits below the fold is not in the DOM at all once the search
+  // field is cleared. Collapsing to the selected filters brings it back into the window.
+  I.waitForVisible(queryAnalyticsPage.filters.buttons.showSelected, 30);
+  queryAnalyticsPage.filters.showSelectedFilters();
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.checkedFilters());
 
   I.assertContain(

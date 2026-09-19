@@ -21,15 +21,21 @@ class MongodbBackupDetailsDashboard {
     ];
   }
 
+  // The panel renders "No data" until the pbm metric behind it is scraped, so a single
+  // probe here is a coin flip -- PMM-T2036 lost it in the gssapi and mysql-psmdb-pgsql
+  // lanes on the same run. Poll like the two helpers below, refreshing in the viewport
+  // so Grafana actually re-runs the query.
   async verifyBackupConfiguredValue(expectedValue) {
     const I = actor();
 
     I.waitForVisible(this.elements.backUpConfiguredValue, 15);
-    const value = await I.grabTextFrom(this.elements.backUpConfiguredValue);
+    await I.asyncWaitFor(async () => {
+      I.scrollTo(this.elements.backUpConfiguredValue);
+      I.click(this.elements.refresh);
+      const actualValue = await I.grabTextFrom(this.elements.backUpConfiguredValue);
 
-    if (value !== expectedValue) {
-      throw new Error(`Expected Value for panel Backup configured on MongoDB PMM Details dashboard does not equal expected value. Expected: "${expectedValue}". Actual: "${value}".`);
-    }
+      return actualValue === expectedValue;
+    }, 60, `Backup configured panel never reached "${expectedValue}"`);
   }
 
   async verifyPitrEnabledValue(expectedValue) {

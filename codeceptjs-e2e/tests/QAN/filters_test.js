@@ -277,22 +277,21 @@ Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan', async ({ I
 
 Scenario(
   'PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan',
-  async ({ I, queryAnalyticsPage, adminPage }) => {
-    queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.filters.filterBy('{');
+  async ({ queryAnalyticsPage, adminPage }) => {
     queryAnalyticsPage.waitForLoaded();
 
-    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-      throw new Error('Filter with character "{" displayed');
-    }
-
-    adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
-    queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.filters.filterBy('}');
-    queryAnalyticsPage.waitForLoaded();
-
-    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-      throw new Error('Filter with character "}" displayed');
+    // Both halves of this have been observed failing. The panel populates after the
+    // spinner detaches, so an empty list is what a too-early probe sees -- and an empty
+    // list satisfies "0 filters" whether or not the search ran. Wait for filters to be
+    // there, then poll the count down, because the search re-renders asynchronously and
+    // a single probe caught the whole unfiltered panel still on screen -- 78 filters.
+    for (const bracket of ['{', '}']) {
+      await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(0, 'bigger', 30);
+      queryAnalyticsPage.filters.filterBy(bracket);
+      queryAnalyticsPage.waitForLoaded();
+      await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(0, 'equals');
+      adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
+      queryAnalyticsPage.waitForLoaded();
     }
   },
 );

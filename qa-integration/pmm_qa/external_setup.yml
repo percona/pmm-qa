@@ -35,6 +35,11 @@
         -v /var/lib/containerd \
         antmelekhin/docker-systemd:ubuntu-24.04
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ external_container }}"
+
   - name: Copy all required Artifacts to the docker external_container
     shell: "{{ item }}"
     with_items:

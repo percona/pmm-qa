@@ -48,7 +48,17 @@ fi
 microdnf install -y wget gnupg2 jq
 wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 rpm -i ./percona-release-latest.noarch.rpm
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
+# A random name per run means a re-provisioned container registers under a new
+# node, and its old series keep the previous name alive in every dashboard
+# filter built from label_values. Callers pass the container name instead.
+export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
+
+# Grafana regex-escapes a multi-value variable even when one value is selected, so a
+# dot in the node name turns a dashboard's node_name="$node_name" into a query for
+# `pxc_proxysql_pmm_8\.4`, which matches nothing (MySQL Instances Compare, Network
+# Traffic). Callers pass the container name, and those carry the version.
+PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
+export PMM_AGENT_SETUP_NODE_NAME
 
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
 # which makes microdnf abort. The mismatch usually clears within a minute, so retry.
@@ -127,10 +137,10 @@ fi
 if [[ -z "$upgrade" ]]; then
     if [[ "$use_metrics_mode" == "yes" ]]; then
         echo "setup pmm-agent when metrics mode yes"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
     else 
         echo "setup pmm-agent when metrics mode no"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
     pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > pmm-agent.log 2>&1 &

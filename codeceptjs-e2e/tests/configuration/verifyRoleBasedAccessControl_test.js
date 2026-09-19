@@ -75,15 +75,15 @@ Scenario(
 
     await I.Authorize(newPsUser.username, newPsUser.password);
 
+    // None of the dashboards below is expanded. Every tolerance in this scenario was
+    // calibrated while expandEachDashboardRow silently opened nothing, so it counts only
+    // the always-visible panels; the collapsed rows add text, pt-summary and polystat
+    // panels, which have no "No data" state at all.
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(5);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(5);
 
@@ -93,13 +93,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(2);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(3);
 
@@ -122,8 +118,6 @@ Scenario(
       environment: psRole.value,
       from: 'now-1m',
     }));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },

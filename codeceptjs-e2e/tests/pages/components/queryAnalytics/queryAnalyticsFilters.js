@@ -17,7 +17,10 @@ class QueryAnalyticsFilters {
       filterLinkByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('a'),
       filterPercentageByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('//span').at(3),
       filterName: locate('//span[@class="checkbox-container__label-text"]'),
-      checkedFilters: () => this.fields.filterCheckboxes.find('//input[@type="checkbox" and @checked]//following-sibling::span[@class="checkbox-container__label-text"]'),
+      // React sets a controlled checkbox's `checked` property, never the HTML
+      // attribute, so an @checked XPath only matches when the input happens to
+      // re-mount already checked. Match the live state instead.
+      checkedFilters: () => locate('div[data-testid^="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text'),
       groupElementsCount: (groupName) => `//span[contains(text(), '${groupName}')]/following-sibling::span[contains(text(), 'Show all')]`,
     };
     this.buttons = {

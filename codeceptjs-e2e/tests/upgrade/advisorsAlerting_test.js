@@ -6,7 +6,20 @@ const advisorName = 'Check for unsupported PostgreSQL';
 const groupName = 'Version Configuration';
 const ruleName = 'Alert Rule for upgrade';
 const checkName = 'MongoDB version check';
-const beforeUpgradePmmVersion = process.env.CLIENT_VERSION ? parseInt(process.env.CLIENT_VERSION.replace(/\./g, ''), 10) : 300;
+// Both halves of an upgrade pair need the version of the server the pre-upgrade
+// suite ran against, which stays the same once the server is upgraded under it.
+// CLIENT_VERSION cannot stand in for it: the nightly passes a tarball URL there.
+const preUpgradeVersion = (() => {
+  const [major, minor] = (process.env.DOCKER_TAG || '').split(':').pop().split('.')
+    .map((part) => parseInt(part, 10));
+
+  return Number.isInteger(major) && Number.isInteger(minor) ? { major, minor } : null;
+})();
+
+// An unreadable tag means running the scenario, so a local run is not silently skipped.
+const preUpgradeAtLeast = (major, minor) => !preUpgradeVersion
+  || preUpgradeVersion.major > major
+  || (preUpgradeVersion.major === major && preUpgradeVersion.minor >= minor);
 
 Before(async ({ I }) => {
   I.Authorize();
@@ -48,7 +61,7 @@ Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async 
   I,
   advisorsPage,
 }) => {
-  if (beforeUpgradePmmVersion > 340) {
+  if (preUpgradeAtLeast(3, 5)) {
     I.amOnPage(advisorsPage.urlConfiguration);
     I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
     I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -79,7 +92,7 @@ Scenario(
     I,
     advisorsPage,
   }) => {
-    if (beforeUpgradePmmVersion > 340) {
+    if (preUpgradeAtLeast(3, 5)) {
       I.amOnPage(advisorsPage.urlConfiguration);
       I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
       I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -100,6 +113,9 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
+    // The advanced settings page these intervals live on arrived in PMM 3.8.0.
+    if (!preUpgradeAtLeast(3, 8)) return;
+
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
     I.fillField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
@@ -118,6 +134,9 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
+    // Nothing was set before the upgrade on a server without that page.
+    if (!preUpgradeAtLeast(3, 8)) return;
+
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.switchTo();
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
