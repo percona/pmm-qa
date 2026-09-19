@@ -5,7 +5,14 @@ const config: PlaywrightTestConfig = {
   ...base,
   // Playwright wipes outputDir on start, so each run needs its own or the previous video is lost.
   outputDir: `./exploratory/findings-${process.env.SWEEP_LABEL ?? 'crawl'}/pw`,
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    [
+      'html',
+      { open: 'never', outputFolder: `./exploratory/findings-${process.env.SWEEP_LABEL ?? 'crawl'}/html` },
+    ],
+    ['junit', { outputFile: `./exploratory/findings-${process.env.SWEEP_LABEL ?? 'crawl'}/junit.xml` }],
+  ],
   retries: 0,
   testDir: './exploratory',
   use: {

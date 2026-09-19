@@ -6,6 +6,8 @@ import { JevExplorer } from './jev.client';
 import { writeFilmstrip, StepRecord } from './report';
 
 const LIMIT = Number(process.env.SWEEP_LIMIT ?? 40);
+const BROKEN_LIMIT = Number(process.env.SWEEP_BROKEN_LIMIT ?? 0.8);
+const NO_DATA_LIMIT = Number(process.env.SWEEP_NO_DATA_LIMIT ?? 0.8);
 const LABEL = process.env.SWEEP_LABEL ?? 'baseline';
 const ARTIFACTS = path.resolve(__dirname, `findings-${LABEL}`);
 
@@ -14,7 +16,7 @@ interface Dash {
   url: string;
 }
 
-test('sweep every dashboard and judge it', async ({ page }) => {
+test('sweep every dashboard and judge it', async ({ page }, testInfo) => {
   test.setTimeout(30 * 60 * 1_000);
   fs.mkdirSync(`${ARTIFACTS}/shots`, { recursive: true });
 
@@ -79,6 +81,16 @@ test('sweep every dashboard and judge it', async ({ page }) => {
     const isFlagged = verdict.broken > 0.8 || verdict.noData > 0.8;
 
     if (isFlagged) flagged.push({ ...verdict, shot, title: dash.title, url: dash.url });
+
+    // Every dashboard reports its own verdict, so the run itself names what failed --
+    // soft so one bad dashboard does not hide the other thirty-nine.
+    await test.step(`${dash.title} - broken ${verdict.broken.toFixed(2)} no-data ${verdict.noData.toFixed(2)}`, async () => {
+      await testInfo.attach(dash.title, { contentType: 'image/jpeg', path: `${ARTIFACTS}/${shot}` });
+      expect.soft(verdict.broken, `${dash.title} looks broken (${dash.url})`).toBeLessThan(BROKEN_LIMIT);
+      expect
+        .soft(verdict.noData, `${dash.title} renders no measurement at all (${dash.url})`)
+        .toBeLessThan(NO_DATA_LIMIT);
+    });
 
     timeline.push({
       action: `no-data ${verdict.noData.toFixed(2)}`,
