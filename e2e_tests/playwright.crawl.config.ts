@@ -3,7 +3,8 @@ import base from './playwright.config';
 
 const config: PlaywrightTestConfig = {
   ...base,
-  outputDir: './exploratory/findings/pw',
+  // Playwright wipes outputDir on start, so each run needs its own or the previous video is lost.
+  outputDir: `./exploratory/findings-${process.env.SWEEP_LABEL ?? 'crawl'}/pw`,
   reporter: [['list']],
   retries: 0,
   testDir: './exploratory',
