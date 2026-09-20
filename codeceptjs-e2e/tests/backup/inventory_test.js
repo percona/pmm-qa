@@ -262,6 +262,16 @@ Data(restoreFromDifferentStorageLocationsTests).Scenario(
 
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, mongoServiceName);
 
+    // pmm-agent 3.8.1 rejects the mongod restart the server sends after a physical
+    // restore (PMM-15163, fixed in 3.9.0), so the restore never reaches Success.
+    const { version: agentVersion } = await inventoryAPI.apiGetPMMAgentInfoByServiceId(service_id);
+
+    if (!isLogical && agentVersion === '3.8.1') {
+      I.say(`Skipping physical restore: pmm-agent ${agentVersion} cannot restart mongod after it (PMM-15163)`);
+
+      return;
+    }
+
     const artifactId = await backupAPI.startBackup(backupName, service_id, currentLocationId, false, isLogical);
 
     await backupAPI.waitForBackupFinish(artifactId);

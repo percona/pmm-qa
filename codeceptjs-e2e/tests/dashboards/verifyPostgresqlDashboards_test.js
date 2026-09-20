@@ -37,15 +37,22 @@ Scenario(
 Scenario(
   'PMM-T2049 - Verify PostgreSQL Instances Overview Dashboard @nightly @dashboards',
   async ({ I, dashboardPage }) => {
+    // PMM-15104 renamed the slow-queries panel in 3.10.0; the ami lane still runs a GA server.
+    const { major, minor } = await serverApi.getPmmVersion();
+
+    if (major === 3 && minor < 10) {
+      I.say(`Skipping: expects the 3.10 panel names, server is ${major}.${minor}`);
+
+      return;
+    }
+
     const url = I.buildUrlWithParams(dashboardPage.postgresqlInstanceOverviewDashboard.url, { from: 'now-5m' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifySlowQueriesPanel('5 minutes');
     await dashboardPage.expandEachDashboardRow();
-    await dashboardPage.verifyMetricsExistence(
-      dashboardPage.postgresqlInstanceOverviewDashboard.metricsFor(await serverApi.getPmmVersion()),
-    );
+    await dashboardPage.verifyMetricsExistence(dashboardPage.postgresqlInstanceOverviewDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
   },
 );
