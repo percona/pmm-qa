@@ -116,6 +116,84 @@ export const DASHBOARDS: DashboardEntry[] = [
   { folder: 'Valkey', url: 'graph/d/valkey-slowlog/valkey-redis-slowlog' },
 ];
 
+export const FOLDER_DASHBOARDS = [
+  { dashboards: ['DB Cluster Summary', 'Databases Overview'], name: 'Experimental' },
+  {
+    dashboards: [
+      'Advanced Data Exploration',
+      'Home Dashboard',
+      'Prometheus Exporter Status',
+      'Prometheus Exporters Overview',
+      'VictoriaMetrics',
+      'VictoriaMetrics Agents Overview',
+    ],
+    name: 'Insight',
+  },
+  {
+    dashboards: ['Databases on Kubernetes - Summary', 'Kubernetes Cluster Overview'],
+    name: 'Kubernetes (experimental)',
+  },
+  {
+    dashboards: [
+      'MongoDB Collections Overview',
+      'MongoDB InMemory Details',
+      'MongoDB Instance Summary',
+      'MongoDB Instances Compare',
+      'MongoDB Instances Overview',
+      'MongoDB MMAPv1 Details',
+      'MongoDB Oplog Details',
+      'MongoDB ReplSet Summary',
+      'MongoDB Sharded Cluster Summary',
+      'MongoDB WiredTiger Details',
+      'MongoDB Router Summary',
+    ],
+    name: 'MongoDB',
+  },
+  {
+    dashboards: [
+      'CPU Utilization Details',
+      'Disk Details',
+      'Memory Details',
+      'Network Details',
+      'Node Summary',
+      'Node Temperature Details',
+      'Nodes Compare',
+      'Nodes Overview',
+      'NUMA Details',
+      'Processes Details',
+    ],
+    name: 'OS',
+  },
+  {
+    dashboards: ['Environments Overview (Designed for PMM)', 'PMM HA Health Overview', 'PMM Health'],
+    name: 'PMM Health',
+  },
+  {
+    dashboards: [
+      'PostgreSQL Instance Summary',
+      'PostgreSQL Instances Compare',
+      'PostgreSQL Instances Overview',
+    ],
+    name: 'PostgreSQL',
+  },
+  { dashboards: ['PMM Query Analytics'], name: 'Query Analytics' },
+  {
+    dashboards: [
+      'Valkey/Redis Clients',
+      'Valkey/Redis Cluster Details',
+      'Valkey/Redis Command Detail',
+      'Valkey/Redis Load',
+      'Valkey/Redis Memory',
+      'Valkey/Redis Network',
+      'Valkey/Redis Overview',
+      'Valkey/Redis Persistence Details',
+      'Valkey/Redis Replication',
+      'Valkey/Redis Slowlog',
+    ],
+    name: 'Valkey',
+  },
+] as const;
+
 /** Extract dashboard name from the URL path (last segment). */
 export const nameFromUrl = (url: string): string => url.split('/').pop() ?? 'unknown';
 

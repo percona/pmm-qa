@@ -3,6 +3,11 @@
 load helpers/test_helper
 
 @test "PS GR selects the existing playbook and exact environment" {
+  # The tarball URL below is architecture-specific, so pin the arch rather than
+  # inherit whatever the developer's machine happens to be.
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'x86_64\n'; }
+
   parse_database_spec 'ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=latest-tarball
   CLIENT_DEBUG=true
@@ -89,6 +94,25 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[PXC_TARBALL]} == /tmp/pxc.tar.gz ]]
   [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 2 ]]
   [[ ${CAPTURE_ENV[PXC_NODES]} == 3 ]]
+  [[ -z ${CAPTURE_ENV[PROXYSQL_PACKAGE]} ]]
+}
+
+@test "PXC 8.4 dispatches with its version and upstream ProxySQL" {
+  parse_database_spec 'PXC=8.4'
+  dispatch_setup
+
+  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
+  [[ ${CAPTURE_ENV[PXC_VERSION]} == 8.4 ]]
+  [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 3 ]]
+}
+
+@test "PXC 9.7 dispatches with its version and upstream ProxySQL" {
+  parse_database_spec 'PXC=9.7'
+  dispatch_setup
+
+  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
+  [[ ${CAPTURE_ENV[PXC_VERSION]} == 9.7 ]]
+  [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 3 ]]
 }
 
 @test "Valkey sentinel alias selects sentinel playbook" {

@@ -5,10 +5,14 @@ Feature('PMM upgrade tests for SSL');
 
 const { adminPage, dashboardPage } = inject();
 const pathToPMMFramework = adminPage.pathToPMMTests;
+// The upgrade pipeline runs `--database ssl_mysql` with no version, so this tracks
+// SSL_MYSQL's DEFAULT_VERSION in qa-integration/pmm_qa/pmm-framework/lib/config.sh.
+const mysqlSslVersion = '8.4';
+
 const sslinstances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric', 'dashboard', 'databaseType']);
 
 sslinstances.add(['pdpgsql_pgsm_ssl', '17', 'pdpgsql_pgsm_ssl_17', 'postgres_ssl', 'pg_stat_database_xact_rollback', dashboardPage.postgresqlInstanceOverviewDashboard.url, 'postgresql']);
-sslinstances.add(['mysql_ssl', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', dashboardPage.mySQLInstanceOverview.url, 'mysql']);
+sslinstances.add(['mysql_ssl', mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', dashboardPage.mySQLInstanceOverview.url, 'mysql']);
 sslinstances.add(['psmdb-server', '6.0', 'psmdb-server', 'mongodb_ssl', 'mongodb_connections', dashboardPage.mongoDbInstanceOverview.url, 'mongodb']);
 
 Before(async ({ I }) => {
