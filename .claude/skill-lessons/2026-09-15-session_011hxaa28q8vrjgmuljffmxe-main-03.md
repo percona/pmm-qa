@@ -1,6 +1,0 @@
-# .claude/agents/investigator.md — a long-lived repro box's datastore both contaminates and ages out a data-dependent assertion
-
-- Added: 2026-09-15
-- Applies to: .claude/agents/investigator.md
-- Evidence: Verifying a fix to a QAN count assertion, the failing run's own rows were still inside the test's window, so the re-run would have re-measured the pre-fix data; clearing them first (`ALTER TABLE metrics DELETE WHERE schema IN (...) SETTINGS mutations_sync=2`) was needed before the count meant anything. In the same verification run a different, untouched test (asserting on a `now-15m` window) failed only because the box's newest row was 16:16:00 against a clock of 16:45:34 — the QA setup's one-shot workload had finished ~29 min earlier and no workload container was running; it had passed on that same box during the baseline reproduction.
-- Proposed change: In the fix-verification section, add that when the assertion reads a COUNT or a recent-window query out of a datastore, the prior run's rows must be deleted before re-running, and that before blaming the diff for a `now-Nm` window failure you compare the store's `max(period_start)` against `now()` — an aged box legitimately fails freshness assertions a fresh CI runner passes. State both in the PR.

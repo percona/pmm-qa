@@ -1,6 +1,0 @@
-# .claude/agents/investigator.md — a tracking ticket in a delivered status is a lead, not a clean dedup
-
-- Added: 2026-09-20
-- Applies to: .claude/agents/investigator.md
-- Evidence: Step 1's Jira dedup found a Bug describing the failing test's exact symptom, but in status Done / resolution Cannot Reproduce, closed two days earlier with no comment. The dedup step enumerates only tickets "still sitting in New, In Review, or another non-delivered status", which reads as "a Done ticket is irrelevant"; the failure had in fact recurred twice since the closure and reproduced 2/2 on the first fresh VM, so the ticket was neither a stop condition nor absent — it was the place the new evidence belonged.
-- Proposed change: In the dedup step, state that a ticket in a delivered status matching the failure is a third outcome alongside stop and continue — continue the investigation, and on a confirmed reproduction comment the reproduction on that ticket and re-open it via the relay `transition` action rather than filing a duplicate; call out Cannot Reproduce specifically, since a failure that is intermittent night to night but deterministic within one page load is exactly what a manual attempt closes wrongly.

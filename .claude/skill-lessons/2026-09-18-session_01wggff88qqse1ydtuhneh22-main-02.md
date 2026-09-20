@@ -1,6 +1,0 @@
-# .claude/agents/investigator.md — sweep for the changed property, not for the list of changed values
-
-- Added: 2026-09-18
-- Applies to: .claude/agents/investigator.md (the step-4 rule "grep for every occurrence of the same pattern and enumerate the full set in the PR")
-- Evidence: An upstream commit trimmed whitespace from 37 dashboard panel titles. The completeness sweep grepped each of the 37 trimmed titles as a whole quoted literal and reported the set exhaustive, and the PR body claimed so. A reviewer found a missed occurrence: a page object stores only a fragment of one title (`'Cursors '` for the panel `"$service_name - Cursors "`), which no whole-value match can see. Re-grepping for the invariant *property* instead — any quoted literal with leading or trailing whitespace across the test and page directories — found that entry and exactly one other hit, a `', '` join separator, in one pass.
-- Proposed change: In that rule, say the enumeration greps the invariant property the change turns on (a trailing space, a renamed prefix, a removed suffix), never the list of changed values, because a call site holding a fragment or an interpolated form of a value is invisible to a whole-value match; and that a PR may claim a sweep is exhaustive only when it names the property it swept for and the residual hits it judged irrelevant.

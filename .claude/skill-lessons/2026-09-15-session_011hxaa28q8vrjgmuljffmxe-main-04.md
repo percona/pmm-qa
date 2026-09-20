@@ -1,6 +1,0 @@
-# .claude/agents/investigator.md — the same tag's last green scheduled run on main is the cheapest control, and container names expose what the setup args hide
-
-- Added: 2026-09-15
-- Applies to: .claude/agents/investigator.md
-- Evidence: For an FB failure, the previous scheduled `e2e-tests-matrix` run on `main` had run the identical 10-test `@pmm-ps-integration` set and passed all 10 — confirmed by reading the job log's "Running 10 tests" and per-test lines, not the conclusion. Its `WIZARD_ARGS` were byte-identical to the red run, so nothing at the args level differed; grepping each run's log for provisioned container names (`ps_pmm_replication_8_0_*` vs `ps_pmm_replication_8_4_*`) revealed a default-version change from a pmm-qa main commit merged between the two runs, localising the cause before any VM existed.
-- Proposed change: In the reproduce step, add that the same tag's most recent green scheduled run on `main` is the first control to pull, verified by its per-test log lines rather than its conclusion; and that when two runs' setup arguments are identical, diffing the provisioned container/image names in their logs is what exposes a defaulted value that changed underneath them.
