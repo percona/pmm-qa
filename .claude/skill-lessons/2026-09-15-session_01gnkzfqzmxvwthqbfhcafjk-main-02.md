@@ -1,6 +1,0 @@
-# .claude/skills/qa-code-review/SKILL.md — a redundancy finding's suggestion block should delete the comment, not shorten it
-
-- Added: 2026-09-15
-- Applies to: .claude/skills/qa-code-review/SKILL.md (section 4, Comments in the diff)
-- Evidence: A 🟡 thread on percona/pmm-qa#1431 established that a six-line comment restated the neighbouring comment, the workflow's own name and the PR body, and that its length was what would make it go stale — then offered a suggestion block keeping two of the lines as a non-obvious invariant, which the author accepted (https://github.com/percona/pmm-qa/pull/1431#discussion_r4011225111, https://github.com/percona/pmm-qa/pull/1431#discussion_r4011228423). The maintainer's disposition was an empty ```suggestion``` on the same hunk (https://github.com/percona/pmm-qa/pull/1431#discussion_r4014325434), and the merged `.github/workflows/nightly-e2e-tests-matrix.yml` carries neither the original block nor the replacement. Section 4 faults an *author* who rewords rather than removes, but sets no matching bar for the review's own suggestion.
-- Proposed change: In section 4, require the suggestion block to follow the finding's own reasoning — where the stated ground is that neighbouring comments, the file's own name and the PR body already carry the content, suggest deleting the block rather than a shortened rewrite.

@@ -18,6 +18,11 @@ Entry points: [pmm-framework/README.md](../../../../qa-integration/pmm_qa/pmm-fr
 | Version pins in one place | scattered per-task versions make upgrades a hunt |
 | Preflight checks for combinations that clash | e.g. `pdpgsql` + `pgsql` with replication |
 
+## Before raising it
+
+- **An inconsistency between two artifact-fetching call sites needs the second site's artifact proved to exist.** Of two client-tarball call sites called inconsistent, only one could take the fix: the other's feature-build branch needs a PR-specific tarball the arm bucket does not publish (168 keys, all `pmm-client-latest*`), so the same change would have traded a wrong-arch binary for a 404. List the bucket or registry contents for the second site's inputs and cite them in the thread; where the artifact is absent, the finding is against the publishing pipeline, not the caller.
+- **A changed version default is not "silently shipped" when the branch's own new CI jobs pin it.** A finding on a PXC default moving 8.0 → 8.4 was declined as deliberate — it aligns PXC with the PS/MYSQL defaults, and the branch's new `pxc-84`/`pxc-97` jobs pin both versions explicitly and were verified end to end. Check for that pin first; where the jobs cover it, what is left is the stale PR body under check 2 and nothing more.
+
 ## Timeouts and retries
 
 - An inner `timeout` must fire **before** the wrapping `nick-fields/retry` `timeout_minutes`, or the action's tree-kill cannot signal a root-owned `sudo` child and dies with `kill EPERM` before any retry decision — a hang then becomes unretryable.

@@ -1,6 +1,0 @@
-# .claude/skills/qa-code-review/references/playwright-suite.md — the one-caller rule keeps passing a module-scope declaration in a test file
-
-- Added: 2026-09-18
-- Applies to: .claude/skills/qa-code-review/references/playwright-suite.md (Structure)
-- Evidence: A maintainer opened a thread against a module-level `const environment = 'dev'` sitting above the single test that read it — "This config is only for the test that uses it, no reason to make It a top-level configuration that other tests in future might want to use. Just insert under the test that uses it" (https://github.com/percona/pmm-qa/pull/1446#discussion_r4048744172) — on a line every AI review on that PR passed. The author moved it into the test body in `48127d45` (https://github.com/percona/pmm-qa/pull/1446#discussion_r4048808295) and that is what merged. The Structure rule "A helper or const with one caller belongs in its caller" already covers it.
-- Proposed change: Make the rule's scope explicit rather than its wording louder — a declaration at module scope in a `*.test.ts` read by one test belongs inside that test's body, which is a shape a reviewer can check without judging reuse intent. Second maintainer verdict on this rule failing to fire; see the queued 2026-09-14 entry where it covered a page-object const and did not fire either.

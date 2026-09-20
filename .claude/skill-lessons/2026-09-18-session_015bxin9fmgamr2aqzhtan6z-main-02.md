@@ -1,6 +1,0 @@
-# .claude/skills/qa-code-review/references/playwright-suite.md — an attached-versus-visible claim about Grafana panels is measured before it is raised
-
-- Added: 2026-09-18
-- Applies to: .claude/skills/qa-code-review/references/playwright-suite.md (Assertions)
-- Evidence: A 🟡 thread on percona/pmm-qa#1446 faulted `.count()` on the no-data panel locator for counting every *attached* match where the source's `grabNumberOfVisibleElements` kept only visible ones, concluding it "reds a run the source would have passed", and carried a suggestion block rewriting the assertion. The author measured the pair on that dashboard — attached and visible identical in every state the test reaches, 60/60 on the unlabelled URL and 2/2 once the label lands, identical title sets, no unmounting between a top and bottom scroll — so the strictness half did not stand; only the thinner failure message did, and it changed no verdict (https://github.com/percona/pmm-qa/pull/1446#discussion_r4041848525).
-- Proposed change: Add an Assertions row — a finding that an attached-counting locator is stricter than a visible-filtered one carries the measured attached/visible pair for the dashboard under review; without it the claim is 🔵 on the failure message alone, and no suggestion block rewrites a passing assertion on it.

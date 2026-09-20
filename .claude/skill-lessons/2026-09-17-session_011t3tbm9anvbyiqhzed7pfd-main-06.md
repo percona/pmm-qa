@@ -1,6 +1,0 @@
-# .claude/skills/qa-code-review/references/codeceptjs-legacy.md — a "replace the fixed wait" finding must name a verifiable predicate and check for a trailing assertion
-
-- Added: 2026-09-17
-- Applies to: .claude/skills/qa-code-review/references/codeceptjs-legacy.md
-- Evidence: A bot finding asked for `I.wait(2)` in `codeceptjs-e2e/tests/pages/explorePage.js` to become a content-based wait. The author kept the fixed settle with reasons: the predicate would need `waitForFunction` against Monaco's `.view-lines`, an empty editor still renders one empty `view-line` so it has to reach into the text, and that cannot be verified without the external-ClickHouse datasource the test needs; and the race is not silent if lost, because the `assert.strictEqual` ending `setSqlQuery` compares the editor's actual content against the query and fails with both strings. https://github.com/percona/pmm-qa/pull/1444#discussion_r4032674575
-- Proposed change: Add that this finding is 🔵, not 🟡, unless it names the replacement predicate and that predicate can be verified in an environment the reviewer has — and that a later assertion in the same method which fails loudly on the lost race is itself a reason to leave the wait alone.

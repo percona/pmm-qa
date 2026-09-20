@@ -1,6 +1,0 @@
-# .claude/skills/qa-code-review/references/ci-workflows.md — before calling a test tag new, grep its token-order near-variants
-
-- Added: 2026-09-17
-- Applies to: .claude/skills/qa-code-review/references/ci-workflows.md
-- Evidence: A review thread on percona/pmm-qa#1445 asserted `@pmm-pdpgsql-integration` "exists nowhere in the repo before this PR". The author checked the near-variants and found `main` already carries `@pdpgsql-pmm-integration` on `codeceptjs-e2e/tests/qa-integration/pmm_pdpgsql_integration_test.js:11` — the same database, a word swap apart, because CodeceptJS orders these DB-first (`@pgsm-pmm-integration`) while Playwright orders them pmm-first (`@pmm-psmdb-integration`). Reaching for the wrong half of the pair loses coverage silently, since `runner-e2e-tests-playwright.yml:220` runs `npx playwright test --grep "$PMM_TEST_FLAG" … || true` and a flag matching nothing runs zero tests and reports green. https://github.com/percona/pmm-qa/pull/1445#discussion_r4036750879
-- Proposed change: Add a rule that a claim about a tag being new or unused is made against the token-order permutations of that tag, not the literal string, and that a near-identical existing tag is itself the finding; relates to the queued check 4 entry on tags that select nothing across the two runners.
