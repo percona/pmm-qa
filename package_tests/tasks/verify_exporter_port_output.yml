@@ -35,6 +35,8 @@
 # pipefail, so that a pmm-admin failure fails here with its own message instead
 # of reaching the assert below as an empty string: awk exits 0 on no input, and
 # "42007 present in " is a much harder failure to read than the real error.
+# pmm-admin has exited 1 with no output at all right after the socket services
+# were removed above, so each call gets a few tries before it counts.
 - name: "{{ item }}: get port from pmm-admin list output"
   shell: |
     set -o pipefail
@@ -42,6 +44,9 @@
   args:
     executable: /bin/bash
   register: list_port_output
+  until: list_port_output.rc == 0
+  retries: 5
+  delay: 3
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin list"
   assert:
@@ -57,6 +62,9 @@
   args:
     executable: /bin/bash
   register: status_port_output
+  until: status_port_output.rc == 0
+  retries: 5
+  delay: 3
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin status"
   assert:
@@ -72,6 +80,9 @@
   args:
     executable: /bin/bash
   register: inventory_list_agents_port_output
+  until: inventory_list_agents_port_output.rc == 0
+  retries: 5
+  delay: 3
   when: item != "vmagent"
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin inventory list agents"
