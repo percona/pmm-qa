@@ -31,7 +31,7 @@ Both share port 443 (nginx routes by SNI hostname) and are reachable at the same
 - **Absolute path, always** — `/workspace/pmm-qa/terraform/linode-runner/run.sh`. The examples below are repo-relative for readability, but any compound command that writes a script somewhere else first leaves the working directory outside the repo, and the call dies with `No such file or directory`. The rule covers every **local file read into the command** as well (`admin_password`, `ip`, `pmm_cert.pem`): `ADMIN_PASSWORD="$(cat terraform/…/admin_password)"` against a reset working directory does not error — it interpolates *empty*, and the remote suite runs a full scenario before failing on "Invalid username or password".
 - **Ship anything non-trivial as a file, not as an inline string.** Each of the three shell layers (local, `run.sh`'s `bash -c`, any `docker exec … sh -c`) strips one level of quoting, and the mangled command can still exit 0 — a `sed -i -E` carrying a URL regex rewrote a container's apt sources into garbage that only surfaced on the next `apt-get update`. Anything with a loop, a regex, a `$`, or more than one level of quoting goes over as `base64 -w0` locally → decode on the box → invoke the file, and reaches a container on stdin (`docker exec -i <c> sh -s <args> < /root/s.sh`).
 - **One `run.sh` in flight per `run_id`.** A second exec call issued while a poll loop is still running dies with `curl: (52) Empty reply from server` or `(56) Recv failure`, which reads as a dead box but is exec-server contention — the detached remote job is unaffected and its log keeps growing. Let the poll reach its sentinel, or kill it, before issuing another call.
-- **Keep an in-command `sleep` under ~240s, and chunk the polling.** The 600s exec-server cap is not the usable budget: on a loaded box (load ~15 on 6 vCPUs) `sleep 480`/`sleep 540` polls both died with "Empty reply from server" while `sleep 240` returned normally. One *Bash tool call* is bounded the same way, so a poll loop written as one long `for` loop is moved to the background at 600s and its later polls are lost — split polling across several calls of roughly five polls each.
+- **Keep an in-command `sleep` under ~240s, and chunk the polling.** The 600s exec-server cap is not the usable budget: on a loaded box (load ~15 on 6 vCPUs) `sleep 480`/`sleep 540` polls both died with "Empty reply from server" while `sleep 240` returned normally. The cap applies to the **whole command's wall clock**, not to each sleep in it: `for i in 1..5; do …; sleep 120; done` obeys the per-sleep rule and still dies at ~600s with `curl: (52) Empty reply from server`, returning none of its polls. Prefer a session-side `Monitor` issuing one short `run.sh` per iteration over any in-command loop. One *Bash tool call* is bounded the same way, so a poll loop written as one long `for` loop is moved to the background at 600s and its later polls are lost — split polling across several calls of roughly five polls each.
 - **The exec channel provides no `HOME`** (`run.sh <run_id> -- "echo HOME=$HOME"` prints empty). Start every script that runs on the box with `export HOME=/root`, including inside a detached one — the export does not carry over from the `run.sh` invocation. Without it `minikube start` wrote its kubeconfig and certs under the CWD, and every later `kubectl`/`helm` call failed on a missing `ca.crt`.
 - **Poll a sentinel, never `pgrep -f`.** End a detached script with a sentinel line (`echo DONE_MARKER=$?` appended to its log) and poll the log for it. `pgrep -f <script>` reports RUNNING forever — the pattern matches the exec-server's own wrapper carrying the poll — which burned two full 10-minute waits on a job that had already exited 0. The same self-match makes `pkill -9 -f <pattern>` kill the shell carrying it, so the rest of that compound command never runs: target a pidfile or an exact program path, and confirm a launch or a kill by the state it changed (a log file growing, containers gone), never by a process count on that pattern.
 
@@ -40,7 +40,10 @@ to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_S
 (128 KiB), so a big remote *output* — not a long command — aborts the call with
 `Argument list too long` and you see none of it. Anything that could be large (a full API
 dump, a log file, `docker inspect` over everything) gets summarised **on the box** so only
-a few lines come back.
+a few lines come back. **A small `tail -N` is not automatically safe** — the bound is bytes,
+not lines. `pmm-framework --verbose` runs Ansible, whose per-task result lines are tens of
+KiB each, so `tail -5 /root/setup_pxc.log` alone aborted the call with `Argument list too
+long` and returned nothing. Bound the line width too: `tail -3 <log> | cut -c1-200`.
 
 When you need the bytes themselves, `tar czf - <paths> | base64 -w0` is only safe under a
 budget: base64 inflates by 4/3 and the JSON wrapper adds more, so keep the *compressed*
@@ -84,6 +87,14 @@ terraform/linode-runner/run.sh <run_id> -- "tail -3 /root/<name>.log; grep -c DO
 ```
 
 A sentinel of `DONE_MARKER=130` — or any `128+N` — means the detach did not hold and the exec-server's teardown reached the job: relaunch it detached rather than investigating the command. `nohup … &` can look fine on a short `docker pull` and only fail past the first round trip, so use the `setsid` form for everything long.
+
+**Issue exactly ONE wait.** Either a `run_in_background` Bash `until <sentinel>; do sleep N; done` loop — which exits and notifies once when the condition holds — or a `Monitor` armed on the terminal condition; then stop issuing commands until the notification arrives. Successive background `sleep` waits do **not** sum: 240s, 300s, 400s, 500s, 560s and 590s issued in turn ran concurrently, so ~50 minutes of sleep advanced the wall clock by ~8, and reading each wait's output file in the turn that launched it returned empty every time — about twenty turns that produced nothing.
+
+**A filter between the command and the log file must be `grep --line-buffered`** (or let the log take the raw output). A detached `npx playwright test … | grep -E '✘|✓|passed|failed' >> log` showed only the phase header through nine one-minute polls while four of five tests had already finished; the lines all appeared when the pipeline exited.
+
+**`npx playwright test` empties `test-results/` at the start of every run**, so a multi-phase script must copy each phase's evidence out (to `/root/`) before the next phase starts, or the earlier phase has to be re-run to get it back.
+
+**Background processes in *this session's* sandbox do not outlive the turn.** The container is reclaimed between turns and takes daemons, dockerd and built images with it; only the scratchpad disk survives. A sampler, watcher and supervisor started with `nohup` died within minutes of the session's wakeup interval lengthening, losing six measurement windows overnight, and a supervisor that restarts dead children did not help because the whole container goes. Continuous measurement therefore either runs inside each turn with its state in files, or moves to a throwaway Linode VM — never promise an unattended overnight watch from the session container.
 
 Tee a long wait's progress to the scratchpad as well as the box (`… |& tee -a "$SCRATCH/pmm-framework.log"`): a container restart leaves a harness background task's output as nothing but `[killed]`, while scratchpad files survive — check that log before concluding anything about how far a setup got, and before re-provisioning. A `codeceptjs` run whose value *is* its measurements needs `--verbose`, or the `I.say` lines never appear and the whole detached run has to be repeated.
 
@@ -210,6 +221,8 @@ terraform/linode-runner/run.sh <run_id> -- "
 
 `-p 8443:8443`, not `443:8443` — host port 443 belongs to nginx, which forwards the plain (unprefixed) hostname here (see "Accessing the VM"). Client containers on the same `pmm-qa` docker network reach it by container hostname (`pmm-server`) regardless of the host mapping — see step 3.
 
+When PMM Server instead comes up through **`codeceptjs-e2e/docker-compose.yml`** (reproducing `runner-e2e-tests-codeceptjs.yml`), that file publishes `443:8443` and the container dies on `failed to bind host port 0.0.0.0:443/tcp: address already in use`. A second `-f` file listing the wanted ports does **not** fix it: Compose merges list-valued fields like `ports` by *appending*, so `443:8443` survives. Tag the override — `ports: !override` in the extra file — and confirm the resolved ports with `docker compose -f … -f … config` rather than by re-running the failing `up`.
+
 Wait for **readyz**: HTTP **200**, body **`{}`**, checked from *inside* the box (this is loopback traffic on the VM, not a controller-to-VM connection, so it's unaffected by anything above):
 
 ```bash
@@ -228,9 +241,11 @@ terraform/linode-runner/run.sh <run_id> -- "
 terraform/linode-runner/run.sh <run_id> -- "docker exec pmm-server change-admin-password '$ADMIN_PASSWORD'"
 ```
 
-(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Never pipe it through `tail`/`head` — its "Admin password changed successfully" line is the only confirmation the change landed. When you are **reproducing a pipeline**, use the credential that pipeline sets (the CI jobs use `admin`) rather than generating one; a generated password against a released image that rejects it costs a round of failed registrations and trips the lockout below.
+(`/usr/local/sbin/change-admin-password` wraps `grafana cli admin reset-admin-password`.) Never pipe it through `tail`/`head` — its "Admin password changed successfully" line is the only confirmation the change landed. **URL-encode that password anywhere it goes into a `--server-url`**: `openssl rand -base64 18` emits `/` and `+`, which parse as URL delimiters, and `pmm-admin config --server-url="https://admin:<pw>@pmm-server:8443"` then fails with `parse …: invalid port ":<pw-tail>" after host`. Encode it first — `python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$PW"`. When you are **reproducing a pipeline**, use the credential that pipeline sets (the CI jobs use `admin`) rather than generating one; a generated password against a released image that rejects it costs a round of failed registrations and trips the lockout below.
 
-Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes. The lockout is **time-based and self-clearing**, so the recovery is to stop issuing auth requests entirely for ~5 minutes and then check once — not to re-reset the password (which appears to succeed and changes nothing observable) and not to rebuild the server. While it is active every later auth probe is uninformative, so treat evidence gathered during one as void.
+Verify the credentials **once** rather than probing: repeated failed logins trip Grafana's brute-force lockout, which then rejects even the correct password for about five minutes. The lockout is **time-based and self-clearing**, so the recovery is to stop issuing auth requests entirely for ~5 minutes and then check once — not to re-reset the password (which appears to succeed and changes nothing observable) and not to rebuild the server. While it is active every later auth probe is uninformative, so treat evidence gathered during one as void. A stand-off only counts when **no auth request at all** is issued during it: a 7-minute pause that suites kept logging in through cleared nothing.
+
+The lockout does not announce itself. Because the app never leaves the login page, it surfaces downstream as a missing element or a navigation timeout — four consecutive suite runs failed with `element (#grafana-iframe) still not visible after 60 sec`, diagnosed first as a TLS setting and then as an empty password, before one login POST returned 401 and named it. So the **first** check on any auth-dependent UI failure is a single login's status code, not a re-run and not a new hypothesis.
 
 **Recreating `pmm-server` on the same `pmm-data` volume: `docker stop` before `docker rm`.** A `docker rm -f` leaves `/srv/postgres18/postmaster.pid` naming a PID the next container reuses, PostgreSQL then fails every retry with `FATAL: lock file "postmaster.pid" already exists`, and readyz serves an nginx 500 with nothing in the pmm-managed log. Recovery on a box already in that state: `rm /srv/postgres18/postmaster.pid` then `supervisorctl start postgresql`.
 
@@ -271,7 +286,20 @@ The password reaches the box inside the command string, which the exec-server ru
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
-The server address has to be reachable **from inside the client container**: use `--pmm-server-ip pmm-server` (the shared `pmm-qa` network hostname) or the VM's own IP. `127.0.0.1` reaches it only from host-networked setups — `pdpgsql` registered fine while `haproxy` and `pgsql` failed at "Install pmm3-client", and the framework still exited after the other setup reported OK, so the failure is easy to miss.
+**For a PMM Server started by step 2 on this same box, omit `--pmm-server-ip` entirely.** `lib/docker.sh:resolve_pmm_server()` hardcodes `PMM_SERVER_PORT=443` whenever the flag is given, while the co-located container listens on 8443 — so a run that registers every replica set still dies at the end with `Failed to register pmm-agent on PMM Server: Post "https://pmm-server:443/v1/management/nodes": connect: connection refused`, after building every image. Without the flag, `discover_pmm_server()` resolves host `pmm-server` port 8443 and the run passes. Reserve `--pmm-server-ip` for a genuinely **external** server that really listens on 443. (Publishing the host port does not help container-to-container: embedded DNS resolves `pmm-server` to the container IP, and the PMM3 container listens only on 8443/8080 internally. If a run must use the flag, publish the server as `-p 443:8443 -p 80:8080` instead, or configure the agent directly with `docker exec <client> pmm-admin config --server-url="https://admin:<url-encoded-pw>@pmm-server:8443" --server-insecure-tls --force <container-ip> generic <node-name>`.)
+
+The server address still has to be reachable **from inside the client container**: `127.0.0.1` reaches it only from host-networked setups — `pdpgsql` registered fine while `haproxy` and `pgsql` failed at "Install pmm3-client", and the framework still exited after the other setup reported OK, so the failure is easy to miss.
+
+**Before retrying a failed `pmm-framework` run, remove the containers it left behind.** The playbooks do not reclaim names, so a half-configured `mysql_pmm_9_7_1` from the first attempt makes the retry die much earlier and for a different reason (`TASK [Prepare Container for MySQL 8.0+]` cannot `docker run --name …`) — a name conflict that masks the original cause and costs a full setup cycle to read. `docker ps -a` to find them, `docker rm -f <name>` to clear them.
+
+**A run including `--database psmdb` needs the MinIO images pre-staged.** MinIO no longer publishes to Docker Hub, so the psmdb-pbm compose file's names fail with `pull access denied for minio/minio`; pull from quay.io and retag locally before invoking the framework (a local image tag, not a `qa-integration` edit — the real fix is repointing `qa-integration/pmm_psmdb-pbm_setup/docker-compose-rs.yaml` at quay.io):
+
+```bash
+docker pull quay.io/minio/minio:latest && docker tag quay.io/minio/minio:latest minio/minio:latest
+docker pull quay.io/minio/mc:latest    && docker tag quay.io/minio/mc:latest    minio/mc:latest
+```
+
+**A second single-node `--database mysql=<ver>` run destroys the first instance's `/tmp`.** The mysql playbook's "Prepare socket folders" task `rm -rf`s `/tmp/mysql-sockets/<node-index>` keyed on node index only, never on version, and the running container bind-mounts that exact path as its `/tmp`. Monitoring stays green (`mysql_up=1` — the exporter uses `127.0.0.1:3306`), so the damage is invisible in PMM until `systemctl restart mysql` inside the container fails outright with InnoDB `Unable to create temporary file inside "/tmp"; errno: 2`. Add the second instance as `ps=` or another database type where possible; the PS playbook does not share that path. If a second MySQL is required, recover by repointing the older container's `socket`, `mysqlx_socket` and `tmpdir` off `/tmp` in its own `my.cnf` and restarting mysqld **in place** — never `docker restart` it, which re-resolves the bind onto the directory the new instance now owns and puts two servers on one socket.
 
 **Checking what actually registered.** `/v1/inventory/{nodes,services,agents}` group by type, so a flat `jq -r '.nodes[]?'` prints nothing on a fully registered box and reads as "nothing registered":
 
@@ -280,7 +308,14 @@ curl -ksS -u "admin:$ADMIN_PASSWORD" https://127.0.0.1:8443/v1/inventory/agents 
   | jq -r 'to_entries[] | .key as $t | (.value[]? | "\($t) \(.agent_id) \(.connected)")'
 ```
 
-The pmm-agent connectivity field there is `connected`; the `is_connected` the codeceptjs inventory tests read comes from `GET /v1/management/services` instead. `pmm-admin` lives at `/usr/sbin/pmm-admin` in the QA database containers, so probe with `command -v pmm-admin` rather than a fixed path, and note that `pmm-admin unregister --force` without `--node-name` targets the agent's own registered node (from its `NodeID`), which is often not the container hostname.
+**Reading QAN data** goes straight to ClickHouse on the box, and the user is not the one the container advertises: its env carries `CLICKHOUSE_PASSWORD="clickhouse"` but the matching user is `default`, so both a bare `clickhouse-client` and `--user clickhouse` fail with `AUTHENTICATION_FAILED`. `pmm.metrics` is the table QAN's "of N items" count reflects, and its `queryid, fingerprint, schema, service_name, agent_type, example, num_queries, period_start` columns name an unexpected digest in one call:
+
+```bash
+docker exec pmm-server clickhouse-client --user default --password clickhouse \
+  --database pmm --query "SELECT queryid, service_name, num_queries FROM metrics WHERE …"
+```
+
+The pmm-agent connectivity field in the inventory output above is `connected`; the `is_connected` the codeceptjs inventory tests read comes from `GET /v1/management/services` instead. `pmm-admin` lives at `/usr/sbin/pmm-admin` in the QA database containers, so probe with `command -v pmm-admin` rather than a fixed path, and note that `pmm-admin unregister --force` without `--node-name` targets the agent's own registered node (from its `NodeID`), which is often not the container hostname.
 
 **Replaying a CI cleanup step has a different blast radius here.** A workflow's `on_retry_command` of `docker rm -f $(docker ps -a -q)` is safe on a runner whose PMM Server is remote and destroys this box's `pmm-server` and its `pmm-data` volume. Scope such a replay to the client containers and say so in the evidence:
 
@@ -312,20 +347,49 @@ environment needs the proxy set explicitly. The symptom: every request fails wit
 `503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
 egress proxy's own response, so the traffic did reach it — this is a proxy *path* problem,
 not a broken PMM, and not the suite bypassing the proxy altogether. The fix is to make the
-suite go through it explicitly: extend `playwright.config.ts` in a scratch config with
-`use.proxy.server` set to this session's `$HTTPS_PROXY`, run
+suite go through it explicitly: extend `playwright.config.ts` in a scratch config, run
 `npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
 have direct egress and the override would break them.
 
-Two details decide whether that scratch config does anything at all. The base config's
+Three details decide whether that scratch config does anything at all. The base config's
 `projects[0].use` wins over a top-level `use`, so map the overrides over `base.projects` as
-well as the top level; and `testDir: './tests'` resolves relative to the scratch file, so it
-must be made absolute or Playwright reports "No tests found". Pin
-`executablePath: '/opt/pw-browsers/chromium'` in the same override — Playwright's
-bundled-browser resolution points at a revision that is not installed and fails with
-`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<rev>`.
+well as the top level; `testDir: './tests'` resolves relative to the scratch file, so it
+must be made absolute or Playwright reports "No tests found"; and `executablePath` must sit
+under **`use.launchOptions`** — a top-level one is ignored and the run dies with
+`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<rev>`. Build the
+proxy settings from the repo's own helper rather than hand-setting `use.proxy.server`:
 
-That session-side recipe only covers suites that drive the UI over HTTP. **Anything touching Docker, `pmm-admin`, or the local filesystem must run on the VM, the way the workflow runs it** — install Node and the suite on the box and run the same `npx playwright test --grep`; `e2e_tests` needs only `PMM_UI_URL` and `ADMIN_PASSWORD`. Tests calling `docker exec <container> pmm-admin annotate` cannot work from this session at all (Docker runs only on the VM), and a session-side run of them reached the login redirect and never the dashboard. An ad-hoc spec must also sit under the config's `testDir` (`./tests`), or Playwright reports "No tests found".
+```js
+const { proxyLaunchOptions } = require('../.claude/scripts/lib/proxy.js');
+const { args, proxy } = proxyLaunchOptions({});
+// use: { proxy, launchOptions: { args, executablePath: '/opt/pw-browsers/chromium' } }
+```
+
+The bare setting omits what that helper also supplies (`--ssl-version-max=tls1.2` and the
+interception-CA SPKI pins), and without them every UI navigation renders only the proxy's
+"upstream request failed" while the suite's API fixture keeps working. Raise
+`navigationTimeout`/`actionTimeout` well above the config's 10 s defaults for the proxied hop.
+
+**That session-side recipe covers API-only and light-page specs, not dashboards.** Even with
+the proxy configured correctly, `page.goto` of `/graph/d/<dashboard>` hits the navigation
+timeout and the iframe renders "upstream request failed"; the same spec passes unchanged on
+the VM. Send any dashboard UI spec — and **anything touching Docker, `pmm-admin`, or the
+local filesystem** — to the box and run it the way the workflow does. Tests calling
+`docker exec <container> pmm-admin annotate` cannot work from this session at all, and a
+session-side run of them reached the login redirect and never the dashboard.
+
+cloud-init installs only Docker and Ansible, so the VM has **no Node**: two detached jobs
+running `npm ci` in `e2e_tests` exited 127 with `npx: command not found`, and because they
+were detached that surfaced only at the `DONE_MARKER` sentinel. Install it first, verifying
+in the same call:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs && node -v
+cd /root/pmm-qa/e2e_tests && npm ci && npx playwright install-deps && npx playwright install chromium
+```
+
+`e2e_tests` then needs only `PMM_UI_URL` and `ADMIN_PASSWORD`. An ad-hoc spec must sit under
+the config's `testDir` (`./tests`), or Playwright reports "No tests found".
 
 ## 5. FB / nightly workflow reproduction (Investigator)
 
