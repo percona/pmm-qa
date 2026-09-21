@@ -57,6 +57,7 @@
         ]
       },
       {
+        "matcher": "mcp__Percona[-_]Jenkins[-_]MCP__|get_job_logs",
         "hooks": [
           {
             "type": "command",

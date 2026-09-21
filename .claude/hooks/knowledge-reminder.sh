@@ -12,9 +12,13 @@ set -euo pipefail
 command -v node >/dev/null 2>&1 || exit 0
 
 # One reminder per tool family per session. Each hook invocation is its own
-# process, so the marker must not carry $$ -- keying on the session id alone is
-# what makes the second call find the first call's marker.
-STATE_DIR="${TMPDIR:-/tmp}/pmm-knowledge-reminder-${CLAUDE_CODE_SESSION_ID:-nosession}"
+# process, so the marker cannot carry $$ -- it is keyed on the session instead,
+# taken from the hook payload rather than CLAUDE_CODE_SESSION_ID, which nothing
+# here establishes the harness exports to a PreToolUse hook (session-end-cleanup.sh
+# bails when it is unset rather than degrading). Keyed on an unset env var every
+# session would share one marker, so the reminder would fire once per machine and
+# stay silent afterwards -- the inverse of what this file claims.
+STATE_DIR="${TMPDIR:-/tmp}/pmm-knowledge-reminder"
 
 STATE_DIR="$STATE_DIR" node -e '
 let raw = "";
@@ -35,8 +39,18 @@ const RULES = [
 const hit = RULES.find(([re]) => re.test(tool));
 if (!hit) process.exit(0);
 
-const marker = process.env.STATE_DIR + "-" + hit[1];
+const session = input.session_id || process.env.CLAUDE_CODE_SESSION_ID || "nosession";
+const marker = process.env.STATE_DIR + "-" + session + "-" + hit[1];
 const fs = require("fs");
+
+// Nothing sweeps these markers, so a shared key ("nosession", if a payload ever
+// arrives without one) would suppress the reminder on this machine for good.
+// Expiring the marker makes that degrade to "fires again later" instead.
+const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+try {
+  if (Date.now() - fs.statSync(marker).mtimeMs > MAX_AGE_MS) fs.unlinkSync(marker);
+} catch { /* no marker yet, or it vanished under us -- the write below decides */ }
+
 try {
   fs.writeFileSync(marker, "", { flag: "wx" });
 } catch {
