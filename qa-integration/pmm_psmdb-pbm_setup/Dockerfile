@@ -94,7 +94,12 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
     sed -i '/ExecStart/a StandardError=file:/var/log/pmm-agent.log' /usr/lib/systemd/system/pmm-agent.service && \
     sed -i '/\[Service\]/a Environment="KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab"' /usr/lib/systemd/system/pmm-agent.service && \
     systemctl enable pmm-agent && \
-    curl -Lf --retry 5 --retry-delay 5 -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && \
+    { case "$(uname -m)" in \
+        x86_64) MGO_ARCH=x86_64 ;; \
+        aarch64) MGO_ARCH=arm64 ;; \
+        *) echo "unsupported arch for mgodatagen: $(uname -m)" >&2; exit 1 ;; \
+      esac; } && \
+    curl -Lf --retry 5 --retry-delay 5 -o /tmp/mgodatagen.tar.gz "https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_${MGO_ARCH}.tar.gz" && \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin && \
     dnf clean all && \
     rm -rf /var/cache/dnf /data/db && mkdir -p /data/db
