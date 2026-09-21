@@ -61,10 +61,6 @@ ARG OL_VERSION
 # Keep this whole chain &&-joined to the last command: a trailing `;` makes the
 # RUN exit 0 even when a download failed, shipping an image that only breaks
 # much later, at test time.
-#
-# --retry-all-errors because plain --retry covers transient HTTP status codes,
-# not a connection reset: the CDNs these pull from have been resetting mid
-# handshake, and one such reset failed the whole image build on the first try.
 RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
         curl -Lf --retry 5 --retry-delay 5 --retry-all-errors -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && \
         cd /tmp && tar -xvf pmm-client.tar.gz --transform 's,^/*[^/]*,/pmm-client,S' && \

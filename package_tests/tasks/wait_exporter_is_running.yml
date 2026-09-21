@@ -9,9 +9,6 @@
 - block:
   - name: Validate {{ process_name }} status
     block:
-      # pmm-admin prints its errors to stdout and exits 1; without pipefail the
-      # pipeline reports awk's rc instead, so a failed list reads as an empty
-      # status rather than as the error it was.
       - name: Wait for {{ process_name }} to have Running Status.
         shell: |
           set -o pipefail

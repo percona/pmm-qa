@@ -72,9 +72,6 @@ Scenario(
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.showTooltip(1, 3);
-    // showTooltip returns once the tooltip element exists; the latency chart is
-    // drawn inside it afterwards, so a bare seeElement here is a coin flip --
-    // orchestrator #31 lost it twice on the arm64 lane having passed in #29 and #30.
     I.waitForVisible(queryAnalyticsPage.data.elements.latencyChart, 30);
   },
 );

@@ -32,11 +32,6 @@
         msg: "{{ ps_aux.stdout }}"
       failed_when: true
 
-# pipefail, so that a pmm-admin failure fails here with its own message instead
-# of reaching the assert below as an empty string: awk exits 0 on no input, and
-# "42007 present in " is a much harder failure to read than the real error.
-# pmm-admin has exited 1 with no output at all right after the socket services
-# were removed above, so each call gets a few tries before it counts.
 - name: "{{ item }}: get port from pmm-admin list output"
   shell: |
     set -o pipefail

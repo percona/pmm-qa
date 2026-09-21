@@ -13,10 +13,6 @@
       http(s)://... .tar.gz URL.
     quiet: true
 
-# A folded scalar (>-) does not process YAML escapes, so `\\.` inside a {{ }}
-# expression there reaches the regex as two characters and matches nothing --
-# unlike a bare `when:` conditional, where the same spelling works. Match once
-# here, in a double-quoted scalar, and test this boolean below instead.
 - name: Classify the requested client version
   set_fact:
     client_version_is_exact: "{{ client_version is match('^3\\.[0-9]+\\.[0-9]+$') }}"
@@ -31,23 +27,6 @@
   register: container_hostname
   changed_when: false
 
-# `pmm-agent setup`'s single positional is the node ADDRESS, so the node name
-# falls back to the container's hostname. Created without --hostname that is a
-# 12-hex-digit docker id, which mints a new inventory entry on every
-# re-provision and survives in label_values() after `unregister`; fall back to
-# the container name there, suffixed with SHARD_NAME so two shards running the
-# same spec cannot claim one node.
-#
-# A hostname the playbook set deliberately is kept verbatim: it is the name
-# dashboards repeat panels by, and tests refer to it literally (valkey's
-# `<host> - Commands by Type`). Such a name is also chosen per container, so it
-# does not collide across shards and needs no suffix.
-#
-# The fallback keeps to [A-Za-z0-9_-]: a container name carrying the version
-# (`pxc_proxysql_pmm_8.4`) puts a dot in the node name, and Grafana regex-escapes
-# a multi-value variable even when one value is selected, so a dashboard's
-# `node_name="$node_name"` then asks for `pxc_proxysql_pmm_8\.4` and matches
-# nothing (MySQL Instances Compare, Network Traffic).
 - name: Derive a stable node name
   set_fact:
     pmm_node_name: >-
@@ -117,9 +96,6 @@
   when: distro_family == "rhel"
   ignore_errors: true
 
-# The apt index and percona-release name the GA channel differently: the
-# packages are published under dists/<codename>/main, while percona-release
-# calls it "release" and dists/<codename>/release/ returns 404.
 - name: Map the client version to its pmm3-client repository components
   set_fact:
     pmm_client_component: >-
@@ -152,9 +128,6 @@
     - pmm_client_component | length > 0
   ignore_errors: true
 
-# One verified download per codename serves every container. Doing it per
-# container multiplied both the bandwidth and the chances of landing in one of
-# repo.percona.com's index/payload disagreement windows; see the script header.
 - name: Fetch one verified pmm-client package for this container's codename
   block:
     - name: Read the container's distro codename

@@ -255,12 +255,6 @@ module.exports = () => actor({
       }
     });
 
-    // build-url appends `?<params>` unconditionally, so on a url that already
-    // carries a query string every parameter ended up after a second `?` and was
-    // silently ignored -- which is how the Nodes Compare test asked for a 1h
-    // window and kept getting the 5m one baked into the dashboard url. Merge
-    // instead, leaving the url's own from/to in place unless the caller asked
-    // for a different one.
     const [path, search = ''] = url.split('?');
     const merged = new Map();
 

@@ -29,9 +29,6 @@
           - valkey_cluster_node_count == valkey_cluster_primaries + (valkey_cluster_primaries * valkey_cluster_replicas)
         fail_msg: "Mismatch: total nodes must equal primaries + primaries*replicas"
 
-    # Nothing else removes these, so a re-run lands on nodes that still hold the
-    # previous cluster config and `--cluster create` refuses them as not empty.
-    # No-ops on a first run.
     - name: Remove primary node containers left by a previous run
       community.docker.docker_container:
         name: "{{ valkey_primary_prefix }}{{ item }}"

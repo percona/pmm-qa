@@ -124,19 +124,12 @@ class QueryAnalyticsQueryDetails {
     I.waitForVisible(this.buttons.tab('Explain'), 30);
     I.click(this.buttons.tab('Explain'));
     queryAnalyticsPage.waitForLoaded();
-    // The error renders where the JSON would, so waiting for the JSON alone made
-    // every explain error a bare "still not visible after 30 sec" and left the
-    // check below unreachable in exactly the case it exists for.
     I.waitForVisible(this.elements.codeBlock.or(this.elements.explainError), 30);
 
     if (await I.isElementDisplayed(this.elements.explainError, 1)) {
       const [message = ''] = await I.grabTextFromAll(this.elements.explainError);
       const text = message.trim();
 
-      // MongoDB explains only aggregate, count, distinct, find, findAndModify, delete,
-      // mapReduce and update. A caller whose search cannot choose the command family --
-      // db.runCommand matches whatever QAN captured -- opts out of that one refusal, and
-      // still fails on every other explain error.
       if (allowUnsupported && /not supported for explain|cannot explain this type of query/i.test(text)) {
         I.say(`Explain is not supported for the selected query: ${text}`);
 

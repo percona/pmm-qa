@@ -93,9 +93,6 @@ Before(async ({
 
   serviceId = service_id;
 
-  // Every member, not just the one the client talks to: rs101 alone cannot elect
-  // a primary, so a secondary left stopped turns into "Server selection timed
-  // out" six minutes later with nothing pointing at the real member.
   await Promise.all(replicaSetMembers.map(
     (member) => I.verifyCommand(`docker exec ${member} systemctl start mongod`),
   ));
@@ -113,12 +110,6 @@ Before(async ({
       break;
     } catch (error) {
       if (attempt === 10) {
-        // The driver's "Server selection timed out" says nothing about which member
-        // is at fault. These containers set systemLog.destination: syslog, so
-        // journald holds the log and /var/log/mongo/mongod.log never exists;
-        // sysconfig sends only fatal and pre-logging output to the .stdout/.stderr
-        // pair. Exit 0 so a missing sink cannot make verifyCommand throw over the
-        // real error.
         const logs = await Promise.all(replicaSetMembers.map(async (member) => {
           const log = await I.verifyCommand(
             `docker exec ${member} sh -c "`
@@ -262,8 +253,6 @@ Data(restoreFromDifferentStorageLocationsTests).Scenario(
 
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, mongoServiceName);
 
-    // pmm-agent 3.8.1 rejects the mongod restart the server sends after a physical
-    // restore (PMM-15163, fixed in 3.9.0), so the restore never reaches Success.
     const { version: agentVersion } = await inventoryAPI.apiGetPMMAgentInfoByServiceId(service_id);
 
     if (!isLogical && agentVersion === '3.8.1') {

@@ -75,10 +75,6 @@ Scenario(
 
     await I.Authorize(newPsUser.username, newPsUser.password);
 
-    // None of the dashboards below is expanded. Every tolerance in this scenario was
-    // calibrated while expandEachDashboardRow silently opened nothing, so it counts only
-    // the always-visible panels; the collapsed rows add text, pt-summary and polystat
-    // panels, which have no "No data" state at all.
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(5);

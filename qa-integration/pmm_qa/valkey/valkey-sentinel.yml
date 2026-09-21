@@ -24,8 +24,6 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
-    # Nothing else removes these, so a re-run lands on a primary that still
-    # carries the previous replication state. No-ops on a first run.
     - name: Remove the primary container left by a previous run
       community.docker.docker_container:
         name: valkey-primary

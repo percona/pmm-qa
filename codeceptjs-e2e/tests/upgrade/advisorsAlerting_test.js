@@ -6,9 +6,6 @@ const advisorName = 'Check for unsupported PostgreSQL';
 const groupName = 'Version Configuration';
 const ruleName = 'Alert Rule for upgrade';
 const checkName = 'MongoDB version check';
-// Both halves of an upgrade pair need the version of the server the pre-upgrade
-// suite ran against, which stays the same once the server is upgraded under it.
-// CLIENT_VERSION cannot stand in for it: the nightly passes a tarball URL there.
 const preUpgradeVersion = (() => {
   const [major, minor] = (process.env.DOCKER_TAG || '').split(':').pop().split('.')
     .map((part) => parseInt(part, 10));
@@ -16,7 +13,6 @@ const preUpgradeVersion = (() => {
   return Number.isInteger(major) && Number.isInteger(minor) ? { major, minor } : null;
 })();
 
-// An unreadable tag means running the scenario, so a local run is not silently skipped.
 const preUpgradeAtLeast = (major, minor) => !preUpgradeVersion
   || preUpgradeVersion.major > major
   || (preUpgradeVersion.major === major && preUpgradeVersion.minor >= minor);
@@ -113,7 +109,6 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
-    // The advanced settings page these intervals live on arrived in PMM 3.8.0.
     if (!preUpgradeAtLeast(3, 8)) return;
 
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
@@ -134,7 +129,6 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
-    // Nothing was set before the upgrade on a server without that page.
     if (!preUpgradeAtLeast(3, 8)) return;
 
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);

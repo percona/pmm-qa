@@ -2,8 +2,6 @@ const path = require('path');
 
 const { isOvFAmiJenkinsJob } = require('../helper/constants');
 
-// Written by the pre-upgrade scenario and read back by the post-upgrade one, which
-// is a separate codeceptjs run: anchor it to the suite so both agree on the path.
 const duplicateDashboardsFile = path.resolve(__dirname, '../../dashboard.json');
 
 Feature('PMM upgrade tests for dashboards');
@@ -79,8 +77,6 @@ Scenario(
     let errorLogs;
 
     if (!isOvFAmiJenkinsJob) {
-      // grep exits 1 on no match -- a clean grafana.log -- which must pass; exit 2,
-      // a log it could not read, must still fail.
       errorLogs = await I.verifyCommand("docker exec pmm-server sh -c 'grep level=error /srv/logs/grafana.log; [ $? -le 1 ]'");
 
       const loadingLibraryErrorLine = errorLogs.split('\n')

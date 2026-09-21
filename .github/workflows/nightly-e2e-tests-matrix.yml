@@ -3,12 +3,6 @@ name: "Nightly E2E tests Matrix (remote PMM Server)"
 # is up. Fans out one setup shard per group of client setups and one job per
 # tag bucket, so each worker only runs the tests it has data for.
 
-# The ten nightly lanes all dispatch this file on the same branch within a few
-# seconds of each other, and created_at only has second resolution, so "the
-# newest run since I dispatched" identifies nobody -- three lanes once polled
-# and failed on one another's run. The server address is unique per lane, so
-# putting it last in the run name gives wait-for-gh-run.sh something exact to
-# match on.
 run-name: "Nightly E2E (${{ inputs.installation_type }}) pmm@${{ inputs.pmm_server_address }}"
 
 on:
@@ -89,20 +83,7 @@ on:
         required: false
 
 jobs:
-  # One runner per shard, and three of the five also run a tag bucket instead of
-  # sitting idle while separate test runners do it. The databases live on the
-  # shard's own runner, so a test bucket placed here is already next to data it
-  # would otherwise reach over the network -- and the three runners that used to
-  # host nothing but a browser are gone.
-  #
-  # fail-fast is off because a bucket failing its tests must not cancel the
-  # shards whose databases the other buckets are still querying. A failed setup
-  # still stops every bucket: nothing runs tests until all five shards pass
-  # 'Barrier: setup complete', and that wait aborts the moment a sibling's setup
-  # job ends in failure.
   shard:
-    # The box in the UI has to say what the shard runs, not just which databases
-    # it hosts -- three of these also run a tag bucket.
     name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}"
     strategy:
       fail-fast: false
@@ -220,9 +201,6 @@ jobs:
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
-      # --setup-retries retries only the setups that failed. The step used to be
-      # wrapped in an all-or-nothing action retry that tore down every container
-      # first, so one flaky setup re-provisioned the whole shard from scratch.
       - name: Run setup for E2E tests (start client services on this runner)
         timeout-minutes: 60
         working-directory: pmm-qa/qa-integration/pmm_qa
@@ -237,9 +215,6 @@ jobs:
             --client-version "${{ env.PMM_CLIENT_VERSION }}" \
             ${{ env.WIZARD_ARGS }}
 
-      # Every shard passes this, test-bearing or not. It is the signal the test
-      # shards wait on, and it replaces the old "is parked in its wait step"
-      # handshake, which a shard that runs tests itself can never satisfy.
       - name: 'Barrier: setup complete'
         id: setup_barrier
         run: echo "Setup finished on shard ${SHARD_NAME}."
@@ -262,10 +237,6 @@ jobs:
               return new Promise((resolve) => setTimeout(resolve, ms));
             }
 
-            // This listing already carries each job's steps, so the barrier can be
-            // read straight off it. Fetching every sibling individually multiplied
-            // one poll by the shard count, and five shards across the matrix runs
-            // in flight exhausted the installation's REST quota.
             async function listJobs() {
               return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 owner,
@@ -290,8 +261,6 @@ jobs:
               const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
               const detailed = setupJobs;
 
-              // A shard whose setup failed never reaches the barrier, so waiting
-              // for it would burn the whole timeout before anyone is told why.
               const broken = detailed.filter((job) => ['failure', 'cancelled'].includes(job.conclusion));
               if (broken.length > 0) {
                 throw new Error(`Not running tests: setup failed on ${broken.map((job) => job.name).join(', ')}.`);
@@ -425,14 +394,6 @@ jobs:
           curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
-      # The two frameworks write their reports to different places: CodeceptJS to
-      # tests/output/result.xml, Playwright to output/results.json (see
-      # e2e_tests/playwright.config.ts). Recording both from the CodeceptJS path
-      # left every Playwright session empty, so `launchable gate` passed shards
-      # that had failing tests.
-      #
-      # The gate's failure is deferred to the last step for the same reason the
-      # test steps are: this runner still owns databases the other buckets query.
       - name: Record launchable test results
         id: launchable_gate
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -462,11 +423,6 @@ jobs:
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
         with:
-          # Two shards run the same tag bucket in different frameworks, so the
-          # tag string is not a unique artifact name -- the second upload of a
-          # duplicate name fails, and continue-on-error hides it. The paths cover
-          # both frameworks; the ones the shard's framework does not write are
-          # expected to be missing.
           name: "artifacts_${{ matrix.shard_name }}"
           if-no-files-found: ignore
           path: |
@@ -486,16 +442,10 @@ jobs:
             ${{ env.TESTS_DIR }}/tests/output/result.xml
             ${{ env.TESTS_DIR }}/output/junit.xml
 
-      # Only the shards that actually ran tests reach this; a database-only shard
-      # skips it, which is how the wait below tells the two apart.
       - name: 'Barrier: tests complete'
         if: ${{ always() && matrix.tags_for_tests != '' }}
         run: echo "Tests finished on shard ${SHARD_NAME}."
 
-      # The databases live on this runner, so it has to outlive every shard that
-      # queries them -- including the shards running tests beside this one.
-      # Skipped when this shard's own setup failed: there are no databases left
-      # to hold, and the other shards abort on their own barrier wait anyway.
       - name: Waiting for tests execution
         if: ${{ always() && steps.setup_barrier.outcome == 'success' }}
         uses: actions/github-script@v7
@@ -525,7 +475,6 @@ jobs:
               });
             }
 
-            // A skipped barrier is a database-only shard, not a finished one.
             function ranTestsAndFinished(job) {
               const step = (job.steps || []).find((s) => s.name === barrierStep);
               return step?.status === 'completed' && step?.conclusion !== 'skipped';
@@ -533,14 +482,9 @@ jobs:
 
             while (true) {
               const jobs = await listJobs();
-              // Every shard posts the setup barrier and nothing else in the run
-              // does, so the step is a better filter than a job-name prefix --
-              // renaming the jobs cannot silently empty this list.
               const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
               const detailed = setupJobs;
 
-              // A cancelled shard never posts its barrier, and its runner is gone
-              // anyway, so holding the databases for it only burns the timeout.
               const cancelled = detailed.filter((job) => job.conclusion === 'cancelled');
               if (cancelled.length > 0) {
                 core.warning(`Not waiting any longer: ${cancelled.map((job) => job.name).join(', ')} were cancelled.`);

@@ -21,10 +21,6 @@ class MongodbBackupDetailsDashboard {
     ];
   }
 
-  // The panel renders "No data" until the pbm metric behind it is scraped, so a single
-  // probe here is a coin flip -- PMM-T2036 lost it in the gssapi and mysql-psmdb-pgsql
-  // lanes on the same run. Poll like the two helpers below, refreshing in the viewport
-  // so Grafana actually re-runs the query.
   async verifyBackupConfiguredValue(expectedValue) {
     const I = actor();
 
@@ -72,13 +68,6 @@ class MongodbBackupDetailsDashboard {
     }, 120, 'Last Successful Backup panel still has no value');
   }
 
-  // Last Successful Backup goes green off a different series than the graphs do, so
-  // waiting on it says nothing about Backup Sizes -- the panel behind
-  // mongodb_pbm_backup_size_bytes. The PITR variant spends longer getting its base
-  // snapshot in place and lost this in the mysql-psmdb-pgsql lane while the snapshot
-  // variant passed on the same dashboard minutes earlier. Poll with the same
-  // scroll-and-refresh the stat panels use; dashboardPage's own wait helper polls but
-  // never re-runs the query, and this dashboard is opened without &refresh=.
   async waitForGraphPanelData(panelTitle) {
     const I = actor();
     const panel = locate(`//section[contains(@data-testid, "${panelTitle}")]`);

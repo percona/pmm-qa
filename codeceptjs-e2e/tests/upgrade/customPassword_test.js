@@ -30,8 +30,6 @@ Data(clientDbServices).Scenario(
       address = '127.0.0.1';
     }
 
-    // pmm-admin lives with the agent, inside the container: the upgrade pipeline
-    // installs no client on the Jenkins agent itself.
     const container = await I.verifyCommand(`docker ps -f name=${containerFilter} --format "{{.Names}}" | head -n1`);
 
     assert.ok(container, `No running container matched "${containerFilter}" for ${serviceType}`);
@@ -81,9 +79,6 @@ Scenario(
     const newPass = process.env.NEW_ADMIN_PASSWORD || 'admin1';
 
     await I.unAuthorize();
-    // Both flips happen with no PMM page loaded -- see parkPage. Leaving one open
-    // blocked admin for five minutes and took five @post-dashboards-upgrade tests
-    // down with it, right after this test passed.
     await I.parkPage();
 
     try {
@@ -91,10 +86,6 @@ Scenario(
       await I.Authorize('admin', newPass);
       await homePage.open();
     } finally {
-      // Restoring the password revokes the session opened with the temporary one,
-      // so this test used to hand the next one a browser and an API helper holding
-      // dead credentials -- it passed while everything after it failed on
-      // "Invalid username or password" and a login page where the app should be.
       await I.parkPage();
       await profileAPI.changePassword('admin', newPass, process.env.ADMIN_PASSWORD);
       await I.unAuthorize();

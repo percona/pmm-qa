@@ -107,13 +107,6 @@ class Grafana extends Helper {
     Playwright.setPlaywrightRequestHeaders({});
   }
 
-  // A PMM page left open keeps polling /api/frontend/settings, /api/user and the
-  // live socket with whatever basic-auth header it was opened with. While the admin
-  // password is being changed those land as wrong-password attempts -- five in one
-  // second is enough for Grafana to block the user for five minutes, which reads as
-  // an unrelated suite failing on a login page where the app should be. Park the
-  // page first; goto() directly, since amOnPage is wrapped to await the Grafana
-  // iframe and would resolve about:blank against the base URL.
   async parkPage() {
     const { Playwright } = this.helpers;
 

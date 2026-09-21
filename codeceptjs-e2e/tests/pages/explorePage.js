@@ -35,7 +35,6 @@ class ExplorePage {
   // clearField empties the slice and fillField splices into the datasource default.
   async setSqlQuery(query) {
     I.waitForVisible(this.elements.sqlBuilder, 30);
-    // The datasource writes its default query a beat after the tab renders.
     I.wait(2);
     I.appendField(this.elements.sqlBuilder, '');
     I.pressKey(['Control', 'a']);

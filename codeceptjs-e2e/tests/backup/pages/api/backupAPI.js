@@ -32,11 +32,6 @@ module.exports = {
 
   // waitForBackupFinish waits for backup to finish. If artifactId is null, scheduleName will be used for filtering
   async waitForBackupFinish(artifactId, scheduleName, timeout = 300) {
-    // Anything other than PENDING used to count as finished, so this returned
-    // the moment the backup moved to IN_PROGRESS. Every caller then asserts a
-    // terminal state -- and on a physical MongoDB backup the artifact was still
-    // running, so the Restore action was disabled and the inventory row never
-    // showed SUCCESS.
     const finished = ['BACKUP_STATUS_SUCCESS', 'BACKUP_STATUS_ERROR'];
 
     for (let i = 0; i < timeout / 5; i++) {

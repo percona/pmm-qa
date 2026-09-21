@@ -37,7 +37,6 @@ Scenario(
 Scenario(
   'PMM-T2049 - Verify PostgreSQL Instances Overview Dashboard @nightly @dashboards',
   async ({ I, dashboardPage }) => {
-    // PMM-15104 renamed the slow-queries panel in 3.10.0; the ami lane still runs a GA server.
     const { major, minor } = await serverApi.getPmmVersion();
 
     if (major === 3 && minor < 10) {
@@ -60,9 +59,6 @@ Scenario(
 Scenario(
   'PMM-T394 - PostgreSQL Instance Compare Dashboard metrics @nightly @dashboards',
   async ({ I, dashboardPage, adminPage }) => {
-    // The service_name variable is multi-select and Grafana defaults it from
-    // label_values(), which still offers services left behind by a previous
-    // provisioning attempt. Pin it to what inventory actually reports.
     const url = I.buildUrlWithParams(
       dashboardPage.postgresqlInstanceCompareDashboard.cleanUrl,
       {

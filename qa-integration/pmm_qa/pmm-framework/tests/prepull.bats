@@ -3,9 +3,6 @@
 
 load helpers/test_helper
 
-# Deliberately no prepull_base_images stub: these exercise the real function.
-# The pre-pull is a speed-up, not a dependency, so what has to hold is that it
-# cannot change what any setup does -- only how long it waits for an image.
 setup() {
   reset_framework_state
   WARNINGS=''

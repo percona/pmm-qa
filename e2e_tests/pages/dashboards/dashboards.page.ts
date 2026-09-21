@@ -84,13 +84,6 @@ export default class Dashboards extends BasePage {
 
   readonly panels = () => Panels(this.page);
 
-  // Deliberately narrower than collectTextsAcrossScroll: it visits one grid item
-  // at a time, so it never reaches the later instances of a vertically repeated
-  // panel. The no-data allow-lists on the dashboard page objects were calibrated
-  // against exactly this traversal, and widening it fails dashboards on repeated
-  // panels nobody has audited -- a true statement about the dashboard, but not
-  // the regression these tests exist to catch. Raising that bar needs the
-  // allow-lists revisited against a live server first.
   collectTextsAcrossGridItems = async (locator: Locator): Promise<string[]> => {
     const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
     const collected = new Set<string>();
@@ -121,10 +114,6 @@ export default class Dashboards extends BasePage {
     const collected = new Set<string>();
     const collect = async () =>
       (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
-    // A repeated panel puts every repeat instance inside one .react-grid-item, and
-    // each instance mounts only once it intersects the viewport -- so scrolling the
-    // container into view mounts only the instances that happen to land on screen.
-    // Step the scrollport instead, half a viewport at a time.
     const anchor = this.elements.gridItems.first();
     const step = async () =>
       anchor.evaluate((el) => {
@@ -139,8 +128,6 @@ export default class Dashboards extends BasePage {
         return scroller.scrollTop === before;
       });
 
-    // loadAllPanels leaves the page at its bottom, and an instance that missed its
-    // load window sits above it -- so every sweep has to begin at the top.
     await anchor.evaluate((el) => el.ownerDocument.scrollingElement?.scrollTo({ top: 0 }));
     //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -278,9 +265,6 @@ export default class Dashboards extends BasePage {
 
     let missing = expectedMetricsNames;
 
-    // A repeated panel can still be mounting when the step that passes over it ends, and
-    // it unmounts again once off-screen -- so a straggler has to be swept for again, not
-    // waited for where the last sweep stopped.
     for (let sweep = 0; sweep < 3 && missing.length > 0; sweep++) {
       const found = await this.collectTextsAcrossScroll(this.elements.panelName);
 

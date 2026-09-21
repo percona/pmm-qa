@@ -35,9 +35,6 @@ pmmTest.describe(() => {
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, { from: 'now-12h', to: 'now' }));
         await dashboard.waitForDashboardToLoad();
 
-        // The variable is built from label_values(), which keeps offering nodes
-        // whose samples outlived their inventory entry (a re-provisioned setup
-        // leaves one behind on every attempt). Keep only what inventory knows.
         const monitoredNodes = new Set((await api.inventoryApi.getAllNodes()).map((node) => node.node_name));
         const nodeNames = (await dashboard.getVariableValues('Node Name')).filter(
           (name) => name !== 'All' && monitoredNodes.has(name),

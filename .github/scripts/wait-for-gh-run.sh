@@ -55,8 +55,6 @@ if [ -z "${GH_TOKEN:-}" ]; then
     exit 2
 fi
 
-# Ten lanes dispatch this workflow at once, so a page of 10 can push a caller's
-# own run off the end before it ever sees it.
 URL="https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?event=workflow_dispatch&branch=${REF}&per_page=50"
 
 start_ts=$(date +%s)
@@ -68,9 +66,7 @@ while true; do
         "${URL}")
 
     # Candidates are the runs created at or after our dispatch. With a marker we
-    # take only the one whose run-name ends in "pmm@<marker>"; without one, or
-    # against a ref whose workflow predates run-name and so marks nothing, we
-    # fall back to the newest candidate and say so.
+    # take only the one whose run-name ends in "pmm@<marker>";
     run_id=$(echo "${response}" | jq -r \
         --arg since "${DISPATCHED_AT}" \
         --arg suffix "pmm@${MARKER}" \

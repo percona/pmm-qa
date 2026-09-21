@@ -12,9 +12,6 @@
 #               log file so concurrent runs cannot interleave. All setups are
 #               allowed to finish and the run fails if any of them did.
 #
-# Either strategy retries a failed setup --setup-retries more times, and only
-# that setup: a batch retry would tear down neighbours that already succeeded.
-#
 # Preflight may downgrade parallel to sequential -- see the conflict rules in
 # preflight_database_setups().
 
@@ -143,14 +140,6 @@ preflight_database_setups() {
   return 0
 }
 
-# The generic systemd containers nearly every setup builds on. Forked setups
-# otherwise reach for the registry at the same moment: four of them died
-# together on `connection reset by peer` from Docker Hub's CDN, and a slower
-# version of the same contention turned 5-minute setups into 50-minute ones.
-#
-# Pulling them once here is best effort in both directions -- an image missing
-# from this list, or a pull that fails anyway, leaves that setup to pull it
-# exactly as it does today, so drift costs nothing but the speed-up.
 readonly BASE_IMAGES=(
   'phusion/baseimage:jammy-1.0.1'
   'antmelekhin/docker-systemd:ubuntu-24.04'
@@ -245,18 +234,6 @@ format_duration() {
 # Print the slowest Ansible tasks recorded in a buffered setup log.
 #
 # Usage: print_slowest_tasks LOG_FILE [COUNT] [FLOOR_SECONDS]
-#
-# ansible.posix.profile_tasks (enabled in run_playbook) ends every playbook with
-# a `task name ------ 12.34s` summary. A spec usually runs more than one
-# playbook, so the lines from all of them are pooled and re-sorted rather than
-# read off a single block.
-#
-# Without this the report says only that a spec was slow; a database whose
-# pmm-client install took most of the time is otherwise indistinguishable from a
-# genuinely slow database.
-#
-# Stdout: one `  <elapsed>  <task name>` line per task, slowest first, and
-#         nothing at all when the log has no profiling in it
 print_slowest_tasks() {
   local log_file=$1 count=${2:-5} floor=${3:-5}
   [[ -r $log_file ]] || return 0
@@ -301,8 +278,6 @@ print_setup_log() {
 
   if ((status == 0)); then
     printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
-    # The log itself is about to be deleted on a green run, so the timings have
-    # to be lifted out of it here or they are lost.
     print_slowest_tasks "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
@@ -381,13 +356,7 @@ run_parallel_setups() {
     pending+=("$index")
   done
 
-  # Only the setups that failed are re-run: re-running the whole batch throws
-  # away every setup that had already succeeded, which is what the outer CI
-  # retry used to cost. Retrying in place rests on two invariants -- a setup
-  # tears down its own containers and volumes before provisioning, and the node
-  # name it registers is stable, so `pmm-agent setup --force` replaces the
-  # earlier registration instead of leaving a second one behind. A setup that
-  # holds neither cannot be retried this way.
+  # Only the setups that failed are re-run
   for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
     ((${#pending[@]} > 0)) || break
     if ((attempt > 0)); then
@@ -492,8 +461,6 @@ run_database_setups() {
       ((attempt == 0)) ||
         log_warn "Retrying $spec, attempt $((attempt + 1)) of $((SETUP_RETRIES + 1))."
       status=0
-      # The subshell keeps die() inside the setup from aborting the run before
-      # the retry can happen; a spec that exhausts its attempts still does.
       (run_database_spec "$spec") || status=$?
       ((status == 0)) && break
     done

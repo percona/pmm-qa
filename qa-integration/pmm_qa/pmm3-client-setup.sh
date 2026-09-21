@@ -63,27 +63,11 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-# --force above: with a stable node name, re-provisioning the same container
-# hits "Node with name ... already exists" and the setup fails.
-#
-# A random name per run means a re-provisioned container registers under a new
-# node, and its old series keep the previous name alive in every dashboard
-# filter built from label_values. Callers pass the container name instead.
 export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
-
-# Grafana regex-escapes a multi-value variable even when one value is selected, so a
-# dot in the node name turns a dashboard's node_name="$node_name" into a query for
-# `pxc_proxysql_pmm_8\.4`, which matches nothing (MySQL Instances Compare, Network
-# Traffic). Callers pass the container name, and those carry the version.
 PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-# repo.percona.com publishes the apt index and the pool file non-atomically, and
-# the two disagree for 6-8 minutes at a time (measured), not the minute the old
-# three-attempt retry here assumed. This script is docker-cp'd into containers on
-# its own, so it cannot call the host-side fetch helper -- keep retrying here, but
-# over a span that can actually outlast a window.
 install_pmm_client_from_repo() {
     local component=$1 attempt
     percona-release enable-only pmm3-client "$component"
@@ -96,8 +80,6 @@ install_pmm_client_from_repo() {
     return 1
 }
 
-# Without this the script used to walk on after a failed install and only die
-# later on a missing pmm-admin, reporting rc=127 instead of the real cause.
 die_on_install_failure() {
     echo "pmm-client could not be installed; aborting client setup" >&2
     exit 1
@@ -136,10 +118,6 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  # Deliberately not routed through scripts/fetch-pmm-client-deb.sh: this script
-  # runs under sudo, so it would create /tmp/pmm-client-cache root-owned and the
-  # Ansible client install, which runs as the build user and shares that cache,
-  # could no longer write into it.
   deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
     -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"

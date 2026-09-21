@@ -32,10 +32,6 @@ mkdir -p "$DEST_DIR" "$CACHE_DIR"
 
 log() { printf '[fetch-pmm-client-deb] %s\n' "$*" >&2; }
 
-# Highest version wins, matching what `apt-get install pmm-client` would pick,
-# unless VERSION pins one. The index lists every version still in the pool, in
-# no guaranteed order, as <upstream>-<build>.<codename> — so a pin matches on
-# the upstream part alone and the build number never has to be guessed.
 resolve_from_index() { # -> "version size sha256 filename", empty on failure
   local pkgs
   pkgs=$(curl -sS --max-time 60 "$BASE/dists/$CODENAME/$COMPONENT/binary-$ARCH/Packages") || return 1
@@ -67,9 +63,6 @@ fetch_verified() {
       reason='no-index'
       no_index_streak=$((no_index_streak + 1))
       log "no pmm-client${VERSION:+ $VERSION} in the $CODENAME/$COMPONENT index (attempt $attempt)"
-      # A missing index is a wrong codename/component or an unreachable repo, not
-      # the publishing race, so spending the whole wait budget on it buys nothing.
-      # Tolerate a few in a row for a transient blip, then stop.
       if [ "$no_index_streak" -ge 4 ]; then
         deadline=0
       fi
@@ -77,11 +70,6 @@ fetch_verified() {
       no_index_streak=0
       served=$(served_size "$file" || true)
       if [ "${served:-}" = "$size" ]; then
-        # Sizes agree; the SHA256 below is what actually decides.
-        # Bound the transfer by the budget that is actually left and by stalling,
-        # not by a fixed timeout: a fixed one longer than the budget turns a slow
-        # mirror into a single doomed attempt, which is how a 180 MB download at
-        # 190 kB/s spent 15 minutes and then gave up with no retry left.
         if curl -sS --fail -C - \
           --connect-timeout 30 --speed-limit 51200 --speed-time 120 \
           --max-time "$(( deadline - $(date +%s) ))" \
@@ -92,12 +80,10 @@ fetch_verified() {
             log "cached pmm-client $version ($size bytes) for $CODENAME/$COMPONENT"
             return 0
           fi
-          # Wrong bytes, so the partial is worthless and must not be resumed.
           reason='sha-mismatch'
           log "sha256 mismatch after download — the repository changed mid-fetch (attempt $attempt)"
           rm -f "$DEB.part"
         else
-          # Cut short rather than wrong: keep it, the next attempt resumes.
           reason='download-failed'
           log "download interrupted at $(stat -c%s "$DEB.part" 2>/dev/null || echo 0)/$size bytes (attempt $attempt)"
         fi

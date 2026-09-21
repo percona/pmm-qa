@@ -3,12 +3,6 @@
 # Percona's proxysql-admin, which does this on the 5.7/8.0 path, is not shipped
 # with upstream ProxySQL. admin-stats_credentials is set for read_user because
 # the CLI tests add the ProxySQL service as that user.
-#
-# The nodes go into a galera hostgroup set rather than one flat hostgroup, which
-# is what proxysql-admin --enable builds on the other path: without it ProxySQL
-# does no writer/reader routing, and the ProxySQL dashboards -- whose hostgroup
-# variable is label_values(proxysql_connection_pool_status, hostgroup) -- see a
-# single value instead of writer, reader and backup-writer.
 
 set -euo pipefail
 

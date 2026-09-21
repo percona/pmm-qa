@@ -280,11 +280,6 @@ Scenario(
   async ({ queryAnalyticsPage, adminPage }) => {
     queryAnalyticsPage.waitForLoaded();
 
-    // Both halves of this have been observed failing. The panel populates after the
-    // spinner detaches, so an empty list is what a too-early probe sees -- and an empty
-    // list satisfies "0 filters" whether or not the search ran. Wait for filters to be
-    // there, then poll the count down, because the search re-renders asynchronously and
-    // a single probe caught the whole unfiltered panel still on screen -- 78 filters.
     for (const bracket of ['{', '}']) {
       await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(0, 'bigger', 30);
       queryAnalyticsPage.filters.filterBy(bracket);

@@ -15,9 +15,6 @@
 # Guard so the collection check runs at most once per process.
 ANSIBLE_COLLECTION_CHECKED=false
 
-# Whether ansible.posix -- and with it the profile_tasks callback that times
-# individual tasks -- turned out to be installable. Set by
-# ensure_ansible_collections().
 PROFILE_TASKS_AVAILABLE=false
 
 # Point Ansible modules at a Python that has `requests`, if one is available.
@@ -79,11 +76,6 @@ ansible_python_interpreter() {
 
 # Install the Ansible collections the run needs, unless they are already there.
 #
-# community.docker is a hard requirement -- the playbooks are built on it.
-# ansible.posix only carries the profile_tasks callback, which turns a setup's
-# log into per-task timings, so a host that cannot install it still provisions
-# fine; it just reports less.
-#
 # Checked once per process, and pre-warmed by preflight before parallel setups
 # so several concurrent jobs cannot race to install the same collection.
 #
@@ -106,13 +98,6 @@ ensure_ansible_collections() {
   ANSIBLE_COLLECTION_CHECKED=true
 }
 
-# Is an Ansible collection installed?
-#
-# `ansible-galaxy collection list <name>` exits 0 whether or not the collection
-# is there (ansible-core 2.16), so the listing itself has to be matched: an
-# installed collection is one `<name>  <version>` row under the table header.
-#
-# Returns: 0 when the collection is installed, 1 otherwise
 collection_installed() {
   ansible-galaxy collection list "$1" 2>/dev/null |
     grep -qiE "^${1//./\\.}[[:space:]]"
@@ -171,9 +156,6 @@ run_playbook() {
     verbosity_args+=(-v)
   done
 
-  # Per-task timings. A spec's own elapsed time only says which database was
-  # slow; these say which task inside it was, so a slow pmm-client install is
-  # not read as a slow database.
   local -a callback_args=()
   if [[ $PROFILE_TASKS_AVAILABLE == true ]]; then
     callback_args=(ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks)
@@ -184,9 +166,6 @@ run_playbook() {
 
   (
     cd "$PMM_QA_ROOT"
-    # Playbooks in subdirectories run their shell tasks with that subdirectory as
-    # the working directory, so anything under pmm_qa/ has to be addressed
-    # absolutely from here rather than relative to the playbook.
     env "PMM_QA_ROOT=$PMM_QA_ROOT" "${callback_args[@]}" "${env_args[@]}" ansible-playbook \
       -i 'localhost,' \
       --connection=local \
