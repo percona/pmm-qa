@@ -43,7 +43,7 @@
   shell: |
     docker exec {{ container_prefix }}{{ index }} apt-get update
     docker exec {{ container_prefix }}{{ index }} apt-get install -y libncurses6 libaio1t64
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+    docker exec {{ container_prefix }}{{ index }} bash -c 'lib=$(ls /usr/lib/*/libaio.so.1t64 2>/dev/null | head -1); if [ -n "$lib" ]; then ln -sf "$lib" "${lib%t64}"; fi'
   when: mysql_version | replace('_', '') | int >= 80
 
 - name: Install MySQL 5.7 dependencies
