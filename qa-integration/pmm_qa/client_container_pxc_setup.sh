@@ -49,6 +49,11 @@ if [ "${pxc_version%%.*}" -ge 9 ] 2>/dev/null; then
   sed -i 's/wsrep_slave_threads/wsrep_applier_threads/g' pxc-startup.sh
 fi
 
+# Percona XtraBackup 8.x emits a timestamped log line before the version line,
+# so pxc-startup.sh's version probe matches the timestamp fraction (e.g. 2.x)
+# and wrongly rejects xtrabackup. Restrict the probe to the version line.
+sed -i "s#xtrabackup --version 2>&1 |#& grep -i 'xtrabackup version' |#" pxc-startup.sh
+
 # PXC is installed from packages (the playbook enabled the matching repo). Build
 # a binary-tarball-shaped basedir out of symlinks into the installed files so the
 # upstream pxc-startup.sh, which assumes a tarball layout, drives the cluster
