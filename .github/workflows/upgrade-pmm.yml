@@ -114,7 +114,7 @@ jobs:
       upgrade_type: docker
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       rc_version: ${{ needs.prepare.outputs.rc_version }}
-      pre_upgrade_version: ''
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
 
   upgrade-ui:
     name: UI way upgrade for PMM
@@ -132,4 +132,4 @@ jobs:
       upgrade_type: ui
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       rc_version: ${{ needs.prepare.outputs.rc_version }}
-      pre_upgrade_version: ''
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
