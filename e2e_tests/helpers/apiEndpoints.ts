@@ -4,6 +4,8 @@ const apiEndpoints = {
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
   alerting: {
+    folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
   },
@@ -20,6 +22,7 @@ const apiEndpoints = {
     services: '/v1/inventory/services',
   },
   management: {
+    annotations: '/v1/management/annotations',
     services: '/v1/management/services',
   },
   platform: {

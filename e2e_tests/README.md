@@ -83,6 +83,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
+- `@alerting`
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
@@ -94,8 +95,10 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
+- `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@pre-upgrade`
 - `@rta`
 - `@settings`
 - `@standalone`
