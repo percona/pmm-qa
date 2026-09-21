@@ -29,6 +29,15 @@
     shell: docker network create pmm-qa
     ignore_errors: true
 
+  # PXC and ProxySQL ship x86_64 binaries only, so the container always runs as
+  # amd64. Docker Desktop provides amd64 emulation via Rosetta automatically, but
+  # a native arm64 host does not -- without registered QEMU binfmt handlers the
+  # amd64 container's init cannot exec and it exits immediately, which surfaces
+  # downstream as "container is not running".
+  - name: Enable amd64 emulation on non-amd64 hosts
+    shell: docker run --privileged --rm tonistiigi/binfmt --install amd64
+    when: ansible_architecture not in ['x86_64', 'amd64']
+
   - name: Prepare Container for PXC and Proxysql
     shell: >
       docker run -d --platform linux/amd64 --name={{ pxc_container }}
