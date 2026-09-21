@@ -94,10 +94,16 @@ jobs:
         id: resolve
         shell: bash
         run: |
+          echo ${{ inputs.docker_tag }}
+          echo ${{ inputs.version }}
+          echo ${{ inputs.upgrade_tag }}
+          echo ${{ inputs.upgrade_version }}
+          echo ${{ inputs.pmm_qa_branch }}
           echo ${{ inputs.rc_version }}
           ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
+          echo $ver
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
