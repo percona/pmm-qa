@@ -34,11 +34,9 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
   await backupAPI.waitForBackupArtifact(service.service_name, `test_schedule_pbm_${current}`);
 
   // Test
-  // Wide enough that the backup this scenario just waited for is still in range. At
-  // now-5m the PITR variant intermittently showed no data on Backup Sizes and Backup
-  // Duration -- it spends longer getting its base snapshot in place, so the points it
-  // is asserting on could fall outside a five-minute window. The snapshot variant,
-  // which is quicker, passed on the same dashboard in the same run.
+  // Wide enough that the backup this scenario just waited for is still in range:
+  // the PITR variant can take longer than a five-minute window to get its base
+  // snapshot in place.
   const url = I.buildUrlWithParams(dashboardPage.mongodbBackupDetailsDashboard.url, {
     from: 'now-30m',
     cluster: 'replicaset',
