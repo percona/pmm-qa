@@ -7,3 +7,10 @@ export interface GrafanaUser {
 export interface GrafanaUserSearchResponse {
   users: GrafanaUser[];
 }
+
+export interface GrafanaFolder {
+  id: number;
+  uid: string;
+  title: string;
+  managedBy: string;
+}
