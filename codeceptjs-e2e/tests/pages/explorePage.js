@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 const { I } = inject();
 
 class ExplorePage {
@@ -40,6 +42,14 @@ class ExplorePage {
     I.pressKey('Backspace');
     I.type(query);
     I.pressKey('Escape');
+
+    const [editorContent = ''] = await I.grabTextFromAll(this.elements.sqlEditorContent);
+
+    assert.strictEqual(
+      editorContent.replace(/\s+/g, ' ').trim(),
+      query,
+      'The SQL editor does not hold the query under test',
+    );
   }
 }
 

@@ -1217,9 +1217,11 @@ module.exports = {
     }
   },
 
-  // A service-repeated panel materialises as its series arrive, which can take
-  // minutes. Keep the short wait for the common case and give a straggler one
-  // re-expand and a long wait before failing it.
+  // Expanding once per walk fixed the scroll position, but it also removed the
+  // re-render the per-metric expand was accidentally buying: a service-repeated
+  // panel materialises as its series arrive and has been seen to take minutes,
+  // which a flat 30s wait then called missing. Keep the short wait for the common
+  // case and give a straggler one re-expand and a long wait before failing it.
   async waitForPanelToMount(panelLocator) {
     // Not a try/catch around waitForElement: CodeceptJS drives steps through its
     // own recorder, so a failing wait rejects the test rather than the catch
@@ -1409,9 +1411,11 @@ module.exports = {
   },
 
   async expandEachDashboardRow() {
-    // A freshly opened dashboard only lays out what is near the top, so counting
-    // collapsed rows here finds none of those further down. Go to the bottom first
-    // and let the scene render the rest before counting.
+    // A freshly opened dashboard only lays out what is near the top, so a count
+    // taken right here finds none of the collapsed rows further down and the loop
+    // below exits having expanded nothing -- every metric inside a collapsed row
+    // is then reported missing. Go to the bottom first, which is where the loop
+    // works from anyway, and let the scene render the rest before counting.
     I.pressKey('End');
     I.wait(2);
 

@@ -122,10 +122,9 @@ parse_args() {
             fi
             ;;
           --setup-retries)
-            if [[ $has_inline == false && -z $value ]]; then
-              die "--setup-retries requires a number, e.g. --setup-retries 1."
+            if [[ $has_inline == true || -n $value ]]; then
+              SETUP_RETRIES=$value
             fi
-            SETUP_RETRIES=$value
             ;;
         esac
         ;;

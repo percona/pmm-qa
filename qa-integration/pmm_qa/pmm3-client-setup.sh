@@ -63,13 +63,18 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-# The random fallback is only for callers that pass no name: a re-provisioned
-# container would otherwise register as a new node and leave its old series
-# holding the previous name in every label_values dashboard filter.
+# --force above: with a stable node name, re-provisioning the same container
+# hits "Node with name ... already exists" and the setup fails.
+#
+# A random name per run means a re-provisioned container registers under a new
+# node, and its old series keep the previous name alive in every dashboard
+# filter built from label_values. Callers pass the container name instead.
 export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
 
-# Grafana regex-escapes a template variable, so a dot in the node name makes
-# node_name="$node_name" match nothing.
+# Grafana regex-escapes a multi-value variable even when one value is selected, so a
+# dot in the node name turns a dashboard's node_name="$node_name" into a query for
+# `pxc_proxysql_pmm_8\.4`, which matches nothing (MySQL Instances Compare, Network
+# Traffic). Callers pass the container name, and those carry the version.
 PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
@@ -85,10 +90,8 @@ install_pmm_client_from_repo() {
     for attempt in 1 2 3 4 5; do
         apt-get update
         apt-get -y install pmm-client && return 0
-        if [ "$attempt" -lt 5 ]; then
-            echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
-            sleep 90
-        fi
+        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
+        sleep 90
     done
     return 1
 }
@@ -172,8 +175,6 @@ fi
 
 ## Check if we are upgrading or attempting fresh install.
 if [[ -z "$upgrade" ]]; then
-    # --force: with a stable node name, re-provisioning the same container hits
-    # "Node with name ... already exists" and the setup fails.
     retry_pmm_agent_setup() {
         local n=3
         local i
@@ -185,10 +186,8 @@ if [[ -z "$upgrade" ]]; then
                 echo "setup pmm-agent (attempt $i/$n)"
                 pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
             fi
-            if [ "$i" -lt "$n" ]; then
-                echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
-                sleep 30
-            fi
+            echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
+            sleep 30
         done
         return 1
     }

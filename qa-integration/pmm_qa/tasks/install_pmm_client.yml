@@ -31,10 +31,23 @@
   register: container_hostname
   changed_when: false
 
-# pmm-agent takes the node name from the container's hostname. Where that is the
-# bare 12-hex docker id, fall back to the container name -- sanitised to
-# [A-Za-z0-9_-], since Grafana regex-escapes a dot in a template variable -- and
-# suffixed with SHARD_NAME so two shards cannot claim one node.
+# `pmm-agent setup`'s single positional is the node ADDRESS, so the node name
+# falls back to the container's hostname. Created without --hostname that is a
+# 12-hex-digit docker id, which mints a new inventory entry on every
+# re-provision and survives in label_values() after `unregister`; fall back to
+# the container name there, suffixed with SHARD_NAME so two shards running the
+# same spec cannot claim one node.
+#
+# A hostname the playbook set deliberately is kept verbatim: it is the name
+# dashboards repeat panels by, and tests refer to it literally (valkey's
+# `<host> - Commands by Type`). Such a name is also chosen per container, so it
+# does not collide across shards and needs no suffix.
+#
+# The fallback keeps to [A-Za-z0-9_-]: a container name carrying the version
+# (`pxc_proxysql_pmm_8.4`) puts a dot in the node name, and Grafana regex-escapes
+# a multi-value variable even when one value is selected, so a dashboard's
+# `node_name="$node_name"` then asks for `pxc_proxysql_pmm_8\.4` and matches
+# nothing (MySQL Instances Compare, Network Traffic).
 - name: Derive a stable node name
   set_fact:
     pmm_node_name: >-
@@ -43,7 +56,7 @@
               ~ (('-' ~ shard_name) if shard_name else '') }}
   vars:
     hostname: "{{ container_hostname.stdout | trim }}"
-    shard_name: "{{ lookup('env', 'SHARD_NAME') | default('', true) | regex_replace('[^A-Za-z0-9_-]', '_') }}"
+    shard_name: "{{ lookup('env', 'SHARD_NAME') | default('', true) }}"
 
 - name: Get PMM server address
   shell: 'docker ps -f name=-server --format "{{ "{{" }}.Names{{ "}}" }}"'
@@ -263,7 +276,7 @@
 
 - name: Connect pmm client to pmm server using metrics mode without encrypted client config
   shell: |
-    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name | quote }} {{ container_name }} \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
       pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
@@ -278,7 +291,7 @@
 
 - name: Connect pmm client to pmm server using default metrics mode without encrypted client config
   shell: |
-    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name | quote }} {{ container_name }} \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
       pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
@@ -292,7 +305,7 @@
 
 - name: Connect pmm client to pmm server using default metrics mode with encrypted client config
   shell: |
-    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name | quote }} {{ container_name }} \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
       pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
@@ -309,7 +322,7 @@
 
 - name: Connect pmm client to pmm server using metrics mode with encrypted client config
   shell: |
-    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name | quote }} {{ container_name }} \
+    docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
       pmm-agent setup --force \
         --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \

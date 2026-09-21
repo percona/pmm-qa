@@ -256,9 +256,12 @@ module.exports = () => actor({
     });
 
     // build-url appends `?<params>` unconditionally, so on a url that already
-    // carries a query string the parameters landed after a second `?` and were
-    // ignored. Merge instead, keeping the url's own from/to unless overridden.
-    const [baseUrl, search = ''] = url.split('?');
+    // carries a query string every parameter ended up after a second `?` and was
+    // silently ignored -- which is how the Nodes Compare test asked for a 1h
+    // window and kept getting the 5m one baked into the dashboard url. Merge
+    // instead, leaving the url's own from/to in place unless the caller asked
+    // for a different one.
+    const [path, search = ''] = url.split('?');
     const merged = new Map();
 
     search.split('&').filter(Boolean).forEach((pair) => {
@@ -274,7 +277,7 @@ module.exports = () => actor({
     });
     Object.entries(queryParams).forEach(([key, value]) => merged.set(key, encodeURIComponent(value)));
 
-    return `${baseUrl}?${[...merged].map(([key, value]) => `${key}=${value}`).join('&')}`;
+    return `${path}?${[...merged].map(([key, value]) => `${key}=${value}`).join('&')}`;
   },
 
   signOut() {

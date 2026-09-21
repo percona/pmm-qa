@@ -3,9 +3,10 @@
   vars:
     port_start: 3306
 
-- name: Remove the node container left by a previous run
-  shell: docker rm -fv {{ container_prefix }}{{ index }} || true
+- name: Remove node containers left by a previous run
+  shell: docker rm -fv {{ container_prefix }}{{ item }} || true
   changed_when: false
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Prepare socket folders
   shell: |
