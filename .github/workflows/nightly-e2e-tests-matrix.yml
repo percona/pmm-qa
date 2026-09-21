@@ -573,22 +573,3 @@ jobs:
         run: |
           echo "Test execution failed on shard ${SHARD_NAME} (${TAGS_FOR_TESTS})." >&2
           exit 1
-
-  notify_investigator:
-    name: Fire Investigator routine
-    needs:
-      - shard
-    if: >
-      !cancelled() &&
-      github.workflow == 'Nightly E2E tests Matrix (remote PMM Server)' &&
-      github.ref_name == github.event.repository.default_branch &&
-      contains(needs.*.result, 'failure')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/notify-investigator
-        with:
-          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}
