@@ -1,0 +1,58 @@
+import { expect } from '@playwright/test';
+import pmmTest from '@fixtures/pmmTest';
+
+pmmTest.beforeEach(async ({ grafanaHelper, leftNavigation, page }) => {
+  await grafanaHelper.authorize();
+  await page.goto('pmm-ui/graph/d/pmm-home');
+  await leftNavigation.selectTimeRange('Last 1 hour');
+});
+
+pmmTest(
+  'PMM-T2205 - Verify Postgres Summary service name persistence @inventory',
+  async ({ dashboard, leftNavigation, page }) => {
+    await pmmTest.step('Open PostgreSQL menu and go to Summary', async () => {
+      await leftNavigation.selectMenuItem('postgresql');
+      await dashboard.waitForDashboardToLoad();
+      await leftNavigation.selectMenuItem('postgresql.summary');
+      await dashboard.selectVariableValue('Service Name');
+      await dashboard.waitForDashboardToLoad();
+      await leftNavigation.selectMenuItem('postgresql.overview');
+      await dashboard.waitForDashboardToLoad();
+      await leftNavigation.selectMenuItem('postgresql.summary');
+    });
+
+    await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
+      await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
+      await expect(page).not.toHaveURL(/.*=true/);
+      await dashboard.verifyAllPanelsHaveData([
+        'Oldest Autovacuum',
+        'CPU',
+        'Top 10 Biggest Databases',
+        'System Uptime',
+        'RAM',
+        'Virtual Memory',
+        'Disk Space',
+      ]);
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2206 - Verify OS Summary Time zone Variable @inventory',
+  async ({ dashboard, leftNavigation, page }) => {
+    await pmmTest.step('Open OS menu and navigate to Overview', async () => {
+      await leftNavigation.selectMenuItem('operatingsystem');
+      await leftNavigation.selectMenuItem('operatingsystem.overview');
+      await dashboard.waitForDashboardToLoad();
+    });
+
+    await pmmTest.step('Navigate to Disk, Memory and Summary', async () => {
+      await leftNavigation.selectMenuItem('operatingsystem.disk');
+      await leftNavigation.selectMenuItem('operatingsystem.memory');
+      await leftNavigation.selectMenuItem('operatingsystem.summary');
+      await expect(page).not.toHaveURL(/.*timezone=.*=true/);
+      await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
+      await expect(page).not.toHaveURL(/.*=true/);
+    });
+  },
+);

@@ -1,0 +1,115 @@
+import { APIRequestContext, expect } from '@playwright/test';
+import GrafanaHelper from '@helpers/grafana.helper';
+import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import apiEndpoints from '@helpers/apiEndpoints';
+
+export default class InventoryApi {
+  constructor(private request: APIRequestContext) {}
+
+  getAllServiceDetailsByRegex = async (regexString: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const regex = new RegExp(regexString);
+    const service = services.services.filter((service: GetService) => regex.test(service.service_name));
+
+    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
+
+    return service;
+  };
+
+  getAllServicesDetailsByPartialName = async (partialServiceName: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const filteredServices = services.services.filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+
+    if (!filteredServices) throw new Error(`Service with name ${partialServiceName} is not present`);
+
+    return filteredServices;
+  };
+
+  getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
+    const services = await this.getServices();
+    const service = services.services.find((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+
+    if (!service) throw new Error(`Service with name ${partialServiceName} is not present`);
+
+    return service;
+  };
+
+  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> =>
+    (await this.getAllServiceDetailsByRegex(regexString))[0];
+
+  getServiceDetailsByRegexAndParameters = async (
+    regexString: string,
+    parameters: object,
+  ): Promise<GetService> => {
+    const services = await this.getServices();
+    const regex = new RegExp(regexString);
+    let filteredServices = services.services.filter((service: GetService) =>
+      regex.test(service.service_name),
+    );
+
+    Object.entries(parameters).forEach(([key, value]) => {
+      filteredServices = filteredServices.filter(
+        (service: GetService) => service[key as keyof GetService] === value,
+      );
+    });
+
+    expect(filteredServices.length, `Service matching regex: ${regex} is not present`).toBeGreaterThan(0);
+
+    return filteredServices[0];
+  };
+
+  getServices = async (): Promise<GetServices> => {
+    const authToken = GrafanaHelper.getToken();
+    const services = await this.request.get(apiEndpoints.management.services, {
+      headers: {
+        Authorization: `Basic ${authToken}`,
+      },
+    });
+
+    expect(
+      services.status(),
+      `Get services API call returned status code: ${services.status()} with error message: ${services.statusText()}`,
+    ).toEqual(200);
+
+    return (await services.json()) as GetServices;
+  };
+
+  getServicesByType = async (serviceType: ServiceType) => {
+    const serviceList = await this.getServices();
+
+    if (serviceType === ServiceType.postgresql) {
+      serviceList.services = serviceList.services.filter(
+        (service: GetService) => service.service_name !== 'pmm-server-postgresql',
+      );
+    }
+
+    const service = serviceList.services.filter(
+      (service: GetService) => service.service_type === serviceType,
+    );
+
+    expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
+
+    return service;
+  };
+
+  verifyAgentsAreRunning = async (serviceName: string) =>
+    this.getServiceDetailsByPartialName(serviceName)
+      .then((service) =>
+        service.agents
+          .filter((agent) => agent.agent_type !== 'pmm-agent')
+          .every((agent) => agent.status === AgentStatus.running),
+      )
+      .catch(() => false);
+
+  verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
+    const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
+
+    for (const agent of agents) {
+      expect.soft(agent.status, `Wrong status for agent: ${agent.agent_type}`).toEqual(expectedStatus);
+    }
+  };
+}
