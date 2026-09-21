@@ -60,7 +60,7 @@ export default class SettingsPage extends BasePage {
     high: this.page.locator('[name="hr"]'),
     low: this.page.locator('[name="lr"]'),
     medium: this.page.locator('[name="mr"]'),
-    publicAddress: this.page.getByTestId('text-input-public-address'),
+    publicAddress: this.page.getByTestId('publicAddress-text-input'),
     rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
     sshKey: this.page.getByTestId('text-input-ssh-key'),
     standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
