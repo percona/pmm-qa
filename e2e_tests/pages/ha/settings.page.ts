@@ -10,9 +10,6 @@ export default class SettingsPage extends BasePage {
     metrics: '/pmm-ui/settings/metrics-resolution',
     ssh: '/pmm-ui/settings/ssh-key',
   };
-  // percona-helm-charts PMM-HA-GA no longer pins PMM_ENABLE_INTERNAL_PG_QAN (the PMM-15301
-  // pin was reverted in #967), so the env-var precondition in
-  // managed/services/server/server.go no longer fires and the HA check's message is returned.
   haQanErrorMessage = "Enabling QAN on PMM's own database is not supported in HA mode.";
   tabs = {
     advanced: this.page.getByTestId('settings-tab-advanced'),
