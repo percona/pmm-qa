@@ -85,8 +85,10 @@ install_pmm_client_from_repo() {
     for attempt in 1 2 3 4 5; do
         apt-get update
         apt-get -y install pmm-client && return 0
-        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
-        sleep 90
+        if [ "$attempt" -lt 5 ]; then
+            echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
+            sleep 90
+        fi
     done
     return 1
 }
@@ -183,8 +185,10 @@ if [[ -z "$upgrade" ]]; then
                 echo "setup pmm-agent (attempt $i/$n)"
                 pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
             fi
-            echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
-            sleep 30
+            if [ "$i" -lt "$n" ]; then
+                echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
+                sleep 30
+            fi
         done
         return 1
     }

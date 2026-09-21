@@ -81,6 +81,15 @@ load helpers/test_helper
   [[ ${DATABASE_SPECS[0]} == ps=8.4 ]]
 }
 
+@test "a valueless --setup-retries is rejected" {
+  run parse_args --setup-retries --database ps=8.4
+  [[ $status -ne 0 ]]
+  [[ $output == *"--setup-retries requires a number"* ]]
+
+  parse_args --setup-retries 2 --database ps=8.4
+  [[ $SETUP_RETRIES == 2 ]]
+}
+
 @test "prebaked PS options are no longer accepted" {
   run parse_args --use-prebaked-ps --database ps=8.4
   [[ $status -ne 0 ]]
