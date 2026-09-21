@@ -1,10 +1,6 @@
 name: PMM Upgrade runner
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - '.github/workflows/upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
       docker_tag:
