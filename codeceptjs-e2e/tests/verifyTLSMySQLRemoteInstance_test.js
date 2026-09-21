@@ -6,6 +6,11 @@ const { adminPage } = inject();
 
 Feature('Monitoring SSL/TLS MYSQL instances');
 
+// The CI leg runs `--database ssl_mysql` with no version, so this tracks SSL_MYSQL's
+// DEFAULT_VERSION in qa-integration/pmm_qa/pmm-framework/lib/config.sh -- the setup names
+// the container and the registered service after it.
+const mysqlSslVersion = '8.4';
+
 const instances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric']);
 const maxQueryLengthInstances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric', 'maxQueryLength']);
 const maxQueryLengthTestData = new DataTable(['text']);
@@ -17,14 +22,14 @@ maxQueryLengthTestData.add(['`']);
 maxQueryLengthTestData.add(['"']);
 
 // instances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections']);
-instances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections']);
+instances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections']);
 
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
 
 // The probe query is found by table name, so it needs a table nothing else on the SSL
 // MySQL instance reads.
@@ -33,7 +38,7 @@ const exampleQueryMarker = 'character_sets';
 let serviceName;
 
 BeforeSuite(async ({ inventoryAPI }) => {
-  const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'mysql_ssl_8.0_ssl_service', 'remote');
+  const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, `mysql_ssl_${mysqlSslVersion}_ssl_service`, 'remote');
 
   serviceName = service_name;
 });

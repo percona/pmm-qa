@@ -31,6 +31,7 @@ import DataSourcesPage from '@pages/dataSources.page';
 import LoginPage from '@pages/login.page';
 import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
+import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
@@ -59,6 +60,7 @@ const pmmTest = base.extend<{
   qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  searchDashboardsPage: SearchDashboardsPage;
   serviceAccountsPage: ServiceAccountsPage;
   servicesPage: ServicesPage;
   tour: TourPage;
@@ -181,6 +183,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),

@@ -5,7 +5,9 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const containerName = cliHelper.execSilent(
     'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}" | head -n 1',
   ).stdout;
-  const result = cliHelper.execSilent(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
+  // The 8.4 client sends comments, which reach the slow log as extra empty-fingerprint queries.
+  const result =
+    cliHelper.execSilent(`docker exec -i ${containerName} mysql --skip-comments -h 127.0.0.1 --port 3306 \
                                                           -u ${credentials.perconaServer.ps_84.username} \
                                                           -p${credentials.perconaServer.ps_84.password} \
                                                           < \${PWD}/testdata/PMM-T1897.sql`);
@@ -23,7 +25,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
 
 pmmTest(
-  'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-integration',
   async ({ api, page, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(replicaServiceRegex);
 

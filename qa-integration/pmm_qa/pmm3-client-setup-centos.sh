@@ -90,9 +90,9 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  rpm_file="pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+  rpm_file="pmm-client-${client_version}-${build_number}.el9.$(uname -m).rpm"
   wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-    -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/${rpm_file}"
+    -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/$(uname -m)/${rpm_file}"
   rpm -i "${rpm_file}"
 fi
 

@@ -35,6 +35,9 @@
       "@api/*": [
         "./api/*"
       ],
+      "@testdata/*": [
+        "./testdata/*"
+      ],
       "@valkey": [
         "./pages/dashboards/valkey/index.ts"
       ]

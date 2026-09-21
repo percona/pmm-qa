@@ -164,18 +164,23 @@ export default class GrafanaApi {
     serviceName?: string,
     timeout: Timeouts = Timeouts.ONE_MINUTE,
   ) => {
-    let iterator = 0;
+    const deadline = Date.now() + timeout;
 
     while (true) {
-      if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-
       const metric = await this.getMetric(metricName, serviceName);
 
       if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 
+      // Against the wall clock, not a count of sleeps, which leaves the time spent in
+      // getMetric outside the budget.
+      const remaining = deadline - Date.now();
+
+      if (remaining <= 0) {
+        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
+      }
+
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      iterator += Timeouts.ONE_SECOND;
+      await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
     }
   };
 }
