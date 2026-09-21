@@ -93,7 +93,7 @@ jobs:
               | { version: $versions[$i],
                   docker_tag: $tags[$i],
                   upgrade_tag: (if $is_rc then "perconalab/pmm-server:3-dev-latest" else $rc_tag end),
-                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end)
+                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end),
                   pre_upgrade_version: $tags[$i]}]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo $MATRIX
