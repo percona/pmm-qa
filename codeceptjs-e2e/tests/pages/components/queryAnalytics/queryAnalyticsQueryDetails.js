@@ -13,6 +13,7 @@ class QueryAnalyticsQueryDetails {
       noTable: locate('pre').withText('No table info from example nor explain'),
       noJSON: locate('pre').withText('No JSON explain found'),
       explainError: locate('$json-explain-error'),
+      explainOutcome: locate('//*[@data-testid="highlight-code" or contains(@class, "pretty-json-container") or @data-testid="json-explain-error"]'),
       classicExplainError: locate('//*[@data-testid="classic-explain-error"]'),
       histogramContainer: locate('$histogram-collapse-container'),
       topQuery: locate('$top-query').find('div'),
@@ -124,7 +125,7 @@ class QueryAnalyticsQueryDetails {
     I.waitForVisible(this.buttons.tab('Explain'), 30);
     I.click(this.buttons.tab('Explain'));
     queryAnalyticsPage.waitForLoaded();
-    I.waitForVisible(this.elements.codeBlock, 30);
+    I.waitForVisible(this.elements.explainOutcome, 30);
 
     if (await I.isElementDisplayed(this.elements.explainError, 1)) {
       throw new Error(`No explain visible for parameters: ${JSON.stringify(parameters)}`);

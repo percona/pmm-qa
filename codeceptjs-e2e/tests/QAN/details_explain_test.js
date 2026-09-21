@@ -93,7 +93,11 @@ Scenario(
       queryAnalyticsPage,
       inventoryAPI,
       serviceName: isJenkinsGssapiJob ? 'rs101_gssapi' : 'rs101',
-      queryTypes: ['db.students', 'db.runCommand', 'db.test'],
+      // 'getMore', not the broader 'db.runCommand': that term also matches the
+      // administrative commands the replica set and its exporters issue (drop,
+      // create, dbStats, currentOp), none of which MongoDB can explain, so the
+      // row this picks would depend on what else happens to be running.
+      queryTypes: ['db.students', 'getMore', 'db.test'],
       cluster: 'replicaset',
     });
   },
