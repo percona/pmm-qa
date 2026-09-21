@@ -109,6 +109,9 @@ Write every message with `git commit -F -` and a quoted heredoc, never `-m "..."
 This repository squash-merges, and the squash body is the concatenation of the branch's commit messages, not the PR body. So:
 
 - Write each body from `git diff origin/main HEAD --stat` and the per-file diffs, never from a phase handoff. Confirm every symbol, number, filename, trigger and line reference against the tree with a scoped Grep before the final gate; a message-only amend after the gate moves HEAD and costs a fresh gate.
+- Measure an "N other files remain" count on the branch HEAD, never on `origin/main`, which still counts the file being retired.
+- Read another repository's branch name from `gh api <owner>/<repo> --jq .default_branch`; never assume `main`.
+- `--no-verify` is allowed only on a message-only amend, where the hook reads an empty staged list. On any commit that stages a file it is a final-gate finding.
 - Correct a false clause in an already-pushed non-tip commit body in the next commit's body, naming the commit and quoting the clause. Never force-push for it. Amending the tip is allowed but cancels an in-flight CI matrix.
 - Re-read the PR body against `git diff -M origin/main..HEAD` before requesting review and after every push. Do not hand-trim the pre-filled bullets in the merge box.
 
@@ -200,7 +203,7 @@ gh pr create \
   --body-file <scratchpad>/migration-pr.md
 ```
 
-The body is this template and nothing more, 25 lines and 1,500 characters at most, written from the diff. Evidence and history stay in the ledger and timeline. A body over the cap is a final-gate finding.
+The body is this template and nothing more, 25 lines and 1,500 characters at most, written from the diff. Evidence and history stay in the ledger and timeline. A body over the cap is a final-gate finding. Count characters with `wc -m`, not `wc -c`; the trailer emoji is 4 bytes.
 
 ```markdown
 Migrates `<source path>` to `<target path>`.

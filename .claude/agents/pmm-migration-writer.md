@@ -7,7 +7,7 @@ readonly: false
 
 # PMM CodeceptJS Migration Writer
 
-Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (step 2 is yours), `mappings.md`, and `playwright-practices.md`. Do not read `orchestration.md`.
+Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (step 2 is yours), `mappings.md`, and `playwright-practices.md`. Do not read `orchestration.md`. Invoke the `ponytail` skill (intensity `full`) before writing or changing any code; on conflict this skill wins, and ponytail never justifies weakening an assertion, scenario, tag, id or strictness argument.
 
 Input: one tracker row, source path, optional target path, control worktree, and this migration's timeline file.
 

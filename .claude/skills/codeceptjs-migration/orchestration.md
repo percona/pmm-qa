@@ -44,7 +44,7 @@ Three preflight checks on control, before the `origin/main` merge and the `in-pr
 gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | select(.title | startswith("migrate("))]'
 ```
 
-   Not `--search 'migrate in:title'`, which matches unrelated titles containing the word.
+   Not `--search 'migrate in:title'`, which matches unrelated titles containing the word. Also run `ListAgents`: another session sharing this worktree will stage or revert files under you, so agree paths with it or stop.
 
 3. Node.js older than 22.18, Docker unavailable, or a fixed local resource already present: `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (never created by `provisioning/`; it means a foreign `qa-integration` environment). Treat any match as foreign unless this run created it; never adopt, replace or tear one down.
 
