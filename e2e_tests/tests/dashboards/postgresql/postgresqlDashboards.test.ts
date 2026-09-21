@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 
-pmmTest.describe('PMM settings tests for upgrade', () => {
+pmmTest.describe('PMM tests for postgresql dashboards', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
   });

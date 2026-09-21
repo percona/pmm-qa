@@ -4,7 +4,11 @@ import DashboardInterface from '@interfaces/dashboard';
 export default class MongodbShardedClusterSummary implements DashboardInterface {
   url = 'graph/d/mongodb-cluster-summary/mongodb-sharded-cluster-summary';
 
-  metrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): GrafanaPanel[] => [
+  metrics = (
+    shardNames: string[] = [],
+    nodeNames: string[] = [],
+    serviceNames: string[] = [],
+  ): GrafanaPanel[] => [
     { name: 'Config Servers', type: 'polyStat' },
     { name: 'Mongos Routers', type: 'polyStat' },
     ...shardNames.map((name): GrafanaPanel => ({ name: `Shard - ${name}`, type: 'polyStat' })),
@@ -45,10 +49,10 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
 
   metricsWithData = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[] = []) =>
     this.metrics(shardNames, nodeNames, serviceNames).filter(
-      (metric) => !this.noDataMetrics(shardNames, nodeNames, serviceNames).includes(metric.name),
+      (metric) => !this.noDataMetrics(serviceNames).includes(metric.name),
     );
 
-  noDataMetrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): string[] => [
+  noDataMetrics = (serviceNames: string[] = []): string[] => [
     ...serviceNames.map((name): string => `Oplog GB/Hour - ${name}`),
   ];
 }

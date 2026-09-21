@@ -13,11 +13,17 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
       const clientCert = cliHelper
         .execSilent(`docker exec ${container} cat /mongodb_certs/client.pem`)
         .assertSuccess().stdout;
+      const diffAuthDir = '../qa-integration/pmm_psmdb_diffauth_setup';
       const caLocation = cliHelper
-        .execSilent(`find / -name "ca.crt"`)
+        .execSilent(`find ${diffAuthDir} -name "ca.crt"`)
         .stdout.split('\n')
-        .find((row: string) => row.includes('pmm_psmdb_diffauth_setup'))
+        .find((row: string) => row.trim())
         ?.trim();
+
+      if (!caLocation) {
+        throw new Error(`ca.crt not found under ${diffAuthDir}; is pmm_psmdb_diffauth_setup provisioned?`);
+      }
+
       const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
 
       await api.remoteInstanceApi.addRemoteInstance({

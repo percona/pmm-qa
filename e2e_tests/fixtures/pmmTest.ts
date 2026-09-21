@@ -1,5 +1,6 @@
 import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';

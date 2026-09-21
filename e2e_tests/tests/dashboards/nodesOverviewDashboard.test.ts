@@ -15,6 +15,7 @@ pmmTest(
       .assertSuccess();
     await api.grafanaApi.waitForMetric(
       `node_boot_time_seconds{environment="${environment}"}`,
+      undefined,
       Timeouts.TWO_MINUTES,
     );
     await page.goto(

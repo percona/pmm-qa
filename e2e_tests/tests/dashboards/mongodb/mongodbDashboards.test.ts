@@ -39,9 +39,11 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
         dashboard.mongo.shardedClusterSummary.metrics(shardNames, nodeNames, serviceNames),
       );
       await dashboard.verifyAllPanelsHaveData(
-        dashboard.mongo.shardedClusterSummary.noDataMetrics(shardNames, nodeNames, serviceNames),
+        dashboard.mongo.shardedClusterSummary.noDataMetrics(serviceNames),
       );
-      await dashboard.verifyPanelValues(dashboard.mongo.shardedClusterSummary.metricsWithData(shardNames));
+      await dashboard.verifyPanelValues(
+        dashboard.mongo.shardedClusterSummary.metricsWithData(shardNames, nodeNames, serviceNames),
+      );
     },
   );
 

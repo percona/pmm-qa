@@ -36,11 +36,6 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
 
         await api.grafanaApi.waitForMetric(service.metric, details.service_name);
         expect(
-          customLabels,
-          `Custom labels for ${service.serviceType} added before upgrade are empty`,
-        ).toBeTruthy();
-
-        expect(
           customLabels.testing,
           `Custom label "testing=upgrade" was not retained post upgrade for ${service.serviceType}`,
         ).toEqual('upgrade');

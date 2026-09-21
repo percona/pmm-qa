@@ -60,12 +60,12 @@ for (const annotation of annotations) {
                   annotation.service,
                 );
           const node = service.node_name;
-          const response = await api.annotationApi.setAnnotation(
-            annotation.annotationName,
-            'PMM-T878',
-            node,
-            service.service_name,
-          );
+          const response = await api.annotationsApi.setAnnotation({
+            nodeName: node,
+            serviceNames: [service.service_name],
+            tags: ['PMM-T878'],
+            text: annotation.annotationName,
+          });
 
           expect(
             response.status(),
@@ -100,32 +100,32 @@ pmmTest(
       ServiceType.mysql,
       'ps_',
     );
-    const wrongNodeName = await api.annotationApi.setAnnotation(
-      'wrong-node-name',
-      'PMM-T878',
-      'random1',
-      service_name,
-    );
+    const wrongNodeName = await api.annotationsApi.postAnnotation({
+      nodeName: 'random1',
+      serviceNames: [service_name],
+      tags: ['PMM-T878'],
+      text: 'wrong-node-name',
+    });
 
     expect(wrongNodeName.status(), 'Annotation with a non-existing node name must be rejected').toEqual(404);
 
-    const wrongServiceName = await api.annotationApi.setAnnotation(
-      'wrong-service-name',
-      'PMM-T878',
-      'pmm-server',
-      'random2',
-    );
+    const wrongServiceName = await api.annotationsApi.postAnnotation({
+      nodeName: 'pmm-server',
+      serviceNames: ['random2'],
+      tags: ['PMM-T878'],
+      text: 'wrong-service-name',
+    });
 
     expect(wrongServiceName.status(), 'Annotation with a non-existing service name must be rejected').toEqual(
       404,
     );
 
-    const emptyServiceName = await api.annotationApi.setAnnotation(
-      'empty-service-name',
-      'PMM-T878',
-      'pmm-server',
-      '',
-    );
+    const emptyServiceName = await api.annotationsApi.postAnnotation({
+      nodeName: 'pmm-server',
+      serviceNames: [''],
+      tags: ['PMM-T878'],
+      text: 'empty-service-name',
+    });
 
     expect(emptyServiceName.status(), 'Annotation without a service name must be rejected').toEqual(400);
   },

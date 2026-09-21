@@ -96,8 +96,14 @@ export default class Dashboards extends BasePage {
   collapseAllRows = async () => {
     await this.waitForDashboardToLoad();
 
-    while ((await this.elements.collapseRow.count()) > 0) {
-      for (const element of await this.elements.collapseRow.all()) {
+    const maxPasses = 20;
+
+    for (let pass = 0; pass < maxPasses; pass++) {
+      const rows = await this.elements.collapseRow.all();
+
+      if (rows.length === 0) return;
+
+      for (const element of rows) {
         try {
           await element.click({ timeout: Timeouts.ONE_SECOND });
         } catch {
@@ -105,6 +111,12 @@ export default class Dashboards extends BasePage {
         }
       }
     }
+
+    const remaining = await this.elements.collapseRow.allTextContents();
+
+    throw new Error(
+      `Failed to collapse all rows after ${maxPasses} passes; still expanded: ${remaining.filter((text) => text.trim()).join(', ') || `${remaining.length} row(s)`}`,
+    );
   };
 
   collapseRow = async (rowName: string) => {
@@ -374,22 +386,21 @@ export default class Dashboards extends BasePage {
     noDataMetrics: string[],
     timeout: Timeouts = Timeouts.ONE_MINUTE,
   ) => {
-    let missingMetrics: string[] = [];
     const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
 
-    for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+    await expect
+      .poll(
+        async () => {
+          const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
 
-      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
-
-      if (missingMetrics.length == 0) break;
-
-      //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
-      await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
-    }
-
-    expect
-      .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
+          return noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
+        },
+        {
+          intervals: [Timeouts.THIRTY_SECONDS],
+          message: `Panels without data remained for row "${rowName}"`,
+          timeout,
+        },
+      )
       .toHaveLength(0);
   };
 

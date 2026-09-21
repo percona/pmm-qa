@@ -1,7 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
-pmmTest.describe('PMM settings tests for upgrade', () => {
+pmmTest.describe('PMM dashboard tests for upgrade', () => {
   const dashboardName = 'upgrade-dashboard';
   const panelName = 'Monitored DB';
 
@@ -13,9 +13,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'PMM-T391 - Verify user is able to create and set custom home dashboard @pre-upgrade',
     async ({ dashboard, grafanaHelper, page }) => {
       const folder = await grafanaHelper.getFolderDetailsByName('Insight');
-
-      await grafanaHelper.createFolder('upgrade-folder');
-
       const customDashboard = await grafanaHelper.createCustomDashboard(
         dashboardName,
         folder.id,
@@ -48,7 +45,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error',
     );
 
-    expect(errorLogs.stderr, `Error found in grafana log after upgrade: ${errorLogs.stderr}`).toHaveLength(0);
+    expect(errorLogs.stdout, `Error found in grafana log after upgrade: ${errorLogs.stdout}`).toHaveLength(0);
   });
 
   pmmTest(

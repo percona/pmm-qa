@@ -3,6 +3,8 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM cli tests for upgrade', () => {
   const nonClientContainers = [
+    'pmm-server',
+    'pmm-server-old',
     'ldap-server',
     'minio',
     'external_pmm',
@@ -44,14 +46,12 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       .stdout.split('\n')
       .filter((item) => item && !nonClientContainers.includes(item));
 
-    console.log(`Container names are: ${containers}`);
-
     for (const container of containers) {
       const pmmAdminVersion: string = cliHelper.execSilent(
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
       const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
       ).stdout;
 
       expect(
@@ -60,12 +60,12 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       ).toContain(process.env.CLIENT_VERSION);
       expect(
         pmmAgentVersion,
-        `PMM agent version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.CLIENT_VERSION} for service ${container},`,
+        `PMM agent version: ${pmmAgentVersion} does not equal expected PMM client version ${process.env.CLIENT_VERSION} for service ${container},`,
       ).toContain(process.env.CLIENT_VERSION);
     }
   });
 
-  pmmTest('Verify PMM client versions after upgrade', async ({ cliHelper }) => {
+  pmmTest('Verify PMM client versions after upgrade @post-upgrade', async ({ cliHelper }) => {
     const containers: string[] = cliHelper
       .execSilent(`docker ps --format "{{.Names }}"`)
       .stdout.split('\n')
@@ -76,7 +76,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
       const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
       ).stdout;
 
       expect(
@@ -85,7 +85,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       ).toContain(process.env.PMM_SERVER_LATEST);
       expect(
         pmmAgentVersion,
-        `PMM agent version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.PMM_SERVER_LATEST} for service ${container},`,
+        `PMM agent version: ${pmmAgentVersion} does not equal expected PMM client version ${process.env.PMM_SERVER_LATEST} for service ${container},`,
       ).toContain(process.env.PMM_SERVER_LATEST);
     }
   });

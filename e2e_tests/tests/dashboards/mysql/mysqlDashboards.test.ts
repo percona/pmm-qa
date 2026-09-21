@@ -12,7 +12,7 @@ const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    await api.grafanaApi.waitForMetric('haproxy_process_start_time_seconds', Timeouts.TWO_MINUTES);
+    await api.grafanaApi.waitForMetric('haproxy_process_start_time_seconds', undefined, Timeouts.TWO_MINUTES);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
         from: 'now-1h',

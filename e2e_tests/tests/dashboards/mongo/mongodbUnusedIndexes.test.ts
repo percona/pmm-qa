@@ -19,7 +19,7 @@ pmmTest(
       const indexes = await mongoDbHelper.createIndexStats(database, collection);
       const metric = `mongodb_indexstats_accesses_ops{database="${database}", key_name="${indexes.unusedIndex}", service_name="${service.service_name}"}`;
 
-      await api.grafanaApi.waitForMetric(metric, Timeouts.TWO_MINUTES);
+      await api.grafanaApi.waitForMetric(metric, undefined, Timeouts.TWO_MINUTES);
       await page.goto(
         urlHelper.buildUrlWithParameters(unusedIndexes.url, {
           cluster: service.cluster,

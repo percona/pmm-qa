@@ -11,12 +11,7 @@ export default class PanelComponent {
     const target = locator.first();
 
     await target.first().waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
-
-    try {
-      await target.scrollIntoViewIfNeeded();
-    } catch {
-      /* ignored */
-    }
+    await target.scrollIntoViewIfNeeded();
 
     if (verifyTexts) {
       const barGaugeTexts = await locator.allTextContents();

@@ -10,6 +10,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
   ];
 
   for (const service of services) {
+    // eslint-disable-next-line playwright/expect-expect -- Pre-upgrade test sets the annotation; the assertion is post-upgrade.
     pmmTest(
       `Adding annotation before upgrade at service Level for ${service.serviceType} @pre-upgrade`,
       async ({ api }) => {
@@ -20,8 +21,6 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
         if (!details) {
           throw new Error(`Service with name ${service.name} was not found!`);
         }
-
-        expect(details, `Service including "${service.name}" (non-ssl) not found`).toBeTruthy();
 
         await api.annotationsApi.setAnnotation({
           nodeName: details.node_name,

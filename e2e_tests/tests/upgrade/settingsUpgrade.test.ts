@@ -18,7 +18,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     };
     const response = await api.settingsApi.changeSettings(body);
 
-    expect(response).toBeTruthy();
+    expect(response.settings.data_retention).toBe(body.data_retention);
 
     await api.serverApi.waitForReady();
   });

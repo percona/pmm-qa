@@ -27,7 +27,7 @@ pmmTest(
 
     await pmmTest.step('Wait for the metrics of every monitored service', async () => {
       for (const metric of MONITORED_METRICS) {
-        await api.grafanaApi.waitForMetric(metric, Timeouts.THIRTY_SECONDS);
+        await api.grafanaApi.waitForMetric(metric, undefined, Timeouts.THIRTY_SECONDS);
       }
     });
 
@@ -73,7 +73,7 @@ pmmTest(
 
     await pmmTest.step('Verify QAN continues to receive data', async () => {
       for (const metric of MONITORED_METRICS) {
-        await api.grafanaApi.waitForMetric(metric, Timeouts.ONE_MINUTE);
+        await api.grafanaApi.waitForMetric(metric, undefined, Timeouts.ONE_MINUTE);
       }
     });
   },

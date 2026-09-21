@@ -22,15 +22,18 @@ export default class AnnotationsApi {
     return await response.json();
   };
 
-  setAnnotation = async ({ nodeName, serviceNames, tags, text }: SetAnnotation) => {
-    const response = await this.request.post(apiEndpoints.management.annotations, {
+  postAnnotation = async ({ nodeName, serviceNames, tags, text }: SetAnnotation) =>
+    this.request.post(apiEndpoints.management.annotations, {
       data: { node_name: nodeName, service_names: serviceNames, tags, text },
       headers: GrafanaHelper.getAuthHeader(),
     });
 
+  setAnnotation = async (annotation: SetAnnotation) => {
+    const response = await this.postAnnotation(annotation);
+
     expect(
       response.status(),
-      `Failed to add annotation "${text}". Response: ${await response.text()}`,
+      `Failed to add annotation "${annotation.text}". Response: ${await response.text()}`,
     ).toEqual(200);
 
     return response;
