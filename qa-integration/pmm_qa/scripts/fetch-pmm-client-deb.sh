@@ -22,7 +22,7 @@ CACHE_DIR=${3:-/tmp/pmm-client-cache}
 BUDGET=${4:-1800}
 VERSION=${5:-}
 
-BASE=http://repo.percona.com/pmm3-client/apt
+BASE=https://repo.percona.com/pmm3-client/apt
 ARCH=$(dpkg --print-architecture 2>/dev/null || echo amd64)
 DEST_DIR=$CACHE_DIR/$COMPONENT/$CODENAME/$ARCH/${VERSION:-latest}
 DEB=$DEST_DIR/pmm-client.deb
@@ -140,11 +140,30 @@ EOF
   done
 }
 
+# An empty VERSION follows a moving channel (3-dev-latest, pmm3-rc), so a cache
+# entry from a previous run can be a version the channel has left behind. A pin
+# cannot move, and an unreadable index is fetch_verified's problem, not this
+# check's -- both keep the cache.
+cache_is_current() {
+  if [ -n "$VERSION" ]; then
+    return 0
+  fi
+
+  local cached current
+  cached=$(cat "$DEST_DIR/version" 2>/dev/null) || return 1
+  read -r current _ < <(resolve_from_index) || return 0
+  if [ -z "${current:-}" ]; then
+    return 0
+  fi
+
+  [ "$cached" = "$current" ]
+}
+
 # Several database specs provision in parallel on one host and share this cache,
 # so the check-and-fetch has to be one critical section or they race on .part.
 exec 9>"$LOCK"
 flock 9
-if [ -s "$DEB" ]; then
+if [ -s "$DEB" ] && cache_is_current; then
   log "reusing cached pmm-client $(cat "$DEST_DIR/version" 2>/dev/null || echo '?') for $CODENAME/$COMPONENT"
 else
   fetch_verified
