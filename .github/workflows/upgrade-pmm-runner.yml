@@ -31,6 +31,10 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
+      rc_version:
+        description: 'RC Version for upgrade to.'
+        default: ''
+        type: string
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
@@ -66,6 +70,10 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
+      rc_version:
+        description: 'RC Version for upgrade to.'
+        default: ''
+        type: string
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
@@ -85,11 +93,8 @@ jobs:
       - name: Resolve PMM client source
         id: resolve
         shell: bash
-        env:
-          RC_VERSION: ${{ needs.prepare.outputs.rc_version }}
-          DEV_LATEST_VERSION: ${{ needs.prepare.outputs.DEV_LATEST_VERSION }}
         run: |
-          ver="${RC_VERSION##*:}"
+          ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
           echo "Version: ${{ inputs.version }}"
@@ -124,7 +129,6 @@ jobs:
             fi
           fi
 
-          # 3. assign the URL to CLIENT_VERSION for later steps
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
           echo "PRE_UPGRADE_BRANCH=pmm-${{ inputs.version }}" >> "$GITHUB_ENV"
           
@@ -178,13 +182,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - name: Setup npm modules for e2e tests
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          npm ci
-          npx playwright install --with-deps
-          envsubst < env.list > env.generated.list
-
       - name: Setup databases + clients
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
@@ -214,9 +211,6 @@ jobs:
           docker exec "$PG" pkill -f postgres_exporter
           docker exec "$PG" pkill -f node_exporter
           sleep 5
-          ls -la
-          echo $PS
-          echo $PG
           docker exec $PG ls $COLLECTORS/custom-queries/postgresql/high-resolution/
           docker exec $PS ls $COLLECTORS/custom-queries/postgresql/high-resolution/
 
@@ -395,6 +389,3 @@ jobs:
             pmm-qa/e2e_tests/logs
             pmm-qa/e2e_tests/screenshots
             pmm-qa/e2e_tests/test-results
-            pmm-qa/codeceptjs-e2e/tests/output/*.png
-            pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
-            pmm-qa/codeceptjs-e2e/logs

@@ -45,10 +45,10 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
 
   metricsWithData = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[] = []) =>
     this.metrics(shardNames, nodeNames, serviceNames).filter(
-      (metric) => !this.noDataMetrics(shardNames, nodeNames, serviceNames).includes(metric.name),
+      (metric) => !this.noDataMetrics(serviceNames).includes(metric.name),
     );
 
-  noDataMetrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): string[] => [
+  noDataMetrics = (serviceNames: string[]): string[] => [
     ...serviceNames.map((name): string => `Oplog GB/Hour - ${name}`),
   ];
 }
