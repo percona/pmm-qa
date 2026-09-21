@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 
-pmmTest.describe('PMM settings tests for upgrade', () => {
+pmmTest.describe('PMM metrics tests for upgrade', () => {
   const services = [
     { metric: 'mysql_global_status_max_used_connections', serviceName: 'ps_pmm', serviceType: 'mysql' },
     { metric: 'pg_stat_database_xact_rollback', serviceName: 'pgsql_pgs', serviceType: 'postgresql' },
@@ -22,9 +22,9 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'Verify metrics from custom queries for mysqld_exporter after upgrade @post-upgrade @post-server-upgrade',
     async ({ api }) => {
       const metricName = 'mysql_performance_schema_memory_summary_current_bytes';
-      // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
-      await api.grafanaApi.waitForMetric(metricName);
+      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
     },
   );
 
@@ -32,9 +32,9 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-server-upgrade',
     async ({ api }) => {
       const metricName = 'pg_stat_user_tables_analyze_count';
-      // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
+      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
 
-      await api.grafanaApi.waitForMetric(metricName);
+      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
     },
   );
 

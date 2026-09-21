@@ -13,9 +13,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'PMM-T391 - Verify user is able to create and set custom home dashboard @pre-upgrade',
     async ({ dashboard, grafanaHelper, page }) => {
       const folder = await grafanaHelper.getFolderDetailsByName('Insight');
-
-      await grafanaHelper.createFolder('upgrade-folder');
-
       const customDashboard = await grafanaHelper.createCustomDashboard(
         dashboardName,
         folder.id,

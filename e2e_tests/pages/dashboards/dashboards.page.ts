@@ -96,7 +96,11 @@ export default class Dashboards extends BasePage {
   collapseAllRows = async () => {
     await this.waitForDashboardToLoad();
 
+    let retries = 0;
+
     while ((await this.elements.collapseRow.count()) > 0) {
+      if (retries++ > 10) throw new Error('Collapsing of all rows was not successful');
+
       for (const element of await this.elements.collapseRow.all()) {
         try {
           await element.click({ timeout: Timeouts.ONE_SECOND });

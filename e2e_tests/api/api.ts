@@ -38,11 +38,9 @@ export default class Api {
     this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
-    this.inventoryApi = new InventoryApi(request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);
     this.settingsApi = new SettingsApi(request);
-    this.serverApi = new ServerApi(request);
   }
 }

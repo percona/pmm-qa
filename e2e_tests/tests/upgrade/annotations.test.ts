@@ -17,10 +17,6 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
           (found) => !found.service_name.includes('ssl'),
         );
 
-        if (!details) {
-          throw new Error(`Service with name ${service.name} was not found!`);
-        }
-
         expect(details, `Service including "${service.name}" (non-ssl) not found`).toBeTruthy();
 
         await api.annotationsApi.setAnnotation({
