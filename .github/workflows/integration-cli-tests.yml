@@ -1,8 +1,6 @@
 name: PMM Integration Tests
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       pmm_qa_branch:
@@ -625,7 +623,7 @@ jobs:
       - valkey-7-tests
       - valkey-8-tests
     if: >
-      !cancelled() && github.event_name == 'schedule' &&
+      !cancelled() && github.workflow == 'Full Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:

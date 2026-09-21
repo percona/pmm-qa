@@ -1,8 +1,6 @@
 name: Helm tests
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       server_image:
@@ -134,7 +132,7 @@ jobs:
     needs:
       - helm-tests
     if: >
-      !cancelled() && github.event_name == 'schedule' &&
+      !cancelled() && github.workflow == 'Full Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:

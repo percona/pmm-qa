@@ -8,8 +8,6 @@ on:
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       pmm_qa_branch:
@@ -233,7 +231,7 @@ jobs:
       - settings_playwright
       - fb_tests
     if: >
-      !cancelled() && github.event_name == 'schedule' &&
+      !cancelled() && github.workflow == 'Full Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
