@@ -5,7 +5,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
+  'PMM-T2297 - Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.insight.advancedDataExploration.url, {
@@ -19,7 +19,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
+  'PMM-T2298 - Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.insight.prometheusExporterStatus.url, {
