@@ -94,6 +94,7 @@ jobs:
         id: resolve
         shell: bash
         run: |
+          echo ${{ inputs.rc_version }}
           ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
