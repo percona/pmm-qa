@@ -112,17 +112,16 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
-  getMetric = async (metricName: string, serviceName?: string) => {
+  getMetric = async (metricName: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
-    const expr = serviceName ? `${metricName}{service_name="${serviceName}"}` : metricName;
     const requestBody = {
       from: 'now-1m',
       queries: [
         {
           datasource: { type: 'prometheus', uid: datasource.uid },
           datasourceId: datasource.uid,
-          expr,
+          expr: metricName,
           intervalMs: 1_000,
           maxDataPoints: 100,
         },
@@ -159,15 +158,11 @@ export default class GrafanaApi {
     return result.frames[0]?.data.values ?? [];
   };
 
-  waitForMetric = async (
-    metricName: string,
-    serviceName?: string,
-    timeout: Timeouts = Timeouts.ONE_MINUTE,
-  ) => {
+  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     const deadline = Date.now() + timeout;
 
     while (true) {
-      const metric = await this.getMetric(metricName, serviceName);
+      const metric = await this.getMetric(metricName);
 
       if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 

@@ -49,7 +49,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
       const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
       ).stdout;
 
       expect(
@@ -74,7 +74,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
       const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
       ).stdout;
 
       expect(

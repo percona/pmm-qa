@@ -35,7 +35,7 @@ export default class InventoryApi {
     const regex = new RegExp(regexString);
     const service = services.services.filter((service: GetService) => regex.test(service.service_name));
 
-    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
+    if (!service || service.length === 0) throw new Error(`Service matching regex: ${regex} is not present`);
 
     return service;
   };
@@ -46,7 +46,9 @@ export default class InventoryApi {
       service.service_name.includes(partialServiceName),
     );
 
-    if (!filteredServices) throw new Error(`Service with name ${partialServiceName} is not present`);
+    if (!filteredServices || filteredServices.length === 0) {
+      throw new Error(`Service with name ${partialServiceName} is not present`);
+    }
 
     return filteredServices;
   };

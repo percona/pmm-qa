@@ -35,8 +35,11 @@ export interface FoldersResponseBody {
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
-  createRule = async (headers: Headers, data: CreateRuleBody) =>
-    this.request.post(apiEndpoints.alerting.rules, { data, headers });
+  createRule = async (headers: Headers, data: CreateRuleBody) => {
+    const response = await this.request.post(apiEndpoints.alerting.rules, { data, headers });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {

@@ -97,8 +97,6 @@ jobs:
           ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
-          echo "Version: ${{ inputs.version }}"
-          echo "Docker Tag: ${{ inputs.docker_tag }}"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \

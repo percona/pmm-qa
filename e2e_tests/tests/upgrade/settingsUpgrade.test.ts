@@ -14,7 +14,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
         lr: '60s',
         mr: '60s',
       },
-      telemetry_enabled: true,
     };
     const response = await api.settingsApi.changeSettings(body);
 

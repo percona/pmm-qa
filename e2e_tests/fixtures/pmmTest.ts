@@ -72,7 +72,6 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
-  vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
@@ -201,7 +200,6 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
-  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   // Registering this as a beforeEach hook would only gate the first spec file that imports this
   // module, since the module is evaluated once and the hook attaches to the file loading at that
   // moment. An auto fixture applies to every test instead.
