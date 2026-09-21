@@ -6,8 +6,6 @@ import path from 'node:path';
  * test runs (which execute as two separate
  * Playwright processes, with a PMM server upgrade in between).
  *
- * {@link CliHelper.execSilent} call spawns its own short-lived child shell, so
- * nothing set there outlives the call, let alone the whole process.
  *
  * The file lives under `output/` (git-ignored) by default. Override the
  * location with the `UPGRADE_STATE_FILE` env var if `output/` is cleaned
