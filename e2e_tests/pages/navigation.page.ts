@@ -198,6 +198,7 @@ export default class LeftNavigation extends BasePage {
     await pmmTest.step(`Select menu item: ${path}`, async () => {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
+      let expandButton: Locator | undefined;
 
       for (const [index, part] of parts.entries()) {
         const item = node[part];
@@ -206,12 +207,13 @@ export default class LeftNavigation extends BasePage {
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
+          expandButton = this.getLocator(item as NestedLocator)
+            ?.locator('xpath=..')
+            .getByRole('button')
+            .first();
+
           if (childLocator && !(await childLocator.isVisible())) {
-            await this.getLocator(item as NestedLocator)
-              ?.locator('xpath=..')
-              .getByRole('button')
-              .first()
-              .click({ timeout: Timeouts.TEN_SECONDS });
+            await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
             await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           }
         }
@@ -233,11 +235,15 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-
       const currentUrl = this.page.url();
 
-      await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      // The left-nav auto-collapses a submenu after a route change, hiding a
+      // just-verified nested item before the click lands (PMM-T2202 flake).
+      await expect(async () => {
+        if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
+
+        await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
       await this.page
         .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
         .catch(Boolean);
