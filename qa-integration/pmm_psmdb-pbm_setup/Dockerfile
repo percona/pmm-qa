@@ -25,12 +25,14 @@ RUN set -ex; \
     export PERCONA_TELEMETRY_URL="https://check-dev.percona.com/v1/telemetry/GenericReport"; \
     dnf install -y gnupg2; \
     if [ $PSMDB_VERSION != "latest" ]; then export PSMDB_REPO="$(echo "${PSMDB_VERSION}" | awk -F '.' '{print "psmdb-"$1$2}')" ; else export PSMDB_REPO=psmdb-80 ; fi ; \
-    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/PERCONA-PACKAGING-KEY https://repo.percona.com/yum/PERCONA-PACKAGING-KEY; \
-    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/RPM-GPG-KEY-centosofficial https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official; \
-    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/RPM-GPG-KEY-EPEL-9 https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-9; \
-    gpg --show-keys --with-colons ${GNUPGHOME}/PERCONA-PACKAGING-KEY | grep -q '^fpr:::::::::4D1BB29D63D98E422B2113B19334A25F8507EFA5:'; \
-    gpg --show-keys --with-colons ${GNUPGHOME}/RPM-GPG-KEY-centosofficial | grep -q '^fpr:::::::::99DB70FAE1D7CE227FB6488205B555B38483C65D:'; \
-    gpg --show-keys --with-colons ${GNUPGHOME}/RPM-GPG-KEY-EPEL-9 | grep -q '^fpr:::::::::FF8AD1344597106ECE813B918A3872BF3228467C:'; \
+    curl -fsSL --connect-timeout 10 --max-time 60 --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/percona.asc https://repo.percona.com/yum/PERCONA-PACKAGING-KEY; \
+    curl -fsSL --connect-timeout 10 --max-time 60 --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/centos.asc https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official; \
+    curl -fsSL --connect-timeout 10 --max-time 60 --retry 5 --retry-delay 5 --retry-all-errors -o ${GNUPGHOME}/epel9.asc https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-9; \
+    gpg --batch --import ${GNUPGHOME}/percona.asc ${GNUPGHOME}/centos.asc ${GNUPGHOME}/epel9.asc; \
+    gpg --batch --export --armor 4D1BB29D63D98E422B2113B19334A25F8507EFA5 > ${GNUPGHOME}/PERCONA-PACKAGING-KEY; \
+    gpg --batch --export --armor 99DB70FAE1D7CE227FB6488205B555B38483C65D > ${GNUPGHOME}/RPM-GPG-KEY-centosofficial; \
+    gpg --batch --export --armor FF8AD1344597106ECE813B918A3872BF3228467C > ${GNUPGHOME}/RPM-GPG-KEY-EPEL-9; \
+    test -s ${GNUPGHOME}/PERCONA-PACKAGING-KEY && test -s ${GNUPGHOME}/RPM-GPG-KEY-centosofficial && test -s ${GNUPGHOME}/RPM-GPG-KEY-EPEL-9; \
     rpmkeys --import ${GNUPGHOME}/PERCONA-PACKAGING-KEY ${GNUPGHOME}/RPM-GPG-KEY-centosofficial ${GNUPGHOME}/RPM-GPG-KEY-EPEL-9; \
     curl -Lf -o /tmp/percona-release.rpm https://repo.percona.com/yum/percona-release-latest.noarch.rpm; \
     rpmkeys --checksig /tmp/percona-release.rpm; \

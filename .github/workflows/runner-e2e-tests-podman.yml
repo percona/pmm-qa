@@ -109,18 +109,25 @@ jobs:
       - name: Setup tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
-          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-              -o /tmp/clickhouse.key https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key
-          gpg --show-keys --with-colons /tmp/clickhouse.key \
-              | grep -q '^fpr:::::::::3A9EA1193A97B548BE1457D48919F6BD2B48D754:'
-          sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg < /tmp/clickhouse.key
+          sudo apt-get install -y apt-transport-https ca-certificates ansible libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          curl -fsSL --connect-timeout 10 --max-time 60 --retry 5 --retry-delay 5 --retry-all-errors \
+              -o "$GNUPGHOME/clickhouse.key" https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key
+          gpg --batch --import "$GNUPGHOME/clickhouse.key"
+          gpg --batch --export 3A9EA1193A97B548BE1457D48919F6BD2B48D754 \
+              | sudo tee /usr/share/keyrings/clickhouse-keyring.gpg >/dev/null
+          test -s /usr/share/keyrings/clickhouse-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" | sudo tee \
               /etc/apt/sources.list.d/clickhouse.list
           . /etc/os-release
-          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
+          echo "deb [signed-by=/usr/share/keyrings/kubic-libcontainers-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
               /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-          curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
+          curl -fsSL --connect-timeout 10 --max-time 60 --retry 5 --retry-delay 5 --retry-all-errors \
+              "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" \
+              | sudo gpg --dearmor -o /usr/share/keyrings/kubic-libcontainers-keyring.gpg
+          test -s /usr/share/keyrings/kubic-libcontainers-keyring.gpg
+          rm -rf "$GNUPGHOME"
           sudo apt-get update
           sudo apt-get install -y clickhouse-client podman
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
