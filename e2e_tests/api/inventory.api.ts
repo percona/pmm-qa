@@ -8,6 +8,17 @@ export default class InventoryApi {
     private request: APIRequestContext,
   ) {}
 
+  getAllServicesDetailsByPartialName = async (partialServiceName: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const filteredServices = services.services.filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+
+    if (!filteredServices) throw new Error(`Service with name ${partialServiceName} is not present`);
+
+    return filteredServices;
+  };
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
 
@@ -85,6 +96,15 @@ export default class InventoryApi {
 
     return <GetServices>await services.json();
   };
+
+  verifyAgentsAreRunning = async (serviceName: string) =>
+    this.getServiceDetailsByPartialName(serviceName)
+      .then((service) =>
+        service.agents
+          .filter((agent) => agent.agent_type !== 'pmm-agent')
+          .every((agent) => agent.status === AgentStatus.running),
+      )
+      .catch(() => false);
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
