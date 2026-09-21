@@ -94,9 +94,9 @@ jobs:
                   docker_tag: $tags[$i],
                   upgrade_tag: (if $is_rc then "perconalab/pmm-server:3-dev-latest" else $rc_tag end),
                   upgrade_version: (if $is_rc then $dev_ver else $rc_ver end),
-                  pre_upgrade_version: ${tags[$i]##*:}}]')
+                  pre_upgrade_version: ($tags[$i] | split(":") | last) }]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo $MATRIX
+          echo "$MATRIX"
 
   upgrade-docker:
     name: Docker way upgrade for PMM
