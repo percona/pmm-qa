@@ -71,8 +71,6 @@ class MongodbBackupDetailsDashboard {
   async waitForGraphPanelData(panelTitle) {
     const I = actor();
     const panel = locate(`//section[contains(@data-testid, "${panelTitle}")]`);
-    // Same text set dashboardPage.reportTitleWithNA matches on. A poll that cleared on
-    // anything narrower could go green on a panel the assertion after it still counts.
     const noDataText = '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]';
 
     I.waitForVisible(panel, 15);

@@ -255,9 +255,6 @@ jobs:
 
             while (true) {
               const jobs = await listJobs();
-              // Every shard posts the setup barrier and nothing else in the run
-              // does, so the step is a better filter than a job-name prefix --
-              // renaming the jobs cannot silently empty this list.
               const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
               const detailed = setupJobs;
 
