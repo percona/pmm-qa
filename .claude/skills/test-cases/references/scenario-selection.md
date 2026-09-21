@@ -234,6 +234,7 @@ Merge when candidates:
 
 Split when candidates:
 
+- assert opposite outcomes on the same path, such as a filter that must apply and one that must not;
 - exercise different branches;
 - use different service/node/role/version selectors;
 - can regress independently;

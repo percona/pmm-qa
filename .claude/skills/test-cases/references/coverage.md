@@ -12,6 +12,10 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 Treat broad search results as a candidate pool. Narrow terms before classifying coverage. A skipped scenario, commented table, or loop over an empty data set is not coverage.
 
+## Ledger
+
+Record one row per behavior inventory entry in the notes file: the exact terms searched, the hits read, the class from the table below, and for `Covered` or `Extend` the file and assertion. Every identifier the change introduces or widens is a term: header, path, config key, flag, metric, error text. A tag or feature name alone is not a search. An entry with no row is unclassified, and an unclassified entry cannot be dropped as covered.
+
 ## Classification
 
 | Class | Meaning | Decision |
@@ -35,6 +39,12 @@ Treat broad search results as a candidate pool. Narrow terms before classifying 
 
 For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tests/api/`, and endpoint constants in `e2e_tests/helpers/apiEndpoints.ts`. An endpoint constant proves availability, not coverage; find a test that calls it and asserts the result.
 
+## Tests shipped with the implementation
+
+A test the implementation pull request adds inside the product repository is coverage once you confirm it runs; subtract every candidate it asserts, and cite it the way you would a pmm-qa test.
+
+Confirm from how its suite selects what to run. `api-tests/Makefile` discovers packages with `find -name '*_test.go'`, so a new package needs no registration; a suite gated by an explicit list or tag covers only its listed entries. Check what the suite holds fixed for its whole run — a configuration it enables everywhere is a branch it leaves untested. A package-level unit test is not coverage for a defect in the composition of several components.
+
 ## Effective constants
 
 Before writing a precondition that depends on a timeout, interval, retention, serving path, base path, or cookie path, read that value's effective setting in this product's configuration. Never assume the upstream default: a case parameterized to one can pass on the broken build.
@@ -44,6 +54,8 @@ Where the value is observable only at runtime, resolve it as a design-time prefl
 ## Execution reality
 
 Check the candidate test's tags against `.github/workflows/`. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
+
+For `Needs automation`, name the workflow file and the job or matrix shard whose provisioned services, versions, and tools meet the case's Preconditions. Search every matrix, `e2e-tests-matrix.yml` and `nightly-e2e-tests-matrix.yml` included, by shard name and `setup_services` for each required service before concluding none does. When a case needs an estate no single shard provides, split it: `Needs automation` on the shard that hosts the most of it, `Manual` for the technologies left over, each named.
 
 A lane must also produce the required engine/client version, dataset shape, topology, and tools. Put version and data requirements in Preconditions. If no lane can run the case at all, report that as a Finding and mark the case Manual rather than dropping it.
 

@@ -20,9 +20,8 @@ Load no reference up front. Read it only when its workflow step applies:
 - Environment dimensions when relevant: the `test-scope` skill
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
-- Known failure shapes when the initial model needs challenging: [references/failure-mechanisms.md](references/failure-mechanisms.md)
-- Historical PMM risks for the behavior-changing areas named in step 4: [references/pmm-risk-patterns.md](references/pmm-risk-patterns.md)
-- Worked reasoning examples only when the model or case boundaries remain unclear: [references/examples.md](references/examples.md)
+- Failure catalogue with PMM history, read with the model above: [references/failure-catalogue.md](references/failure-catalogue.md)
+- One worked example, only when the model or case boundaries remain unclear: [references/examples.md](references/examples.md)
 - Coverage search and suite placement: [references/coverage.md](references/coverage.md)
 - Test-case format: [references/test-case-template.md](references/test-case-template.md)
 - Strong-case gate, the refusal policy for every candidate: [references/strong-case-gate.md](references/strong-case-gate.md)
@@ -34,6 +33,8 @@ The references above are prompts for reasoning, not quotas. A technique, histori
 When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. Hand the finished draft back after step 9 and skip step 10: the caller owns execution and any Zephyr writes. Step 10 runs only when a user invoked this skill directly. The workflow below assumes that direct invocation in a fresh session with nothing supplied.
 
 ## Workflow
+
+Keep working notes in `<scratchpad>/<ticket or feature>-notes.md`, one section per step: the behavior inventory (step 2), the failure hypotheses (step 3), the coverage ledger (step 6), and the gate verdict per candidate (step 7). Write a step's section before starting the next step; a candidate absent from the notes is not in the draft, and a dropped one keeps its row. The notes are what the user gets when they ask why a case is or is not there.
 
 ### 1. Establish the test basis
 
@@ -65,7 +66,7 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
-Read changed files before individual hunks, then read behavior-changing code and developer tests.
+Read changed files before individual hunks, then read behavior-changing code and developer tests. Read the pull request's review threads as well and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding.
 
 Create one inventory entry per distinct externally meaningful behavior, not per hunk, function, or file.
 
@@ -91,7 +92,7 @@ Compare requirements and implementation in both directions:
 
 - requirement with no implementation -> Finding;
 - implementation with no requirement -> Finding or candidate if it changes a public contract;
-- developer tests -> existing lower-layer evidence, not automatic reasons for another end-to-end case.
+- developer tests -> existing lower-layer evidence, not automatic reasons for another end-to-end case; when the pull request adds a suite that runs against a live server, classify it as coverage with [coverage.md](references/coverage.md) instead.
 
 ### 3. Build the change-impact and failure model
 
@@ -101,13 +102,15 @@ For every behavior inventory entry, trace the shortest real product path:
 
 `trigger -> validation -> state -> propagation -> consumer -> observable result`
 
-Use the reference to inspect blast radius, derive relevant invariants, and write concrete failure hypotheses that name **how** the product could be wrong. Read [failure-mechanisms.md](references/failure-mechanisms.md) to challenge the model when relevant.
+Use the reference to inspect blast radius, derive relevant invariants, and write concrete failure hypotheses that name **how** the product could be wrong. Then read [failure-catalogue.md](references/failure-catalogue.md) and add every mechanism the path can reach.
+
+For every check, gate, filter, or trusted input the change adds or widens, write both directions as separate hypotheses: it fails to apply where it must (missing, skipped, bypassed, forged), and it applies where it must not (over-blocks, over-filters, errors on a legitimate caller). Each direction has its own oracle and its own case.
 
 After choosing how to induce each behavior, trace that path against every inventory entry. Name any entry the setup bypasses and use a second induction path where needed. Mutating server state can bypass client scheduling; mutating client state can bypass server rejection.
 
 ### 4. Challenge with historical PMM defects
 
-For behavior-changing tickets involving state, monitoring data flow, permissions, lifecycle, upgrade, HA, cross-component calls, dashboards, QAN, agents, exporters, or persistence, read and follow [pmm-risk-patterns.md](references/pmm-risk-patterns.md). For cosmetic/text-only changes, skip historical mining unless the implementation touches behavior.
+Follow the Fresh history section of [failure-catalogue.md](references/failure-catalogue.md): one Jira query per qualifying inventory entry, built from the entry's own identifiers, with the query and hits recorded in the notes. Skip it for a cosmetic or text-only change whose implementation touches no behavior.
 
 If Jira search is unavailable or remains inconclusive, report the historical check as skipped or inconclusive and continue from requirements and implementation evidence. Do not imply that no relevant defects exist.
 
@@ -137,44 +140,51 @@ Assign priority from failure impact, not ticket priority:
 - **Normal:** meaningful user-visible failure with a workaround;
 - **Low:** cheap supporting coverage that should usually be merged into a stronger case.
 
-Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test. Write each Step as the action a person performs, at the layer a user of the feature uses — UI for UI behavior, `pmm-admin` for CLI behavior, the API only when the API is the contract under test; the exact command, query, or value goes in Data.
+Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test. Write each Step as the action a person performs, at the layer a user of the feature uses — UI for UI behavior, `pmm-admin` for CLI behavior, the API only when the API is the contract under test. Even then the Step says what the person does in product words; the exact command, path, header, query, or value goes in Data. A Zephyr case is read by people who did not write it, so it has to make sense without the Data column.
 
 Then mark each case `Needs automation` or `Manual`. Automation is a standing maintenance cost, so it is the exception, not the reward for a good case.
 
 Mark `Needs automation` only when all of these hold:
 
 - the setup and the oracle are deterministic, with no timing race and no dependence on a restart, upgrade, or other multi-minute wait;
-- it runs in the cheapest environment that can host it, and the suite for that environment already exists;
-- existing helpers and page objects already reach the setup and the oracle, or the gap is one small helper;
-- the behavior will keep changing, so the test keeps earning its upkeep.
+- it runs in the cheapest environment that can host it, and you can name the workflow file and job or shard that already provisions its preconditions;
+- existing helpers and page objects already reach the setup and the oracle, or the gap is one small helper.
 
-Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; it depends on a race, a restart, or wall-clock waiting; or it is a one-off verification for this ticket that no later change will regress.
+Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; it depends on a race, a restart, or wall-clock waiting; or it is a one-off verification for this ticket that no later change will regress. "No lane provisions this" is a claim about `.github/workflows/`: search it for each required service or tool and record the search in the notes before making it.
 
 ### 9. Produce the review draft and wait for approval
 
 Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case.
 
-The draft is the cases plus the few lines a reader needs to trust them. The impact and failure model, the behavior inventory, the existing-coverage search, and the drop reasons are working notes: they decide what gets written, and they stay out of the draft unless the user asks for them.
+Before writing, check the notes: every inventory entry has a ledger row; every hypothesis resolves to a case, a cited assertion, or a drop reason; every `Needs automation` names its lane; every implementation Evidence names a location. After writing, check the cases: no Step or Expected cell holds a URL, path, header, command, flag, or JSON, and each case reads without its Data column. Then give the diff paths and the notes file, not the draft, to one subagent and ask it for hypotheses the notes miss and for ledger citations that would not fail on the named defect. Wait for its report; it is an input to the draft, not a parallel task. Add what survives the gate and record the rest as drops. Skip the subagent only for a cosmetic change.
+
+The draft is the cases plus the few lines a reader needs to trust them. The impact and failure model, the behavior inventory, the coverage ledger, and the drop reasons stay in the notes file: they decide what gets written, and they stay out of the draft unless the user asks for them.
 
 Use this review structure:
 
 ```markdown
 ## <PMM-XXXX or feature> — test cases
 
-<Two to five lines of prose. What the change actually is in behavior terms; any correction to
-the ticket's own How to test; any coverage the search could not reach. Nothing else — no
-headings, no tables, no restating a case the reader is about to read.>
+<Two to five lines of prose. What the change actually is in behavior terms, and any coverage
+the search could not reach. Nothing else — no headings, no tables, no restating a case the
+reader is about to read.>
 
-| # | Case | Pri | Env | Status | Folder |
+Findings:
+- <One line each: a contract conflict, a correction to How to test, a behavior moved during
+review, a lane no workflow provides. A Finding changes a case, corrects the ticket, or needs a
+product decision; an observation that does none of these stays in the notes. Omit the block
+when there are none.>
+
+| # | Case | Pri | Lane | Status | Folder |
 | --- | --- | --- | --- | --- | --- |
-| <N> | <short title> | <High \| Normal \| Low> | <Docker \| HA \| CLI \| …> | <Needs automation \| Manual> | <Zephyr folder path> |
+| <N> | <short title> | <High \| Normal \| Low> | <workflow file · job or shard, or none> | <Needs automation \| Manual> | <Zephyr folder path> |
 
 ---
 
 <one test-case-template block per case, numbered and ordered as in the table>
 ```
 
-Keep the prose honest and short: a wrong command in the ticket, a rejected root-cause hypothesis, or an unreachable evidence source is worth a line each; nothing else is.
+Keep the prose short; a wrong command in the ticket, a rejected root-cause hypothesis, or a behavior the review round moved goes in Findings, one line each.
 
 Choose each case's Folder with the rule in [publish.md](references/publish.md), so the reviewer approves its placement with the case.
 
@@ -190,3 +200,7 @@ Do not execute cases, create/update Zephyr entries, or begin automation without 
 ### 10. Publish the approved cases
 
 Only when a user invoked this skill directly and explicitly approved the reviewed draft: read [publish.md](references/publish.md) and follow it for the approved cases.
+
+## Evals
+
+`evals/evals.json` holds prompts with expected outcomes. After changing this skill, run each prompt twice with the `skill-creator` skill and grade each expectation against both drafts. Grade by the failure mechanisms a draft covers and the findings it states, never by case count: two drafts that group the same checks differently have converged.

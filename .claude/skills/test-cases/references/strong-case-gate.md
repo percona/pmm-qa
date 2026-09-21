@@ -17,7 +17,7 @@ Keep candidates only when **all** conditions hold:
    Assert a deterministic public result at the layer where the defect matters: API response, persisted state, CLI result, permission decision, exporter flag, metric, supported UI behavior, or other owning layer.
 
 5. **Value exceeds cost**
-   User/product impact justifies setup, runtime, credentials, and maintenance burden. If valuable but automation cost is the only blocker, mark it Manual and name the blocker.
+   User/product impact justifies setup, runtime, credentials, and maintenance burden. This is a judgement, so write its one-line reason in the notes beside the verdict. If valuable but automation cost is the only blocker, mark it Manual and name the blocker.
 
 6. **Blast-radius relevance**
    The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.

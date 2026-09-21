@@ -7,8 +7,11 @@ Use this format for every proposed case.
 - Use a short, action-oriented title, numbered to match the summary table.
 - Assign `High`, `Normal`, or `Low` priority from failure impact.
 - Assign `Needs automation` or `Manual` on the same line as the priority.
-- Name the primary defect the case catches and its traceable evidence.
-- Write the step as the action a person performs, in product words; put the exact command, query, URL, or value in `Data`, empty when the step needs none.
+- Name the primary defect the case catches and its traceable evidence. Implementation evidence carries a location, repository path plus function or line; a claim without one is not evidence.
+- Write the step as the action a person performs, in product words, as if explaining it to a colleague who does not know the code: "as the viewer, ask for a snapshot through the data source", never `GET /graph/api/datasources/proxy/<id>/snapshot/create`. No URL, path, endpoint, header name, command, flag, or JSON appears in a Step or Expected cell; every one of them goes in `Data`, empty when the step needs none.
+- Write the expected result as what the person sees or gets, in plain words first; the exact code or value follows in parentheses when the oracle needs it: "the request is refused (403) and no snapshot directory appears".
+- Give the case a title a product manager would understand: what the user does and what must hold, not the mechanism.
+- Before finishing, read the Step and Expected columns without the Data column. If a row cannot be followed that way, rewrite it.
 - Omit the `Precondition` line when unnecessary; do not write `None` or `N/A`.
 - Capture the identifier of any state the case will modify in its first step, and address that state by the captured identifier afterwards.
 - Give the first step an assertion that the precondition actually holds.
@@ -44,7 +47,7 @@ Use this format for every proposed case.
 
 Priority: <High | Normal | Low> · <Needs automation | Manual>
 
-Catches: <Primary defect> — Evidence: <acceptance criterion, implementation branch, invariant, or historical mechanism>
+Catches: <Primary defect> — Evidence: <acceptance criterion, invariant, or historical mechanism>; <repo/path:function or line for implementation evidence>
 
 Precondition: <Short optional setup>
 
@@ -59,22 +62,24 @@ Cleanup: <What is restored, and where it runs so a failure cannot skip it>
 
 ## Example
 
-Case-1 Adapted from automated case `PMM-T2197` in `e2e_tests/tests/navigation.test.ts`, linked to PMM-14544. When Zephyr is available, use its `get` operation to read the stored case before reusing or extending it.
+A real Zephyr case, in the register every case must match. Someone who has never tested PMM can follow it; nothing in Step or Expected needs the Data column to make sense.
 
 ```markdown
-### 1. Non-admin user sees no admin-only menu items
+### 1. Filtered RTA queries can be paged through in the details view
 
 Priority: Normal · Needs automation
 
-Catches: Viewer role still sees Configuration or Export logs — Evidence: PMM-14544 RBAC menu acceptance criterion
+Catches: The details view pages through all queries instead of the filtered ones, or the arrows enable at the wrong end — Evidence: RTA details filter acceptance criterion
 
-Precondition: Logged in as admin.
+Precondition: RTA is running for the rs101 MongoDB service.
 
 | Step | Data | Expected |
 | --- | --- | --- |
-| - Create a non-admin user and capture its login. | - `POST /graph/api/admin/users` with role `Viewer` | - User is listed under Administration → Users with role Viewer. |
-| - Sign out, sign in as the captured user, open the left menu. | | - Configuration is not in the menu. |
-| - Open Help. | | - Export logs button is not visible. |
+| - Run three long queries whose text contains the filter word, and one query with different text. Pause RTA polling and filter by the word. | - filter word `rta-details-filtered` | - Only the three matching queries are shown. |
+| - Open details for the first filtered query. | | - The previous arrow is disabled and the details match the first query. |
+| - Click next. | | - The second filtered query is shown. |
+| - Click next. | | - The third filtered query is shown and the next arrow is disabled. |
+| - Click previous. | | - The second filtered query is shown again. |
 
-Cleanup: Delete the captured user, in teardown so a failed assertion still removes it.
+Cleanup: Stop RTA polling for the service, in teardown so a failed step still stops it.
 ```

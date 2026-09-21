@@ -1,0 +1,51 @@
+{
+  "skill_name": "test-cases",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/test-cases PMM-15379",
+      "expected_output": "A draft whose case set is the union both earlier runs missed: a Viewer supplying X-Proxy-Admin through the data source proxy is refused; the vmproxy read-only gate holds with access control disabled; normal dashboard, variable and Explore traffic is never refused, Needs automation on the nightly extra-pxc-pdpgsql-haproxy shard with ProxySQL by hand; a Viewer holding an empty-filter role still reads every series. No route-shape or admin-diagnostics case, because api-tests/accesscontrol covers them. Findings name the api/v1/targets move during PR review and the feature-build image requirement. Grade by mechanisms covered: access-control-off gate; forged trusted inputs (X-Proxy-Admin, X-Proxy-Filter); full-access direction; estate sweep with the deny-log oracle; route shapes subtracted as api-tests coverage.",
+      "files": [],
+      "expectations": [
+        "No Step or Expected cell contains a URL, path, endpoint, header name, command, flag, or JSON; all of those sit in the Data column, and each case reads as plain steps a non-QA reader can follow",
+        "A case sends X-Proxy-Admin from a Viewer and asserts 403 with an unchanged snapshot list",
+        "A case runs with access control disabled and asserts the gated sub-paths return 403",
+        "The estate sweep names the technologies a workflow shard provisions as Needs automation on that shard, and marks the rest Manual with the workflow search recorded in the notes; a blanket Manual with no recorded search fails",
+        "The full-access direction (empty-filter Viewer sees every series the admin sees) is asserted in some case, or dropped with a ledger row citing the exact api-tests assertion",
+        "No case repeats the four route shapes or admin diagnostics; the draft cites api-tests/accesscontrol as coverage",
+        "Findings state that api/v1/targets is 403 for a Viewer, contradicting How to test",
+        "Every implementation Evidence names a repository path with a function or line",
+        "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/test-cases PMM-15420",
+      "expected_output": "Five cases: HA badge stays Healthy across the token rotation deadline (HA); session recovers past the rotation deadline; unrecoverable session redirects to login once; server restart does not log the user out (Manual); two tabs past the deadline both recover (Manual). Findings reject the AI-triage fetchStatus root cause, correct rotated_at - 150 to - 3700, and note that docker exec psql is wrong for HA where Grafana uses the shared PostgreSQL. Grade by mechanisms covered: recovery via 401-rotate-replay; unrecoverable session redirects once; restart and multi-tab as Manual; HA badge as the HA-lane case.",
+      "files": [],
+      "expectations": [
+        "No Step or Expected cell contains a URL, path, endpoint, header name, command, flag, or JSON; all of those sit in the Data column, and each case reads as plain steps a non-QA reader can follow",
+        "A Finding rejects the fetchStatus === 'paused' triage hypothesis with a code location",
+        "A Finding corrects the How to test offset from 150 to a value above 3600 seconds",
+        "A case captures the user_auth_token row id at setup and restores rotated_at in cleanup",
+        "A case asserts exactly one rotate call per expiry and no navigation to /login",
+        "The HA case waits on the 401, rotate and replayed responses, not on a duration",
+        "A case waits past pmm-managed's one-minute auth cache before asserting the 401, and names an in-app poll rather than a page load as the trigger",
+        "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/test-cases PMM-15138",
+      "expected_output": "RBAC cases that deny the mutation at the API boundary and verify unchanged state, with a Finding that a Viewer reading alert templates contradicts the documentation and PMM-T1991, rather than a case that asserts either side as fact. Grade by mechanisms covered: denied mutation with unchanged state for POST, PUT and DELETE; the disputed Viewer read recorded as a Finding, not asserted.",
+      "files": [],
+      "expectations": [
+        "No Step or Expected cell contains a URL, path, endpoint, header name, command, flag, or JSON; all of those sit in the Data column, and each case reads as plain steps a non-QA reader can follow",
+        "A Finding records that GET /v1/alerting/templates answers 200 to a Viewer while the permission matrix and PMM-T1991 (rule-templates page refused) say Viewer cannot view templates",
+        "No case asserts the disputed Viewer read as the expected behavior",
+        "Each denied-mutation case asserts the API status and the unchanged persisted state",
+        "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
+      ]
+    }
+  ]
+}

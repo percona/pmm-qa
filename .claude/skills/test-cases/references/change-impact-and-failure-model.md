@@ -185,11 +185,13 @@ Common PMM invariants:
 
 - denied actions are denied at the API boundary;
 - denied mutations leave state unchanged;
-- UI visibility does not substitute for server-side authorization.
+- UI visibility does not substitute for server-side authorization;
+- a header, token, or marker a component trusts cannot be supplied by the client;
+- every route reaching that component overwrites it, so send it deliberately from an unprivileged caller on each one.
 
 ## 4. Generate failure hypotheses
 
-For each changed path or invariant, ask how the implementation could violate it. Use [failure-mechanisms.md](failure-mechanisms.md) as the single failure catalogue and select only mechanisms reachable from the current path.
+For each changed path or invariant, ask how the implementation could violate it. Use [failure-catalogue.md](failure-catalogue.md) as the single failure catalogue and select only mechanisms reachable from the current path.
 
 ## 5. Choose where a defect becomes meaningful
 
