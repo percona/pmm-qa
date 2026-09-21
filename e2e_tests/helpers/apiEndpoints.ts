@@ -3,6 +3,12 @@ const apiEndpoints = {
     roles: '/v1/accesscontrol/roles',
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
+  alerting: {
+    folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
+    rules: '/v1/alerting/rules',
+    templates: '/v1/alerting/templates',
+  },
   backups: {
     artifacts: '/v1/backups/artifacts',
     locations: '/v1/backups/locations',
@@ -16,6 +22,7 @@ const apiEndpoints = {
     services: '/v1/inventory/services',
   },
   management: {
+    annotations: '/v1/management/annotations',
     services: '/v1/management/services',
   },
   platform: {
@@ -27,6 +34,7 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
+    readyz: '/v1/server/readyz',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
   },
