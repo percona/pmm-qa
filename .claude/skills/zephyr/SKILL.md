@@ -194,6 +194,16 @@ Base `https://api.zephyrscale.smartbear.com/v2`, auth
 | `PUT /testcases/{testCaseKey}` | `set-status` | Whole-case replace (see "Status workflow"); takes `status` as `{id}`, not a name, and needs every custom field present — `null` for the optional ones |
 | `GET /statuses` | `set-status` | `projectKey`, `statusType=TEST_CASE` — resolves the status name to the id the PUT needs |
 | `POST /testcases/{testCaseKey}/teststeps` | `steps` | `{mode, items[]}`, ≤100 per request |
+| `POST /testcases/{testCaseKey}/links/issues` | — | **Not brokered.** See below |
+
+**Linking a test case to a Jira issue is not available.** The relay answers
+`unknown_action` for every spelling of it — `link`, `links`, `link-issue`, `issuelink`,
+`traceability`, `raw`, `passthrough` — and the Zephyr API key is not in this environment,
+so the upstream endpoint (which takes the Jira issue's **numeric id**, not its key) cannot
+be reached either. Say so *before* creating the cases, not after: one run created six and
+only then discovered the gap. The fallback is to record the keys in the ticket's
+`How to test` (`customfield_10083`) and a Developers-only comment, and tell the user the
+Zephyr traceability panel needs a human.
 | `POST /testexecutions` | CI only | `projectKey`, `testCaseKey`, `testCycleKey`, `statusName` (`PASS`/`FAIL`), `comment`. Not brokered — see below |
 
 ## Who reports results (and who doesn't)

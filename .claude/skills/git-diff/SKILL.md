@@ -52,6 +52,12 @@ git -C /tmp/g diff --stat "$base" "pr$N"        # the whole PR
 git -C /tmp/g log --oneline "$base..pr$N"       # its commits
 ```
 
+**Never `git grep` that clone.** `--filter=blob:none` fetches blobs on demand, so
+`git grep <pattern> <ref>` pulls the entire tree — it blew past the 120 s command timeout
+and had to be killed by pid. The filtered clone supports `git show <ref>:<path>` and range
+diffs; to read a known file use `git show <ref>:<path> | grep`, and take a full,
+unfiltered clone if you genuinely need a tree-wide search.
+
 **Diff the merge-base range, not `git show`.** `git show --stat pr<n>` compares the head
 with its immediate parent, so on a multi-commit PR it reports the last commit and nothing
 else — on a 5-commit PR that read 1 file changed where the range is 4. And at `--depth 1`

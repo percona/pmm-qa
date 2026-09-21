@@ -67,6 +67,8 @@ Declare any single observation window longer than 10 minutes in the test plan be
 
 Resolve unexpected output, timing gaps, inconsistent values, or unexplained log entries before a pass. Either support a benign explanation with evidence or record a finding and mark the affected check `FAILED` or `BLOCKED`.
 
+**A metric read right after a restart reports "not yet scraped", not "not collected".** An absence or count claim about a PMM metric names the last restart of the DB, exporter or pmm-agent, and the metric's resolution bucket (LR 60s, MR 10s, HR 5s), and is read only after one full interval of that bucket has elapsed since that restart. A zero inside that window is uninformative and must not be diagnosed against: restarting `mysqld` in two monitored containers and querying VictoriaMetrics immediately returned `0` series for `mysql_perf_schema_memory_events_*` where the instruments were ON and `72` where they were OFF — an inversion that sent a session through `pmm-admin list`, agent statuses and both clients' vmagent scrape configs, all healthy. A minute later the same query returned `229` series and the inversion was gone.
+
 For migrations and upgrades, seed realistic ticket-relevant data first, record the source version and values, perform the real lifecycle event, re-read the data after background processing, and exercise a post-change read/write path. Empty-instance survival does not prove data preservation.
 
 ## Report from the checklist

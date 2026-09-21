@@ -1,6 +1,0 @@
-# .claude/agents/test-runner.md — step 8 must check the new test's subject ships in the image its CI job runs
-
-- Added: 2026-09-17
-- Applies to: .claude/agents/test-runner.md (step 8, Automation decision)
-- Evidence: QA of an unmerged product PR produced a pmm-qa test asserting a dashboard panel that exists only on that PR's feature build. It was wired to a CI job defaulting to `perconalab/pmm-server:3-dev-latest`, i.e. `percona/pmm` main, where the panel is still the pre-change one — so merged it would have been red on every run. A reviewer caught it; `percona/pmm` main's raw dashboard JSON confirmed the pre-change title, height and SQL. Step 8 covers the Zephyr key, the framework and where not to open the PR, but never says to check that what the test asserts is actually in the build the chosen job runs.
-- Proposed change: In step 8, require confirming the change under test is merged to `percona/pmm` main (or present in the image the chosen tag's job pulls) before opening the PR; when it is not, open the PR as a draft carrying a `> [!WARNING]` dependency block naming the upstream PR, and gate the test through `helpers/versionGates.ts` keyed by its `PMM-Txxxx` once the shipping version is known.

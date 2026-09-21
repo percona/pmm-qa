@@ -37,7 +37,17 @@ PMM_CERT_PATH="$PMM_CERT_PATH" node .claude/scripts/pw-screenshot.js \
   PMM-14576
 ```
 
-Session name `PMM-14576` above — reuse the same ticket key for follow-up screenshots (or a recording) so the login isn't repeated.
+**A saved login session is single-use — re-login immediately before every capture.** Grafana rotates the auth token on use, so the session name is a file name, not a reusable login: one `pmm-ui-login.js` followed by two `pw-screenshot.js` calls produced one correct image and one of the login page; followed by three, one correct image and two login pages. Re-running the login immediately before each `pw-screenshot.js` / `pw-record.js` produced correct images every time on the same box and URLs. Wrap the pair in a shell function rather than logging in once per ticket:
+
+```bash
+shot() {  # shot <url> <outfile>
+  PMM_URL="$PMM_URL" ADMIN_PASSWORD="$ADMIN_PASSWORD" PMM_CERT_PATH="$PMM_CERT_PATH" \
+    node .claude/scripts/pmm-ui-login.js PMM-14576
+  PMM_CERT_PATH="$PMM_CERT_PATH" node .claude/scripts/pw-screenshot.js "$1" "$2" PMM-14576
+}
+```
+
+**The Grafana dashboard lives in an iframe.** PMM 3 renders it in a second frame, so top-frame DOM work silently finds nothing: `page.evaluate(() => document.querySelectorAll(…))` returned zero elements for text plainly visible in the screenshot, and `PW_CLICK_TEXT='Namespace'` clicked PMM's own shell without opening the variable picker. Anything beyond a plain `PW_CLICK_TEXT` must iterate `page.frames()` and offset clicks by `frameElement().boundingBox()`; `page.frames()` reporting 2 frames and repeating the lookup in the second found the picker immediately. Note also that `PW_CLICK_TEXT` on a variable's *label* does not open its combobox.
 
 ## HA / LKE variant (self-signed cert, tall dashboards)
 
@@ -55,10 +65,10 @@ PMM_UI_INSECURE=1 PW_SCROLL=1 PW_SETTLE_MS=15000 \
   node .claude/scripts/pw-screenshot.js \
   "$PMM_URL/graph/d/pmm-ha-health-overview" \
   "/tmp/PMM-13860-ha-overview.png" \
-  PMM-13860           # reuse the session for each dashboard
+  PMM-13860
 ```
 
-`PW_CLICK_TEXT='...'` clicks an element by partial text first (e.g. to expand a collapsed row). Login once, then one `pw-screenshot.js` per dashboard.
+`PW_CLICK_TEXT='...'` clicks an element by partial text first (e.g. to expand a collapsed row). Re-run `pmm-ui-login.js` before **each** `pw-screenshot.js` here too — the token rotates on this path as well.
 
 ## Record a short clip instead of a screenshot
 
@@ -139,6 +149,10 @@ When you do write one:
   from `.claude/scripts/lib/proxy.js`. A freshly `npm install`-ed playwright otherwise
   resolves a browser revision that isn't present (`Executable doesn't exist at
   /opt/pw-browsers/chromium_headless_shell-<rev>`).
+- **Log in inline, don't trust a saved storage state.** A state written by
+  `pmm-ui-login.js` minutes earlier screenshots the login page (see the single-use rule
+  above): check for the login form and authenticate from `ADMIN_PASSWORD` in the script
+  itself.
 - **Selecting PMM's page frame:** `/graph/<x>` redirects to `/pmm-ui/graph/<x>` and
   renders the old Grafana page in an iframe, so a `f.url().includes('/graph/…')` match
   also hits the outer shell frame. Require `/graph/` **and** exclude `/pmm-ui/`.

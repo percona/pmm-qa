@@ -340,7 +340,39 @@ The sweeps above are the pattern; a new script that lists, creates or deletes Li
 - **A loop that creates billing resources prints its batch id and teardown command *before* the loop**, so a mid-loop failure doesn't leave the id off-screen.
 - **Teardown-on-failure needs three layers.** `trap cleanup ERR` alone leaks: a bash ERR trap fires on a non-zero exit, not on the SIGTERM/SIGINT a CI cancel or timeout sends. Trap `ERR` **and** `TERM INT HUP` in the script; add a workflow cleanup step gated `if: ${{ success() || cancelled() }}` so a job-level cancel also cleans up while a genuine test failure is kept for investigation; and back both with an out-of-band `expires-<epoch>` tag plus a scheduled sweep — the only guarantee that survives a SIGKILL or a dying runner.
 
+### A second PMM HA instance in another namespace
+
+Four steps the single-instance recipe does not need: install the **dependencies chart
+once only** (its operators watch all namespaces), copy `pmm-secret` into the new
+namespace *before* installing, use a distinct release name, and set
+`prometheus-node-exporter.enabled=false` on the second release. Do **not** slim it down
+to one ClickHouse replica: qan-api2 blocks on `sum(is_local = 0) > 0` in
+`system.clusters` and loops on "Waiting for ClickHouse cluster to be ready…", leaving
+PMM permanently unready — ClickHouse has a hard 2-replica floor, so save resources
+elsewhere.
+
+### Swapping the released install onto branch charts is an *upgrade*
+
+`helm upgrade` upgrades neither dependencies, CRDs nor data directories, and each gap
+fails differently:
+
+- It refuses with "missing in charts/ directory" until each chart's dependency repos are
+  added (`helm repo add`) and `helm dependency build` is run — for **both** charts.
+- `pmm-ha-dependencies` 1.0.0 → 1.2.0 leaves pg-operator 3.1.0 crash-looping on "no
+  matches for upstream.pgv2.percona.com/v1beta1": helm never upgrades CRDs, so apply the
+  subchart's own `crds/crd.yaml` by hand.
+- pg-db 3.1.0 defaults to PostgreSQL 18 and refuses an existing 17 data directory
+  ("Expected PostgreSQL data version 18 / data version::17"). Pin
+  `pg-db.postgresVersion` and the image back to the major version already on disk.
+
 ## Teardown — mandatory, every path
+
+**Confirm the cluster is gone before removing the kubeconfig** — or through a path
+teardown does not invalidate (the relay, or the external URL). An
+`until ! kubectl get --raw /readyz; do sleep 20; done` loop run *after* the local
+kubeconfig was deleted exited on its first iteration because the file was missing, and
+that was reported as "API server gone (cluster deleted)". A probe whose failure mode is
+indistinguishable from a missing credential is not evidence of deletion.
 
 ```bash
 # X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.

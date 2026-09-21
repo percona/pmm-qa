@@ -1,6 +1,0 @@
-# .claude/skills/test-cases/SKILL.md — verify a PR's claim about a third-party component against that component's own docs
-
-- Added: 2026-09-16
-- Applies to: .claude/skills/test-cases/SKILL.md (currently on branch Add-test-cases-skill)
-- Evidence: For PMM-14787 the PR's own documentation stated that VictoriaMetrics removes metrics "one whole month partition at a time", so a sub-month retention "does not remove anything from the current month". That claim was used as the expected result and as grounds to tell the user the ticket's 2-day-retention scenario could not pass on any build. VictoriaMetrics' own sizing guide states the retention cycle "is one day or one month. If the retention period is higher than 30 days cycle is a month; otherwise day", so every period this feature uses purges daily. The user pushed back and the ticket's acceptance case had to be added afterwards.
-- Proposed change: In step 2 ("Read the effective value of any timeout, interval, retention, path, threshold, or other constant"), add that a claim the change's own documentation makes about behaviour owned by a third-party component (VictoriaMetrics, ClickHouse, Grafana, an operator) is a Finding candidate, not a contract: confirm it against that component's published documentation before using it as an expected result or as a reason to drop a case.

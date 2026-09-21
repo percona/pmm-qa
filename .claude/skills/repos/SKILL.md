@@ -108,6 +108,15 @@ shape for all three is what produces `TypeError: string indices must be integers
 | `actions_list` → `list_workflow_runs` | `{"total_count": N, "workflow_runs": [...]}` |
 | `list_pull_requests` | bare top-level list |
 | `pull_request_read` → `get_files` | bare top-level list |
+| `get_job_logs` | `{"logs_content": "…"}` — the newlines are literal `\n` and must be expanded before grepping |
+
+**For `list_workflow_runs` the spill is the cheap path and a small page is the expensive
+one.** Its runs carry whole squashed commit bodies, so `perPage: 5` returns *inline* and
+costs ~15k result tokens of PR prose to answer "which runs failed and when", while
+`perPage: 40` exceeds the cap, spills, and answers the same question for ~200 tokens
+after a local `python3 -c json.load`. Request a large page deliberately. `actions_list`
+has no `fields` parameter to trim with — only `list_pull_requests` does — so the page
+size is the only lever.
 
 If a payload doesn't match, check before parsing rather than guessing:
 `jq 'if type == "array" then "array" else keys end' <file>`. Per-item keys are not
@@ -184,11 +193,19 @@ only for repos **attached at session/Routine creation** — verify with a small 
 
 Same org is not the same as attached. In a session scoped to `pmm-qa` alone, both the
 MCP tools and `gh` answer `percona/pmm` and `percona/grafana` with "not configured for
-this session / Allowed repositories: percona/pmm-qa"; `add_repo` returns
-`read_available` (anonymous git is already possible, nothing gets attached) and refuses
-`access: "push"` as a cross-tier add. Both repos are public, so read what you need over
-anonymous git rather than reporting the ticket unreadable — the `git-diff` skill carries
-the PR-ref recipe.
+this session / Allowed repositories: percona/pmm-qa".
+
+**Try `add_repo` first — it does more than its refusal suggests.** Called with
+`access: "push"` on an unattached same-org repo it can return `"status": "appended"`
+alongside `"push_check": "refused"`: the repo is attached for **reads** and only git
+push is downgraded. Measured on `percona/percona-helm-charts`, a `list_pull_requests`
+call that had just failed with "not configured for this session" succeeded immediately
+afterwards, as did `search_pull_requests`. That matters because anonymous git cannot
+serve the GitHub MCP reads at all — PR search by `head:`, check runs, PR metadata — so
+falling straight back to it gives up capability the add would have granted. Where the
+add really is refused, both repos are public: read what you need over anonymous git
+rather than reporting the ticket unreadable — the `git-diff` skill carries the PR-ref
+recipe.
 
 ## Cloud environment
 

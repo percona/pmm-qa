@@ -22,6 +22,10 @@ gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
 - **Latest FB build only** — older comments/checks are invalid
 - Ignore JNKPercona "API tests have succeded/failed" comments
 
+**The test step's own `conclusion` is not the verdict for a Launchable-wrapped job.** One "Run UI tests … with launchable" step concluded `success` after 11 minutes while its own tail read `3 failed / 7 passed`; what went red was the later **"Record launchable test results"** step, whose output carries the whole failure set — a `Files found / Tests found / Tests passed / Tests failed` table, then `Actionable Failure Details:` with one `##[group]` per failing test giving the spec path, testcase name, parameterised data row and assertion error. One `grep -n '##\[group\]'` over the job log lands on them without paging through the Playwright step.
+
+**Never read a test verdict from `tail_lines`.** A Playwright job's epilogue is longer than any sane tail: `tail_lines: 120` on a failed e2e job returned only the artifact-upload table, the `actions/upload-artifact` env dump and the git credential cleanup — no test line at all, while the verdict sat at lines 2415–2522 of 2776. `tail_lines` identifies *which* job failed; the pass/fail tally and failing spec names come from fetching the whole log to a file and grepping it (`✘|passed|failed|Error:`).
+
 A **green conclusion on a pmm-qa e2e job is evidence of a pass only if its `steps[]` show the "Execute e2e tests" step concluded `success`**, not `skipped`. The steps are already in the `actions/runs/<id>/jobs?per_page=100&filter=latest` payload, so this costs no extra call. A 2–3-minute green job whose "Check if launchable subset is empty" → "Skip notice" succeeded while "Setup PMM Server", "Setup PMM-Client" and "Execute e2e tests" were all skipped is an empty Launchable subset and proves nothing; real runs of the same job take 15–19.5 minutes.
 
 A run-level `status` of `queued`, or jobs carrying no `runner_id` in `list_workflow_jobs`, is **runner-concurrency exhaustion**, not a failing test. When several runs look identical at job level, `get_workflow_job`'s per-step `started_at`/`completed_at` is the cheapest way to find which step actually wedged — four such runs had wedged in two different steps. `runs-on: ubuntu-*` means GitHub-hosted, which rules out shared-egress and NAT explanations before you start measuring.
@@ -43,6 +47,8 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 | Client docker | **ignore** for `CLIENT_VERSION` |
 
 Before using that image as "the build under test", compare its Docker Hub `last_updated` against the **earliest fix commit** on the linked pmm PR: an image pushed at 08:46Z against a first fix commit at 09:17Z the same day contains none of the change, and needs a rebuild. The familiar caution (a product fix merged *after* the build) is only half of it — the image can also simply predate the commits.
+
+The gap can be **months**, not minutes, so compare the comment's date and the image tag's short sha against the linked PR's `head.sha` and `updated_at` every time. One FB server image was built two months before its PR head and shipped a materially earlier dashboard JSON — different panel titles, targets missing an `avg by (service_name,event_name)` aggregation and an `irate` fallback, the new row below two collapsed rows instead of above them. The ticket's *How to test* field still named the old titles, so the stale image and the stale field agreed with each other and the mismatch read as confirmation. When they diverge, say so in the report and validate the PR head directly — for a dashboard, import the head JSON from `raw.githubusercontent.com` as a **second** dashboard rather than replacing the shipped copy — instead of reporting the FB image as the change. Expect that build's client tarball to have expired from the build cache and 404 as well.
 
 ## Map failures to workflows
 

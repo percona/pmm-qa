@@ -1,6 +1,0 @@
-# qa-integration/pmm_qa/client_container_proxysql_upstream_setup.sh — upstream ProxySQL must replicate proxysql-admin's read_user stats credential
-
-- Added: 2026-09-16
-- Applies to: PXC 8.4+ upstream ProxySQL setup; also a QA-verification note for pmm-qa CLI tests
-- Evidence: The @proxysql CLI test PMM-T2158 adds the ProxySQL service as read_user/read_user, which only works because proxysql-admin set admin-stats_credentials='read_user:read_user'; the upstream path omitted it and the test failed. Fixed by setting that admin variable in the upstream config. Reproducing the CLI suite faithfully also required matching CI exactly: run pmm-framework with --client-debug (the connection-timeout tests grep /pmm-agent.log for debug-only 'timeout=N' lines) and a FRESH PMM server per run (reusing one server left registered services that made add-proxysql fail with 'already exists', and a leftover pxc container held host port 6033).
-- Proposed change: When replacing a vendor tool (e.g. proxysql-admin) with a hand-rolled setup, enumerate every side effect the tests depend on (here: admin-stats_credentials for read_user) - not just the happy-path config. When reproducing pmm-qa CLI tests, mirror the runner: --client-debug and a fresh pmm-server + single spec run.

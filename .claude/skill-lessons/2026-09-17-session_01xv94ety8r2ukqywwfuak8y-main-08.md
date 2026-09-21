@@ -1,6 +1,0 @@
-# .claude/agents/test-runner.md — check near-variants before inventing a tag, not just the exact string
-
-- Added: 2026-09-17
-- Applies to: .claude/agents/test-runner.md (step 8, Automation decision)
-- Evidence: A new Playwright tag `@pmm-pdpgsql-integration` was coined from the Playwright convention (`@pmm-psmdb-integration`), and a reviewer confirmed the exact string existed nowhere in the repo. A grep for the near-variants then found `@pdpgsql-pmm-integration` already in `main` (`codeceptjs-e2e/.../pmm_pdpgsql_integration_test.js`, PMM-T1262) — the same database, one word swap apart, because CodeceptJS orders these DB-first and Playwright pmm-first. `runner-e2e-tests-playwright.yml:220` runs `playwright test --grep "$PMM_TEST_FLAG" … || true`, so picking the wrong half of such a pair runs zero tests and the job still reports green.
-- Proposed change: In step 8, require grepping the repo for the *stem* of a new tag (the database or feature word) across both suites before coining one, since the two suites use opposite word orders, and rejecting any name that differs from an existing tag only by word order or a separator — a mismatched `--grep` is silently green, so the collision costs coverage rather than failing loudly.

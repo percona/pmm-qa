@@ -30,6 +30,8 @@ If the message is genuinely ambiguous between two agents, ask a short clarifying
 1. Match per the table above.
 2. If it matched an agent: read that agent's `.md` file directly and follow it **in this same session** — do not spawn it as a nested subagent (Routine-fired sessions aren't confirmed to support that; this is the same reference-and-follow pattern `test-runner` uses for `fb-reporter`). Pass along whatever that agent needs (ticket key, PR number, failure description) straight from the mention text.
 3. If it didn't match anything actionable: answer directly, in your own voice, no hand-off.
+
+   **A job or test count read off pipeline source expands to leaf jobs before it is quoted.** Recurse through every `uses:` reusable workflow, every `strategy.matrix` (multiplying by its size), and every Jenkins `parallel` / `build job:` child, and state the counting depth — top-level or leaf — in the answer. Counting each `uses:` as one job gave "~70 leaf jobs" for `rc-testing-suite.yml` where `integration-cli-tests.yml` alone (29 jobs × a 5-version compat matrix) is 145 and the true total was 237, by which point the user had said they no longer trusted the numbers.
 4. Reply in-thread via the relay's `/reply` endpoint (see the Slack README) with whatever the matched agent produced, or your own direct answer.
 
 ## When the caller lacks the routine

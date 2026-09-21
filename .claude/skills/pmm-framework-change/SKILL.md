@@ -57,6 +57,50 @@ thing, with the cheapest check that would actually **fail** if you were wrong.
 | Changed argument parsing or the catalogue | Replay every `--database` shape CI actually sends | [#real-inputs](references/verification-recipes.md#exercising-real-caller-inputs-from-ci-workflows) |
 | Touched `preflight_database_setups` or the conflict rules | Classify every pair as refused / sequential / parallel — all three, both orderings | [#preflight](references/verification-recipes.md#preflight-conflict-outcomes) |
 
+**A database version bump is verified on a live VM, not by the unit tests.** Adding a
+version to `lib/config.sh` and `product_version_download_helper` passes `make check` and
+then fails at runtime — PXC 8.4 died on `CREATE USER … identified with
+mysql_native_password` (the plugin is OFF by default from 8.4), and PXC 9.7 aborted
+mysqld on `unknown variable 'wsrep_slave_threads=2'` (renamed to
+`wsrep_applier_threads`). Provision and run the setup before calling a bump done.
+
+Two habits that fall out of it. **Express version guards by exclusion or a numeric major
+compare** (`${v%%.*}`, `!= 5.7`), never a substring match: an 8.x-only workaround gated
+`echo "$pxc_version" | grep '8'` silently skipped every 9.x release. And **when you
+replace a vendor tool with a hand-rolled setup, enumerate every side effect the tests
+depend on**, not just the happy-path config — dropping `proxysql-admin` for upstream
+ProxySQL also dropped the `admin-stats_credentials='read_user:read_user'` it had been
+setting, which is the only reason the `@proxysql` CLI test's `read_user` registration
+worked. Reproducing those CLI tests faithfully also means mirroring the runner: run
+`pmm-framework` with `--client-debug` (the connection-timeout tests grep
+`/pmm-agent.log` for debug-only `timeout=N` lines) and a **fresh** PMM server per run, or
+leftover registered services fail `add-proxysql` with "already exists" and a stale
+container still holds host port 6033.
+
+Three paths where the obvious check silently misses the change:
+
+- **A green PR-check e2e run is not evidence for the client-install path.** Those
+  legs pass `pmm_client_version: latest-tarball`, which leaves the repository
+  component empty and skips the changed block entirely — one change passed every
+  leg twice and broke the first nightly setup job that ran. Only a component
+  version (`3-dev-latest`, `pmm3-rc`, `pmm3-latest`) reaches it, so exercise it
+  with a dispatched nightly or a VM run before calling it verified.
+- **An Ansible shell task runs in the playbook's directory, not the `pmm_qa` root.**
+  A shared task file invoking `./scripts/<name>.sh` resolved for the root-level
+  playbooks and died with rc 127 for one in a subdirectory, killing the setup. The
+  repo already shows the rule — `tls-ssl-setup/mysql_tls_setup.yml` reaches
+  `./mysql/mysql_ssl_setup.sh`, relative to the *playbook*. Address other repo files
+  absolutely through the exported `PMM_QA_ROOT`, and check any relative path in a
+  shared task file against a playbook in a subdirectory, never only a root-level one.
+- **`pmm-agent setup`'s positionals are `[node-address] [node-type] [node-name]`.**
+  Four `pmm-agent setup … {{ container_name }}` calls were read as setting the node
+  *name*; the single positional sets the **address**, and node-name defaults to
+  `os.Hostname()`. The containers are created without `--hostname`, so every node
+  registered under its docker short ID — a new identity on each re-provision and a
+  permanent orphan in `label_values` after each retry. Set
+  `PMM_AGENT_SETUP_NODE_NAME` (or an explicit container `hostname:`) whenever a setup
+  registers a client from inside a container.
+
 A check that passes before *and* after your change tells you nothing. If you
 cannot construct one that would have caught the mistake, you don't yet
 understand what you changed. That cuts both ways: a check that reports success

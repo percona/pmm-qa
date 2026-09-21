@@ -23,6 +23,14 @@ Resolve the current ISO week in **UTC** (`date -u +%G-W%V`) and look for `origin
 
 Your PR is the only human review in front of an unattended instruction edit, and the entry files leave with the merge. So the body has to stand alone: grouped by target, each lesson's sanitized evidence, the change it drove, and how you validated it — including every lesson you **declined**, with the reason. Nothing else survives.
 
+## A lesson that contradicts existing text replaces it
+
+Locate the instruction the lesson contradicts and **rewrite it in place**. Adding a
+qualifying line beside the text it contradicts leaves the file saying both things, and
+the next reader follows whichever they hit first. Add a new line only where no existing
+text owns that behaviour. Prefer editing over appending wherever an edit is possible —
+these files are read in full, so every unnecessary addition is a cost on every session.
+
 ## Deleting entries is not cleanup, it is the mechanism
 
 The gardener refuses to capture a lesson it can already see in the queue. So an entry you applied but left in place blocks that lesson from ever being captured again. Delete every entry you acted on — applied, declined, already covered, contradicted, obsolete, or unsafe — in the same commits that carry the change, which is also what keeps `main` free of entry files. Only a lesson still genuinely open and unresolved stays; it rides to `main` and next week's branch inherits it.

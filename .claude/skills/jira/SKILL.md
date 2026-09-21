@@ -175,10 +175,22 @@ J field "$(jq -n --arg i PMM-15188 --arg v "...wiki markup..." '{issue:$i,fields
 J transitions "$(jq -n --arg i PMM-15188 '{issue:$i}')"
 J transition  "$(jq -n --arg i PMM-15188 --arg t 41 '{issue:$i,transitionId:$t}')"
 
-# attach — a screenshot, base64-encoded (the relay does the multipart upload)
+# attach — a screenshot, base64-encoded (the relay does the multipart upload).
+# --rawfile from a file, never --arg: "$(base64 -w0 …)" as an argument dies with
+# "/usr/bin/jq: Argument list too long".
+base64 -w0 fb-checks.png >/tmp/fb-checks.b64
 J attach "$(jq -n --arg i PMM-15188 --arg f fb-checks.png \
-      --arg c "$(base64 -w0 fb-checks.png)" '{issue:$i,filename:$f,content_b64:$c}')"
+      --rawfile c /tmp/fb-checks.b64 '{issue:$i,filename:$f,content_b64:$c}')"
 ```
+
+**The attach action rejects anything much above ~60 KB of JSON payload** with HTTP 413 —
+a 1600x950 PNG and a 100 KB JPEG both failed; a 40 KB JPEG (53 KB payload) succeeded.
+**Crop first**: for a flat-colour UI screenshot, `ffmpeg -vf crop=W:H:X:Y` to the region
+carrying the evidence is the reduction that works, while downscaling barely shrinks the
+PNG and JPEG conversion can make it *larger*. Measured on one 853 KB full-page PNG:
+downscaled to 1100 px wide it was still 90 KB (base64 121 KB, 413); as JPEG it grew to
+113 KB (base64 150 KB); cropped to the 1600x420 summary region it was 42 KB (base64
+55 KB) and uploaded.
 
 Available actions: `create`, `read`, `search`, `comment`, `field`, `transitions`,
 `transition`, `attach` — the full set the old direct-REST path had **plus
