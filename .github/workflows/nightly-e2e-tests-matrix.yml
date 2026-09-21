@@ -176,13 +176,13 @@ jobs:
       - name: Resolve PMM Server URLs
         id: pmm_urls
         run: |
-          ADDR="${{ env.PMM_SERVER_ADDRESS }}"
+          ADDR="${PMM_SERVER_ADDRESS}"
           ADDR_NO_SCHEME=${ADDR#http://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
           {
             echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
-            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "PMM_URL=https://admin:${ADMIN_PASSWORD}@${ADDR_NO_SCHEME}"
             echo "SERVER_IP=${ADDR_NO_SCHEME}"
           } >> "$GITHUB_ENV"
 
@@ -216,8 +216,8 @@ jobs:
             cd pmm-qa/qa-integration/pmm_qa
             sudo timeout -k 30 19m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
-              --client_version "${{ env.PMM_CLIENT_VERSION }}" \
-              --admin_password "${{ env.ADMIN_PASSWORD }}" \
+              --client_version "${PMM_CLIENT_VERSION}" \
+              --admin_password "${ADMIN_PASSWORD}" \
               --use_metrics_mode no
 
       # --setup-retries retries only the setups that failed. The step used to be
@@ -229,13 +229,15 @@ jobs:
         run: |
           mkdir -p /tmp/backup_data || true
           chmod 777 /tmp/backup_data || true
+          # WIZARD_ARGS stays unquoted: it carries several --database specs.
+          # shellcheck disable=SC2086
           timeout -k 30 59m ./pmm-framework/pmm-framework \
             --parallel \
             --setup-retries 1 \
             --pmm-server-ip "${SERVER_IP}" \
-            --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
-            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
-            ${{ env.WIZARD_ARGS }}
+            --pmm-server-password "${ADMIN_PASSWORD}" \
+            --client-version "${PMM_CLIENT_VERSION}" \
+            ${WIZARD_ARGS}
 
       # Every shard passes this, test-bearing or not. It is the signal the test
       # shards wait on, and it replaces the old "is parked in its wait step"
@@ -338,47 +340,51 @@ jobs:
       - name: Prepare launchable for CodeceptJS
         if: ${{ matrix.tests_framework == 'codeceptjs' }}
         working-directory: pmm-qa/codeceptjs-e2e
+        env:
+          TEST_SUITE_TAGS: ${{ steps.tags_processed.outputs.result }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
 
-          docker pull ${{ env.DOCKER_VERSION }} || true
-          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          docker pull "${DOCKER_VERSION}" || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' "${DOCKER_VERSION}" | cut -d@ -f2) || true
           export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
 
-          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${INSTALLATION_TYPE}-nightly-ui-tests-${TEST_SUITE_TAGS}" \
             > launchable-session.txt || true
-          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
-            --use-case feature-branch codeceptjs < test_list.txt > "${{ env.SUBSET_FILE_NAME }}" || true
-          cat "${{ env.SUBSET_FILE_NAME }}" || true
+          node launchable-prepare.js "${TAGS_FOR_TESTS}"
+          launchable subset --session "$(cat launchable-session.txt)" --confidence "${LAUNCHABLE_CONFIDENCE}" \
+            --use-case feature-branch codeceptjs < test_list.txt > "${SUBSET_FILE_NAME}" || true
+          cat "${SUBSET_FILE_NAME}" || true
 
       - name: Prepare launchable for Playwright
         if: ${{ matrix.tests_framework == 'playwright' }}
         working-directory: pmm-qa/e2e_tests
+        env:
+          TEST_SUITE_TAGS: ${{ steps.tags_processed.outputs.result }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
 
-          docker pull ${{ env.DOCKER_VERSION }} || true
-          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          docker pull "${DOCKER_VERSION}" || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' "${DOCKER_VERSION}" | cut -d@ -f2) || true
           export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
 
-          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${INSTALLATION_TYPE}-nightly-ui-tests-${TEST_SUITE_TAGS}" \
             > launchable-session.txt || true
-          node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
-            --use-case feature-branch playwright < test_list.txt > "${{ env.SUBSET_FILE_NAME }}" || true
-          cat "${{ env.SUBSET_FILE_NAME }}" || true
+          node launchable-prepare.js "${PMM_TEST_FLAG}"
+          launchable subset --session "$(cat launchable-session.txt)" --confidence "${LAUNCHABLE_CONFIDENCE}" \
+            --use-case feature-branch playwright < test_list.txt > "${SUBSET_FILE_NAME}" || true
+          cat "${SUBSET_FILE_NAME}" || true
 
       - name: Check if launchable subset is empty
         if: ${{ matrix.tags_for_tests != '' }}
         id: check_launchable_subset
         working-directory: ${{ env.TESTS_DIR }}
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+          if [ -s "${SUBSET_FILE_NAME}" ]; then
             echo "has_subset=true" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is not empty. Continue with tests."
           else
@@ -399,11 +405,11 @@ jobs:
           sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
           sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
 
-          npx codeceptjs run-workers ${{ env.WORKERS }} \
+          npx codeceptjs run-workers "${WORKERS}" \
             -c pr.codecept.js \
-            --grep "${{ env.TAGS_FOR_TESTS }}" \
+            --grep "${TAGS_FOR_TESTS}" \
             --reporter mocha-multi \
-            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+            -o "$(cat "${SUBSET_FILE_NAME}")"
 
       - name: Execute Playwright e2e tests
         if: ${{ matrix.tests_framework == 'playwright' && steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -414,14 +420,14 @@ jobs:
           # shellcheck disable=SC2046
           # The launchable subset is a whitespace-separated list of test files,
           # so it has to split into separate arguments.
-          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}")
+          npx playwright test --grep "${PMM_TEST_FLAG}" $(cat "${SUBSET_FILE_NAME}")
 
       - name: Download PMM Server logs
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ${{ env.TESTS_DIR }}
         continue-on-error: true
         run: |
-          curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
+          curl --insecure "https://admin:${ADMIN_PASSWORD}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
       # The two frameworks write their reports to different places: CodeceptJS to
