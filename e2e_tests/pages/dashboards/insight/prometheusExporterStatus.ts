@@ -21,6 +21,11 @@ export default class PrometheusExporterStatusDashboard implements DashboardInter
     { name: 'ProxySQL Exporter Errors', type: 'unknown' },
     { name: 'ProxySQL up', type: 'unknown' },
     { name: 'Scrape Durations', type: 'unknown' },
+    { name: 'Agent Uptime', type: 'unknown' },
+    { name: 'Resident Memory Usage', type: 'unknown' },
+    { name: 'Samples', type: 'unknown' },
+    { name: 'Scrapes Durations', type: 'unknown' },
+    { name: 'Virtual Memory Usage', type: 'unknown' },
   ];
   noDataMetrics: string[] = [
     'Agent Uptime',
