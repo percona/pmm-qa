@@ -144,7 +144,7 @@ jobs:
       SHARD_NAME: ${{ matrix.shard_name }}
       TAGS_FOR_TESTS: ${{ matrix.tags_for_tests }}
       PMM_TEST_FLAG: ${{ matrix.tags_for_tests }}
-      WORKERS: ${{ 1 }}
+      WORKERS: 1
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
       INSTALLATION_TYPE: ${{ inputs.installation_type || 'docker' }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -153,8 +153,10 @@ jobs:
       SUBSET_FILE_NAME: ${{ matrix.tests_framework == 'playwright' && 'launchable-subset.txt' || 'launchable-subset.json' }}
       SETUP_BARRIER_STEP: 'Barrier: setup complete'
       TEST_BARRIER_STEP: 'Barrier: tests complete'
-      EXPECTED_SETUP_JOBS: ${{ 5 }}
-      EXPECTED_TEST_SHARDS: ${{ 3 }}
+      EXPECTED_SETUP_JOBS: ${{ strategy.job-total }}
+      # No expression counts the test-bearing shards, so this one tracks the
+      # matrix entries with a non-empty tags_for_tests by hand.
+      EXPECTED_TEST_SHARDS: 3
       WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 
