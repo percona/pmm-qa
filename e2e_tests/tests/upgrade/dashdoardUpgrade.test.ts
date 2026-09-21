@@ -48,7 +48,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error',
     );
 
-    expect(errorLogs.stderr, `Error found in grafana log after upgrade: ${errorLogs.stderr}`).toHaveLength(0);
+    expect(errorLogs.stdout, `Error found in grafana log after upgrade: ${errorLogs.stdout}`).toHaveLength(0);
   });
 
   pmmTest(
