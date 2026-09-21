@@ -177,10 +177,12 @@ J transition  "$(jq -n --arg i PMM-15188 --arg t 41 '{issue:$i,transitionId:$t}'
 
 # attach — a screenshot, base64-encoded (the relay does the multipart upload).
 # --rawfile from a file, never --arg: "$(base64 -w0 …)" as an argument dies with
-# "/usr/bin/jq: Argument list too long".
-base64 -w0 fb-checks.png >/tmp/fb-checks.b64
+# "/usr/bin/jq: Argument list too long". mktemp, not a fixed name -- concurrent
+# sessions sharing one path attach each other's screenshots.
+b64=$(mktemp); trap 'rm -f "$b64"' EXIT
+base64 -w0 fb-checks.png >"$b64"
 J attach "$(jq -n --arg i PMM-15188 --arg f fb-checks.png \
-      --rawfile c /tmp/fb-checks.b64 '{issue:$i,filename:$f,content_b64:$c}')"
+      --rawfile c "$b64" '{issue:$i,filename:$f,content_b64:$c}')"
 ```
 
 **The attach action rejects anything much above ~60 KB of JSON payload** with HTTP 413 —

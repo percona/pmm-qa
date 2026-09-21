@@ -383,8 +383,17 @@ running `npm ci` in `e2e_tests` exited 127 with `npx: command not found`, and be
 were detached that surfaced only at the `DONE_MARKER` sentinel. Install it first, verifying
 in the same call:
 
+Add NodeSource as a signed apt repo rather than piping its installer into a root
+shell — `curl … | bash` runs whatever the endpoint serves that minute, with no
+pinned artifact to check, and this is the same keyring shape `session-start.sh`
+already uses for `gh`:
+
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs && node -v
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+  | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg
+echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+  >/etc/apt/sources.list.d/nodesource.list
+apt-get update -qq && apt-get install -y nodejs && node -v
 cd /root/pmm-qa/e2e_tests && npm ci && npx playwright install-deps && npx playwright install chromium
 ```
 

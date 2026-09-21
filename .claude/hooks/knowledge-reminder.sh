@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse hook -- points the turn at the file that already documents a tool's
-# pitfalls, on the first call to that tool. Two documented traps were re-hit in
-# one session because the owning guidance never loaded, so this fires at the
-# point of failure instead of restating the rules more loudly elsewhere.
+# pitfalls, on the first call to that tool.
 #
 # Context only: it never blocks a call and never changes one.
 set -euo pipefail
@@ -12,12 +10,8 @@ set -euo pipefail
 command -v node >/dev/null 2>&1 || exit 0
 
 # One reminder per tool family per session. Each hook invocation is its own
-# process, so the marker cannot carry $$ -- it is keyed on the session instead,
-# taken from the hook payload rather than CLAUDE_CODE_SESSION_ID, which nothing
-# here establishes the harness exports to a PreToolUse hook (session-end-cleanup.sh
-# bails when it is unset rather than degrading). Keyed on an unset env var every
-# session would share one marker, so the reminder would fire once per machine and
-# stay silent afterwards -- the inverse of what this file claims.
+# process, so the marker is keyed on the session -- taken from the hook payload,
+# which carries it whether or not the harness exports CLAUDE_CODE_SESSION_ID.
 STATE_DIR="${TMPDIR:-/tmp}/pmm-knowledge-reminder"
 
 STATE_DIR="$STATE_DIR" node -e '
@@ -43,9 +37,9 @@ const session = input.session_id || process.env.CLAUDE_CODE_SESSION_ID || "noses
 const marker = process.env.STATE_DIR + "-" + session + "-" + hit[1];
 const fs = require("fs");
 
-// Nothing sweeps these markers, so a shared key ("nosession", if a payload ever
-// arrives without one) would suppress the reminder on this machine for good.
-// Expiring the marker makes that degrade to "fires again later" instead.
+// Nothing sweeps these markers, and a payload without a session id falls back to
+// a key shared by every session on this box, which would suppress the reminder
+// for good. Expiring the marker bounds that to "fires again later".
 const MAX_AGE_MS = 12 * 60 * 60 * 1000;
 try {
   if (Date.now() - fs.statSync(marker).mtimeMs > MAX_AGE_MS) fs.unlinkSync(marker);
