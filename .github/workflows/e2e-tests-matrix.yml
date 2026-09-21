@@ -231,7 +231,7 @@ jobs:
       - settings_playwright
       - fb_tests
     if: >
-      !cancelled() && github.workflow == 'Full Test Suite' &&
+      !cancelled() && github.workflow == 'Nightly Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:

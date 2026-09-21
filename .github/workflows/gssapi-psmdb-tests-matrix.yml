@@ -304,7 +304,7 @@ jobs:
       - mongo_package_tests_integration_ol8
       - mongo_package_tests_integration_ol9
     if: >
-      !cancelled() && github.workflow == 'Full Test Suite' &&
+      !cancelled() && github.workflow == 'Nightly Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:

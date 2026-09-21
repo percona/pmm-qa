@@ -1,9 +1,9 @@
-name: "Full Test Suite"
+name: "Nightly Test Suite"
 
-# Every suite that has to pass before a build is called good, in one dispatch.
-# Runs against a release candidate or against the dev build: build_type decides
-# which images the jobs below get, and pmm_server_image/pmm_client_image
-# override that when a specific build has to be pinned.
+# The GitHub Actions half of the nightly, in one dispatch -- the Jenkins
+# orchestrator drives this and its own suites. build_type decides which images
+# the jobs below get, so the same workflow serves a release candidate and the
+# dev build; pmm_server_image pins a specific one.
 
 on:
   workflow_dispatch:

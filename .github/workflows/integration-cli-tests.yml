@@ -623,7 +623,7 @@ jobs:
       - valkey-7-tests
       - valkey-8-tests
     if: >
-      !cancelled() && github.workflow == 'Full Test Suite' &&
+      !cancelled() && github.workflow == 'Nightly Test Suite' &&
       contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
