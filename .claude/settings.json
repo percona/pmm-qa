@@ -55,6 +55,14 @@
             "command": "sh -c 'n=pre-commit-lint-gate.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'n=knowledge-reminder.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
