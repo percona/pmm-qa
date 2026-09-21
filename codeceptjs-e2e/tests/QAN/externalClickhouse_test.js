@@ -50,11 +50,22 @@ Scenario(
 );
 
 Scenario('PMM-T2020 - Verify external clickhouse as datasource on explore page @docker-configuration', async ({ I, explorePage }) => {
+  const query = 'SELECT * FROM pmm.metrics LIMIT 10;';
+
   I.amOnPage(basePmmUrl + explorePage.url);
   explorePage.selectDataSource('ClickHouse');
   I.waitForVisible(explorePage.elements.sqlEditorButton, 30);
   I.click(explorePage.elements.sqlEditorButton);
-  await explorePage.setSqlQuery('SELECT * FROM pmm.metrics LIMIT 10;');
+  await explorePage.setSqlQuery(query);
+
+  const [editorContent = ''] = await I.grabTextFromAll(explorePage.elements.sqlEditorContent);
+
+  assert.strictEqual(
+    editorContent.replace(/\s+/g, ' ').trim(),
+    query,
+    'The SQL editor does not hold the query under test',
+  );
+
   I.click(explorePage.elements.runQueryButton);
   I.waitForVisible(explorePage.elements.resultRow, 30);
   I.dontSee(explorePage.messages.authError);

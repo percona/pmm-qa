@@ -155,7 +155,7 @@ jobs:
       TEST_BARRIER_STEP: 'Barrier: tests complete'
       EXPECTED_SETUP_JOBS: ${{ 5 }}
       EXPECTED_TEST_SHARDS: ${{ 3 }}
-      WAIT_POLL_INTERVAL_SECONDS: 300
+      WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 
     steps:
@@ -287,17 +287,16 @@ jobs:
               // Every shard posts the setup barrier and nothing else in the run
               // does, so the step is a better filter than a job-name prefix --
               // renaming the jobs cannot silently empty this list.
-              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
-              const detailed = setupJobs;
+              const shards = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
 
               // A shard whose setup failed never reaches the barrier, so waiting
               // for it would burn the whole timeout before anyone is told why.
-              const broken = detailed.filter((job) => ['failure', 'cancelled'].includes(job.conclusion));
+              const broken = shards.filter((job) => ['failure', 'cancelled'].includes(job.conclusion));
               if (broken.length > 0) {
                 throw new Error(`Not running tests: setup failed on ${broken.map((job) => job.name).join(', ')}.`);
               }
 
-              const ready = detailed.filter(passedBarrier);
+              const ready = shards.filter(passedBarrier);
               core.info(`Setup shards past the barrier: ${ready.length}/${expectedSetupJobs}`);
 
               if (ready.length >= expectedSetupJobs) {
@@ -533,21 +532,17 @@ jobs:
 
             while (true) {
               const jobs = await listJobs();
-              // Every shard posts the setup barrier and nothing else in the run
-              // does, so the step is a better filter than a job-name prefix --
-              // renaming the jobs cannot silently empty this list.
-              const setupJobs = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
-              const detailed = setupJobs;
+              const shards = jobs.filter((job) => (job.steps || []).some((s) => s.name === 'Barrier: setup complete'));
 
               // A cancelled shard never posts its barrier, and its runner is gone
               // anyway, so holding the databases for it only burns the timeout.
-              const cancelled = detailed.filter((job) => job.conclusion === 'cancelled');
+              const cancelled = shards.filter((job) => job.conclusion === 'cancelled');
               if (cancelled.length > 0) {
                 core.warning(`Not waiting any longer: ${cancelled.map((job) => job.name).join(', ')} were cancelled.`);
                 return;
               }
 
-              const finished = detailed.filter(ranTestsAndFinished);
+              const finished = shards.filter(ranTestsAndFinished);
               core.info(`Shards done testing: ${finished.length}/${expectedTestShards}`);
               for (const job of finished) {
                 core.info(`- ${job.name}: ${job.conclusion || 'in progress'}`);
