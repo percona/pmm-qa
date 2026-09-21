@@ -9,6 +9,6 @@ export default class TablePanel extends PanelComponent {
   };
 
   verifyPanelData = async (panelName: string) => {
-    await this.verifyData(this.elements.tablePanelValue(panelName), panelName);
+    await this.verifyData(this.elements.tablePanelValue(panelName), panelName, false);
   };
 }
