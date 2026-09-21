@@ -60,6 +60,11 @@
     set_fact:
       proxysql_package: "{{package.stdout | default(proxysql_package,true)}}"
 
+  - name: Use the arm64 ProxySQL package on arm64 hosts
+    set_fact:
+      proxysql_package: "{{ proxysql_package | regex_replace('_amd64\\.deb$', '_arm64.deb') }}"
+    when: ansible_architecture not in ['x86_64', 'amd64']
+
   - name: Get filename from URL for ProxySQL
     shell: basename {{ proxysql_package }}
     register: file_name
