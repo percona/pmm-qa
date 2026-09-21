@@ -1193,9 +1193,6 @@ module.exports = {
     I.click(this.fields.reportTitle);
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
-    // Expanded once, not per metric: expandEachDashboardRow presses End, so calling it
-    // inside the loop jumped to the bottom of the page before every lookup and left
-    // scrollBackToPanel's three PageUps to climb back. The callers already expand first.
     await this.expandEachDashboardRow();
 
     for (const i in metrics) {
