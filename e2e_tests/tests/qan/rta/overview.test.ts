@@ -271,9 +271,10 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
 
-    // A fixed set of columns is exported by every build. client_app_name is
-    // dropped when empty (proto3 omits empty scalars), so it is not required.
-    const fixedHeaders = [
+    // client_app_name is dropped when empty (proto3 omits empty scalars), so
+    // it is not required. service_id, query_text and the injected
+    // future_export_field are unlisted API fields the dynamic export appends.
+    const requiredHeaders = [
       'operation_id',
       'elapsed_exec_time_sec',
       'db_instance_address',
@@ -287,21 +288,15 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
       'operation_start_time',
       'data_capture_time',
       'raw_query',
+      'service_id',
+      'query_text',
+      dynamicHeader,
     ];
-    // service_id, query_text and the injected future_export_field are unlisted
-    // API fields: only builds that append unlisted fields to the export emit
-    // them. Older release images the upgrade suite lands on export the fixed
-    // columns only, so require the appended fields only when the build appends.
-    const buildAppendsUnlistedFields = headers.includes(dynamicHeader);
 
-    expect(headers).toEqual(
-      expect.arrayContaining(
-        buildAppendsUnlistedFields ? [...fixedHeaders, 'service_id', 'query_text'] : fixedHeaders,
-      ),
-    );
+    expect(headers).toEqual(expect.arrayContaining(requiredHeaders));
     expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
     expect(headers).not.toContain('query_execution_duration');
-    expect(csvContent.includes(dynamicValue)).toBe(buildAppendsUnlistedFields);
+    expect(csvContent).toContain(dynamicValue);
   });
 
   await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);
