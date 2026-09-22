@@ -105,13 +105,7 @@ To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github
 
 No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
 
-Full Release-Candidate testing is **not** driven from this repo. The orchestrator is the Jenkins pipeline [`Percona-Lab/jenkins-pipelines` › `pmm/v3/pmm3-rc-testing.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-rc-testing.groovy). For a given `RC_VERSION` it runs three parallel lanes:
-
-- **Lane 1**: `pmm3-ui-tests-nightly-gha` against the AMI plus the last 5 GA `percona/pmm-client` tags (backward-compatibility; compat lanes skipped on patch RCs).
-- **Lane 2**: `pmm3-ui-tests-nightly-gha` for OVF / Docker / Helm / HA, `pmm3-ui-tests-nightly-gssapi`, `openshift-helm-tests`.
-- **Lane 3**: `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`nightly-test-suite.yml`](.github/workflows/nightly-test-suite.yml).
-
-**Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `nightly-test-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+Full Release-Candidate testing is **not** driven from this repo, and no longer has a pipeline of its own: [`pmm3-release-candidate.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-release-candidate.groovy) triggers the same nightly orchestrator, passing the candidate's server image, its AMI and its client tarballs. The orchestrator reads the `-rc` in the image tag and switches the package lanes to the `testing` repository and the candidate's own tarballs; every other lane is the one the nightly runs. `pmm3-rc-testing.groovy` was removed once it had nothing the orchestrator lacked.
 
 ## Linting
 
