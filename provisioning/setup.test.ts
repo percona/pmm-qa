@@ -19,12 +19,11 @@ import {
   orchestrate,
   parseConfig,
   parseDatabase,
+  publishClientTarball,
   provisionDatabases,
   provisionerArgs,
   reportProvisionResult,
-  publishClientTarball,
   resolveClientArgs,
-  serverImageFreshness,
   teardown,
   teardownContainerIds,
   teardownVolumeNames,
@@ -303,38 +302,18 @@ test('recreates and waits for PMM Server', async () => {
   assert.equal(readinessChecks, 2);
 });
 
-test('pulls the server image unless the local digest matches the registry', async () => {
-  const digests = (localDigest: string, remote: CommandResult): Runner =>
-    async (_file, args): Promise<CommandResult> => {
-      if (args[0] === 'image') return { code: 0, stdout: `perconalab/pmm-server@${localDigest}\n`, stderr: '' };
-      if (args[0] === 'buildx') return remote;
-      return { code: 0, stdout: '', stderr: '' };
-    };
-  const remote = { code: 0, stdout: 'sha256:aaa\n', stderr: '' };
-  const image = 'perconalab/pmm-server:3-dev-latest';
-  assert.equal(await serverImageFreshness(image, digests('sha256:aaa', remote)), 'current');
-  assert.equal(await serverImageFreshness(image, digests('sha256:bbb', remote)), 'stale');
-  assert.equal(
-    await serverImageFreshness(image, digests('sha256:aaa', { code: 1, stdout: '', stderr: 'no network' })),
-    'unknown',
-  );
-  assert.equal(
-    await serverImageFreshness(image, async () => ({ code: 1, stdout: '', stderr: 'no such image' })),
-    'stale',
-  );
-
+test('always pulls the server image, leaving the manifest check to docker', async () => {
   const pulls: string[][] = [];
   const runner: Runner = async (_file, args): Promise<CommandResult> => {
     if (args[0] === 'pull') pulls.push(args);
-    if (args[0] === 'image') return { code: 0, stdout: 'perconalab/pmm-server@sha256:aaa\n', stderr: '' };
-    if (args[0] === 'buildx') return { code: 0, stdout: 'sha256:aaa\n', stderr: '' };
     return { code: 0, stdout: '', stderr: '' };
   };
+  const image = 'perconalab/pmm-server:3-dev-latest';
   await createServer(
     { serverImage: image, adminPassword: 'admin', serverPort: '443', serverEnv: [], watchtower: false },
     runner,
   );
-  assert.deepEqual(pulls, []);
+  assert.deepEqual(pulls, [['pull', image]]);
 });
 
 test('spawns the database provisioners without waiting for server readiness', async () => {

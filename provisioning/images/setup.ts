@@ -39,8 +39,6 @@ export interface Config extends PmmClientConfig {
   setupType: SetupType;
   nodes: number;
   querySource: QuerySource;
-  clientTarball?: string;
-  pmmServer?: string;
   rootPassword: string;
   myRocks: boolean;
   backup: boolean;
@@ -690,9 +688,4 @@ async function main(): Promise<void> {
   console.log(`total: ${((performance.now() - totalStarted) / 1000).toFixed(1)}s`);
 }
 
-if (import.meta.main) {
-  main().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+if (import.meta.main) await main();

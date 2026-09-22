@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import {
   checkWorkload,
   configurePmm,
+  containerIdsByLabel,
   docker,
   envFlag,
   PMM_CLIENT_OPTIONS,
@@ -24,8 +25,6 @@ export interface Config extends PmmClientConfig {
   image: string;
   nodes: number;
   querySource: QuerySource;
-  clientTarball?: string;
-  pmmServer?: string;
   rootPassword: string;
   cluster: string;
   proxyImage: string;
@@ -104,7 +103,9 @@ export function parseConfig(
     ...pmmClientConfig(values, { ...env, CLIENT_TARBALL: env.CLIENT_TARBALL ?? env.PXC_CLIENT_TARBALL }),
     rootPassword: values['root-password'] ?? env.ROOT_PASSWORD ?? 'GRgrO9301RuF',
     cluster: values.cluster ?? env.PXC_CLUSTER_NAME ?? 'pxc-dev-cluster',
-    proxyImage: values['proxy-image'] ?? env.PROXYSQL_IMAGE ?? `pmm-qa/proxysql:${proxyMajor(version)}`,
+    // PROXYSQL_VERSION pins the major regardless of the PXC version, as pmm-framework's setup_pxc did.
+    proxyImage: values['proxy-image'] ?? env.PROXYSQL_IMAGE
+      ?? `pmm-qa/proxysql:${env.PROXYSQL_VERSION ?? proxyMajor(version)}`,
     skipWorkload: values['skip-workload'] ?? envFlag(env.SKIP_WORKLOAD),
     workloadSeconds: positiveInteger(
       values['workload-seconds'] ?? env.WORKLOAD_SECONDS ?? '30',
@@ -149,9 +150,7 @@ export function pxcRunArgs(config: Config, node: number): string[] {
 }
 
 async function cleanup(): Promise<void> {
-  const containers = (
-    await docker(['ps', '-aq', '--filter', `label=${LABEL}`], true)
-  ).stdout.trim().split(/\s+/).filter(Boolean);
+  const containers = await containerIdsByLabel(`label=${LABEL}`);
   if (containers.length) await docker(['rm', '-fv', ...containers]);
 }
 
@@ -434,9 +433,4 @@ async function main(): Promise<void> {
   await step('Run ProxySQL workload', () => runWorkload(config, names[0]));
 }
 
-if (import.meta.main) {
-  main().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+if (import.meta.main) await main();

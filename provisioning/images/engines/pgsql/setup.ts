@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import {
   configurePmm,
+  containerIdsByLabel,
   docker,
   envFlag,
   pmmClientConfig,
@@ -22,8 +23,6 @@ export interface Config extends PmmClientConfig {
   setupType: SetupType;
   nodes: number;
   useSocket: boolean;
-  clientTarball?: string;
-  pmmServer?: string;
   tls: boolean;
 }
 
@@ -127,7 +126,7 @@ CREATE ROLE pmm LOGIN PASSWORD 'pmm'; GRANT pg_monitor TO pmm;`);
 }
 
 async function cleanup(): Promise<void> {
-  const ids = (await docker(['ps', '-aq', '--filter', `label=${LABEL}`], true)).stdout.trim().split(/\s+/).filter(Boolean);
+  const ids = await containerIdsByLabel(`label=${LABEL}`);
   if (ids.length) await docker(['rm', '-fv', ...ids]);
 }
 
@@ -150,12 +149,10 @@ async function main(): Promise<void> {
       args.push(name, '127.0.0.1:5432');
     }
     return registerPmmService(args);
-  })).then(() => undefined));
+  })));
   await step('Wait for PostgreSQL exporters', () =>
-    Promise.all(names.map((name) => waitForPmmExporter(name, 'postgres_exporter'))).then(() => undefined));
+    Promise.all(names.map((name) => waitForPmmExporter(name, 'postgres_exporter'))));
   await step('Run PostgreSQL workload', () => sql(names[0], 'CREATE TABLE IF NOT EXISTS pmm_qa_load AS SELECT generate_series(1,1000) id; SELECT count(*) FROM pmm_qa_load;'));
 }
 
-if (import.meta.main) {
-  main().catch((error) => { console.error(error); process.exitCode = 1; });
-}
+if (import.meta.main) await main();

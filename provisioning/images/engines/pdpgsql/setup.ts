@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import {
   configurePmm,
+  containerIdsByLabel,
   docker,
   envFlag,
   PMM_CLIENT_OPTIONS,
@@ -21,8 +22,6 @@ export interface Config extends PmmClientConfig {
   image: string;
   setupType: SetupType;
   nodes: number;
-  clientTarball?: string;
-  pmmServer?: string;
   postgresPassword: string;
   tls: boolean;
 }
@@ -201,20 +200,8 @@ exec patroni /tmp/patroni.yml`,
 
 async function cleanup(config: Config): Promise<void> {
   const namePrefix = containerName(config, 1).slice(0, -1);
-  const containers = (
-    await docker([
-      'ps',
-      '-aq',
-      '--filter',
-      `label=${LABEL}`,
-      '--filter',
-      `name=${namePrefix}`,
-    ], true)
-  ).stdout.trim().split(/\s+/).filter(Boolean);
-  if (config.setupType === 'patroni') {
-    const etcd = (await docker(['ps', '-aq', '--filter', `name=${ETCD}`], true)).stdout.trim();
-    if (etcd) containers.push(etcd);
-  }
+  const containers = await containerIdsByLabel(`label=${LABEL}`, `name=${namePrefix}`);
+  if (config.setupType === 'patroni') containers.push(...await containerIdsByLabel(`name=${ETCD}`));
   if (containers.length) await docker(['rm', '-fv', ...containers]);
 }
 
@@ -395,9 +382,4 @@ async function main(): Promise<void> {
   await step('Run PostgreSQL workload', () => runWorkload(names[0]));
 }
 
-if (import.meta.main) {
-  main().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+if (import.meta.main) await main();

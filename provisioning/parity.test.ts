@@ -226,3 +226,12 @@ test('COMPOSE_PROFILES reaches the compose-backed stack and nowhere else', () =>
   assert.doesNotMatch(args('ssl_mlaunch,COMPOSE_PROFILES=classic'), /--replica-sets/);
   assert.doesNotMatch(args('mlaunch_modb,COMPOSE_PROFILES=extra'), /--replica-sets/);
 });
+
+test('PROXYSQL_VERSION pins the proxy major, as setup_pxc did', async () => {
+  const { parseConfig: pxc } = await import('./images/engines/pxc/setup.ts');
+  // Derived from the PXC version by default: 5.7/8.0 keep Percona's proxysql2, 8.4+ take upstream 3.
+  assert.equal(pxc(['--version', '8.0'], {}).proxyImage, 'pmm-qa/proxysql:2');
+  assert.equal(pxc([], {}).proxyImage, 'pmm-qa/proxysql:3');
+  assert.equal(pxc(['--version', '8.4'], { PROXYSQL_VERSION: '2' }).proxyImage, 'pmm-qa/proxysql:2');
+  assert.equal(pxc(['--version', '8.0'], { PROXYSQL_VERSION: '3' }).proxyImage, 'pmm-qa/proxysql:3');
+});

@@ -1,12 +1,12 @@
 import { parseArgs } from 'node:util';
 import {
-  configurePmm, docker, PMM_CLIENT_OPTIONS, pmmClientConfig, preparePmm, registerPmmService, retry,
+  configurePmm, containerIdsByLabel, docker, PMM_CLIENT_OPTIONS, pmmClientConfig, preparePmm, registerPmmService, retry,
   step, type PmmClientConfig,
 } from '../../../pmm-client.ts';
 
 type ServiceType = 'haproxy' | 'external';
 interface Config extends PmmClientConfig {
-  type: ServiceType; image: string; clientTarball?: string; pmmServer?: string; backends: string[];
+  type: ServiceType; image: string; backends: string[];
   redisImage: string;
 }
 const NETWORK = 'pmm-qa';
@@ -76,11 +76,8 @@ export function serviceRunArgs(config: Config): string[] {
 }
 
 async function cleanup(type: ServiceType): Promise<void> {
-  const ids = (await docker(['ps', '-aq', '--filter', `label=pmm-qa.service=${type}`], true)).stdout.trim().split(/\s+/).filter(Boolean);
-  if (type === 'external') {
-    const redis = (await docker(['ps', '-aq', '--filter', 'name=redis_container'], true)).stdout.trim();
-    if (redis) ids.push(redis);
-  }
+  const ids = await containerIdsByLabel(`label=pmm-qa.service=${type}`);
+  if (type === 'external') ids.push(...await containerIdsByLabel('name=redis_container'));
   if (ids.length) await docker(['rm', '-fv', ...ids]);
 }
 
@@ -98,15 +95,13 @@ async function main(): Promise<void> {
   await retry(`${config.type} metrics`, () => docker(['exec', name, 'curl', '-fsS', `http://127.0.0.1:${port}/metrics`], true), (result) => result.stdout.length > 0);
   await configurePmm(config, [name], server, tarball);
   if (config.type === 'haproxy') {
-    await step('Register HAProxy', () => registerPmmService(['exec', name, 'pmm-admin', 'add', 'haproxy', '--listen-port=42100', '--environment=haproxy', 'haproxy_service']).then(() => undefined));
+    await step('Register HAProxy', () => registerPmmService(['exec', name, 'pmm-admin', 'add', 'haproxy', '--listen-port=42100', '--environment=haproxy', 'haproxy_service']));
   } else {
     await step('Register external exporters', () => Promise.all([
       registerPmmService(['exec', name, 'pmm-admin', 'add', 'external', '--listen-port=42200', '--group=redis', '--service-name=redis_external_service']),
       registerPmmService(['exec', name, 'pmm-admin', 'add', 'external', '--listen-port=9256', '--group=processes', '--service-name=nodeprocess_service']),
-    ]).then(() => undefined));
+    ]));
   }
 }
 
-if (import.meta.main) {
-  main().catch((error) => { console.error(error); process.exitCode = 1; });
-}
+if (import.meta.main) await main();

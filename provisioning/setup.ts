@@ -582,25 +582,6 @@ async function ensureNetwork(runner: Runner): Promise<void> {
   }
 }
 
-export type ImageFreshness = 'current' | 'stale' | 'unknown';
-
-// `docker pull` re-checks every layer against the registry even when nothing changed. The manifest
-// digest answers "is my local copy still the tag's current image?" in about a second without
-// fetching any layer, so the pull can be skipped when they match -- and only when they match.
-export async function serverImageFreshness(image: string, runner: Runner): Promise<ImageFreshness> {
-  const local = await runner(CONTAINER_RUNTIME, ['image', 'inspect', image, '--format', '{{index .RepoDigests 0}}'], true, true);
-  const digest = local.stdout.trim().split('@')[1];
-  if (!digest) return 'stale';
-  const remote = await runner(
-    'docker',
-    ['buildx', 'imagetools', 'inspect', image, '--format', '{{.Manifest.Digest}}'],
-    true,
-    true,
-  );
-  if (remote.code !== 0) return 'unknown';
-  return remote.stdout.trim() === digest ? 'current' : 'stale';
-}
-
 export async function createServer(
   config: Pick<Config, 'serverImage' | 'adminPassword' | 'serverPort' | 'serverEnv' | 'watchtower'>,
   runner: Runner,
@@ -608,12 +589,7 @@ export async function createServer(
   await runner(CONTAINER_RUNTIME, ['rm', '-f', SERVER, WATCHTOWER], true, true);
   await runner(CONTAINER_RUNTIME, ['volume', 'rm', '-f', SERVER_VOLUME], true, true);
   await ensureNetwork(runner);
-  const freshness = await serverImageFreshness(config.serverImage, runner);
-  if (freshness === 'current') {
-    console.log(`${config.serverImage} already matches the registry digest; skipping pull`);
-  } else {
-    await runner(CONTAINER_RUNTIME, ['pull', config.serverImage]);
-  }
+  await runner(CONTAINER_RUNTIME, ['pull', config.serverImage]);
   await runner(CONTAINER_RUNTIME, ['volume', 'create', SERVER_VOLUME]);
   await runner(CONTAINER_RUNTIME, [
     'run',
@@ -699,8 +675,7 @@ export async function waitForServer(
   );
 }
 
-// Reusing a server trades freshness for speed, so say out loud which image the reused container is
-// running and whether the registry has moved past it.
+// Reusing a server trades freshness for speed, so say out loud which image it is actually running.
 export async function reportReusedServer(name: string, runner: Runner): Promise<void> {
   const info = await runner(
     'docker',
@@ -710,13 +685,7 @@ export async function reportReusedServer(name: string, runner: Runner): Promise<
   );
   const [image, created] = info.stdout.trim().split(/\s+/);
   if (!image) return;
-  const freshness = await serverImageFreshness(image, runner);
-  const note = {
-    current: 'matches the registry',
-    stale: 'the registry has a newer image; drop --reuse-server to recreate it',
-    unknown: 'could not reach the registry to compare',
-  }[freshness];
-  console.log(`Reusing ${name}: ${image} created ${created} -- ${note}`);
+  console.log(`Reusing ${name}: ${image} created ${created}`);
 }
 
 export function buildDescriptor(database: DatabaseConfig): string {
@@ -1035,9 +1004,4 @@ export async function main(): Promise<void> {
   console.log(`\nProvisioning completed successfully (${((performance.now() - started) / 1000).toFixed(1)}s total).`);
 }
 
-if (import.meta.main) {
-  main().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+if (import.meta.main) await main();

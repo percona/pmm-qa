@@ -22,8 +22,6 @@ export interface Config extends PmmClientConfig {
   version: Version;
   image: string;
   setupType: SetupType;
-  clientTarball?: string;
-  pmmServer?: string;
   tls: boolean;
 }
 
@@ -182,9 +180,4 @@ async function main(): Promise<void> {
   console.log(`total: ${((performance.now() - started) / 1000).toFixed(1)}s`);
 }
 
-if (import.meta.main) {
-  main().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+if (import.meta.main) await main();

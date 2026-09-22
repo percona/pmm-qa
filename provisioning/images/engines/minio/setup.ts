@@ -35,6 +35,4 @@ async function main(): Promise<void> {
     `mc alias set local http://${NAME}:9000 minioadmin minioadmin; ${config.buckets.map((bucket) => `mc mb --ignore-existing local/${bucket}`).join('; ')}`]));
 }
 
-if (import.meta.main) {
-  main().catch((error) => { console.error(error); process.exitCode = 1; });
-}
+if (import.meta.main) await main();

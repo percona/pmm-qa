@@ -1,13 +1,12 @@
 import { parseArgs } from 'node:util';
 import {
-  configurePmm, docker, PMM_CLIENT_OPTIONS, pmmClientConfig, preparePmm, registerPmmService, retry,
+  configurePmm, containerIdsByLabel, docker, PMM_CLIENT_OPTIONS, pmmClientConfig, preparePmm, registerPmmService, retry,
   step, type PmmClientConfig, waitForPmmExporter,
 } from '../../../pmm-client.ts';
 
 type SetupType = 'cluster' | 'sentinel';
 export interface Config extends PmmClientConfig {
-  version: '7' | '8'; image: string; setupType: SetupType; clientTarball?: string;
-  pmmServer?: string; password: string;
+  version: '7' | '8'; image: string; setupType: SetupType; password: string;
 }
 
 const NETWORK = 'pmm-qa';
@@ -100,7 +99,7 @@ async function start(config: Config): Promise<string[]> {
 }
 
 async function cleanup(): Promise<void> {
-  const ids = (await docker(['ps', '-aq', '--filter', `label=${LABEL}`], true)).stdout.trim().split(/\s+/).filter(Boolean);
+  const ids = await containerIdsByLabel(`label=${LABEL}`);
   if (ids.length) {
     await Promise.all(ids.map((id) => docker(['exec', id, 'pmm-admin', 'unregister', '--force'], true)));
     await docker(['rm', '-fv', ...ids]);
@@ -114,13 +113,11 @@ async function main(): Promise<void> {
   await step('Clean previous run', cleanup);
   const names = await step(`Start Valkey ${config.setupType}`, () => start(config));
   await configurePmm(config, names, server, tarball);
-  await step('Register Valkey services', () => Promise.all(names.map((name) => registerPmmService(serviceArgs(config, name)))).then(() => undefined));
+  await step('Register Valkey services', () => Promise.all(names.map((name) => registerPmmService(serviceArgs(config, name)))));
   await step('Wait for Valkey exporters', () =>
-    Promise.all(names.map((name) => waitForPmmExporter(name, 'valkey_exporter'))).then(() => undefined));
+    Promise.all(names.map((name) => waitForPmmExporter(name, 'valkey_exporter'))));
   const workloadNodes = names.filter((name) => !name.startsWith('valkey-sentinel-'));
-  await step('Run Valkey workload', () => Promise.all(workloadNodes.map((name) => docker(workloadArgs(config, name)))).then(() => undefined));
+  await step('Run Valkey workload', () => Promise.all(workloadNodes.map((name) => docker(workloadArgs(config, name)))));
 }
 
-if (import.meta.main) {
-  main().catch((error) => { console.error(error); process.exitCode = 1; });
-}
+if (import.meta.main) await main();
