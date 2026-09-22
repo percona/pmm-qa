@@ -230,7 +230,11 @@ export default class Dashboards extends BasePage {
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
-  verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
+  verifyMetricsPresent = async (
+    expectedMetrics: GrafanaPanel[],
+    serviceList?: GetService[],
+    partialMatch = false,
+  ) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
@@ -238,7 +242,11 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
-    const missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
+    const missingMetrics = expectedMetricsNames.filter((metric) =>
+      partialMatch
+        ? !availableMetrics.some((available) => available.includes(metric))
+        : !availableMetrics.includes(metric),
+    );
 
     expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };

@@ -22,7 +22,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
+  'PMM-T2299 - Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.os.nodesCompare.url, {
@@ -31,14 +31,7 @@ pmmTest(
         to: 'now',
       }),
     );
-    await dashboard.loadAllPanels();
-
-    const panelTitles = await dashboard.collectTextsAcrossScroll(dashboard.elements.panelName);
-    const missingMetrics = dashboard.os.nodesCompare.metrics
-      .map(({ name }) => name)
-      .filter((name) => !panelTitles.some((panelTitle) => panelTitle.includes(name)));
-
-    expect(missingMetrics, `Nodes Compare panels are missing for: ${missingMetrics}`).toHaveLength(0);
+    await dashboard.verifyMetricsPresent(dashboard.os.nodesCompare.metrics, undefined, true);
     await dashboard.verifyAllPanelsHaveData(dashboard.os.nodesCompare.noDataMetrics);
   },
 );
@@ -52,9 +45,7 @@ pmmTest(
   },
 );
 
-// TODO: unskip after https://perconadev.atlassian.net/browse/PMM-14748 is fixed
-// eslint-disable-next-line playwright/no-skipped-test -- PMM-14748 breaks the time zone, so the scenario is skipped until it is fixed.
-pmmTest.skip(
+pmmTest(
   'PMM-T1090 - Verify time zones and navigation between dashboards @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, leftNavigation, page, urlHelper }) => {
     const timeZone = 'Europe/London';
