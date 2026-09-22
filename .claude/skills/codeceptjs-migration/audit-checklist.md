@@ -26,6 +26,7 @@ The reviewer works this twice: before execution and after. Clear the Shape block
 - [ ] Every active scenario is migrated; commented-out ones excluded. For `already-covered`, each scenario is mapped to existing Playwright coverage.
 - [ ] Every `PMM-Txxxx` id and every original tag preserved; a destination tag may be added, never substituted.
 - [ ] Completeness proved by comparing both runners' listings programmatically on count, rows per scenario, ids, tag sets and each row's distinguishing value. Playwright side from the `list` reporter (the `json` reporter reorders describe-wrapped specs). CodeceptJS side from `npx codeceptjs dry-run` on a scratchpad copy of `pr.codecept.js` with `NODE_PATH=codeceptjs-e2e/node_modules` and `include` and `helpers.*.require` paths absolutised.
+- [ ] Every ported name list (dashboard panels, folders, tags) compared as a set against the source's own list, `comm` both directions, counted twice by different mechanisms. Filtering the port's names against the live DOM finds only names the port added, never ones it dropped, and a name absent live may have been spliced from a neighbouring list rather than retired.
 - [ ] The writer's `scenarioSelectability` report re-derived: every scenario matches an existing job's grep or carries `destinationTagNeeded: true` with a plan for step 5b.
 
 ### Fidelity

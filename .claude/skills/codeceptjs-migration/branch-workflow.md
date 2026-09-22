@@ -150,7 +150,7 @@ curl -sf https://raw.githubusercontent.com/percona/grafana/main/.github/workflow
 
 | Tag | Consumer | Playwright side |
 | --- | --- | --- |
-| `@gssapi-nightly` | Jenkins `pmm3-ui-tests-nightly-gssapi.groovy` (cron, GSSAPI-enabled server) | `Run Playwright UI Tests` stage, same grep, once the jenkins-pipelines PR adding it merges; before that, retiring the source loses GSSAPI coverage |
+| `@gssapi-nightly` | Jenkins `pmm3-ui-tests-nightly-gssapi.groovy` (cron, GSSAPI-enabled server) | `Run Playwright UI Tests` stage, unconditional, same grep. Re-read the groovy at master before relying on this row; a pending upstream stage lands without touching this table |
 | `@grafana-pr` | `percona/grafana` `.github/workflows/ui-tests.yml` | already runs `npx playwright test --grep @grafana-pr --pass-with-no-tests` beside `npm run e2e:grafana-pr` |
 | `@qan`, `@nightly`, `@menu` | Jenkins `pmm3-ui-tests-nightly.groovy`, CodeceptJS only | dead: no cron, no caller in `pmm/`, last builds failed in under a second. The live nightly is `pmm3-ui-tests-nightly-gha.groovy`, which dispatches `nightly-e2e-tests-matrix.yml` |
 | `@ami-upgrade`, `@ami-ovf-*`, `@pmm-upgrade`, `@pmm-migration`, `@pmm-pre-migration` | Jenkins upgrade and migration pipelines | none; the first migrated test carrying one needs a Playwright step in that pipeline before the source retires |
@@ -186,7 +186,7 @@ With `npx playwright test --list --grep '<expression>'`, in both directions:
 - every migrated scenario is selected by some Playwright job whose `setup_services` covers what it needs (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml` lists every selecting job; selection is not executability);
 - every expression an edited job already carried selects exactly what it did before. If `git diff --name-status origin/main HEAD -- e2e_tests/tests/` shows only additions, this reduces to confirming each existing expression has zero hits on the new filename.
 
-Capture each selection to a sorted file and report added and removed sets with `comm -13`/`comm -23`, never two totals. Do not parse `Total: N tests` (misses `Total: 1 test`) and do not count with `git grep <rev> -- 'dir/**/*_test.js'` (`**` does not span directories); measure each count twice by different mechanisms.
+Capture each selection to a sorted file and report added and removed sets with `comm -13`/`comm -23`, never two totals. Normalise the coordinates out first, `sed -E 's/:[0-9]+:[0-9]+ / /'`, anchoring on the coordinate group alone: an appended scenario shifts every later test's `:line:col`, so a raw `comm` reports tests entering and leaving buckets they never left. Playwright separates path from title with `›`, not `>`, so a pattern anchored on `>` is a silent no-op. Do not parse `Total: N tests` (misses `Total: 1 test`) and do not count with `git grep <rev> -- 'dir/**/*_test.js'` (`**` does not span directories); measure each count twice by different mechanisms.
 
 When the edit newly selects tests outside the migrated file, run the edited job's full grep expression once at its own worker count and report the command; `|| true` on the run step turns an unsupported test into apparent flake.
 
