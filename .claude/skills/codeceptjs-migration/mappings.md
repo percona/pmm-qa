@@ -123,7 +123,7 @@ Read `codeceptjs-e2e/tests/custom_steps.js` for any step not listed here; map it
 - `readZipArchive`, `getFileLineCount`: inline `new AdmZip(path).getEntries().map(({ entryName }) => entryName)` in the test while it has one consumer; move it to `@helpers/archive.helper.ts` at the second. Entry names only: no `getZip` flag or `string[] | AdmZip` return.
 - `readFileInZipArchive(zip, file)`: inline `new AdmZip(zip).readAsText(file)`.
 - `seeEntriesInZip`, `dontSeeEntriesInZip`: not helpers. Assert on the entry list in the test: `expect(entries).toContain('file.log')` / `not.toContain(...)`.
-- `buildUrlWithParams(url, params)`: `@helpers/url.helper.ts` (maps `env`/`node_name`/`cluster`/`service_name`/`application_name`/`database`/`columns`/`from`/`to`/`search`/`page_number`/`page_size`/`refresh`/`metric` to `var-*`/query params; defaults `from=now-5m`, `to=now`).
+- `buildUrlWithParams(url, params)`: `@helpers/url.helper.ts` `buildUrlWithParameters`, which maps `database`/`schema`/`environment`/`nodeName`/`serviceName`/`replicationSet`/`cluster`/`metric` to `var-*` and passes `from`/`to`/`refresh` through. It sets no defaults, where the CodeceptJS helper set `from=now-5m` and `to=now` unconditionally: pass both explicitly, or the dashboard's own saved window (often `now-12h`) applies and the port silently tolerates staler data than the source. It throws `Unsupported environment <key>` on every other key, so `application_name`, `columns`, `search` (`dimensionSearchText`), `page_number` and `page_size` need the helper extended; CodeceptJS ignored an unknown key instead.
 - `cleanupClickhouse()`: `@helpers/cli.helper.ts`, `docker exec pmm-server clickhouse-client --database pmm --password clickhouse --query "TRUNCATE TABLE metrics"`.
 
 ## Skip policy
