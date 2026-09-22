@@ -421,7 +421,8 @@ export async function startWorkload(name: string, script: string): Promise<void>
     name,
     'sh',
     '-c',
-    `{ ${script}
+    `echo running > ${WORKLOAD_RC}
+     { ${script}
      } > ${WORKLOAD_LOG} 2>&1
      echo $? > ${WORKLOAD_RC}`,
   ]);
@@ -437,17 +438,16 @@ export async function checkWorkload(name: string): Promise<void> {
      while [ $i -lt 10 ]; do
        rc="$(cat ${WORKLOAD_RC} 2>/dev/null)"
        [ -n "$rc" ] && break
-       pgrep -x sysbench >/dev/null && break
        i=$((i+1))
        sleep 1
      done
      rc="$(cat ${WORKLOAD_RC} 2>/dev/null)"
-     if [ -n "$rc" ] && [ "$rc" != 0 ]; then
+     if [ -n "$rc" ] && [ "$rc" != running ] && [ "$rc" != 0 ]; then
        echo "sysbench workload failed on ${name} (exit $rc)"
        tail -20 ${WORKLOAD_LOG}
        exit 1
      fi
-     if [ -z "$rc" ] && ! pgrep -x sysbench >/dev/null; then
+     if [ -z "$rc" ]; then
        echo "sysbench workload is not running on ${name} and left no exit status"
        tail -20 ${WORKLOAD_LOG} 2>/dev/null
        exit 1
