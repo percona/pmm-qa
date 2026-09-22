@@ -69,13 +69,13 @@ The source is the authority on what is checked, never on how the code is shaped.
 - **Duplication is not behaviour.** A block repeated across scenarios has two callers and earns a POM or helper method, never a function in the spec file. When the block contains assertions, extract the commands and locators around them and leave each assertion inline in every scenario. Keep per-scenario asymmetry. Prove it by counting each assertion and call category before and after. Shell strings differing only in runs of spaces share one builder; `cli.helper.ts` hands them to `/bin/sh`, which collapses them.
 - **No `private`, no one-click wrappers, no waits in the POM.** A new `private` method needs a stated reason. A method wrapping a single click is replaced by the locator at the call site. One-off actions live in the test. A POM method waits only for what its own action needs (`waitForEvent('download')`, `loadAllPanels()`); a `waitFor` standing in for an assertion belongs in the test. Locators live in the POM as class properties, never raw in a method or a test. A refinement chained off a builder in a test (`builders.x(name).getByTestId(...)`) is a raw locator: make it its own builder.
 - **Reuse with the smallest diff.** Drop `private` in place instead of renaming or wrapping; never a public method plus a forwarding delegate. Check `base.page.ts` and the target's folder siblings before adding anything. Do not repeat config in tests (`ignoreHTTPSErrors` is in `playwright.config.ts`); path aliases, not relative imports.
-- **Helpers return one shape.** No mode flags that change the return type. A CodeceptJS custom step that asserts becomes a helper returning a value plus an `expect` in the test. Existing POM `verify*` methods that assert are reused as they are, never extended or imitated in new methods. Never extend `assertFunctionNames` to satisfy `playwright/expect-expect`.
+- **Helpers return one shape.** No mode flags that change the return type. A CodeceptJS custom step that asserts becomes a helper returning a value plus an `expect` in the test. Existing POM `verify*` methods that assert are reused as they are, never imitated in a new method or inlined into a test; add a parameter when the source carried the variant as its own page method. Never extend `assertFunctionNames` to satisfy `playwright/expect-expect`.
 
 Run `bash .claude/scripts/check-migration-conventions.sh <every changed file>` before handing off and paste its output; it fails on every shape above that can be grepped, and the reviewer re-runs it.
 
 ## Title, tags, ids
 
-Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Copy the title string as is, interior spacing included; trim leading and trailing whitespace, which `playwright/valid-title` rejects. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality.
+Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Copy the title string as is, interior spacing included; trim leading and trailing whitespace, which `playwright/valid-title` rejects. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality. An id-less source scenario: ask the maintainer for a key, never invent one.
 
 ## Waits and retries
 
@@ -87,7 +87,7 @@ Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads
 
 ## Skips
 
-Do not migrate commented-out scenarios. An `xScenario` goes through the worth-porting gate first; one that fails it is proposed `retired` on static evidence (the source TODO, the product default, sibling sources), for the reviewer to confirm live. One that passes follows the skip policy in `mappings.md`; stop if no policy fits rather than inventing one.
+Do not migrate commented-out scenarios. An `xScenario` goes through the worth-porting gate first; one that fails it is proposed `retired` on static evidence (the source TODO, the product default, sibling sources), for the reviewer to confirm live. One that passes follows the skip policy in `mappings.md`; stop if no policy fits rather than inventing one. Read the blocking ticket's status first: if it is resolved, verify live and port unskipped, gating on the fix version in `versionGates.ts`.
 
 ## Workflow coverage
 
