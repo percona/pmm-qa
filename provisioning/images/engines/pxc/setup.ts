@@ -87,7 +87,7 @@ export function parseConfig(
     process.exit(0);
   }
 
-  const version = values.version ?? env.PXC_VERSION ?? '8.0';
+  const version = values.version ?? env.PXC_VERSION ?? '8.4';
   if (!['5.7', '8.0', '8.4', '9.7'].includes(version)) throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
   const nodes = positiveInteger(values.nodes ?? env.PXC_NODES ?? '3', 'nodes');
   if (nodes < 3) throw new Error('PXC requires at least 3 nodes');

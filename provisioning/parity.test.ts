@@ -65,10 +65,10 @@ test('retired spec options say where the capability went', () => {
 
 test('a PXC tarball reaches the build and never the engine', () => {
   const database = parseDatabase('PXC,TARBALL=https://downloads.percona.com/a.tar.gz');
-  assert.equal(buildDescriptor(database), 'pxc=8.0,tarball=https://downloads.percona.com/a.tar.gz');
+  assert.equal(buildDescriptor(database), 'pxc=8.4,tarball=https://downloads.percona.com/a.tar.gz');
   assert.ok(!provisionerArgs(database, []).includes('--tarball'));
   // A tarball build must not answer to the tag a packaged build already owns.
-  assert.notEqual(databaseImage(database), databaseImage(parseDatabase('pxc=8.0')));
+  assert.notEqual(databaseImage(database), databaseImage(parseDatabase('pxc=8.4')));
 });
 
 test('a missing image builds the descriptor its --db implies', () => {
@@ -206,4 +206,23 @@ test('MINIO is honoured and defaults on, as pmm-framework registered it', async 
   assert.equal(minio('psmdb,MINIO=false'), false);
   assert.equal(minio('psmdb', { MINIO: 'false' }), false);
   assert.equal(minio('psmdb,MINIO=true'), true);
+});
+
+test('a bare --db picks the version pmm-framework registered as DEFAULT_VERSION', () => {
+  const version = (spec: string) => parseDatabase(spec, {}).version;
+  for (const type of ['mysql', 'ps', 'pxc']) assert.equal(version(type), '8.4', type);
+  assert.equal(version('pgsql'), '17');
+  assert.equal(version('pdpgsql'), '17');
+  assert.equal(version('valkey'), '8');
+  // PSMDB registered DEFAULT_VERSION=latest, which resolves to the same series.
+  assert.equal(version('psmdb'), version('psmdb=latest'));
+});
+
+test('COMPOSE_PROFILES reaches the compose-backed stack and nowhere else', () => {
+  const args = (spec: string) => provisionerArgs(parseDatabase(spec, {}), []).join(' ');
+  assert.match(args('psmdb,COMPOSE_PROFILES=extra'), /--replica-sets 2/);
+  assert.match(args('psmdb,COMPOSE_PROFILES=classic'), /--replica-sets 1/);
+  // No mlaunch playbook ever read it, so it is accepted and dropped, as TARBALL is.
+  assert.doesNotMatch(args('ssl_mlaunch,COMPOSE_PROFILES=classic'), /--replica-sets/);
+  assert.doesNotMatch(args('mlaunch_modb,COMPOSE_PROFILES=extra'), /--replica-sets/);
 });

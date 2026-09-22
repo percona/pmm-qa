@@ -21,7 +21,7 @@ test('builds the Percona ProxySQL image', () => {
 
 test('parses framework-compatible defaults', () => {
   const config = parseConfig([], {});
-  assert.equal(config.version, '8.0');
+  assert.equal(config.version, '8.4');
   assert.equal(config.nodes, 3);
   assert.equal(config.cluster, 'pxc-dev-cluster');
   assert.equal(config.querySource, 'perfschema');
@@ -63,7 +63,7 @@ test('uses Galera readiness checks without a fixed bootstrap delay', () => {
 });
 
 test('starts the Percona ProxySQL image', () => {
-  const config = parseConfig([], {});
+  const config = parseConfig(['--version', '8.0'], {});
   assert.equal(config.proxyImage, 'pmm-qa/proxysql:2');
   assert.ok(proxyRunArgs(config).includes(config.proxyImage));
   assert.ok(!proxyRunArgs(config).some((arg) => arg.includes('proxysql.cnf')));

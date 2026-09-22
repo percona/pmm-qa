@@ -73,7 +73,7 @@ export function normalizeVersion(engine: Engine, value: string): DbVersion {
 }
 
 export function defaultVersion(engine: Engine, env: Record<string, string | undefined>): string {
-  return (engine === 'ps' ? env.PS_VERSION : env.MS_VERSION) ?? (engine === 'ps' ? '8.0' : '9.7');
+  return (engine === 'ps' ? env.PS_VERSION : env.MS_VERSION) ?? '8.4';
 }
 
 export function defaultImage(

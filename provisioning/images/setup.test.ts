@@ -35,7 +35,7 @@ test('builds the selected PS image with its matching XtraBackup', () => {
 test('accepts engine defaults and engine=version overrides', () => {
   assert.ok(dockerBuildArgs('ps=8.0').includes('pmm-qa/ps:8.0'));
   assert.ok(dockerBuildArgs('psmdb=8.0').includes('pmm-qa/psmdb:8.0'));
-  assert.deepEqual(dockerBuildArgs('ps'), dockerBuildArgs('ps=8.0'));
+  assert.deepEqual(dockerBuildArgs('ps'), dockerBuildArgs('ps=8.4'));
   assert.deepEqual(dockerBuildArgs('psmdb'), dockerBuildArgs('psmdb=8.0'));
   assert.deepEqual(dockerBuildArgs('pdpgsql'), dockerBuildArgs('pdpgsql=17'));
   assert.throws(() => dockerBuildArgs('ps='), /<engine>\[=<version>\]/);
@@ -62,8 +62,8 @@ test('builds PDPGSQL with a PGSM_BRANCH build arg', () => {
 test('parses MySQL single-node defaults', () => {
   const config = parseConfig(['--engine', 'mysql'], {});
   assert.equal(config.engine, 'mysql');
-  assert.equal(config.version, '9.7');
-  assert.equal(config.image, 'pmm-qa/mysql:9.7');
+  assert.equal(config.version, '8.4');
+  assert.equal(config.image, 'pmm-qa/mysql:8.4');
   assert.equal(config.setupType, 'single');
   assert.equal(config.nodes, 1);
   assert.equal(config.querySource, 'perfschema');
@@ -74,8 +74,8 @@ test('parses MySQL single-node defaults', () => {
 test('parses PS single-node defaults', () => {
   const config = parseConfig(['--engine', 'ps'], {});
   assert.equal(config.engine, 'ps');
-  assert.equal(config.version, '8.0');
-  assert.equal(config.image, 'pmm-qa/ps:8.0');
+  assert.equal(config.version, '8.4');
+  assert.equal(config.image, 'pmm-qa/ps:8.4');
 });
 
 test('infers engine from framework environment names', () => {
@@ -221,7 +221,7 @@ test('generates unique GR identity and a shared seed list for MySQL', () => {
   const first = mysqlArguments(config, 1);
   assert.ok(
     first.includes(
-      '--loose-group-replication-group-seeds=mysql_pmm_gr_9_7_1:34061,mysql_pmm_gr_9_7_2:34061,mysql_pmm_gr_9_7_3:34061',
+      '--loose-group-replication-group-seeds=mysql_pmm_gr_8_4_1:34061,mysql_pmm_gr_8_4_2:34061,mysql_pmm_gr_8_4_3:34061',
     ),
   );
 });
@@ -231,7 +231,7 @@ test('generates unique GR identity and a shared seed list for PS', () => {
   const first = mysqlArguments(config, 1);
   assert.ok(
     first.includes(
-      '--loose-group-replication-group-seeds=ps_pmm_gr_8_0_1:34061,ps_pmm_gr_8_0_2:34061,ps_pmm_gr_8_0_3:34061',
+      '--loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061',
     ),
   );
   assert.ok(first.includes('--userstat=1'));

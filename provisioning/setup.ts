@@ -78,9 +78,9 @@ const SERVERLESS_TYPES = new Set<DatabaseType>(['bucket']);
 // resolve_value()'s "an exported variable outranks the spec" rule. Keys are in provisioning's own
 // spelling; OPTION_ALIASES maps pmm-framework's differing names onto them.
 export const DATABASES = {
-  mysql: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '9.7', script: ['images', 'setup.ts'], selector: ['engine', 'mysql'], envOptions: ['query-source', 'setup-type', 'tarball', 'encrypted-client-config'] },
-  ps: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.0', script: ['images', 'setup.ts'], selector: ['engine', 'ps'], envOptions: ['query-source', 'setup-type', 'tarball', 'nodes-count', 'my-rocks', 'encrypted-client-config', 'backup'] },
-  pxc: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.0', script: ['images', 'engines', 'pxc', 'setup.ts'], envOptions: ['query-source', 'tarball'] },
+  mysql: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.4', script: ['images', 'setup.ts'], selector: ['engine', 'mysql'], envOptions: ['query-source', 'setup-type', 'tarball', 'encrypted-client-config'] },
+  ps: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.4', script: ['images', 'setup.ts'], selector: ['engine', 'ps'], envOptions: ['query-source', 'setup-type', 'tarball', 'nodes-count', 'my-rocks', 'encrypted-client-config', 'backup'] },
+  pxc: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.4', script: ['images', 'engines', 'pxc', 'setup.ts'], envOptions: ['query-source', 'tarball'] },
   psmdb: { versions: ['6.0', '7.0', '8.0', 'latest'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'psmdb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'ol-version', 'gssapi', 'storage-engine', 'minio'] },
   mongodb: { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'mongodb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'storage-engine'] },
   pgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '17', script: ['images', 'engines', 'pgsql', 'setup.ts'], envOptions: ['query-source', 'use-socket', 'setup-type', 'encrypted-client-config'] },
@@ -461,7 +461,9 @@ export function provisionerArgs(
     args.push('--metrics-mode', metricsMode);
   }
   const options = { ...database.options };
-  if (options['compose-profiles']) {
+  // COMPOSE_PROFILES picks the replica-set count on the compose-backed PSMDB stack. The mlaunch
+  // types registered it too, but no mlaunch playbook ever read it, so it stays inert there.
+  if (options['compose-profiles'] && (database.type === 'psmdb' || database.type === 'mongodb')) {
     const replicaSets = options['compose-profiles'].toLowerCase() === 'extra' ? '2' : '1';
     if (options['replica-sets'] && options['replica-sets'] !== replicaSets) {
       throw new Error('compose-profiles conflicts with replica-sets');

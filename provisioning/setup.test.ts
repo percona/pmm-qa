@@ -102,9 +102,9 @@ test('parses database defaults together', () => {
   assert.deepEqual(
     config.databases.map(({ type, version, options }) => ({ type, version, options })),
     [
-      { type: 'mysql', version: '9.7', options: {} },
-      { type: 'ps', version: '8.0', options: {} },
-      { type: 'pxc', version: '8.0', options: {} },
+      { type: 'mysql', version: '8.4', options: {} },
+      { type: 'ps', version: '8.4', options: {} },
+      { type: 'pxc', version: '8.4', options: {} },
       { type: 'psmdb', version: '8.0', options: {} },
       { type: 'mongodb', version: '8.0', options: {} },
       { type: 'pgsql', version: '17', options: {} },
