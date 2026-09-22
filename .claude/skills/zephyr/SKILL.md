@@ -107,9 +107,8 @@ body. Project is forced to `PMM`.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
-# X-Actor is your GitHub login — resolve it from the GitHub MCP get_me (.login) as the
-# first call of this batch, never from the user's email, display name or Jira account
-# (same relay gate as the jira skill; a guessed actor 403s identity_not_authorized).
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first, never
+# from the user's email, display name or Jira account (a guessed actor 403s identity_not_authorized).
 command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
 [ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 Z() { curl -sS -m 180 --fail-with-body -X POST "$RELAY/zephyr/$1" \
@@ -117,11 +116,9 @@ Z() { curl -sS -m 180 --fail-with-body -X POST "$RELAY/zephyr/$1" \
         -H "Content-Type: application/json" -d "$2"; }
 
 # search — dedup BEFORE creating. A full test title works as the query.
-# A PMM-Txxxx absent from the repo proves only that no test carries the key, never that
-# the behaviour is uncovered: map the case's steps against candidate tests first, and
-# weigh each step's expectedResult over its description prose, which routinely
-# overstates the assertion. Where an existing test already covers the steps, attach the
-# key to it with the ` + ` multi-key title instead of writing a second test.
+# A key absent from the repo means no test carries it, not that the behaviour is uncovered:
+# match the case's steps (weigh expectedResult over description prose) against existing tests,
+# and attach the key to a covering test with the ` + ` multi-key title rather than write a second.
 Z search "$(jq -n --arg q 'PMM-T555 - Verify user is able to add MySQL service @instances' \
       '{query:$q, limit:20}')"
 Z search "$(jq -n --arg q 'add MySQL service' '{query:$q, folderId:1234}')"
