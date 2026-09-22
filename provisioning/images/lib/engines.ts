@@ -65,7 +65,7 @@ export function normalizeEngine(value: string | undefined, env: Record<string, s
 }
 
 export function normalizeVersion(engine: Engine, value: string): DbVersion {
-  const versions = engine === 'ps' ? ['5.7', '8.0', '8.4'] : ['5.7', '8.0', '8.4', '9.7'];
+  const versions = ['5.7', '8.0', '8.4', '9.7'];
   if (!versions.includes(value)) {
     throw new Error(`version must be ${versions.join(', ')}`);
   }

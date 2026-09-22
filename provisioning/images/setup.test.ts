@@ -28,6 +28,7 @@ test('builds the selected PS image with its matching XtraBackup', () => {
   assert.ok(args.includes('XTRABACKUP_PACKAGE=percona-xtrabackup-24'));
   assert.ok(args.includes('pmm-qa/ps:5.7'));
   assert.ok(args.includes('engines/ps/Dockerfile'));
+  assert.ok(dockerBuildArgs('ps=9.7').includes('XTRABACKUP_PACKAGE='));
   assert.throws(() => dockerBuildArgs('ps=8.1'), /version must be/);
 });
 
@@ -166,6 +167,13 @@ test('reads existing PS framework environment names', () => {
   assert.equal(config.myRocks, true);
   assert.equal(config.backup, true);
   assert.equal(config.encryptedClientConfig, true);
+});
+
+test('rejects PS 9.7 backup until a compatible XtraBackup is published', () => {
+  assert.throws(
+    () => parseConfig(['--engine', 'ps', '--version', '9.7', '--backup'], {}),
+    /backup is not supported with PS 9\.7/,
+  );
 });
 
 test('rejects PS-only flags on MySQL', () => {

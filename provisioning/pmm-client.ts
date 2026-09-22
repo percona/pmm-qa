@@ -55,8 +55,10 @@ export function pmmClientConfig(
 
 type CommandResult = { stdout: string; stderr: string };
 
-const LATEST_TARBALL_URL =
-  'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
+// arm64 client builds are published under their own bucket prefix, as pmm-framework's
+// normalize_client_version() does off uname -m.
+export const latestTarballUrl = (arch: string = process.arch): string =>
+  `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client${arch === 'arm64' ? '-arm' : ''}/pmm-client-latest.tar.gz`;
 const CACHE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '.cache');
 
 function commandLabel(file: string, args: string[]): string {
@@ -383,7 +385,7 @@ export async function resolveClientTarball(
   source: string,
   fetcher: typeof fetch = fetch,
 ): Promise<string> {
-  const normalized = source === 'latest' ? LATEST_TARBALL_URL : source;
+  const normalized = source === 'latest' ? latestTarballUrl() : source;
   if (!/^https?:\/\//i.test(normalized)) {
     const localPath = resolve(normalized);
     if (!localPath.endsWith('.tar.gz')) throw new Error('client tarball must end in .tar.gz');

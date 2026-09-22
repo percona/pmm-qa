@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
-import { pmmClientConfig } from './pmm-client.ts';
+import { latestTarballUrl, pmmClientConfig } from './pmm-client.ts';
 import { buildDescriptor, databaseImage, normalizeArgv, parseConfig, parseDatabase, provisionerArgs, resolveClientArgs } from './setup.ts';
 
 const WORKFLOWS = resolve(fileURLToPath(new URL('..', import.meta.url)), '.github', 'workflows');
@@ -80,6 +80,8 @@ test('env vars pmm-framework honoured still win when no flag is given', () => {
   const config = parseConfig([], { ADMIN_PASSWORD: 'from-env', CLIENT_VERSION: '3.9.1-rc' });
   assert.equal(config.adminPassword, 'from-env');
   assert.equal(config.clientVersion, '3.9.1-rc');
+  // Deliberately not pmm-framework's order, which let ADMIN_PASSWORD beat the flag. See
+  // ARCHITECTURE.md, "The flag outranks ADMIN_PASSWORD".
   assert.equal(parseConfig(['--admin-password', 'flag'], { ADMIN_PASSWORD: 'env' }).adminPassword, 'flag');
 });
 
@@ -179,4 +181,29 @@ test('gssapi selects a krb5-linked client, and rejects one that cannot work', ()
     parseConfig(['--db', 'psmdb'], { GSSAPI: 'true', OL_VERSION: '8' }).databases[0].clientVersion ?? '',
     /dynamic-ol8/,
   );
+});
+
+test('latest-tarball follows the host architecture, as normalize_client_version did', () => {
+  assert.match(latestTarballUrl('arm64'), /PR-BUILDS\/pmm-client-arm\/pmm-client-latest\.tar\.gz$/);
+  assert.match(latestTarballUrl('x64'), /PR-BUILDS\/pmm-client\/pmm-client-latest\.tar\.gz$/);
+});
+
+test('a numeric option keeps its value; only a boolean flag is passed bare', () => {
+  // NODES_COUNT=1 and COMPOSE_PROFILES=classic are pmm-framework's own registered defaults, so a
+  // value of 1 must stay a count instead of reading as "true" and reaching the engine bare.
+  const args = (spec: string) => provisionerArgs(parseDatabase(spec, {}), []);
+  assert.match(args('ps,NODES_COUNT=1').join(' '), /--nodes 1/);
+  assert.match(args('psmdb,COMPOSE_PROFILES=classic').join(' '), /--replica-sets 1/);
+  assert.deepEqual(args('ps,MY_ROCKS=1').filter((a) => a === '--my-rocks' || a === '1'), ['--my-rocks']);
+  assert.ok(!args('ps,BACKUP=false').includes('--backup'));
+});
+
+test('MINIO is honoured and defaults on, as pmm-framework registered it', async () => {
+  const { parseConfig: psmdb } = await import('./images/engines/psmdb/setup.ts');
+  const minio = (spec: string, env: Record<string, string> = {}) =>
+    psmdb(provisionerArgs(parseDatabase(spec, env), []).slice(1), {}).minio;
+  assert.equal(minio('psmdb'), true);
+  assert.equal(minio('psmdb,MINIO=false'), false);
+  assert.equal(minio('psmdb', { MINIO: 'false' }), false);
+  assert.equal(minio('psmdb,MINIO=true'), true);
 });

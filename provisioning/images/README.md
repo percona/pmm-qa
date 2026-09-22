@@ -37,8 +37,10 @@ pre-release).
 Omit the version to build the defaults: MySQL `9.7`, PS `8.0`, PXC `8.0`, PSMDB `8.0`,
 or PDPGSQL `18`.
 
-MySQL supports `5.7`, `8.0`, `8.4`, and `9.7`. Percona Server supports `5.7`, `8.0`,
-and `8.4`. Each engine has its own Dockerfile under `engines/`.
+MySQL, Percona Server, and PXC support `5.7`, `8.0`, `8.4`, and `9.7`. PXC 8.4+
+uses upstream ProxySQL 3, matching pmm-framework. PS 9.7 rejects `backup=true`
+until a compatible Percona XtraBackup release is published. Each engine has its
+own Dockerfile under `engines/`.
 
 ## Run
 

@@ -1,0 +1,17 @@
+FROM ubuntu:22.04
+
+ARG PROXYSQL_PACKAGE=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql_3.0.11-ubuntu22_amd64.deb
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl default-mysql-client \
+    && curl -fL "$PROXYSQL_PACKAGE" -o /tmp/proxysql.deb \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/proxysql.deb \
+    && rm -rf /tmp/proxysql.deb /var/lib/apt/lists/* \
+    && proxysql --version \
+    && command -v mysql proxysql
+
+COPY proxysql.cnf /etc/proxysql.cnf
+
+EXPOSE 6032 6033
+ENTRYPOINT ["proxysql"]
+CMD ["-f", "-c", "/etc/proxysql.cnf"]

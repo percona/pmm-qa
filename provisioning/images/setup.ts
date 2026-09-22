@@ -116,7 +116,7 @@ export function parseConfig(
     console.log(`Usage: node setup.ts [options]
 
   --engine ENGINE[=VERSION,OPTION=VALUE] (repeatable)
-  --version 5.7|8.0|8.4|9.7 (single engine; mysql only for 9.7)
+  --version 5.7|8.0|8.4|9.7 (single engine)
   --setup-type single|replication|gr (global default or engine option)
   --nodes NUMBER                    (global default or engine option)
   --query-source perfschema|slowlog (global default or engine option)
@@ -166,6 +166,10 @@ export function parseConfig(
   if (engine === 'mysql' && (values['my-rocks'] || values.backup || values.buckets)) {
     throw new Error('--my-rocks, --backup, and --buckets are only supported with --engine ps');
   }
+  const backup = engine === 'ps' && (values.backup ?? envFlag(env.BACKUP));
+  if (backup && version === '9.7') {
+    throw new Error('backup is not supported with PS 9.7: no compatible Percona XtraBackup is published');
+  }
 
   return {
     engine,
@@ -177,7 +181,7 @@ export function parseConfig(
     ...client,
     rootPassword: values['root-password'] ?? env.ROOT_PASSWORD ?? 'GRgrO9301RuF',
     myRocks: engine === 'ps' && (values['my-rocks'] ?? envFlag(env.MY_ROCKS)),
-    backup: engine === 'ps' && (values.backup ?? envFlag(env.BACKUP)),
+    backup,
     buckets:
       engine === 'ps'
         ? (values.buckets ?? env.BUCKETS ?? 'bcp')

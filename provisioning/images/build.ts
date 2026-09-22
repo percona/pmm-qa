@@ -18,6 +18,8 @@ const psImages = {
   '5.7': ['percona/percona-server:5.7', 'percona-xtrabackup-24'],
   '8.0': ['percona/percona-server:8.0.46', 'percona-xtrabackup-80'],
   '8.4': ['percona/percona-server:8.4.10', 'percona-xtrabackup-84'],
+  // No compatible XtraBackup is published for PS 9.7. The provisioner rejects backup=true.
+  '9.7': ['percona/percona-server:9.7.1-1.1', ''],
 } as const;
 
 const SIMPLE_ENGINE_BUILDS: Record<string, { versions: string[]; arg: string; context: string }> = {
@@ -50,7 +52,9 @@ export function dockerBuildArgs(
     : requestedVersion ?? DATABASES[normalizedEngine].defaultVersion;
   if (normalizedEngine === 'mysql') {
     const image = mysqlImages[version as keyof typeof mysqlImages];
-    if (!image) throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
+    if (!image) {
+      throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
+    }
     const args = [
       'build',
       '-f',
@@ -67,7 +71,9 @@ export function dockerBuildArgs(
 
   if (normalizedEngine === 'ps') {
     const image = psImages[version as keyof typeof psImages];
-    if (!image) throw new Error('version must be 5.7, 8.0, or 8.4');
+    if (!image) {
+      throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
+    }
     return [
       'build',
       '-f',
@@ -83,7 +89,9 @@ export function dockerBuildArgs(
   }
 
   if (normalizedEngine === 'pxc') {
-    if (version !== '5.7' && version !== '8.0') throw new Error('version must be 5.7 or 8.0');
+    if (!['5.7', '8.0', '8.4', '9.7'].includes(version)) {
+      throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
+    }
     // tarball= overlays a pre-release binary tarball (pmm-framework's PXC_TARBALL);
     // image= builds against a different base image instead. See ARCHITECTURE.md.
     const args = [
@@ -176,10 +184,11 @@ export function dockerBuildArgs(
   return args;
 }
 
-export function proxyBuildArgs(): string[] {
+export function proxyBuildArgs(pxcVersion = DATABASES.pxc.defaultVersion): string[] {
+  const upstream = pxcVersion === '8.4' || pxcVersion === '9.7';
   return [
-    'build', '-f', 'engines/pxc/proxy/Dockerfile',
-    '-t', 'pmm-qa/proxysql:2', 'engines/pxc',
+    'build', '-f', `engines/pxc/proxy/${upstream ? 'Dockerfile.upstream' : 'Dockerfile'}`,
+    '-t', `pmm-qa/proxysql:${upstream ? '3' : '2'}`, 'engines/pxc',
   ];
 }
 
@@ -201,9 +210,10 @@ if (import.meta.main) {
     process.exitCode = result.status ?? 1;
     const engine = descriptor.split('=', 1)[0].toLowerCase();
     if (result.status === 0 && engine === 'pxc') {
+      const version = descriptor.split(',', 1)[0].split('=')[1] ?? DATABASES.pxc.defaultVersion;
       process.exitCode = spawnSync(
         'docker',
-        proxyBuildArgs(),
+        proxyBuildArgs(version),
         { stdio: 'inherit', cwd: ROOT },
       ).status ?? 1;
     }

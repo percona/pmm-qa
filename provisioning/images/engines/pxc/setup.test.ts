@@ -2,18 +2,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { dockerBuildArgs, proxyBuildArgs } from '../../build.ts';
-import { containerName, parseConfig, proxyRunArgs, pxcRunArgs } from './setup.ts';
+import { containerName, databaseUsersSql, parseConfig, proxyRunArgs, pxcRunArgs, upstreamProxySql } from './setup.ts';
 
 test('builds supported PXC images', () => {
   assert.ok(dockerBuildArgs('pxc=5.7').includes('PXC_IMAGE=percona/percona-xtradb-cluster:5.7'));
   assert.ok(dockerBuildArgs('pxc=8.0').includes('pmm-qa/pxc:8.0'));
-  assert.throws(() => dockerBuildArgs('pxc=8.4'), /version must be/);
+  assert.ok(dockerBuildArgs('pxc=8.4').includes('PXC_IMAGE=percona/percona-xtradb-cluster:8.4'));
+  assert.ok(dockerBuildArgs('pxc=9.7').includes('pmm-qa/pxc:9.7'));
+  assert.throws(() => dockerBuildArgs('pxc=10.0'), /version must be/);
 });
 
 test('builds the Percona ProxySQL image', () => {
-  const args = proxyBuildArgs();
-  assert.ok(args.includes('engines/pxc/proxy/Dockerfile'));
-  assert.ok(args.includes('pmm-qa/proxysql:2'));
+  assert.ok(proxyBuildArgs('8.0').includes('pmm-qa/proxysql:2'));
+  const upstream = proxyBuildArgs('8.4');
+  assert.ok(upstream.includes('engines/pxc/proxy/Dockerfile.upstream'));
+  assert.ok(upstream.includes('pmm-qa/proxysql:3'));
 });
 
 test('parses framework-compatible defaults', () => {
@@ -64,6 +67,17 @@ test('starts the Percona ProxySQL image', () => {
   assert.equal(config.proxyImage, 'pmm-qa/proxysql:2');
   assert.ok(proxyRunArgs(config).includes(config.proxyImage));
   assert.ok(!proxyRunArgs(config).some((arg) => arg.includes('proxysql.cnf')));
+});
+
+test('PXC 8.4 and 9.7 select and configure upstream ProxySQL 3', () => {
+  for (const version of ['8.4', '9.7']) {
+    assert.equal(parseConfig(['--version', version], {}).proxyImage, 'pmm-qa/proxysql:3');
+    assert.match(databaseUsersSql(version as '8.4' | '9.7'), /caching_sha2_password/);
+  }
+  const sql = upstreamProxySql(3);
+  assert.match(sql, /\(0,'pxc_pmm_3',3306\)/);
+  assert.match(sql, /admin-stats_credentials/);
+  assert.match(sql, /proxysql_user/);
 });
 
 test('keeps framework-compatible Galera hostgroups and credentials', () => {

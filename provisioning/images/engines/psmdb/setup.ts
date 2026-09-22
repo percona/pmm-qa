@@ -35,6 +35,7 @@ export interface Config extends PmmClientConfig {
   pmmServer?: string;
   tls: boolean;
   gssapi: boolean;
+  minio: boolean;
   replicaSets: number;
 }
 
@@ -99,6 +100,7 @@ export function parseConfig(
       ...PMM_CLIENT_OPTIONS,
       tls: { type: 'boolean' },
       gssapi: { type: 'boolean' },
+      minio: { type: 'string' },
       'replica-sets': { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -117,6 +119,7 @@ export function parseConfig(
   --admin-password PASSWORD
   --tls
   --gssapi
+  --minio true|false        PBM backup storage, on by default
   --client-debug`);
     process.exit(0);
   }
@@ -143,6 +146,9 @@ export function parseConfig(
   }
   const gssapi = values.gssapi ?? envFlag(env.GSSAPI);
   if (engine === 'mongodb' && gssapi) throw new Error('GSSAPI is supported by PSMDB only');
+  // pmm-framework registered MINIO=true for PSMDB, so absence means on, not off.
+  const minio = values.minio !== undefined ? envFlag(values.minio)
+    : env.MINIO === undefined || envFlag(env.MINIO);
   const replicaSets = Number(values['replica-sets'] ?? env.REPLICA_SETS ?? (composeProfile === 'extra' ? '2' : '1'));
   if (![1, 2].includes(replicaSets)) throw new Error('replica sets must be 1 or 2');
   if (setupType === 'sharding' && replicaSets !== 1) {
@@ -164,6 +170,7 @@ export function parseConfig(
     }, '3-dev-latest'),
     tls: values.tls ?? envFlag(env.TLS),
     gssapi,
+    minio,
     replicaSets,
   };
 }
@@ -599,7 +606,9 @@ async function main(): Promise<void> {
   const [pmmServer, tarball] = await preparePmm(config, config.image, 'npm run build -- <version>');
   await step('Clean previous run', () => cleanup(config));
   await step('Start Kerberos', () => startKerberos(config));
-  const minio = config.engine === 'psmdb' ? step('Start MinIO', () => startMinio(config)) : undefined;
+  const minio = config.engine === 'psmdb' && config.minio
+    ? step('Start MinIO', () => startMinio(config))
+    : undefined;
   minio?.catch(() => undefined);
   const nodes = await step(`Start and configure ${config.engine} topology`, () => startTopology(config));
   if (minio) {

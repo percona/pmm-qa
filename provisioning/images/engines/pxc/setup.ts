@@ -16,7 +16,7 @@ import {
   waitForPmmExporter,
 } from '../../../pmm-client.ts';
 
-export type PxcVersion = '5.7' | '8.0';
+export type PxcVersion = '5.7' | '8.0' | '8.4' | '9.7';
 export type QuerySource = 'perfschema' | 'slowlog';
 
 export interface Config extends PmmClientConfig {
@@ -36,6 +36,10 @@ export interface Config extends PmmClientConfig {
 const NETWORK = 'pmm-qa';
 const LABEL = 'pmm-qa.engine=pxc';
 const PROXY = 'pxc-proxy';
+
+export function proxyMajor(version: PxcVersion): 2 | 3 {
+  return version === '5.7' || version === '8.0' ? 2 : 3;
+}
 
 function positiveInteger(value: string, name: string): number {
   const parsed = Number(value);
@@ -68,7 +72,7 @@ export function parseConfig(
   if (values.help) {
     console.log(`Usage: node setup.ts [options]
 
-  --version 5.7|8.0
+  --version 5.7|8.0|8.4|9.7
   --nodes NUMBER
   --query-source perfschema|slowlog
   --client-tarball latest|PATH|URL
@@ -84,7 +88,7 @@ export function parseConfig(
   }
 
   const version = values.version ?? env.PXC_VERSION ?? '8.0';
-  if (version !== '5.7' && version !== '8.0') throw new Error('version must be 5.7 or 8.0');
+  if (!['5.7', '8.0', '8.4', '9.7'].includes(version)) throw new Error('version must be 5.7, 8.0, 8.4, or 9.7');
   const nodes = positiveInteger(values.nodes ?? env.PXC_NODES ?? '3', 'nodes');
   if (nodes < 3) throw new Error('PXC requires at least 3 nodes');
   const querySource = (values['query-source'] ?? env.QUERY_SOURCE ?? 'perfschema').toLowerCase();
@@ -100,7 +104,7 @@ export function parseConfig(
     ...pmmClientConfig(values, { ...env, CLIENT_TARBALL: env.CLIENT_TARBALL ?? env.PXC_CLIENT_TARBALL }),
     rootPassword: values['root-password'] ?? env.ROOT_PASSWORD ?? 'GRgrO9301RuF',
     cluster: values.cluster ?? env.PXC_CLUSTER_NAME ?? 'pxc-dev-cluster',
-    proxyImage: values['proxy-image'] ?? env.PROXYSQL_IMAGE ?? 'pmm-qa/proxysql:2',
+    proxyImage: values['proxy-image'] ?? env.PROXYSQL_IMAGE ?? `pmm-qa/proxysql:${proxyMajor(version)}`,
     skipWorkload: values['skip-workload'] ?? envFlag(env.SKIP_WORKLOAD),
     workloadSeconds: positiveInteger(
       values['workload-seconds'] ?? env.WORKLOAD_SECONDS ?? '30',
@@ -234,15 +238,47 @@ async function startNodes(config: Config): Promise<string[]> {
   return names;
 }
 
+export function databaseUsersSql(version: PxcVersion): string {
+  const upstream = proxyMajor(version) === 3
+    ? `
+     CREATE USER IF NOT EXISTS 'monitor'@'%' IDENTIFIED WITH caching_sha2_password BY 'monitor';
+     GRANT USAGE ON *.* TO 'monitor'@'%';
+     CREATE USER IF NOT EXISTS 'proxysql_user'@'%' IDENTIFIED WITH caching_sha2_password BY 'passw0rd';
+     GRANT ALL PRIVILEGES ON *.* TO 'proxysql_user'@'%';`
+    : '';
+  return `CREATE USER IF NOT EXISTS 'pmm'@'%' IDENTIFIED BY 'pmm';
+     GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD ON *.* TO 'pmm'@'%';
+     CREATE USER IF NOT EXISTS 'admin'@'%' IDENTIFIED BY 'admin';
+     GRANT ALL PRIVILEGES ON *.* TO 'admin'@'%' WITH GRANT OPTION;${upstream}`;
+}
+
 async function configureUsers(config: Config, first: string): Promise<void> {
   await mysql(
     first,
     config.rootPassword,
-    `CREATE USER IF NOT EXISTS 'pmm'@'%' IDENTIFIED BY 'pmm';
-     GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD ON *.* TO 'pmm'@'%';
-     CREATE USER IF NOT EXISTS 'admin'@'%' IDENTIFIED BY 'admin';
-     GRANT ALL PRIVILEGES ON *.* TO 'admin'@'%' WITH GRANT OPTION;`,
+    databaseUsersSql(config.version),
   );
+}
+
+export function upstreamProxySql(nodeCount: number): string {
+  const servers = Array.from(
+    { length: nodeCount },
+    (_, index) => `(0,'${containerName(index + 1)}',3306)`,
+  ).join(',');
+  return `DELETE FROM mysql_servers;
+INSERT INTO mysql_servers (hostgroup_id, hostname, port) VALUES ${servers};
+LOAD MYSQL SERVERS TO RUNTIME;
+SAVE MYSQL SERVERS TO DISK;
+UPDATE global_variables SET variable_value='monitor' WHERE variable_name IN ('mysql-monitor_username','mysql-monitor_password');
+UPDATE global_variables SET variable_value='read_user:read_user' WHERE variable_name='admin-stats_credentials';
+LOAD MYSQL VARIABLES TO RUNTIME;
+SAVE MYSQL VARIABLES TO DISK;
+LOAD ADMIN VARIABLES TO RUNTIME;
+SAVE ADMIN VARIABLES TO DISK;
+DELETE FROM mysql_users;
+INSERT INTO mysql_users (username, password, default_hostgroup) VALUES ('proxysql_user','passw0rd',0);
+LOAD MYSQL USERS TO RUNTIME;
+SAVE MYSQL USERS TO DISK;`;
 }
 
 export function proxyRunArgs(config: Pick<Config, 'proxyImage'>): string[] {
@@ -285,13 +321,18 @@ async function startProxy(config: Config, nodeCount: number): Promise<void> {
       ),
     (result) => result.stdout.includes('1'),
   );
-  await docker([
-    'exec',
-    PROXY,
-    'proxysql-admin',
-    '--config-file=/etc/proxysql-admin.cnf',
-    '--enable',
-  ]);
+  const upstream = proxyMajor(config.version) === 3;
+  if (upstream) {
+    await docker(['exec', PROXY, 'mysql', '-h127.0.0.1', '-P6032', '-uadmin', '-padmin', '-e', upstreamProxySql(nodeCount)]);
+  } else {
+    await docker([
+      'exec',
+      PROXY,
+      'proxysql-admin',
+      '--config-file=/etc/proxysql-admin.cnf',
+      '--enable',
+    ]);
+  }
   await retry(
     `${nodeCount} ProxySQL PXC backends`,
     () =>
@@ -307,7 +348,7 @@ async function startProxy(config: Config, nodeCount: number): Promise<void> {
           '--batch',
           '--skip-column-names',
           '-e',
-          'SELECT COUNT(DISTINCT hostname) FROM runtime_mysql_servers WHERE hostgroup_id IN (10,11,12,13)',
+          `SELECT COUNT(DISTINCT hostname) FROM runtime_mysql_servers WHERE hostgroup_id ${upstream ? '= 0' : 'IN (10,11,12,13)'}`,
         ],
         true,
       ),

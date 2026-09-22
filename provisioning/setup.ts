@@ -65,7 +65,12 @@ const TEARDOWN_VOLUME_PREFIXES = ['pmm-qa-', 'psmdb-', 'pmm-data'];
 const SERVER_VOLUME = 'pmm-data';
 const DIAGNOSTICS_DIR = resolve(ROOT, '..', 'provisioning-artifacts');
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
-const FALSE_VALUES = new Set(['0', 'false', 'no', 'off']);
+// Engine flags declared `type: 'boolean'`. Which ones are boolean cannot be read off the value:
+// nodes=1 is a count, my-rocks=1 is a flag.
+const BOOLEAN_OPTIONS = new Set([
+  'tls', 'gssapi', 'use-socket', 'my-rocks', 'backup', 'skip-workload',
+  'encrypted-client-config', 'client-debug',
+]);
 const SERVERLESS_TYPES = new Set<DatabaseType>(['bucket']);
 
 // `envOptions` lists the spec options pmm-framework registered for this type. It is what
@@ -74,9 +79,9 @@ const SERVERLESS_TYPES = new Set<DatabaseType>(['bucket']);
 // spelling; OPTION_ALIASES maps pmm-framework's differing names onto them.
 export const DATABASES = {
   mysql: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '9.7', script: ['images', 'setup.ts'], selector: ['engine', 'mysql'], envOptions: ['query-source', 'setup-type', 'tarball', 'encrypted-client-config'] },
-  ps: { versions: ['5.7', '8.0', '8.4'], defaultVersion: '8.0', script: ['images', 'setup.ts'], selector: ['engine', 'ps'], envOptions: ['query-source', 'setup-type', 'tarball', 'nodes-count', 'my-rocks', 'encrypted-client-config', 'backup'] },
-  pxc: { versions: ['5.7', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'pxc', 'setup.ts'], envOptions: ['query-source', 'tarball'] },
-  psmdb: { versions: ['6.0', '7.0', '8.0', 'latest'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'psmdb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'ol-version', 'gssapi', 'storage-engine'] },
+  ps: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.0', script: ['images', 'setup.ts'], selector: ['engine', 'ps'], envOptions: ['query-source', 'setup-type', 'tarball', 'nodes-count', 'my-rocks', 'encrypted-client-config', 'backup'] },
+  pxc: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '8.0', script: ['images', 'engines', 'pxc', 'setup.ts'], envOptions: ['query-source', 'tarball'] },
+  psmdb: { versions: ['6.0', '7.0', '8.0', 'latest'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'psmdb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'ol-version', 'gssapi', 'storage-engine', 'minio'] },
   mongodb: { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'mongodb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'storage-engine'] },
   pgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '17', script: ['images', 'engines', 'pgsql', 'setup.ts'], envOptions: ['query-source', 'use-socket', 'setup-type', 'encrypted-client-config'] },
   pdpgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '17', script: ['images', 'engines', 'pdpgsql', 'setup.ts'], envOptions: ['use-socket', 'setup-type', 'encrypted-client-config'] },
@@ -465,9 +470,8 @@ export function provisionerArgs(
   }
   for (const [key, value] of Object.entries(options)) {
     if (key === 'ol-version' || key === 'compose-profiles' || BUILD_OPTIONS.has(key) || (database.type === 'pxc' && key === 'setup-type')) continue;
-    const normalized = value.toLowerCase();
-    if (TRUE_VALUES.has(normalized)) args.push(`--${key}`);
-    else if (!FALSE_VALUES.has(normalized)) args.push(`--${key}`, value);
+    if (!BOOLEAN_OPTIONS.has(key)) args.push(`--${key}`, value);
+    else if (TRUE_VALUES.has(value.toLowerCase())) args.push(`--${key}`);
   }
   if (database.type === 'haproxy') {
     const targets = backendTargets(allDatabases.filter((sibling) => sibling !== database));

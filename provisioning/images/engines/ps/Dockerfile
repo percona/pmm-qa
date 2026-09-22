@@ -47,8 +47,9 @@ RUN curl -fL \
         -o /tmp/libev.rpm \
     && rpm -Uvh /tmp/libev.rpm \
     && rm /tmp/libev.rpm
-RUN microdnf install -y ${XTRABACKUP_PACKAGE}
+RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then microdnf install -y "${XTRABACKUP_PACKAGE}"; fi
 RUN microdnf install -y qpress tar && microdnf clean all
-RUN xtrabackup --version && sysbench --version
+RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then xtrabackup --version; fi \
+    && sysbench --version
 
 USER mysql

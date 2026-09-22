@@ -320,10 +320,21 @@ supported-monitoring matrix still claims one of the dropped versions.
 pmm-framework logged a note under `--verbose` and silently used its default. The
 parity test above is what makes that safe to keep.
 
+PS 9.7 also rejects `backup=true`: no compatible `percona-xtrabackup-97` package
+is published. A normal PS 9.7 topology remains supported without installing an
+older, incompatible XtraBackup package.
+
 **A different default client.** pmm-framework registered `CLIENT_VERSION=3-dev-latest` per type;
 here the default is `latest-tarball`. Both install the newest development client, from the
 experimental package channel and the PR build cache respectively, and every CI caller sets
 `CLIENT_VERSION` explicitly, so the registered default is never what actually runs.
+
+**The flag outranks `ADMIN_PASSWORD`.** pmm-framework's `admin_password()` read
+`${ADMIN_PASSWORD:-${PMM_SERVER_PASSWORD:-admin}}`, so the environment beat `--pmm-server-password`.
+Here `--admin-password` wins, as every other flag does. Nothing observes the difference: all eight
+workflow call sites pass `--pmm-server-password "$ADMIN_PASSWORD"`, the same value the job env
+already holds. Restoring the old order would make `--admin-password` silently dead in CI, because
+`ADMIN_PASSWORD` is a job-level env in every runner workflow.
 
 ---
 
