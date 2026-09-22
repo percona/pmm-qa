@@ -47,6 +47,7 @@ export default class Dashboards extends BasePage {
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
     noDataPanel: this.page.locator(noDataMarkerXPath),
     noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
+    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
