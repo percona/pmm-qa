@@ -1,29 +1,17 @@
 name: "Nightly Test Suite"
 
 # The GitHub Actions half of the nightly, in one dispatch -- the Jenkins
-# orchestrator drives this and its own suites. build_type decides which images
-# the jobs below get, so the same workflow serves a release candidate and the
-# dev build; pmm_server_image pins a specific one.
+# orchestrator drives this and its own suites. pmm_image_tag names the images
+# every job below runs, so the same workflow serves a release candidate and the
+# dev build.
 
 on:
   workflow_dispatch:
     inputs:
-      build_type:
-        description: 'Which build to test'
-        required: true
-        default: 'release candidate'
-        type: choice
-        options:
-          - release candidate
-          - dev-latest
-      pmm_version:
-        description: 'Numeric version under test, e.g. 3.10.0. Tags the release-candidate images and is the version the GSSAPI suite asserts.'
-        required: true
-        type: string
-      pmm_server_image:
-        description: 'Pin the images. Empty takes <pmm_version>-rc for a release candidate, 3-dev-latest for dev. The client image follows this one.'
+      pmm_image_tag:
+        description: 'Tag under test, used verbatim as perconalab/pmm-server:<tag> and pmm-client:<tag>. E.g. 3-dev-latest, 3.9.1-rc, 3.9.1-rc2612.'
         required: false
-        default: ''
+        default: '3-dev-latest'
         type: string
       pmm_client_tarball_ol8:
         description: 'OL8 pmm-client dynamic tarball URL (from client autobuild)'
@@ -75,33 +63,24 @@ jobs:
       - id: pick
         shell: bash
         env:
-          BUILD_TYPE: ${{ inputs.build_type }}
-          PMM_VERSION: ${{ inputs.pmm_version }}
-          SERVER_IMAGE: ${{ inputs.pmm_server_image }}
+          IMAGE_TAG: ${{ inputs.pmm_image_tag }}
         run: |
           set -euo pipefail
-          if [[ "$BUILD_TYPE" == "release candidate" ]]; then
-            default_server="perconalab/pmm-server:${PMM_VERSION}-rc"
-            default_client="perconalab/pmm-client:${PMM_VERSION}-rc"
+          # The tag is taken as given -- nothing is appended to it. A tag
+          # carrying -rc selects the release-candidate package repositories,
+          # any other tag the dev ones.
+          if [[ "$IMAGE_TAG" == *-rc* ]]; then
+            repository='release candidate'
             client_version=pmm3-rc
           else
-            default_server=perconalab/pmm-server:3-dev-latest
-            default_client=perconalab/pmm-client:3-dev-latest
+            repository=dev-latest
             client_version=3-dev-latest
           fi
-          # workflow_dispatch caps inputs at 10, so there is no separate client
-          # override: a pinned server image names its client sibling.
-          server="${SERVER_IMAGE:-$default_server}"
-          if [[ -n "$SERVER_IMAGE" ]]; then
-            client="${SERVER_IMAGE/pmm-server/pmm-client}"
-          else
-            client="$default_client"
-          fi
           {
-            echo "server_image=${server}"
-            echo "client_image=${client}"
+            echo "server_image=perconalab/pmm-server:${IMAGE_TAG}"
+            echo "client_image=perconalab/pmm-client:${IMAGE_TAG}"
             echo "client_version=${client_version}"
-            echo "repository=${BUILD_TYPE}"
+            echo "repository=${repository}"
           } >> "$GITHUB_OUTPUT"
 
   get_compat_versions:
@@ -201,7 +180,7 @@ jobs:
       pmm_client_version_ol8: ${{ inputs.pmm_client_tarball_ol8 }}
       pmm_client_version_ol9: ${{ inputs.pmm_client_tarball_ol9 }}
       repository: ${{ needs.resolve.outputs.repository }}
-      expected_version: ${{ inputs.pmm_version }}
+      expected_version: ${{ inputs.pmm_image_tag }}
 
   qa_integration_psmdb_pbm_full:
     name: PMM_PSMDB_PBM_FULL

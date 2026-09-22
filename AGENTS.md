@@ -103,7 +103,7 @@ To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github
 
 ### External orchestration
 
-No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with `build_type: release candidate`.
+No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
 
 Full Release-Candidate testing is **not** driven from this repo. The orchestrator is the Jenkins pipeline [`Percona-Lab/jenkins-pipelines` › `pmm/v3/pmm3-rc-testing.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-rc-testing.groovy). For a given `RC_VERSION` it runs three parallel lanes:
 
