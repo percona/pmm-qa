@@ -1,0 +1,6 @@
+# CLAUDE.md House style — clones in this environment are shallow, including the session's own checkout
+
+- Added: 2026-09-22
+- Applies to: all skills and agents that run git in a remote/web session
+- Evidence: Third context for the same root fact, and the first outside a provisioned VM (cf. 2026-09-21-feb9bad6-...-main-01 and 2026-09-22-0fd1534c-...-main-01, both scoped to the linode box's pmm-qa clone). Merging `origin/main` into a feature branch in the session's own `/workspace/pmm-qa` failed with `fatal: refusing to merge unrelated histories` and `git merge-base HEAD origin/main` printed nothing, which reads as a branch cut from an orphan root; `git rev-parse --is-shallow-repository` was `true`, and after `git fetch --unshallow origin` the real base resolved and the merge produced exactly one conflict.
+- Proposed change: Add a House style bullet that the container's clone is shallow, so `git rev-parse --is-shallow-repository` is the first check on any missing-history symptom — "unrelated histories", an empty `merge-base`, or a revision expression that will not resolve — and `git fetch --unshallow origin` precedes merge, rebase or merge-base work; never read a truncated local clone as a property of the branch. Placing it in House style lets the two linode-scoped entries point at one shared rule instead of each skill carrying its own copy.
