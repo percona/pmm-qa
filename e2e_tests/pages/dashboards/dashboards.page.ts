@@ -10,6 +10,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
 import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
@@ -28,6 +29,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
 
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
+  readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
@@ -45,6 +47,7 @@ export default class Dashboards extends BasePage {
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
     noDataPanel: this.page.locator(noDataMarkerXPath),
     noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
+    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
@@ -256,22 +259,30 @@ export default class Dashboards extends BasePage {
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
-  verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
+  verifyMetricsPresent = async (
+    expectedMetrics: GrafanaPanel[],
+    serviceList?: GetService[],
+    partialMatch = false,
+  ) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
 
     await this.loadAllPanels();
 
-    let missing = expectedMetricsNames;
+    let missingMetrics = expectedMetricsNames;
 
-    for (let sweep = 0; sweep < 3 && missing.length > 0; sweep++) {
-      const found = await this.collectTextsAcrossScroll(this.elements.panelName);
+    for (let sweep = 0; sweep < 3 && missingMetrics.length > 0; sweep++) {
+      const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
 
-      missing = missing.filter((metric) => !found.includes(metric));
+      missingMetrics = missingMetrics.filter((metric) =>
+        partialMatch
+          ? !availableMetrics.some((available) => available.includes(metric))
+          : !availableMetrics.includes(metric),
+      );
     }
 
-    expect.soft(missing, `Missing dashboard panels: ${missing.join(', ')}`).toHaveLength(0);
+    expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {
