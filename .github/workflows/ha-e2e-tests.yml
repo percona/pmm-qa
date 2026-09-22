@@ -160,31 +160,21 @@ jobs:
 
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ env.WIZARD_ARGS != '' }}
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 20
-          retry_wait_seconds: '10'
-          max_attempts: 2
-          retry_on: 'any'
-          command: |
-            cd pmm-qa/qa-integration/pmm_qa
-            mkdir -m 777 -p /tmp/backup_data || true
-            timeout -k 30 19m ./pmm-framework/pmm-framework \
-              --parallel \
-              --pmm-server-ip "${SERVER_IP}" \
-              --pmm-server-password "${ADMIN_PASSWORD}" \
-              --client-version "${PMM_CLIENT_VERSION}" \
-              ${WIZARD_ARGS}
-          on_retry_command: |
-            # Removing a container does not unregister its node from the remote server.
-            for c in $(docker ps -q); do
-              docker exec "$c" sh -c 'command -v pmm-admin' >/dev/null 2>&1 || continue
-              timeout 60 docker exec "$c" pmm-admin unregister --force ||
-                echo "pmm-admin unregister FAILED for $c - its node may still be registered"
-            done
-            docker rm -f $(docker ps -a -q) || true
-            docker volume rm -f $(docker volume ls -q) || true
-            docker network rm -f $(docker network ls -q) || true
+        timeout-minutes: 35
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -p /tmp/backup_data || true
+          chmod 777 /tmp/backup_data || true
+          # shellcheck disable=SC2086
+          # WIZARD_ARGS holds several --database flags and has to split into
+          # separate arguments.
+          timeout -k 30 34m ./pmm-framework/pmm-framework \
+            --parallel \
+            --setup-retries 1 \
+            --pmm-server-ip "${SERVER_IP}" \
+            --pmm-server-password "${ADMIN_PASSWORD}" \
+            --client-version "${PMM_CLIENT_VERSION}" \
+            ${WIZARD_ARGS}
 
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/

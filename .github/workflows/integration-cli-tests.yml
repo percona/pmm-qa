@@ -1,8 +1,6 @@
 name: PMM Integration Tests
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       pmm_qa_branch:
@@ -591,48 +589,3 @@ jobs:
       cli_tag: '@valkey'
       services_list: '--database valkey=8'
       test_name: 'Valkey 8.x'
-
-  notify_investigator:
-    name: Fire Investigator routine
-    needs:
-      - help-tests
-      - pmm-server-tests
-      - pmm-client-container-tests
-      - generic-tests
-      - remove-tests
-      - ps-57-tests
-      - ps-80-tests
-      - ps-84-tests
-      - ps-97-tests
-      - mysql-80-tests
-      - mysql-84-tests
-      - mysql-97-tests
-      - pdpgsql-14-tests
-      - pdpgsql-15-tests
-      - pdpgsql-16-tests
-      - pdpgsql-17-tests
-      - pdpgsql-18-tests
-      - psmdb-6-replica-tests
-      - psmdb-7-replica-tests
-      - psmdb-8-tests
-      - psmdb-7-shard-tests
-      - psmdb-8-shard-tests
-      - haproxy-tests
-      - pxc-57-proxysql-tests
-      - pxc-80-proxysql-tests
-      - pxc-84-proxysql-tests
-      - pxc-97-proxysql-tests
-      - valkey-7-tests
-      - valkey-8-tests
-    if: >
-      !cancelled() && github.event_name == 'schedule' &&
-      contains(needs.*.result, 'failure')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/notify-investigator
-        with:
-          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}

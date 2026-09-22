@@ -3,6 +3,10 @@
   vars:
     port_start: 3306
 
+- name: Remove the node container left by a previous run
+  shell: docker rm -fv {{ container_prefix }}{{ index }} || true
+  changed_when: false
+
 - name: Prepare socket folders
   shell: |
     docker run --rm -v /tmp:/host-tmp {{ busybox_image }} sh -c '
@@ -34,6 +38,11 @@
       -p {{ docker_port|int + item - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-22.04
   when: mysql_version | replace('_', '') | int < 80
+
+- name: Configure apt inside the container
+  include_tasks: ../tasks/configure_container_apt.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ index }}"
 
 - name: Install dependencies
   shell: |
