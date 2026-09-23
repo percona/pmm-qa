@@ -62,7 +62,7 @@ ARG OL_VERSION
 # RUN exit 0 even when a download failed, shipping an image that only breaks
 # much later, at test time.
 RUN { [[ "$PMM_CLIENT_VERSION" != latest-tarball ]] || \
-        PMM_CLIENT_VERSION="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client$([[ $(uname -m) == aarch64 ]] && echo -arm)/pmm-client-latest.tar.gz"; } && \
+        PMM_CLIENT_VERSION="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client$([[ $(uname -m) != aarch64 ]] || echo -arm)/pmm-client-latest.tar.gz"; } && \
     if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
         curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && \
         cd /tmp && tar -xvf pmm-client.tar.gz --transform 's,^/*[^/]*,/pmm-client,S' && \
