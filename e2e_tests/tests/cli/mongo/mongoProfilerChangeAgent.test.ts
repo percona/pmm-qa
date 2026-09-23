@@ -366,6 +366,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T2310 - Verify Change agent disable collectors @psmdb-profiler-integration',
+    async ({ api, cliHelper }) => {
+      const collectorsToDisable = ['collstats', 'dbstats'];
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --disable-collectors=${collectorsToDisable.join(',')}`,
+        )
+        .assertSuccess()
+        .outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
+
+      const agent = await api.inventoryApi.getAgentById(mongoExporterId);
+
+      expect(
+        agent.disabled_collectors,
+        'Disabled collectors were not persisted on the mongodb_exporter agent',
+      ).toEqual(collectorsToDisable);
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
