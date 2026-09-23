@@ -353,23 +353,31 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} sed -i '/bindIp: 0.0.0.0/a\\  tls:\\n    mode: requireTLS\\n    certificateKeyFile: /certs/server.pem\\n    CAFile: /certs/ca-certs.pem' ${confPath}`,
       );
       cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`);
-      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mongod`).assertSuccess();
+      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mongod`);
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
-      // systemctl restart returns before mongod finishes rebinding its port under
-      // requireTLS, and the service reads "Down" as soon as the old non-TLS agent
-      // loses its connection -- which happens while mongod is still restarting. The
-      // change-agent connection check then races mongod startup and fails with
-      // "connection refused". Wait until mongod answers over TLS before reconfiguring.
+      // The mongod unit is Type=simple, so `systemctl restart` returns 0 the moment
+      // it execs mongod -- before mongod validates the new TLS config. A bad or
+      // unreadable certificate makes mongod exit right after, yet the restart still
+      // reports success and the service reads "Down" (the old non-TLS agent lost its
+      // connection). The change-agent connection check would then hit a dead mongod
+      // and fail with a misleading "connection refused". Poll mongod directly over
+      // TLS until it serves again; if it never does, surface mongod's own startup
+      // log so the real cause is visible instead.
       await expect(() => {
-        cliHelper
-          .execSilent(
-            `docker exec ${containerName} mongo --tls --host localhost --port 27017 --tlsCAFile /certs/ca-certs.pem --tlsCertificateKeyFile /certs/client.pem --tlsAllowInvalidCertificates --quiet --eval 'db.hello()'`,
-          )
-          .assertSuccess();
+        const probe = cliHelper.execSilent(
+          `docker exec ${containerName} mongo --tls --host localhost --port 27017 --tlsCAFile /certs/ca-certs.pem --tlsCertificateKeyFile /certs/client.pem --tlsAllowInvalidCertificates --quiet --eval 'db.hello()'`,
+        );
+
+        expect(
+          probe.code,
+          `mongod is not serving TLS after restart. mongod journal:\n${
+            cliHelper.execSilent(`docker exec ${containerName} journalctl -u mongod --no-pager -n 20`).stdout
+          }`,
+        ).toEqual(0);
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
 
       // MongoDB agents take a single cert+key PEM via --tls-certificate-key-file;
