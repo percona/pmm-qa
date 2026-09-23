@@ -305,6 +305,67 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T2307 - Verify Change agent stats collections @psmdb-profiler-integration',
+    async ({ api, cliHelper }) => {
+      const statsCollections = ['db1.col1', 'db2.col2'];
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --stats-collections=${statsCollections.join(',')}`,
+        )
+        .assertSuccess()
+        .outContains(`- updated stats collections: ${statsCollections.join(',')}`);
+
+      const agent = await api.inventoryApi.getAgentById(mongoExporterId);
+
+      expect(
+        agent.mongo_db_options.stats_collections,
+        'Stats collections were not persisted on the mongodb_exporter agent',
+      ).toEqual(statsCollections);
+    },
+  );
+
+  pmmTest(
+    'PMM-T2308 - Verify Change agent collections limit @psmdb-profiler-integration',
+    async ({ api, cliHelper }) => {
+      const collectionsLimit = 100;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --collections-limit=${collectionsLimit}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed collections limit to ${collectionsLimit}`);
+
+      const agent = await api.inventoryApi.getAgentById(mongoExporterId);
+
+      expect(
+        agent.mongo_db_options.collections_limit,
+        'Collections limit was not persisted on the mongodb_exporter agent',
+      ).toEqual(collectionsLimit);
+    },
+  );
+
+  pmmTest(
+    'PMM-T2309 - Verify Change agent enable diagnostic data histograms @psmdb-profiler-integration',
+    async ({ api, cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --enable-diagnostic-data-histograms`,
+        )
+        .assertSuccess()
+        .outContains('- enabled diagnostic data histograms');
+
+      const agent = await api.inventoryApi.getAgentById(mongoExporterId);
+
+      expect(
+        agent.mongo_db_options.enable_diagnostic_data_histograms,
+        'Diagnostic data histograms were not enabled on the mongodb_exporter agent',
+      ).toBe(true);
+    },
+  );
+
+  pmmTest(
     'PMM-T1013 - Verify Change agent skip connection check @psmdb-profiler-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
