@@ -102,7 +102,7 @@ One flow may assert multiple surfaces. Do not duplicate the full workflow per su
 
 ### Regression
 
-Reproduce the ticket's original failure when deterministic and not already caught.
+Reproduce the ticket's original failure as a pmm-qa case when deterministic, unless a pmm-qa test already asserts it. A test in the product repository does not replace it: the reported reproduction is the ticket's acceptance record, and product-repository tests change without QA review. When a Finding shows the fix is incomplete for the ticket's own defect, add that path to the reproduction case, with its Expected stating the correct behavior, so the gap stays tracked; the case publishes as `Draft` until the fix lands.
 
 Add nearby regression candidates only when the change affects a shared boundary/caller/consumer and the candidate has a distinct failure signal.
 

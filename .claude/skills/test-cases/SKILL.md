@@ -147,7 +147,7 @@ If Jira search is unavailable or remains inconclusive, report the historical che
 
 Read [scenario-selection.md](references/scenario-selection.md) and [test-level-selection.md](references/test-level-selection.md).
 
-Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. Place each at the lowest layer that observes its defect; a gap that belongs in a product-repository test becomes a `Recommend:` Finding, not a case. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure when deterministic.
+Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. Place each at the lowest layer that observes its defect; a gap that belongs in a product-repository test becomes a `Recommend:` Finding, not a case. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure as a pmm-qa case when deterministic, even when a product-repository test covers it; see the Regression rule in scenario-selection.md.
 
 ### 6. Find existing coverage
 

@@ -52,7 +52,7 @@ For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tes
 
 ## Tests shipped with the implementation
 
-A test the implementation pull request adds inside the product repository is coverage once you confirm it runs; subtract every candidate it asserts, and cite it the way you would a pmm-qa test.
+A test the implementation pull request adds inside the product repository is coverage once you confirm it runs; subtract every candidate it asserts except the ticket's own reproduction (scenario-selection.md, Regression), and cite it the way you would a pmm-qa test.
 
 Confirm from how its suite selects what to run, and name that evidence: the workflow and its trigger, the Makefile target, or the Jenkins job. `api-tests/Makefile` discovers packages with `find -name '*_test.go'`, so a new package needs no registration, but percona/pmm's `api-tests` run from Jenkins feature builds rather than on the pull request. A suite gated by an explicit list or tag covers only its listed entries. Check what the suite holds fixed for its whole run — a configuration it enables everywhere, or a flag a test passes to skip a code path, is a branch it leaves untested. A package-level unit test is not coverage for a defect in the composition of several components. A test whose run you cannot confirm is `Adjacent`.
 

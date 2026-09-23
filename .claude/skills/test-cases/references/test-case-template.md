@@ -7,11 +7,11 @@ Use this format for every proposed case.
 - Use a short, action-oriented title, numbered to match the summary table.
 - Assign `High`, `Normal`, or `Low` priority from failure impact.
 - Assign `Needs automation`, `Automation candidate — infra gap`, or `Manual` on the same line as the priority, followed by its lane, its blocker, or its manual reason.
-- Name the primary defect the case catches and its traceable evidence. Implementation evidence carries a location, repository path plus function or line; a claim without one is not evidence.
+- Name the primary defect the case catches and its traceable evidence. Write the Catches part as one or two plain sentences a tester understands — what goes wrong for the user if the defect is back — and put function names, commits, and file references only after "— Evidence:". Implementation evidence carries a location, repository path plus function or line; a claim without one is not evidence.
 - Write the step as the action a person performs, in product words, as if explaining it to a colleague who does not know the code: "as the viewer, ask for a snapshot through the data source", never `GET /graph/api/datasources/proxy/<id>/snapshot/create`. No URL, path, endpoint, header name, command, flag, or JSON appears in a Step or Expected cell; every one of them goes in `Data`, empty when the step needs none.
 - Write the expected result as what the person sees or gets, in plain words first; the exact code or value follows in parentheses when the oracle needs it: "the request is refused (403) and no snapshot directory appears". Write a value in Step or Expected in plain quotes, never in backticks; `check_draft.py` rejects backticks there.
 - Give the case a title a product manager would understand: what the user does and what must hold, not the mechanism.
-- Before finishing, read the Step and Expected columns without the Data column. If a row cannot be followed that way, rewrite it.
+- Before finishing, read the Step and Expected columns without the Data column, as a tester new to the feature would. If a row cannot be followed that way, or needs the Catches line to make sense, rewrite it.
 - Omit the `Precondition` and `Cleanup` lines when unnecessary; do not write `None` or `N/A`.
 - Capture the identifier of any state the case will modify in its first step, and address that state by the captured identifier afterwards.
 - Give the first step an assertion that the precondition actually holds.
@@ -21,6 +21,7 @@ Use this format for every proposed case.
 - Use only `Step`, `Data` and `Expected` columns.
 - Start every table cell with `- `; publishing strips it, so it never reaches Zephyr.
 - Use short sentence fragments.
+- Give each row one action a person can do in one go, starting with who does it when the actor changes ("As the Viewer, …"). A step that needs "and then" across two results is two rows: opening a page and reloading it are separate rows.
 - Use one observable result per row.
 - Keep the fewest useful rows.
 - Merge navigation, input, and submission when they lead to one result.
