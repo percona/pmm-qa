@@ -256,20 +256,28 @@ export default class LeftNavigation extends BasePage {
 
         await locator.click({ timeout: Timeouts.TEN_SECONDS });
       }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
+
       // A dashboard rewrites its own var-* query params, so "URL changed" alone
       // can fire before navigation to the clicked link happens.
+      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
+      // path, so the path must also move off the page that was already open.
+      const currentPath = new URL(currentUrl).pathname;
+
       await (
         targetPath
-          ? this.page.waitForURL((url) => url.pathname.startsWith(targetPath), {
-              timeout: Timeouts.TEN_SECONDS,
-            })
+          ? this.page.waitForURL(
+              (url) =>
+                url.pathname.startsWith(targetPath) &&
+                (url.pathname !== currentPath || currentPath === targetPath),
+              { timeout: Timeouts.TEN_SECONDS },
+            )
           : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
               timeout: Timeouts.TEN_SECONDS,
             })
       ).catch(Boolean);
       await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
 
-      if (targetPath ? /\/graph\/d\//.test(targetPath) : this.isDashboardPage()) {
+      if (this.isDashboardPage()) {
         await this.page
           .locator('#grafana-iframe')
           .waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });

@@ -25,7 +25,7 @@ mkdir -p "$DEST_DIR" "$CACHE_DIR"
 
 log() { printf '[fetch-pmm-client-rpm] %s\n' "$*" >&2; }
 
-resolve_from_index() { # -> "version sha256 href", empty on failure
+resolve_from_index() { # -> "version sha256 href"; exit 0 with no output when the index has no match
   local primary
   primary=$(curl -sS --fail --max-time 60 "$BASE/repodata/repomd.xml" | grep -o 'href="repodata/[^"]*-primary\.xml\.gz"' | cut -d'"' -f2) || return 1
   [ -n "$primary" ] || return 1
@@ -52,10 +52,11 @@ if best:
 }
 
 fetch_verified() {
-  local deadline=$(( $(date +%s) + BUDGET )) attempt=0 version sha href
+  local deadline=$(( $(date +%s) + BUDGET )) attempt=0 version sha href resolved rc
   while :; do
     attempt=$((attempt + 1))
-    read -r version sha href < <(resolve_from_index) || true
+    resolved=$(resolve_from_index) && rc=0 || rc=$?
+    read -r version sha href <<<"$resolved" || true
     if [ -n "${href:-}" ]; then
       if curl -sS --fail -C - --connect-timeout 30 --speed-limit 51200 --speed-time 120 \
         --max-time "$(( deadline - $(date +%s) ))" -o "$RPM.part" "$BASE/$href"; then
@@ -71,13 +72,15 @@ fetch_verified() {
       else
         log "download interrupted (attempt $attempt)"
       fi
+    elif [ "$rc" -ne 0 ]; then
+      log "the el$EL/$COMPONENT/$ARCH index could not be read (attempt $attempt)"
     else
       log "no pmm-client${VERSION:+ $VERSION} in the el$EL/$COMPONENT/$ARCH index (attempt $attempt)"
     fi
     if [ "$(date +%s)" -ge "$deadline" ] || { [ -z "${href:-}" ] && [ "$attempt" -ge 4 ]; }; then
       log "giving up after $attempt attempts: $BASE/${href:-<unresolved>}"
       # 3 tells callers the package is not published here, not that fetching failed.
-      [ -z "${href:-}" ] && curl -sSf --max-time 60 -o /dev/null "$BASE/repodata/repomd.xml" && return 3
+      [ -z "${href:-}" ] && [ "$rc" -eq 0 ] && return 3
       return 1
     fi
     sleep 15
