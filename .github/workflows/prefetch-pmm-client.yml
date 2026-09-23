@@ -54,17 +54,26 @@ jobs:
           COMPONENT: ${{ steps.cache.outputs.component }}
           VERSION: ${{ startsWith(matrix.version, '3.') && matrix.version || '' }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           scripts=pmm-qa/qa-integration/pmm_qa/scripts
+          # A build that is not published for a platform (exit 3, e.g. GA
+          # releases on focal) is skipped; any other failure fails the step so
+          # a partial set is never saved under the key.
+          fetch() {
+            "$@"
+            rc=$?
+            [ "$rc" -eq 3 ] && { echo "::notice::not published, skipped: $*"; return 0; }
+            return "$rc"
+          }
           # Runners are jammy, the database containers jammy and focal or
           # Oracle Linux 8/9 (the official MySQL and Percona images).
           for codename in jammy focal; do
-            "$scripts/fetch-pmm-client-deb.sh" "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION"
+            fetch "$scripts/fetch-pmm-client-deb.sh" "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION" || exit 1
           done
           yum_component=$COMPONENT
           [ "$yum_component" = main ] && yum_component=release
           for el in 8 9; do
-            "$scripts/fetch-pmm-client-rpm.sh" "$yum_component" "$el" x86_64 /tmp/pmm-client-cache 900 "$VERSION"
+            fetch "$scripts/fetch-pmm-client-rpm.sh" "$yum_component" "$el" x86_64 /tmp/pmm-client-cache 900 "$VERSION" || exit 1
           done
 
       - if: ${{ steps.fetch.outcome == 'success' }}

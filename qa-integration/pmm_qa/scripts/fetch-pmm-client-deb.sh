@@ -14,6 +14,7 @@
 #   and dists/<codename>/release/ does not exist.
 #   VERSION pins an exact upstream version (3.9.1); empty takes the highest.
 # Stdout: the path of the verified .deb (nothing else — callers capture it)
+# Exit: 3 when the index does not publish that package, 1 on any other failure
 set -euo pipefail
 
 COMPONENT=${1:?index component (main|testing|experimental) required}
@@ -121,6 +122,8 @@ EOF
         printf '    served size  %s\n' "${served:-<unknown>}"
         printf '    index sha256 %s\n' "${sha:-<unknown>}"
       } >&2
+      # 3 tells callers the package is not published here, not that fetching failed.
+      [ "$reason" = no-index ] && return 3
       return 1
     fi
     sleep 15

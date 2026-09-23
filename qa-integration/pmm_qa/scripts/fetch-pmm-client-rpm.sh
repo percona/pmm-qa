@@ -6,6 +6,7 @@
 #   COMPONENT is the yum channel (release|testing|experimental).
 #   VERSION pins an exact upstream version (3.9.1); empty takes the highest.
 # Stdout: the path of the verified .rpm (nothing else — callers capture it)
+# Exit: 3 when the index does not publish that package, 1 on any other failure
 set -euo pipefail
 
 COMPONENT=${1:?yum channel (release|testing|experimental) required}
@@ -75,6 +76,8 @@ fetch_verified() {
     fi
     if [ "$(date +%s)" -ge "$deadline" ] || { [ -z "${href:-}" ] && [ "$attempt" -ge 4 ]; }; then
       log "giving up after $attempt attempts: $BASE/${href:-<unresolved>}"
+      # 3 tells callers the package is not published here, not that fetching failed.
+      [ -z "${href:-}" ] && return 3
       return 1
     fi
     sleep 15
