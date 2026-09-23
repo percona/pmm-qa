@@ -75,7 +75,7 @@ Run `bash .claude/scripts/check-migration-conventions.sh <every changed file>` b
 
 ## Title, tags, ids
 
-Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Copy the title string as is, interior spacing included; trim leading and trailing whitespace, which `playwright/valid-title` rejects. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality. An id-less source scenario: ask the maintainer for a key, never invent one.
+Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Copy the title string as is, interior spacing included; trim leading and trailing whitespace, which `playwright/valid-title` rejects. Never prefix a test id with `@`: `@PMM-T1419 ...` becomes `PMM-T1419 ...`; tags keep theirs. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality. An id-less source scenario: ask the maintainer for a key, never invent one.
 
 ## Waits and retries
 
