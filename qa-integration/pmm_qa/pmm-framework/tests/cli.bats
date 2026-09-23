@@ -113,13 +113,39 @@ load helpers/test_helper
   # token (see the "-" to "." conversion in latest_psmdb_version()).
   # 8.0.29-13 is deliberately absent: only what the release repo carries is a
   # candidate, so a patch still sitting in psmdb-80/yum/testing is never picked.
+  # shellcheck disable=SC2329,SC2317
   curl() {
-    printf '%s\n' \
-      '<a href="percona-server-mongodb-server-8.0.4-1.el9.x86_64.rpm">' \
-      '<a href="percona-server-mongodb-server-8.0.4-2.el9.x86_64.rpm">'
+    case "$*" in
+      *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;
+      *primary.xml.gz)
+        printf '%s\n' \
+          '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.4" rel="1.el9"/>' \
+          '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.4" rel="2.el9"/>' \
+          '<name>percona-server-mongodb-tools</name>' '<version epoch="0" ver="8.0.5" rel="1.el9"/>' |
+          gzip
+        ;;
+    esac
   }
 
   [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
+}
+
+@test "ignores a PSMDB patch that the repo index does not list" {
+  # An RPM can be in the directory listing before the repodata index names it;
+  # dnf only installs what the index lists.
+  # shellcheck disable=SC2329,SC2317
+  curl() {
+    case "$*" in
+      *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;
+      *primary.xml.gz)
+        printf '%s\n' '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.29" rel="13.el9"/>' |
+          gzip
+        ;;
+      *) printf '%s\n' '<a href="percona-server-mongodb-server-8.0.32-14.el9.x86_64.rpm">' ;;
+    esac
+  }
+
+  [[ $(latest_psmdb_version 8.0) == 8.0.29-13 ]]
 }
 
 @test "selects the existing requests-capable interpreter for Ansible modules" {

@@ -63,78 +63,78 @@ register_database PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database MLAUNCH_PSMDB \
   '4.4 5.0 6.0 7.0 8.0' \
   'CLIENT_VERSION SETUP_TYPE TARBALL' \
   'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'TARBALL='
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'TARBALL='
 
 register_database MLAUNCH_MODB \
   '4.4 5.0 6.0 7.0 8.0' \
   'CLIENT_VERSION SETUP_TYPE TARBALL' \
   'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'TARBALL='
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'TARBALL='
 
 register_database SSL_MLAUNCH \
   '4.4 5.0 6.0 7.0 8.0' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL' \
   'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
 
 register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
+  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
+  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'TARBALL=' 'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' 'TARBALL='
+  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' 'TARBALL='
 
 register_database PGSQL \
   '11 12 13 14 15 16 17 18' \
   'QUERY_SOURCE CLIENT_VERSION USE_SOCKET SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'QUERY_SOURCE=pgstatements' 'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET=' \
+  'QUERY_SOURCE=pgstatements' 'CLIENT_VERSION=latest-tarball' 'USE_SOCKET=' \
   'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PDPGSQL \
   '11 12 13 14 15 16 17 18' \
   'CLIENT_VERSION USE_SOCKET SETUP_TYPE PGSM_BRANCH ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET=' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
+  'CLIENT_VERSION=latest-tarball' 'USE_SOCKET=' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
   'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database SSL_PDPGSQL \
   '11 12 13 14 15 16 17' \
   'CLIENT_VERSION USE_SOCKET' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET='
+  'CLIENT_VERSION=latest-tarball' 'USE_SOCKET='
 
 register_database PXC \
   '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION QUERY_SOURCE' \
   'DEFAULT_VERSION=8.4' \
-  'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema'
+  'CLIENT_VERSION=latest-tarball' 'QUERY_SOURCE=perfschema'
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
 # PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
@@ -143,8 +143,8 @@ register_database PROXYSQL '2 3' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
 # logs a note under --verbose and falls back to the (empty) default.
-register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
-register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
+register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
+register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
 register_database DOCKERCLIENTS '' ''
 register_database BUCKET '' 'BUCKET_NAMES' 'BUCKET_NAMES=bcp'
 
@@ -152,7 +152,7 @@ register_database VALKEY \
   '7 8' \
   'CLIENT_VERSION SETUP_TYPE TARBALL ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=' 'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 # --------------------------------------------------------------------------
 # Catalogue queries. All take an already-uppercased TYPE.

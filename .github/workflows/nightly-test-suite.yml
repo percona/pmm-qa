@@ -74,7 +74,7 @@ jobs:
             client_version=pmm3-rc
           else
             repository=dev-latest
-            client_version=3-dev-latest
+            client_version=latest-tarball
           fi
           {
             echo "server_image=perconalab/pmm-server:${IMAGE_TAG}"
@@ -110,7 +110,9 @@ jobs:
             echo '::error::pmm-version-getter returned no GA tags for compatibility (check Docker Hub).'
             exit 1
           fi
-          compat_matrix_json="$(echo "$VERSIONS_JSON" | jq 'map({version: ., image: ("percona/pmm-client:" + .)})')"
+          tarballs=https://downloads.percona.com/downloads/pmm3
+          compat_matrix_json="$(echo "$VERSIONS_JSON" | jq --arg t "$tarballs" \
+            'map({version: ., image: ("percona/pmm-client:" + .), tarball: "\($t)/\(.)/binary/tarball/pmm-client-\(.)-x86_64.tar.gz"})')"
           {
             echo "compat_matrix<<__COMPAT_MATRIX_EOF__"
             echo "$compat_matrix_json"
@@ -144,7 +146,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       pmm_client_image: ${{ matrix.image }}
-      pmm_client_version: ${{ matrix.version }}
+      pmm_client_version: ${{ matrix.tarball }}
 
   e2e_tests_matrix:
     name: E2E Tests Matrix (CodeceptJS)

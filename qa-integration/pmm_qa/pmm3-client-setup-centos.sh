@@ -67,6 +67,12 @@ retry_microdnf_install() {
     return 1
 }
 
+if [[ "$client_version" == "latest-tarball" ]]; then
+    bucket=pmm-client
+    [[ "$(uname -m)" == aarch64 ]] && bucket=pmm-client-arm
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
+fi
+
 if [[ "$client_version" == "3-dev-latest" ]]; then
     echo "Installing 3-dev-latest pmm client"
     percona-release enable-only pmm3-client experimental
