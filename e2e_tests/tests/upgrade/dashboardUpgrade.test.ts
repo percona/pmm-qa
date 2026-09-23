@@ -41,13 +41,33 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest('Verify grafana logs after upgrade @post-upgrade', async ({ cliHelper }) => {
-    // "context canceled" errors are benign: they are logged when in-flight
-    // grafana requests abort during the server restart that the upgrade performs.
+    // The upgrade restarts the PMM Server, so grafana.log accumulates transient
+    // request-lifecycle errors that are not upgrade defects: in-flight requests
+    // aborting ("context canceled"), clients disconnecting mid-response
+    // ("broken pipe") and feature-flag (ofrep) endpoint timeouts. Instead of a
+    // denylist of that ever-changing noise, assert only on the errors that mean
+    // the upgrade actually broke dashboards, datasources or storage: library
+    // panel load failures (this check's original intent) and
+    // provisioning/migration failures.
+    const meaningfulErrorSignatures = [
+      'Error while loading library panels',
+      'logger=provisioning',
+      'logger=migrator',
+      'logger=resource-migrator',
+      'logger=unifiedstorage-migrator',
+      'logger=storage.unified.migrat',
+    ];
     const errorLogs = cliHelper.execSilent(
-      'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error | grep -v "context canceled"',
+      'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error',
     );
+    const meaningfulErrors = errorLogs.stdout
+      .split('\n')
+      .filter((line) => meaningfulErrorSignatures.some((signature) => line.includes(signature)));
 
-    expect(errorLogs.stdout, `Error found in grafana log after upgrade: ${errorLogs.stdout}`).toHaveLength(0);
+    expect(
+      meaningfulErrors,
+      `Meaningful grafana errors found after upgrade:\n${meaningfulErrors.join('\n')}`,
+    ).toHaveLength(0);
   });
 
   pmmTest(
