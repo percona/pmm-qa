@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# build-images -- prebake database images ahead of a run.
+#
+#   ./build-images ps=8.4 ps=8.0
+#
+# pmm-framework builds a missing image on demand; this exists to warm a cache.
+
+set -euo pipefail
+
+FRAMEWORK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+QA_INTEGRATION_ROOT=$(cd "$FRAMEWORK_DIR/../.." && pwd)
+
+# shellcheck source=lib/common.sh
+source "$FRAMEWORK_DIR/lib/common.sh"
+# shellcheck source=lib/images.sh
+source "$FRAMEWORK_DIR/lib/images.sh"
+
+(($# > 0)) || die "Usage: build-images ENGINE=VERSION..."
+for spec in "$@"; do
+  engine=${spec%%=*}
+  engine=${engine,,}
+  [[ $spec == *=* ]] || die "'$spec' needs a version, e.g. $engine=8.4."
+  declare -F "build_${engine}_image" >/dev/null || die "No prebaked image for '$engine'."
+  "build_${engine}_image" "${spec#*=}"
+done

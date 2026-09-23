@@ -17,6 +17,8 @@
 #   lib/docker.sh     finding the PMM Server
 #   lib/ansible.sh    running playbooks
 #   lib/runners.sh    running setup scripts, plus version/password helpers
+#   lib/images.sh     building prebaked database images
+#   lib/prebaked.sh   the docker backend: PMM Client install, agent, retries
 #   setups/*.sh       one function per database type, and the dispatch table
 #   lib/execution.sh  preflight and the sequential/parallel strategies
 #
@@ -59,6 +61,10 @@ source "$FRAMEWORK_DIR/lib/docker.sh"
 source "$FRAMEWORK_DIR/lib/ansible.sh"
 # shellcheck source=lib/runners.sh
 source "$FRAMEWORK_DIR/lib/runners.sh"
+# shellcheck source=lib/images.sh
+source "$FRAMEWORK_DIR/lib/images.sh"
+# shellcheck source=lib/prebaked.sh
+source "$FRAMEWORK_DIR/lib/prebaked.sh"
 # shellcheck source=setups/mysql.sh
 source "$FRAMEWORK_DIR/setups/mysql.sh"
 # shellcheck source=setups/postgresql.sh

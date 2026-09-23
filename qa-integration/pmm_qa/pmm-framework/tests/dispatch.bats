@@ -2,39 +2,123 @@
 
 load helpers/test_helper
 
-@test "PS GR selects the existing playbook and exact environment" {
-  # The tarball URL below is architecture-specific, so pin the arch rather than
-  # inherit whatever the developer's machine happens to be.
+# Records every docker call and answers the probes setup_ps polls, so a PS
+# setup runs end to end without a daemon.
+stub_prebaked_docker() {
+  DOCKER_CALLS=$BATS_TEST_TMPDIR/docker.calls
+  : >"$DOCKER_CALLS"
   # shellcheck disable=SC2329,SC2317
-  uname() { printf 'x86_64\n'; }
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    case "$*" in
+      *'pmm-admin status'*) printf 'Connected : true\nmysqld_exporter Running\n' ;;
+      *'REPLICA STATUS'* | *'SLAVE STATUS'*)
+        printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
+        ;;
+      *replication_group_members*) printf '3\n' ;;
+      *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
+    esac
+  }
+}
 
+@test "PS GR runs three prebaked nodes and registers them as the playbook did" {
+  stub_prebaked_docker
   parse_database_spec 'ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
-  GLOBAL_CLIENT_VERSION=latest-tarball
+  GLOBAL_CLIENT_VERSION=3-dev-latest
   CLIENT_DEBUG=true
   dispatch_setup
 
-  [[ $CAPTURE_KIND == playbook ]]
-  [[ $CAPTURE_TARGET == percona_server_for_mysql/percona-server-setup.yml ]]
-  [[ ${CAPTURE_ENV[PS_VERSION]} == 8.4 ]]
-  [[ ${CAPTURE_ENV[SETUP_TYPE]} == gr ]]
-  [[ ${CAPTURE_ENV[QUERY_SOURCE]} == slowlog ]]
-  [[ ${CAPTURE_ENV[NODES_COUNT]} == 1 ]]
-  [[ ${CAPTURE_ENV[CLIENT_DEBUG]} == true ]]
-  [[ ${CAPTURE_ENV[CLIENT_VERSION]} == https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz ]]
-  # Prebaked-image plumbing was a POC and is no longer part of the framework.
-  [[ -z ${CAPTURE_ENV[USE_PREBAKED_PS]-} ]]
-  [[ -z ${CAPTURE_ENV[PREBAKED_PS_IMAGE]-} ]]
+  [[ $(grep -c '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- '--name ps_pmm_gr_8_4_3 .*--publish 3308:3306 pmm-qa/ps:8.4 --server-id=3 ' "$DOCKER_CALLS"
+  grep -q -- '--loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061' "$DOCKER_CALLS"
+  grep -q 'START GROUP_REPLICATION' "$DOCKER_CALLS"
+  [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
+  # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
+  [[ $(grep -Fc 'enable-only pmm3-client experimental && $pkg install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- 'pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
+  grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_1 sh -c' "$DOCKER_CALLS") -eq 1 ]]
+  [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_[23] sh -c' "$DOCKER_CALLS") -eq 0 ]]
 }
 
-@test "MySQL GR maps group replication and node values" {
-  parse_database_spec 'mysql=8.4,SETUP_TYPE=gr'
+@test "PS 5.7 replication uses the 5.7 statements and publishes no port" {
+  stub_prebaked_docker
+  parse_database_spec 'ps=5.7,SETUP_TYPE=replication'
   dispatch_setup
 
-  [[ $CAPTURE_TARGET == mysql/mysql-setup.yml ]]
-  [[ ${CAPTURE_ENV[MS_VERSION]} == 8.4 ]]
-  [[ ${CAPTURE_ENV[GROUP_REPLICATION]} == 1 ]]
-  [[ ${CAPTURE_ENV[MS_NODES]} == 1 ]]
-  [[ ${CAPTURE_ENV[MS_CONTAINER]} == mysql_pmm_8.4 ]]
+  [[ $(grep -c '^run --detach --name ps_pmm_replication_5_7_[12] ' "$DOCKER_CALLS") -eq 2 ]]
+  [[ $(grep -c -- '--publish' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q -- '--log-slave-updates=ON' "$DOCKER_CALLS"
+  grep -q "CHANGE MASTER TO MASTER_HOST='ps_pmm_replication_5_7_1'" "$DOCKER_CALLS"
+  grep -Eq -- '--environment=ps-replication-dev --cluster=ps-replication-dev-cluster --replication-set=ps-async-replication --debug ps_pmm_replication_5_7_2_[0-9]+ ' "$DOCKER_CALLS"
+}
+
+@test "single PS honours MY_ROCKS and skips encryption on a client older than 3.7" {
+  stub_prebaked_docker
+  parse_database_spec 'ps=8.0,MY_ROCKS=true,ENCRYPTED_CLIENT_CONFIG=true,CLIENT_VERSION=3.6.0'
+  dispatch_setup
+
+  grep -q -- '--name ps_pmm_8_0_1 .*--publish 3306:3306 --env INIT_ROCKSDB=1 pmm-qa/ps:8.0 ' "$DOCKER_CALLS"
+  grep -q 'pmm-client-3.6.0-7.el' "$DOCKER_CALLS"
+  [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
+  grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
+  grep -q '^exec --detach ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS"
+}
+
+@test "PS rejects what it cannot provision before touching docker" {
+  stub_prebaked_docker
+  local spec
+  for spec in 'ps=9.7,BACKUP=true' 'ps,SETUP_TYPE=bogus' 'ps,NODES_COUNT=two'; do
+    parse_database_spec "$spec"
+    run dispatch_setup
+    [[ $status -ne 0 ]]
+  done
+  [[ ! -s $DOCKER_CALLS ]]
+}
+
+@test "retry_on stops on an unmatched error and reports short output whole" {
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  run retry_on 'flaky' 3 'the probe' sh -c 'echo "no such thing" >&2; exit 1'
+  [[ $status -ne 0 ]]
+  [[ $output == *'Gave up on the probe after 1 attempt(s); last output: no such thing'* ]]
+
+  run retry 3 'the probe' sh -c 'echo flaky; exit 1'
+  [[ $output == *'after 3 attempt(s); last output: flaky'* ]]
+}
+
+@test "the PS image builds from the shared Dockerfile with the version's base image" {
+  stub_prebaked_docker
+  build_ps_image 8.0
+  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/ps/Dockerfile --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 -t pmm-qa/ps:8.0 $PREBAKED_IMAGES_DIR$" "$DOCKER_CALLS"
+  run build_ps_image 9.9
+  [[ $status -ne 0 ]]
+}
+
+@test "MySQL GR runs on the mysql image with mysql labels and no PS-only settings" {
+  stub_prebaked_docker
+  parse_database_spec 'mysql=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
+  dispatch_setup
+
+  [[ $(grep -c '^run --detach --name mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- '--label pmm-qa.engine=mysql .*--publish 3306:3306 pmm-qa/mysql:8.4 ' "$DOCKER_CALLS"
+  [[ $(grep -c -- '--userstat' "$DOCKER_CALLS") -eq 0 ]]
+  [[ $(grep -c 'log_slow_rate_limit' "$DOCKER_CALLS") -eq 0 ]]
+  grep -Eq -- '--environment=mysql-gr-dev --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication --debug mysql_pmm_gr_8_4_2_[0-9]+ ' "$DOCKER_CALLS"
+  grep -q -- '--time=60 run' "$DOCKER_CALLS"
+}
+
+@test "MySQL 5.7 publishes its port and builds from the 5.7 stage" {
+  stub_prebaked_docker
+  parse_database_spec 'mysql=5.7'
+  dispatch_setup
+  grep -q -- '--name mysql_pmm_5_7_1 .*--publish 3306:3306 pmm-qa/mysql:5.7 ' "$DOCKER_CALLS"
+  grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
+
+  build_mysql_image 5.7
+  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/mysql/Dockerfile --target mysql-57 -t pmm-qa/mysql:5.7 " "$DOCKER_CALLS"
+  build_mysql_image 8.0
+  grep -q -- '--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 -t pmm-qa/mysql:8.0 ' "$DOCKER_CALLS"
 }
 
 @test "PGSQL replication selects replication playbook" {
@@ -127,16 +211,16 @@ load helpers/test_helper
 @test "multiple specs dispatch sequentially without leaking environment maps" {
   local -a targets=()
   local spec
-  for spec in 'ps=8.4' 'external' 'haproxy'; do
+  for spec in 'pxc=8.0' 'external' 'haproxy'; do
     parse_database_spec "$spec"
     dispatch_setup
     targets+=("$CAPTURE_TARGET")
   done
 
-  [[ ${targets[0]} == percona_server_for_mysql/percona-server-setup.yml ]]
+  [[ ${targets[0]} == pxc_proxysql_setup.yml ]]
   [[ ${targets[1]} == external_setup.yml ]]
   [[ ${targets[2]} == haproxy_setup.yml ]]
-  [[ -z ${CAPTURE_ENV[PS_VERSION]-} ]]
+  [[ -z ${CAPTURE_ENV[PXC_VERSION]-} ]]
   [[ -z ${CAPTURE_ENV[REDIS_EXPORTER_VERSION]-} ]]
 }
 

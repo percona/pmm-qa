@@ -24,7 +24,7 @@
 # Returns: 0 for playbook-backed types, 1 for script-backed ones
 setup_uses_ansible() {
   case "$1" in
-    PSMDB|SSL_PSMDB|DOCKERCLIENTS) return 1 ;;
+    PS|MYSQL|PSMDB|SSL_PSMDB|DOCKERCLIENTS) return 1 ;;
     *) return 0 ;;
   esac
 }
@@ -88,7 +88,7 @@ preflight_database_setups() {
       fi
     elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then
-        conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
+        conflict="$mysql_data_owner and $DB_TYPE setups (both publish host ports from 3306)"
       fi
       mysql_data_owner=$DB_TYPE
     elif [[ $DB_TYPE == PDPGSQL ]]; then

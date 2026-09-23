@@ -2,7 +2,7 @@ SHELL := /usr/bin/env bash
 
 # `bash -n` only parses its first file argument, so syntax has to loop. .bats is
 # excluded from it -- `@test "..." {` is not valid bash; shellcheck reads it fine.
-BASH_SOURCES := pmm-framework $(wildcard *.sh lib/*.sh setups/*.sh tests/helpers/*.bash)
+BASH_SOURCES := pmm-framework build-images $(wildcard *.sh lib/*.sh setups/*.sh tests/helpers/*.bash)
 LINT_SOURCES := $(BASH_SOURCES) $(wildcard tests/*.bats)
 
 .PHONY: check syntax lint test

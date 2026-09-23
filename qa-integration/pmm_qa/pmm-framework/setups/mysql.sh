@@ -3,8 +3,8 @@
 #
 # setups/mysql.sh -- MySQL-family setups: PS, MYSQL, SSL_MYSQL, PXC.
 #
-# Every setup function here follows the same shape, which is the pattern to
-# copy when adding a new one:
+# Every setup function here except setup_ps and setup_mysql (which run a
+# prebaked image, see lib/prebaked.sh) follows the same shape:
 #
 #   1. resolve the version, setup type and client version
 #   2. build `declare -A env_map=(...)` -- the contract with the playbook
@@ -19,67 +19,358 @@
 # Reads, in every function: DB_VERSION and DB_CONFIG (set by
 # parse_database_spec), PMM_SERVER_HOST, CLIENT_DEBUG.
 
-# Percona Server for MySQL.
-#
-# SETUP_TYPE selects the topology inside the playbook ('' single, gr, replication).
-# NODES_COUNT, MY_ROCKS and BACKUP are passed through for the playbook to act on.
+# Percona Server for MySQL, on the prebaked pmm-qa/ps image.
 setup_ps() {
-  local version setup_type client
-  version=$(resolved_version PS_VERSION PS "$DB_VERSION")
-  setup_type=$(resolve_value PS SETUP_TYPE DB_CONFIG)
-  setup_type=${setup_type,,}
-  client=$(resolved_client_version PS DB_CONFIG)
-
-  declare -A env_map=(
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [SETUP_TYPE]="$setup_type"
-    [NODES_COUNT]="$(resolve_value PS NODES_COUNT DB_CONFIG)"
-    [QUERY_SOURCE]="$(resolve_value PS QUERY_SOURCE DB_CONFIG)"
-    [PS_VERSION]="$version"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [MY_ROCKS]="$(resolve_value PS MY_ROCKS DB_CONFIG)"
-    [ENCRYPTED_CLIENT_CONFIG]="$(resolve_value PS ENCRYPTED_CLIENT_CONFIG DB_CONFIG)"
-    [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
-    [BACKUP]="$(resolve_value PS BACKUP DB_CONFIG)"
-  )
-  run_playbook 'percona_server_for_mysql/percona-server-setup.yml' env_map
+  setup_mysql_family ps PS PS_VERSION
 }
 
-# Upstream MySQL.
-#
-# Unlike PS, this playbook wants the topology pre-translated: SETUP_TYPE=gr sets
-# GROUP_REPLICATION=1, and SETUP_TYPE=replication asks for two nodes. Both are
-# still passed alongside the raw SETUP_TYPE.
+# Upstream MySQL, on the prebaked pmm-qa/mysql image. Unlike PS it registers
+# no NODES_COUNT, MY_ROCKS or BACKUP.
 setup_mysql() {
-  local version setup_type client group_replication='' nodes=1
-  version=$(resolved_version MS_VERSION MYSQL "$DB_VERSION")
-  setup_type=$(resolve_value MYSQL SETUP_TYPE DB_CONFIG)
+  setup_mysql_family mysql MYSQL MS_VERSION
+}
+
+# Provision ENGINE (ps or mysql) on its prebaked image (lib/prebaked.sh) rather
+# than a playbook.
+#
+# SETUP_TYPE selects the topology ('' single, replication, gr); the node count
+# is raised to the topology's minimum. Container names, host ports, PMM service
+# names and labels match what percona-server-setup.yml and mysql-setup.yml
+# produced, because tests look them up.
+#
+# The mf_* helpers below read this function's locals through bash's dynamic
+# scoping.
+setup_mysql_family() {
+  local engine=$1 type=$2 version_env=$3
+  local version setup_type client nodes=1 query_source my_rocks=false backup=false encrypted
+  local topology='' tarball='' password=GRgrO9301RuF suffix index minor
+  local -a names=() targets=()
+  version=$(resolved_version "$version_env" "$type" "$DB_VERSION")
+  setup_type=$(resolve_value "$type" SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
-  client=$(resolved_client_version MYSQL DB_CONFIG)
-  if [[ $setup_type == gr ]]; then
-    group_replication=1
-  elif [[ $setup_type == replication ]]; then
-    nodes=2
+  client=$(resolved_client_version "$type" DB_CONFIG)
+  query_source=$(resolve_value "$type" QUERY_SOURCE DB_CONFIG)
+  encrypted=$(bool_string "$(resolve_value "$type" ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
+  if [[ $engine == ps ]]; then
+    nodes=$(resolve_value PS NODES_COUNT DB_CONFIG)
+    my_rocks=$(bool_string "$(resolve_value PS MY_ROCKS DB_CONFIG)")
+    backup=$(bool_string "$(resolve_value PS BACKUP DB_CONFIG)")
+  fi
+  suffix=$(((RANDOM << 15 | RANDOM) % 100000 + 1))
+
+  [[ $nodes =~ ^[1-9][0-9]*$ ]] || die "$type NODES_COUNT must be a positive integer (got '$nodes')."
+  case $setup_type in
+    '') ;;
+    replication) topology=_replication nodes=$((nodes < 2 ? 2 : nodes)) ;;
+    gr) topology=_gr nodes=$((nodes < 3 ? 3 : nodes)) ;;
+    *) die "$type SETUP_TYPE must be empty, replication or gr (got '$setup_type')." ;;
+  esac
+  if [[ $backup == true && $version == 9.7 ]]; then
+    die 'PS 9.7 does not support BACKUP=true: no compatible Percona XtraBackup is published.'
+  fi
+  if [[ $encrypted == true && $client == 3.*.* ]]; then
+    minor=${client#3.}
+    minor=${minor%%.*}
+    ((minor >= 7)) || encrypted=false
   fi
 
-  declare -A env_map=(
-    [GROUP_REPLICATION]="$group_replication"
-    [MS_NODES]="$nodes"
-    [MS_VERSION]="$version"
-    [SETUP_TYPE]="$setup_type"
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [MS_CONTAINER]="mysql_pmm_$version"
-    [CLIENT_VERSION]="$client"
-    [QUERY_SOURCE]="$(resolve_value MYSQL QUERY_SOURCE DB_CONFIG)"
-    [MS_TARBALL]="$(resolve_value MYSQL TARBALL DB_CONFIG)"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-    [ENCRYPTED_CLIENT_CONFIG]="$(resolve_value MYSQL ENCRYPTED_CLIENT_CONFIG DB_CONFIG)"
-    [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
-  )
-  run_playbook 'mysql/mysql-setup.yml' env_map
+  for ((index = 1; index <= nodes; index++)); do
+    names+=("${engine}_pmm${topology}_${version//./_}_$index")
+  done
+  if [[ -z $setup_type ]]; then
+    targets=("${names[@]}")
+  else
+    targets=("${names[0]}")
+  fi
+
+  step "Prepare image pmm-qa/$engine:$version" ensure_image "$engine" "$version"
+  if [[ $client == http* ]]; then
+    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
+  fi
+  step 'Clean previous run' mf_cleanup
+  step 'Start database nodes' each_node names mf_start_node
+  case $setup_type in
+    replication) step 'Configure replication' mf_configure_replication ;;
+    gr) step 'Configure group replication' mf_configure_group_replication ;;
+  esac
+  if [[ $query_source == slowlog ]]; then
+    step 'Enable the slow query log' each_node names mf_enable_slowlog
+  fi
+  if [[ $my_rocks == true ]]; then
+    step 'Check MyRocks' each_node names mf_check_myrocks
+  fi
+  if [[ $backup == true ]]; then
+    step 'Start MinIO for backups' mf_start_minio
+  fi
+  step 'Wait for PMM Server' wait_pmm_server_ready
+  step 'Install PMM Client' each_node names install_pmm_client "$client" "$tarball"
+  # One registration at a time: a freshly ready pmm-managed answers concurrent
+  # ones with a bare 'Internal server error'.
+  step 'Set up PMM agents' mf_setup_agents
+  step 'Register MySQL with PMM' each_node names mf_register
+  step 'Run workload' each_node targets mf_workload
 }
+
+mf_sql() {
+  docker exec -e "MYSQL_PWD=$password" "$1" mysql -uroot --batch --skip-column-names -e "$2" ||
+    die "SQL failed on $1: ${2:0:80}"
+}
+
+mf_cleanup() {
+  local ids
+  ids=$(docker ps -aq --filter "name=^${engine}_pmm${topology}_${version//./_}_") || die 'docker ps failed.'
+  if [[ -n $ids ]]; then
+    # shellcheck disable=SC2086 # one id per word
+    must docker rm -fv $ids >/dev/null
+  fi
+  ensure_pmm_network
+}
+
+mf_start_node() {
+  local name=$1 node=${1##*_} seed seeds=''
+  local -a run=(
+    docker run --detach --name "$name" --hostname "$name"
+    --label "pmm-qa.engine=$engine" --label "pmm-qa.$engine.setup-type=${setup_type:-single}"
+    --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password"
+  )
+  # As in the playbooks: node N on host port 3305+N, except PS 5.7, which has none.
+  if [[ $engine != ps || $version != 5.7 ]]; then
+    run+=(--publish "$((3305 + node)):3306")
+  fi
+  if [[ $my_rocks == true ]]; then
+    run+=(--env INIT_ROCKSDB=1)
+  fi
+  run+=(
+    "pmm-qa/$engine:$version" "--server-id=$node" "--report-host=$name"
+    --bind-address=0.0.0.0 --max-connections=1000 --innodb-buffer-pool-size=256M
+    --innodb-monitor-enable=all
+  )
+  if [[ $engine == ps ]]; then
+    run+=(--userstat=1)
+  fi
+  # The playbook's my.cnf loads native password auth below 9.x; only 8.4 ships it off.
+  if [[ $version == 8.4 ]]; then
+    run+=(--mysql-native-password=ON)
+  fi
+  if [[ -n $setup_type ]]; then
+    run+=(
+      --gtid-mode=ON --enforce-gtid-consistency=ON --log-bin=binlog --binlog-checksum=NONE
+      "--relay-log=$name-relay-bin" --relay-log-recovery=ON
+    )
+    if [[ $version == 5.7 ]]; then
+      run+=(--log-slave-updates=ON)
+    else
+      run+=(--log-replica-updates=ON)
+    fi
+  fi
+  if [[ $setup_type == gr ]]; then
+    for seed in "${names[@]}"; do
+      seeds+=${seeds:+,}$seed:34061
+    done
+    if [[ $version == 5.7 ]]; then
+      run+=(
+        --binlog-format=ROW --master-info-repository=TABLE --relay-log-info-repository=TABLE
+        --transaction-write-set-extraction=XXHASH64
+      )
+    else
+      run+=(--loose-group-replication-recovery-get-public-key=ON)
+    fi
+    run+=(
+      --plugin-load-add=group_replication.so
+      --loose-group-replication-group-name=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+      "--loose-group-replication-local-address=$name:34061"
+      "--loose-group-replication-group-seeds=$seeds"
+      --loose-group-replication-communication-stack=XCOM
+      --loose-group-replication-start-on-boot=OFF
+      --loose-group-replication-bootstrap-group=OFF
+      --loose-group-replication-single-primary-mode=ON
+      --loose-group-replication-enforce-update-everywhere-checks=OFF
+      --loose-group-replication-recovery-retry-count=10
+      --loose-group-replication-recovery-reconnect-interval=60
+    )
+  fi
+  must "${run[@]}" >/dev/null
+  retry 60 "$name to accept MySQL connections" docker exec "$name" mysqladmin ping \
+    --host=127.0.0.1 --protocol=tcp -uroot "-p$password" --silent >/dev/null
+}
+
+mf_replica_running() {
+  local status field=Replica statement='SHOW REPLICA STATUS'
+  if [[ $version == 5.7 ]]; then
+    field=Slave statement='SHOW SLAVE STATUS'
+  fi
+  status=$(docker exec -e "MYSQL_PWD=$password" "$1" mysql -uroot --vertical -e "$statement") || return 1
+  [[ $status == *"${field}_IO_Running: Yes"* && $status == *"${field}_SQL_Running: Yes"* ]]
+}
+
+mf_start_replica() {
+  if [[ $version == 5.7 ]]; then
+    mf_sql "$1" "CHANGE MASTER TO MASTER_HOST='${names[0]}', MASTER_PORT=3306,
+      MASTER_USER='repl_user', MASTER_PASSWORD='$password', MASTER_AUTO_POSITION=1; START SLAVE;"
+  else
+    mf_sql "$1" "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${names[0]}', SOURCE_PORT=3306,
+      SOURCE_USER='repl_user', SOURCE_PASSWORD='$password', SOURCE_AUTO_POSITION=1,
+      GET_SOURCE_PUBLIC_KEY=1; START REPLICA;"
+  fi
+  retry 60 "$1 replication threads" mf_replica_running "$1" >/dev/null
+}
+
+mf_configure_replication() {
+  local -a replicas=("${names[@]:1}")
+  mf_sql "${names[0]}" "CREATE USER IF NOT EXISTS 'repl_user'@'%' IDENTIFIED BY '$password';
+    GRANT REPLICATION SLAVE ON *.* TO 'repl_user'@'%';"
+  each_node replicas mf_start_replica
+  mf_seed_testdb
+}
+
+# The upstream mysql image logs its first-boot user setup, and a member carrying
+# GTIDs the group lacks is refused (ERROR 3092), so each member starts clean, as
+# in the playbooks.
+mf_prepare_gr_member() {
+  local grants reset='RESET MASTER;'
+  if [[ $version != 5.7 && $version != 8.0 ]]; then
+    reset='RESET BINARY LOGS AND GTIDS;'
+  fi
+  if [[ $version == 5.7 ]]; then
+    grants="GRANT REPLICATION SLAVE ON *.* TO 'repl_user'@'%';
+      CHANGE MASTER TO MASTER_USER='repl_user', MASTER_PASSWORD='$password'
+        FOR CHANNEL 'group_replication_recovery';"
+  else
+    grants="GRANT REPLICATION SLAVE, CONNECTION_ADMIN, BACKUP_ADMIN, GROUP_REPLICATION_STREAM,
+        SERVICE_CONNECTION_ADMIN, SYSTEM_VARIABLES_ADMIN ON *.* TO 'repl_user'@'%';
+      CHANGE REPLICATION SOURCE TO SOURCE_USER='repl_user', SOURCE_PASSWORD='$password'
+        FOR CHANNEL 'group_replication_recovery';"
+  fi
+  mf_sql "$1" "$reset SET SQL_LOG_BIN=0;
+    CREATE USER IF NOT EXISTS 'repl_user'@'%' IDENTIFIED BY '$password';
+    $grants
+    SET SQL_LOG_BIN=1;"
+}
+
+mf_gr_online() {
+  [[ $(mf_sql "${names[0]}" "SELECT COUNT(*) FROM performance_schema.replication_group_members
+    WHERE MEMBER_STATE='ONLINE';") == "${#names[@]}" ]]
+}
+
+mf_configure_group_replication() {
+  local -a members=("${names[@]:1}")
+  each_node names mf_prepare_gr_member
+  mf_sql "${names[0]}" 'SET GLOBAL group_replication_bootstrap_group=ON;
+    START GROUP_REPLICATION; SET GLOBAL group_replication_bootstrap_group=OFF;'
+  each_node members mf_sql 'START GROUP_REPLICATION;'
+  retry 120 "${#names[@]} online GR members" mf_gr_online >/dev/null
+  mf_seed_testdb
+}
+
+mf_has_test_row() {
+  [[ $(mf_sql "$1" 'SELECT COUNT(*) FROM testdb.testdb WHERE id=1;') == 1 ]]
+}
+
+mf_wait_test_row() {
+  retry 60 "test row on $1" mf_has_test_row "$1" >/dev/null
+}
+
+mf_seed_testdb() {
+  local -a replicas=("${names[@]:1}")
+  mf_sql "${names[0]}" "CREATE DATABASE IF NOT EXISTS testdb;
+    CREATE TABLE IF NOT EXISTS testdb.testdb (id INT PRIMARY KEY, data VARCHAR(100));
+    INSERT INTO testdb.testdb VALUES (1, 'Initial data from node mysql1')
+      ON DUPLICATE KEY UPDATE data=VALUES(data);"
+  each_node replicas mf_wait_test_row
+}
+
+mf_enable_slowlog() {
+  local replica_statements=log_slow_replica_statements rate_limit=''
+  if [[ $version == 5.7 ]]; then
+    replica_statements=log_slow_slave_statements
+  fi
+  # log_slow_rate_limit is a Percona Server variable.
+  if [[ $engine == ps ]]; then
+    rate_limit='SET GLOBAL log_slow_rate_limit=1;'
+  fi
+  mf_sql "$1" "SET GLOBAL slow_query_log=ON; SET GLOBAL long_query_time=0; $rate_limit
+    SET GLOBAL log_slow_admin_statements=ON; SET GLOBAL $replica_statements=ON;"
+}
+
+mf_check_myrocks() {
+  [[ $(mf_sql "$1" "SELECT COUNT(*) FROM information_schema.engines
+    WHERE engine='ROCKSDB' AND support IN ('YES', 'DEFAULT');") == 1 ]] ||
+    die "MyRocks is not enabled on $1."
+}
+
+# Same container, volume, ports and buckets as tasks/setup_minio_container.yml.
+mf_start_minio() {
+  local bucket
+  docker rm -fv minio >/dev/null 2>&1 || true
+  docker volume rm -f minio_backups >/dev/null 2>&1 || true
+  must docker run --detach --name minio --network pmm-qa --volume minio_backups:/backups \
+    --publish 9010:9000 --publish 9001:9001 \
+    --env MINIO_ROOT_USER=minio1234 --env MINIO_ROOT_PASSWORD=minio1234 \
+    quay.io/minio/minio server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001 >/dev/null
+  retry 60 MinIO docker exec minio mc alias set myminio http://127.0.0.1:9000 minio1234 minio1234 >/dev/null
+  local -a buckets=()
+  IFS=, read -ra buckets <<<"${BUCKETS:-bcp}"
+  for bucket in "${buckets[@]}"; do
+    must docker exec minio mc mb --ignore-existing "myminio/$bucket" >/dev/null
+  done
+}
+
+mf_setup_agents() {
+  local name
+  for name in "${names[@]}"; do
+    setup_pmm_agent "$name" "$encrypted"
+  done
+  each_node names wait_pmm_agent
+}
+
+mf_register() {
+  local -a add=(pmm-admin add mysql "--query-source=$query_source" --username=root "--password=$password")
+  case $setup_type in
+    gr)
+      add+=("--environment=$engine-gr-dev" "--cluster=$engine-gr-dev-cluster")
+      add+=("--replication-set=$engine-gr-replication")
+      ;;
+    replication)
+      add+=("--environment=$engine-replication-dev" "--cluster=$engine-replication-dev-cluster")
+      add+=("--replication-set=$engine-async-replication")
+      ;;
+    *) add+=("--environment=$engine-dev" "--cluster=$engine-single-dev-cluster") ;;
+  esac
+  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering $1" \
+    docker exec "$1" "${add[@]}" --debug "${1}_$suffix" 127.0.0.1:3306 >/dev/null
+  wait_exporter "$1" mysqld_exporter
+}
+
+# sysbench runs detached, so the setup does not wait out its run (30 s for PS,
+# 60 s for MySQL, as in the playbooks); the rc check at the end only catches a
+# workload that already failed.
+mf_workload() {
+  local seconds=30
+  if [[ $engine == mysql ]]; then
+    seconds=60
+  fi
+  local sysbench='sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1
+    --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest
+    --tables=10 --table-size=100000'
+  mf_sql "$1" "SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;
+    CREATE DATABASE IF NOT EXISTS sbtest;
+    CREATE USER IF NOT EXISTS 'sbtest'@'localhost' IDENTIFIED BY 'password';
+    GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'localhost';
+    CREATE USER IF NOT EXISTS 'sbtest'@'127.0.0.1' IDENTIFIED BY 'password';
+    GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'127.0.0.1';
+    FLUSH PRIVILEGES;"
+  must docker exec "$1" sh -c 'echo running > /tmp/workload.rc'
+  must docker exec --detach "$1" sh -c "{ ${sysbench//$'\n'/ } --threads=10 prepare &&
+    ${sysbench//$'\n'/ } --threads=16 --time=$seconds run; } > /tmp/workload.log 2>&1
+    echo \$? > /tmp/workload.rc"
+  mf_sql "$1" 'CREATE DATABASE IF NOT EXISTS school;'
+  docker exec -i -e "MYSQL_PWD=$password" "$1" mysql -uroot school <"$PMM_QA_ROOT/data/mysql_load.sql" >/dev/null ||
+    die "Loading the school schema into $1 failed."
+  # shellcheck disable=SC2016 # expanded by the container's shell
+  must docker exec "$1" sh -c 'rc=$(cat /tmp/workload.rc)
+    [ "$rc" = running ] || [ "$rc" = 0 ] || { tail -20 /tmp/workload.log; exit 1; }'
+}
+
 
 # MySQL with TLS, monitored over an encrypted connection.
 setup_ssl_mysql() {

@@ -84,8 +84,8 @@ buffered log of every setup still running and keeps the log directory — under 
 `timeout` wrapper that buffer is the only record of where a setup got stuck.
 
 Setups that cannot run concurrently — two of the same database type, or any two
-of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
-ports — are detected during preflight. The run is not rejected: it falls back
+of the MySQL family (PS/MySQL), which both publish host ports from 3306 — are
+detected during preflight. The run is not rejected: it falls back
 to sequential execution with a warning, so every requested setup still runs.
 
 Two pairs cannot share a host at all, and those preflight refuses instead:

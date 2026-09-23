@@ -21,12 +21,12 @@ EOF
   printf 'args='
   printf '%q ' "$@"
   echo
-  env | grep -E '^(PS_.*|PGSQL_.*|SETUP_TYPE|QUERY_SOURCE|CLIENT_VERSION|PMM_SERVER_IP|ADMIN_PASSWORD)=' | sort
+  env | grep -E '^(PXC_.*|PGSQL_.*|SETUP_TYPE|QUERY_SOURCE|CLIENT_VERSION|PMM_SERVER_IP|ADMIN_PASSWORD)=' | sort
 } >>"$RECORD_FILE"
 if [[ ${PARALLEL_TEST:-false} == true ]]; then
-  if [[ -n ${PS_VERSION:-} ]]; then
+  if [[ -n ${PXC_VERSION:-} ]]; then
     sleep 1
-    echo 'PS parallel log'
+    echo 'PXC parallel log'
   elif [[ -n ${PGSQL_VERSION:-} ]]; then
     echo 'PGSQL parallel log'
   fi
@@ -35,17 +35,17 @@ if [[ -n ${HANG_SECONDS:-} ]]; then
   echo 'setup is working'
   sleep "$HANG_SECONDS"
 fi
-if [[ ${FAIL_PS:-false} == true && -n ${PS_VERSION:-} ]]; then
-  echo 'PS failed as requested'
+if [[ ${FAIL_PXC:-false} == true && -n ${PXC_VERSION:-} ]]; then
+  echo 'PXC failed as requested'
   exit 9
 fi
-if [[ -n ${FAIL_PS_ONCE:-} && -n ${PS_VERSION:-} ]]; then
-  if [[ ! -e $FAIL_PS_ONCE ]]; then
-    : >"$FAIL_PS_ONCE"
-    echo 'PS failed on its first attempt'
+if [[ -n ${FAIL_PXC_ONCE:-} && -n ${PXC_VERSION:-} ]]; then
+  if [[ ! -e $FAIL_PXC_ONCE ]]; then
+    : >"$FAIL_PXC_ONCE"
+    echo 'PXC failed on its first attempt'
     exit 9
   fi
-  echo 'PS succeeded on its second attempt'
+  echo 'PXC succeeded on its second attempt'
 fi
 EOF
   cat >"$TEST_BIN/curl" <<'EOF'
@@ -63,7 +63,7 @@ EOF
       --pmm-server-ip 10.0.0.5 \
       --pmm-server-password secret \
       --client-version latest-tarball \
-      --database ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog \
+      --database pxc=8.0,QUERY_SOURCE=slowlog \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
@@ -71,14 +71,13 @@ EOF
 
   first_call=$(awk '/--- call ---/{n++} n==1{print}' "$RECORD_FILE")
   second_call=$(awk '/--- call ---/{n++} n==2{print}' "$RECORD_FILE")
-  [[ $first_call == *'percona_server_for_mysql/percona-server-setup.yml'* ]]
-  [[ $first_call == *'PS_VERSION=8.4'* ]]
-  [[ $first_call == *'SETUP_TYPE=gr'* ]]
+  [[ $first_call == *'pxc_proxysql_setup.yml'* ]]
+  [[ $first_call == *'PXC_VERSION=8.0'* ]]
   [[ $first_call == *'QUERY_SOURCE=slowlog'* ]]
   [[ $first_call == *'PMM_SERVER_IP=10.0.0.5'* ]]
   [[ $second_call == *'pgsql_pgss_setup.yml'* ]]
   [[ $second_call == *'PGSQL_VERSION=16'* ]]
-  [[ $second_call != *'PS_VERSION='* ]]
+  [[ $second_call != *'PXC_VERSION='* ]]
 }
 
 @test "entrypoint reports invalid database without calling backends" {
@@ -102,22 +101,22 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Starting [1/2] ps=8.4'* ]]
+  [[ $output == *'Starting [1/2] pxc=8.0'* ]]
   [[ $output == *'Starting [2/2] pgsql=16'* ]]
-  [[ $output =~ \[1/2\]\ ps=8\.4:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output =~ \[1/2\]\ pxc=8\.0:\ OK\ in\ [0-9ms]+\ \(log: ]]
   [[ $output =~ \[2/2\]\ pgsql=16:\ OK\ in\ [0-9ms]+\ \(log: ]]
   [[ $output == *'All 2 setups finished in '* ]]
-  [[ $output != *'PS parallel log'* ]]
+  [[ $output != *'PXC parallel log'* ]]
   [[ $output != *'PGSQL parallel log'* ]]
 
-  # pgsql has no artificial delay, so it should finish before sleeping ps.
+  # pgsql has no artificial delay, so it should finish before sleeping pxc.
   pgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] pgsql=16: OK/{print NR; exit}')
-  ps_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] ps=8\.4: OK/{print NR; exit}')
-  [[ $pgsql_ok_line -lt $ps_ok_line ]]
+  pxc_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] pxc=8\.0: OK/{print NR; exit}')
+  [[ $pgsql_ok_line -lt $pxc_ok_line ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
@@ -125,16 +124,16 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PS=true \
+    FAIL_PXC=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -ne 0 ]]
-  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in '* ]]
-  [[ $output == *'PS failed as requested'* ]]
+  [[ $output == *'===== [1/2] pxc=8.0 FAILED (exit=1) in '* ]]
+  [[ $output == *'PXC failed as requested'* ]]
   [[ $output == *'[2/2] pgsql=16: OK in '* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
@@ -144,18 +143,18 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PS_ONCE="$BATS_TEST_TMPDIR/ps-attempted" \
+    FAIL_PXC_ONCE="$BATS_TEST_TMPDIR/pxc-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in '* ]]
+  [[ $output == *'===== [1/2] pxc=8.0 FAILED (exit=1) in '* ]]
   [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
-  [[ $output == *'[1/2] ps=8.4: OK in '* ]]
+  [[ $output == *'[1/2] pxc=8.0: OK in '* ]]
   # pgsql provisioned once: the retry must not touch a setup that succeeded.
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
   [[ $output != *'Parallel setup logs kept at:'* ]]
@@ -165,12 +164,12 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PS=true \
+    FAIL_PXC=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -ne 0 ]]
@@ -183,16 +182,16 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PS_ONCE="$BATS_TEST_TMPDIR/ps-attempted" \
+    FAIL_PXC_ONCE="$BATS_TEST_TMPDIR/pxc-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Retrying ps=8.4, attempt 2 of 2'* ]]
-  [[ $output == *'ps=8.4: OK in '* ]]
+  [[ $output == *'Retrying pxc=8.0, attempt 2 of 2'* ]]
+  [[ $output == *'pxc=8.0: OK in '* ]]
   [[ $output == *'pgsql=16: OK in '* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
 }
@@ -204,7 +203,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
@@ -236,7 +235,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16 <<<'framework-stdin-payload'
 
   [[ $status -eq 0 ]]
@@ -247,23 +246,6 @@ EOF
   fi
 }
 
-@test "parallel mode falls back to sequential for PS and MySQL" {
-  run env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
-      --database mysql=8.4
-
-  # Both setups must still run; only their concurrency is given up.
-  [[ $status -eq 0 ]]
-  [[ $output == *'Running setups sequentially'* ]]
-  [[ $output == *'shared mysql_cluster_data and host ports'* ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
-}
-
 @test "parallel mode falls back to sequential for duplicate database types" {
   run env \
     PATH="$TEST_BIN:$PATH" \
@@ -271,12 +253,12 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps,SETUP_TYPE=replication \
-      --database ps,SETUP_TYPE=gr
+      --database pgsql \
+      --database pgsql,SETUP_TYPE=replication
 
   [[ $status -eq 0 ]]
   [[ $output == *'Running setups sequentially'* ]]
-  [[ $output == *'two PS setups'* ]]
+  [[ $output == *'two PGSQL setups'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
@@ -343,11 +325,11 @@ EOF
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -eq 0 ]]
-  [[ $output == *'PS parallel log'* ]]
+  [[ $output == *'PXC parallel log'* ]]
   [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'setup log ====='* ]]
 }
@@ -357,18 +339,18 @@ EOF
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
     PARALLEL_TEST=true \
-    FAIL_PS=true \
+    FAIL_PXC=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16
 
   [[ $status -ne 0 ]]
   # --verbose echoes both, but the failure keeps its own FAILED banner so it is
   # still findable among the successful logs.
-  [[ $output == *'PS failed as requested'* ]]
+  [[ $output == *'PXC failed as requested'* ]]
   [[ $output == *'FAILED (exit=1)'* ]]
   [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
@@ -384,7 +366,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 \
+      --database pxc=8.0 \
       --database pgsql=16 >"$out" 2>&1 &
   fw_pid=$!
 
@@ -402,7 +384,7 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/2] ps=8.4 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/2] pxc=8.0 INTERRUPTED ====='* ]]
   [[ $output == *'===== [2/2] pgsql=16 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
@@ -423,7 +405,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database ps=8.4 >"$out" 2>&1 &
+      --database pxc=8.0 >"$out" 2>&1 &
   fw_pid=$!
 
   until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
@@ -438,7 +420,7 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/1] ps=8.4 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/1] pxc=8.0 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
 
   local log_dir

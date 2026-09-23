@@ -31,6 +31,16 @@ preflight_run() {
   run preflight_database_setups
 }
 
+@test "PS with MySQL, or two PS setups, fall back to sequential" {
+  DATABASE_SPECS=(ps mysql)
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'PS and MYSQL setups (both publish host ports from 3306)'* ]]
+  [[ $(parallel_decision mysql ps) == false ]]
+  [[ $(parallel_decision 'ps,SETUP_TYPE=replication' 'ps,SETUP_TYPE=gr') == false ]]
+}
+
 @test "PSMDB and SSL PSMDB run in parallel" {
   [[ $(parallel_decision psmdb ssl_psmdb) == true ]]
 }
