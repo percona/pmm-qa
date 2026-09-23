@@ -2,7 +2,13 @@ import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
+import {
+  KubernetesPod,
+  KubernetesPodResource,
+  KubernetesResourceList,
+  KubernetesServiceExposure,
+  KubernetesServiceResource,
+} from '@interfaces/kubernetes';
 
 interface ExecInPodOptions {
   container?: string;
@@ -68,6 +74,16 @@ export default class K8sHelper {
       name: item.metadata.name,
       ready: item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
     }));
+  };
+
+  /** The Service's type and, for a LoadBalancer, the address the cloud assigned it. */
+  getServiceExposure = (name: string): KubernetesServiceExposure => {
+    const service = JSON.parse(
+      this.execSilent(`get service ${name} --output=json`).assertSuccess().stdout,
+    ) as KubernetesServiceResource;
+    const ingress = service.status?.loadBalancer?.ingress?.[0];
+
+    return { address: ingress?.ip ?? ingress?.hostname, type: service.spec.type };
   };
 
   /** @param labelSelector `-l` selector; empty means every StatefulSet */

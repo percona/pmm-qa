@@ -15,3 +15,13 @@ export interface KubernetesPodResource {
     conditions?: { status: string; type: string }[];
   };
 }
+
+export interface KubernetesServiceResource {
+  spec: { type: string };
+  status?: { loadBalancer?: { ingress?: { hostname?: string; ip?: string }[] } };
+}
+
+export interface KubernetesServiceExposure {
+  address?: string;
+  type: string;
+}

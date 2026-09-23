@@ -46,6 +46,13 @@ cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.help
 constructor — change it there, or pass one in. Nothing skips itself: an unreachable
 namespace fails the test with kubectl's own error.
 
+`@pmm-helm-replicas` and `@pmm-helm-scale` also need `helm` and `PMM_HA_CHART` — the
+pmm-ha chart under test, as a directory or `repo/pmm-ha` (pin it with
+`PMM_HA_CHART_VERSION`). `@pmm-helm-replicas` only runs server-side dry runs;
+`@pmm-helm-scale` upgrades the release through 5 and 1 replicas and back to 3, and checks
+the HAProxy Service is a LoadBalancer. Neither tag contains `@pmm-ha`, so the HA suite's
+`--grep` does not pull them in.
+
 ## Running Tests
 
 Run commands from `e2e_tests/`.
@@ -107,6 +114,8 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
 - `@pmm-helm-pre-upgrade`
+- `@pmm-helm-replicas`
+- `@pmm-helm-scale`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
