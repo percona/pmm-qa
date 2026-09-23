@@ -77,6 +77,7 @@ export interface GetService {
         stats_collections: [string];
         collections_limit: 0;
         enable_all_collectors: true;
+        enable_diagnostic_data_histograms: true;
       };
       mysql_options: {
         is_tls_key_set: true;
