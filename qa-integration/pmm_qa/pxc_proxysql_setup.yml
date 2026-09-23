@@ -15,6 +15,7 @@
     pxc_dev_cluster: "{{ lookup('vars', 'extra_pxc_cluster_name', default=lookup('env','PXC_CLUSTER_NAME') | default('pxc-dev-cluster', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
+    shard_node_name: "{{ pxc_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
     pxc_repo: "{{ {'5.7': 'pxc-57', '8.0': 'pxc-80', '8.4': 'pxc-84-lts', '9.7': 'pxc-97-lts'}[pxc_version] | default('pxc-80') }}"
 
   tasks:
@@ -66,6 +67,11 @@
   - name: Get filename from URL for ProxySQL
     shell: basename {{ proxysql_package }}
     register: file_name
+
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ pxc_container }}"
 
   - name: Install base packages and ProxySQL inside the PXC pxc_container
     shell: "{{ item }}"
