@@ -9,7 +9,7 @@ Use this format for every proposed case.
 - Assign `Needs automation`, `Automation candidate — infra gap`, or `Manual` on the same line as the priority, followed by its lane, its blocker, or its manual reason.
 - Name the primary defect the case catches and its traceable evidence. Implementation evidence carries a location, repository path plus function or line; a claim without one is not evidence.
 - Write the step as the action a person performs, in product words, as if explaining it to a colleague who does not know the code: "as the viewer, ask for a snapshot through the data source", never `GET /graph/api/datasources/proxy/<id>/snapshot/create`. No URL, path, endpoint, header name, command, flag, or JSON appears in a Step or Expected cell; every one of them goes in `Data`, empty when the step needs none.
-- Write the expected result as what the person sees or gets, in plain words first; the exact code or value follows in parentheses when the oracle needs it: "the request is refused (403) and no snapshot directory appears".
+- Write the expected result as what the person sees or gets, in plain words first; the exact code or value follows in parentheses when the oracle needs it: "the request is refused (403) and no snapshot directory appears". Write a value in Step or Expected in plain quotes, never in backticks; `check_draft.py` rejects backticks there.
 - Give the case a title a product manager would understand: what the user does and what must hold, not the mechanism.
 - Before finishing, read the Step and Expected columns without the Data column. If a row cannot be followed that way, rewrite it.
 - Omit the `Precondition` and `Cleanup` lines when unnecessary; do not write `None` or `N/A`.

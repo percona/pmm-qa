@@ -26,7 +26,7 @@ Then:
 
 1. identify which behavior is externally observable;
 2. mark the mismatch as a Finding, naming each side's source and label;
-3. avoid asserting the disputed expectation as fact unless a higher-ranked source settles it; a claim about a third-party component's behavior is settled only by that component's own documentation or source;
+3. avoid asserting the disputed expectation as fact unless a higher-ranked source settles it; a claim about a third-party component's behavior is settled only by that component's own documentation or source. Once such a source settles it, the matter is closed: keep the acceptance case and its bound as written, and do not demote it to an observation or to `Draft` for want of a stronger guarantee;
 4. when useful, propose a test that exposes the mismatch rather than assuming one side is correct — it publishes as Zephyr `Draft` until the Finding is resolved;
 5. when existing automation asserts one side of the dispute, say so in the Finding: that test will fail or be rewritten once the Finding is resolved.
 

@@ -93,7 +93,7 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
-Read changed files before individual hunks, then read behavior-changing code and developer tests. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding.
+Read changed files before individual hunks, then read behavior-changing code and developer tests. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
 
 Create one inventory entry per distinct externally meaningful behavior, not per hunk, function, or file.
 
