@@ -14,8 +14,6 @@ pmmTest(
   'PMM-T2107 - Verify every standby PMM HA node monitors itself @pmm-ha',
   async ({ api, haClusterHelper }) => {
     const podNames = haClusterHelper.podNames();
-    // Read once: asking per pod is a kubectl exec each, and an election landing
-    // mid-filter would drop the wrong pod from the list.
     const leader = haClusterHelper.leaderFromPods(podNames);
     const standbys = podNames.filter((podName) => podName !== leader);
 
