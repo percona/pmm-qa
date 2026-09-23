@@ -23,10 +23,12 @@ Record one row per behavior inventory entry in the notes file: the exact terms s
 |---|---|---|
 | Covered | Existing assertion would fail on the named defect | Do not create a case; cite the key and assertion |
 | Extend | Same action exists but the assertion is weaker, or fails on the defect only by chance | Add the missing assertion to that flow |
-| Adjacent | Similar fixture or subject, different action or result; or a product test whose run is not confirmed | New case; reuse setup where practical |
+| Adjacent | Similar fixture or subject, different action or result; or a product test whose run is not confirmed | New case; reuse setup where practical. For a product test that will run on every build once merged, a Finding asking to confirm its run before sign-off may replace the case — say which you chose |
 | None | No executable assertion for the behavior | New case if it passes the strong-case gate |
 
 A `Covered` row states what the cited assertion sees on the base branch — from base-branch code, or from a CI failure recorded before the fix — and why that differs from the fixed build. A developer test that seeds only the data the old code already handled passes on the broken build and is not coverage, however close its name.
+
+A rejected-write test that asserts only the refusal — the status code or error — is `Extend`: add the read that shows state unchanged, even when the refusal happens before the backend, because a later regression can move it after the write.
 
 An assertion that fails on the defect only under data or timing the test does not control — a table check that trips only when a node's load happens to be zero — is `Extend`: make it deterministic.
 

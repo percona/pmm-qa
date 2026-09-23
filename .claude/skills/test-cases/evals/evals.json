@@ -54,14 +54,14 @@
     {
       "id": 4,
       "prompt": "what should I test for PMM-14951?",
-      "expected_output": "Facts checked 2026-09-23. Focused depth. Zero new cases: e2e_tests/tests/variableParsing.test.ts (PMM-T2206, Automated) follows the ticket's steps and asserts the URL carries no timezone=...=true.",
+      "expected_output": "Facts checked 2026-09-23. Focused or Standard depth. No new case for the =true mechanism: e2e_tests/tests/variableParsing.test.ts (PMM-T2206, Automated) follows the ticket's steps and asserts the URL carries no timezone=...=true.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
-        "The notes record Focused depth and why",
-        "The draft proposes no new case and cites PMM-T2206 in e2e_tests/tests/variableParsing.test.ts as Covered by for the mechanism",
+        "The notes record Focused or Standard depth with its trigger; not Deep",
+        "PMM-T2206 in e2e_tests/tests/variableParsing.test.ts counts as coverage for the =true mechanism unless the notes show a concrete way it passes on the broken build; no new case repeats it",
         "The Covered row states what the assertion sees on the base branch",
-        "Only the ticket's symptom query runs in the history step; there is no per-entry history search",
+        "The history step includes a query on the ticket's own symptom",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]
     },
@@ -95,13 +95,13 @@
     {
       "id": 7,
       "prompt": "/test-cases PMM-15302",
-      "expected_output": "Facts checked 2026-09-23. A weak ticket whose scope moved during review. Zero new cases: api-tests assert ChangeSSHKey is refused off AMI, UI unit tests in Settings.test.tsx cover the tab visibility, and PMM-T85 covers the AMI tab.",
+      "expected_output": "Facts checked 2026-09-23. A weak ticket whose scope moved during review. No new case for the non-AMI refusal: api-tests assert ChangeSSHKey is refused off AMI, UI unit tests in Settings.test.tsx cover the tab visibility, and PMM-T85 exercises the AMI tab but skips on non-AMI lanes. The backend now also refuses OVF; open PMM-15430 plans removing OVF, while docs on main still describe the OVA appliance.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
-        "The draft proposes no new case and names the api-tests and UI unit tests with how their runs were confirmed",
+        "No new case repeats the non-AMI refusal the api-tests and UI unit tests cover, and the draft names how their runs were confirmed; any AMI-side case says why the unit tests' mocked version does not cover it",
         "A Finding states the scope moved from removing the SSH tab in HA to showing it only on AMI",
-        "A Finding states the backend now also rejects OVF, which no requirement asks for",
+        "A Finding states the backend now also rejects OVF and names the conflict with the OVF/OVA docs on main or open PMM-15430",
         "No expected behaviour is invented to fill the one-line description",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]
@@ -155,7 +155,7 @@
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
         "A case sends the change to the wrong agent type and asserts refusal with the fields the request could write unchanged",
-        "The unchanged-state oracle names the fields it compares and excludes updated_at and stored credential ciphertext",
+        "The unchanged-state oracle names the fields it compares rather than a whole-row or whole-listing snapshot",
         "The regression case states base behaviour, fixed behaviour, and the assertion that tells them apart",
         "An accepted change is asserted to alter only the requested field and to reach the exporter's running configuration",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
