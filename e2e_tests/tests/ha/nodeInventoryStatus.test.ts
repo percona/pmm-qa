@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2145 + PMM-T2138 - Verify the node status of PMM HA nodes on the Inventory Nodes page @pmm-ha',
+  'PMM-T2145 + PMM-T2138 + PMM-T2106 - Verify the node status of PMM HA nodes on the Inventory Nodes page across a leader restart @pmm-ha',
   async ({ api, haClusterHelper, k8sHelper, nodesPage, page }) => {
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');

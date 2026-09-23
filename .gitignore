@@ -18,6 +18,7 @@ cli/playwright-report/*
 cli/test-report/*
 
 .idea
+.claudine
 .vscode
 .DS_Store
 # Logs
