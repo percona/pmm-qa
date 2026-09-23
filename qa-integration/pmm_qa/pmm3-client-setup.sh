@@ -63,38 +63,38 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
+export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
+PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
+export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-# Percona's CDN/repo occasionally serves inconsistent metadata during builds,
-# which makes apt-get abort. The mismatch usually clears within a minute, so retry.
-retry_apt_install() {
-    local n=3
-    local i
-    for i in $(seq 1 $n); do
-        apt-get -y install "$@" && break
-        echo "apt-get install failed (attempt $i/$n); retrying in 30s..."
-        sleep 30
+install_pmm_client_from_repo() {
+    local component=$1 attempt
+    percona-release enable-only pmm3-client "$component"
+    for attempt in 1 2 3 4 5; do
         apt-get update
+        apt-get -y install pmm-client && return 0
+        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
+        sleep 90
     done
     return 1
 }
 
+die_on_install_failure() {
+    echo "pmm-client could not be installed; aborting client setup" >&2
+    exit 1
+}
+
 if [[ "$client_version" == "3-dev-latest" ]]; then
-    percona-release enable-only pmm3-client experimental
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo experimental || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-rc" ]]; then
-    percona-release enable-only pmm3-client testing
-    apt-get update
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo testing || die_on_install_failure
 fi
 
 if [[ "$client_version" == "pmm3-latest" ]]; then
-    percona-release enable-only pmm3-client release
-    retry_apt_install pmm-client
+    install_pmm_client_from_repo release || die_on_install_failure
     apt-get -y update
     percona-release enable-only pmm3-client experimental
 fi
@@ -159,10 +159,10 @@ if [[ -z "$upgrade" ]]; then
         for i in $(seq 1 $n); do
             if [[ "$use_metrics_mode" == "yes" ]]; then
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
             else
                 echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
+                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
             fi
             echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
             sleep 30

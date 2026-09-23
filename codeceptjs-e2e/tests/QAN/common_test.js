@@ -49,6 +49,8 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
   queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
   I.wait(3);
+  I.waitForVisible(queryAnalyticsPage.filters.buttons.showSelected, 30);
+  queryAnalyticsPage.filters.showSelectedFilters();
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.checkedFilters());
 
   I.assertContain(

@@ -4,7 +4,12 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class LeftNavigation extends BasePage {
-  builders = {};
+  builders = {
+    selectedTimeZone: (timeZone: string): Locator =>
+      this.grafanaIframe().getByRole('region', { name: 'Time zone selection' }).getByText(timeZone),
+    timeZoneOption: (timeZone: string): Locator =>
+      this.grafanaIframe().getByTestId('data-testid Select option').filter({ hasText: timeZone }),
+  };
   buttons: NestedLocatorMap = {
     accounts: {
       changePassword: { locator: this.page.getByTestId('navitem-password-change') },
@@ -160,6 +165,9 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    changeTimeSettingsButton: this.grafanaIframe().getByTestId(
+      'data-testid Time zone picker Change time settings button',
+    ),
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
@@ -173,7 +181,9 @@ export default class LeftNavigation extends BasePage {
     tourMask: this.page.locator('.reactour__mask'),
     tourPopover: this.page.locator('.reactour__popover'),
   };
-  inputs = {};
+  inputs = {
+    timeZonePicker: this.grafanaIframe().getByRole('combobox', { name: 'Time zone picker' }),
+  };
   messages = {};
 
   getBackgroundColor = (): Promise<string> =>

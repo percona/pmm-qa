@@ -31,7 +31,9 @@ module.exports = {
   },
 
   // waitForBackupFinish waits for backup to finish. If artifactId is null, scheduleName will be used for filtering
-  async waitForBackupFinish(artifactId, scheduleName, timeout = 120) {
+  async waitForBackupFinish(artifactId, scheduleName, timeout = 300) {
+    const finished = ['BACKUP_STATUS_SUCCESS', 'BACKUP_STATUS_ERROR'];
+
     for (let i = 0; i < timeout / 5; i++) {
       const artifacts = await this.getArtifactsList();
 
@@ -44,18 +46,17 @@ module.exports = {
       let found;
 
       artifactId
-        ? found = artifacts.filter(({ artifact_id, status }) => status !== 'BACKUP_STATUS_PENDING' && artifact_id === artifactId)
-        : found = artifacts.filter(({ name, status }) => status !== 'BACKUP_STATUS_PENDING' && name.startsWith(scheduleName));
+        ? found = artifacts.filter(({ artifact_id, status }) => finished.includes(status) && artifact_id === artifactId)
+        : found = artifacts.filter(({ name, status }) => finished.includes(status) && name.startsWith(scheduleName));
 
       if (found.length) return;
 
       I.wait(5);
     }
 
-    throw new Error(`Backup was not finished for schedule: ${scheduleName} in ${timeout} seconds`);
+    throw new Error(`Backup did not reach a terminal status for ${artifactId ? `artifact: ${artifactId}` : `schedule: ${scheduleName}`} in ${timeout} seconds`);
   },
 
-  
   async waitForBackupArtifact(serviceName, backupNamePrefix = null, timeout = 120) {
     for (let i = 0; i < timeout / 2; i++) {
       const artifacts = await this.getArtifactsList();

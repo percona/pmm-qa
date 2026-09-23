@@ -89,8 +89,6 @@ on:
         required: false
       ZEPHYR_PMM_API_KEY:
         required: false
-
-
 jobs:
   tests:
     name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
@@ -205,9 +203,11 @@ jobs:
           ls
           docker network create pmm-qa
           docker volume create pmm-volume
-          
-          cat docker-compose.yml
-
+          for attempt in 1 2 3; do
+            PWD=$(pwd) docker compose -f docker-compose.yml pull --quiet && break
+            echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
+            sleep 15
+          done
           PWD=$(pwd) docker compose -f docker-compose.yml up -d
           # shellcheck disable=SC2016
           # Deliberately unexpanded: the inner bash -c does the expanding, and
@@ -237,6 +237,7 @@ jobs:
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
           unzip logs.zip -d logs

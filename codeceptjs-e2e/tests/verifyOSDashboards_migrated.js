@@ -27,8 +27,11 @@ Scenario(
 
 Scenario(
   'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
-  async ({ I, dashboardPage }) => {
-    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.url, {
+  async ({ I, dashboardPage, inventoryAPI }) => {
+    const liveNodes = (await inventoryAPI.getAllNodes())
+      .filter((node) => node.node_type === 'generic' || node.node_type === 'container');
+    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.cleanUrl, {
+      node_name: liveNodes[0].node_name,
       from: 'now-1h',
     });
 
