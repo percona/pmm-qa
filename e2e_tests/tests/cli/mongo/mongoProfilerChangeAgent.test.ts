@@ -359,6 +359,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
+      // systemctl restart returns before mongod finishes rebinding its port under
+      // requireTLS, and the service reads "Down" as soon as the old non-TLS agent
+      // loses its connection -- which happens while mongod is still restarting. The
+      // change-agent connection check then races mongod startup and fails with
+      // "connection refused". Wait until mongod answers over TLS before reconfiguring.
+      await expect(() => {
+        cliHelper
+          .execSilent(
+            `docker exec ${containerName} mongo --tls --host localhost --port 27017 --tlsCAFile /certs/ca-certs.pem --tlsCertificateKeyFile /certs/client.pem --tlsAllowInvalidCertificates --quiet --eval 'db.hello()'`,
+          )
+          .assertSuccess();
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
       // MongoDB agents take a single cert+key PEM via --tls-certificate-key-file;
       // the MySQL-style --tls-cert-file/--tls-key-file flags do not exist here and
       // make pmm-admin reject the whole command, leaving the agents without TLS.
