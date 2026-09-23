@@ -3,6 +3,7 @@ import BasePage from '@pages/base.page';
 /** Grafana's "Add data source" list and the settings form a picked plugin opens. */
 export default class DataSourcesPage extends BasePage {
   url = 'graph/connections/datasources/new';
+  exploreUrl = 'graph/explore';
   builders = {
     exploreDataSourceName: (dataSourceName: string) =>
       this.grafanaIframe().getByText(dataSourceName, { exact: true }).first(),
@@ -15,11 +16,13 @@ export default class DataSourcesPage extends BasePage {
     exploreData: this.grafanaIframe()
       .getByRole('link', { name: 'Explore data' })
       .filter({ hasNotText: 'Explore view' }),
+    exploreGiveFeedback: this.grafanaIframe().getByText('Give feedback'),
     saveAndTest: this.grafanaIframe().getByTestId(
       'data-testid Data source settings page Save and Test button',
     ),
   };
   elements = {
+    exploreQueryEditorModeToggle: this.grafanaIframe().getByTestId('QueryEditorModeToggle'),
     // Explore-only control, so it doubles as proof the iframe actually navigated there.
     exploreRunQuery: this.grafanaIframe().getByRole('button', { name: 'Run query' }),
     testResult: this.grafanaIframe().getByTestId('data-testid Data source settings page Alert'),

@@ -20,7 +20,7 @@ on:
         type: string
       pmm_client_version:
         description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         required: false
         type: string
 
@@ -47,7 +47,7 @@ jobs:
       ADMIN_PASSWORD: 'admin'
       PDPGSQL_VERSION: ${{ inputs.pdpgsql_version || '17' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
     steps:
       - name: Run the PMM Server container

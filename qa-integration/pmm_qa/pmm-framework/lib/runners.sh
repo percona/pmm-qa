@@ -77,7 +77,7 @@ version_is_greater() {
 # Expand a PSMDB major version into its newest full version.
 #
 # The PSMDB setup scripts want a complete version such as '8.0.26-11', but
-# specs name the major series ('8.0'). This lists the psmdb repo the setup
+# specs name the major series ('8.0'). This reads the psmdb repo index the setup
 # installs from and picks the highest patch there. Reading the repo rather than
 # the percona.com downloads page matters: a release appears on the page (and in
 # psmdb-<series>/yum/testing) before its RPMs are promoted to 'release', and the
@@ -86,8 +86,8 @@ version_is_greater() {
 #
 # 'latest' and '' pass through untouched -- they are meaningful to the setup
 # script as-is. This is the only network call the framework makes, and the only
-# reason `curl` is required (preflight checks for it only when a PSMDB setup is
-# requested).
+# reason `curl` and `gunzip` are required (preflight checks for them only when
+# a PSMDB setup is requested).
 #
 # Reads:  OL_VERSION (the el release the Dockerfile builds on, default 9)
 # Usage:  version=$(latest_psmdb_version 8.0)   # -> 8.0.26-11
@@ -100,9 +100,22 @@ latest_psmdb_version() {
     return
   fi
 
-  local el=${OL_VERSION:-9} index latest='' latest_patch='' candidate patch
-  index=$(curl --fail --silent --show-error \
-    "https://repo.percona.com/psmdb-${requested//./}/yum/release/$el/RPMS/$(uname -m)/") ||
+  local el=${OL_VERSION:-9} base primary index latest='' latest_patch='' candidate patch
+  # dnf installs from the repodata index, not the directory listing, and a
+  # file can sit in the listing while the index does not name it yet.
+  base="https://repo.percona.com/psmdb-${requested//./}/yum/release/$el/RPMS/$(uname -m)"
+  primary=$(curl --fail --silent --show-error "$base/repodata/repomd.xml" |
+    grep -Eo 'repodata/[^"]*-primary\.xml\.gz' | head -n1) || primary=''
+  [[ -n $primary ]] ||
+    die "Failed to read the psmdb-${requested//./} release repo index for PSMDB $requested."
+  index=$(curl --fail --silent --show-error "$base/$primary" | gunzip | awk '
+      /<name>percona-server-mongodb-server<\/name>/ { inpkg = 1; next }
+      inpkg && /<version / {
+        match($0, /ver="[^"]*"/); ver = substr($0, RSTART + 5, RLENGTH - 6)
+        match($0, /rel="[^"]*"/); rel = substr($0, RSTART + 5, RLENGTH - 6)
+        print "percona-server-mongodb-server-" ver "-" rel "."
+        inpkg = 0
+      }') ||
     die "Failed to read the psmdb-${requested//./} release repo index for PSMDB $requested."
 
   # Patches look like '<major.minor>.<patch>-<build>'; the trailing '-build' is

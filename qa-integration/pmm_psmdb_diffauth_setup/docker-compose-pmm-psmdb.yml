@@ -10,7 +10,7 @@ services:
         - PMM_REPO=${PMM_REPO:-experimental}
         - PBM_VERSION=${PBM_VERSION:-latest}
         - PSMDB_VERSION=${PSMDB_VERSION:-latest}
-        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
+        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-latest-tarball}
     command: /bin/bash
 
   test:
