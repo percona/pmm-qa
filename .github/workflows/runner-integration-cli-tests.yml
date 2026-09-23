@@ -185,6 +185,16 @@ jobs:
           # curl's %{http_code} must reach curl literally.
           timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
+      # Released packages never change, so each version is fetched from
+      # repo.percona.com once and restored from here, instead of by every job
+      # of a fan-out at once.
+      - name: Restore pmm-client package cache
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && startsWith(env.PMM_CLIENT_VERSION, '3.') }}
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/pmm-client-cache
+          key: pmm-client-deb-${{ env.PMM_CLIENT_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
@@ -195,6 +205,14 @@ jobs:
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
           ./pmm-framework/pmm-framework --parallel --client-debug ${{ env.WIZARD_ARGS }}
+
+      - name: Save pmm-client package cache
+        if: ${{ !cancelled() && steps.check_launchable_subset.outputs.has_subset == 'true' && startsWith(env.PMM_CLIENT_VERSION, '3.') }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/pmm-client-cache
+          key: pmm-client-deb-${{ env.PMM_CLIENT_VERSION }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

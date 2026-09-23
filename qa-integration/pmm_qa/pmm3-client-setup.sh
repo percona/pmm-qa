@@ -110,17 +110,26 @@ fi
 
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  build_number=7
-  minor_version=${client_version#3.}
-  minor_version=${minor_version%%.*}
-  if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
-    build_number=8
-  elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
-    build_number=1
+  # Share the verified host cache the container installs use, so a job downloads
+  # each release once and CI can restore it instead of hitting repo.percona.com.
+  fetcher="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
+  if [ -x "$fetcher" ]; then
+    cache_dir=${PMM_CLIENT_CACHE_DIR:-/tmp/pmm-client-cache}
+    deb_file=$("$fetcher" main "$(lsb_release -sc)" "$cache_dir" 1800 "$client_version") || die_on_install_failure
+    chmod -R a+rwX "$cache_dir"
+  else
+    build_number=7
+    minor_version=${client_version#3.}
+    minor_version=${minor_version%%.*}
+    if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
+      build_number=8
+    elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
+      build_number=1
+    fi
+    deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
+    wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+      -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   fi
-  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
-  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   dpkg -i "${deb_file}"
 fi
 

@@ -486,6 +486,15 @@ else
     CH_PASSWORD="$(random_password)"
     VM_PASSWORD="$(random_password)"
 
+    # PMM-HA-GA charts renamed the VictoriaMetrics keys and reject the old ones;
+    # main and the published charts still read the old ones.
+    VM_USER_KEY=VMAGENT_remoteWrite_basicAuth_username
+    VM_PASS_KEY=VMAGENT_remoteWrite_basicAuth_password
+    if [ -d "$PMM_CHART/templates" ] && grep -rq PMM_HA_VM_USERNAME "$PMM_CHART/templates"; then
+        VM_USER_KEY=PMM_HA_VM_USERNAME
+        VM_PASS_KEY=PMM_HA_VM_PASSWORD
+    fi
+
     kubectl create secret generic pmm-secret -n "$NAMESPACE" \
         --from-literal=PMM_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
         --from-literal=GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
@@ -493,8 +502,8 @@ else
         --from-literal=GF_PASSWORD="$GF_PASSWORD" \
         --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
         --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
-        --from-literal=VMAGENT_remoteWrite_basicAuth_username="victoriametrics_pmm" \
-        --from-literal=VMAGENT_remoteWrite_basicAuth_password="$VM_PASSWORD" \
+        --from-literal="$VM_USER_KEY"="victoriametrics_pmm" \
+        --from-literal="$VM_PASS_KEY"="$VM_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     SECRET_CREATED="true"
     log "Created pmm-secret in $NAMESPACE"
