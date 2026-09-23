@@ -25,7 +25,7 @@ on:
         type: string
       pmm_client_version:
         description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         required: false
         type: string
 
@@ -56,7 +56,7 @@ jobs:
       PXC_VERSION: ${{ inputs.pxc_version || '8.0' }}
       PXC_GLIBC: ${{ inputs.pxc_glibc || '2.35' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
     steps:
       - name: PXC_VERSION ENV Setup

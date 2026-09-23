@@ -3,7 +3,10 @@ name: "Nightly E2E tests Matrix (remote PMM Server)"
 # is up. Fans out one setup shard per group of client setups and one job per
 # tag bucket, so each worker only runs the tests it has data for.
 
-run-name: "Nightly E2E (${{ inputs.installation_type }}) pmm@${{ inputs.pmm_server_address }}"
+# Only compat lanes pass an exact client version (3.x.y); the rest need no label.
+run-name: >-
+  Nightly E2E (${{ inputs.installation_type }})${{ startsWith(inputs.pmm_client_version, '3.')
+  && format(' compat {0}', inputs.pmm_client_version) || '' }} pmm@${{ inputs.pmm_server_address }}
 
 on:
   workflow_dispatch:
@@ -76,8 +79,6 @@ on:
       LAUNCHABLE_TOKEN:
         required: false
       GH_TOKEN:
-        required: false
-      INVESTIGATOR_ROUTINE_TOKEN:
         required: false
       ZEPHYR_PMM_API_KEY:
         required: false
@@ -186,6 +187,15 @@ jobs:
         working-directory: pmm-qa/qa-integration
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
+      # An exact version (compat lanes) installs its release tarball, not the repo package.
+      - name: Resolve pmm-client install source
+        run: |
+          v="${PMM_CLIENT_VERSION}"
+          if [[ "$v" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
+            v="https://downloads.percona.com/downloads/pmm3/${v}/binary/tarball/pmm-client-${v}-x86_64.tar.gz"
+          fi
+          echo "CLIENT_INSTALL=${v}" >> "$GITHUB_ENV"
+
       - name: Setup PMM-Client against remote PMM Server
         uses: nick-fields/retry@v3
         with:
@@ -197,7 +207,7 @@ jobs:
             cd pmm-qa/qa-integration/pmm_qa
             sudo timeout -k 30 19m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
-              --client_version "${{ env.PMM_CLIENT_VERSION }}" \
+              --client_version "${{ env.CLIENT_INSTALL }}" \
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
@@ -212,7 +222,7 @@ jobs:
             --setup-retries 1 \
             --pmm-server-ip "${SERVER_IP}" \
             --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
-            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
+            --client-version "${{ env.CLIENT_INSTALL }}" \
             ${{ env.WIZARD_ARGS }}
 
       - name: 'Barrier: setup complete'

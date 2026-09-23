@@ -17,7 +17,7 @@ pmmTest.afterEach(async ({ api }) => {
 });
 
 pmmTest(
-  'PMM-T2137 - Verify new dashboards are retained after failover @pmm-ha',
+  'PMM-T2137 + PMM-T2123 - Verify new dashboards and their panels are retained after failover @pmm-ha',
   async ({ api, dashboard, haClusterHelper, page }) => {
     const url = await pmmTest.step(`Create a new dashboard with a panel titled "${panelTitle}"`, async () => {
       const created = await api.grafanaApi.createDashboard(dashboardTitle, panelTitle);

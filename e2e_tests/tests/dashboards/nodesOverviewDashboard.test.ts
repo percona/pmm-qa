@@ -17,6 +17,10 @@ pmmTest(
       `node_boot_time_seconds{environment="${environment}"}`,
       Timeouts.TWO_MINUTES,
     );
+    await api.grafanaApi.waitForMetric(
+      `rate(node_netstat_Tcp_RetransSegs{environment="${environment}"}[1h])`,
+      Timeouts.TWO_MINUTES,
+    );
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.os.nodesOverview.url, {
         environment,
