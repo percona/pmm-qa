@@ -456,14 +456,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
       ];
 
+      // The connection check authenticates against rs101, a freshly-restarted node
+      // that requireTLS has isolated from the replica set; it can transiently reject
+      // auth for a moment after coming back (seen as "sasl conversation error ...
+      // AuthenticationFailed"). Retry until the check passes -- the change only
+      // persists on success, so re-running the same command is idempotent.
       for (const command of commands) {
-        await cliHelper
-          .execSilent(command)
-          .assertSuccess()
-          .outContainsNormalizedMany([
-            '- updated TLS certificate key password',
-            `- changed authentication database to ${authDatabase}`,
-          ]);
+        await expect(async () => {
+          await cliHelper
+            .execSilent(command)
+            .assertSuccess()
+            .outContainsNormalizedMany([
+              '- updated TLS certificate key password',
+              `- changed authentication database to ${authDatabase}`,
+            ]);
+        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
       }
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
