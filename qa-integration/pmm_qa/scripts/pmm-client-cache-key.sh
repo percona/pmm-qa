@@ -33,4 +33,4 @@ read -r version sha < <(curl -sS --fail --retry 3 --max-time 60 "$BASE/dists/$CO
 ' | sort -V | tail -1) || true
 
 [ -n "${sha:-}" ] || exit 0
-printf '%s %s pmm-client-deb-%s-%s-%s\n' "$component" "$version" "$component" "${sha:0:16}" "$ARCH"
+printf '%s %s pmm-client-pkgs-%s-%s-%s\n' "$component" "$version" "$component" "${sha:0:16}" "$ARCH"

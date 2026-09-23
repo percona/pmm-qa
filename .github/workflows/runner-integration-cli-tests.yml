@@ -203,14 +203,6 @@ jobs:
         run: |
           ./pmm-framework/pmm-framework --parallel --client-debug ${{ env.WIZARD_ARGS }}
 
-      - name: Save pmm-client package cache
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.client_cache.outputs.key != '' && steps.client_cache.outputs.cache_hit != 'true' }}
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/pmm-client-cache
-          key: ${{ steps.client_cache.outputs.key }}
-
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/cli

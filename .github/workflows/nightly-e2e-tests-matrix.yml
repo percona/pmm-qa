@@ -230,14 +230,6 @@ jobs:
             --client-version "${{ env.PMM_CLIENT_VERSION }}" \
             ${{ env.WIZARD_ARGS }}
 
-      - name: Save pmm-client package cache
-        if: ${{ steps.client_cache.outputs.key != '' && steps.client_cache.outputs.cache_hit != 'true' }}
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/pmm-client-cache
-          key: ${{ steps.client_cache.outputs.key }}
-
       - name: 'Barrier: setup complete'
         id: setup_barrier
         run: echo "Setup finished on shard ${SHARD_NAME}."

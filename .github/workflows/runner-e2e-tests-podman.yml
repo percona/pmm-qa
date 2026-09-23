@@ -237,14 +237,6 @@ jobs:
           export HOST_IP
           ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
-      - name: Save pmm-client package cache
-        if: ${{ steps.client_cache.outputs.key != '' && steps.client_cache.outputs.cache_hit != 'true' }}
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/pmm-client-cache
-          key: ${{ steps.client_cache.outputs.key }}
-
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-qa/e2e_tests
         run: |
