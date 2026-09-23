@@ -60,11 +60,12 @@ RUN set -ex; \
 ARG OL_VERSION
 # Keep this whole chain &&-joined to the last command: a trailing `;` makes the
 # RUN exit 0 even when a download failed, shipping an image that only breaks
-# much later, at test time.
+# much later, at test time. curl --retry skips TLS resets and OL8 has no
+# --retry-all-errors, so the downloads also retry in a loop.
 RUN { [[ "$PMM_CLIENT_VERSION" != latest-tarball ]] || \
         PMM_CLIENT_VERSION="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client$([[ $(uname -m) != aarch64 ]] || echo -arm)/pmm-client-latest.tar.gz"; } && \
     if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
-        curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && \
+        for i in 1 2 3 4 5; do curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && break; [ "$i" -lt 5 ] || exit 1; sleep 10; done && \
         cd /tmp && tar -xvf pmm-client.tar.gz --transform 's,^/*[^/]*,/pmm-client,S' && \
         cd /tmp/pmm-client && ./install_tarball && cd / && \
         install -D -m 0644 /tmp/pmm-client/config/pmm-agent.service /usr/lib/systemd/system/pmm-agent.service && \
@@ -96,7 +97,7 @@ RUN { [[ "$PMM_CLIENT_VERSION" != latest-tarball ]] || \
     sed -i '/ExecStart/a StandardError=file:/var/log/pmm-agent.log' /usr/lib/systemd/system/pmm-agent.service && \
     sed -i '/\[Service\]/a Environment="KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab"' /usr/lib/systemd/system/pmm-agent.service && \
     systemctl enable pmm-agent && \
-    curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && \
+    for i in 1 2 3 4 5; do curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && break; [ "$i" -lt 5 ] || exit 1; sleep 10; done && \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin && \
     dnf clean all && \
     rm -rf /var/cache/dnf /data/db && mkdir -p /data/db
