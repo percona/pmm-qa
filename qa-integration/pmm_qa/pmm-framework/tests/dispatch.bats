@@ -62,6 +62,8 @@ stub_prebaked_docker() {
   dispatch_setup
 
   grep -q -- '--name ps_pmm_8_0_1 .*--publish 3306:3306 --env INIT_ROCKSDB=1 pmm-qa/ps:8.0 ' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_8_0_1 --hostname ps_pmm_8_0_1 --user root .* --user=mysql' "$DOCKER_CALLS"
+  [[ $(grep -c 'mysql-sockets' "$DOCKER_CALLS") -eq 0 ]]
   grep -q 'pmm-client-3.6.0-7.el' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
@@ -134,6 +136,10 @@ stub_prebaked_docker() {
   parse_database_spec 'mysql=5.7'
   dispatch_setup
   grep -q -- '--name mysql_pmm_5_7_1 .*--publish 3306:3306 pmm-qa/mysql:5.7 ' "$DOCKER_CALLS"
+  grep -q -- '^run --rm --volume /tmp:/host-tmp busybox:1.37.0 ' "$DOCKER_CALLS"
+  grep -q -- 'ln -s mysqld.sock /host-tmp/mysql-sockets/1/mysql.sock' "$DOCKER_CALLS"
+  grep -q -- '--name mysql_pmm_5_7_1 --hostname mysql_pmm_5_7_1 --user root .*--volume /tmp/mysql-sockets/1:/var/run/mysqld ' "$DOCKER_CALLS"
+  grep -q -- 'pmm-qa/mysql:5.7 .* --user=mysql' "$DOCKER_CALLS"
   grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
 
   build_mysql_image 5.7

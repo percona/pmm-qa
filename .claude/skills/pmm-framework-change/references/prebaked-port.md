@@ -30,6 +30,13 @@ replication-set). Pin down:
 - **Database users:** users, passwords and the auth plugin for each version.
 - **Server settings** the playbook's `my.cnf` or SQL sets, such as
   `innodb_monitor_enable` and native password auth.
+- **The default `docker exec` user.** The playbooks' containers ran as root,
+  and tests `docker exec` without `--user` to read pmm-agent's root-owned
+  files. Start the container with `--user root` and keep the database itself on
+  its own user (`--user=mysql` for mysqld).
+- **Host mounts** tests reach from outside the container, e.g. MySQL's
+  `/tmp/mysql-sockets/N/mysql.sock`, which `cli/tests/mysql.spec.ts` uses with
+  the runner's own `pmm-admin`.
 - **Registration:** every `pmm-admin add`. That means the service name and its
   random-suffix pattern, `--environment`, `--cluster`, `--replication-set`, the
   host/port form, and the credentials.
@@ -105,6 +112,8 @@ replication-set). Pin down:
   the framework flags CI uses. `runner-integration-cli-tests.yml` passes
   `--parallel --client-debug`, and the connection-timeout CLI tests read DSNs
   that pmm-agent only logs at debug level.
+- Specs that call `sudo pmm-admin` on the host (`mysql.spec.ts`) only run on a
+  CI runner, which installs a host client. Verify those in CI, not in WSL.
 - Write the pmm-agent log where the playbook's client setup did, because tests
   read it: `/pmm-agent.log` for PXC, `/var/log/pmm-agent.log` for the
   `install_pmm_client.yml` types. This is `setup_pmm_agent`'s third argument.

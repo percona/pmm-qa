@@ -128,11 +128,21 @@ mf_cleanup() {
 
 mf_start_node() {
   local name=$1 node=${1##*_} seed seeds=''
+  # Root, as the playbooks' containers were: tests `docker exec` without --user
+  # and read pmm-agent's root-owned config. mysqld itself still runs as mysql.
   local -a run=(
-    docker run --detach --name "$name" --hostname "$name"
+    docker run --detach --name "$name" --hostname "$name" --user root
     --label "pmm-qa.engine=$engine" --label "pmm-qa.$engine.setup-type=${setup_type:-single}"
     --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password"
   )
+  # As mysql-setup.yml: the host reaches node N's socket at
+  # /tmp/mysql-sockets/N/mysql.sock, which the CLI socket tests use.
+  if [[ $engine == mysql ]]; then
+    must docker run --rm --volume /tmp:/host-tmp "$BUSYBOX_IMAGE" sh -c "
+      rm -rf /host-tmp/mysql-sockets/$node && mkdir -p /host-tmp/mysql-sockets/$node &&
+      chmod 0777 /host-tmp/mysql-sockets/$node && ln -s mysqld.sock /host-tmp/mysql-sockets/$node/mysql.sock"
+    run+=(--volume "/tmp/mysql-sockets/$node:/var/run/mysqld")
+  fi
   # As in the playbooks: node N on host port 3305+N, except PS 5.7, which has none.
   if [[ $engine != ps || $version != 5.7 ]]; then
     run+=(--publish "$((3305 + node)):3306")
@@ -143,7 +153,7 @@ mf_start_node() {
   run+=(
     "pmm-qa/$engine:$version" "--server-id=$node" "--report-host=$name"
     --bind-address=0.0.0.0 --max-connections=1000 --innodb-buffer-pool-size=256M
-    --innodb-monitor-enable=all
+    --innodb-monitor-enable=all --user=mysql
   )
   if [[ $engine == ps ]]; then
     run+=(--userstat=1)
