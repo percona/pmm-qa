@@ -99,8 +99,7 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
         aarch64) MGO_ARCH=arm64 ;; \
         *) echo "unsupported arch for mgodatagen: $(uname -m)" >&2; exit 1 ;; \
       esac; } && \
-    curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && \
-    curl -Lf --retry 5 --retry-delay 5 -o /tmp/mgodatagen.tar.gz "https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_${MGO_ARCH}.tar.gz" && \
+    curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz "https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_${MGO_ARCH}.tar.gz" && \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin && \
     dnf clean all && \
     rm -rf /var/cache/dnf /data/db && mkdir -p /data/db
