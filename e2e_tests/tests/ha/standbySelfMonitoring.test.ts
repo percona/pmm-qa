@@ -43,9 +43,6 @@ pmmTest(
 
         expect(exporter?.status, `"${podName}" must run its own node_exporter`).toEqual(AgentStatus.running);
 
-        // The series label and the inventory come from different places - the
-        // scrape job and pmm-managed - so matching them proves the standby's
-        // own exporter produced the data, not another node labelling it.
         await expect(async () => {
           const samples = await api.prometheusApi.instantQuery(
             `max by (agent_id) (timestamp(${nodeMetric}{node_name="${podName}"}))`,
