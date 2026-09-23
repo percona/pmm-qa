@@ -15,6 +15,10 @@ on:
         description: 'PMM Server docker tag to upgrade to'
         default: 'perconalab/pmm-server:3-dev-latest'
         type: string
+      pre_upgrade_version:
+        description: 'Expected PMM version before upgrade'
+        default: ''
+        type: string
       upgrade_version:
         description: 'Expected PMM version after upgrade'
         default: ''
@@ -56,6 +60,11 @@ on:
         default: 'perconalab/pmm-server:3-dev-latest'
         type: string
         required: true
+      pre_upgrade_version:
+        description: 'Expected PMM version before upgrade'
+        default: ''
+        type: string
+        required: true
       upgrade_version:
         description: 'Expected PMM version after upgrade'
         default: ''
@@ -94,10 +103,17 @@ jobs:
         id: resolve
         shell: bash
         run: |
+          echo ${{ inputs.docker_tag }}
+          echo ${{ inputs.version }}
+          echo ${{ inputs.upgrade_tag }}
+          echo ${{ inputs.upgrade_version }}
+          echo ${{ inputs.pmm_qa_branch }}
           echo ${{ inputs.rc_version }}
+          echo ${{ inputs.pre_upgrade_version }}
           ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
+          echo $ver
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
@@ -238,6 +254,8 @@ jobs:
 
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
+        env:
+          CLIENT_VERSION: ${{ inputs.pre_upgrade_version }}
         run: |
           npx playwright test --grep "@pre-upgrade"
 
@@ -310,7 +328,23 @@ jobs:
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
               fi
-              docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -x pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
+              # The pmm-client package ships a pmm-agent.service, but the QA DB
+              # containers already run pmm-agent as a standalone (nohup) process that
+              # holds the agent's local API port (127.0.0.1:7777). A bare
+              # `systemctl restart` then starts the new binary as a service that cannot
+              # bind that port and crash-loops (Restart=always), while the old process
+              # keeps serving pmm-admin on the previous version. Stop every instance and
+              # wait for the port to free before starting the upgraded agent.
+              docker exec "$c" sh -c '
+                systemctl stop pmm-agent 2>/dev/null || true
+                pkill -x pmm-agent 2>/dev/null || true
+                for _ in $(seq 1 15); do pgrep -x pmm-agent >/dev/null || break; sleep 1; done
+                if systemctl cat pmm-agent >/dev/null 2>&1; then
+                  systemctl restart pmm-agent
+                else
+                  nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 &
+                fi
+              '
             } >"$log" 2>&1
             status=$?
             set -e
@@ -335,6 +369,21 @@ jobs:
               echo "FAIL: $c: expected $LATEST_VERSION, got $CLIENT_UPGRADE_VERSION"
               verify_failed=1
             fi
+            # The checks above read the on-disk binary; also confirm the RUNNING agent
+            # (pmm-admin status) was actually restarted onto the new version, retrying
+            # while it reconnects to the server.
+            RUNNING_VERSION=""
+            for _ in $(seq 1 30); do
+              RUNNING_VERSION=$(docker exec "$c" sh -c 'pmm-admin status 2>/dev/null | awk "/pmm-agent version/ {print \$NF}"')
+              [[ "$RUNNING_VERSION" == *"$LATEST_VERSION"* ]] && break
+              sleep 2
+            done
+            if [[ "$RUNNING_VERSION" == *"$LATEST_VERSION"* ]]; then
+              echo "OK: running pmm-agent contains $LATEST_VERSION ($RUNNING_VERSION)"
+            else
+              echo "FAIL: $c: running pmm-agent expected $LATEST_VERSION, got '$RUNNING_VERSION'"
+              verify_failed=1
+            fi
             rm -f "$log"
             if [ "$verify_failed" -ne 0 ]; then
               echo "== upgrade verification failed in $c =="
@@ -347,7 +396,7 @@ jobs:
           # output so per-container logs stay contiguous when printed
           outdir=$(mktemp -d)
           declare -A pid_container
-          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
             upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
             pid_container[$!]="$c"
           done

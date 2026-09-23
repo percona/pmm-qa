@@ -48,9 +48,7 @@ jobs:
 
           # --- CLIENT range: latest -> 5 minors back ---
           FLOOR=$(echo "$TAGS" | sed -E 's/\.[0-9]+$//' | sort -Vru | sed -n '5p' | sed 's/$/.0/')
-          VERSIONS=$(echo "$TAGS" | sort -Vr \
-            | awk -v floor="$FLOOR" '{print} $0==floor{exit}' \
-            | jq -R . | jq -sc .)
+          VERSIONS=$(echo "$TAGS" | sort -Vr | awk -v floor="$FLOOR" '{print} $0==floor{exit}' | jq -R . | jq -sc .)
 
           UI_LOW=3.5.0
           UI_HIGH=3.8.1
@@ -95,8 +93,10 @@ jobs:
               | { version: $versions[$i],
                   docker_tag: $tags[$i],
                   upgrade_tag: (if $is_rc then "perconalab/pmm-server:3-dev-latest" else $rc_tag end),
-                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end) }]')
+                  upgrade_version: (if $is_rc then $dev_ver else $rc_ver end),
+                  pre_upgrade_version: ($tags[$i] | split(":") | last | split("-")[0]) }]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "$MATRIX"
 
   upgrade-docker:
     name: Docker way upgrade for PMM
@@ -113,6 +113,8 @@ jobs:
       upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: docker
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      rc_version: ${{ needs.prepare.outputs.rc_version }}
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
 
   upgrade-ui:
     name: UI way upgrade for PMM
@@ -129,3 +131,5 @@ jobs:
       upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: ui
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      rc_version: ${{ needs.prepare.outputs.rc_version }}
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}

@@ -39,6 +39,8 @@ export default class AlertingApi {
     const response = await this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
     expect(response.status(), await response.text()).toEqual(200);
+
+    return response;
   };
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
