@@ -5,6 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/wait-for-pmm-agent.sh"
 
 pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
+mongo_query_source=${MONGO_QUERY_SOURCE:-profiler}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
 minio=${MINIO:-true}
@@ -326,7 +327,7 @@ do
     rs=$(echo $node | awk -F "0" '{print $1}')
     docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup
     wait_for_pmm_agent docker-compose-sharded.yaml "$node"
-    docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --replication-set=${rs} --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=${node} --port=27017 ${node}_${random_number}
+    docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --query-source="${mongo_query_source}" --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --replication-set=${rs} --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=${node} --port=27017 ${node}_${random_number}
 done
 
 # Enable FTDC on the mongos so it exposes the serverStatus (mongodb_ss_*) metric family.
@@ -354,7 +355,7 @@ docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NA
 # Utilization" gauge on the Router Summary needs. The shard mongod services keep
 # --enable-all-collectors; they don't hit the indexstats duplicate because each shard only
 # sees its own chunks.
-docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --disable-collectors=indexstats --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} mongos_${random_number} 127.0.0.1:27017
+docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --query-source="${mongo_query_source}" --disable-collectors=indexstats --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} mongos_${random_number} 127.0.0.1:27017
 
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017

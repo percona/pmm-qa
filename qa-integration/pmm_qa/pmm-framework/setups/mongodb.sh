@@ -58,6 +58,7 @@ setup_psmdb() {
     [PMM_CLIENT_VERSION]="$client"
     [COMPOSE_PROFILES]="$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)"
     [MONGO_SETUP_TYPE]="$setup_type"
+    [MONGO_QUERY_SOURCE]="$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)"
     [MONGO_STORAGE_ENGINE]="$(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG)"
     [OL_VERSION]="$(resolve_value PSMDB OL_VERSION DB_CONFIG)"
     [GSSAPI]="$(resolve_value PSMDB GSSAPI DB_CONFIG)"
