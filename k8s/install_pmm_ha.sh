@@ -487,10 +487,17 @@ else
     VM_PASSWORD="$(random_password)"
 
     # PMM-HA-GA charts renamed the VictoriaMetrics keys and reject the old ones;
-    # main and the published charts still read the old ones.
+    # older charts read only the old ones.
     VM_USER_KEY=VMAGENT_remoteWrite_basicAuth_username
     VM_PASS_KEY=VMAGENT_remoteWrite_basicAuth_password
-    if [ -d "$PMM_CHART/templates" ] && grep -rq PMM_HA_VM_USERNAME "$PMM_CHART/templates"; then
+    CHART_TEMPLATES="$PMM_CHART/templates"
+    if [ ! -d "$PMM_CHART" ]; then
+        PROBE_DIR="$(mktemp -d)"
+        helm pull "$PMM_CHART" --untar --untardir "$PROBE_DIR" ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} \
+            || fail "cannot pull $PMM_CHART to read which pmm-secret keys it expects."
+        CHART_TEMPLATES="$PROBE_DIR/pmm-ha/templates"
+    fi
+    if grep -rq PMM_HA_VM_USERNAME "$CHART_TEMPLATES"; then
         VM_USER_KEY=PMM_HA_VM_USERNAME
         VM_PASS_KEY=PMM_HA_VM_PASSWORD
     fi

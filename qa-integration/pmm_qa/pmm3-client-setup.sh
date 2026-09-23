@@ -110,12 +110,15 @@ fi
 
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  # Share the verified host cache the container installs use, so a job downloads
-  # each release once and CI can restore it instead of hitting repo.percona.com.
+  # Containers get this file docker cp'd on its own, with no scripts/ beside it,
+  # so the table below is their path rather than a leftover.
   fetcher="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
   if [ -x "$fetcher" ]; then
-    cache_dir=${PMM_CLIENT_CACHE_DIR:-/tmp/pmm-client-cache}
-    deb_file=$("$fetcher" main "$(lsb_release -sc)" "$cache_dir" 1800 "$client_version") || die_on_install_failure
+    cache_dir=/tmp/pmm-client-cache
+    # Fits inside the tightest caller's 19m wall, so a give-up prints its diagnosis.
+    deb_file=$("$fetcher" main "$(lsb_release -sc)" "$cache_dir" 900 "$client_version") || die_on_install_failure
+    # Root owns the tree, but the cache action has to read it and the later
+    # non-root pmm-framework run has to reopen the fetcher's lock inside it.
     chmod -R a+rwX "$cache_dir"
   else
     build_number=7
