@@ -1,0 +1,50 @@
+import DashboardInterface from '@interfaces/dashboard';
+import { GrafanaPanel } from '@interfaces/grafanaPanel';
+
+export default class VictoriaMetricsDashboard implements DashboardInterface {
+  url = 'graph/d/victoriametrics/victoriametrics';
+  metrics: GrafanaPanel[] = [
+    { name: 'Uptime', type: 'stat' },
+    { name: 'Version', type: 'text' },
+    { name: 'CPU Usage', type: 'stat' },
+    { name: 'Memory Usage', type: 'stat' },
+    { name: 'Disk Usage', type: 'stat' },
+    { name: 'Total Datapoints', type: 'stat' },
+    { name: 'Index Size', type: 'stat' },
+    { name: 'Concurrent Inserts', type: 'stat' },
+    { name: 'Cache Memory Usage', type: 'stat' },
+    { name: 'Time before run out of space', type: 'stat' },
+    { name: 'Requests', type: 'timeSeries' },
+    { name: 'Active Time Series Changes', type: 'timeSeries' },
+    { name: 'Queries Duration', type: 'timeSeries' },
+    { name: 'Queries Duration Details', type: 'timeSeries' },
+    { name: 'Cache Memory Usage', type: 'timeSeries' },
+    { name: 'Cache Size', type: 'timeSeries' },
+    { name: 'Concurrent Inserts', type: 'timeSeries' },
+    { name: 'Error Requests', type: 'timeSeries' },
+    { name: 'Disk Space Usage - Datapoints', type: 'timeSeries' },
+    { name: 'Disk Space Usage - Index', type: 'timeSeries' },
+    { name: 'Datapoints Ingestions', type: 'timeSeries' },
+    { name: 'Pending Datapoints', type: 'timeSeries' },
+    { name: 'Datapoints', type: 'timeSeries' },
+    { name: 'LSM Parts', type: 'timeSeries' },
+    { name: 'Active Merges', type: 'timeSeries' },
+    { name: 'Merge speed', type: 'timeSeries' },
+    { name: 'TCP Connections', type: 'timeSeries' },
+    { name: 'Ignored Rows', type: 'timeSeries' },
+    { name: 'Logging Messages', type: 'timeSeries' },
+    { name: 'Churn Rate', type: 'timeSeries' },
+    { name: 'Slow Queries', type: 'timeSeries' },
+    { name: 'Slow Inserts', type: 'timeSeries' },
+    { name: 'Memory Usage', type: 'timeSeries' },
+    { name: 'Time Series', type: 'timeSeries' },
+    { name: 'Flags', type: 'table' },
+    { name: 'CPU Busy', type: 'stat' },
+    { name: 'Mem Avail', type: 'stat' },
+    { name: 'Disk Reads', type: 'stat' },
+    { name: 'Disk Writes', type: 'stat' },
+    { name: 'Network IO', type: 'stat' },
+    { name: 'Sys Uptime', type: 'stat' },
+  ];
+  noDataMetrics: string[] = ['Active Time Series Changes'];
+}

@@ -5,7 +5,7 @@
   vars:
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     metrics_mode: "{{ lookup('env', 'metrics_mode') }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     valkey_version: "{{ lookup('env', 'VALKEY_VERSION') | default('7', true) }}"
     valkey_image: "valkey/valkey:{{ valkey_version }}-bookworm"
@@ -24,9 +24,36 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
-    - name: Set Random Number Fact
-      set_fact:
-        random_number: "{{ (10000 | random) | int }}"
+    - name: Remove the primary container left by a previous run
+      community.docker.docker_container:
+        name: valkey-primary
+        state: absent
+        force_kill: true
+
+    - name: Remove replica containers left by a previous run
+      community.docker.docker_container:
+        name: "valkey-replica-{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Remove sentinel containers left by a previous run
+      community.docker.docker_container:
+        name: "sentinel-{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Remove the primary volume left by a previous run
+      community.docker.docker_volume:
+        name: valkey-primary-data
+        state: absent
+
+    - name: Remove replica volumes left by a previous run
+      community.docker.docker_volume:
+        name: "valkey-replica-{{ item }}-data"
+        state: absent
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
 
     - name: Create Docker network
       community.docker.docker_network:
@@ -87,7 +114,7 @@
     - name: Start Valkey primary container
       community.docker.docker_container:
         name: "valkey-primary"
-        hostname: "valkey-primary-node-{{ random_number }}"
+        hostname: "valkey-primary-node"
         image: "{{ valkey_image }}"
         state: started
         restart_policy: unless-stopped
@@ -115,7 +142,7 @@
     - name: Start Valkey replica containers
       community.docker.docker_container:
         name: "valkey-replica-{{ item }}"
-        hostname: "valkey-replica-{{ item }}-node-{{ random_number }}"
+        hostname: "valkey-replica-{{ item }}-node"
         image: "{{ valkey_image }}"
         state: started
         restart_policy: unless-stopped
@@ -145,7 +172,7 @@
     - name: Start Sentinel containers
       community.docker.docker_container:
         name: "sentinel-{{ item }}"
-        hostname: "sentinel-{{ item }}-node-{{ random_number }}"
+        hostname: "sentinel-{{ item }}-node"
         image: "{{ valkey_image }}"
         state: started
         restart_policy: unless-stopped
@@ -207,7 +234,7 @@
         container: "valkey-primary"
         command: >-
           pmm-admin add valkey --cluster=valkey-cluster --replication-set=valkey-repl --environment=valkey-test 
-          --username=default --password="{{ valkey_password }}" --service-name=valkey-primary-svc-{{ random_number }} 
+          --username=default --password="{{ valkey_password }}" --service-name=valkey-primary-svc 
           --host=valkey-primary --port=6379 --custom-labels='role=primary'
       ignore_errors: yes
     - name: Add the replicas to monitoring
@@ -215,7 +242,7 @@
         container: "valkey-replica-{{ item }}"
         command: >-
           pmm-admin add valkey --cluster=valkey-cluster --replication-set=valkey-repl --environment=valkey-test 
-          --username=default --password="{{ valkey_password }}" --service-name=valkey-replica{{ item }}-svc-{{ random_number }} 
+          --username=default --password="{{ valkey_password }}" --service-name=valkey-replica{{ item }}-svc 
           --host=valkey-replica-{{ item }} --port=6379 --custom-labels='role=replica'
       loop: "{{ range(1, valkey_replica_count + 1) | list }}"
       ignore_errors: yes
@@ -224,7 +251,7 @@
         container: "sentinel-{{ item }}"
         command: >-
           pmm-admin add valkey --cluster=valkey-cluster --environment=valkey-test --username=default 
-          --password="{{ valkey_password }}" --service-name=sentinel{{ item }}-svc-{{ random_number }} 
+          --password="{{ valkey_password }}" --service-name=sentinel{{ item }}-svc 
           --host=sentinel-{{ item }} --port={{ sentinel_start_port }}  --custom-labels='role=sentinel'
       loop: "{{ range(1, sentinel_count + 1) | list }}"
       ignore_errors: yes

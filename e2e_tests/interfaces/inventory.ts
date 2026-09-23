@@ -1,6 +1,7 @@
 export interface GetNode {
   node_id: string;
   node_name: string;
+  node_type: string;
 }
 
 export interface GetServices {

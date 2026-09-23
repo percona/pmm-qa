@@ -120,14 +120,23 @@ class QueryAnalyticsQueryDetails {
     I.waitForVisible(this.elements.noExamples, 30);
   }
 
-  async verifyExplain(parameters = {}) {
+  async verifyExplain(parameters = {}, { allowUnsupported = false } = {}) {
     I.waitForVisible(this.buttons.tab('Explain'), 30);
     I.click(this.buttons.tab('Explain'));
     queryAnalyticsPage.waitForLoaded();
-    I.waitForVisible(this.elements.codeBlock, 30);
+    I.waitForVisible(this.elements.codeBlock.or(this.elements.explainError), 30);
 
     if (await I.isElementDisplayed(this.elements.explainError, 1)) {
-      throw new Error(`No explain visible for parameters: ${JSON.stringify(parameters)}`);
+      const [message = ''] = await I.grabTextFromAll(this.elements.explainError);
+      const text = message.trim();
+
+      if (allowUnsupported && /not supported for explain|cannot explain this type of query/i.test(text)) {
+        I.say(`Explain is not supported for the selected query: ${text}`);
+
+        return;
+      }
+
+      throw new Error(`No explain visible for parameters: ${JSON.stringify(parameters)}: ${text}`);
     }
   }
 

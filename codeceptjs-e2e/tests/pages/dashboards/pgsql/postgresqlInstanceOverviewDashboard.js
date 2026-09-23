@@ -10,7 +10,7 @@ class PostgresqlInstanceOverviewDashboard {
       'Execution time',
       'Transactions per second',
       'Lowest uptime (top 3)',
-      'Queries',
+      'Top slow queries',
     ];
   }
 }

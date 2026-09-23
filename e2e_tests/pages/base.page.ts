@@ -79,6 +79,9 @@ export default abstract class BasePage {
 
     await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
 
+    // The options list is virtualized, so a value past the first rendered rows is absent from the DOM until filtered.
+    if (dropDownValue) await combobox.pressSequentially(dropDownValue);
+
     const options = frame.getByRole('option');
 
     await options.first().waitFor({
@@ -88,7 +91,7 @@ export default abstract class BasePage {
 
     const valueToSelect = dropDownValue
       ? options.filter({
-          hasText: new RegExp(`^${dropDownValue}$`, 'i'),
+          hasText: new RegExp(`^${dropDownValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
         })
       : options.filter({
           hasText: /^(?!All$).+/i,
