@@ -92,9 +92,10 @@ install_pmm_client_from_repo() {
     [ "$component" = release ] && index_component=main
     percona-release enable-only pmm3-client "$component"
     deb=$(cached_pmm_client_deb "$index_component")
+    # dpkg, not apt: apt swaps a local .deb for the repository's copy when
+    # the versions match, and downloads it again.
     if [ -n "$deb" ]; then
-        apt-get update
-        apt-get -y install "$deb" && return 0
+        dpkg -i "$deb" || { apt-get update && apt-get -y -f install; } && return 0
     fi
     for attempt in 1 2 3 4 5; do
         apt-get update
