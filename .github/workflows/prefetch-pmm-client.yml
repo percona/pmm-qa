@@ -16,6 +16,11 @@ on:
         required: false
         default: ''
         type: string
+      skip:
+        description: The caller already prefetched (nested under nightly-test-suite)
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   prefetch:
@@ -27,13 +32,15 @@ jobs:
       matrix:
         version: ${{ fromJson(inputs.client_versions) }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - if: ${{ !inputs.skip }}
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.pmm_qa_branch || github.head_ref || github.ref_name }}
           repository: percona/pmm-qa
           path: ./pmm-qa
 
       - id: cache
+        if: ${{ !inputs.skip }}
         uses: ./pmm-qa/.github/actions/pmm-client-cache
         with:
           client_version: ${{ matrix.version }}

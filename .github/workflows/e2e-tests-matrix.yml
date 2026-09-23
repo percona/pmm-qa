@@ -38,6 +38,11 @@ on:
 
   workflow_call:
     inputs:
+      skip_prefetch:
+        description: Set by a caller that already prefetched the client
+        required: false
+        default: false
+        type: boolean
       pmm_qa_branch:
         required: false
         type: string
@@ -60,6 +65,7 @@ jobs:
     name: Prefetch pmm-client
     uses: ./.github/workflows/prefetch-pmm-client.yml
     with:
+      skip: ${{ inputs.skip_prefetch || false }}
       client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball') }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch }}
 

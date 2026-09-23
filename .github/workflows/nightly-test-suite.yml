@@ -137,6 +137,7 @@ jobs:
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
+      skip_prefetch: true
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       pmm_client_image: ${{ needs.resolve.outputs.client_image }}
@@ -154,6 +155,7 @@ jobs:
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
+      skip_prefetch: true
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       pmm_client_image: ${{ matrix.image }}
@@ -165,6 +167,7 @@ jobs:
     uses: ./.github/workflows/e2e-tests-matrix.yml
     secrets: inherit
     with:
+      skip_prefetch: true
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       pmm_client_image: ${{ needs.resolve.outputs.client_image }}
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
