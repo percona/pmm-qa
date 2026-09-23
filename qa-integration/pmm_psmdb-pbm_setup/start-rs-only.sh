@@ -6,6 +6,8 @@ mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 mongo_setup_type=${mongo_setup_type,,}
 mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
 mongo_storage_engine=${mongo_storage_engine,,}
+mongo_query_source=${MONGO_QUERY_SOURCE:-profiler}
+mongo_query_source=${mongo_query_source,,}
 ol_version=${OL_VERSION:-9}
 minio=${MINIO:-true}
 minio=${minio,,}
@@ -18,15 +20,27 @@ export COMPOSE_PROFILES=${profile}
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
 
+# Pick the base mongod config for the storage engine.
 if [ "$mongo_storage_engine" = "inmemory" ]; then
-
-    generated_config_dir="/tmp/pmm-qa-mongod-rs-inmemory"
-    rm -rf "$generated_config_dir"
-    mkdir -p "$generated_config_dir"
-    cp ./conf/mongod-rs-inmemory/mongod.conf "$generated_config_dir/mongod.conf"
-    export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
+    base_config=./conf/mongod-rs-inmemory/mongod.conf
 else
     mongo_storage_engine="wiredTiger"
+    base_config=./conf/mongod-rs/mongod.conf
+fi
+
+# Materialise a generated config when it must diverge from the shipped default:
+# the in-memory engine ships its own config, and mongolog QAN needs mongod to
+# write a log FILE -- the shipped configs log to syslog, which the built-in
+# mongolog agent cannot tail (it exits with "no log path found").
+if [ "$mongo_storage_engine" = "inmemory" ] || [ "$mongo_query_source" = "mongolog" ]; then
+    generated_config_dir="/tmp/pmm-qa-mongod-rs-generated"
+    rm -rf "$generated_config_dir"
+    mkdir -p "$generated_config_dir"
+    cp "$base_config" "$generated_config_dir/mongod.conf"
+    if [ "$mongo_query_source" = "mongolog" ]; then
+        sed -i 's#destination: syslog#destination: file\n  path: /var/log/mongo/mongod.log\n  logAppend: true#' "$generated_config_dir/mongod.conf"
+    fi
+    export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
 fi
 
 docker network create qa-integration || true
