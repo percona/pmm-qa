@@ -107,6 +107,12 @@ class Grafana extends Helper {
     Playwright.setPlaywrightRequestHeaders({});
   }
 
+  async parkPage() {
+    const { Playwright } = this.helpers;
+
+    if (Playwright.page) await Playwright.page.goto('about:blank');
+  }
+
   async getBrowserCookies() {
     const { Playwright } = this.helpers;
     const { browserContext } = Playwright;

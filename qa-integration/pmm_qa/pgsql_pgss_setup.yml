@@ -11,6 +11,7 @@
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+    shard_node_name: "{{ pgsql_pgss_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -30,6 +31,11 @@
       -p {{ pgsql_pgss_port }}:5432
       phusion/baseimage:jammy-1.0.1
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ pgsql_pgss_container }}"
+
   - name: Copy all required Artifacts to the docker pgsql_pgss_container
     shell: "{{ item }}"
     with_items:
@@ -48,8 +54,8 @@
     with_items:
       - docker network connect pmm-qa {{ pgsql_pgss_container }}
       - >-
-        docker exec {{ pgsql_pgss_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
-        --use_metrics_mode no
+        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ shard_node_name }} {{ pgsql_pgss_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version
+        }} --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Set Random Number Fact
     set_fact:
