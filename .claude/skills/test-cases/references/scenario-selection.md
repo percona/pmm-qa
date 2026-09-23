@@ -2,13 +2,13 @@
 
 Generate candidates only after the change-impact and failure model exists.
 
-Categories are not quotas. Pick a technique because it matches the behavior or failure mechanism.
+Categories are not quotas. Pick a technique because it matches the behavior or failure mechanism; do not apply all techniques to every ticket.
 
 ## Technique selection
 
 | Situation | Primary technique | What to derive |
 | --- | --- | --- |
-| Input has meaningful valid/invalid classes | Equivalence partitioning | One representative per behaviorally distinct class |
+| Input has meaningful valid/invalid classes | Equivalence partitioning | One representative per class that reaches a distinct branch |
 | Behavior changes at threshold/default/unit | Boundary-value analysis | Values immediately below/at/above the transition |
 | Result depends on multiple conditions | Decision table | Minimal combinations that exercise distinct outcomes |
 | Entity moves through lifecycle/retry/reconnect states | State-transition testing | Valid/invalid transitions and recovery paths |
@@ -16,129 +16,14 @@ Categories are not quotas. Pick a technique because it matches the behavior or f
 | Change spans several PMM components | Use-case/scenario testing | End-to-end path at meaningful boundaries |
 | Historical bug or implementation shape suggests a failure | Error guessing | One evidence-backed adversarial scenario |
 
-Do not apply all techniques to every ticket.
+PMM-specific rules for these techniques:
 
-## Equivalence partitioning
-
-Use when inputs form classes that reach different behavior.
-
-Examples:
-
-- supported vs unsupported DB version;
-- existing vs missing inventory object;
-- authorized vs unauthorized role;
-- explicit setting vs default setting.
-
-Merge values that reach the same branch and have the same failure signal.
-
-Do not create empty/null/special-character cases unless the contract or implementation treats them differently.
-
-## Boundary-value analysis
-
-Use only when behavior changes at a boundary:
-
-- minimum/maximum;
-- zero vs non-zero;
-- inclusive/exclusive comparison;
-- default fallback;
-- timeout/retry budget;
-- unit conversion;
-- rounding;
-- lookback/evaluation interval.
-
-Use values immediately around the transition.
-
-Do not test arbitrary extreme values that PMM passes through unchanged.
-
-## Decision tables
-
-Use when two or more conditions interact.
-
-Typical PMM dimensions:
-
-- role × action;
-- client version × server version;
-- feature flag × topology;
-- state × requested transition;
-- datasource/backend × feature;
-- explicit value × default/fallback.
-
-Create only combinations that produce distinct behavior or expose a plausible interaction defect.
-
-Do not explode every permutation.
-
-## State-transition testing
-
-Use for:
-
-- agent connectivity;
-- task/backup state;
-- inventory lifecycle;
-- alert state;
-- reconnect/retry;
-- upgrade/migration;
-- enable/disable flows.
-
-Name:
-
-- starting state;
-- exact trigger;
-- expected next state;
-- invalid or recovery transition if relevant.
-
-Drive the event that actually invokes the changed code. Pod deletion, process restart, scrape, reconciliation, and migration are not interchangeable.
-
-## Pairwise / configuration reduction
-
-Use when coverage depends on multiple supported dimensions and no single dimension is sufficient.
-
-Examples:
-
-`DB type × DB version × auth mode × topology`
-
-First remove dimensions not touched by the change.
-
-Then protect explicitly high-risk combinations:
-
-- oldest/newest supported versions;
-- changed backend;
-- HA vs single-server when shared code differs;
-- default and non-default configuration.
-
-Use pairwise only for remaining combinatorial coverage. Pairwise does not replace a known high-risk combination.
-
-## Use-case / scenario testing
-
-Use when value comes from a cross-component user workflow.
-
-Trace the actual path:
-
-`user action -> API/CLI -> persistence -> agent/exporter -> metric/query/UI`
-
-Do not assert every layer unless each assertion catches a distinct defect.
-
-Prefer one flow that verifies the important propagation boundary.
-
-## Error guessing
-
-Use only when backed by:
-
-- current implementation shape;
-- a relevant historical PMM bug;
-- a recurring failure mechanism;
-- a known shared dependency;
-- a realistic state residue or timing hazard.
-
-Examples:
-
-- rejected update persists;
-- value saved but not consumed;
-- reconnect uses stale cache;
-- two entities collide on one key;
-- retry counter is not reset;
-- older client bypasses a new validation path.
-
-"Could break" is not enough.
+- **Partitions and boundaries:** merge values that reach the same branch and have the same failure signal. Add empty, null, or special-character values only when the contract or implementation treats them differently, and extreme values only when PMM transforms them rather than passing them through.
+- **Decision tables:** typical PMM dimensions are role × action, client × server version, feature flag × topology, state × requested transition, backend × feature, and explicit value × default. Keep only combinations with distinct behavior or a plausible interaction defect.
+- **State transitions:** name the starting state, the exact trigger, and the expected next state. Drive the event that actually invokes the changed code — pod deletion, process restart, scrape, reconciliation, and migration are not interchangeable.
+- **Configuration reduction:** first remove dimensions the change does not touch, then protect the high-risk combinations — oldest and newest supported versions, the changed backend, HA vs single-server where shared code differs, default and non-default configuration — and use pairwise only for what remains.
+- **Scenario testing:** trace `user action -> API/CLI -> persistence -> agent/exporter -> metric/query/UI`, and assert a layer only when it catches a distinct defect.
+- **Error guessing:** only when backed by the current implementation shape, a relevant PMM bug, a recurring mechanism from the catalogue, a known shared dependency, or a realistic residue or timing hazard. "Could break" is not enough.
 
 ## Candidate rules
 
@@ -187,7 +72,7 @@ For secret handling, bound the exact log/response window and search for the exac
 
 Create a candidate when the change adds a migration, modifies defaults/on-disk state, changes creation templates, or introduces version gates.
 
-Seed meaningful pre-upgrade state, then verify:
+Seed meaningful pre-upgrade state — created the way the old version created it — then verify:
 
 - post-upgrade read;
 - post-upgrade write;

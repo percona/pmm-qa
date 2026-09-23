@@ -10,98 +10,12 @@ For every changed public behavior, trace:
 
 `trigger -> validation -> state -> propagation -> consumer -> observation`
 
-Record only steps that exist in the implementation.
+Record only steps that exist in the implementation. PMM-specific links are the ones most often skipped:
 
-### Trigger
-
-How does the behavior start?
-
-Examples:
-
-- UI action
-- API request
-- `pmm-admin` command
-- agent reconnect
-- scrape/evaluation cycle
-- Helm reconciliation
-- upgrade/migration
-- scheduled refresh
-- database workload
-
-### Validation / branch selector
-
-What decides the behavior?
-
-Examples:
-
-- role/permission
-- feature flag
-- database type/version
-- empty/non-empty input
-- default vs explicit value
-- current lifecycle state
-- retry count
-- threshold
-- topology
-- client/server compatibility
-
-### State
-
-What is read or written?
-
-Examples:
-
-- PostgreSQL row
-- inventory object
-- agent configuration
-- browser state
-- chart value
-- generated config
-- metric label
-- cached object
-- task status
-
-### Propagation
-
-How does state move?
-
-Examples:
-
-- server -> agent
-- API -> DB -> exporter
-- Helm values -> rendered template -> pod env
-- DB -> exporter -> VictoriaMetrics -> Grafana
-- API -> browser cache -> dashboard query
-
-### Consumer
-
-What actually uses the value?
-
-Examples:
-
-- pmm-agent
-- exporter
-- Grafana panel
-- QAN
-- alert evaluator
-- backup worker
-- inventory API
-- CLI status/reporting
-
-### Observation
-
-Where would a user or test detect failure?
-
-Prefer the owning public layer:
-
-- API response/state
-- persisted source of truth
-- running exporter config
-- metric
-- query result
-- CLI status
-- visible UI behavior
-- bounded logs only when logs are the contract
+- **Trigger:** besides UI, API, and `pmm-admin`, the change may start from an agent reconnect, a scrape or evaluation cycle, Helm reconciliation, an upgrade or migration, a scheduled refresh, or database workload.
+- **Propagation:** server -> agent; API -> DB -> exporter; Helm values -> rendered template -> pod env; DB -> exporter -> VictoriaMetrics -> Grafana; API -> browser cache -> dashboard query.
+- **Consumer:** pmm-agent, an exporter, a Grafana panel, QAN, the alert evaluator, the backup worker, the inventory API, CLI status.
+- **Observation:** prefer the owning public layer — API response or state, the persisted source of truth, running exporter config, a metric, a query result, CLI status, visible UI behavior; bounded logs only when logs are the contract.
 
 ## 2. Build the blast-radius map
 
@@ -117,27 +31,7 @@ For each changed helper, schema, config object, API field, stored value, or shar
 - single-server vs HA/chart differences;
 - database/backend variants.
 
-Do not assume "same component" means affected. Name the shared dependency.
-
-### Example
-
-A setting stored per service is changed.
-
-Do not stop at:
-
-`CLI -> API -> saved value`
-
-Check:
-
-`CLI -> API -> DB -> agent config -> exporter process`
-
-Then ask whether:
-
-- update of service A can overwrite service B;
-- reconnect reloads the value;
-- server restart preserves it;
-- old client/new server combinations use the same field;
-- UI reads the same source of truth.
+Do not assume "same component" means affected. Name the shared dependency. A stored per-service setting, for example, is not done at `CLI -> API -> saved value`: follow it to `DB -> agent config -> exporter process`, then ask whether updating service A can overwrite B, whether reconnect reloads it, whether restart preserves it, whether an old client uses the same field, and whether the UI reads the same source of truth.
 
 ## 3. Derive invariants
 
@@ -153,6 +47,8 @@ Common PMM invariants:
 - failed multi-step operations do not leave usable-looking partial state;
 - updating one field preserves unrelated fields unless replacement is explicit;
 - changing one service/node does not mutate another.
+
+Write the oracle as a state delta over named fields: a rejected operation leaves them unchanged (`S1 == S0`); an accepted one changes only the fields the request asked for. Compare decoded values of the fields the request could write, never a whole-row snapshot: PMM rewrites the full row on update, bumps `updated_at`, re-encrypts stored credentials with a fresh nonce, and agent reports change status and ports asynchronously, so a full snapshot fails on the fixed build.
 
 ### Propagation
 
@@ -187,7 +83,17 @@ Common PMM invariants:
 - denied mutations leave state unchanged;
 - UI visibility does not substitute for server-side authorization;
 - a header, token, or marker a component trusts cannot be supplied by the client;
-- every route reaching that component overwrites it, so send it deliberately from an unprivileged caller on each one.
+- every route reaching a component that a new or widened filter, allow-list, or trusted marker protects enforces it — send the forbidden request from an unprivileged caller on each one.
+
+When the change touches nginx, `auth_server`, vmproxy, or a Grafana proxy, enumerate those routes from the configuration rather than from How to test:
+
+- every nginx `location` that proxies to the component, including exact-match locations — a location that declares any `proxy_set_header` inherits none from the server level, so check each one for the overwrite;
+- Grafana's data-source proxy and resource routes, and its alerting and rule routes that forward to data sources;
+- paths that reach the upstream directly and skip the proxy;
+- the bind interface of the upstream and the proxy (`PMM_INTERFACE_TO_BIND`), which decides whether nginx is the only way in;
+- the HA request path, where vmauth fronts VictoriaMetrics and routes only some endpoints.
+
+Record the list in the notes. Choose an oracle that differs between the broken and the fixed build on every topology the change reaches: on HA an "empty result" can hold on both, so assert the status code.
 
 ## 4. Generate failure hypotheses
 
@@ -195,9 +101,7 @@ For each changed path or invariant, ask how the implementation could violate it.
 
 ## 5. Choose where a defect becomes meaningful
 
-Assert at the layer where the defect matters.
-
-Examples:
+Assert at the layer where the defect matters — [test-level-selection.md](test-level-selection.md) picks the layer:
 
 - validation defect -> API rejection + unchanged persisted state;
 - propagation defect -> source of truth + final consumer;
