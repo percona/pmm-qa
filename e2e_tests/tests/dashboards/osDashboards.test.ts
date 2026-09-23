@@ -66,9 +66,9 @@ pmmTest(
       await leftNavigation.elements.timePickerOpenButton.click();
     });
 
-    await pmmTest.step('Navigate to an OS dashboard through the left navigation', async () => {
+    await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
       await leftNavigation.selectMenuItem('inventory');
-      await leftNavigation.selectMenuItem('operatingsystem');
+      await leftNavigation.selectMenuItem('operatingsystem.overview');
       await dashboard.waitForDashboardToLoad();
     });
 

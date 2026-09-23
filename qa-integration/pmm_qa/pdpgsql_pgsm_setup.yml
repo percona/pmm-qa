@@ -7,7 +7,7 @@
     pdpgsql_version: "{{ lookup('vars', 'extra_pdpgsql_version', default=lookup('env','PDPGSQL_VERSION') | default('15', true) ) }}"
     pdpgsql_pgsm_container: "{{ lookup('vars', 'extra_pdpgsql_pgsm_container', default=lookup('env','PDPGSQL_PGSM_CONTAINER') | default('pdpgsql_pgsm', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     pgstat_monitor_branch: "{{ lookup('vars', 'extra_pgstat_monitor_branch', default=lookup('env','PGSTAT_MONITOR_BRANCH') | default('2.1.0', true) ) }}"

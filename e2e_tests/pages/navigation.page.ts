@@ -246,6 +246,8 @@ export default class LeftNavigation extends BasePage {
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
       const currentUrl = this.page.url();
+      const href = await locator.getAttribute('href', { timeout: Timeouts.TEN_SECONDS }).catch(() => null);
+      const targetPath = href ? new URL(href, currentUrl).pathname : undefined;
 
       // The left-nav auto-collapses a submenu after a route change, hiding a
       // just-verified nested item before the click lands (PMM-T2202 flake).
@@ -254,9 +256,25 @@ export default class LeftNavigation extends BasePage {
 
         await locator.click({ timeout: Timeouts.TEN_SECONDS });
       }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
-      await this.page
-        .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
-        .catch(Boolean);
+
+      // A dashboard rewrites its own var-* query params, so "URL changed" alone
+      // can fire before navigation to the clicked link happens.
+      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
+      // path, so the path must also move off the page that was already open.
+      const currentPath = new URL(currentUrl).pathname;
+
+      await (
+        targetPath
+          ? this.page.waitForURL(
+              (url) =>
+                url.pathname.startsWith(targetPath) &&
+                (url.pathname !== currentPath || currentPath === targetPath),
+              { timeout: Timeouts.TEN_SECONDS },
+            )
+          : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
+              timeout: Timeouts.TEN_SECONDS,
+            })
+      ).catch(Boolean);
       await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
 
       if (this.isDashboardPage()) {
