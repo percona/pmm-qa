@@ -145,15 +145,23 @@ jobs:
           client_version: ${{ matrix.version }}
           lookup_only: 'true'
 
-      - name: Fetch the packages the runner and its containers install
+      - name: Fetch the packages the runners and their containers install
         if: ${{ steps.cache.outputs.key != '' && steps.cache.outputs.cache_hit != 'true' }}
         env:
           COMPONENT: ${{ steps.cache.outputs.component }}
           VERSION: ${{ startsWith(matrix.version, '3.') && matrix.version || '' }}
         run: |
-          # Runners are jammy; the database containers are jammy and focal.
+          set -euo pipefail
+          scripts=pmm-qa/qa-integration/pmm_qa/scripts
+          # Runners are jammy, the database containers jammy and focal or
+          # Oracle Linux 8/9 (the official MySQL and Percona images).
           for codename in jammy focal; do
-            pmm-qa/qa-integration/pmm_qa/scripts/fetch-pmm-client-deb.sh "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION"
+            "$scripts/fetch-pmm-client-deb.sh" "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION"
+          done
+          yum_component=$COMPONENT
+          [ "$yum_component" = main ] && yum_component=release
+          for el in 8 9; do
+            "$scripts/fetch-pmm-client-rpm.sh" "$yum_component" "$el" x86_64 /tmp/pmm-client-cache 900 "$VERSION"
           done
 
       - if: ${{ steps.cache.outputs.key != '' && steps.cache.outputs.cache_hit != 'true' }}

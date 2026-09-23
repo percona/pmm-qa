@@ -160,6 +160,48 @@
     - distro_family == "debian"
     - pmm_client_component | length > 0
 
+# Same as the Debian path above: one verified package from the host cache
+# instead of every container downloading it. Falls through to the per-channel
+# installs below when it cannot be staged.
+- set_fact:
+    pmm_client_installed_from_cache: false
+
+- name: Install pmm client on RHEL-family containers from the host cache
+  when:
+    - distro_family == "rhel"
+    - pmm_client_release_component | length > 0
+    - client_version is match('^(3-dev-latest|pmm3-rc|pmm3-latest|3\\.[0-9]+\\.[0-9]+)$')
+  block:
+    - name: Read the container's EL major version and arch
+      shell: docker exec {{ container_name }} sh -c '. /etc/os-release && echo "${VERSION_ID%%.*} $(uname -m)"'
+      register: container_el
+      changed_when: false
+
+    - name: Fetch and verify the pmm-client rpm on the host
+      shell: >
+        {{ lookup('env', 'PMM_QA_ROOT') }}/scripts/fetch-pmm-client-rpm.sh
+        {{ pmm_client_release_component | quote }}
+        {{ container_el.stdout.split()[0] | quote }}
+        {{ container_el.stdout.split()[1] | quote }}
+        {{ pmm_client_cache_dir | default('/tmp/pmm-client-cache') | quote }}
+        {{ pmm_client_fetch_budget | default(900) | quote }}
+        {{ pmm_client_pinned_version | trim | quote }}
+      register: pmm_client_rpm
+      changed_when: false
+
+    - name: Install the verified rpm
+      shell: |
+        set -e
+        docker cp {{ pmm_client_rpm.stdout_lines[-1] | trim | quote }} {{ container_name }}:/pmm-client.rpm
+        docker exec --user root {{ container_name }} rpm -Uvh --replacepkgs /pmm-client.rpm
+
+    - set_fact:
+        pmm_client_installed_from_cache: true
+  rescue:
+    - name: Leave the install to the repository
+      debug:
+        msg: "Could not install a cached pmm-client rpm in {{ container_name }}; installing from the repository."
+
 - name: Install pmm client experimental on RHEL-family containers
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client experimental
@@ -168,7 +210,7 @@
   retries: 3
   delay: 30
   until: dnf_install_result.rc == 0
-  when: distro_family == "rhel" and client_version == "3-dev-latest"
+  when: distro_family == "rhel" and client_version == "3-dev-latest" and not (pmm_client_installed_from_cache | default(false))
 
 - name: Install pmm client testing on RHEL-family containers
   shell: |
@@ -178,7 +220,7 @@
   retries: 3
   delay: 30
   until: dnf_install_result.rc == 0
-  when: distro_family == "rhel" and client_version == "pmm3-rc"
+  when: distro_family == "rhel" and client_version == "pmm3-rc" and not (pmm_client_installed_from_cache | default(false))
 
 - name: Install pmm client release on RHEL-family containers
   shell: |
@@ -188,7 +230,7 @@
   retries: 3
   delay: 30
   until: dnf_install_result.rc == 0
-  when: distro_family == "rhel" and client_version == "pmm3-latest"
+  when: distro_family == "rhel" and client_version == "pmm3-latest" and not (pmm_client_installed_from_cache | default(false))
 
 - name: Install specific PMM client version on RHEL-family containers
   shell: |
@@ -210,6 +252,7 @@
   when:
     - distro_family == 'rhel'
     - client_version is match('^3\\.[0-9]+\\.[0-9]+$')
+    - not (pmm_client_installed_from_cache | default(false))
 
 - name: Install tarball PMM client version
   shell: |
