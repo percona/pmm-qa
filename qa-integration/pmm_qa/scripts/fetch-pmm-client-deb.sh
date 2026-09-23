@@ -77,6 +77,7 @@ fetch_verified() {
           if echo "$sha  $DEB.part" | sha256sum -c --quiet -; then
             mv "$DEB.part" "$DEB"
             printf '%s\n' "$version" >"$DEST_DIR/version"
+            printf '%s\n' "$sha" >"$DEST_DIR/sha256"
             log "cached pmm-client $version ($size bytes) for $CODENAME/$COMPONENT"
             return 0
           fi
@@ -130,6 +131,15 @@ EOF
 # so the check-and-fetch has to be one critical section or they race on .part.
 exec 9>"$LOCK"
 flock 9
+# Dev and RC channels republish in place, so a cached package is reused only
+# while the index still names it; an unreachable index keeps the cached one.
+if [ -s "$DEB" ]; then
+  read -r _ _ current_sha _ < <(resolve_from_index) || true
+  if [ -n "${current_sha:-}" ] && [ "$current_sha" != "$(cat "$DEST_DIR/sha256" 2>/dev/null)" ]; then
+    log "cached pmm-client is no longer the one $CODENAME/$COMPONENT publishes; refetching"
+    rm -f "$DEB"
+  fi
+fi
 if [ -s "$DEB" ]; then
   log "reusing cached pmm-client $(cat "$DEST_DIR/version" 2>/dev/null || echo '?') for $CODENAME/$COMPONENT"
 else

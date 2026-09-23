@@ -67,6 +67,11 @@
     with_items:
       - docker exec {{ mongodb_ssl_container }} bash -xe ./mlaunch_ssl_setup.sh --mongodb_version {{ mongodb_version }} >> mongodb/setup_mongodb_ssl_{{ mongodb_version }}.log
 
+  - name: Stage the cached pmm-client package
+    include_tasks: ../tasks/stage_pmm_client_deb.yml
+    vars:
+      container_name: "{{ mongodb_ssl_container }}"
+
   - name: Install pmm-client on the mongodb_ssl_container
     shell: "{{ item }}"
     with_items:

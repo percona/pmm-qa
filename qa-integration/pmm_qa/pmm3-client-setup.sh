@@ -68,9 +68,34 @@ PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
+# One verified package per version: staged into containers by the playbooks,
+# or fetched through the host cache that CI restores. Empty when neither is
+# available, and the caller downloads it itself as before.
+cached_pmm_client_deb() {
+    local component=$1 version=${2:-} fetcher cache_dir=/tmp/pmm-client-cache deb
+    if [ -s /pmm-client.deb ]; then
+        echo /pmm-client.deb
+        return 0
+    fi
+    fetcher="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
+    [ -x "$fetcher" ] || return 0
+    # Fits inside the tightest caller's 19m wall, so a give-up prints its diagnosis.
+    deb=$("$fetcher" "$component" "$(lsb_release -sc)" "$cache_dir" 900 "$version") || return 0
+    # Root owns the tree, but the cache action has to read it and the later
+    # non-root pmm-framework run has to reopen the fetcher's lock inside it.
+    chmod -R a+rwX "$cache_dir"
+    echo "$deb"
+}
+
 install_pmm_client_from_repo() {
-    local component=$1 attempt
+    local component=$1 index_component=$1 attempt deb
+    [ "$component" = release ] && index_component=main
     percona-release enable-only pmm3-client "$component"
+    deb=$(cached_pmm_client_deb "$index_component")
+    if [ -n "$deb" ]; then
+        apt-get update
+        apt-get -y install "$deb" && return 0
+    fi
     for attempt in 1 2 3 4 5; do
         apt-get update
         apt-get -y install pmm-client && return 0
@@ -110,17 +135,8 @@ fi
 
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  # Containers get this file docker cp'd on its own, with no scripts/ beside it,
-  # so the table below is their path rather than a leftover.
-  fetcher="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
-  if [ -x "$fetcher" ]; then
-    cache_dir=/tmp/pmm-client-cache
-    # Fits inside the tightest caller's 19m wall, so a give-up prints its diagnosis.
-    deb_file=$("$fetcher" main "$(lsb_release -sc)" "$cache_dir" 900 "$client_version") || die_on_install_failure
-    # Root owns the tree, but the cache action has to read it and the later
-    # non-root pmm-framework run has to reopen the fetcher's lock inside it.
-    chmod -R a+rwX "$cache_dir"
-  else
+  deb_file=$(cached_pmm_client_deb main "$client_version")
+  if [ -z "$deb_file" ]; then
     build_number=7
     minor_version=${client_version#3.}
     minor_version=${minor_version%%.*}

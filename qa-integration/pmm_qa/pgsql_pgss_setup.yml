@@ -49,6 +49,11 @@
     with_items:
       - docker exec {{ pgsql_pgss_container }} bash -xe ./pg_stat_statements_setup.sh --pgsql_version {{ pgsql_version }} > setup_pgsql_pgss_{{ pgsql_version }}.log
 
+  - name: Stage the cached pmm-client package
+    include_tasks: tasks/stage_pmm_client_deb.yml
+    vars:
+      container_name: "{{ pgsql_pgss_container }}"
+
   - name: Install pmm-client on the pgsql_pgss_container
     shell: "{{ item }}"
     with_items:

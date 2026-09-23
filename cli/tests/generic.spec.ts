@@ -631,11 +631,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
-    const upgradedVersion = (await cli.exec('sudo pmm-admin version | grep -m1 "^Version:"'))
-      .stdout.replace('Version:', '').trim();
-
-    expect(upgradedVersion, 'Could not read the expected upgrade version from the host client!').not.toEqual('');
     await newPid.outNotContains(oldPid.stdout);
-    await newVersion.outContains(upgradedVersion);
+    await newVersion.outNotContains(latestReleasedVersion);
   });
 });

@@ -1,0 +1,44 @@
+name: Restore pmm-client package cache
+description: >
+  Restore the verified pmm-client packages for a client_version into
+  /tmp/pmm-client-cache, keyed by the build repo.percona.com currently
+  publishes. No-op for tarball versions.
+inputs:
+  client_version:
+    description: pmm3-client-setup.sh --client_version value
+    required: true
+  pmm_qa_path:
+    description: Where pmm-qa is checked out
+    default: pmm-qa
+  lookup_only:
+    description: Only check whether the cache exists
+    default: 'false'
+outputs:
+  key:
+    description: Cache key, empty when the version is not cacheable
+    value: ${{ steps.key.outputs.key }}
+  component:
+    description: apt index component the version installs from
+    value: ${{ steps.key.outputs.component }}
+  cache_hit:
+    description: Whether the cache was found
+    value: ${{ steps.restore.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      env:
+        CLIENT_VERSION: ${{ inputs.client_version }}
+        KEY_SCRIPT: ${{ inputs.pmm_qa_path }}/qa-integration/pmm_qa/scripts/pmm-client-cache-key.sh
+      run: |
+        read -r component _ key < <("$KEY_SCRIPT" "$CLIENT_VERSION") || true
+        echo "component=${component:-}" >> "$GITHUB_OUTPUT"
+        echo "key=${key:-}" >> "$GITHUB_OUTPUT"
+    - id: restore
+      if: steps.key.outputs.key != ''
+      uses: actions/cache/restore@v4
+      with:
+        path: /tmp/pmm-client-cache
+        key: ${{ steps.key.outputs.key }}
+        lookup-only: ${{ inputs.lookup_only }}

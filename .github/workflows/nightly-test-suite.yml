@@ -93,16 +93,18 @@ jobs:
 
   plan:
     name: Compatibility matrix (percona/pmm-client)
-    needs: get_compat_versions
+    needs: [get_compat_versions, resolve]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
       compat_matrix: ${{ steps.pick.outputs.compat_matrix }}
+      client_versions: ${{ steps.pick.outputs.client_versions }}
     steps:
       - id: pick
         shell: bash
         env:
           VERSIONS_JSON: ${{ needs.get_compat_versions.outputs.version_matrix }}
+          CLIENT_VERSION: ${{ needs.resolve.outputs.client_version }}
         run: |
           set -euo pipefail
           n="$(echo "$VERSIONS_JSON" | jq 'length')"
@@ -111,15 +113,58 @@ jobs:
             exit 1
           fi
           compat_matrix_json="$(echo "$VERSIONS_JSON" | jq 'map({version: ., image: ("percona/pmm-client:" + .)})')"
+          echo "client_versions=$(echo "$VERSIONS_JSON" | jq -c --arg v "$CLIENT_VERSION" '[$v] + . | unique')" >> "$GITHUB_OUTPUT"
           {
             echo "compat_matrix<<__COMPAT_MATRIX_EOF__"
             echo "$compat_matrix_json"
             echo "__COMPAT_MATRIX_EOF__"
           } >> "$GITHUB_OUTPUT"
 
+  # Every job below installs these packages, most of them several times over;
+  # fetching each once here stops the fan-out saturating repo.percona.com.
+  prefetch_client:
+    name: Prefetch pmm-client (${{ matrix.version }})
+    needs: plan
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(needs.plan.outputs.client_versions) }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.pmm_qa_branch || 'main' }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
+
+      - id: cache
+        uses: ./pmm-qa/.github/actions/pmm-client-cache
+        with:
+          client_version: ${{ matrix.version }}
+          lookup_only: 'true'
+
+      - name: Fetch the packages the runner and its containers install
+        if: ${{ steps.cache.outputs.key != '' && steps.cache.outputs.cache_hit != 'true' }}
+        env:
+          COMPONENT: ${{ steps.cache.outputs.component }}
+          VERSION: ${{ startsWith(matrix.version, '3.') && matrix.version || '' }}
+        run: |
+          # Runners are jammy; the database containers are jammy and focal.
+          for codename in jammy focal; do
+            pmm-qa/qa-integration/pmm_qa/scripts/fetch-pmm-client-deb.sh "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION"
+          done
+
+      - if: ${{ steps.cache.outputs.key != '' && steps.cache.outputs.cache_hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/pmm-client-cache
+          key: ${{ steps.cache.outputs.key }}
+
   cli_integration_tests:
     name: CLI integration (pmm-cli-integration-tests)
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/integration-cli-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -132,7 +177,7 @@ jobs:
   compatibility_integration_tests:
     if: ${{ !inputs.skip_compatibility }}
     name: Compatibility CLI (${{ matrix.version }})
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     strategy:
       fail-fast: false
       matrix:
@@ -148,7 +193,7 @@ jobs:
 
   e2e_tests_matrix:
     name: E2E Tests Matrix (CodeceptJS)
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/e2e-tests-matrix.yml
     secrets: inherit
     with:
@@ -159,7 +204,7 @@ jobs:
 
   helm_tests:
     name: pmm3-helm
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/helm-tests.yml
     secrets: inherit
     with:
@@ -170,7 +215,7 @@ jobs:
 
   gssapi_tests:
     name: GSSAPI Tests Matrix
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/gssapi-psmdb-tests-matrix.yml
     secrets: inherit
     with:
@@ -184,7 +229,7 @@ jobs:
 
   qa_integration_psmdb_pbm_full:
     name: PMM_PSMDB_PBM_FULL
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
@@ -193,7 +238,7 @@ jobs:
 
   qa_integration_proxysql:
     name: PMM_PROXYSQL
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/PMM_PROXYSQL.yaml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
@@ -204,7 +249,7 @@ jobs:
 
   qa_integration_pdpgsql:
     name: PMM_PDPGSQL
-    needs: [plan, resolve]
+    needs: [plan, resolve, prefetch_client]
     uses: ./.github/workflows/PMM_PDPGSQL.yaml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}

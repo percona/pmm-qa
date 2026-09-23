@@ -220,6 +220,12 @@ jobs:
         working-directory: ./pmm-qa
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
+      - name: Restore pmm-client package cache
+        id: client_cache
+        uses: ./pmm-qa/.github/actions/pmm-client-cache
+        with:
+          client_version: ${{ env.CLIENT_VERSION }}
+
       - name: Setup PMM3-Client
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
@@ -230,6 +236,14 @@ jobs:
           HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
           export HOST_IP
           ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Save pmm-client package cache
+        if: ${{ steps.client_cache.outputs.key != '' && steps.client_cache.outputs.cache_hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/pmm-client-cache
+          key: ${{ steps.client_cache.outputs.key }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-qa/e2e_tests
