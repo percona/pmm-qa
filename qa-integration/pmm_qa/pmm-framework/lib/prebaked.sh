@@ -203,8 +203,25 @@ wait_exporter() {
   retry 60 "$2 on $1" exporter_running "$1" "$2" >/dev/null
 }
 
+# Usage: exporter_running NODE EXPORTER [STATES]  (STATES defaults to running|waiting)
 exporter_running() {
   local status
   status=$(docker exec "$1" pmm-admin status 2>&1) || return 1
-  grep -Eiq "$2.*(running|waiting)" <<<"$status"
+  grep -Eiq "$2.*(${3:-running|waiting})" <<<"$status"
+}
+
+# Host dashboards read node_exporter, so a node without it running has no
+# CPU, memory or network data even when its database exporters are fine.
+# Usage: wait_node_exporter NODE PMM_AGENT_LOG
+wait_node_exporter() {
+  if ! (retry 60 "node_exporter on $1 to be Running" exporter_running "$1" node_exporter running >/dev/null); then
+    docker exec "$1" sh -c "grep -i node_exporter '$2' | tail -20" >&2 || true
+    die "node_exporter is not running on $1."
+  fi
+}
+
+# Print NODE's agents and their states as `agent-status NODE: ...` lines, which
+# the parallel runner echoes even for a setup that succeeded.
+report_agent_status() {
+  docker exec "$1" pmm-admin status 2>&1 | grep -Ei 'exporter|vmagent|agent_' | sed "s/^[[:space:]]*/agent-status $1: /" || true
 }

@@ -413,6 +413,18 @@ EOF
   [[ -z $output ]]
 }
 
+@test "a successful prebaked setup echoes its agents' states" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf '%s\n' '==> Run workload' 'agent-status pxc_proxysql_pmm_8.4: node_exporter  Running  42001' 'noise' >"$log"
+
+  run print_setup_log 1 1 'pxc' 0 "$log" 70
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == "[1/1] pxc: OK in 1m10s (log: $log)" ]]
+  [[ ${lines[1]} == '  pxc_proxysql_pmm_8.4: node_exporter  Running  42001' ]]
+  [[ $output != *noise* ]]
+}
+
 @test "a successful setup reports its slowest tasks before its log is discarded" {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'Install PMM Client packages ------------------------------------------- 421.07s\n' >"$log"

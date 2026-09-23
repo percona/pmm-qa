@@ -110,6 +110,9 @@ setup_mysql_family() {
   step 'Set up PMM agents' mf_setup_agents
   step 'Register MySQL with PMM' each_node names mf_register
   step 'Run workload' each_node targets mf_workload
+  for index in "${names[@]}"; do
+    report_agent_status "$index"
+  done
 }
 
 mf_sql() {
@@ -373,6 +376,7 @@ mf_register() {
   retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering $1" \
     docker exec "$1" "${add[@]}" --debug "${1}_$suffix" 127.0.0.1:3306 >/dev/null
   wait_exporter "$1" mysqld_exporter
+  wait_node_exporter "$1" /var/log/pmm-agent.log
 }
 
 # sysbench runs detached, so the setup does not wait out its run (30 s for PS,
@@ -460,6 +464,7 @@ setup_pxc() {
   step 'Set up PMM agent' pxc_setup_agent
   step 'Register PXC and ProxySQL with PMM' pxc_register
   step 'Run workload' pxc_workload
+  report_agent_status "$container"
 }
 
 pxc_cleanup() {
@@ -510,6 +515,7 @@ pxc_register() {
     docker exec "$container" pmm-admin add proxysql --username=admin --password=admin \
     "--service-name=my-new-proxysql_${container}_$suffix" --host=127.0.0.1 --port=6032 >/dev/null
   retry 60 "the PXC and ProxySQL exporters in $container" pxc_exporters_running >/dev/null
+  wait_node_exporter "$container" /pmm-agent.log
 }
 
 # As in client_container_proxysql_setup.sh, the load keeps running after setup:

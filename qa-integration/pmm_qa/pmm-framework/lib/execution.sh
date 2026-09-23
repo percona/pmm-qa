@@ -279,6 +279,8 @@ print_setup_log() {
   if ((status == 0)); then
     printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
     print_slowest_tasks "$log_file"
+    # Prebaked setups end with their agents' states (report_agent_status).
+    grep '^agent-status ' "$log_file" 2>/dev/null | sed 's/^agent-status /  /' || true
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
       cat_setup_log "$log_file"

@@ -13,7 +13,7 @@ stub_prebaked_docker() {
     case "$*" in
       *'pmm-admin status'*)
         printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
-          'mysqld_exporter Running' 'proxysql_exporter Running'
+          'mysqld_exporter Running' 'proxysql_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
         ;;
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
@@ -218,6 +218,24 @@ stub_prebaked_docker() {
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add mysql --query-source=slowlog --username=admin --password=admin --host=127.0.0.1 --port=3308 --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node__3_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_pxc_proxysql_pmm_8.4_[0-9]+ --host=127.0.0.1 --port=6032$' "$DOCKER_CALLS"
   grep -q -- '--mysql-host=127.0.0.1 --mysql-port=6033' "$DOCKER_CALLS"
+}
+
+@test "a prebaked setup fails when node_exporter never reaches Running" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  NODE_EXPORTER_STATE=Waiting
+  parse_database_spec 'pxc=8.4'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'node_exporter is not running on pxc_proxysql_pmm_8.4.'* ]]
+  grep -q "grep -i node_exporter '/pmm-agent.log'" "$DOCKER_CALLS"
+
+  NODE_EXPORTER_STATE=Running
+  : >"$DOCKER_CALLS"
+  run dispatch_setup
+  [[ $status -eq 0 ]]
+  [[ $output == *'agent-status pxc_proxysql_pmm_8.4: node_exporter Running'* ]]
 }
 
 @test "a PXC tarball builds its own image tag, and ProxySQL overrides are refused" {
