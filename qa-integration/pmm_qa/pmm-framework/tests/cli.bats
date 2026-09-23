@@ -113,6 +113,7 @@ load helpers/test_helper
   # token (see the "-" to "." conversion in latest_psmdb_version()).
   # 8.0.29-13 is deliberately absent: only what the release repo carries is a
   # candidate, so a patch still sitting in psmdb-80/yum/testing is never picked.
+  # shellcheck disable=SC2329,SC2317
   curl() {
     case "$*" in
       *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;
@@ -132,6 +133,7 @@ load helpers/test_helper
 @test "ignores a PSMDB patch that the repo index does not list" {
   # An RPM can be in the directory listing before the repodata index names it;
   # dnf only installs what the index lists.
+  # shellcheck disable=SC2329,SC2317
   curl() {
     case "$*" in
       *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;

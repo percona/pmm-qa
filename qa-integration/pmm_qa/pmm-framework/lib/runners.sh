@@ -105,8 +105,10 @@ latest_psmdb_version() {
   # file can sit in the listing while the index does not name it yet.
   base="https://repo.percona.com/psmdb-${requested//./}/yum/release/$el/RPMS/$(uname -m)"
   primary=$(curl --fail --silent --show-error "$base/repodata/repomd.xml" |
-    grep -Eo 'repodata/[^"]*-primary\.xml\.gz' | head -n1) && [[ -n $primary ]] &&
-    index=$(curl --fail --silent --show-error "$base/$primary" | gunzip | awk '
+    grep -Eo 'repodata/[^"]*-primary\.xml\.gz' | head -n1) || primary=''
+  [[ -n $primary ]] ||
+    die "Failed to read the psmdb-${requested//./} release repo index for PSMDB $requested."
+  index=$(curl --fail --silent --show-error "$base/$primary" | gunzip | awk '
       /<name>percona-server-mongodb-server<\/name>/ { inpkg = 1; next }
       inpkg && /<version / {
         match($0, /ver="[^"]*"/); ver = substr($0, RSTART + 5, RLENGTH - 6)
