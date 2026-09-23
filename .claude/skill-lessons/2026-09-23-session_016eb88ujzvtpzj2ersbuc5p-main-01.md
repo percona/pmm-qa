@@ -1,0 +1,6 @@
+# .claude/agents/test-runner.md — no feature build image means stop and report, not build the product by hand
+
+- Added: 2026-09-23
+- Applies to: any agent or session that provisions PMM to verify a ticket's fix (test-runner, investigator, an ad-hoc main-agent QA run)
+- Evidence: PMM-15191's linked pmm-submodules PR-4568 had no feature build, so QA instead built pmm-managed from the PR head and its merge-base and bind-mounted both arms over the stock image, across three Linode provisioning cycles. The user's standing correction: "if there is no created feature build in linked pmm-submodules, stop doing anything and provide this info", and separately "don't need to build pmm-managed separately". The missing tag was verifiable in one call before any VM was created — `perconalab/pmm-server-fb` tags filtered by `name=PR-<num>` returned `count=0` while the same registry held 13658 tags and was actively publishing other PRs' builds that day.
+- Proposed change: add a hard pre-provisioning gate — resolve the ticket's pmm-submodules PR, query Docker Hub for a `perconalab/pmm-server-fb` tag matching `PR-<num>`, and if none exists, stop and report the absence plus its cause (JNKPercona's build comment, and how far the `ci.yml` dep branch trails `main`) instead of provisioning, building binaries, or substituting a stock image.
