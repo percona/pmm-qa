@@ -12,7 +12,7 @@ set -euo pipefail
 
 CLIENT_VERSION=${1:?client_version required}
 CODENAME=${2:-jammy}
-BASE=http://repo.percona.com/pmm3-client/apt
+BASE=https://repo.percona.com/pmm3-client/apt
 ARCH=$(dpkg --print-architecture 2>/dev/null || echo amd64)
 
 case $CLIENT_VERSION in

@@ -86,6 +86,12 @@ fetch_verified() {
 
 exec 9>"$LOCK"
 flock 9
+# The cache directory is shared and writable, so the file itself is hashed
+# before reuse, not just its recorded checksum.
+if [ -s "$RPM" ] && ! echo "$(cat "$DEST_DIR/sha256" 2>/dev/null)  $RPM" | sha256sum -c --quiet - >/dev/null 2>&1; then
+  log "cached pmm-client does not match its recorded checksum; refetching"
+  rm -f "$RPM"
+fi
 # Dev and RC channels republish in place, so a cached package is reused only
 # while the index still names it; an unreachable index keeps the cached one.
 if [ -s "$RPM" ]; then

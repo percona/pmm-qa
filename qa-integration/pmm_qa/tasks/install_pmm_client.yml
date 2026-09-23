@@ -160,6 +160,7 @@
       docker exec --user root {{ container_name }} apt-get update
       docker exec --user root {{ container_name }} apt-get install -y -f
     fi
+    docker exec --user root {{ container_name }} dpkg-query -W pmm-client
   when:
     - distro_family == "debian"
     - pmm_client_component | length > 0

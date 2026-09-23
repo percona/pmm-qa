@@ -632,6 +632,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
     await newPid.outNotContains(oldPid.stdout);
-    await newVersion.outNotContains(latestReleasedVersion);
+
+    const upgradedVersion = newVersion.stdout.replace('Version:', '').trim();
+    const [upgraded, released] = [upgradedVersion, latestReleasedVersion].map((v) =>
+      v.split('-')[0].split('.').map(Number),
+    );
+    const firstDiff = upgraded.findIndex((part, i) => part !== released[i]);
+    const isNewer = firstDiff !== -1 && upgraded[firstDiff] > released[firstDiff];
+
+    expect(isNewer, `Upgraded version '${upgradedVersion}' is not newer than ${latestReleasedVersion}!`).toBe(true);
   });
 });

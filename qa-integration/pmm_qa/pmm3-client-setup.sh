@@ -95,7 +95,8 @@ install_pmm_client_from_repo() {
     # dpkg, not apt: apt swaps a local .deb for the repository's copy when
     # the versions match, and downloads it again.
     if [ -n "$deb" ]; then
-        dpkg -i "$deb" || { apt-get update && apt-get -y -f install; } && return 0
+        dpkg -i "$deb" || { apt-get update && apt-get -y -f install; }
+        dpkg-query -W pmm-client >/dev/null 2>&1 && return 0
     fi
     for attempt in 1 2 3 4 5; do
         apt-get update

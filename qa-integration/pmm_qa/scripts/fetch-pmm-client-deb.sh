@@ -23,7 +23,7 @@ CACHE_DIR=${3:-/tmp/pmm-client-cache}
 BUDGET=${4:-1800}
 VERSION=${5:-}
 
-BASE=http://repo.percona.com/pmm3-client/apt
+BASE=https://repo.percona.com/pmm3-client/apt
 ARCH=$(dpkg --print-architecture 2>/dev/null || echo amd64)
 DEST_DIR=$CACHE_DIR/$COMPONENT/$CODENAME/$ARCH/${VERSION:-latest}
 DEB=$DEST_DIR/pmm-client.deb
@@ -134,6 +134,12 @@ EOF
 # so the check-and-fetch has to be one critical section or they race on .part.
 exec 9>"$LOCK"
 flock 9
+# The cache directory is shared and writable, so the file itself is hashed
+# before reuse, not just its recorded checksum.
+if [ -s "$DEB" ] && ! echo "$(cat "$DEST_DIR/sha256" 2>/dev/null)  $DEB" | sha256sum -c --quiet - >/dev/null 2>&1; then
+  log "cached pmm-client does not match its recorded checksum; refetching"
+  rm -f "$DEB"
+fi
 # Dev and RC channels republish in place, so a cached package is reused only
 # while the index still names it; an unreachable index keeps the cached one.
 if [ -s "$DEB" ]; then
