@@ -77,7 +77,7 @@ fetch_verified() {
     if [ "$(date +%s)" -ge "$deadline" ] || { [ -z "${href:-}" ] && [ "$attempt" -ge 4 ]; }; then
       log "giving up after $attempt attempts: $BASE/${href:-<unresolved>}"
       # 3 tells callers the package is not published here, not that fetching failed.
-      [ -z "${href:-}" ] && return 3
+      [ -z "${href:-}" ] && curl -sSf --max-time 60 -o /dev/null "$BASE/repodata/repomd.xml" && return 3
       return 1
     fi
     sleep 15

@@ -60,7 +60,11 @@ fetch_verified() {
   while :; do
     attempt=$((attempt + 1))
     read -r version size sha file < <(resolve_from_index) || true
-    if [ -z "${file:-}" ]; then
+    if [ -z "${file:-}" ] && ! curl -sSf --max-time 60 -o /dev/null "$BASE/dists/$CODENAME/$COMPONENT/binary-$ARCH/Packages"; then
+      reason='index-unreachable'
+      no_index_streak=0
+      log "the $CODENAME/$COMPONENT index is unreachable (attempt $attempt)"
+    elif [ -z "${file:-}" ]; then
       reason='no-index'
       no_index_streak=$((no_index_streak + 1))
       log "no pmm-client${VERSION:+ $VERSION} in the $CODENAME/$COMPONENT index (attempt $attempt)"

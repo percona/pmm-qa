@@ -634,9 +634,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await newPid.outNotContains(oldPid.stdout);
 
     const upgradedVersion = newVersion.stdout.replace('Version:', '').trim();
-    const [upgraded, released] = [upgradedVersion, latestReleasedVersion].map((v) =>
-      v.split('-')[0].split('.').map(Number),
-    );
+    const toParts = (version: string) => version.split('-')[0].split('.').map(Number);
+    const [upgraded, released] = [toParts(upgradedVersion), toParts(latestReleasedVersion)];
     const firstDiff = upgraded.findIndex((part, i) => part !== released[i]);
     const isNewer = firstDiff !== -1 && upgraded[firstDiff] > released[firstDiff];
 
