@@ -37,19 +37,23 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pmm-client-docker-tests.bats#L6
    */
   test('run pmm-admin list on pmm-client docker container', async ({}) => {
+    // The compose stack starts a second PMM Server beside the job's own; on a
+    // busy runner its agents can take over two minutes to leave UNKNOWN.
+    test.setTimeout(300_000);
     await expect(async () => {
-      const output = JSON.parse((await cli.exec('docker exec pmm-client-1 pmm-admin list --json')).stdout);
+      const raw = (await cli.exec('docker exec pmm-client-1 pmm-admin list --json')).stdout;
+      const output = JSON.parse(raw);
       const mysqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'ps-8.0');
       const postgresqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'pdpgsql-1');
       const mongodbServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'mongodb-7.0');
       const unknownAgentStatus = output.agent.some((agent: { status: string }) => agent.status.toLowerCase().includes('unknown'));
 
-      expect(mysqlServicePresent).toBeTruthy();
-      expect(postgresqlServicePresent).toBeTruthy();
-      expect(mongodbServicePresent).toBeTruthy();
-      expect(unknownAgentStatus).toBeFalsy();
+      expect(mysqlServicePresent, `ps-8.0 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(postgresqlServicePresent, `pdpgsql-1 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(mongodbServicePresent, `mongodb-7.0 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(unknownAgentStatus, `An agent is still UNKNOWN:\n${raw}`).toBeFalsy();
     }).toPass({
-      timeout: 120_000,
+      timeout: 240_000,
       intervals: [2_000],
     });
   });
