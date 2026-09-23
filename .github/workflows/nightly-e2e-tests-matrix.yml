@@ -3,7 +3,10 @@ name: "Nightly E2E tests Matrix (remote PMM Server)"
 # is up. Fans out one setup shard per group of client setups and one job per
 # tag bucket, so each worker only runs the tests it has data for.
 
-run-name: "Nightly E2E (${{ inputs.installation_type }}) client ${{ inputs.pmm_client_version }} pmm@${{ inputs.pmm_server_address }}"
+# Only compat lanes pass an exact client version (3.x.y); the rest need no label.
+run-name: >-
+  Nightly E2E (${{ inputs.installation_type }})${{ startsWith(inputs.pmm_client_version, '3.')
+  && format(' compat {0}', inputs.pmm_client_version) || '' }} pmm@${{ inputs.pmm_server_address }}
 
 on:
   workflow_dispatch:
