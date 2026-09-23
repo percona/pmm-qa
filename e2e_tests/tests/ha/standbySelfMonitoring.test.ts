@@ -51,8 +51,6 @@ pmmTest(
             `max by (agent_id) (timestamp(${nodeMetric}{node_name="${podName}"}))`,
           );
 
-          // Once collection stops the series drops out of an instant query, so an
-          // empty result is the stopped standby - not a wrong exporter.
           expect(samples, `"${podName}" must still report ${nodeMetric}`).not.toHaveLength(0);
           expect(
             samples.map((sample) => sample.metric.agent_id),
