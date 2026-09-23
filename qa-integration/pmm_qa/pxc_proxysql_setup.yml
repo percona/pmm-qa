@@ -15,9 +15,7 @@
     pxc_dev_cluster: "{{ lookup('vars', 'extra_pxc_cluster_name', default=lookup('env','PXC_CLUSTER_NAME') | default('pxc-dev-cluster', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
-    # PXC ships x86_64 and arm64 packages (no arm64 build for 5.7); each major
-    # series lives in its own percona-release repository.
-    pxc_repo: "{{ {'5.7': 'pxc-57', '8.0': 'pxc-80', '8.4': 'pxc-84-lts', '9.7': 'pxc-9x-innovation'}[pxc_version] | default('pxc-80') }}"
+    pxc_repo: "{{ {'5.7': 'pxc-57', '8.0': 'pxc-80', '8.4': 'pxc-84-lts', '9.7': 'pxc-97-lts'}[pxc_version] | default('pxc-80') }}"
 
   tasks:
   - name: cleanup container for client and DB setup
