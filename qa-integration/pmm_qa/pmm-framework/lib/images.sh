@@ -6,6 +6,8 @@
 # provisioning/images; only the choice of build args lives here.
 
 PREBAKED_IMAGES_DIR=${PREBAKED_IMAGES_DIR:-$QA_INTEGRATION_ROOT/../provisioning/images}
+# Links each published package to this repository on GitHub.
+readonly PREBAKED_SOURCE_LABEL=org.opencontainers.image.source=https://github.com/percona/pmm-qa
 
 # Build pmm-qa/ps:VERSION.
 build_ps_image() {
@@ -20,7 +22,7 @@ build_ps_image() {
   esac
   docker build -f "$PREBAKED_IMAGES_DIR/engines/ps/Dockerfile" \
     --build-arg "PS_IMAGE=$base" --build-arg "XTRABACKUP_PACKAGE=$xtrabackup" \
-    -t "pmm-qa/ps:$version" "$PREBAKED_IMAGES_DIR" ||
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/ps:$version" "$PREBAKED_IMAGES_DIR" ||
     die "Building pmm-qa/ps:$version failed."
 }
 
@@ -35,7 +37,7 @@ build_mysql_image() {
     *) die "MySQL $version has no prebaked image; use 5.7, 8.0, 8.4 or 9.7." ;;
   esac
   docker build -f "$PREBAKED_IMAGES_DIR/engines/mysql/Dockerfile" "${stage[@]}" \
-    -t "pmm-qa/mysql:$version" "$PREBAKED_IMAGES_DIR" ||
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/mysql:$version" "$PREBAKED_IMAGES_DIR" ||
     die "Building pmm-qa/mysql:$version failed."
 }
 
@@ -58,7 +60,7 @@ build_pxc_proxysql_image() {
   docker build -f "$FRAMEWORK_DIR/images/pxc/Dockerfile" \
     --build-arg "PXC_VERSION=$version" --build-arg "PROXYSQL_PACKAGE=$package" \
     --build-arg "PXC_TARBALL=$tarball" \
-    -t "pmm-qa/pxc-proxysql:$tag" "$FRAMEWORK_DIR/images/pxc" ||
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/pxc-proxysql:$tag" "$FRAMEWORK_DIR/images/pxc" ||
     die "Building pmm-qa/pxc-proxysql:$tag failed."
 }
 

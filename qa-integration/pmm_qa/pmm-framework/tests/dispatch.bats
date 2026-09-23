@@ -113,7 +113,7 @@ stub_prebaked_docker() {
 @test "the PS image builds from the shared Dockerfile with the version's base image" {
   stub_prebaked_docker
   build_ps_image 8.0
-  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/ps/Dockerfile --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 -t pmm-qa/ps:8.0 $PREBAKED_IMAGES_DIR$" "$DOCKER_CALLS"
+  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/ps/Dockerfile --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $PREBAKED_IMAGES_DIR$" "$DOCKER_CALLS"
   run build_ps_image 9.9
   [[ $status -ne 0 ]]
 }
@@ -143,9 +143,9 @@ stub_prebaked_docker() {
   grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
 
   build_mysql_image 5.7
-  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/mysql/Dockerfile --target mysql-57 -t pmm-qa/mysql:5.7 " "$DOCKER_CALLS"
+  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/mysql/Dockerfile --target mysql-57 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 " "$DOCKER_CALLS"
   build_mysql_image 8.0
-  grep -q -- '--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 -t pmm-qa/mysql:8.0 ' "$DOCKER_CALLS"
+  grep -q -- '--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 ' "$DOCKER_CALLS"
 }
 
 @test "PGSQL replication selects replication playbook" {
@@ -217,9 +217,9 @@ stub_prebaked_docker() {
     [[ $1 != image ]]
   }
   build_pxc_proxysql_image 8.0 https://example.com/pxc.tar.gz
-  grep -Eq -- '--build-arg PXC_VERSION=8.0 --build-arg PROXYSQL_PACKAGE= --build-arg PXC_TARBALL=https://example.com/pxc.tar.gz -t pmm-qa/pxc-proxysql:8.0-tb[0-9a-f]{8} ' "$DOCKER_CALLS"
+  grep -Eq -- '--build-arg PXC_VERSION=8.0 --build-arg PROXYSQL_PACKAGE= --build-arg PXC_TARBALL=https://example.com/pxc.tar.gz --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/pxc-proxysql:8.0-tb[0-9a-f]{8} ' "$DOCKER_CALLS"
   build_pxc_proxysql_image 9.7
-  grep -q -- 'PROXYSQL_PACKAGE=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.x86_64.rpm --build-arg PXC_TARBALL= -t pmm-qa/pxc-proxysql:9.7 ' "$DOCKER_CALLS"
+  grep -q -- 'PROXYSQL_PACKAGE=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.x86_64.rpm --build-arg PXC_TARBALL= --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/pxc-proxysql:9.7 ' "$DOCKER_CALLS"
 
   parse_database_spec 'pxc=8.0'
   PROXYSQL_VERSION=3 run dispatch_setup
