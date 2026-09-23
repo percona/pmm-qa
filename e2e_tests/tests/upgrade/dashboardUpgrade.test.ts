@@ -41,8 +41,10 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest('Verify grafana logs after upgrade @post-upgrade', async ({ cliHelper }) => {
+    // "context canceled" errors are benign: they are logged when in-flight
+    // grafana requests abort during the server restart that the upgrade performs.
     const errorLogs = cliHelper.execSilent(
-      'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error',
+      'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error | grep -v "context canceled"',
     );
 
     expect(errorLogs.stdout, `Error found in grafana log after upgrade: ${errorLogs.stdout}`).toHaveLength(0);

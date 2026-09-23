@@ -9,7 +9,7 @@ export default class PostgresqlInstancesOverviewDashboard {
     { name: 'Transactions per second', type: 'stat' },
     { name: 'Execution time', type: 'timeSeries' },
     { name: 'Lowest uptime (top 3)', type: 'barGauge' },
-    { name: 'Queries', type: 'table' },
+    { name: 'Top slow queries', type: 'table' },
   ];
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
