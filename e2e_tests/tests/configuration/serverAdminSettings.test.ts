@@ -35,7 +35,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T1419 Verify there is no Give feedback button on Explore page @grafana-pr',
+  'PMM-T1419 - Verify there is no Give feedback button on Explore page @settings @grafana-pr',
   async ({ dataSourcesPage, page }) => {
     await page.goto(dataSourcesPage.exploreUrl);
     await expect(dataSourcesPage.elements.exploreQueryEditorModeToggle).toBeVisible({
