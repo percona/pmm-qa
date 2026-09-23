@@ -66,9 +66,9 @@ pmmTest(
       await leftNavigation.elements.timePickerOpenButton.click();
     });
 
-    await pmmTest.step('Navigate to a MySQL dashboard through the left navigation', async () => {
+    await pmmTest.step('Navigate to an OS dashboard through the left navigation', async () => {
       await leftNavigation.selectMenuItem('inventory');
-      await leftNavigation.selectMenuItem('mysql');
+      await leftNavigation.selectMenuItem('operatingsystem');
       await dashboard.waitForDashboardToLoad();
     });
 
