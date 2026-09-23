@@ -27,6 +27,8 @@ replication-set). Pin down:
 
 - **Containers:** exact names, including dots versus underscores; how many
   containers and what runs in each; the network; the published host ports.
+  When the playbook searched for a free port (`find_first_empty_docker_port.yml`),
+  search too: CI puts two topologies of one type on one host.
 - **Database users:** users, passwords and the auth plugin for each version.
 - **Server settings** the playbook's `my.cnf` or SQL sets, such as
   `innodb_monitor_enable` and native password auth.

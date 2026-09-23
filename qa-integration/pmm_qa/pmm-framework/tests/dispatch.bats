@@ -18,6 +18,7 @@ stub_prebaked_docker() {
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
         ;;
+      'ps --format {{.Ports}}') printf '%s\n' "${PUBLISHED_PORTS:-}" ;;
       *replication_group_members*) printf '3\n' ;;
       *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
     esac
@@ -42,6 +43,16 @@ stub_prebaked_docker() {
   grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
   [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_1 sh -c' "$DOCKER_CALLS") -eq 1 ]]
   [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_[23] sh -c' "$DOCKER_CALLS") -eq 0 ]]
+}
+
+@test "a second PS topology publishes past the ports the first one holds" {
+  stub_prebaked_docker
+  PUBLISHED_PORTS=$'0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp\n0.0.0.0:3307->3306/tcp, [::]:3307->3306/tcp\n0.0.0.0:33060->33060/tcp'
+  parse_database_spec 'ps=8.4,SETUP_TYPE=gr'
+  dispatch_setup
+
+  grep -q -- '--name ps_pmm_gr_8_4_1 .*--publish 3308:3306 ' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_gr_8_4_3 .*--publish 3310:3306 ' "$DOCKER_CALLS"
 }
 
 @test "PS 5.7 replication uses the 5.7 statements and publishes no port" {

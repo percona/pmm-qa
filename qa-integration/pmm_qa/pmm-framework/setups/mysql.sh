@@ -43,7 +43,7 @@ setup_mysql() {
 setup_mysql_family() {
   local engine=$1 type=$2 version_env=$3
   local version setup_type client nodes=1 query_source my_rocks=false backup=false encrypted
-  local topology='' tarball='' password=GRgrO9301RuF suffix index minor
+  local topology='' tarball='' password=GRgrO9301RuF suffix index minor base_port
   local -a names=() targets=()
   version=$(resolved_version "$version_env" "$type" "$DB_VERSION")
   setup_type=$(resolve_value "$type" SETUP_TYPE DB_CONFIG)
@@ -88,6 +88,7 @@ setup_mysql_family() {
     tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   fi
   step 'Clean previous run' mf_cleanup
+  base_port=$(mf_first_free_port) || die 'Could not list the published host ports.'
   step 'Start database nodes' each_node names mf_start_node
   case $setup_type in
     replication) step 'Configure replication' mf_configure_replication ;;
@@ -126,6 +127,29 @@ mf_cleanup() {
   ensure_pmm_network
 }
 
+# The first host port from 3306 with room for every node after it, as
+# find_first_empty_docker_port.yml picked it, so a second topology on the same
+# host does not collide with the ports the first one published.
+# Stdout: the base port
+mf_first_free_port() {
+  local published port=3306 offset taken
+  published=$(docker ps --format '{{.Ports}}') || return 1
+  while :; do
+    taken=false
+    for ((offset = 0; offset < nodes; offset++)); do
+      if [[ $published == *":$((port + offset))->"* ]]; then
+        taken=true
+        break
+      fi
+    done
+    if [[ $taken == false ]]; then
+      break
+    fi
+    port=$((port + offset + 1))
+  done
+  printf '%s' "$port"
+}
+
 mf_start_node() {
   local name=$1 node=${1##*_} seed seeds=''
   # Root, as the playbooks' containers were: tests `docker exec` without --user
@@ -143,9 +167,9 @@ mf_start_node() {
       chmod 0777 /host-tmp/mysql-sockets/$node && ln -s mysqld.sock /host-tmp/mysql-sockets/$node/mysql.sock"
     run+=(--volume "/tmp/mysql-sockets/$node:/var/run/mysqld")
   fi
-  # As in the playbooks: node N on host port 3305+N, except PS 5.7, which has none.
+  # As in the playbooks: node N on host port base+N-1, except PS 5.7, which has none.
   if [[ $engine != ps || $version != 5.7 ]]; then
-    run+=(--publish "$((3305 + node)):3306")
+    run+=(--publish "$((base_port + node - 1)):3306")
   fi
   if [[ $my_rocks == true ]]; then
     run+=(--env INIT_ROCKSDB=1)
