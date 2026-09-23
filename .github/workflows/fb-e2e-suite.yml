@@ -59,7 +59,16 @@ on:
       LAUNCHABLE_TOKEN:
         required: false
 jobs:
+  # Every job below installs the same client; fetch it once for all of them.
+  prefetch_client:
+    name: Prefetch pmm-client
+    uses: ./.github/workflows/prefetch-pmm-client.yml
+    with:
+      client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || 'latest-tarball') }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+
   backup_management_mongo:
+    needs: prefetch_client
     name: Backup Management MongoDB UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -91,6 +100,7 @@ jobs:
 #      tags_for_tests: '@bm-mysql'
 
   backup_management_common:
+    needs: prefetch_client
     name: Backup Management Common and Locations UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -107,6 +117,7 @@ jobs:
       tags_for_tests: '@bm-locations'
 
   exporters:
+    needs: prefetch_client
     name: Exporters tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -122,6 +133,7 @@ jobs:
       tags_for_tests: '@exporters'
 
   mongo_exporter:
+    needs: prefetch_client
     name: MongoDB Exporter tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -137,6 +149,7 @@ jobs:
       tags_for_tests: '@mongodb-exporter'
 
   instances:
+    needs: prefetch_client
     name: Instances UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -152,6 +165,7 @@ jobs:
       tags_for_tests: '@fb-instances'
 
   instances_playwright:
+    needs: prefetch_client
     name: Instances UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -165,6 +179,7 @@ jobs:
       pmm_test_flag: '@fb-instances'
 
   alerting_and_settings:
+    needs: prefetch_client
     name: Alerting and Settings UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -180,6 +195,7 @@ jobs:
       tags_for_tests: '@fb-alerting|@fb-settings'
  
   alerting:
+    needs: prefetch_client
     name: Alerting tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -193,6 +209,7 @@ jobs:
       pmm_test_flag: '@alerting'
 
   settings:
+    needs: prefetch_client
     name: Settings tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -206,6 +223,7 @@ jobs:
       pmm_test_flag: '@fb-settings'
 
   user_and_password:
+    needs: prefetch_client
     name: User with changed password UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -220,6 +238,7 @@ jobs:
       pmm_test_flag: '@user-password'
 
   pgsm:
+    needs: prefetch_client
     name: PGSM UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -235,6 +254,7 @@ jobs:
       tags_for_tests: '@pgsm-pmm-integration'
 
   pgss:
+    needs: prefetch_client
     name: PGSS UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -265,6 +285,7 @@ jobs:
   #     tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   psmdb_replica:
+    needs: prefetch_client
     name: PSMDB Replica UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -280,6 +301,7 @@ jobs:
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
   user_and_password_podman:
+    needs: prefetch_client
     name: User with changed password UI tests
     uses: ./.github/workflows/runner-e2e-tests-podman.yml
     secrets: inherit
@@ -293,6 +315,7 @@ jobs:
       pmm_test_flag: '@user-password'
 
   dump_tool:
+    needs: prefetch_client
     name: Dump Tool UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -308,6 +331,7 @@ jobs:
       tags_for_tests: '@dump'
 
   service_account:
+    needs: prefetch_client
     name: Service Accounts tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -323,6 +347,7 @@ jobs:
       pmm_test_flag: '@service-account'
 
   psmdb_arbiter:
+    needs: prefetch_client
     name: PSMDB Arbiter Replica UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -338,6 +363,7 @@ jobs:
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   ps_integration:
+    needs: prefetch_client
     name: Percona Server for MySQL UI integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -351,6 +377,7 @@ jobs:
       pmm_test_flag: '@pmm-ps-integration'
 
   rbac:
+    needs: prefetch_client
     name: PS UI Role based access control
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -366,6 +393,7 @@ jobs:
       tags_for_tests: '@rbac'
 
   encryption:
+    needs: prefetch_client
     name: Encryption tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -381,6 +409,7 @@ jobs:
       tags_for_tests: '@fb-encryption'
 
   docker_configuration:
+    needs: prefetch_client
     name: Docker configuration tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -396,6 +425,7 @@ jobs:
       tags_for_tests: '@docker-configuration'
 
   docker_configuration_playwright:
+    needs: prefetch_client
     name: Docker configuration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -408,6 +438,7 @@ jobs:
       pmm_test_flag: '@docker-configuration'
 
   nomad:
+    needs: prefetch_client
     name: Nomad tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
@@ -424,6 +455,7 @@ jobs:
       tags_for_tests: '@nomad'
 
   rta:
+    needs: prefetch_client
     name: RTA tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:

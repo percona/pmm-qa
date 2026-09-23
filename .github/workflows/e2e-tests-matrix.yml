@@ -55,7 +55,16 @@ on:
         type: string
 
 jobs:
+  # Every job below installs the same client; fetch it once for all of them.
+  prefetch_client:
+    name: Prefetch pmm-client
+    uses: ./.github/workflows/prefetch-pmm-client.yml
+    with:
+      client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball') }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch }}
+
   settings_and_cli:
+    needs: prefetch_client
     name: Settings and cli UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
@@ -69,6 +78,7 @@ jobs:
       tags_for_tests: '@settings|@cli'
 
   ssl_mysql:
+    needs: prefetch_client
     name: MySQL SSL tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
@@ -82,6 +92,7 @@ jobs:
       tags_for_tests: '@ssl-mysql'
 
   ssl_mongo:
+    needs: prefetch_client
     name: MongoDB SSL tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
@@ -95,6 +106,7 @@ jobs:
       tags_for_tests: '@ssl-mongo'
 
   ssl_postgres:
+    needs: prefetch_client
     name: PDPGSQL SSL tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
@@ -108,6 +120,7 @@ jobs:
       tags_for_tests: '@ssl-postgres'
 
   disconnect:
+    needs: prefetch_client
     name: Disconnect from PMM Server
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
@@ -121,6 +134,7 @@ jobs:
       tags_for_tests: '@disconnect'
 
   ps_pxc_haproxy_integration:
+    needs: prefetch_client
     name: PS, PXC and Haproxy integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -133,6 +147,7 @@ jobs:
       pmm_test_flag: '@pmm-ps-pxc-haproxy-integration'
 
   psmdb_integration:
+    needs: prefetch_client
     name: PSMDB integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -145,6 +160,7 @@ jobs:
       pmm_test_flag: '@pmm-psmdb-integration'
 
   new-navigation:
+    needs: prefetch_client
     name: New Navigation UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -169,6 +185,7 @@ jobs:
 #      pmm_test_flag: '@pmm-valkey-integration'
 
   inventory:
+    needs: prefetch_client
     name: Inventory|Image renderer tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -181,6 +198,7 @@ jobs:
       pmm_test_flag: '@inventory|@image-renderer'
 
   access-control:
+    needs: prefetch_client
     name: Access control tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -193,6 +211,7 @@ jobs:
       pmm_test_flag: '@LBAC'
 
   settings_playwright:
+    needs: prefetch_client
     name: Settings UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:

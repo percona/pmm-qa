@@ -83,7 +83,16 @@ on:
         required: false
 
 jobs:
+  # Every shard installs the same client; fetch it once for all of them.
+  prefetch_client:
+    name: Prefetch pmm-client
+    uses: ./.github/workflows/prefetch-pmm-client.yml
+    with:
+      client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || 'latest-tarball') }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+
   shard:
+    needs: prefetch_client
     name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}"
     strategy:
       fail-fast: false

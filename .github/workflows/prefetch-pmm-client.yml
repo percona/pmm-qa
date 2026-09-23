@@ -1,0 +1,68 @@
+name: Prefetch pmm-client
+
+# Called before a fan-out: fetch each client version once and save it to
+# actions/cache, so every job after it restores the packages instead of all of
+# them downloading from repo.percona.com at once. A cache that already exists
+# makes this a no-op; it never fails its caller.
+
+on:
+  workflow_call:
+    inputs:
+      client_versions:
+        description: JSON array of pmm3-client-setup.sh --client_version values
+        required: true
+        type: string
+      pmm_qa_branch:
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  prefetch:
+    name: Prefetch pmm-client (${{ matrix.version }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(inputs.client_versions) }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.pmm_qa_branch || github.head_ref || github.ref_name }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
+
+      - id: cache
+        uses: ./pmm-qa/.github/actions/pmm-client-cache
+        with:
+          client_version: ${{ matrix.version }}
+          lookup_only: 'true'
+
+      - name: Fetch the packages the runners and their containers install
+        id: fetch
+        if: ${{ steps.cache.outputs.key != '' && steps.cache.outputs.cache_hit != 'true' }}
+        continue-on-error: true
+        env:
+          COMPONENT: ${{ steps.cache.outputs.component }}
+          VERSION: ${{ startsWith(matrix.version, '3.') && matrix.version || '' }}
+        run: |
+          set -euo pipefail
+          scripts=pmm-qa/qa-integration/pmm_qa/scripts
+          # Runners are jammy, the database containers jammy and focal or
+          # Oracle Linux 8/9 (the official MySQL and Percona images).
+          for codename in jammy focal; do
+            "$scripts/fetch-pmm-client-deb.sh" "$COMPONENT" "$codename" /tmp/pmm-client-cache 900 "$VERSION"
+          done
+          yum_component=$COMPONENT
+          [ "$yum_component" = main ] && yum_component=release
+          for el in 8 9; do
+            "$scripts/fetch-pmm-client-rpm.sh" "$yum_component" "$el" x86_64 /tmp/pmm-client-cache 900 "$VERSION"
+          done
+
+      - if: ${{ steps.fetch.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/pmm-client-cache
+          key: ${{ steps.cache.outputs.key }}

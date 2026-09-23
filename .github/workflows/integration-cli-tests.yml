@@ -62,11 +62,20 @@ on:
         required: false
 
 jobs:
+  # Every job below installs the same client; fetch it once for all of them.
+  prefetch_client:
+    name: Prefetch pmm-client
+    uses: ./.github/workflows/prefetch-pmm-client.yml
+    with:
+      client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || 'latest-tarball') }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):
   # @help, @server-only, @client-docker, @generic, @unregister,
   # @service-removal, @ps, @mysql, @mysql-conf-file, @pdpgsql,
   # @psmdb, @shard-psmdb, @haproxy, @proxysql, @mongoDb
   help-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -82,6 +91,7 @@ jobs:
       test_name: 'help tests'
 
   pmm-server-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -97,6 +107,7 @@ jobs:
       test_name: 'pmm-server container'
 
   pmm-client-container-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -113,6 +124,7 @@ jobs:
       test_name: 'pmm-client docker'
 
   generic-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -129,6 +141,7 @@ jobs:
       test_name: 'Generic'
 
   remove-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -144,6 +157,7 @@ jobs:
       test_name: 'Remove'
 
   ps-57-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -160,6 +174,7 @@ jobs:
       test_name: 'Percona Server 5.7'
 
   ps-80-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -176,6 +191,7 @@ jobs:
       test_name: 'Percona Server 8.0'
 
   ps-84-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -192,6 +208,7 @@ jobs:
       test_name: 'Percona Server 8.4'
 
   ps-97-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -208,6 +225,7 @@ jobs:
       test_name: 'Percona Server 9.7'
 
   mysql-80-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -224,6 +242,7 @@ jobs:
       test_name: 'MySQL 8.0'
 
   mysql-84-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -240,6 +259,7 @@ jobs:
       test_name: 'MySQL 8.4'
 
   mysql-97-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -256,6 +276,7 @@ jobs:
       test_name: 'MySQL 9.7'
 
   pdpgsql-14-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -272,6 +293,7 @@ jobs:
       test_name: 'PD PostgreSQL 14'
 
   pdpgsql-15-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -288,6 +310,7 @@ jobs:
       test_name: 'PD PostgreSQL 15'
 
   pdpgsql-16-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -304,6 +327,7 @@ jobs:
       test_name: 'PD PostgreSQL 16'
 
   pdpgsql-17-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -320,6 +344,7 @@ jobs:
       test_name: 'PD PostgreSQL 17'
 
   pdpgsql-18-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -399,6 +424,7 @@ jobs:
   #      test_name: 'MongoDB 7.x'
 
   psmdb-6-replica-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -415,6 +441,7 @@ jobs:
       test_name: 'PSMDB Replica 6.x'
 
   psmdb-7-replica-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -431,6 +458,7 @@ jobs:
       test_name: 'PSMDB Replica 7.x'
 
   psmdb-8-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -447,6 +475,7 @@ jobs:
       test_name: 'PSMDB Replica 8.x'
 
   psmdb-7-shard-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -463,6 +492,7 @@ jobs:
       test_name: 'PSMDB Shard 7.x'
 
   psmdb-8-shard-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -479,6 +509,7 @@ jobs:
       test_name: 'PSMDB Shard 8.x'
 
   haproxy-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -495,6 +526,7 @@ jobs:
       test_name: 'HA Proxy'
 
   pxc-57-proxysql-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -511,6 +543,7 @@ jobs:
       test_name: 'PXC 5.7'
 
   pxc-80-proxysql-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -527,6 +560,7 @@ jobs:
       test_name: 'PXC 8.0'
 
   pxc-84-proxysql-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -543,6 +577,7 @@ jobs:
       test_name: 'PXC 8.4'
 
   pxc-97-proxysql-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -559,6 +594,7 @@ jobs:
       test_name: 'PXC 9.7'
 
   valkey-7-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
@@ -575,6 +611,7 @@ jobs:
       test_name: 'Valkey 7.x'
 
   valkey-8-tests:
+    needs: prefetch_client
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
