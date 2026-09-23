@@ -52,8 +52,8 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
     async ({ api }) => {
       const clientService = await api.inventoryApi.getServiceDetailsByPartialName(container);
 
-      await api.grafanaApi.waitForMetric(metric, clientService.service_name);
-      await api.grafanaApi.waitForMetric(metric, remoteServiceName);
+      await api.grafanaApi.waitForMetric(`${metric}{service_name="${clientService.service_name}"}`);
+      await api.grafanaApi.waitForMetric(`${metric}{service_name="${remoteServiceName}"}`);
     },
   );
 });

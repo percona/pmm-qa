@@ -10,6 +10,7 @@ export default interface DashboardInterface {
   metrics:
     | GrafanaPanel[]
     | ((services: string[]) => MetricsRow[])
+    | ((services: string[], nodes: string[]) => MetricsRow[])
     | ((serviceName: string) => GrafanaPanel[])
     | ((shardNames: string[], nodeNames: string[], serviceNames: string[]) => GrafanaPanel[]);
   noDataMetrics:

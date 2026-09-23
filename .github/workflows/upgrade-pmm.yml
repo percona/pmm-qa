@@ -34,9 +34,9 @@ jobs:
     outputs:
       versions: ${{ steps.set.outputs.versions }}
       ui_versions: ${{ steps.set.outputs.ui_versions }}
-      rc_version:  ${{ steps.set.outputs.rc_version }}
-      matrix:  ${{ steps.set.outputs.matrix }}
-      ui_matrix:  ${{ steps.set.outputs.ui_matrix }}
+      rc_version: ${{ steps.set.outputs.rc_version }}
+      matrix: ${{ steps.set.outputs.matrix }}
+      ui_matrix: ${{ steps.set.outputs.ui_matrix }}
       DEV_LATEST_VERSION: ${{ steps.set.outputs.DEV_LATEST_VERSION }}
     steps:
       - name: Compute version range (latest -> 5 minors back)
@@ -62,7 +62,8 @@ jobs:
 
 
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
-          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" \
+            | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
           RC_SERVER_VERSION="${RC_VERSION%-rc*}"
@@ -74,16 +75,17 @@ jobs:
             '[$versions[] | { version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver }]')
           echo "ui_matrix=$UI_MATRIX" >> "$GITHUB_OUTPUT"
           echo "UI matrix: $UI_MATRIX"
-          export VERSION_LIST=$(echo "$VERSIONS" | tr -d '[]"' | tr ',' ' ')
+          VERSION_LIST=$(echo "$VERSIONS" | tr -d '[]"' | tr ',' ' ')
+          export VERSION_LIST
           DOCKER_TAGS=()
-          DOCKER_TAGS+=(perconalab/pmm-server:$RC_VERSION)
+          DOCKER_TAGS+=("perconalab/pmm-server:$RC_VERSION")
           for version in $VERSION_LIST; do
             DOCKER_TAGS+=("percona/pmm-server:$version")
           done
           echo "${DOCKER_TAGS[@]}"
-          echo "DOCKER_TAGS=${DOCKER_TAGS[@]}" >> "$GITHUB_OUTPUT"
+          echo "DOCKER_TAGS=${DOCKER_TAGS[*]}" >> "$GITHUB_OUTPUT"
           VERSIONS=$(jq -cn --argjson versions "$VERSIONS" '["pmm3-rc"] + $versions')
-          echo $VERSIONS
+          echo "$VERSIONS"
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
           MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" \

@@ -14,14 +14,16 @@ export type NestedLocator = Locator | NestedLocators;
 export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
-  snackBar = new SnackbarComponent(this.page);
+  snackBar: SnackbarComponent;
   abstract builders: Record<string, (...args: string[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
   abstract messages: Record<string, Locator>;
 
-  constructor(protected page: Page) {}
+  constructor(protected page: Page) {
+    this.snackBar = new SnackbarComponent(this.page);
+  }
 
   duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();
