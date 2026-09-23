@@ -4,7 +4,7 @@ ARG REPO=release
 ARG PMM_REPO=experimental
 ARG PBM_VERSION=2.9.1-1
 ARG PSMDB_VERSION=latest
-ARG PMM_CLIENT_VERSION=latest
+ARG PMM_CLIENT_VERSION=latest-tarball
 
 RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
 rm -f /lib/systemd/system/multi-user.target.wants/*;\
