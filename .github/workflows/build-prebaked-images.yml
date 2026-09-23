@@ -33,10 +33,49 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: ${{ matrix.engine }}:${{ matrix.version }}
+  # Rebuild only the engines a push touched. A schedule or manual run, a push
+  # whose previous commit is unknown (a new branch or a force-push), or a change
+  # to the shared build logic rebuilds all of them.
+  plan:
     # A fork's schedule must not try to publish into percona's registry.
     if: github.repository == 'percona/pmm-qa'
+    runs-on: ubuntu-latest
+    outputs:
+      engines: ${{ steps.pick.outputs.engines }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pick the engines to build
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          all='["ps","mysql","pxc-proxysql"]'
+          if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            engines=$all
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+            if grep -qE '^(qa-integration/pmm_qa/pmm-framework/(lib/images\.sh|build-images)|\.github/workflows/build-prebaked-images\.yml)$' <<<"$changed"; then
+              engines=$all
+            else
+              picked=()
+              if grep -q '^provisioning/images/engines/ps/' <<<"$changed"; then picked+=('"ps"'); fi
+              if grep -q '^provisioning/images/engines/mysql/' <<<"$changed"; then picked+=('"mysql"'); fi
+              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pxc/' <<<"$changed"; then picked+=('"pxc-proxysql"'); fi
+              engines="[$(IFS=,; echo "${picked[*]}")]"
+            fi
+          fi
+          echo "engines=$engines" >>"$GITHUB_OUTPUT"
+          echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: ${{ matrix.engine }}:${{ matrix.version }}
+    needs: plan
+    if: needs.plan.outputs.engines != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -49,7 +88,7 @@ jobs:
       fail-fast: false
       max-parallel: 5 # GHCR starts rejecting concurrent pushes beyond this
       matrix:
-        engine: [ps, mysql, pxc-proxysql]
+        engine: ${{ fromJSON(needs.plan.outputs.engines) }}
         version: ['5.7', '8.0', '8.4', '9.7']
     env:
       IMAGE: pmm-qa/${{ matrix.engine }}:${{ matrix.version }}
