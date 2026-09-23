@@ -220,12 +220,6 @@ jobs:
         working-directory: ./pmm-qa
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
-      - name: Restore pmm-client package cache
-        id: client_cache
-        uses: ./pmm-qa/.github/actions/pmm-client-cache
-        with:
-          client_version: ${{ env.CLIENT_VERSION }}
-
       - name: Setup PMM3-Client
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no

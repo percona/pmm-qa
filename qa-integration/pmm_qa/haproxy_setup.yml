@@ -52,11 +52,6 @@
     with_items:
       - docker exec {{ haproxy_container }} bash -x ./haproxy_setup.sh
 
-  - name: Stage the cached pmm-client package
-    include_tasks: tasks/stage_pmm_client_deb.yml
-    vars:
-      container_name: "{{ haproxy_container }}"
-
   - name: Install pmm3-client on the haproxy_container
     shell: "{{ item }}"
     with_items:

@@ -609,7 +609,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await oldVersion.outContains(latestReleasedVersion);
     const arch = (await cli.exec(`docker exec ${containerName} uname -m`)).stdout.trim();
     const bucket = arch === 'aarch64' ? 'pmm-client-arm' : 'pmm-client';
-    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http')
+    // Compat runs install a released tarball URL; only a build-cache URL is newer than the release.
+    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('pmm-build-cache')
       ? process.env.PMM_CLIENT_VERSION
       : `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz`;
 

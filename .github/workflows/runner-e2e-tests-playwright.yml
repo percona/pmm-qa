@@ -203,13 +203,6 @@ jobs:
           # curl's %{http_code} must reach curl literally.
           timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 
-      - name: Restore pmm-client package cache
-        id: client_cache
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        uses: ./pmm-qa/.github/actions/pmm-client-cache
-        with:
-          client_version: ${{ env.PMM_CLIENT_VERSION }}
-
       - name: Setup PMM-Client
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/qa-integration/pmm_qa

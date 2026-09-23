@@ -68,36 +68,9 @@ PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-# One verified package per version: staged into containers by the playbooks,
-# or fetched through the host cache that CI restores. Empty when neither is
-# available, and the caller downloads it itself as before.
-cached_pmm_client_deb() {
-    local component=$1 version=${2:-} fetcher cache_dir=/tmp/pmm-client-cache deb
-    if [ -s /pmm-client.deb ]; then
-        echo /pmm-client.deb
-        return 0
-    fi
-    fetcher="$(dirname "$0")/scripts/fetch-pmm-client-deb.sh"
-    [ -x "$fetcher" ] || return 0
-    # Fits inside the tightest caller's 19m wall, so a give-up prints its diagnosis.
-    deb=$("$fetcher" "$component" "$(lsb_release -sc)" "$cache_dir" 900 "$version") || return 0
-    # Root owns the tree, but the cache action has to read it and the later
-    # non-root pmm-framework run has to reopen the fetcher's lock inside it.
-    chmod -R a+rwX "$cache_dir"
-    echo "$deb"
-}
-
 install_pmm_client_from_repo() {
-    local component=$1 index_component=$1 attempt deb
-    [ "$component" = release ] && index_component=main
+    local component=$1 attempt
     percona-release enable-only pmm3-client "$component"
-    deb=$(cached_pmm_client_deb "$index_component")
-    # dpkg, not apt: apt swaps a local .deb for the repository's copy when
-    # the versions match, and downloads it again.
-    if [ -n "$deb" ]; then
-        dpkg -i "$deb" || { apt-get update && apt-get -y -f install; }
-        dpkg-query -W pmm-client >/dev/null 2>&1 && return 0
-    fi
     for attempt in 1 2 3 4 5; do
         apt-get update
         apt-get -y install pmm-client && return 0
@@ -137,20 +110,17 @@ fi
 
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  deb_file=$(cached_pmm_client_deb main "$client_version")
-  if [ -z "$deb_file" ]; then
-    build_number=7
-    minor_version=${client_version#3.}
-    minor_version=${minor_version%%.*}
-    if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
-      build_number=8
-    elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
-      build_number=1
-    fi
-    deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
-    wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-      -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
+  build_number=7
+  minor_version=${client_version#3.}
+  minor_version=${minor_version%%.*}
+  if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
+    build_number=8
+  elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
+    build_number=1
   fi
+  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
   dpkg -i "${deb_file}"
 fi
 

@@ -185,13 +185,6 @@ jobs:
           # curl's %{http_code} must reach curl literally.
           timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
-      - name: Restore pmm-client package cache
-        id: client_cache
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        uses: ./pmm-qa/.github/actions/pmm-client-cache
-        with:
-          client_version: ${{ env.PMM_CLIENT_VERSION }}
-
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa

@@ -14,7 +14,6 @@
 #   and dists/<codename>/release/ does not exist.
 #   VERSION pins an exact upstream version (3.9.1); empty takes the highest.
 # Stdout: the path of the verified .deb (nothing else — callers capture it)
-# Exit: 3 when the index does not publish that package, 1 on any other failure
 set -euo pipefail
 
 COMPONENT=${1:?index component (main|testing|experimental) required}
@@ -23,7 +22,7 @@ CACHE_DIR=${3:-/tmp/pmm-client-cache}
 BUDGET=${4:-1800}
 VERSION=${5:-}
 
-BASE=https://repo.percona.com/pmm3-client/apt
+BASE=http://repo.percona.com/pmm3-client/apt
 ARCH=$(dpkg --print-architecture 2>/dev/null || echo amd64)
 DEST_DIR=$CACHE_DIR/$COMPONENT/$CODENAME/$ARCH/${VERSION:-latest}
 DEB=$DEST_DIR/pmm-client.deb
@@ -60,11 +59,7 @@ fetch_verified() {
   while :; do
     attempt=$((attempt + 1))
     read -r version size sha file < <(resolve_from_index) || true
-    if [ -z "${file:-}" ] && ! curl -sSf --max-time 60 -o /dev/null "$BASE/dists/$CODENAME/$COMPONENT/binary-$ARCH/Packages"; then
-      reason='index-unreachable'
-      no_index_streak=0
-      log "the $CODENAME/$COMPONENT index is unreachable (attempt $attempt)"
-    elif [ -z "${file:-}" ]; then
+    if [ -z "${file:-}" ]; then
       reason='no-index'
       no_index_streak=$((no_index_streak + 1))
       log "no pmm-client${VERSION:+ $VERSION} in the $CODENAME/$COMPONENT index (attempt $attempt)"
@@ -82,7 +77,6 @@ fetch_verified() {
           if echo "$sha  $DEB.part" | sha256sum -c --quiet -; then
             mv "$DEB.part" "$DEB"
             printf '%s\n' "$version" >"$DEST_DIR/version"
-            printf '%s\n' "$sha" >"$DEST_DIR/sha256"
             log "cached pmm-client $version ($size bytes) for $CODENAME/$COMPONENT"
             return 0
           fi
@@ -126,8 +120,6 @@ EOF
         printf '    served size  %s\n' "${served:-<unknown>}"
         printf '    index sha256 %s\n' "${sha:-<unknown>}"
       } >&2
-      # 3 tells callers the package is not published here, not that fetching failed.
-      [ "$reason" = no-index ] && return 3
       return 1
     fi
     sleep 15
@@ -138,21 +130,6 @@ EOF
 # so the check-and-fetch has to be one critical section or they race on .part.
 exec 9>"$LOCK"
 flock 9
-# The cache directory is shared and writable, so the file itself is hashed
-# before reuse, not just its recorded checksum.
-if [ -s "$DEB" ] && ! echo "$(cat "$DEST_DIR/sha256" 2>/dev/null)  $DEB" | sha256sum -c --quiet - >/dev/null 2>&1; then
-  log "cached pmm-client does not match its recorded checksum; refetching"
-  rm -f "$DEB"
-fi
-# Dev and RC channels republish in place, so a cached package is reused only
-# while the index still names it; an unreachable index keeps the cached one.
-if [ -s "$DEB" ]; then
-  read -r _ _ current_sha _ < <(resolve_from_index) || true
-  if [ -n "${current_sha:-}" ] && [ "$current_sha" != "$(cat "$DEST_DIR/sha256" 2>/dev/null)" ]; then
-    log "cached pmm-client is no longer the one $CODENAME/$COMPONENT publishes; refetching"
-    rm -f "$DEB"
-  fi
-fi
 if [ -s "$DEB" ]; then
   log "reusing cached pmm-client $(cat "$DEST_DIR/version" 2>/dev/null || echo '?') for $CODENAME/$COMPONENT"
 else

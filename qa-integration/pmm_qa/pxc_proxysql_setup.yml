@@ -83,11 +83,6 @@
       - docker exec {{ pxc_container }} dpkg -i {{ file_name.stdout }}
       - docker exec {{ pxc_container }} apt install -y sysbench
 
-  - name: Stage the cached pmm-client package
-    include_tasks: tasks/stage_pmm_client_deb.yml
-    vars:
-      container_name: "{{ pxc_container }}"
-
   - name: Install pmm-client on the pxc_container
     shell: "{{ item }}"
     with_items:

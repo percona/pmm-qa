@@ -64,11 +64,6 @@
       - docker exec {{ ps_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat
       - docker exec {{ ps_container }} apt install -y sysbench
 
-  - name: Stage the cached pmm-client package
-    include_tasks: tasks/stage_pmm_client_deb.yml
-    vars:
-      container_name: "{{ ps_container }}"
-
   - name: Install pmm-client on the ps_container
     shell: "{{ item }}"
     with_items:

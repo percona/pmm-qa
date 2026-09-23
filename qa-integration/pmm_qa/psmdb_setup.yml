@@ -42,11 +42,6 @@
       - docker exec {{ psmdb_container }} apt-get update
       - docker exec {{ psmdb_container }} apt-get -y install wget curl git gnupg2 lsb-release jq
 
-  - name: Stage the cached pmm-client package
-    include_tasks: tasks/stage_pmm_client_deb.yml
-    vars:
-      container_name: "{{ psmdb_container }}"
-
   - name: Install pmm-client on the psmdb_container
     shell: "{{ item }}"
     with_items:

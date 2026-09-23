@@ -83,16 +83,7 @@ on:
         required: false
 
 jobs:
-  # Every shard installs the same client; fetch it once for all of them.
-  prefetch_client:
-    name: Prefetch pmm-client
-    uses: ./.github/workflows/prefetch-pmm-client.yml
-    with:
-      client_versions: ${{ format('["{0}"]', inputs.pmm_client_version || 'latest-tarball') }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-
   shard:
-    needs: prefetch_client
     name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}"
     strategy:
       fail-fast: false
@@ -194,12 +185,6 @@ jobs:
       - name: Export path to qa-integration repo
         working-directory: pmm-qa/qa-integration
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
-
-      - name: Restore pmm-client package cache
-        id: client_cache
-        uses: ./pmm-qa/.github/actions/pmm-client-cache
-        with:
-          client_version: ${{ env.PMM_CLIENT_VERSION }}
 
       - name: Setup PMM-Client against remote PMM Server
         uses: nick-fields/retry@v3
