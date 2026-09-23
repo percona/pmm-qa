@@ -109,6 +109,9 @@ setup_mysql_family() {
   # ones with a bare 'Internal server error'.
   step 'Set up PMM agents' mf_setup_agents
   step 'Register MySQL with PMM' each_node names mf_register
+  # As the playbooks do on every node: tests write through whichever container
+  # `docker ps` lists first, which can be a group-replication secondary.
+  step 'Clear read-only' each_node names mf_sql 'SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;'
   step 'Run workload' each_node targets mf_workload
   for index in "${names[@]}"; do
     report_agent_status "$index"
@@ -390,8 +393,7 @@ mf_workload() {
   local sysbench='sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1
     --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest
     --tables=10 --table-size=100000'
-  mf_sql "$1" "SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;
-    CREATE DATABASE IF NOT EXISTS sbtest;
+  mf_sql "$1" "CREATE DATABASE IF NOT EXISTS sbtest;
     CREATE USER IF NOT EXISTS 'sbtest'@'localhost' IDENTIFIED BY 'password';
     GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'localhost';
     CREATE USER IF NOT EXISTS 'sbtest'@'127.0.0.1' IDENTIFIED BY 'password';
@@ -490,8 +492,11 @@ pxc_enable_slowlog() {
   done
 }
 
+# The node is registered without the version's dot: dashboards compare
+# node_name with `=` against a multi-value variable, whose value Grafana
+# regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself.
 pxc_setup_agent() {
-  setup_pmm_agent "$container" false /pmm-agent.log
+  setup_pmm_agent "$container" false /pmm-agent.log "${container//./_}"
   wait_pmm_agent "$container"
 }
 

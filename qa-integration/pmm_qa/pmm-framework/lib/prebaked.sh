@@ -158,12 +158,13 @@ install_pmm_client() {
     pmm-admin --version" >/dev/null
 }
 
-# Register NODE's pmm-agent with the server and start it without systemd,
-# logging to LOG, where the playbook's client setup put it and tests read it.
+# Register NODE's pmm-agent with the server as a container node at address NODE
+# named NODE_NAME (default: NODE), and start it without systemd, logging to
+# LOG, where the playbook's client setup put it and tests read it.
 # ENCRYPTED=true stores the agent config encrypted, as ENCRYPTED_CLIENT_CONFIG asks.
-# Usage: setup_pmm_agent NODE ENCRYPTED [LOG]
+# Usage: setup_pmm_agent NODE ENCRYPTED [LOG] [NODE_NAME]
 setup_pmm_agent() {
-  local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log}
+  local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log} node_name=${4:-$1}
   local -a setup=(
     "--config-file=$PMM_AGENT_CONFIG"
     "--server-address=$PMM_SERVER_HOST:$PMM_SERVER_PORT"
@@ -176,6 +177,10 @@ setup_pmm_agent() {
   if [[ $(bool_string "$CLIENT_DEBUG") == true ]]; then
     setup+=(--debug)
   fi
+  # Every container of an image inherits the image's /etc/machine-id, which
+  # pmm-agent reports as the node's machine_id; the playbooks' systemd
+  # containers generated their own at boot.
+  must docker exec --user root "$node" sh -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id'
   if [[ $encrypted == true ]]; then
     must docker exec --user root "$node" openssl genpkey -algorithm RSA \
       -pkeyopt rsa_keygen_bits:4096 -aes256 -pass pass:testpass -out "$PMM_AGENT_KEY"
@@ -184,7 +189,7 @@ setup_pmm_agent() {
     start+=("--config-file-key-file=$PMM_AGENT_KEY" --config-file-key-password=testpass)
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
-    docker exec --user root "$node" pmm-agent setup "${setup[@]}" "$node" >/dev/null
+    docker exec --user root "$node" pmm-agent setup "${setup[@]}" "$node" container "$node_name" >/dev/null
   must docker exec --detach --user root "$node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
 }
 

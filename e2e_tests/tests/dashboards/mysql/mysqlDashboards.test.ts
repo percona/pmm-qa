@@ -88,11 +88,15 @@ pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlUserDetails.url, {
         from: 'now-1h',
+        refresh: '5s',
         serviceName: service_name,
       }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlUserDetails.metrics);
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlUserDetails.noDataMetrics);
+    await dashboard.verifyAllPanelsHaveData(
+      dashboard.mysql.mysqlUserDetails.noDataMetrics,
+      Timeouts.FIVE_MINUTES,
+    );
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlUserDetails.metricsWithData);
   },
 );

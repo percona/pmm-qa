@@ -39,7 +39,8 @@ stub_prebaked_docker() {
   [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
   # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
   [[ $(grep -Fc 'enable-only pmm3-client experimental && $pkg install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- 'pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
+  grep -q -- 'pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2 container ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --user root ps_pmm_gr_8_4_[123] sh -c tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id$' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
   [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_1 sh -c' "$DOCKER_CALLS") -eq 1 ]]
   [[ $(grep -c '^exec --detach ps_pmm_gr_8_4_[23] sh -c' "$DOCKER_CALLS") -eq 0 ]]
@@ -214,6 +215,7 @@ stub_prebaked_docker() {
 
   grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 .*--publish 6033:6033 pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
   grep -q '^exec --user root pxc_proxysql_pmm_8.4 pmm-pxc start$' "$DOCKER_CALLS"
+  grep -q -- '^exec --user root pxc_proxysql_pmm_8.4 pmm-agent setup .* pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4$' "$DOCKER_CALLS"
   [[ $(grep -c "SET GLOBAL log_slow_rate_limit=1" "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add mysql --query-source=slowlog --username=admin --password=admin --host=127.0.0.1 --port=3308 --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node__3_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_pxc_proxysql_pmm_8.4_[0-9]+ --host=127.0.0.1 --port=6032$' "$DOCKER_CALLS"
