@@ -3,11 +3,17 @@
 How the framework is put together, what happens on a run, and the exact steps
 to extend it. For installing and *using* it, see [README.md](README.md).
 
-The framework does not provision anything itself. It is a **dispatcher**: it
-turns a `--database` spec into a map of environment variables and hands that to
-an existing Ansible playbook or shell script under `qa-integration/`. Almost
-every question about behaviour is answered by asking *which env map was built,
-and which playbook received it*.
+The framework is a **dispatcher**. For most types it turns a `--database` spec
+into a map of environment variables and hands that to an existing Ansible
+playbook or shell script under `qa-integration/`. For those, almost every
+question about behaviour is answered by asking *which env map was built, and
+which playbook received it*.
+
+`PS`, `MYSQL` and `PXC` are the exception. They run on **prebaked images**:
+the database and its tooling are baked into an image ahead of time, and the
+setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
+instead of a playbook. Types move to this backend one at a time. See §5,
+"Port a type to a prebaked image".
 
 ---
 
@@ -29,11 +35,13 @@ flowchart TB
         SPEC["run_database_spec<br/>parse_database_spec → DB_TYPE / DB_VERSION / DB_CONFIG"]
         DISP["setups/dispatch.sh<br/>dispatch_setup"]
         SETUP["setups/*.sh<br/>setup_NAME builds env_map"]
+        BAKED["setups/mysql.sh<br/>setup_ps / setup_mysql / setup_pxc"]
     end
 
     subgraph BACK["Backends"]
         PB["lib/ansible.sh<br/>run_playbook"]
         SC["lib/runners.sh<br/>run_setup_script"]
+        DK["lib/images.sh + lib/prebaked.sh<br/>ensure_image, docker run/exec"]
     end
 
     subgraph REAL["qa-integration/ (not part of this framework)"]
@@ -42,17 +50,24 @@ flowchart TB
         DOCKER[("Docker containers<br/>+ PMM Client")]
     end
 
+    GHCR[("ghcr.io/percona/pmm-qa<br/>prebaked images")]
+
     ARGS --> PARSE --> PRE --> STRAT
     STRAT -- no --> SEQ --> SPEC
     STRAT -- yes --> PAR --> SPEC
     SPEC --> DISP --> SETUP
+    DISP --> BAKED
     SETUP --> PB --> YML --> DOCKER
     SETUP --> SC --> SH --> DOCKER
+    BAKED --> DK --> DOCKER
+    GHCR -. pulled by ensure_image .-> DK
 ```
 
-**The one rule to remember:** a setup function's only job is to build
-`env_map`. That map is the contract with the playbook, which reads it via
-`lookup('env', 'KEY')`.
+**The one rule to remember:** a playbook-backed setup function's only job is to
+build `env_map`. That map is the contract with the playbook, which reads it via
+`lookup('env', 'KEY')`. A prebaked setup's contract is the **end state** the
+playbook it replaced produced (container names, ports, users, PMM service names
+and labels), because tests look those up by name.
 
 ---
 
@@ -67,12 +82,23 @@ flowchart TB
 | `lib/docker.sh` | `discover_pmm_server`, `resolve_pmm_server` | common |
 | `lib/ansible.sh` | `run_playbook`, `print_env_map`, collection/interpreter setup | common |
 | `lib/runners.sh` | `run_setup_script`, version/password/branch resolvers | common, config, ansible |
+| `lib/images.sh` | `build_<engine>_image` per prebaked image, `ensure_image` (local, else pull from `PREBAKED_REGISTRY`, else build) | common |
+| `lib/prebaked.sh` | The docker backend: `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits | common, runners |
+| `build-images` | CLI to prebake images ahead of a run (`./build-images ps=8.4 pxc-proxysql=8.0`) | common, images |
+| `images/pxc/` | The single-container PXC + ProxySQL image; `pmm-pxc` inside it prepares node 1 at build time and starts the cluster at run time | — |
 | `setups/*.sh` | One `setup_<name>` per type, plus `dispatch_setup` | everything above |
 | `lib/execution.sh` | `preflight_database_setups`, sequential and parallel strategies | everything above |
 
 Source order matters only because `lib/config.sh` runs `register_database`
 calls and a validation loop at source time — both need `lib/common.sh`'s
 `die()` already defined.
+
+The PS and MySQL images build from the Dockerfiles in
+`provisioning/images/engines/`, which the TypeScript provisioner shares.
+`images/pxc/` is this framework's own, because the tests expect PXC's
+single-container layout. `.github/workflows/build-prebaked-images.yml` builds
+every image weekly, checks that it starts, and publishes it to
+`ghcr.io/percona/pmm-qa/<engine>:<version>` (plus a dated tag for rollback).
 
 ---
 
@@ -89,9 +115,9 @@ sequenceDiagram
     participant S as setup_NAME
     participant B as run_playbook / run_setup_script
 
-    U->>E: --parallel --database ps=8.4 --database psmdb
+    U->>E: --parallel --database pgsql=16 --database psmdb
     E->>C: parse_args
-    C-->>E: DATABASE_SPECS=(ps=8.4, psmdb)
+    C-->>E: DATABASE_SPECS=(pgsql=16, psmdb)
     E->>X: run_database_setups
     X->>X: preflight — conflicts? server? curl? ansible?
     Note over X: a conflict here turns --parallel off
@@ -99,9 +125,9 @@ sequenceDiagram
         X->>C: parse_database_spec
         C-->>X: DB_TYPE, DB_VERSION, DB_CONFIG
         X->>D: dispatch_setup
-        D->>S: setup_ps
+        D->>S: setup_pgsql
         S->>S: resolve version / client / options → env_map
-        S->>B: run_playbook 'percona-server-setup.yml' env_map
+        S->>B: run_playbook 'pgsql_pgss_setup.yml' env_map
         B-->>S: success or die
     end
     X-->>U: exit 0, or non-zero if any setup failed
@@ -121,9 +147,9 @@ fails in seconds rather than halfway through. Preflight decides:
 
 ### The conflict rules
 
-Two setups of the **same type**, or any two of the **MySQL family**
-(`PS`/`MYSQL`), reuse the same container names, host ports and data
-directories. They cannot run at the same time.
+Two setups of the **same type** reuse the same container names and host ports,
+and any two of the **MySQL family** (`PS`/`MYSQL`) both publish host ports from
+3306. They cannot run at the same time.
 
 When `--parallel` is asked for and such a conflict exists, the framework keeps
 every setup and gives up only the concurrency:
@@ -281,6 +307,7 @@ Then check the two capability predicates:
 - `setup_requires_server` (`setups/dispatch.sh`) — add it if it needs **no**
   PMM Server
 - `setup_uses_ansible` (`lib/execution.sh`) — add it if it is **script**-backed
+  or **prebaked**
 
 **4 — add a test** in `tests/dispatch.bats`. The suite stubs the backends and
 asserts on the captured env map, so no containers are involved:
@@ -309,10 +336,28 @@ Do not name it after a registered option key (see the warning above).
 
 ### Add a new backend
 
-`run_playbook` and `run_setup_script` are the only two. Both take
-`(target, env_map_name)`, pass variables through `env` rather than exporting,
-and `die` on failure. A third backend should follow the same shape and be
-reflected in `setup_uses_ansible`.
+`run_playbook` and `run_setup_script` take `(target, env_map_name)`, pass
+variables through `env` rather than exporting, and `die` on failure. A new
+env-map backend should follow the same shape and be reflected in
+`setup_uses_ansible`.
+
+The prebaked backend (`lib/prebaked.sh`) has no single entry point. Its setup
+functions call `docker` directly, through helpers that each `die` on failure.
+
+### Port a type to a prebaked image
+
+1. Record the playbook's end state (names, ports, users, `pmm-admin add`
+   arguments) and the time it takes, before changing anything.
+2. Add `build_<engine>_image` to `lib/images.sh` and the image to the
+   `build-prebaked-images.yml` matrix.
+3. Rewrite `setup_<name>` on the `lib/prebaked.sh` helpers so that it
+   reproduces that end state.
+4. Add the type to `setup_uses_ansible`.
+5. Replace its playbook-capture tests with `stub_prebaked_docker` tests.
+
+The step-by-step recipe, the parity checklist and the pitfalls are in
+`.claude/skills/pmm-framework-change/references/prebaked-port.md`. Leave the old
+playbook in place until every type is ported.
 
 ---
 
@@ -328,13 +373,20 @@ Three suites, none of which start a container:
 | Suite | Covers |
 | --- | --- |
 | `tests/cli.bats` | parsing, precedence, the catalogue, server discovery, log formatting |
-| `tests/dispatch.bats` | each type selects the right playbook/script and env map |
+| `tests/dispatch.bats` | each type selects the right playbook/script and env map; prebaked types issue the exact `docker run` / `pmm-admin add` commands |
 | `tests/integration.bats` | the real entrypoint with stubbed `docker`/`ansible-playbook`/`curl` |
 
 `tests/helpers/test_helper.bash` sources the modules and **replaces**
 `run_playbook` and `run_setup_script` with capture stubs, so a test can assert
 on `CAPTURE_KIND`, `CAPTURE_TARGET` and `CAPTURE_ENV` without provisioning
-anything. `reset_framework_state` runs before each test.
+anything. `reset_framework_state` runs before each test. Prebaked setups call
+`docker` directly, so their tests use `stub_prebaked_docker` instead. It is a
+`docker` shell function that records every call and answers the probes the
+setup polls, so a whole setup runs end to end without a daemon.
+
+`integration.bats` needs a sample type that still goes through
+`ansible-playbook`. That is `pdpgsql` today; move it again when that type is
+ported.
 
 `tests/integration.bats` takes the opposite approach: it puts fake `docker`,
 `ansible-playbook` and `curl` executables on `PATH` and runs the real
@@ -378,3 +430,10 @@ degrades instead of failing a long CI job. Unknown *database names* are fatal.
 **`die` exits the current shell.** At top level that ends the run; inside
 `$(...)` or a parallel job it ends only that subshell, and `set -e` propagates
 the failure outward.
+
+**Inside a sequential setup, `set -e` is off.** The sequential path runs
+`(run_database_spec) || status=$?`, and bash ignores errexit for everything
+underneath a `||`, subshells included. A playbook setup does not notice,
+because `run_playbook` dies itself. A prebaked setup must do the same: wrap
+commands in `must`, `step`, `retry` or `each_node`, which die on failure, or
+add an explicit `|| die`. A bare failing `docker` call is silently skipped.

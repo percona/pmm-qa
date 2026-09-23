@@ -11,7 +11,10 @@ stub_prebaked_docker() {
   docker() {
     printf '%s\n' "$*" >>"$DOCKER_CALLS"
     case "$*" in
-      *'pmm-admin status'*) printf 'Connected : true\nmysqld_exporter Running\n' ;;
+      *'pmm-admin status'*)
+        printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
+          'mysqld_exporter Running' 'proxysql_exporter Running'
+        ;;
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
         ;;
@@ -85,6 +88,24 @@ stub_prebaked_docker() {
 
   run retry 3 'the probe' sh -c 'echo flaky; exit 1'
   [[ $output == *'after 3 attempt(s); last output: flaky'* ]]
+}
+
+@test "ensure_image pulls the published image before building one" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    [[ $1 != image ]]
+  }
+  ensure_image ps 8.4
+  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^tag ghcr.io/percona/pmm-qa/ps:8.4 pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  [[ $(grep -c '^build ' "$DOCKER_CALLS") -eq 0 ]]
+
+  : >"$DOCKER_CALLS"
+  PREBAKED_REGISTRY='' ensure_image ps 8.4
+  [[ $(grep -c '^pull ' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q '^build .* -t pmm-qa/ps:8.4 ' "$DOCKER_CALLS"
 }
 
 @test "the PS image builds from the shared Dockerfile with the version's base image" {
@@ -169,34 +190,35 @@ stub_prebaked_docker() {
   [[ ${CAPTURE_ENV[MINIO]} == false ]]
 }
 
-@test "PXC tarball selects PXC and ProxySQL playbook" {
-  parse_database_spec 'PXC=8.0,TARBALL=/tmp/pxc.tar.gz'
+@test "PXC runs in one container and registers its nodes and ProxySQL as the playbook did" {
+  stub_prebaked_docker
+  parse_database_spec 'PXC=8.4,QUERY_SOURCE=slowlog'
   dispatch_setup
 
-  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
-  [[ ${CAPTURE_ENV[PXC_VERSION]} == 8.0 ]]
-  [[ ${CAPTURE_ENV[PXC_TARBALL]} == /tmp/pxc.tar.gz ]]
-  [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 2 ]]
-  [[ ${CAPTURE_ENV[PXC_NODES]} == 3 ]]
-  [[ -z ${CAPTURE_ENV[PROXYSQL_PACKAGE]} ]]
+  grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 .*--publish 6033:6033 pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pxc_proxysql_pmm_8.4 pmm-pxc start$' "$DOCKER_CALLS"
+  [[ $(grep -c "SET GLOBAL log_slow_rate_limit=1" "$DOCKER_CALLS") -eq 3 ]]
+  grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add mysql --query-source=slowlog --username=admin --password=admin --host=127.0.0.1 --port=3308 --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node__3_[0-9]+$' "$DOCKER_CALLS"
+  grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_pxc_proxysql_pmm_8.4_[0-9]+ --host=127.0.0.1 --port=6032$' "$DOCKER_CALLS"
+  grep -q -- '--mysql-host=127.0.0.1 --mysql-port=6033' "$DOCKER_CALLS"
 }
 
-@test "PXC 8.4 dispatches with its version and upstream ProxySQL" {
-  parse_database_spec 'PXC=8.4'
-  dispatch_setup
+@test "a PXC tarball builds its own image tag, and ProxySQL overrides are refused" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    [[ $1 != image ]]
+  }
+  build_pxc_proxysql_image 8.0 https://example.com/pxc.tar.gz
+  grep -Eq -- '--build-arg PXC_VERSION=8.0 --build-arg PROXYSQL_PACKAGE= --build-arg PXC_TARBALL=https://example.com/pxc.tar.gz -t pmm-qa/pxc-proxysql:8.0-tb[0-9a-f]{8} ' "$DOCKER_CALLS"
+  build_pxc_proxysql_image 9.7
+  grep -q -- 'PROXYSQL_PACKAGE=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.x86_64.rpm --build-arg PXC_TARBALL= -t pmm-qa/pxc-proxysql:9.7 ' "$DOCKER_CALLS"
 
-  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
-  [[ ${CAPTURE_ENV[PXC_VERSION]} == 8.4 ]]
-  [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 3 ]]
-}
-
-@test "PXC 9.7 dispatches with its version and upstream ProxySQL" {
-  parse_database_spec 'PXC=9.7'
-  dispatch_setup
-
-  [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
-  [[ ${CAPTURE_ENV[PXC_VERSION]} == 9.7 ]]
-  [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 3 ]]
+  parse_database_spec 'pxc=8.0'
+  PROXYSQL_VERSION=3 run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'PROXYSQL_VERSION and PROXYSQL_PACKAGE are not supported'* ]]
 }
 
 @test "Valkey sentinel alias selects sentinel playbook" {
@@ -211,16 +233,16 @@ stub_prebaked_docker() {
 @test "multiple specs dispatch sequentially without leaking environment maps" {
   local -a targets=()
   local spec
-  for spec in 'pxc=8.0' 'external' 'haproxy'; do
+  for spec in 'pdpgsql=17' 'external' 'haproxy'; do
     parse_database_spec "$spec"
     dispatch_setup
     targets+=("$CAPTURE_TARGET")
   done
 
-  [[ ${targets[0]} == pxc_proxysql_setup.yml ]]
+  [[ ${targets[0]} == percona-distribution-postgresql/percona-distribution-postgres-setup.yml ]]
   [[ ${targets[1]} == external_setup.yml ]]
   [[ ${targets[2]} == haproxy_setup.yml ]]
-  [[ -z ${CAPTURE_ENV[PXC_VERSION]-} ]]
+  [[ -z ${CAPTURE_ENV[PDPGSQL_VERSION]-} ]]
   [[ -z ${CAPTURE_ENV[REDIS_EXPORTER_VERSION]-} ]]
 }
 

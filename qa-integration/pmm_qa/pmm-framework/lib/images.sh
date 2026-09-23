@@ -39,10 +39,55 @@ build_mysql_image() {
     die "Building pmm-qa/mysql:$version failed."
 }
 
-# Build pmm-qa/ENGINE:VERSION unless it is already present.
-ensure_image() {
-  local engine=$1 version=$2
-  if ! docker image inspect "pmm-qa/$engine:$version" >/dev/null 2>&1; then
-    "build_${engine}_image" "$version"
+# Build pmm-qa/pxc-proxysql:VERSION, the whole cluster plus ProxySQL in one
+# image (images/pxc). 8.4 disabled mysql_native_password, which Percona's
+# proxysql2 still needs, so from 8.4 it gets upstream ProxySQL 3 instead.
+#
+# A PXC TARBALL is built into its own tag, VERSION-tb<first 8 hex of the URL's
+# sha256>, so a pre-release never replaces the packaged image.
+build_pxc_proxysql_image() {
+  local version=$1 tarball=${2:-} package='' tag=$1
+  case $version in
+    5.7 | 8.0) ;;
+    8.4 | 9.7) package=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.x86_64.rpm ;;
+    *) die "PXC $version has no prebaked image; use 5.7, 8.0, 8.4 or 9.7." ;;
+  esac
+  if [[ -n $tarball ]]; then
+    tag=$(pxc_proxysql_tag "$version" "$tarball")
   fi
+  docker build -f "$FRAMEWORK_DIR/images/pxc/Dockerfile" \
+    --build-arg "PXC_VERSION=$version" --build-arg "PROXYSQL_PACKAGE=$package" \
+    --build-arg "PXC_TARBALL=$tarball" \
+    -t "pmm-qa/pxc-proxysql:$tag" "$FRAMEWORK_DIR/images/pxc" ||
+    die "Building pmm-qa/pxc-proxysql:$tag failed."
+}
+
+# Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL
+pxc_proxysql_tag() {
+  if [[ -n ${2:-} ]]; then
+    printf '%s-tb%s' "$1" "$(printf '%s' "$2" | sha256sum | cut -c1-8)"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# Where .github/workflows/build-prebaked-images.yml publishes. Set it empty to
+# always build locally, e.g. to try a Dockerfile change.
+PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa}
+
+# Make pmm-qa/ENGINE:TAG present: keep a local copy, else pull the published
+# one, else build it. The engine's builder gets BUILD_ARGS, or just TAG when
+# there are none.
+# Usage: ensure_image ENGINE TAG [BUILD_ARGS...]
+ensure_image() {
+  local engine=$1 tag=$2 published
+  shift 2
+  (($# > 0)) || set -- "$tag"
+  docker image inspect "pmm-qa/$engine:$tag" >/dev/null 2>&1 && return 0
+  published=$PREBAKED_REGISTRY/$engine:$tag
+  if [[ -n $PREBAKED_REGISTRY ]] && docker pull --quiet "$published" >/dev/null 2>&1; then
+    must docker tag "$published" "pmm-qa/$engine:$tag"
+    return 0
+  fi
+  "build_${engine//-/_}_image" "$@"
 }

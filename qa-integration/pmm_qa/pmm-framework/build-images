@@ -2,7 +2,7 @@
 #
 # build-images -- prebake database images ahead of a run.
 #
-#   ./build-images ps=8.4 ps=8.0
+#   ./build-images ps=8.4 mysql=8.0 pxc-proxysql=8.0
 #
 # pmm-framework builds a missing image on demand; this exists to warm a cache.
 
@@ -21,6 +21,6 @@ for spec in "$@"; do
   engine=${spec%%=*}
   engine=${engine,,}
   [[ $spec == *=* ]] || die "'$spec' needs a version, e.g. $engine=8.4."
-  declare -F "build_${engine}_image" >/dev/null || die "No prebaked image for '$engine'."
-  "build_${engine}_image" "${spec#*=}"
+  declare -F "build_${engine//-/_}_image" >/dev/null || die "No prebaked image for '$engine'."
+  "build_${engine//-/_}_image" "${spec#*=}"
 done

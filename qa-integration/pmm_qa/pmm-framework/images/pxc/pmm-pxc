@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+#
+# pmm-pxc -- a whole PXC cluster and its ProxySQL in one container, the layout
+# pxc_proxysql_setup.yml produced: node N listens on port 3305+N, ProxySQL on
+# 6032 (admin) and 6033, all reached through 127.0.0.1.
+#
+#   pmm-pxc prepare VERSION   (image build) node configs, node 1's datadir, users
+#   pmm-pxc start             bootstrap node 1, join the others, start ProxySQL
+
+set -euo pipefail
+
+readonly NODES=3 ROOT=/var/lib/pxc
+
+socket() {
+  printf '%s/node%d/mysql.sock' "$ROOT" "$1"
+}
+
+sql() {
+  mysql -uroot -S "$(socket "$1")" --batch --skip-column-names -e "$2"
+}
+
+# Usage: wait_for SECONDS DESCRIPTION CMD...
+wait_for() {
+  local seconds=$1 description=$2
+  shift 2
+  for ((; seconds > 0; seconds--)); do
+    "$@" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "Timed out waiting for $description." >&2
+  return 1
+}
+
+write_configs() {
+  local version=$1 provider node base cluster=''
+  provider=$(find /usr/lib64 /usr/lib -name libgalera_smm.so -print -quit)
+  for ((node = 1; node <= NODES; node++)); do
+    cluster+=${cluster:+,}127.0.0.1:$((4567 + 10 * (node - 1)))
+  done
+  for ((node = 1; node <= NODES; node++)); do
+    base=$((4567 + 10 * (node - 1)))
+    mkdir -p "$ROOT/node$node/data"
+    cat >"$ROOT/node$node.cnf" <<EOF
+[mysqld]
+user=mysql
+server_id=$node
+port=$((3305 + node))
+bind_address=0.0.0.0
+datadir=$ROOT/node$node/data
+socket=$(socket "$node")
+pid_file=$ROOT/node$node/mysqld.pid
+log_error=$ROOT/node$node/error.log
+binlog_format=ROW
+default_storage_engine=InnoDB
+innodb_autoinc_lock_mode=2
+innodb_buffer_pool_size=128M
+innodb_flush_log_at_trx_commit=2
+max_connections=500
+wsrep_provider=$provider
+wsrep_cluster_name=pxc-dev-cluster
+wsrep_cluster_address=gcomm://$cluster
+wsrep_node_name=node$node
+wsrep_node_address=127.0.0.1:$base
+wsrep_node_incoming_address=127.0.0.1:$((3305 + node))
+wsrep_provider_options="base_port=$base;ist.recv_addr=127.0.0.1:$((base + 1))"
+wsrep_sst_receive_address=127.0.0.1:$((base + 2))
+wsrep_sst_method=xtrabackup-v2
+pxc_encrypt_cluster_traffic=OFF
+EOF
+    # 5.7's xtrabackup SST logs in as a user of its own.
+    if [[ $version == 5.7 ]]; then
+      echo 'wsrep_sst_auth=sstuser:sstpass' >>"$ROOT/node$node.cnf"
+    fi
+  done
+}
+
+# ProxySQL's own config, read on its first start: the nodes as Galera
+# hostgroups (writer 10, reader 11, backup writer 12, offline 13) and the
+# users pxc_proxysql_setup.yml configured.
+write_proxysql_config() {
+  local node servers=''
+  for ((node = 1; node <= NODES; node++)); do
+    servers+="${servers:+,}{ address=\"127.0.0.1\", port=$((3305 + node)), hostgroup=10 }"
+  done
+  cat >/etc/proxysql-pmm.cnf <<EOF
+datadir="/var/lib/proxysql"
+admin_variables={ admin_credentials="admin:admin" mysql_ifaces="0.0.0.0:6032" stats_credentials="read_user:read_user" }
+mysql_variables={ interfaces="0.0.0.0:6033" monitor_username="monitor" monitor_password="monitor" }
+mysql_servers=( $servers )
+mysql_galera_hostgroups=( { writer_hostgroup=10, backup_writer_hostgroup=12, reader_hostgroup=11, offline_hostgroup=13, active=1, max_writers=1, writer_is_also_reader=1, max_transactions_behind=100 } )
+mysql_users=( { username="proxysql_user", password="passw0rd", default_hostgroup=10 } )
+EOF
+}
+
+# The users pxc_proxysql_setup.yml creates, native-password below 8.4 as there.
+create_users() {
+  local version=$1 with=''
+  case $version in
+    8.0) with='WITH mysql_native_password' ;;
+    5.7) ;;
+    *) with='WITH caching_sha2_password' ;;
+  esac
+  sql 1 "CREATE USER 'admin'@'%' IDENTIFIED $with BY 'admin';
+    GRANT ALL PRIVILEGES ON *.* TO 'admin'@'%' WITH GRANT OPTION;
+    CREATE USER 'read_user'@'%' IDENTIFIED $with BY 'read_user';
+    GRANT SELECT ON *.* TO 'read_user'@'%';
+    CREATE USER 'monitor'@'127.%' IDENTIFIED $with BY 'monitor';
+    GRANT USAGE, REPLICATION CLIENT ON *.* TO 'monitor'@'127.%';
+    CREATE USER 'proxysql_user'@'127.%' IDENTIFIED $with BY 'passw0rd';
+    GRANT ALL PRIVILEGES ON *.* TO 'proxysql_user'@'127.%';
+    CREATE DATABASE sbtest;"
+  if [[ $version == 5.7 ]]; then
+    sql 1 "CREATE USER 'sstuser'@'localhost' IDENTIFIED BY 'sstpass';
+      GRANT RELOAD, LOCK TABLES, PROCESS, REPLICATION CLIENT ON *.* TO 'sstuser'@'localhost';"
+  fi
+}
+
+prepare() {
+  local version=$1
+  write_configs "$version"
+  write_proxysql_config
+  chown -R mysql:mysql "$ROOT"
+  mysqld --defaults-file="$ROOT/node1.cnf" --wsrep-provider=none --initialize-insecure
+  mysqld --defaults-file="$ROOT/node1.cnf" --wsrep-provider=none --skip-networking &
+  wait_for 120 'node 1 to initialise' sql 1 'SELECT 1'
+  create_users "$version"
+  # The 5.7 image ships no mysqladmin.
+  sql 1 'SHUTDOWN'
+  wait
+}
+
+start_node() {
+  local node=$1
+  shift
+  setsid mysqld --defaults-file="$ROOT/node$node.cnf" "$@" </dev/null >/dev/null 2>&1 &
+}
+
+synced() {
+  [[ $(sql "$1" "SHOW STATUS LIKE 'wsrep_local_state_comment'") == *Synced ]]
+}
+
+wait_synced() {
+  wait_for 300 "node $1 to sync" synced "$1" || {
+    tail -30 "$ROOT/node$1/error.log" >&2
+    return 1
+  }
+}
+
+proxysql_online() {
+  [[ $(mysql -h127.0.0.1 -P6032 -uadmin -padmin --batch --skip-column-names -e \
+    "SELECT COUNT(DISTINCT port) FROM runtime_mysql_servers WHERE status='ONLINE'" 2>/dev/null) == "$NODES" ]]
+}
+
+start() {
+  local node
+  start_node 1 --wsrep-new-cluster
+  wait_synced 1
+  for ((node = 2; node <= NODES; node++)); do
+    start_node "$node"
+    wait_synced "$node"
+  done
+  proxysql -c /etc/proxysql-pmm.cnf >/var/lib/proxysql/start.log 2>&1
+  wait_for 60 "ProxySQL to see all $NODES nodes online" proxysql_online
+}
+
+case ${1:-} in
+  prepare) prepare "${2:?usage: pmm-pxc prepare VERSION}" ;;
+  start) start ;;
+  *)
+    echo 'usage: pmm-pxc prepare VERSION | start' >&2
+    exit 2
+    ;;
+esac

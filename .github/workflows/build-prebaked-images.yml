@@ -1,0 +1,130 @@
+# Builds the prebaked database images pmm-framework runs (PS, MySQL and PXC with
+# ProxySQL) and publishes them to ghcr.io/percona/pmm-qa/<engine>:<version>, so
+# a CI job pulls a ready image instead of spending 90-160 s building one. Each
+# image is started and checked before it is pushed, so a broken build never
+# replaces a working tag, and each cell publishes on its own.
+#
+# Tags: :<version> and :<version>-YYYY-MM-DD. To roll back, retag a dated one.
+# Keep the matrix in sync with the build_*_image functions in
+# qa-integration/pmm_qa/pmm-framework/lib/images.sh.
+name: Build prebaked database images
+
+on:
+  schedule:
+    - cron: '23 3 * * 1' # Mondays, off the hour
+  workflow_dispatch:
+  push:
+    # TEMPORARY: Pre-Baked-Images-POC publishes from the branch for the first
+    # live test. Remove it before merging to main.
+    branches: [main, Pre-Baked-Images-POC]
+    paths:
+      - provisioning/images/engines/ps/**
+      - provisioning/images/engines/mysql/**
+      - qa-integration/pmm_qa/pmm-framework/images/**
+      - qa-integration/pmm_qa/pmm-framework/lib/images.sh
+      - qa-integration/pmm_qa/pmm-framework/build-images
+      - .github/workflows/build-prebaked-images.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-prebaked-images
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.engine }}:${{ matrix.version }}
+    # A fork's schedule must not try to publish into percona's registry.
+    if: github.repository == 'percona/pmm-qa'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      max-parallel: 5 # GHCR starts rejecting concurrent pushes beyond this
+      matrix:
+        engine: [ps, mysql, pxc-proxysql]
+        version: ['5.7', '8.0', '8.4', '9.7']
+    env:
+      IMAGE: pmm-qa/${{ matrix.engine }}:${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Build the image
+        run: bash qa-integration/pmm_qa/pmm-framework/build-images '${{ matrix.engine }}=${{ matrix.version }}'
+
+      - name: Start it and check it works
+        env:
+          ENGINE: ${{ matrix.engine }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          if [ "$ENGINE" = pxc-proxysql ]; then
+            # The full cluster: three nodes synced and ProxySQL seeing all of them.
+            docker run -d --init --name probe "$IMAGE"
+            docker exec --user root probe pmm-pxc start
+            docker exec probe sysbench --version
+          else
+            docker run -d --name probe -e MYSQL_ROOT_PASSWORD=probe "$IMAGE"
+            for i in $(seq 1 90); do
+              if docker exec -e MYSQL_PWD=probe probe mysql -uroot -h127.0.0.1 -e 'SELECT VERSION()'; then
+                break
+              fi
+              if [ "$i" -eq 90 ]; then
+                docker logs probe
+                exit 1
+              fi
+              sleep 1
+            done
+            docker exec probe sysbench --version
+            # PS 9.7 has no compatible XtraBackup; setup_ps refuses BACKUP=true there.
+            if [ "$ENGINE" = ps ] && [ "$VERSION" != 9.7 ]; then
+              docker exec --user root probe xtrabackup --version
+            fi
+          fi
+          docker rm -fv probe
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Publish
+        id: push
+        env:
+          ENGINE: ${{ matrix.engine }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          name="ghcr.io/${GITHUB_REPOSITORY}/${ENGINE}"
+          dated="${VERSION}-$(date -u +%F)"
+          docker tag "$IMAGE" "${name}:${VERSION}"
+          docker tag "$IMAGE" "${name}:${dated}"
+
+          for attempt in 1 2 3 4 5; do
+            if docker push "${name}:${VERSION}" && docker push "${name}:${dated}"; then
+              break
+            fi
+            [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
+            echo "push failed, retrying in $((attempt * 20))s"
+            sleep "$((attempt * 20))"
+          done
+
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${name}:${VERSION}")
+          digest=${digest#*@}
+          echo "name=${name}" >>"$GITHUB_OUTPUT"
+          echo "digest=${digest}" >>"$GITHUB_OUTPUT"
+          echo "- \`${name}:${VERSION}\` (also \`:${dated}\`) \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

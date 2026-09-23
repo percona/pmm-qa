@@ -85,6 +85,39 @@ With the `3-dev-latest` package client:
   `yum` would otherwise quietly install a PMM 2 client (117 s) that cannot
   register. No CI job runs MySQL 5.7 with a package client.
 
+## PXC on the prebaked path
+
+This is one container, `pxc_proxysql_pmm_<ver>`, built from `images/pxc`: 3
+nodes on 127.0.0.1:3306-3308, ProxySQL on 6032/6033 and one pmm-agent. That is
+the same layout the playbook produced. `CLIENT_VERSION=latest-tarball`.
+
+| `pxc=8.0` | TS `provisioning/` | pmm-framework (Ansible) | pmm-framework (prebaked) |
+|---|---|---|---|
+| Time | 119.7 s (median of 3) | 242.9 s (1 run) | 63.3 s / 67.7 s / 65.3 s |
+
+The TypeScript tool uses separate containers (`pxc_pmm_1..3`, `pxc-proxy`),
+which the tests do not expect.
+
+| Spec | Time | Checked |
+|---|---|---|
+| `pxc=5.7` | 55.6 s | 5.7.44-48-57, ProxySQL 2.7.3 |
+| `pxc=8.0` | 65.3 s | 8.0.46-38.1, ProxySQL 2.7.3 |
+| `pxc=8.4` | 62.8 s | 8.4.10-10.1, ProxySQL 3.0.11 |
+| `pxc=9.7` | 66.1 s | 9.7.1-1.1, ProxySQL 3.0.11 |
+| `pxc=8.4,QUERY_SOURCE=slowlog` | 63.9 s | `slow_query_log=1` on all 3 nodes |
+| `pxc=8.0` with `CLIENT_VERSION=3-dev-latest` | 86.7 s | package client install |
+
+Every run had these, matching the playbook:
+- all 3 nodes `Synced`, cluster size 3
+- ProxySQL Galera hostgroups 10/11/12, with a query through 6033 as `proxysql_user`
+- services `pxc_node__1..3_<n>` with `pxc-dev` / `pxc-dev-cluster` / `pxc-repl`
+- `my-new-proxysql_<container>_<n>` with every exporter Running
+- the continuous sysbench read-only and read-write load
+
+Two differences from the playbook: the Percona package is ProxySQL 2.7.3, not
+the playbook's pinned 2.6.2, and the image build (`build-images
+pxc-proxysql=<ver>`) takes about 90 s the first time.
+
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value

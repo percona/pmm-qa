@@ -156,10 +156,12 @@ install_pmm_client() {
     pmm-admin --version" >/dev/null
 }
 
-# Register NODE's pmm-agent with the server and start it without systemd.
+# Register NODE's pmm-agent with the server and start it without systemd,
+# logging to LOG, where the playbook's client setup put it and tests read it.
 # ENCRYPTED=true stores the agent config encrypted, as ENCRYPTED_CLIENT_CONFIG asks.
+# Usage: setup_pmm_agent NODE ENCRYPTED [LOG]
 setup_pmm_agent() {
-  local node=$1 encrypted=$2
+  local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log}
   local -a setup=(
     "--config-file=$PMM_AGENT_CONFIG"
     "--server-address=$PMM_SERVER_HOST:$PMM_SERVER_PORT"
@@ -181,7 +183,7 @@ setup_pmm_agent() {
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
     docker exec --user root "$node" pmm-agent setup "${setup[@]}" "$node" >/dev/null
-  must docker exec --detach --user root "$node" pmm-agent "${start[@]}"
+  must docker exec --detach --user root "$node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
 }
 
 pmm_agent_connected() {

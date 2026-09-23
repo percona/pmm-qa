@@ -5,15 +5,18 @@ description: >-
   databases (PS, MySQL, PXC, PostgreSQL, PSMDB, Valkey, ...) and registers them
   with a PMM Server. Use when editing its entrypoint, lib/*.sh, setups/*.sh or
   tests/*.bats, adding a database type or CLI flag, touching --parallel or the
-  buffered-log path, or checking whether a change broke the framework before a
-  push. Doc-only and one-line changes count.
+  buffered-log path, porting a type from its Ansible playbook to a prebaked
+  image, or checking whether a change broke the framework before a push.
+  Doc-only and one-line changes count.
 ---
 
 # Changing pmm-framework safely
 
-`pmm-framework` is a dispatcher, not a provisioner: `setup_<name>` functions in
-`setups/*.sh` build an environment-variable map and hand it to an existing
-Ansible playbook or shell script under `qa-integration/pmm_qa/`.
+`pmm-framework` is a dispatcher: most `setup_<name>` functions in `setups/*.sh`
+build an environment-variable map and hand it to an existing Ansible playbook or
+shell script under `qa-integration/pmm_qa/`. PS, MySQL and PXC instead run on
+prebaked images with plain `docker` commands (`lib/prebaked.sh`). To port
+another type, follow [prebaked-port.md](references/prebaked-port.md).
 
 **Read [ARCHITECTURE.md](../../../qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md)
 first.** It owns the module map, the run sequence, the value-resolution
@@ -56,6 +59,7 @@ thing, with the cheapest check that would actually **fail** if you were wrong.
 | Touched `run_parallel_setups`, `set -m`, traps, `should_dump_successful_logs` | Drive it through a real pty / real process group | [#pty](references/verification-recipes.md#driving-parallel-mode-under-a-real-pty) |
 | Changed argument parsing or the catalogue | Replay every `--database` shape CI actually sends | [#real-inputs](references/verification-recipes.md#exercising-real-caller-inputs-from-ci-workflows) |
 | Touched `preflight_database_setups` or the conflict rules | Classify every pair as refused / sequential / parallel — all three, both orderings | [#preflight](references/verification-recipes.md#preflight-conflict-outcomes) |
+| Ported a type to a prebaked image, or changed one | The playbook's end state (names, ports, labels via the PMM API, exporters, workload) reproduced by a real run of every CI spec | [prebaked-port.md §6](references/prebaked-port.md#6-verify-for-real) |
 
 A check that passes before *and* after your change tells you nothing. If you
 cannot construct one that would have caught the mistake, you don't yet
