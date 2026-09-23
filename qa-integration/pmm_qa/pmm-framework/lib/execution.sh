@@ -129,7 +129,7 @@ preflight_database_setups() {
   fi
 
   [[ $needs_server == true ]] && resolve_pmm_server
-  [[ $needs_curl == true ]] && require_command curl
+  [[ $needs_curl == true ]] && require_command curl && require_command gunzip
   # Warm these up before forking so parallel jobs cannot race to install the
   # same Ansible collection.
   if [[ $PARALLEL == true && $needs_ansible == true ]]; then

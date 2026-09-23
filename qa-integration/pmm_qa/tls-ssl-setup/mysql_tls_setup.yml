@@ -9,7 +9,7 @@
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL_VERSION') | default('8.0', true) ) }}"
     mysql_ssl_container: "{{ lookup('vars', 'extra_mysql_ssl_container', default=lookup('env','MYSQL_SSL_CONTAINER') | default('mysql_ssl', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('pmm3admin!', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     shard_node_name: "{{ mysql_ssl_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"

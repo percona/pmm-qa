@@ -609,7 +609,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await oldVersion.outContains(latestReleasedVersion);
     const arch = (await cli.exec(`docker exec ${containerName} uname -m`)).stdout.trim();
     const bucket = arch === 'aarch64' ? 'pmm-client-arm' : 'pmm-client';
-    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http')
+    // Compat runs install a released tarball URL; only a build-cache URL is newer than the release.
+    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('pmm-build-cache')
       ? process.env.PMM_CLIENT_VERSION
       : `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz`;
 
@@ -631,11 +632,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
-    const upgradedVersion = (await cli.exec('sudo pmm-admin version | grep -m1 "^Version:"'))
-      .stdout.replace('Version:', '').trim();
-
-    expect(upgradedVersion, 'Could not read the expected upgrade version from the host client!').not.toEqual('');
     await newPid.outNotContains(oldPid.stdout);
-    await newVersion.outContains(upgradedVersion);
+
+    const upgradedVersion = newVersion.stdout.replace('Version:', '').trim();
+    const toParts = (version: string) => version.split('-')[0].split('.').map(Number);
+    const [upgraded, released] = [toParts(upgradedVersion), toParts(latestReleasedVersion)];
+    const firstDiff = upgraded.findIndex((part, i) => part !== released[i]);
+    const isNewer = firstDiff !== -1 && upgraded[firstDiff] > released[firstDiff];
+
+    expect(isNewer, `Upgraded version '${upgradedVersion}' is not newer than ${latestReleasedVersion}!`).toBe(true);
   });
 });

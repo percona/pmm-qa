@@ -1,3 +1,12 @@
+# The target's own architecture; controller-local plays without facts fall back to uname.
+- name: Expand latest-tarball to the build-cache URL
+  set_fact:
+    client_version: >-
+      https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/{{
+      'pmm-client-arm' if ansible_facts.architecture | default(lookup('pipe', 'uname -m')) in ['aarch64', 'arm64'] else 'pmm-client'
+      }}/pmm-client-latest.tar.gz
+  when: client_version == 'latest-tarball'
+
 # Every install task below is a `when:` with no else, so an unrecognised
 # client_version would install nothing at all.
 - name: Check client_version is one this file can install
