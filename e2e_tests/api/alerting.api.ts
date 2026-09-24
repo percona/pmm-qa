@@ -1,7 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AlertRule, AlertRulesResponse, TemplatedAlertRule } from '@interfaces/alerting';
+import { AlertInstance, AlertRule, AlertRulesResponse, TemplatedAlertRule } from '@interfaces/alerting';
 
 type Headers = Record<string, string>;
 
@@ -17,12 +17,16 @@ export default class AlertingApi {
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
+      filters: rule.serviceName
+        ? [{ label: 'service_name', regexp: rule.serviceName, type: 'FILTER_TYPE_MATCH' }]
+        : undefined,
       folder_uid: rule.folderUid,
       for: rule.pendingPeriod,
       group: rule.group,
+      interval: rule.interval,
       name: rule.name,
       params: [{ float: rule.threshold, name: 'threshold', type: 'PARAM_TYPE_FLOAT' }],
-      severity: 'SEVERITY_WARNING',
+      severity: rule.severity ?? 'SEVERITY_WARNING',
       template_name: rule.templateName,
     });
 
@@ -32,22 +36,94 @@ export default class AlertingApi {
   createTemplate = async (headers: Headers, yamlBody: AlertTemplateBody) =>
     this.request.post(apiEndpoints.alerting.templates, { data: yamlBody, headers });
 
+  deleteActiveSilences = async (): Promise<void> => {
+    const response = await this.request.get(`${apiEndpoints.grafana.alertmanager}/silences`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    for (const { id, status } of (await response.json()) as { id: string; status: { state: string } }[]) {
+      if (status.state !== 'active') continue;
+
+      const deleted = await this.request.delete(`${apiEndpoints.grafana.alertmanager}/silence/${id}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+
+      expect(deleted.status(), await deleted.text()).toEqual(200);
+    }
+  };
+
   deleteTemplate = async (headers: Headers, templateName: string) =>
     this.request.delete(`${apiEndpoints.alerting.templates}/${templateName}`, { headers });
 
-  getRule = async (name: string): Promise<AlertRule | undefined> => {
+  getAlerts = async (): Promise<Pick<AlertInstance, 'labels'>[]> => {
+    const response = await this.request.get(`${apiEndpoints.grafana.alertmanager}/alerts`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return (await response.json()) as Pick<AlertInstance, 'labels'>[];
+  };
+
+  getRule = async (name: string): Promise<AlertRule | undefined> =>
+    (await this.getRuleGroups()).flatMap((group) => group.rules).find((rule) => rule.name === name);
+
+  getRuleGroups = async (): Promise<AlertRulesResponse['data']['groups']> => {
     const response = await this.request.get(apiEndpoints.grafana.prometheusRules, {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
     expect(response.status()).toEqual(200);
 
-    return ((await response.json()) as AlertRulesResponse).data.groups
-      .flatMap((group) => group.rules)
-      .find((rule) => rule.name === name);
+    return ((await response.json()) as AlertRulesResponse).data.groups;
   };
 
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
+
+  removeAllAlertRules = async (): Promise<void> => {
+    for (const { folderUid, name } of await this.getRuleGroups()) {
+      const response = await this.request.delete(`${apiEndpoints.grafana.ruler}/${folderUid}/${name}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+        params: { subtype: 'cortex' },
+      });
+
+      expect(response.status(), await response.text()).toEqual(202);
+    }
+  };
+
+  setWebhookContactPoint = async (): Promise<void> => {
+    const receivers = await this.request.get(apiEndpoints.grafana.receivers, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(receivers.status()).toEqual(200);
+
+    const { name, resourceVersion } = (
+      (await receivers.json()) as { items: { metadata: { name: string; resourceVersion: string } }[] }
+    ).items[0].metadata;
+    const response = await this.request.put(`${apiEndpoints.grafana.receivers}/${name}`, {
+      data: {
+        metadata: { name, resourceVersion },
+        spec: {
+          integrations: [
+            {
+              disableResolveMessage: false,
+              name: 'empty',
+              secureFields: {},
+              settings: { password: 'alert', url: 'http://webhookd:8080/alert', username: 'alert' },
+              type: 'webhook',
+            },
+          ],
+          title: 'empty',
+        },
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
 
   updateTemplate = async (headers: Headers, templateName: string, yamlBody: AlertTemplateBody) =>
     this.request.put(`${apiEndpoints.alerting.templates}/${templateName}`, {

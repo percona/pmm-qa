@@ -93,10 +93,12 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
+- `@fb-alerting`
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ia`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
