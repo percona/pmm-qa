@@ -10,8 +10,24 @@ const postgresPodSelectors = {
   postgres: 'postgres-operator.crunchydata.com/data=postgres',
 };
 const cordonedNodes: string[] = [];
-const skewOf = (podsPerNode: Record<string, number>): number =>
-  Math.max(...Object.values(podsPerNode)) - Math.min(...Object.values(podsPerNode));
+
+// ScheduleAnyway only scores the spread, so past one pod per node the scheduler
+// also weighs node load and an even skew is not guaranteed.
+const expectOnePodPerNodeFirst = (podsPerNode: Record<string, number>, replicas: number): void => {
+  const counts = Object.values(podsPerNode);
+
+  if (replicas >= counts.length) {
+    expect(
+      counts.filter((pods) => pods === 0),
+      `Every node must host an HAProxy pod before any shares one: ${JSON.stringify(podsPerNode)}`,
+    ).toHaveLength(0);
+  } else {
+    expect(
+      Math.max(...counts),
+      `No node may host two HAProxy pods while another has none: ${JSON.stringify(podsPerNode)}`,
+    ).toBe(1);
+  }
+};
 
 pmmTest.describe('HAProxy scaling on an HA cluster', () => {
   pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper, haProxyHelper }) => {
@@ -38,16 +54,7 @@ pmmTest.describe('HAProxy scaling on an HA cluster', () => {
       });
 
       await pmmTest.step('Verify the replicas are spread one-per-node first, then co-located', async () => {
-        const podsPerNode = haProxyHelper.podsPerNode();
-
-        expect(
-          Object.entries(podsPerNode).filter(([, pods]) => pods === 0),
-          `Every node must host an HAProxy pod, got ${JSON.stringify(podsPerNode)}`,
-        ).toHaveLength(0);
-        expect(
-          skewOf(podsPerNode),
-          `Per-node counts must differ by at most 1: ${JSON.stringify(podsPerNode)}`,
-        ).toBeLessThanOrEqual(1);
+        expectOnePodPerNodeFirst(haProxyHelper.podsPerNode(), replicas);
       });
 
       await pmmTest.step('Verify PMM is served through the scaled HAProxy', async () => {
@@ -192,12 +199,7 @@ pmmTest.describe('HAProxy scaling on an HA cluster', () => {
           haProxyHelper.scale(replicas);
           await haProxyHelper.waitForReadyPods(replicas);
 
-          const podsPerNode = haProxyHelper.podsPerNode();
-
-          expect(
-            skewOf(podsPerNode),
-            `Per-node counts must differ by at most 1: ${JSON.stringify(podsPerNode)}`,
-          ).toBeLessThanOrEqual(1);
+          expectOnePodPerNodeFirst(haProxyHelper.podsPerNode(), replicas);
         });
       }
 
