@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 
