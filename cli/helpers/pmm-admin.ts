@@ -43,10 +43,11 @@ export const getPmmAdminMinorVersion = async (containerName: string) => {
   });
 };
 
-export const addMongoServiceAndGetExporterId = async (containerName: string, serviceName: string, address: string) => {
+export const addMongoServiceAndGetExporterId = async (containerName: string, serviceName: string, address: string, onCreated: () => void) => {
   return test.step(`add mongodb "${serviceName}" service and get its mongodb_exporter id`, async () => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} ${serviceName} ${address}`);
     await output.assertSuccess();
+    onCreated();
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
     expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
 

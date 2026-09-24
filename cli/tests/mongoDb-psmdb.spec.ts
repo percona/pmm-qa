@@ -139,8 +139,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
   test('PMM-T2325 - Verify --agent-env-vars can be changed on an existing mongodb_exporter with pmm-admin inventory change agent', async ({}) => {
     const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
-    servicesToRemove.push(serviceName);
-    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
     let output = await cli.exec(`${changeAgent} --agent-env-vars=KRB5_CLIENT_KTNAME,DOES_NOT_EXIST_VAR`);
@@ -159,7 +158,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
       const listenPort = agents.find((a: { agent_id: string }) => a.agent_id === agentId)?.port;
       expect(listenPort, `mongodb_exporter ${agentId} has no listen port yet`).toBeTruthy();
       // Other exporters in this container (e.g. PMM-T2128's) carry KRB5_CLIENT_KTNAME too.
-      const environ = await cli.exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f exporters/mongodb_exporter); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${listenPort} " && tr "\\0" "\\n" < /proc/$p/environ; done'`);
+      const environ = await cli.exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f "[e]xporters/mongodb_exporter"); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${listenPort} " && tr "\\0" "\\n" < /proc/$p/environ; done'`);
       await environ.outContains('KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab');
       await environ.outNotContains('DOES_NOT_EXIST_VAR');
       const list = await cli.exec(`docker exec ${containerName} pmm-admin list`);
@@ -177,8 +176,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
   test('PMM-T2326 - Verify validation of --agent-env-vars for pmm-admin inventory change agent mongodb-exporter', async ({}) => {
     const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
-    servicesToRemove.push(serviceName);
-    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
     let output = await cli.exec(`${changeAgent} --agent-env-vars=VALID_VAR`);
