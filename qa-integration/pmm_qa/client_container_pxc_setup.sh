@@ -82,7 +82,10 @@ fi
 # xtrabackup ships under pxc_extra rather than on PATH; pxc-startup.sh probes for
 # it with `which xtrabackup`.
 xtrabackup_bin="$(ls /usr/bin/pxc_extra/pxb-*/bin/xtrabackup 2>/dev/null | tail -1)"
-[ -n "$xtrabackup_bin" ] && export PATH="$(dirname "$xtrabackup_bin"):$PATH"
+if [ -n "$xtrabackup_bin" ]; then
+  xtrabackup_dir="$(dirname "$xtrabackup_bin")"
+  export PATH="$xtrabackup_dir:$PATH"
+fi
 
 cd ~/PXC || exit 1
 
