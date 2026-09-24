@@ -213,7 +213,7 @@ services:
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
   minio:
-    image: quay.io/minio/minio
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     profiles: ["minio"]
     container_name: minio
     ports:
@@ -235,7 +235,7 @@ services:
 
   createbucket:
     container_name: createbucket
-    image: quay.io/minio/mc
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     profiles: ["minio"]
     networks:
       - pmm-qa
