@@ -302,8 +302,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
         )
         .assertSuccess()
-        .outContains('- enabled TLS')
-        .outContains('- enabled TLS skip verification');
+        .outContainsMany(['- enabled TLS', '- enabled TLS skip verification']);
 
       // Verify agent details show TLS enabled
       await grafanaHelper.authorize();

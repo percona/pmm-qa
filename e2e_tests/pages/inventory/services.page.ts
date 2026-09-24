@@ -15,8 +15,6 @@ export default class ServicesPage extends BasePage {
   };
   buttons = {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
-    statusByServiceName: (serviceName: string) =>
-      this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="2"]//div`),
   };
   elements = {
     rowsPerPageDropdown: this.grafanaIframe().getByTestId('pagination').locator('div[class*="-singleValue"]'),

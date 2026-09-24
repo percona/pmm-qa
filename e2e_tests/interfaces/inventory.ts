@@ -79,6 +79,9 @@ export interface GetService {
         enable_all_collectors: true;
         enable_diagnostic_data_histograms: true;
       };
+      rta_options: {
+        collect_interval: string;
+      };
       mysql_options: {
         is_tls_key_set: true;
         extra_dsn_params: {

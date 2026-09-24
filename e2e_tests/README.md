@@ -127,6 +127,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@psmdb-profiler-integration`
 - `@rds-integration`
 - `@rta`
+- `@rta-mongodb-integration`
 - `@service-account`
 - `@settings`
 - `@standalone`

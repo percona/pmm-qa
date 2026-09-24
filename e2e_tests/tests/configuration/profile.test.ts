@@ -65,7 +65,7 @@ pmmTest(
 
       for (const service of services) {
         await expect(
-          servicesPage.builders.monitoringStatusByServiceName(service.service_name),
+          servicesPage.builders.monitoringByServiceName(service.service_name),
           `'${service.service_name}' is expected to have 'OK' status when all the agents are 'Running'`,
         ).toHaveText('OK', { timeout: Timeouts.ONE_MINUTE });
       }
