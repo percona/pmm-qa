@@ -10,9 +10,13 @@
   - name: Validate {{ process_name }} status
     block:
       - name: Wait for {{ process_name }} to have Running Status.
-        shell: "pmm-admin list {{ port_flag if port_flag is defined else '' }} | grep '{{ process_name }}' | awk -F' ' '{print $2}'"
+        shell: |
+          set -o pipefail
+          pmm-admin list {{ port_flag if port_flag is defined else '' }} | grep '{{ process_name }}' | awk -F' ' '{print $2}'
+        args:
+          executable: /bin/bash
         register: last_status
-        until: last_status.stdout.find('Running') != -1
+        until: last_status.rc == 0 and last_status.stdout.find('Running') != -1
         delay: "{{ delay if delay is defined else 5 }}"
         retries: "{{ retries if retries is defined else 5 }}"
       - name: Waiting successful
@@ -21,7 +25,7 @@
     rescue:
       - name: Waiting failed
         debug:
-          msg: "{{ process_name }} status is '{{ last_status.stdout }}'!"
+          msg: "{{ process_name }} status is '{{ last_status.stdout }}' (rc={{ last_status.rc }}, stderr='{{ last_status.stderr }}')!"
         failed_when: true
   rescue:
     - name: Generate PMM summary on failure

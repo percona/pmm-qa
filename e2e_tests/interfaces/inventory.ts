@@ -1,6 +1,15 @@
+export interface NodeAgent {
+  agent_id: string;
+  agent_type: string;
+  is_connected: boolean;
+  status: string;
+}
+
 export interface GetNode {
+  agents?: NodeAgent[];
   node_id: string;
   node_name: string;
+  node_type: string;
 }
 
 export interface GetServices {

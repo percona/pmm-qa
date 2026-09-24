@@ -1,15 +1,13 @@
 name: "E2E tests Matrix"
 
 concurrency:
-  group: e2e-tests-${{ github.event_name == 'pull_request' && github.head_ref || (github.event.inputs.pmm_qa_branch || github.ref_name) }}
+  group: e2e-tests-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.head_ref || (github.event.inputs.pmm_qa_branch || github.ref_name) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       pmm_qa_branch:
@@ -37,7 +35,14 @@ on:
         default: 'null'
         required: false
         type: string
-
+      arch:
+        description: "package for enabling repo"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
   workflow_call:
     inputs:
       pmm_qa_branch:
@@ -55,10 +60,15 @@ on:
       sha:
         required: false
         type: string
+      arch:
+        type: string
+        required: false
+        default: amd64
 
 jobs:
   settings_and_cli:
     name: Settings and cli UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -72,6 +82,7 @@ jobs:
 
   ssl_mysql:
     name: MySQL SSL tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -85,6 +96,7 @@ jobs:
 
   ssl_mongo:
     name: MongoDB SSL tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -98,6 +110,7 @@ jobs:
 
   ssl_postgres:
     name: PDPGSQL SSL tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -111,6 +124,7 @@ jobs:
 
   disconnect:
     name: Disconnect from PMM Server
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -131,6 +145,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database haproxy --database ps --database pxc'
       pmm_test_flag: '@pmm-ps-pxc-haproxy-integration'
 
@@ -143,6 +158,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database psmdb'
       pmm_test_flag: '@pmm-psmdb-integration'
 
@@ -155,6 +171,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps=8.4 --database psmdb --database valkey'
       pmm_test_flag: '@new-navigation|@menu'
 
@@ -167,6 +184,7 @@ jobs:
 #      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
 #      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 ##      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      arch: ${{ inputs.arch }}
 #      setup_services: '--database valkey'
 #      pmm_test_flag: '@pmm-valkey-integration'
 
@@ -179,6 +197,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database pdpgsql'
       pmm_test_flag: '@inventory|@image-renderer'
 
@@ -191,6 +210,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps=8.4 --database psmdb --database pdpgsql'
       pmm_test_flag: '@LBAC'
 
@@ -203,6 +223,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '-h'
       pmm_test_flag: '@settings'
 
@@ -216,31 +237,4 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-
-  notify_investigator:
-    name: Fire Investigator routine
-    needs:
-      - settings_and_cli
-      - ssl_mysql
-      - ssl_mongo
-      - ssl_postgres
-      - disconnect
-      - ps_pxc_haproxy_integration
-      - psmdb_integration
-      - new-navigation
-      - inventory
-      - access-control
-      - settings_playwright
-      - fb_tests
-    if: >
-      !cancelled() && github.event_name == 'schedule' &&
-      contains(needs.*.result, 'failure')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/notify-investigator
-        with:
-          routine-token: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}
+      arch: ${{ inputs.arch }}

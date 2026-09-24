@@ -72,7 +72,7 @@ Scenario(
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.showTooltip(1, 3);
-    I.seeElement(queryAnalyticsPage.data.elements.latencyChart);
+    I.waitForVisible(queryAnalyticsPage.data.elements.latencyChart, 30);
   },
 );
 

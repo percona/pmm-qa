@@ -77,13 +77,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(5);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(5);
 
@@ -93,13 +89,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(2);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(3);
 
@@ -122,8 +114,6 @@ Scenario(
       environment: psRole.value,
       from: 'now-1m',
     }));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },
