@@ -22,7 +22,9 @@ pmmTest.describe('PMM metrics tests for upgrade', () => {
     'Verify metrics from custom queries for mysqld_exporter after upgrade @post-upgrade @post-server-upgrade',
     async ({ api }) => {
       const metricName = 'mysql_performance_schema_memory_summary_current_bytes';
-      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+      // Match the local ps service (ps_pmm_<version>_...), not the remote instance named 'ps_pmm_'
+      // added by the pre-upgrade external-service tests, which has no custom queries applied.
+      const serviceName = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_\\d');
 
       await api.grafanaApi.waitForMetric(`${metricName}{service_name="${serviceName.service_name}"}`);
     },
