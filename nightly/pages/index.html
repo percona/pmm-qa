@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMM Nightly Reports</title>
+<style>
+  :root { --bg:#fff; --fg:#1b1f24; --muted:#59636e; --line:#d1d9e0; --pass:#1a7f37; --fail:#cf222e; --skip:#9a6700; --row:#f6f8fa; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#3d444d; --pass:#3fb950; --fail:#f85149; --skip:#d29922; --row:#151b23; }
+  }
+  body { margin:0; padding:24px 16px; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 20px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  tr.run { cursor:pointer; }
+  tr.run:hover { background:var(--row); }
+  tr.detail td { background:var(--row); }
+  .pass, .success { color:var(--pass); } .fail, .failure, .cancelled { color:var(--fail); } .skipped { color:var(--skip); }
+  .jobs { display:flex; flex-wrap:wrap; gap:4px 16px; margin:0 0 8px; padding:0; list-style:none; }
+  .inv { margin:8px 0 0; padding-left:18px; }
+  a { color:inherit; }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PMM Nightly Reports</h1>
+  <p class="sub">One row per Nightly Test Suite run. Click a row for job results and investigator findings. <a href="../">Performance reports</a></p>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Tag</th><th>Status</th><th>Summary</th><th>Findings</th><th>Run</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https:\/\//.test(u || '') ? u : '#';
+fetch('data/index.json', {cache: 'no-store'}).then(r => r.json()).then(runs => {
+  const tbody = document.getElementById('rows');
+  if (!runs.length) { tbody.innerHTML = '<tr><td colspan="6">No runs published yet.</td></tr>'; return; }
+  tbody.innerHTML = runs.slice().reverse().map((r, i) => {
+    const inv = r.investigations || [];
+    const jobs = (r.jobs || []).map(j => `<li><span class="${esc(j.result)}">●</span> ${esc(j.name)}: ${esc(j.result)}</li>`).join('');
+    const finds = inv.map(f => `<li><b>${esc(f.verdict)}</b> — ${esc(f.job)}: ${esc(f.summary)}` +
+      (f.link ? ` (<a href="${esc(safeUrl(f.link))}">link</a>)` : '') + '</li>').join('');
+    return `<tr class="run" data-i="${i}"><td>${esc((r.date || '').replace('T', ' ').slice(0, 16))}</td><td>${esc(r.image_tag)}</td>` +
+      `<td class="${esc(r.status)}">${esc(r.status)}</td><td>${esc(r.summary)}</td><td>${inv.length}</td>` +
+      `<td><a href="${esc(safeUrl(r.run_url))}" onclick="event.stopPropagation()">open</a></td></tr>` +
+      `<tr class="detail" id="d${i}" hidden><td colspan="6"><ul class="jobs">${jobs}</ul>` +
+      (finds ? `<ul class="inv">${finds}</ul>` : '<span>No investigator findings yet.</span>') + '</td></tr>';
+  }).join('');
+  tbody.addEventListener('click', e => {
+    const row = e.target.closest('tr.run');
+    if (row) { const d = document.getElementById('d' + row.dataset.i); d.hidden = !d.hidden; }
+  });
+}).catch(() => { document.getElementById('rows').innerHTML = '<tr><td colspan="6">Could not load data/index.json.</td></tr>'; });
+</script>
+</body>
+</html>
