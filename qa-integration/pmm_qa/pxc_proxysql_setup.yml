@@ -19,7 +19,10 @@
     pxc_repo: "{{ {'5.7': 'pxc-57', '8.0': 'pxc-80', '8.4': 'pxc-84-lts', '9.7': 'pxc-97-lts'}[pxc_version] | default('pxc-80') }}"
     # The pxc-57 repository publishes only version-suffixed package names
     # (percona-xtradb-cluster-server-5.7, ...); 8.0 and later drop the suffix.
+    # Its server package also depends on percona-xtrabackup-24, which lives
+    # in pxb-24 rather than in pxc-57.
     pxc_pkg_suffix: "{{ '-5.7' if pxc_version == '5.7' else '' }}"
+    pxc_extra_repo: "{{ 'pxb-24' if pxc_version == '5.7' else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -95,6 +98,7 @@
         -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb
         && (dpkg -i /tmp/percona-release.deb || apt-get -y -f install)'
       - docker exec {{ pxc_container }} percona-release enable-only {{ pxc_repo }} release
+      - docker exec {{ pxc_container }} bash -c '[ -z "{{ pxc_extra_repo }}" ] || percona-release enable {{ pxc_extra_repo }} release'
       - docker exec {{ pxc_container }} apt-get update
       - >-
         docker exec {{ pxc_container }} env DEBIAN_FRONTEND=noninteractive apt-get -y install
