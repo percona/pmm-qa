@@ -8,6 +8,7 @@ on:
         default: 'main'
         type: string
   workflow_call:
+    inputs:
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
