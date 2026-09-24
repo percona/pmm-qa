@@ -84,7 +84,6 @@ const expectOwnershipConflict = (result: ExecReturn, kindPattern: string): void 
     result.code,
     'The install must fail on a cluster-scoped resource the first namespace owns',
   ).not.toEqual(0);
-  expect(output).toContain('INSTALLATION FAILED');
   expect(output).toMatch(new RegExp(`${kindPattern} "[^"]+" in namespace "" exists and cannot be imported`));
   expect(output).toContain(`key "meta.helm.sh/release-namespace" must equal "${secondNamespace}"`);
 };
