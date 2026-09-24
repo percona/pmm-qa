@@ -38,7 +38,7 @@ Scripts, run from the skill directory: `scripts/check_draft.py <draft.md>` check
 Facts about PMM's environment that a reasonable first attempt gets wrong:
 
 - A pull request's own description or docs about how a third-party component behaves — VictoriaMetrics retention, ClickHouse partitions, Grafana routing — are the claim under test, not a contract. One such claim once dropped a ticket's acceptance case; the component's own docs said the opposite.
-- percona/pmm `api-tests` do not run on the pull request; they run from Jenkins against a feature build. Confirm the run before subtracting them.
+- Do not read or cite product-repository tests — unit tests, percona/pmm `api-tests`, exporter CI. Only pmm-qa tests and Zephyr count as coverage, so every defect the draft names gets a pmm-qa case or an explicit drop reason.
 - A Zephyr case marked `Automated` may have no test on `origin/main`. Only the test's assertions are coverage.
 - This checkout can lag `origin/main` by many commits, including CI restructures. Read workflows and tests from `origin/main`.
 - A nightly shard that provisions databases may select no tests. It is not a lane.
@@ -52,7 +52,7 @@ Facts about PMM's environment that a reasonable first attempt gets wrong:
 Choose the depth once the step 2 inventory exists, record it and its trigger in the notes, and raise it — never lower it — if later steps find more. Choose by risk, not by the size of the diff: a one-file change that deletes data in HA is Deep.
 
 - **Deep** when any inventory entry touches authentication, authorization, a proxy, secrets, HA or chart topology, upgrade or migration, data deletion or retention, a persisted schema, or more than one component.
-- **Focused** when the change is local to one component and touches no persisted state, permission, topology, or version gate — a text, link, or style change, or a local fix whose only consumer is what it renders.
+- **Focused** when the change is local to one component and touches no persisted state, permission, topology, or version gate — a text, link, or style change, or a local fix whose output other components only read, without the change altering how they read it.
 - **Standard** otherwise.
 
 Focused skips the per-entry history search (step 4 keeps its one symptom search), `test-scope`, and the worked example, and replaces the step 9 subagent with a self-check: every `Covered` row states what its assertion sees on the base branch. Deep adds `test-scope`, the route enumeration in [change-impact-and-failure-model.md](references/change-impact-and-failure-model.md) for any proxy or auth change, and always runs the step 9 subagent.
@@ -93,7 +93,7 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
-Read changed files before individual hunks, then read behavior-changing code and developer tests. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
+Read changed files before individual hunks, then read the behavior-changing code; skip the pull request's test files. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
 
 Create one inventory entry per distinct externally meaningful behavior, not per hunk, function, or file.
 
@@ -119,7 +119,6 @@ Compare requirements and implementation in both directions:
 
 - requirement with no implementation -> Finding;
 - implementation with no requirement -> Finding or candidate if it changes a public contract;
-- developer tests -> classify with [coverage.md](references/coverage.md): coverage only when they run and would fail on the named defect, never an automatic reason for another end-to-end case.
 
 ### 3. Build the change-impact and failure model
 
@@ -147,7 +146,7 @@ If Jira search is unavailable or remains inconclusive, report the historical che
 
 Read [scenario-selection.md](references/scenario-selection.md) and [test-level-selection.md](references/test-level-selection.md).
 
-Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. Place each at the lowest layer that observes its defect; a gap that belongs in a product-repository test becomes a `Recommend:` Finding, not a case. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure as a pmm-qa case when deterministic, even when a product-repository test covers it; see the Regression rule in scenario-selection.md.
+Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. Place each at the lowest pmm-qa layer that observes its defect — API or CLI before UI. A defect no pmm-qa test can reach becomes a Finding. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure as a pmm-qa case when deterministic; see the Regression rule in scenario-selection.md.
 
 ### 6. Find existing coverage
 
@@ -181,7 +180,7 @@ Mark `Needs automation` only when all of these hold:
 
 Mark `Automation candidate — infra gap` when the case is deterministic and worth automating but no lane runs its preconditions, or it needs more than one small helper; name the missing lane or helper. "No lane provisions this" is a claim about `.github/workflows/` on `origin/main`: search it for each required service or tool and record the search in the notes before making it.
 
-Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; it depends on a race, a restart, or wall-clock waiting; or it is a one-off verification for this ticket that no later change will regress. The reason and the lane travel into Zephyr with the case.
+Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; or it depends on a race, a restart, or wall-clock waiting. A check that confirms this ticket once, and that no later change could regress, is not a case: it belongs in the ticket's own QA run, not in Zephyr. The reason and the lane travel into Zephyr with the case.
 
 ### 9. Produce the review draft and wait for approval
 
@@ -224,7 +223,7 @@ coverage, or to a drop reason you can state on request. Say in one line that cas
 and why in the aggregate — "the rest of the PR is unit-covered and does not earn an e2e" — rather
 than listing each candidate.
 
-Zero proposed cases is valid when existing coverage already catches every meaningful identified defect. Then the table is replaced by one line per mechanism, `Covered by: <mechanism> → <test path:line or PMM-T key>`, and any Findings and `Recommend:` lines still apply.
+Zero proposed cases is valid when existing coverage already catches every meaningful identified defect. Then the table is replaced by one line per mechanism, `Covered by: <mechanism> → <pmm-qa test path:line or PMM-T key>`, and any Findings still apply.
 
 Do not execute cases, create/update Zephyr entries, or begin automation without explicit user approval after review. Approval unlocks Zephyr only (`create`, `steps`, `link-issue`): never post the draft or the cases as a Jira comment, and never write How to test or any other Jira field — the coverage link from step 10 is the ticket's record. Stop here and wait; when another agent invoked this skill, return the draft to it instead.
 

@@ -8,7 +8,7 @@ Keep candidates only when **all** conditions hold:
    Name the acceptance criterion, implementation branch, invariant, historical defect mechanism, or explicit customer behavior that justifies it.
 
 2. **Named defect**
-   State the plausible defect and confirm the case would fail if that defect existed. For a bug, write `base: <what the broken build does> → fix: <what the fixed build does> → <assertion that tells them apart>`, derived from base-branch code or a pre-fix CI failure; this skill never runs the build to find out. When the two builds give the same observation on some topology, choose an oracle that differs there too.
+   State the plausible defect and confirm the case would fail if that defect existed. For a bug, write `base: <what the broken build does> → fix: <what the fixed build does> → <assertion that tells them apart>`, derived from base-branch code or a pre-fix CI failure; this skill never runs the build to find out. When the two builds give the same observation on some topology, choose an oracle that differs there too. A case that gives the same result on the broken build and on the fixed build does not test the fix: keep it only when it names the later change it protects against, and rank it below the cases for the ticket's own defect.
 
 3. **Unique coverage**
    No existing assertion already catches the same defect. Otherwise classify as covered or extend.

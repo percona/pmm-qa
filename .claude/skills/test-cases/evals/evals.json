@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "/test-cases PMM-15379",
-      "expected_output": "Facts checked 2026-09-23 against percona/pmm#5923 at 22d785b, still open; re-check them if it has moved. Deep. Cases: a Viewer supplying X-Proxy-Admin through the data source proxy is refused with the snapshot list unchanged; the vmproxy read-only gate holds with access control disabled; normal dashboard, variable and Explore traffic is never refused, on a lane whose job both provisions the estate and selects the test's tag; a Viewer holding an empty-filter role still reads every series. Routes are enumerated from the configuration, not from How to test. No route-shape or admin-diagnostics case, because api-tests/accesscontrol covers them from the Jenkins API-test job. Findings name the api/v1/targets move during PR review and the feature-build image requirement. Grade by mechanisms covered: access-control-off gate; forged trusted inputs (X-Proxy-Admin, X-Proxy-Filter); full-access direction; route enumeration; route shapes subtracted as api-tests coverage.",
+      "expected_output": "Facts checked 2026-09-23 against percona/pmm#5923 at 22d785b, still open; re-check them if it has moved. Deep. Cases: a Viewer supplying X-Proxy-Admin through the data source proxy is refused with the snapshot list unchanged; the vmproxy read-only gate holds with access control disabled; normal dashboard, variable and Explore traffic is never refused, on a lane whose job both provisions the estate and selects the test's tag; a Viewer holding an empty-filter role still reads every series. Routes are enumerated from the configuration, not from How to test. The UID, non-1 id and export routes from the ticket's Defect 1 get their own case. Findings name the api/v1/targets move during PR review and the feature-build image requirement. Grade by mechanisms covered: access-control-off gate; forged trusted inputs (X-Proxy-Admin, X-Proxy-Filter); full-access direction; route enumeration; Defect 1 route shapes reproduced as a pmm-qa case.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
@@ -13,8 +13,8 @@
         "The notes enumerate the routes reaching vmproxy or VictoriaMetrics from nginx locations and Grafana routes, including the Grafana alerting routes and the paths that reach VictoriaMetrics without vmproxy; each is a case, a ledger row, or a stated drop",
         "Any HA case asserts a status code that differs between the broken and fixed build, not only an empty result",
         "The estate sweep names a lane only where one job both provisions the technology and selects the test's tag; the rest are infra gap or Manual with the workflow search recorded in the notes; a blanket Manual with no recorded search fails",
-        "The full-access direction (empty-filter Viewer sees every series the admin sees) is asserted in some case, or dropped with a ledger row citing the exact api-tests assertion",
-        "No case repeats the four route shapes or admin diagnostics; the draft cites api-tests/accesscontrol as coverage and names how its run was confirmed",
+        "The full-access direction (empty-filter Viewer sees every series the admin sees) is asserted in some case",
+        "A case reproduces Defect 1: a restricted Viewer gets 0 series through the UID address, a data source with an id other than 1, and the export",
         "Findings state that api/v1/targets is 403 for a Viewer, contradicting How to test",
         "Every implementation Evidence names a repository path with a function or line",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
@@ -68,13 +68,13 @@
     {
       "id": 5,
       "prompt": "/test-cases PMM-15242",
-      "expected_output": "Facts checked 2026-09-23. Zero new cases for the missing usage output: cli/tests/generic.spec.ts asserts the usage text on stdout and TestNoCommandPrintsUsage in percona/pmm admin/cli runs on the pull request. The Go test passes --server-url, which skips the pmm-agent lookup, so running pmm-admin with no arguments while pmm-agent is stopped is untested.",
+      "expected_output": "Facts checked 2026-09-23. Zero new cases for the missing usage output: cli/tests/generic.spec.ts asserts the usage text on stdout. Running pmm-admin with no arguments while pmm-agent is stopped is untested by any pmm-qa test.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
-        "The draft proposes no new case for the fixed panic and cites both tests as coverage, naming how the Go test's run was confirmed",
-        "A Finding raises or rules out, with a code location, the no-agent path the Go test bypasses with --server-url",
-        "If a case is proposed for the no-agent path it is Automation candidate — infra gap naming the missing lane, not Manual",
+        "The draft proposes no new case for the fixed panic and cites cli/tests/generic.spec.ts as coverage; it cites no product-repository test",
+        "The no-agent path (pmm-admin with no arguments while pmm-agent is stopped) is a case or a Finding with a code location",
+        "If a case is proposed for the no-agent path it is automatable in an existing lane (for example by simulating the stopped agent) or an Automation candidate — infra gap naming the missing lane, not Manual",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]
     },
@@ -95,11 +95,11 @@
     {
       "id": 7,
       "prompt": "/test-cases PMM-15302",
-      "expected_output": "Facts checked 2026-09-23. A weak ticket whose scope moved during review. No new case for the non-AMI refusal: api-tests assert ChangeSSHKey is refused off AMI, UI unit tests in Settings.test.tsx cover the tab visibility, and PMM-T85 exercises the AMI tab but skips on non-AMI lanes. The backend now also refuses OVF; open PMM-15430 plans removing OVF, while docs on main still describe the OVA appliance.",
+      "expected_output": "Facts checked 2026-09-23. A weak ticket whose scope moved during review. No pmm-qa test covers the non-AMI side: PMM-T85 exercises the AMI tab but skips on non-AMI lanes, so the non-AMI refusal and the hidden tab need a case. The backend now also refuses OVF; open PMM-15430 plans removing OVF, while docs on main still describe the OVA appliance.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
-        "No new case repeats the non-AMI refusal the api-tests and UI unit tests cover, and the draft names how their runs were confirmed; any AMI-side case says why the unit tests' mocked version does not cover it",
+        "A case covers the non-AMI side: no SSH key tab, the direct link redirects, and a key sent through the API is refused with the stored key unchanged; the draft cites no product-repository test",
         "A Finding states the scope moved from removing the SSH tab in HA to showing it only on AMI",
         "A Finding states the backend now also rejects OVF and names the conflict with the OVF/OVA docs on main or open PMM-15430",
         "No expected behaviour is invented to fill the one-line description",
@@ -109,13 +109,12 @@
     {
       "id": 8,
       "prompt": "Plan QA for PMM-14670, it's a one-line QAN retention fix",
-      "expected_output": "Facts checked 2026-09-23. Deep despite one changed file: the partition purge is HA-only and deletes data. No new Zephyr case: PMM-T2295 covers the HA retention outcome. qan-api2/db_test.go seeds only date partitions, so it passes on the broken build and is not coverage. The right layer is a product test: a non-date partition in TestDropOldPartition, which qan-api2.yml runs with ClickHouse on every pull request.",
+      "expected_output": "Facts checked 2026-09-23. Deep despite one changed file: the partition purge is HA-only and deletes data. No new Zephyr case: PMM-T2295 covers the HA retention outcome. The HA-only non-date partition shape is not reachable from a pmm-qa test except through the HA retention outcome that PMM-T2295 already asserts.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
         "The notes record Deep depth, triggered by HA and data deletion, not by the size of the diff",
-        "The draft does not count qan-api2/db_test.go as Covered and says why it passes pre-fix",
-        "A Recommend Finding asks for a non-date partition in TestDropOldPartition",
+        "The draft cites no product-repository test",
         "No new Zephyr case duplicates PMM-T2295",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]
@@ -129,7 +128,7 @@
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
         "The history step finds PMM-14892 through a query on the ticket's symptom",
         "One case asserts that loading PMM sends no request to port 35729, marked Needs automation with a named lane",
-        "A Finding or Recommend line covers the requested CI string check",
+        "A Finding notes that the CI string check the refinement asked for was not built",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]
     },
@@ -164,12 +163,12 @@
     {
       "id": 12,
       "prompt": "/test-cases PMM-15161",
-      "expected_output": "Facts checked 2026-09-23. Focused. mysqld_exporter's own unit and live tests (run across the MySQL matrix in its CI) cover the corrected unsigned detection. What remains at PMM level is the auto-increment alert on an UNSIGNED ZEROFILL column, with the pmm-client version that ships the exporter in Preconditions.",
+      "expected_output": "Facts checked 2026-09-23. Focused. The PMM-level checks are the metric for an UNSIGNED ZEROFILL column and the auto-increment alert on an UNSIGNED ZEROFILL column, with the pmm-client version that ships the exporter in Preconditions.",
       "files": [],
       "expectations": [
         "scripts/check_draft.py reports no issues on the draft, and each case reads as plain steps a non-QA reader can follow without the Data column",
-        "The exporter's own tests are subtracted as coverage with how their run was confirmed",
-        "At most one PMM-level case, at the alert or panel that consumes the metric",
+        "A case asserts the auto-increment metric for an UNSIGNED ZEROFILL column reports the unsigned maximum; the draft cites no exporter CI test",
+        "The alert or panel that consumes the metric is covered in the same or one more case",
         "The pmm-client version carrying the fixed exporter is in Preconditions",
         "A second run on the same prompt covers the same failure mechanisms; case count and grouping may differ"
       ]

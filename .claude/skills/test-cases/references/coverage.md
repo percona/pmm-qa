@@ -23,14 +23,18 @@ Record one row per behavior inventory entry in the notes file: the exact terms s
 |---|---|---|
 | Covered | Existing assertion would fail on the named defect | Do not create a case; cite the key and assertion |
 | Extend | Same action exists but the assertion is weaker, or fails on the defect only by chance | Add the missing assertion to that flow |
-| Adjacent | Similar fixture or subject, different action or result; or a product test whose run is not confirmed | New case; reuse setup where practical. For a product test that will run on every build once merged, a Finding asking to confirm its run before sign-off may replace the case — say which you chose |
+| Adjacent | Similar fixture or subject, different action or result | New case; reuse setup where practical |
 | None | No executable assertion for the behavior | New case if it passes the strong-case gate |
 
-A `Covered` row states what the cited assertion sees on the base branch — from base-branch code, or from a CI failure recorded before the fix — and why that differs from the fixed build. A developer test that seeds only the data the old code already handled passes on the broken build and is not coverage, however close its name.
+A `Covered` row states what the cited assertion sees on the base branch — from base-branch code, or from a CI failure recorded before the fix — and why that differs from the fixed build. A pmm-qa test that seeds only the data the old code already handled passes on the broken build and is not coverage, however close its name.
+
+Only pmm-qa tests and Zephyr cases count. Do not read or cite tests in the product repositories — unit tests, integration tests, percona/pmm `api-tests`, exporter CI — and do not drop a case because one of them exists.
 
 A rejected-write test that asserts only the refusal — the status code or error — is `Extend`: add the read that shows state unchanged, even when the refusal happens before the backend, because a later regression can move it after the write.
 
 An assertion that fails on the defect only under data or timing the test does not control — a table check that trips only when a node's load happens to be zero — is `Extend`: make it deterministic.
+
+Classify an existing test as `Extend` only when it would pass on a defect the failure model names. A test that already fails on the broken build is `Covered`, even when it could assert more: checks for defects nobody named are not an extension.
 
 A Zephyr `Automated` status is not coverage. Find the test that carries the key on `origin/main` and read its assertions; recent cases are routinely marked Automated before, or without, a merged test.
 
@@ -49,12 +53,6 @@ Starting points only — confirm each against `AGENTS.md` and `origin/main` befo
 | Post-upgrade checks | `support_scripts/check_upgrade.py` | Driven from Jenkins upgrade jobs, not by any pmm-qa workflow |
 
 For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tests/api/`, and endpoint constants in `e2e_tests/helpers/apiEndpoints.ts`. An endpoint constant proves availability, not coverage; find a test that calls it and asserts the result.
-
-## Tests shipped with the implementation
-
-A test the implementation pull request adds inside the product repository is coverage once you confirm it runs; subtract every candidate it asserts except the ticket's own reproduction (scenario-selection.md, Regression), and cite it the way you would a pmm-qa test.
-
-Confirm from how its suite selects what to run, and name that evidence: the workflow and its trigger, the Makefile target, or the Jenkins job. `api-tests/Makefile` discovers packages with `find -name '*_test.go'`, so a new package needs no registration, but percona/pmm's `api-tests` run from Jenkins feature builds rather than on the pull request. A suite gated by an explicit list or tag covers only its listed entries. Check what the suite holds fixed for its whole run — a configuration it enables everywhere, or a flag a test passes to skip a code path, is a branch it leaves untested. A package-level unit test is not coverage for a defect in the composition of several components. A test whose run you cannot confirm is `Adjacent`.
 
 ## Effective constants
 

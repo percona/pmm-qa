@@ -13,6 +13,7 @@ Use this format for every proposed case.
 - Give the case a title a product manager would understand: what the user does and what must hold, not the mechanism.
 - Before finishing, read the Step and Expected columns without the Data column, as a tester new to the feature would. If a row cannot be followed that way, or needs the Catches line to make sense, rewrite it.
 - Omit the `Precondition` and `Cleanup` lines when unnecessary; do not write `None` or `N/A`.
+- When a case needs an environment other than its lane's default — another deployment, distribution, setting, or topology — say so in plain words in the Precondition or in its own Step; the exact command goes in Data.
 - Capture the identifier of any state the case will modify in its first step, and address that state by the captured identifier afterwards.
 - Give the first step an assertion that the precondition actually holds.
 - Write every wait as the event waited for, never as a duration; bound an absence assertion with an observable event as well.
