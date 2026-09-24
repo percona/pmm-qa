@@ -3,7 +3,7 @@
 Replace a type's Ansible playbook with a prebaked image plus plain `docker`
 commands (`lib/images.sh`, `lib/prebaked.sh`). Port one type at a time, and do
 not start the next until every CI spec for the current one has passed a real
-run. PS, MySQL and PXC are done; copy them.
+run. PS, MySQL, PXC, PSMDB and SSL PSMDB are done; copy them.
 
 ## 1. Measure before you change anything
 
@@ -51,6 +51,10 @@ replication-set). Pin down:
 - **What tests depend on:** grep `e2e_tests`, `cli/tests` and
   `codeceptjs-e2e/tests` for the container and service names. When a layout
   change would break tests, ask the user before choosing.
+- **Node names:** no dots. Dashboards compare `node_name` with `=` against a
+  regex-escaped multi-value variable, so `pxc_proxysql_pmm_8.4` never matches.
+- **Every node's own settings:** clear what the playbook cleared on all nodes,
+  not just the primary (GR secondaries stay `super_read_only`).
 
 ## 3. The image
 
@@ -58,6 +62,11 @@ replication-set). Pin down:
   already handles "local copy, else pull from `PREBAKED_REGISTRY`, else build".
 - Reuse `provisioning/images/engines/<engine>/Dockerfile` when its layout
   matches the playbook's. Otherwise add `pmm-framework/images/<engine>/`.
+- When the old path is a compose stack, keep its compose files: tag the
+  prebaked image with the name compose builds (`replica_member/local` for
+  PSMDB) and never call `build`. Names, networks, ports and volumes then match
+  for free.
+- Keep systemd in the image when tests `systemctl` inside the container.
 - Bake everything slow into the image: packages, sysbench, and pre-initialised
   data directories and users. Run time should only start things.
 - Add the image to `.github/workflows/build-prebaked-images.yml`: the matrix and
@@ -65,7 +74,10 @@ replication-set). Pin down:
 - Add any script inside the image to `BASH_SOURCES` in the Makefile.
 - Base images differ: check each version's image for `microdnf`, `yum`,
   `percona-release`, `mysqladmin` and its OS release before using them.
-  `microdnf` cannot install a local `.rpm` file; use `rpm -Uvh`.
+  `microdnf` cannot install a local `.rpm` file; use `rpm -Uvh`. EL8's curl
+  has no `--retry-all-errors`.
+- Install PMM Client at run time, not in the image, so one image serves every
+  `CLIENT_VERSION`.
 - Use `COPY --chmod=0755`. A Windows checkout does not keep the executable
   bit.
 
@@ -79,6 +91,13 @@ replication-set). Pin down:
   the setup still exiting 0.
 - **Never use `[[ cond ]] && cmd` as a statement.** On the parallel path,
   errexit is on, and a false condition kills the setup. Use `if`.
+- `pmm-agent setup` takes `[<node-address>] [<node-type>] [<node-name>]`; the
+  first positional is the address, not the name.
+- Give each container its own `/etc/machine-id` before `pmm-agent setup`;
+  every container of one image otherwise reports the same machine_id.
+- Replace fixed sleeps with probes for the state the next step needs.
+- Probe through shell functions, never `sh -c "... docker ..."`: a child
+  shell cannot see the test's stubbed `docker`.
 - Run `pmm-agent setup` one node at a time. Install, start and exporter waits
   can run in parallel with `each_node`.
 - Retry `pmm-admin add` on `pmm-agent is not connected|context deadline
@@ -102,7 +121,9 @@ replication-set). Pin down:
 ## 6. Verify for real
 
 - Run every CI spec for the type once in WSL against a real PMM Server, plus
-  one run with a package `CLIENT_VERSION`. For each run, check:
+  one run with a package `CLIENT_VERSION`. Use each job's own client: the
+  GSSAPI jobs pass `pmm-client-dynamic-ol<N>-latest.tar.gz`, and the plain
+  tarball cannot authenticate with Kerberos. For each run, check:
   - the database state: nodes synced, or replication running;
   - the labels, read from `/v1/management/services` (`pmm-admin list` does not
     print them);

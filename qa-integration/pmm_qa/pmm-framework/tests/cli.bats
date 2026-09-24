@@ -107,21 +107,6 @@ load helpers/test_helper
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
-@test "resolves latest PSMDB patch without Python" {
-  # Same patch, two builds: only correct if 'patch-build' is compared as
-  # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
-  # token (see the "-" to "." conversion in latest_psmdb_version()).
-  # 8.0.29-13 is deliberately absent: only what the release repo carries is a
-  # candidate, so a patch still sitting in psmdb-80/yum/testing is never picked.
-  curl() {
-    printf '%s\n' \
-      '<a href="percona-server-mongodb-server-8.0.4-1.el9.x86_64.rpm">' \
-      '<a href="percona-server-mongodb-server-8.0.4-2.el9.x86_64.rpm">'
-  }
-
-  [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
-}
-
 @test "selects the existing requests-capable interpreter for Ansible modules" {
   local fake_python=$BATS_TEST_TMPDIR/python
   printf '#!/usr/bin/env bash\nexit 0\n' >"$fake_python"

@@ -10,16 +10,21 @@ stub_prebaked_docker() {
   # shellcheck disable=SC2329,SC2317
   docker() {
     printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    if [[ $1 == compose && ${5:-} == */compose.yml ]]; then
+      cp "$5" "$BATS_TEST_TMPDIR/override.yml"
+      printf '%s' "$5" >"$BATS_TEST_TMPDIR/override.path"
+    fi
     case "$*" in
       *'pmm-admin status'*)
         printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
-          'mysqld_exporter Running' 'proxysql_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
+          'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
         ;;
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
         ;;
       'ps --format {{.Ports}}') printf '%s\n' "${PUBLISHED_PORTS:-}" ;;
       *replication_group_members*) printf '3\n' ;;
+      *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
       *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
     esac
   }
@@ -181,31 +186,81 @@ stub_prebaked_docker() {
   [[ ${CAPTURE_ENV[PDPGSQL_PGSM_PORT]} == 5447 ]]
 }
 
-@test "PSMDB sharding alias selects sharded script and PMM client env name" {
-  parse_database_spec 'psmdb=latest,SETUP_TYPE=shards,COMPOSE_PROFILES=extra,OL_VERSION=8,GSSAPI=true'
+@test "PSMDB pss runs the compose stack on the prebaked image and registers it as configure-agents.sh did" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=7.0,SETUP_TYPE=pss,GSSAPI=true,OL_VERSION=8'
   GLOBAL_CLIENT_VERSION=3-dev-latest
   dispatch_setup
 
-  [[ $CAPTURE_KIND == script ]]
-  [[ $CAPTURE_TARGET == start-sharded.sh ]]
-  [[ $CAPTURE_DIRECTORY == "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" ]]
-  [[ ${CAPTURE_ENV[PSMDB_VERSION]} == latest ]]
-  [[ ${CAPTURE_ENV[MONGO_SETUP_TYPE]} == shards ]]
-  [[ ${CAPTURE_ENV[COMPOSE_PROFILES]} == extra ]]
-  [[ ${CAPTURE_ENV[OL_VERSION]} == 8 ]]
-  [[ ${CAPTURE_ENV[GSSAPI]} == true ]]
-  [[ ${CAPTURE_ENV[MINIO]} == true ]]
-  [[ ${CAPTURE_ENV[PMM_CLIENT_VERSION]} == 3-dev-latest ]]
+  grep -q '^tag pmm-qa/psmdb:7.0-ol8 replica_member/local$' "$DOCKER_CALLS"
+  grep -q '^compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket$' "$DOCKER_CALLS"
+  ! grep -q 'compose.* build' "$DOCKER_CALLS" || false
+  grep -Fq 'exec -i rs101 mongo --quiet --eval rs.initiate({ _id: "rs", members: [{ _id: 0, host: "rs101:27017", priority: 2 },{ _id: 1, host: "rs102:27017", priority: 1 },{ _id: 2, host: "rs103:27017", priority: 1 }] })' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $external
+  grep -Fq 'getSiblingDB("$external").createUser({ user: "pmm@PERCONATEST.COM"' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec rs10[123] systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
+  [[ $(grep -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id' "$DOCKER_CALLS") -eq 3 ]]
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup$' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $external
+  grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
+  grep -q '^exec rs101 mgodatagen -f /etc/datagen/replicaset.json' "$DOCKER_CALLS"
 }
 
-@test "PSMDB MINIO defaults to true and honors an explicit false" {
-  parse_database_spec 'psmdb=latest,SETUP_TYPE=pss'
+@test "PSMDB psa with the extra set registers the arbiters and the extra set as the scripts did" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false'
   dispatch_setup
-  [[ ${CAPTURE_ENV[MINIO]} == true ]]
 
-  parse_database_spec 'psmdb=latest,SETUP_TYPE=pss,MINIO=false'
+  grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"
+  ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
+  grep -Fq '{ _id: 2, host: "rs103:27017", arbiterOnly: true }' "$DOCKER_CALLS"
+  grep -Fq '{ _id: 2, host: "rs203:27017", arbiterOnly: true }' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $external
+  ! grep -Fq '$external' "$DOCKER_CALLS" || false
+  grep -q '^exec rs103 systemctl stop pbm-agent$' "$DOCKER_CALLS"
+  grep -q '^exec rs203 systemctl stop pbm-agent$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=rs103 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=rs203 --port=27017$' "$DOCKER_CALLS"
+}
+
+@test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329
+  psmdb_traffic() { printf 'traffic\n' >>"$DOCKER_CALLS"; }
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards'
   dispatch_setup
-  [[ ${CAPTURE_ENV[MINIO]} == false ]]
+
+  grep -q '^compose -f docker-compose-sharded.yaml up -d$' "$DOCKER_CALLS"
+  for name in rs1 rs2 rscfg; do
+    grep -Fq "rs.initiate({ _id: \"$name\", members: [{ _id: 0, host: \"${name}01:27017\", priority: 2 }" "$DOCKER_CALLS"
+  done
+  grep -Fq 'sh.addShard("rs2/rs201:27017,rs202:27017,rs203:27017")' "$DOCKER_CALLS"
+  grep -Eq '^exec rscfg02 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rscfg02_[0-9]+ --environment=mongo-sharded-dev --cluster=sharded --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg02 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
+  [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
+  ! grep -q 'pbm config' "$DOCKER_CALLS" || false
+  grep -q '^exec --detach mongos bash -c while true' "$DOCKER_CALLS"
+  grep -q '^traffic$' "$DOCKER_CALLS"
+}
+
+@test "SSL PSMDB runs the TLS stack on the prebaked image without writing the password to disk" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329
+  ssl_psmdb_certs() { :; }
+  PMM_SERVER_PASSWORD=$'quote" slash\\ newline\nvalue'
+  parse_database_spec 'ssl_psmdb=latest,SETUP_TYPE=pss'
+  dispatch_setup
+
+  grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"
+  ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
+  # shellcheck disable=SC2016
+  grep -Fq 'PMM_AGENT_SERVER_PASSWORD: "${ADMIN_PASSWORD}"' "$BATS_TEST_TMPDIR/override.yml"
+  grep -A1 -q '^  test:$' "$BATS_TEST_TMPDIR/override.yml"
+  ! grep -Fq 'slash' "$BATS_TEST_TMPDIR/override.yml" || false
+  [[ ! -e $(dirname "$(cat "$BATS_TEST_TMPDIR/override.path")") ]]
+  grep -Eq '^exec psmdb-server pmm-admin add mongodb psmdb-server_[0-9]+ --agent-password=mypass --username=pmm_mongodb --password=5M\]\(Q%q/U\+YQ<\^m --host psmdb-server --port 27017 --tls --tls-certificate-key-file=/mongodb_certs/client.pem --tls-ca-file=/mongodb_certs/ca-certs.pem --cluster=mycluster$' "$DOCKER_CALLS"
 }
 
 @test "PXC runs in one container and registers its nodes and ProxySQL as the playbook did" {
@@ -308,31 +363,6 @@ stub_prebaked_docker() {
   [[ $CAPTURE_TARGET == mlaunch_modb_setup.yml ]]
   [[ ${CAPTURE_ENV[MODB_VERSION]} == 7.0 ]]
   [[ ${CAPTURE_ENV[MODB_SETUP]} == pss ]]
-}
-
-@test "SSL PSMDB uses a temporary script without editing tracked setup files" {
-  PMM_SERVER_HOST=192.0.2.10
-  PMM_SERVER_PORT=443
-  PMM_SERVER_PASSWORD=$'quote" slash\\ newline\nvalue'
-  parse_database_spec 'ssl_psmdb=latest,SETUP_TYPE=pss'
-  dispatch_setup
-
-  [[ $CAPTURE_KIND == script ]]
-  [[ $CAPTURE_DIRECTORY == "$QA_INTEGRATION_ROOT/pmm_psmdb_diffauth_setup" ]]
-  [[ $CAPTURE_TARGET == */pmm-framework-ssl-psmdb.*/test-auth.sh ]]
-  [[ ! -e $CAPTURE_TARGET ]]
-  [[ $CAPTURE_SCRIPT_CONTENT == *'--server-address=192.0.2.10:443'* ]]
-  # shellcheck disable=SC2016
-  [[ $CAPTURE_OVERRIDE_CONTENT == *'PMM_AGENT_SERVER_PASSWORD: "${ADMIN_PASSWORD}"'* ]]
-  [[ $CAPTURE_OVERRIDE_CONTENT != *"$PMM_SERVER_PASSWORD"* ]]
-  [[ ${CAPTURE_ENV[PSMDB_VERSION]} == latest ]]
-  [[ ${CAPTURE_ENV[MONGO_SETUP_TYPE]} == pss ]]
-  [[ ${CAPTURE_ENV[MINIO]} == false ]]
-
-  first_target=$CAPTURE_TARGET
-  dispatch_setup
-  [[ $CAPTURE_TARGET != "$first_target" ]]
-  [[ ! -e $CAPTURE_TARGET ]]
 }
 
 @test "service handlers map exporters and client debug" {

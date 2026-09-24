@@ -64,6 +64,17 @@ build_pxc_proxysql_image() {
     die "Building pmm-qa/pxc-proxysql:$tag failed."
 }
 
+# Build pmm-qa/psmdb:VERSION-olOL (images/psmdb), where VERSION is a major
+# such as 8.0 or a full patch such as 8.0.26-11.
+build_psmdb_image() {
+  local tag=$1 version=${1%-ol*} ol=${1##*-ol}
+  [[ $ol == 8 || $ol == 9 ]] || die "PSMDB image tag '$tag' must end in -ol8 or -ol9."
+  docker build -f "$FRAMEWORK_DIR/images/psmdb/Dockerfile" \
+    --build-arg "PSMDB_VERSION=$version" --build-arg "OL_VERSION=$ol" \
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/psmdb:$tag" "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" ||
+    die "Building pmm-qa/psmdb:$tag failed."
+}
+
 # Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL
 pxc_proxysql_tag() {
   if [[ -n ${2:-} ]]; then

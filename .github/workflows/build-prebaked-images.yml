@@ -1,5 +1,5 @@
-# Builds the prebaked database images pmm-framework runs (PS, MySQL and PXC with
-# ProxySQL) and publishes them to ghcr.io/percona/pmm-qa/<engine>:<version>, so
+# Builds the prebaked database images pmm-framework runs (PS, MySQL, PXC with
+# ProxySQL, and PSMDB) and publishes them to ghcr.io/percona/pmm-qa/<engine>:<version>, so
 # a CI job pulls a ready image instead of spending 90-160 s building one. Each
 # image is started and checked before it is pushed, so a broken build never
 # replaces a working tag, and each cell publishes on its own.
@@ -23,6 +23,11 @@ on:
       - qa-integration/pmm_qa/pmm-framework/images/**
       - qa-integration/pmm_qa/pmm-framework/lib/images.sh
       - qa-integration/pmm_qa/pmm-framework/build-images
+      # What images/psmdb/Dockerfile copies from its build context.
+      - qa-integration/pmm_psmdb-pbm_setup/keyfile
+      - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
       - .github/workflows/build-prebaked-images.yml
 
 permissions:
@@ -41,7 +46,7 @@ jobs:
     if: github.repository == 'percona/pmm-qa'
     runs-on: ubuntu-latest
     outputs:
-      engines: ${{ steps.pick.outputs.engines }}
+      cells: ${{ steps.pick.outputs.cells }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -54,7 +59,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
         run: |
-          all='["ps","mysql","pxc-proxysql"]'
+          all='["ps","mysql","pxc-proxysql","psmdb"]'
           if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
@@ -66,16 +71,20 @@ jobs:
               if grep -q '^provisioning/images/engines/ps/' <<<"$changed"; then picked+=('"ps"'); fi
               if grep -q '^provisioning/images/engines/mysql/' <<<"$changed"; then picked+=('"mysql"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pxc/' <<<"$changed"; then picked+=('"pxc-proxysql"'); fi
+              if grep -qE '^qa-integration/(pmm_qa/pmm-framework/images/psmdb/|pmm_psmdb-pbm_setup/)' <<<"$changed"; then picked+=('"psmdb"'); fi
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
-          echo "engines=$engines" >>"$GITHUB_OUTPUT"
+          # PSMDB tags pair a major with an Oracle Linux release.
+          cells=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
+            else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
+          echo "cells=$cells" >>"$GITHUB_OUTPUT"
           echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
 
   build:
     name: ${{ matrix.engine }}:${{ matrix.version }}
     needs: plan
-    if: needs.plan.outputs.engines != '[]'
+    if: needs.plan.outputs.cells != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -88,8 +97,7 @@ jobs:
       fail-fast: false
       max-parallel: 5 # GHCR starts rejecting concurrent pushes beyond this
       matrix:
-        engine: ${{ fromJSON(needs.plan.outputs.engines) }}
-        version: ['5.7', '8.0', '8.4', '9.7']
+        include: ${{ fromJSON(needs.plan.outputs.cells) }}
     env:
       IMAGE: pmm-qa/${{ matrix.engine }}:${{ matrix.version }}
     steps:
@@ -105,7 +113,10 @@ jobs:
           ENGINE: ${{ matrix.engine }}
           VERSION: ${{ matrix.version }}
         run: |
-          if [ "$ENGINE" = pxc-proxysql ]; then
+          if [ "$ENGINE" = psmdb ]; then
+            # mongod needs the mongod.conf compose mounts, so check the tools run.
+            docker run --rm "$IMAGE" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'
+          elif [ "$ENGINE" = pxc-proxysql ]; then
             # The full cluster: three nodes synced and ProxySQL seeing all of them.
             docker run -d --init --name probe "$IMAGE"
             docker exec --user root probe pmm-pxc start
@@ -128,7 +139,7 @@ jobs:
               docker exec --user root probe xtrabackup --version
             fi
           fi
-          docker rm -fv probe
+          docker rm -fv probe 2>/dev/null || true
 
       - name: Log in to GHCR
         env:

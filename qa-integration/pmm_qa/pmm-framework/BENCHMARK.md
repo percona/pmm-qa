@@ -118,6 +118,41 @@ Two differences from the playbook: the Percona package is ProxySQL 2.7.3, not
 the playbook's pinned 2.6.2, and the image build (`build-images
 pxc-proxysql=<ver>`) takes about 90 s the first time.
 
+## PSMDB on the prebaked path
+
+The same containers as before (`pmm_psmdb-pbm_setup`'s compose files, now
+running `pmm-qa/psmdb:<major>-ol<N>` tagged as `replica_member/local`), one run
+each, with `CLIENT_VERSION=latest-tarball`. The old path rebuilt the image with
+`--no-cache` on every run and slept 60 s after each step; it was timed from a
+clean `git archive HEAD` copy.
+
+| Spec | Old (compose scripts) | Prebaked | Checked |
+|---|---|---|---|
+| `psmdb,SETUP_TYPE=pss` | 283 s | 47 s / 59 s | rs101 PRIMARY, 3 pbm-agents OK, S3 storage `minio:9000/bcp/pbme2etest` |
+| `psmdb,SETUP_TYPE=psa` | 282 s | 48 s | rs103 ARBITER, its pbm-agent stopped |
+| `psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra` | 358 s | 76 s | both sets PRIMARY/SECONDARY/SECONDARY |
+| `psmdb=8.0,SETUP_TYPE=sharding` | 495 s | 157 s | shards rs1 and rs2 added, 10 nodes' exporters Running |
+| `psmdb,SETUP_TYPE=pss,STORAGE_ENGINE=inmemory` | – | 62 s | |
+| `psmdb,OL_VERSION=8,GSSAPI=true` | – | 54 s | `rs10N_gssapi_*` registered over Kerberos |
+| `psmdb,COMPOSE_PROFILES=extra,OL_VERSION=8,GSSAPI=true` | – | 77 s | |
+| `psmdb,OL_VERSION=9,GSSAPI=true` | – | 71 s | |
+| `psmdb,COMPOSE_PROFILES=extra,OL_VERSION=9,GSSAPI=true` | – | 76 s | |
+| `ssl_psmdb` | – | 77 s | psmdb-server PRIMARY, `psmdb-server_*` in `mycluster` |
+| `psmdb,SETUP_TYPE=pss` with `3-dev-latest` | – | 140 s | package client install is the slow part |
+
+Every run gave each container its own machine ID, and the labels read back
+from `/v1/management/services` matched the old scripts': `psmdb-dev` /
+`replicaset` / `rs` for the first set, no environment for the extra set,
+`mongo-sharded-dev` / `sharded` / `rs1`, `rs2`, `rscfg` for the shards, and
+none but the cluster for mongos.
+
+- GSSAPI needs the client CI passes for it,
+  `PR-BUILDS/pmm-client/pmm-client-dynamic-ol<N>-latest.tar.gz`; the plain
+  `latest-tarball` client is built without `-tags gssapi` and refuses to
+  register.
+- `psmdb=7.0,SETUP_TYPE=sharding` took 221 s including the one-off 7.0 image
+  build. A cold image build is 91-95 s.
+
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value

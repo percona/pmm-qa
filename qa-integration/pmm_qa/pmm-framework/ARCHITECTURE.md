@@ -9,7 +9,7 @@ playbook or shell script under `qa-integration/`. For those, almost every
 question about behaviour is answered by asking *which env map was built, and
 which playbook received it*.
 
-`PS`, `MYSQL` and `PXC` are the exception. They run on **prebaked images**:
+`PS`, `MYSQL`, `PXC`, `PSMDB` and `SSL_PSMDB` are the exception. They run on **prebaked images**:
 the database and its tooling are baked into an image ahead of time, and the
 setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
 instead of a playbook. Types move to this backend one at a time. See §5,
@@ -35,7 +35,7 @@ flowchart TB
         SPEC["run_database_spec<br/>parse_database_spec → DB_TYPE / DB_VERSION / DB_CONFIG"]
         DISP["setups/dispatch.sh<br/>dispatch_setup"]
         SETUP["setups/*.sh<br/>setup_NAME builds env_map"]
-        BAKED["setups/mysql.sh<br/>setup_ps / setup_mysql / setup_pxc"]
+        BAKED["setups/mysql.sh, setups/mongodb.sh<br/>setup_ps / setup_mysql / setup_pxc<br/>setup_psmdb / setup_ssl_psmdb"]
     end
 
     subgraph BACK["Backends"]
@@ -86,6 +86,7 @@ and labels), because tests look those up by name.
 | `lib/prebaked.sh` | The docker backend: `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits | common, runners |
 | `build-images` | CLI to prebake images ahead of a run (`./build-images ps=8.4 pxc-proxysql=8.0`) | common, images |
 | `images/pxc/` | The single-container PXC + ProxySQL image; `pmm-pxc` inside it prepares node 1 at build time and starts the cluster at run time | — |
+| `images/psmdb/` | The systemd PSMDB + PBM image, tagged `<major>-ol8` or `<major>-ol9`; built with `qa-integration/pmm_psmdb-pbm_setup` as its context | — |
 | `setups/*.sh` | One `setup_<name>` per type, plus `dispatch_setup` | everything above |
 | `lib/execution.sh` | `preflight_database_setups`, sequential and parallel strategies | everything above |
 
@@ -96,7 +97,10 @@ calls and a validation loop at source time — both need `lib/common.sh`'s
 The PS and MySQL images build from the Dockerfiles in
 `provisioning/images/engines/`, which the TypeScript provisioner shares.
 `images/pxc/` is this framework's own, because the tests expect PXC's
-single-container layout. `.github/workflows/build-prebaked-images.yml` builds
+single-container layout. `images/psmdb/` is the PSMDB stacks' own Dockerfile
+without the PMM Client; the setups tag it `replica_member/local`, so the
+stacks' compose files run it unchanged (same containers, networks, ports and
+volumes) and never build. `.github/workflows/build-prebaked-images.yml` builds
 every image weekly, checks that it starts, and publishes it to
 `ghcr.io/percona/pmm-qa/<engine>:<version>` (plus a dated tag for rollback).
 
@@ -140,7 +144,7 @@ fails in seconds rather than halfway through. Preflight decides:
 
 - **does anything need a PMM Server?** — `BUCKET` and `DOCKERCLIENTS` do not,
   so `--database bucket` works with no server running
-- **does anything need `curl`?** — only the PSMDB patch lookup
+- **does anything need `curl`?** — `PSMDB` and `SSL_PSMDB`
 - **do any two setups conflict?** — see below
 - **warm up Ansible** before parallel jobs fork, so they cannot race to install
   the same collection

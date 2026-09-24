@@ -14,8 +14,9 @@ description: >-
 
 `pmm-framework` is a dispatcher: most `setup_<name>` functions in `setups/*.sh`
 build an environment-variable map and hand it to an existing Ansible playbook or
-shell script under `qa-integration/pmm_qa/`. PS, MySQL and PXC instead run on
-prebaked images with plain `docker` commands (`lib/prebaked.sh`). To port
+shell script under `qa-integration/pmm_qa/`. PS, MySQL, PXC, PSMDB and SSL
+PSMDB instead run on prebaked images with plain `docker` commands
+(`lib/prebaked.sh`). To port
 another type, follow [prebaked-port.md](references/prebaked-port.md).
 
 **Read [ARCHITECTURE.md](../../../qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md)
