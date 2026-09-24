@@ -85,6 +85,16 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[MINIO]} == false ]]
 }
 
+@test "PSMDB QUERY_SOURCE defaults to profiler and honors mongolog" {
+  parse_database_spec 'psmdb=latest,SETUP_TYPE=pss'
+  dispatch_setup
+  [[ ${CAPTURE_ENV[MONGO_QUERY_SOURCE]} == profiler ]]
+
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss,QUERY_SOURCE=mongolog'
+  dispatch_setup
+  [[ ${CAPTURE_ENV[MONGO_QUERY_SOURCE]} == mongolog ]]
+}
+
 @test "PXC tarball selects PXC and ProxySQL playbook" {
   parse_database_spec 'PXC=8.0,TARBALL=/tmp/pxc.tar.gz'
   dispatch_setup
