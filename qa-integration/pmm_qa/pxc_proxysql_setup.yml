@@ -86,6 +86,17 @@
       - docker exec {{ pxc_container }} dpkg -i {{ file_name.stdout }}
       - docker exec {{ pxc_container }} apt install -y sysbench
 
+  # pmm3-client-setup.sh installs Ubuntu's mysql-client, which conflicts with the
+  # PXC 5.7 client packages; installing it first lets PXC replace it instead of
+  # apt removing PXC.
+  - name: Install pmm-client on the pxc_container
+    shell: "{{ item }}"
+    with_items:
+      - docker network connect pmm-qa {{ pxc_container }}
+      - >-
+        docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}{{ (debug_client |
+        default(false) | bool) | ternary(' --debug', '') }} --use_metrics_mode no
+
   - name: Install Percona XtraDB Cluster packages from the percona repository
     shell: "{{ item }}"
     with_items:
@@ -110,14 +121,6 @@
         mkdir -p /etc/apparmor.d/disable
         && ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
         && (apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true); fi; true'
-
-  - name: Install pmm-client on the pxc_container
-    shell: "{{ item }}"
-    with_items:
-      - docker network connect pmm-qa {{ pxc_container }}
-      - >-
-        docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}{{ (debug_client |
-        default(false) | bool) | ternary(' --debug', '') }} --use_metrics_mode no
 
   - name: Configure PXC for PMM Client if non-tarball install
     shell: "{{ item }}"
