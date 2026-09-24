@@ -91,17 +91,20 @@ wait_pmm_server_ready() {
 # If-Modified-Since. An unreachable build cache falls back to the cached copy.
 # Stdout: the path of the cached tarball
 fetch_client_tarball() {
-  local url=$1 dir=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework file
+  local url=$1 dir=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework file temp
   local -a since=()
   file=$dir/pmm-client-$(printf '%s' "$url" | sha256sum | cut -c1-16).tar.gz
   must mkdir -p "$dir"
   if [[ -f $file ]]; then
     since=(-z "$file")
   fi
-  if curl -fsSL "${since[@]}" -o "$file.$$" "$url" && [[ -s $file.$$ ]]; then
-    must mv -f "$file.$$" "$file"
+  # Parallel setups fetch the same URL at once, and $$ is the parent shell's
+  # pid in all of them, so each needs a temp file of its own.
+  temp=$(mktemp "$file.XXXXXX") || die "Could not create a temp file in $dir."
+  if curl -fsSL "${since[@]}" -o "$temp" "$url" && [[ -s $temp ]]; then
+    must mv -f "$temp" "$file"
   fi
-  rm -f "$file.$$"
+  rm -f "$temp"
   [[ -f $file ]] || die "Could not download PMM Client from $url."
   printf '%s' "$file"
 }

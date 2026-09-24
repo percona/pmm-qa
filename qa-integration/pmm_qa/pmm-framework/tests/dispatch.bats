@@ -98,6 +98,27 @@ stub_prebaked_docker() {
   [[ ! -s $DOCKER_CALLS ]]
 }
 
+@test "parallel setups can fetch the same client tarball at once" {
+  export XDG_CACHE_HOME=$BATS_TEST_TMPDIR/cache
+  # shellcheck disable=SC2329
+  curl() {
+    local out
+    while (($#)); do
+      if [[ $1 == -o ]]; then out=$2; fi
+      shift
+    done
+    sleep 0.3
+    printf 'tarball\n' >"$out"
+  }
+  (fetch_client_tarball https://example.test/pmm-client.tar.gz >/dev/null) &
+  local first=$!
+  (fetch_client_tarball https://example.test/pmm-client.tar.gz >/dev/null) &
+  local second=$!
+  wait "$first"
+  wait "$second"
+  [[ $(cat "$XDG_CACHE_HOME"/pmm-framework/pmm-client-*.tar.gz) == tarball ]]
+}
+
 @test "retry_on stops on an unmatched error and reports short output whole" {
   # shellcheck disable=SC2329,SC2317
   sleep() { :; }
