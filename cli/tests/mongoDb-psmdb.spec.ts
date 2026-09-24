@@ -15,6 +15,8 @@ let adminVersion: number;
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
+  test.use({ pmmClientContainer: containerName });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');

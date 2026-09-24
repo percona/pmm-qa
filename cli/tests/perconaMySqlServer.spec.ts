@@ -11,6 +11,9 @@ const connectionTimeoutServiceName = 'mysql_connection_timeout_service';
 const mysqldExporterMyCnfDir = () => (adminVersion < 9 ? 'agent_type_mysqld_exporter' : 'mysqld_exporter');
 
 test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, () => {
+  // containerName is discovered in beforeAll, so it is read when each test starts.
+  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
     await result.outContains('ps_pmm', 'Percona MySQL docker container should exist. please run pmm-framework with --database ps');
