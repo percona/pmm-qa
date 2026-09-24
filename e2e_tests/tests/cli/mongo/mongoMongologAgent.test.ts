@@ -11,7 +11,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceName: string;
   let serviceId: string;
   let mongoExporterId: string;
-  let mongoProfilerAgentId: string;
+  let mongoMongologAgentId: string;
   let pgExporterPort: string;
   const pgExporterPassword = 'newAgentPassword';
 
@@ -32,15 +32,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mongodb_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
-    mongoProfilerAgentId = cliHelper
+    mongoMongologAgentId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mongodb_profiler_agent | awk -F' ' '{print $3}'`,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mongodb_mongolog_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
   });
 
   pmmTest(
-    'PMM-T1001 - Verify Change agent username and password @psmdb-profiler-integration',
+    'PMM-T1001 - Verify Change agent username and password @psmdb-mongolog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
       const monitoringRoles =
@@ -72,7 +72,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).outContains('Authentication failed'));
@@ -83,7 +83,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --password=${newPassword} --username=${newUsername}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -95,12 +95,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1002 - Verify Change agent custom labels @psmdb-profiler-integration',
+    'PMM-T1002 - Verify Change agent custom labels @psmdb-mongolog-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --custom-labels=${customLabel}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --custom-labels=${customLabel}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --custom-labels=${customLabel}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -109,18 +109,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(mongoExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
       await agentsPage.hideRowDetails(mongoExporterId);
-      await agentsPage.showRowDetails(mongoProfilerAgentId);
+      await agentsPage.showRowDetails(mongoMongologAgentId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
-      await agentsPage.hideRowDetails(mongoProfilerAgentId);
+      await agentsPage.hideRowDetails(mongoMongologAgentId);
     },
   );
 
   pmmTest(
-    'PMM-T1003 - Verify Change agent log level @psmdb-profiler-integration',
+    'PMM-T1003 - Verify Change agent log level @psmdb-mongolog-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --log-level=debug`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -130,18 +130,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(mongoExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
       await agentsPage.hideRowDetails(mongoExporterId);
-      await agentsPage.showRowDetails(mongoProfilerAgentId);
+      await agentsPage.showRowDetails(mongoMongologAgentId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mongoProfilerAgentId);
+      await agentsPage.hideRowDetails(mongoMongologAgentId);
     },
   );
 
   pmmTest(
-    'PMM-T1004 - Verify Change agent debug, trace and json @psmdb-profiler-integration',
+    'PMM-T1004 - Verify Change agent debug, trace and json @psmdb-mongolog-integration',
     async ({ cliHelper }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --debug --trace --json`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --debug --trace --json`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --debug --trace --json`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -149,7 +149,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1005 - Verify Change agent enable true/false @psmdb-profiler-integration',
+    'PMM-T1005 - Verify Change agent enable true/false @psmdb-mongolog-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -161,7 +161,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       for (const enableCommand of enableCommands) {
         let commands = [
           `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} ${enableCommand.command}`,
         ];
 
         for (const command of commands) {
@@ -173,7 +173,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
         commands = [
           `docker exec ${containerName} pmm-admin list | grep mongodb_exporter | grep ${serviceId}`,
-          `docker exec ${containerName} pmm-admin list | grep mongodb_profiler_agent | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep mongodb_mongolog_agent | grep ${serviceId}`,
         ];
 
         for (const command of commands) {
@@ -184,7 +184,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1006 - Verify Change agent agent password @psmdb-profiler-integration',
+    'PMM-T1006 - Verify Change agent agent password @psmdb-mongolog-integration',
     async ({ cliHelper, page }) => {
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --agent-password=${pgExporterPassword}`,
@@ -204,7 +204,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1007 - Verify Change agent expose exporter @psmdb-profiler-integration',
+    'PMM-T1007 - Verify Change agent expose exporter @psmdb-mongolog-integration',
     async ({ cliHelper, page }) => {
       pgExporterPort = cliHelper
         .execSilent(
@@ -229,7 +229,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1008 - Verify Change agent push metrics @psmdb-profiler-integration',
+    'PMM-T1008 - Verify Change agent push metrics @psmdb-mongolog-integration',
     async ({ cliHelper, page }) => {
       pgExporterPort = cliHelper
         .execSilent(
@@ -263,7 +263,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1009 - Verify Change agent disable collectors @psmdb-profiler-integration',
+    'PMM-T1009 - Verify Change agent disable collectors @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       const collectorsToDisable = ['diagnosticdata', 'replicasetstatus'];
 
@@ -284,28 +284,28 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1015 - Verify Change agent max query length @psmdb-profiler-integration',
+    'PMM-T1015 - Verify Change agent max query length @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       const maxQueryLength = 2_048;
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --max-query-length=${maxQueryLength}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --max-query-length=${maxQueryLength}`,
         )
         .assertSuccess()
         .outContains(`- changed max query length to ${maxQueryLength}`);
 
-      const agent = await api.inventoryApi.getAgentById(mongoProfilerAgentId);
+      const agent = await api.inventoryApi.getAgentById(mongoMongologAgentId);
 
       expect(
         agent.max_query_length,
-        'Max query length was not persisted on the qan-mongodb-profiler-agent',
+        'Max query length was not persisted on the qan-mongodb-mongolog-agent',
       ).toEqual(maxQueryLength);
     },
   );
 
   pmmTest(
-    'PMM-T2307 - Verify Change agent stats collections @psmdb-profiler-integration',
+    'PMM-T2307 - Verify Change agent stats collections @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       const statsCollections = ['db1.col1', 'db2.col2'];
 
@@ -326,7 +326,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T2308 - Verify Change agent collections limit @psmdb-profiler-integration',
+    'PMM-T2308 - Verify Change agent collections limit @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       const collectionsLimit = 100;
 
@@ -347,7 +347,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T2309 - Verify Change agent enable diagnostic data histograms @psmdb-profiler-integration',
+    'PMM-T2309 - Verify Change agent enable diagnostic data histograms @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       await cliHelper
         .execSilent(
@@ -366,7 +366,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T2310 - Verify Change agent disable collectors @psmdb-profiler-integration',
+    'PMM-T2310 - Verify Change agent disable collectors @psmdb-mongolog-integration',
     async ({ api, cliHelper }) => {
       const collectorsToDisable = ['collstats', 'dbstats'];
 
@@ -387,11 +387,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1013 - Verify Change agent skip connection check @psmdb-profiler-integration',
+    'PMM-T1013 - Verify Change agent skip connection check @psmdb-mongolog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --password=invalid_skip_check_password --skip-connection-check`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --password=invalid_skip_check_password --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --password=invalid_skip_check_password --skip-connection-check`,
       ];
 
       for (const command of commands) {
@@ -400,7 +400,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --username=${newUsername} --password=${newPassword}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --username=${newUsername} --password=${newPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --username=${newUsername} --password=${newPassword}`,
       ];
 
       for (const command of commands) {
@@ -414,7 +414,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1010 - Verify Change agent tls @psmdb-profiler-integration',
+    'PMM-T1010 - Verify Change agent tls @psmdb-mongolog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mongod/mongod.conf`;
 
@@ -474,7 +474,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=${certKeyFilePassword} --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify --authentication-database=${authDatabase}`,
       ];
 
       // The connection check authenticates against rs101, a freshly-restarted node
@@ -504,7 +504,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --authentication-mechanism=${authMechanism} --skip-connection-check`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --authentication-mechanism=${authMechanism} --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --authentication-mechanism=${authMechanism} --skip-connection-check`,
       ];
 
       for (const command of commands) {
@@ -516,7 +516,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --authentication-mechanism= --skip-connection-check`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --authentication-mechanism= --skip-connection-check`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --authentication-mechanism= --skip-connection-check`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -526,7 +526,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T1011 - Verify Change agent pmm agent listen port @psmdb-profiler-integration',
+    'PMM-T1011 - Verify Change agent pmm agent listen port @psmdb-mongolog-integration',
     async ({ cliHelper }) => {
       let commands = [
         `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
@@ -538,7 +538,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --pmm-agent-listen-port=7778`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --pmm-agent-listen-port=7778`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --pmm-agent-listen-port=7778`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -546,13 +546,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T99103 - Verify Change agent server url and server insecure tls @psmdb-profiler-integration',
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @psmdb-mongolog-integration',
     async ({ cliHelper }) => {
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
       const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
       let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --server-url=${serverUrl}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --server-url=${serverUrl}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --server-url=${serverUrl}`,
       ];
 
       for (const command of commands) {
@@ -561,7 +561,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --server-url=${serverUrl} --server-insecure-tls`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${mongoProfilerAgentId} --server-url=${serverUrl} --server-insecure-tls`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${mongoMongologAgentId} --server-url=${serverUrl} --server-insecure-tls`,
       ];
 
       for (const command of commands) {
