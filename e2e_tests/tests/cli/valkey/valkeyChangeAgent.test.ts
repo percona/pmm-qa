@@ -171,7 +171,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+      // The whole container was restarted above, so pmm-agent, the exporter and the
+      // vmagent scrape pipeline all have to come back before the service reports Up.
+      // Match the mysql/mongo/pgsql TLS change-agent tests, which allow five minutes.
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
     },
   );
 
