@@ -34,12 +34,14 @@ import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
+import AlertingPage from '@pages/alerting.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   agentsPage: AgentsPage;
+  alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -74,6 +76,7 @@ const pmmTest = base.extend<{
   downloadsPage: DownloadsPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
+  alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 

@@ -40,3 +40,15 @@ services:
     networks:
       - pmm-network
       - pmm-qa
+
+  webhookd:
+    image: ncarlier/webhookd
+    profiles: [webhookd]
+    container_name: webhookd
+    environment:
+      - WHD_SCRIPTS=/var/opt/webhookd/scripts
+      - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
+    volumes:
+      - ./testdata/ia/scripts:/var/opt/webhookd/scripts
+    networks:
+      - pmm-qa
