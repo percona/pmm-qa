@@ -211,26 +211,6 @@ pmmTest.describe(
       },
     );
 
-    pmmTest(
-      'PMM-T1011 - Verify Change agent pmm agent listen port @rta-mongodb-integration',
-      async ({ cliHelper }) => {
-        let commands = [
-          `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
-          `docker restart ${containerName}`,
-          `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
-        ];
-
-        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-        commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --pmm-agent-listen-port=7778`,
-          `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --pmm-agent-listen-port=7778`,
-        ];
-
-        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-      },
-    );
-
     pmmTest('PMM-T2318 - Verify RTA Change agent tls @rta-mongodb-integration', async ({ cliHelper }) => {
       const confPath = `/etc/mongod/mongod.conf`;
 
@@ -314,5 +294,25 @@ pmmTest.describe(
         )
         .assertSuccess();
     });
+
+    pmmTest(
+      'PMM-T1011 - Verify Change agent pmm agent listen port @rta-mongodb-integration',
+      async ({ cliHelper }) => {
+        let commands = [
+          `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+          `docker restart ${containerName}`,
+          `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
+        ];
+
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+        commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --pmm-agent-listen-port=7778`,
+          `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --pmm-agent-listen-port=7778`,
+        ];
+
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      },
+    );
   },
 );
