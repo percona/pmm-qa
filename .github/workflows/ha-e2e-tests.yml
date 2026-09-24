@@ -69,6 +69,8 @@ jobs:
       # checkout, a commit, or the report upload below.
       KUBECONFIG: ${{ github.workspace }}/kubeconfig
       PMM_K8S_NAMESPACE: pmm
+      # k8s/install_pmm_ha.sh platform, for tests that install a second PMM HA (PMM-T2286).
+      PLATFORM: openshift
       WORKERS: 1
 
     steps:
