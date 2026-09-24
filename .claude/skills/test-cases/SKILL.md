@@ -1,7 +1,7 @@
 ---
 name: test-cases
 description: Design evidence-backed test cases for a PMM Jira ticket, or audit test coverage of an existing PMM feature. Use when asked what to test or verify for PMM-XXXXX, for a test plan or QA plan, where Zephyr or pmm-qa automation coverage has gaps, or whether proposed cases are sufficient, even when the user only pastes a ticket key or pull request and asks how to check it. Produces a review draft first. Only after the user approves it, creates the cases in Zephyr and links them to the ticket. Reads Jira but never writes it. Never executes tests or provisions environments. Not for getting a PMM-T key for a test already being written; use the zephyr skill for that.
-compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git, rg, curl, jq and python3 in a pmm-qa checkout, and RELAY_KEY for the Zephyr publishing step.
+compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git, curl, jq and python3 in a pmm-qa checkout, and RELAY_KEY for the Zephyr publishing step.
 ---
 
 # Test cases

@@ -6,7 +6,7 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 1. Search `origin/main`, not only this checkout: the working branch can lag it by many commits, including CI restructures. `git fetch origin main` first, then read files with `git show origin/main:<path>` and list them with `git ls-tree -r --name-only origin/main`.
 2. Run `git rev-parse --is-shallow-repository`. Only when it prints `false`, run `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone skip the log search — its empty result is not evidence of absence, so cite only the tree searches.
-3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`. Use only `-n`, `-l`, `-g`, and `--hidden` — `rg` recurses by default and `-r` is `--replace`, which rewrites matched text in the output to look like source. Re-run any hit whose matched text differs from the query. List matching files first (`rg -l`), then read only the matching lines of the likely hits (`rg -n -m 5 <term> <file>` or a bounded `sed -n` range); never print an unbounded search or a whole large file.
+3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value in the fetched tree, not the checkout: `git grep -l <term> origin/main` lists matching files, including CI lanes under `.github/`; then read only the matching lines of the likely hits (`git grep -n <term> origin/main -- <path>`, or a bounded `sed -n` range of `git show origin/main:<path>`). Never print an unbounded search or a whole large file.
 4. Search the feature or page name only after identifiers.
 5. Read the full setup and assertions of every plausible hit.
 6. Search Zephyr with `scripts/relay.sh zephyr search`, `list`, and `get`.
@@ -70,7 +70,7 @@ A lane is a workflow job that can run the case as written. Find it on `origin/ma
 
 Search every workflow, not only the matrices — HA, Helm, CLI integration, FB, package, and per-database workflows all host lanes. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
 
-For `Needs automation`, name the workflow file and job or matrix shard. When a case needs an estate no single job provides, split it: `Needs automation` on the job that hosts the most of it, the rest as its own case, each named. A version, dataset shape, or tool the lane must produce goes in Preconditions.
+For `Needs automation`, name the workflow file and job or matrix shard. When a case needs an estate no single job provides, keep it whole as `Automation candidate — infra gap`; split it only when each part catches its own named defect and has a job that runs it as written. A version, dataset shape, or tool the lane must produce goes in Preconditions.
 
 When no lane can run a deterministic, valuable case, mark it `Automation candidate — infra gap` and name the missing lane or helper, and report the gap as a Finding; record the workflow search in the notes. `Manual` is for a case that is manual by nature — a subjective or visual judgement, a race, a multi-day wait, a destructive estate — never for a missing lane.
 

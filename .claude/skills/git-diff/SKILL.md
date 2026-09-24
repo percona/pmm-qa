@@ -33,7 +33,7 @@ gh api "repos/percona/pmm/pulls/<n>/files?per_page=100" \
 
 Return: files changed, behavioral summary, gaps in "How to test", suggested manual checks.
 
-Do not stop after finding a PMM or Grafana PR. HA behavior may live in `percona/percona-helm-charts`. For chart tickets inspect templates, values, image pins, and feature gates.
+Check all three repos for linked PRs: HA behavior often lives in `percona/percona-helm-charts`, and for chart tickets inspect templates, values, image pins, and feature gates.
 
 ## When the session doesn't have the repo
 
@@ -42,7 +42,7 @@ MCP tools and `gh` for percona/pmm, percona/grafana, percona/percona-helm-charts
 anonymous read (see the `repos` skill). Public repositories can be fetched by PR ref directly:
 
 ```bash
-REPO=percona/pmm        # or percona/grafana — whichever the PR is in
+REPO=percona/pmm        # or percona/grafana, percona/percona-helm-charts — whichever the PR is in
 N=<pr-number>
 BASE=main               # the PR's base branch, if it isn't main
 

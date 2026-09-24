@@ -831,7 +831,8 @@ async function zephyrJiraIssueId(key) {
     signal: AbortSignal.timeout(30_000),
     headers: { Authorization: auth, Accept: "application/json" },
   });
-  if (!r.ok) return null;
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`jira issue lookup ${r.status}`);
   return Number((await r.json()).id) || null;
 }
 

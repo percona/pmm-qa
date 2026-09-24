@@ -77,8 +77,8 @@ def check(plan):
                     err(n, f"steps[{s_idx}].{field}", "strip the leading '- '")
             if not str(s.get("description", "")).strip():
                 err(n, f"steps[{s_idx}].description", "empty")
-            if not str(s.get("expectedResult", "")).strip() and not last:
-                err(n, f"steps[{s_idx}].expectedResult", "only the final Cleanup step may have no expected result")
+            if not str(s.get("expectedResult", "")).strip() and not (last and s.get("cleanup")):
+                err(n, f"steps[{s_idx}].expectedResult", "only the final step marked cleanup: true may have no expected result")
     return errors
 
 

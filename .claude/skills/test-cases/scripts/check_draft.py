@@ -17,7 +17,7 @@ FORBIDDEN = [
 
 
 def cells(line):
-    return [c.strip() for c in line.strip().strip("|").split("|")]
+    return [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
 
 
 def check(text):
@@ -48,6 +48,8 @@ def check(text):
                        "detail": f"summary table {sorted(summary)} vs case blocks {sorted(blocks)}"})
     if list(blocks) != list(range(1, len(blocks) + 1)):
         issues.append({"case": None, "line": None, "check": "numbering", "detail": f"case blocks not 1..n: {list(blocks)}"})
+    if not blocks and not any(re.match(r"^Covered by: .+ → .+$", ln) for ln in lines):
+        issues.append({"case": None, "line": None, "check": "coverage", "detail": "zero-case draft has no Covered by line"})
 
     for n, block in blocks.items():
         body = block["lines"]
@@ -80,8 +82,8 @@ def check(text):
             if m and m.group(2).strip().rstrip(".").lower() in ("", "none", "n/a", "na"):
                 issues.append({"case": n, "line": i, "check": "empty-optional", "detail": f"omit the {m.group(1)} line instead"})
         table = [(i, ln) for i, ln in body if ln.startswith("|")]
-        if not table:
-            issues.append({"case": n, "line": None, "check": "table", "detail": "no step table"})
+        if len(table) < 3:
+            issues.append({"case": n, "line": None, "check": "table", "detail": "no step rows"})
             continue
         if cells(table[0][1]) != ["Step", "Data", "Expected"]:
             issues.append({"case": n, "line": table[0][0], "check": "columns", "detail": table[0][1]})

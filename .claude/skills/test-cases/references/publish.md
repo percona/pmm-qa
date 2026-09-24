@@ -24,7 +24,7 @@ Zephyr has no delete, so plan, validate, then write. Every Zephyr call below goe
 
    - `name` is the title without its number; `objective` is the Catches/Evidence line followed by `Lane: <workflow · job>`, `Blocked: <missing lane or helper>`, or `Manual: <reason>`, so the reason survives in Zephyr.
    - `statusName`: `Needs Automation` for Needs automation; `Needs Automation` with `labels: ["infra-gap"]` for Automation candidate — infra gap; `Manual Only` for Manual; `Draft`, with `openFinding: true` and the Finding in the objective, for any case whose expected result depends on an open Finding.
-   - One step per table row, each cell with its leading `- ` stripped; `testData` omitted when the cell is empty. When the case has a Cleanup line, append it as the last step with no `expectedResult`.
+   - One step per table row, each cell with its leading `- ` stripped; `testData` omitted when the cell is empty. When the case has a Cleanup line, append it as the last step with `"cleanup": true` and no `expectedResult`.
    - `folderId` is `null` for a folder that does not exist yet.
 3. Run `python3 scripts/check_publish_plan.py <plan>` and fix every error it reports before any Zephyr write.
 4. Create missing folders level by level: `scripts/relay.sh zephyr create-folder` with the version folder name at the project root, then the area with the version folder's `id` as `parentId`. Zephyr allows duplicate names, so re-check `folders` before each create, and put the returned ids into the plan.

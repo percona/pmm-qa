@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-RELAY=https://139-162-176-43.ip.linodeusercontent.com
+RELAY=${RELAY:-https://139-162-176-43.ip.linodeusercontent.com}
 
 usage() {
   cat <<'EOF'
