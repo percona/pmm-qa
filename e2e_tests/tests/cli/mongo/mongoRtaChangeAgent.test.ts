@@ -11,6 +11,7 @@ pmmTest.describe(
     const mongoPassword = 'pmmpass';
     let containerName: string;
     let serviceId: string;
+    let mongoExporterId: string;
     let pmmAgentId: string;
     let rtaAgentId: string;
 
@@ -24,6 +25,11 @@ pmmTest.describe(
       pmmAgentId = cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin list | grep pmm_agent | head -1 | awk -F' ' '{print $3}'`,
+        )
+        .stdout.trim();
+      mongoExporterId = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mongodb_exporter | awk -F' ' '{print $4}'`,
         )
         .stdout.trim();
 
@@ -179,6 +185,49 @@ pmmTest.describe(
             `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --username=${mongoUsername} --password=${mongoPassword}`,
           )
           .assertSuccess();
+      },
+    );
+
+    pmmTest(
+      'PMM-T99103 - Verify Change agent server url and server insecure tls @rta-mongodb-integration',
+      async ({ cliHelper }) => {
+        const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+        const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+        let commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent ge agent rta-mongodb-agent ${rtaAgentId} --server-url=${serverUrl}`,
+        ];
+
+        for (const command of commands) {
+          await cliHelper.execSilent(command).outContains('tls: failed to verify certificate:');
+        }
+
+        commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --server-url=${serverUrl} --server-insecure-tls`,
+        ];
+
+        for (const command of commands) {
+          await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
+        }
+      },
+    );
+
+    pmmTest(
+      'PMM-T1011 - Verify Change agent pmm agent listen port @rta-mongodb-integration',
+      async ({ cliHelper }) => {
+        let commands = [
+          `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+          `docker restart ${containerName}`,
+          `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
+        ];
+
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+        commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${mongoExporterId} --pmm-agent-listen-port=7778`,
+          `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --pmm-agent-listen-port=7778`,
+        ];
+
+        commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       },
     );
 
