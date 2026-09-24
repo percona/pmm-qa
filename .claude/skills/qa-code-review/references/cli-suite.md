@@ -5,9 +5,10 @@ Playwright as a runner, no browser. **Conventions do not carry over from `e2e_te
 | | `cli/` | `e2e_tests/` |
 |---|---|---|
 | File suffix | `*.spec.ts` | `*.test.ts` |
-| Entry point | raw `test` / `expect` from `@playwright/test` | `pmmTest` from `@fixtures/pmmTest` |
+| Entry point | `test` / `expect` from `@helpers/test` (auto `versionGate` fixture) | `pmmTest` from `@fixtures/pmmTest` |
 | Tags | `test.describe('…', { tag: '@tag' }, …)` | in the test title |
 | Reuse | `helpers/cli-helper.ts`, `helpers/pmm-admin.ts` | page objects |
+| Version gates | `helpers/versionGates.ts`, on the pmm-client version | `helpers/versionGates.ts`, on the PMM Server version |
 | Lint | `npm run lint` = `eslint . && tsc --noEmit` | no script yet |
 | tsconfig | `include: ["./"]` — everything type-checked | `tests/**` + config only |
 
@@ -20,6 +21,7 @@ Details in [cli/CONTRIBUTING.md](../../../../cli/CONTRIBUTING.md).
 - Cleanup in `afterEach`, not `try/finally`. 🟡
 - Assertions close to the behaviour, not batched at the end.
 - `PMM-Txxxx` in every test title — same rule as the UI suite.
+- A spec whose `pmm-admin` runs inside a container sets `test.use({ pmmClientContainer: '<container>' })` once, or a gated test reads the host's client version instead of the one it drives. 🔴 when the spec has a gated test.
 - An assertion removed without a stated reason is 🔴: say which other assertion covers it.
 - A retry budget must fit inside the enclosing timeout. `beforeAll` inherits the test timeout, so a `toPass` loop longer than that gets cut mid-retry — raise it with `test.setTimeout()` and show the arithmetic.
 - `++` in test code: prefer an explicit expression.
