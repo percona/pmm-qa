@@ -166,8 +166,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
+      // The docker restart above reloads valkey from its on-disk config, which wipes the
+      // in-memory ACL user PMM-T9991 created (no aclfile / ACL SAVE). Point the exporter
+      // back at the persistent requirepass `default` user, which survives the restart, in
+      // the same call that enables TLS so the connection check can authenticate.
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --username=default --password=${valkeyPassword} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
@@ -321,8 +325,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await cliHelper.execSilent(command).assertSuccess().outContains('agent configuration updated.');
       }
 
+      // PMM-T9994 restarted valkey, which wiped the runtime ACL user, so authenticate as the
+      // persistent requirepass `default` user here rather than the now-gone custom one.
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --username=${newUsername} --password=${newPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --username=default --password=${valkeyPassword}`,
       ];
 
       for (const command of commands) {
