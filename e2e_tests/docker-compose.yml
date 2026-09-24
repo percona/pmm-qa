@@ -59,6 +59,7 @@ services:
 
   webhookd:
     image: ncarlier/webhookd
+    profiles: [webhookd]
     container_name: webhookd
     environment:
       - WHD_SCRIPTS=/var/opt/webhookd/scripts
