@@ -42,6 +42,14 @@ export default class GrafanaHelper {
     return response;
   };
 
+  findOrCreateUser = async (username: string, password: string) => {
+    const existingUser = (await this.listUsers()).users.find((user) => user.login === username);
+
+    return existingUser
+      ? { created: false, id: existingUser.id }
+      : { created: true, id: await this.createUser(username, password) };
+  };
+
   findUserByUsername = async (username: string): Promise<GrafanaUser> => {
     const users = await this.listUsers();
     const user = users.users.find((user) => user.login === username);
