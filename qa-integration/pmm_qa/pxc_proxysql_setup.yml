@@ -17,6 +17,9 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
     shard_node_name: "{{ pxc_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
     pxc_repo: "{{ {'5.7': 'pxc-57', '8.0': 'pxc-80', '8.4': 'pxc-84-lts', '9.7': 'pxc-97-lts'}[pxc_version] | default('pxc-80') }}"
+    # The pxc-57 repository publishes only version-suffixed package names
+    # (percona-xtradb-cluster-server-5.7, ...); 8.0 and later drop the suffix.
+    pxc_pkg_suffix: "{{ '-5.7' if pxc_version == '5.7' else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -95,8 +98,8 @@
       - docker exec {{ pxc_container }} apt-get update
       - >-
         docker exec {{ pxc_container }} env DEBIAN_FRONTEND=noninteractive apt-get -y install
-        percona-xtradb-cluster-server percona-xtradb-cluster-client
-        percona-xtradb-cluster-common percona-xtradb-cluster-test
+        percona-xtradb-cluster-server{{ pxc_pkg_suffix }} percona-xtradb-cluster-client{{ pxc_pkg_suffix }}
+        percona-xtradb-cluster-common{{ pxc_pkg_suffix }} percona-xtradb-cluster-test{{ pxc_pkg_suffix }}
       # The packaged mysqld carries an apparmor profile that confines it to
       # /var/lib/mysql; the multi-node setup runs several mysqld under /home/pxc,
       # so drop the profile where apparmor is present (a no-op in most containers).
