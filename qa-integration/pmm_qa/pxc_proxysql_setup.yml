@@ -94,6 +94,9 @@
         -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb
         && (dpkg -i /tmp/percona-release.deb || apt-get -y -f install)'
       - docker exec {{ pxc_container }} percona-release enable-only {{ pxc_repo }} release
+      # PXC 5.7 depends on percona-xtrabackup-24, which only the pxb-24 repo ships.
+      - >-
+        {{ (pxc_version == '5.7') | ternary('docker exec ' ~ pxc_container ~ ' percona-release enable pxb-24 release', 'true') }}
       - docker exec {{ pxc_container }} apt-get update
       - >-
         docker exec {{ pxc_container }} env DEBIAN_FRONTEND=noninteractive apt-get -y install
