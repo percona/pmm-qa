@@ -10,6 +10,8 @@ const password = 'VKvl41568AsE';
 const connectionTimeoutServiceName = 'valkey_connection_timeout_service';
 
 test.describe('Valeky CLI tests', { tag: '@valkey' }, () => {
+  test.use({ pmmClientContainer: containerName });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB valkey-primary-1 docker container should exist. please run pmm-framework with --database valkey');
