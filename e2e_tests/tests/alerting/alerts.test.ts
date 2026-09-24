@@ -10,6 +10,13 @@ pmmTest.describe.configure({ mode: 'default' });
 
 const ruleName = 'PSQL immortal rule';
 const alertFile = 'testdata/ia/scripts/alert.txt';
+const webhook = {
+  disableResolveMessage: false,
+  name: 'empty',
+  secureFields: {},
+  settings: { password: 'alert', url: 'http://webhookd:8080/alert', username: 'alert' },
+  type: 'webhook',
+};
 const postgresqlRule = {
   group: '10s',
   interval: '10s',
@@ -30,7 +37,7 @@ pmmTest.beforeAll(async ({ browser }) => {
   await api.settingsApi.updateSettings({ enable_alerting: true });
   fs.rmSync(alertFile, { force: true });
   await api.alertingApi.removeAllAlertRules();
-  await api.alertingApi.setWebhookContactPoint();
+  await api.alertingApi.setEmptyReceiverIntegrations([webhook]);
   await api.alertingApi.createRuleFromTemplate({
     ...postgresqlRule,
     folderUid: await api.grafanaApi.getFolderUid('PostgreSQL'),
@@ -57,8 +64,10 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   const grafanaHelper = new GrafanaHelper(page);
+  const api = new Api(page, page.request);
 
-  await new Api(page, page.request).alertingApi.removeAllAlertRules();
+  await api.alertingApi.removeAllAlertRules();
+  await api.alertingApi.setEmptyReceiverIntegrations([]);
 
   for (const userId of createdUserIds.splice(0)) await grafanaHelper.deleteUser(userId);
 
@@ -81,14 +90,13 @@ pmmTest(
     }
 
     await expect(alertingPage.builders.alertRow(ruleName)).toHaveCount(1);
-    await api.alertingApi.setWebhookContactPoint();
+    await api.alertingApi.setEmptyReceiverIntegrations([webhook]);
     await expect
-      .poll(() => fs.existsSync(alertFile), {
+      .poll(() => (fs.existsSync(alertFile) ? fs.readFileSync(alertFile, 'utf8') : ''), {
         intervals: [Timeouts.FIVE_SECONDS],
         timeout: Timeouts.FIVE_MINUTES,
       })
-      .toBe(true);
-    expect(fs.readFileSync(alertFile, 'utf8')).toContain(ruleName);
+      .toContain(ruleName);
   },
 );
 

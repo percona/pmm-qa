@@ -99,7 +99,7 @@ export default class AlertingApi {
     }
   };
 
-  setWebhookContactPoint = async (): Promise<void> => {
+  setEmptyReceiverIntegrations = async (integrations: Record<string, unknown>[]): Promise<void> => {
     const receivers = await this.request.get(apiEndpoints.grafana.receivers, {
       headers: GrafanaHelper.getAuthHeader(),
     });
@@ -118,18 +118,7 @@ export default class AlertingApi {
     const response = await this.request.put(`${apiEndpoints.grafana.receivers}/${name}`, {
       data: {
         metadata: { name, resourceVersion },
-        spec: {
-          integrations: [
-            {
-              disableResolveMessage: false,
-              name: 'empty',
-              secureFields: {},
-              settings: { password: 'alert', url: 'http://webhookd:8080/alert', username: 'alert' },
-              type: 'webhook',
-            },
-          ],
-          title: 'empty',
-        },
+        spec: { integrations, title: 'empty' },
       },
       headers: GrafanaHelper.getAuthHeader(),
     });
