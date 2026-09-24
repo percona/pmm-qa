@@ -132,9 +132,9 @@ register_database SSL_PDPGSQL \
 
 register_database PXC \
   '5.7 8.0 8.4 9.7' \
-  'CLIENT_VERSION QUERY_SOURCE TARBALL' \
+  'CLIENT_VERSION QUERY_SOURCE' \
   'DEFAULT_VERSION=8.4' \
-  'CLIENT_VERSION=latest-tarball' 'QUERY_SOURCE=perfschema' 'TARBALL='
+  'CLIENT_VERSION=latest-tarball' 'QUERY_SOURCE=perfschema'
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
 # PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
