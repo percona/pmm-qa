@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import pmmTest from '@fixtures/pmmTest';
@@ -16,12 +16,13 @@ import { Timeouts } from '@helpers/timeouts';
 const execFileAsync = promisify(execFile);
 const installScript = resolve('../k8s/install_pmm_ha.sh');
 const outputDir = resolve('output/ha-multi-namespace');
-const summaryFile = `${outputDir}/pmm-ha-summary.env`;
 const secondNamespace = 'pmm-2';
 // Without "pmm-ha" in it, so the chart names the second instance `<release>-pmm-ha`.
 const secondRelease = 'pmm-second';
 const secondPodNames = Array.from({ length: defaultReplicas }, (_, i) => `${secondRelease}-pmm-ha-${i}`);
 const haproxySelector = 'app.kubernetes.io/name=haproxy';
+// A fixed name in the chart, which is why each instance needs a namespace of its own.
+const haproxyService = 'svc/pmm-ha-haproxy';
 const nodeExporterSelector = 'app.kubernetes.io/name=prometheus-node-exporter';
 const cliHelper = new CliHelper();
 
@@ -46,7 +47,7 @@ const runInstaller = async (args: string[]): Promise<ExecReturn> => {
         ...process.env,
         DEBUG_DIR: `${outputDir}/debug`,
         PMM_ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin',
-        SUMMARY_FILE: summaryFile,
+        SUMMARY_FILE: `${outputDir}/pmm-ha-summary.env`,
       },
       maxBuffer: 64 * 1_024 * 1_024,
     });
@@ -86,14 +87,6 @@ const expectOwnershipConflict = (result: ExecReturn, kindPattern: string): void 
   ).not.toEqual(0);
   expect(output).toMatch(new RegExp(`${kindPattern} "[^"]+" in namespace "" exists and cannot be imported`));
   expect(output).toContain(`key "meta.helm.sh/release-namespace" must equal "${secondNamespace}"`);
-};
-
-const secondInstanceUrl = (): string => {
-  const url = /^url=(https:\/\/\S+)$/m.exec(readFileSync(summaryFile, 'utf8'))?.[1];
-
-  if (!url) throw new Error(`${summaryFile} carries no external URL for the second PMM HA instance`);
-
-  return url.replace(/\/?$/, '');
 };
 
 // Deleting the namespace alone would leak the release's ClusterRoles and fail the next run's install.
@@ -186,7 +179,6 @@ pmmTest(
             image,
             '--set',
             'prometheus-node-exporter.enabled=false',
-            '--external-access',
           ])
         ).assertSuccess();
       },
@@ -244,28 +236,35 @@ pmmTest(
       expect(await highAvailabilityPage.getLeaderName()).toEqual(firstLeader);
     });
 
-    const secondUrl = secondInstanceUrl();
+    const portForward = await secondK8sHelper.portForward(haproxyService, 443);
+    const secondUrl = `https://127.0.0.1:${portForward.localPort}`;
 
-    await pmmTest.step(`Verify the second instance serves on ${secondUrl}`, async () => {
-      const response = await page.request.get(`${secondUrl}${apiEndpoints.ha.status}`, {
-        headers: GrafanaHelper.getAuthHeader(),
+    try {
+      await pmmTest.step('Verify the second instance serves through its own HAProxy', async () => {
+        const response = await page.request.get(`${secondUrl}${apiEndpoints.ha.status}`, {
+          headers: GrafanaHelper.getAuthHeader(),
+        });
+
+        expect(response.status()).toEqual(200);
+        expect(((await response.json()) as HaStatusResponse).status).toEqual('Enabled');
       });
 
-      expect(response.status()).toEqual(200);
-      expect(((await response.json()) as HaStatusResponse).status).toEqual('Enabled');
-    });
+      await grafanaHelper.authorize('admin', process.env.ADMIN_PASSWORD || 'admin', `${secondUrl}/`);
 
-    await grafanaHelper.authorize('admin', process.env.ADMIN_PASSWORD || 'admin', `${secondUrl}/`);
+      await pmmTest.step('Verify the second instance UI names its own leader', async () => {
+        await leftNavigation.verifyUiRenders(`${secondUrl}/${highAvailabilityPage.url}`);
+        expect(await highAvailabilityPage.getLeaderName()).toEqual(secondLeader);
+      });
 
-    await pmmTest.step('Verify the second instance UI names its own leader', async () => {
-      await leftNavigation.verifyUiRenders(`${secondUrl}/${highAvailabilityPage.url}`);
-      expect(await highAvailabilityPage.getLeaderName()).toEqual(secondLeader);
-    });
-
-    await pmmTest.step('Verify Query Analytics opens on the second instance', async () => {
-      await page.goto(`${secondUrl}/${queryAnalytics.url}`, { timeout: Timeouts.TWO_MINUTES });
-      await expect(queryAnalytics.elements.pageTitle.first()).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
-      await queryAnalytics.noSpinner();
-    });
+      await pmmTest.step('Verify Query Analytics opens on the second instance', async () => {
+        await page.goto(`${secondUrl}/${queryAnalytics.url}`, { timeout: Timeouts.TWO_MINUTES });
+        await expect(queryAnalytics.elements.pageTitle.first()).toBeVisible({
+          timeout: Timeouts.TWO_MINUTES,
+        });
+        await queryAnalytics.noSpinner();
+      });
+    } finally {
+      portForward.stop();
+    }
   },
 );

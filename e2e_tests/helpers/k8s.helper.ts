@@ -1,8 +1,14 @@
+import { spawn } from 'node:child_process';
 import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
+
+export interface PortForward {
+  localPort: number;
+  stop: () => void;
+}
 
 interface ExecInPodOptions {
   container?: string;
@@ -86,6 +92,35 @@ export default class K8sHelper {
         .assertSuccess()
         .stdout.trim(),
     );
+
+  /**
+   * `kubectl port-forward` on a free local port, resolved once kubectl reports it.
+   *
+   * @param resource  e.g. `svc/pmm-ha-haproxy`
+   */
+  portForward = async (resource: string, remotePort: number): Promise<PortForward> =>
+    await new Promise((resolve, reject) => {
+      const kubectl = spawn('kubectl', [
+        '--namespace',
+        this.namespace,
+        'port-forward',
+        resource,
+        `:${remotePort}`,
+      ]);
+      let output = '';
+
+      kubectl.stdout.on('data', (chunk: Buffer) => {
+        output += chunk.toString();
+
+        const localPort = /Forwarding from 127\.0\.0\.1:(\d+)/.exec(output)?.[1];
+
+        if (localPort) resolve({ localPort: Number(localPort), stop: () => kubectl.kill() });
+      });
+      kubectl.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()));
+      kubectl.on('exit', (code) =>
+        reject(new Error(`kubectl port-forward ${resource} exited with ${code}: ${output.trim()}`)),
+      );
+    });
 
   scaleStatefulSet = (name: string, replicas: number): ExecReturn =>
     this.exec(`scale statefulset ${name} --replicas=${replicas}`);
