@@ -59,7 +59,12 @@ if ! [[ "$client_version" =~ ^(3-dev-latest|pmm3-rc|pmm3-latest|latest-tarball|3
 fi
 
 apt-get update
-apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
+# Keep a MySQL client the database packages already installed: Ubuntu's
+# mysql-client pulls mysql-client-8.0, which evicts the PXC 5.7 client and
+# with it the server package that depends on it.
+mysql_client=mysql-client
+command -v mysql >/dev/null 2>&1 && mysql_client=
+apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev $mysql_client postgresql-client
 wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
 dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
