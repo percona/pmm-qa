@@ -3,6 +3,7 @@ import pmmTest from '@fixtures/pmmTest';
 import Api from '@api/api';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { AlertSeverity } from '@interfaces/alerting';
 import { expect } from '@playwright/test';
 
 pmmTest.describe.configure({ mode: 'default' });
@@ -34,7 +35,7 @@ pmmTest.beforeAll(async ({ browser }) => {
     ...postgresqlRule,
     folderUid: await api.grafanaApi.getFolderUid('PostgreSQL'),
     name: ruleName,
-    severity: 'SEVERITY_CRITICAL',
+    severity: AlertSeverity.Critical,
   });
 
   const { users } = await grafanaHelper.listUsers();
@@ -207,22 +208,13 @@ pmmTest(
 );
 
 pmmTest('PMM-T564 - Verify fired alert severity colors @ia', async ({ alertingPage, api, page }) => {
-  const severities = [
-    'SEVERITY_CRITICAL',
-    'SEVERITY_ERROR',
-    'SEVERITY_NOTICE',
-    'SEVERITY_WARNING',
-    'SEVERITY_ALERT',
-    'SEVERITY_INFO',
-    'SEVERITY_DEBUG',
-    'SEVERITY_EMERGENCY',
-  ] as const;
+  const severities = Object.entries(AlertSeverity);
 
   await api.alertingApi.removeAllAlertRules();
 
   const folderUid = await api.grafanaApi.getFolderUid('PostgreSQL');
 
-  for (const severity of severities) {
+  for (const [, severity] of severities) {
     await api.alertingApi.createRuleFromTemplate({ ...postgresqlRule, folderUid, name: severity, severity });
   }
 
@@ -234,14 +226,12 @@ pmmTest('PMM-T564 - Verify fired alert severity colors @ia', async ({ alertingPa
     .toBeGreaterThanOrEqual(severities.length);
   await page.goto(alertingPage.url);
 
-  for (const severity of severities) {
+  for (const [label, severity] of severities) {
     await expect(alertingPage.builders.alertRow(severity)).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
     await expect(alertingPage.builders.stateCell(severity)).toContainText('Firing', {
       timeout: Timeouts.TEN_SECONDS,
     });
-    await expect(alertingPage.builders.severityCell(severity)).toContainText(
-      `${severity[9]}${severity.slice(10).toLowerCase()}`,
-    );
+    await expect(alertingPage.builders.severityCell(severity)).toContainText(label);
   }
 });
 

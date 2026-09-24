@@ -1,12 +1,13 @@
-export type AlertSeverity =
-  | 'SEVERITY_ALERT'
-  | 'SEVERITY_CRITICAL'
-  | 'SEVERITY_DEBUG'
-  | 'SEVERITY_EMERGENCY'
-  | 'SEVERITY_ERROR'
-  | 'SEVERITY_INFO'
-  | 'SEVERITY_NOTICE'
-  | 'SEVERITY_WARNING';
+export enum AlertSeverity {
+  Critical = 'SEVERITY_CRITICAL',
+  Error = 'SEVERITY_ERROR',
+  Notice = 'SEVERITY_NOTICE',
+  Warning = 'SEVERITY_WARNING',
+  Alert = 'SEVERITY_ALERT',
+  Info = 'SEVERITY_INFO',
+  Debug = 'SEVERITY_DEBUG',
+  Emergency = 'SEVERITY_EMERGENCY',
+}
 
 export interface AlertInstance {
   labels: Record<string, string>;

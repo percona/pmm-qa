@@ -1,7 +1,13 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AlertInstance, AlertRule, AlertRulesResponse, TemplatedAlertRule } from '@interfaces/alerting';
+import {
+  AlertInstance,
+  AlertRule,
+  AlertRulesResponse,
+  AlertSeverity,
+  TemplatedAlertRule,
+} from '@interfaces/alerting';
 
 type Headers = Record<string, string>;
 
@@ -26,7 +32,7 @@ export default class AlertingApi {
       interval: rule.interval,
       name: rule.name,
       params: [{ float: rule.threshold, name: 'threshold', type: 'PARAM_TYPE_FLOAT' }],
-      severity: rule.severity ?? 'SEVERITY_WARNING',
+      severity: rule.severity ?? AlertSeverity.Warning,
       template_name: rule.templateName,
     });
 
@@ -100,9 +106,15 @@ export default class AlertingApi {
 
     expect(receivers.status()).toEqual(200);
 
-    const { name, resourceVersion } = (
-      (await receivers.json()) as { items: { metadata: { name: string; resourceVersion: string } }[] }
-    ).items[0].metadata;
+    const receiver = (
+      (await receivers.json()) as {
+        items: { metadata: { name: string; resourceVersion: string }; spec: { title: string } }[];
+      }
+    ).items.find((item) => item.spec.title === 'empty');
+
+    if (!receiver) throw new Error('Receiver "empty" is not present');
+
+    const { name, resourceVersion } = receiver.metadata;
     const response = await this.request.put(`${apiEndpoints.grafana.receivers}/${name}`, {
       data: {
         metadata: { name, resourceVersion },
