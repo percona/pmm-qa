@@ -11,24 +11,6 @@ const postgresPodSelectors = {
 };
 const cordonedNodes: string[] = [];
 
-// ScheduleAnyway only scores the spread, so past one pod per node the scheduler
-// also weighs node load and an even skew is not guaranteed.
-const expectOnePodPerNodeFirst = (podsPerNode: Record<string, number>, replicas: number): void => {
-  const counts = Object.values(podsPerNode);
-
-  if (replicas >= counts.length) {
-    expect(
-      counts.filter((pods) => pods === 0),
-      `Every node must host an HAProxy pod before any shares one: ${JSON.stringify(podsPerNode)}`,
-    ).toHaveLength(0);
-  } else {
-    expect(
-      Math.max(...counts),
-      `No node may host two HAProxy pods while another has none: ${JSON.stringify(podsPerNode)}`,
-    ).toBe(1);
-  }
-};
-
 pmmTest.describe('HAProxy scaling on an HA cluster', () => {
   pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper, haProxyHelper }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
@@ -54,7 +36,14 @@ pmmTest.describe('HAProxy scaling on an HA cluster', () => {
       });
 
       await pmmTest.step('Verify the replicas are spread one-per-node first, then co-located', async () => {
-        expectOnePodPerNodeFirst(haProxyHelper.podsPerNode(), replicas);
+        const podsPerNode = haProxyHelper.podsPerNode();
+
+        // ScheduleAnyway only scores the spread, so past one pod per node the
+        // scheduler also weighs node load and an even skew is not guaranteed.
+        expect(
+          Object.values(podsPerNode).filter((pods) => pods === 0),
+          `Every node must host an HAProxy pod before any shares one: ${JSON.stringify(podsPerNode)}`,
+        ).toHaveLength(0);
       });
 
       await pmmTest.step('Verify PMM is served through the scaled HAProxy', async () => {
@@ -195,11 +184,10 @@ pmmTest.describe('HAProxy scaling on an HA cluster', () => {
         nodes.length * 2 + 1,
         defaultHaProxyReplicas,
       ]) {
-        await pmmTest.step(`Scale HAProxy to ${replicas} replicas and verify the spread`, async () => {
+        // Nothing rebalances on scale-down, so only the count is a contract here.
+        await pmmTest.step(`Scale HAProxy to ${replicas} replicas`, async () => {
           haProxyHelper.scale(replicas);
           await haProxyHelper.waitForReadyPods(replicas);
-
-          expectOnePodPerNodeFirst(haProxyHelper.podsPerNode(), replicas);
         });
       }
 
