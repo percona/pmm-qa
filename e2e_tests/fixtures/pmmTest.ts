@@ -19,6 +19,7 @@ import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
+import HaProxyHelper from '@helpers/haProxy.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
@@ -48,6 +49,7 @@ const pmmTest = base.extend<{
   dataSourcesPage: DataSourcesPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
+  haProxyHelper: HaProxyHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
@@ -130,6 +132,7 @@ const pmmTest = base.extend<{
     await use(grafanaHelper);
   },
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
+  haProxyHelper: async ({ k8sHelper }, use) => await use(new HaProxyHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {
     const helpPage = new HelpPage(page);
