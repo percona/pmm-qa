@@ -110,7 +110,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatStatementId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatStatementId} --log-level=debug`,
       ];
 
       commands.forEach((command) => console.log(cliHelper.execSilent(command)));
