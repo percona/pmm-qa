@@ -16,6 +16,7 @@ const mongoServiceName = 'mongo_service_1';
 const containerName = 'rs101';
 let adminVersion: number;
 let adminFullVersion: string;
+const servicesToRemove: string[] = [];
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
@@ -29,6 +30,12 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   test.beforeEach(async ({}, testInfo) => {
     const minVersion = minPmmClientVersion[testInfo.title.match(/PMM-T\d+/)?.[0] ?? ''];
     test.skip(!!minVersion && versionBelow(adminFullVersion, minVersion), `This test is relevant for pmm-client version ${minVersion} and above`);
+  });
+
+  test.afterEach(async ({}) => {
+    for (const serviceName of servicesToRemove.splice(0)) {
+      await removeMongoService(containerName, serviceName);
+    }
   });
 
   test('run pmm-admin', async ({}) => {
@@ -140,6 +147,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
   test('PMM-T2325 - Verify --agent-env-vars can be changed on an existing mongodb_exporter with pmm-admin inventory change agent', async ({}) => {
     const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
+    servicesToRemove.push(serviceName);
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
@@ -173,12 +181,11 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     output = await cli.exec(`${changeAgent} --agent-env-vars=`);
     await output.assertSuccess();
     await output.outContainsMany(['Environment variables : (none)', 'environment variable names are removed']);
-
-    await removeMongoService(containerName, serviceName);
   });
 
   test('PMM-T2326 - Verify validation of --agent-env-vars for pmm-admin inventory change agent mongodb-exporter', async ({}) => {
     const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
+    servicesToRemove.push(serviceName);
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
@@ -208,8 +215,6 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     output = await cli.exec(`${changeAgent} --agent-env-vars=lowercase_var`);
     await output.assertSuccess();
     await output.outContains('Environment variables : lowercase_var');
-
-    await removeMongoService(containerName, serviceName);
   });
 
   test('PMM-T2005 verify PBM Agent health status metric is correct', async ({}) => {
