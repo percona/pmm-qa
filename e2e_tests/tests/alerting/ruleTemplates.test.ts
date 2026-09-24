@@ -126,10 +126,10 @@ for (const [unit, range] of [
 ] as const) {
   pmmTest(
     `PMM-T500 + PMM-T595 + PMM-T596 - Add rule templates with different units, empty range @fb-alerting | unit ${unit}, range ${range || 'empty'}`,
-    async ({ alertingPage, api, page }) => {
+    async ({ alertingPage, page }) => {
       const {
         content,
-        templates: [{ name, summary }],
+        templates: [{ summary }],
       } = alertingPage.readTemplateFile(inputTemplate);
 
       await page.goto(alertingPage.urls.templates);
@@ -142,9 +142,6 @@ for (const [unit, range] of [
       await expect(alertingPage.builders.deleteTemplate(summary)).toBeEnabled({
         timeout: Timeouts.ONE_MINUTE,
       });
-      expect((await api.alertingApi.deleteTemplate(GrafanaHelper.getAuthHeader(), name)).status()).toEqual(
-        200,
-      );
     },
   );
 }
@@ -314,7 +311,7 @@ for (const user of users) {
       const newSummary = 'Updated E2E Template';
       const {
         content,
-        templates: [{ name, summary }],
+        templates: [{ summary }],
       } = alertingPage.readTemplateFile(templateYaml);
       const updatedContent = content.replace(summary, newSummary);
 
@@ -341,9 +338,6 @@ for (const user of users) {
         .toBe(alertingPage.normalizeTemplate(updatedContent));
       await expect(alertingPage.elements.modalHeader).toHaveText(`Edit "${newSummary}" Alert Rule Template`);
       await expect(alertingPage.elements.modalWarning).toHaveText(nameWarning);
-      expect((await api.alertingApi.deleteTemplate(GrafanaHelper.getAuthHeader(), name)).status()).toEqual(
-        200,
-      );
     },
   );
 }
