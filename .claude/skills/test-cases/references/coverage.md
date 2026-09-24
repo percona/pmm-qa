@@ -6,10 +6,10 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 1. Search `origin/main`, not only this checkout: the working branch can lag it by many commits, including CI restructures. `git fetch origin main` first, then read files with `git show origin/main:<path>` and list them with `git ls-tree -r --name-only origin/main`.
 2. Run `git rev-parse --is-shallow-repository`. Only when it prints `false`, run `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone skip the log search — its empty result is not evidence of absence, so cite only the tree searches.
-3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`. Use only `-n`, `-l`, `-g`, and `--hidden` — `rg` recurses by default and `-r` is `--replace`, which rewrites matched text in the output to look like source. Re-run any hit whose matched text differs from the query.
+3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value with `rg --hidden -g '!.git/**'`. Hidden paths matter: CI lanes live under `.github/`. Use only `-n`, `-l`, `-g`, and `--hidden` — `rg` recurses by default and `-r` is `--replace`, which rewrites matched text in the output to look like source. Re-run any hit whose matched text differs from the query. List matching files first (`rg -l`), then read only the matching lines of the likely hits (`rg -n -m 5 <term> <file>` or a bounded `sed -n` range); never print an unbounded search or a whole large file.
 4. Search the feature or page name only after identifiers.
 5. Read the full setup and assertions of every plausible hit.
-6. Search Zephyr with the `zephyr` skill's read-only `search`, `list`, and `get` operations.
+6. Search Zephyr with `scripts/relay.sh zephyr search`, `list`, and `get`.
 
 Treat broad search results as a candidate pool. Narrow terms before classifying coverage. A skipped scenario, commented table, or loop over an empty data set is not coverage.
 

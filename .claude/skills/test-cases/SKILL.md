@@ -14,9 +14,9 @@ Do not generate tests from category checklists alone. First understand the chang
 
 Load no reference up front. Read it only when its workflow step applies:
 
-- Ticket context: the `jira` skill
+- Ticket context and history searches: `scripts/relay.sh jira`
 - Linked implementation: the `git-diff` skill
-- Existing manual cases: the `zephyr` skill
+- Existing manual cases: `scripts/relay.sh zephyr`
 - Environment dimensions when relevant: the `test-scope` skill
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
@@ -31,7 +31,7 @@ Load no reference up front. Read it only when its workflow step applies:
 
 The references above are prompts for reasoning, not quotas. A technique, historical bug, or risk category never justifies a test by itself.
 
-Scripts, run from the skill directory: `scripts/check_draft.py <draft.md>` checks a draft against the template (step 9); `scripts/check_publish_plan.py <plan.json>` checks a publish plan before any Zephyr write (step 10). Both print JSON and exit 1 on a finding.
+Scripts, run from the skill directory: `scripts/relay.sh` reads Jira and reads or writes Zephyr, trimmed to the fields this skill needs (`--help` lists the calls and setup; open the `jira` or `zephyr` skill only for a call it lacks); `scripts/check_draft.py <draft.md>` checks a draft against the template (step 9); `scripts/check_publish_plan.py <plan.json>` checks a publish plan before any Zephyr write (step 10). They print JSON and exit non-zero on a finding or error.
 
 ## Gotchas
 
@@ -61,11 +61,11 @@ When another agent or skill invokes this one, skip whatever that session already
 
 ## Workflow
 
-Keep working notes in `<scratchpad>/<ticket or feature>-notes.md`, one section per step: the behavior inventory and depth (step 2), the failure hypotheses and scope decision (step 3), the coverage ledger (step 6), and the gate verdict per candidate (step 7) with its mechanism, test level, scope dimension, topology, and oracle. Write a step's section before starting the next step; a candidate absent from the notes is not in the draft, and a dropped one keeps its row. The notes are what the user gets when they ask why a case is or is not there.
+Keep working notes in `<scratchpad>/<ticket or feature>-notes.md`, one section per step: the behavior inventory and depth (step 2), the failure hypotheses and scope decision (step 3), the coverage ledger (step 6), and the gate verdict per candidate (step 7) with its mechanism, test level, scope dimension, topology, and oracle. Write a step's section before starting the next step; a candidate absent from the notes is not in the draft, and a dropped one keeps its row. The notes are what the user gets when they ask why a case is or is not there. Keep them terse — one line per entry, hypothesis, ledger row, and verdict, citing paths and lines instead of quoting code, diffs, or ticket text — since every later step re-reads them. Batch independent reads and searches into one command, and search only when the answer can change a case.
 
 ### 1. Establish the test basis
 
-For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with `jira` using `fieldsCsv:"*all"` when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
+For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with `scripts/relay.sh jira read` when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
 
 Take linked pull requests from the supplied ticket context. When none were supplied, read [edge-cases.md](references/edge-cases.md) for discovery.
 
@@ -93,7 +93,7 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
-Read changed files before individual hunks, then read the behavior-changing code; skip the pull request's test files. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
+Read the list of changed files before any hunk, then read only the hunks of behavior-changing code; skip the pull request's test files. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
 
 Create one inventory entry per distinct externally meaningful behavior, not per hunk, function, or file.
 
