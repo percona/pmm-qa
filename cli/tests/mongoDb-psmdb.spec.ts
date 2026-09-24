@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
+import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
 
@@ -15,19 +15,6 @@ let adminVersion: number;
 // pmm-admin with percona/pmm#5781 (PMM-15019): --agent-env-vars on change agent and the POSIX name pattern.
 let hasChangeAgentEnvVars: boolean;
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
-
-const addMongoServiceAndGetExporterId = async (serviceName: string) => {
-  const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --host=${ip} --port=${port} --service-name=${serviceName}`);
-  await output.assertSuccess();
-  const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
-  expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
-
-  const list = JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin list --json`)).stdout);
-  const exporter = list.agent.find((a: { agent_type: string, service_id: string }) => a.agent_type === 'AGENT_TYPE_MONGODB_EXPORTER' && a.service_id === serviceId);
-  expect(exporter, `mongodb_exporter for service ${serviceId} not found`).toBeTruthy();
-
-  return exporter.agent_id as string;
-};
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
   test.beforeAll(async ({}) => {
@@ -153,7 +140,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     test.skip(!hasChangeAgentEnvVars, 'pmm-admin inventory change agent mongodb-exporter has no --agent-env-vars (PMM-15019)');
 
     const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
-    const agentId = await addMongoServiceAndGetExporterId(serviceName);
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
     let output = await cli.exec(`${changeAgent} --agent-env-vars=KRB5_CLIENT_KTNAME,DOES_NOT_EXIST_VAR`);
@@ -171,8 +158,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
       const agents = JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin list --json`)).stdout).agent;
       const listenPort = agents.find((a: { agent_id: string }) => a.agent_id === agentId)?.port;
       expect(listenPort, `mongodb_exporter ${agentId} has no listen port yet`).toBeTruthy();
-      // Select this agent's own exporter by its listen port: other exporters in the container
-      // (e.g. from PMM-T2128) may carry the same variable.
+      // Other exporters in this container (e.g. PMM-T2128's) carry KRB5_CLIENT_KTNAME too.
       const environ = await cli.exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f exporters/mongodb_exporter); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${listenPort} " && tr "\\0" "\\n" < /proc/$p/environ; done'`);
       await environ.outContains('KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab');
       await environ.outNotContains('DOES_NOT_EXIST_VAR');
@@ -195,7 +181,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     test.skip(!hasChangeAgentEnvVars, 'pmm-admin inventory change agent mongodb-exporter has no --agent-env-vars (PMM-15019)');
 
     const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
-    const agentId = await addMongoServiceAndGetExporterId(serviceName);
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
     const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
 
     let output = await cli.exec(`${changeAgent} --agent-env-vars=VALID_VAR`);
