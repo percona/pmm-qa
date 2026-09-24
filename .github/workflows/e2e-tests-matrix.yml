@@ -68,7 +68,7 @@ on:
 jobs:
   settings_and_cli:
     name: Settings and cli UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -82,7 +82,7 @@ jobs:
 
   ssl_mysql:
     name: MySQL SSL tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -96,7 +96,7 @@ jobs:
 
   ssl_mongo:
     name: MongoDB SSL tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -110,7 +110,7 @@ jobs:
 
   ssl_postgres:
     name: PDPGSQL SSL tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -124,7 +124,7 @@ jobs:
 
   disconnect:
     name: Disconnect from PMM Server
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:

@@ -72,7 +72,7 @@ on:
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -105,7 +105,7 @@ jobs:
 
   backup_management_common:
     name: Backup Management Common and Locations UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -122,7 +122,7 @@ jobs:
 
   exporters:
     name: Exporters tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -138,7 +138,7 @@ jobs:
 
   mongo_exporter:
     name: MongoDB Exporter tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -154,7 +154,7 @@ jobs:
 
   instances:
     name: Instances UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -184,7 +184,7 @@ jobs:
 
   alerting_and_settings:
     name: Alerting and Settings UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -243,7 +243,7 @@ jobs:
 
   pgsm:
     name: PGSM UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -259,7 +259,7 @@ jobs:
 
   pgss:
     name: PGSS UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -290,7 +290,7 @@ jobs:
 
   psmdb_replica:
     name: PSMDB Replica UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -320,7 +320,7 @@ jobs:
 
   dump_tool:
     name: Dump Tool UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -352,7 +352,7 @@ jobs:
 
   psmdb_arbiter:
     name: PSMDB Arbiter Replica UI tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -382,7 +382,7 @@ jobs:
 
   rbac:
     name: PS UI Role based access control
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -398,7 +398,7 @@ jobs:
 
   encryption:
     name: Encryption tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -414,7 +414,7 @@ jobs:
 
   docker_configuration:
     name: Docker configuration tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -443,7 +443,7 @@ jobs:
 
   nomad:
     name: Nomad tests
-    if: (inputs.arch || github.event.inputs.arch) == 'amd64'
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
