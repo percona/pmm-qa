@@ -223,7 +223,7 @@ jobs:
           docker exec "$PG" pkill -f node_exporter
           sleep 5
           docker exec "$PG" ls "$COLLECTORS/custom-queries/postgresql/high-resolution/"
-          docker exec "$PS" ls "$COLLECTORS/custom-queries/postgresql/high-resolution/"
+          docker exec "$PS" ls "$COLLECTORS/custom-queries/mysql/high-resolution/"
 
       - name: Check packages before upgrade
         run: |

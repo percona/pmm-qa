@@ -31,11 +31,22 @@ export default class TestState {
 
   /** Read the whole state object, or `{}` if nothing has been saved yet. */
   readAll = (): Record<string, string> => {
+    let raw: string;
+
     try {
-      return JSON.parse(fs.readFileSync(this.file, 'utf8'));
-    } catch {
-      return {};
+      raw = fs.readFileSync(this.file, 'utf8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return {};
+      throw err;
     }
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error(`Upgrade state in ${this.file} is not a JSON object`);
+    }
+
+    return parsed as Record<string, string>;
   };
 
   /** Merge the given key/value pairs into the persisted state. */
