@@ -43,7 +43,7 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
     const metricName = 'redis_uptime_in_seconds';
 
     await api.grafanaApi.waitForMetric(metricName);
-    await api.grafanaApi.waitForMetric(metricName, `${redisServiceName}-2`);
+    await api.grafanaApi.waitForMetric(`${metricName}{service_name="${redisServiceName}-2"}`);
 
     const target = await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote');
     const expectedScrapeUrl = 'http://external_pmm:42200/metrics';
@@ -78,7 +78,9 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
     pmmTest(
       `PMM-T2071 - Verify Agents are Running and Metrics are being collected Pre and Post Upgrade (API) for upgrade-${service.upgradeService} @pre-upgrade @post-upgrade @post-server-upgrade`,
       async ({ api }) => {
-        await api.grafanaApi.waitForMetric(service.metric, `upgrade-${service.upgradeService}`);
+        await api.grafanaApi.waitForMetric(
+          `${service.metric}{service_name="upgrade-${service.upgradeService}"}`,
+        );
       },
     );
   }

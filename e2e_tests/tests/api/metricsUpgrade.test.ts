@@ -13,7 +13,7 @@ pmmTest.describe('PMM metrics tests for upgrade', () => {
       async ({ api }) => {
         const serviceName = await api.inventoryApi.getServiceDetailsByPartialName(service.serviceName);
 
-        await api.grafanaApi.waitForMetric(service.metric, serviceName.service_name);
+        await api.grafanaApi.waitForMetric(`${service.metric}{service_name="${serviceName.service_name}"}`);
       },
     );
   }
@@ -24,7 +24,7 @@ pmmTest.describe('PMM metrics tests for upgrade', () => {
       const metricName = 'mysql_performance_schema_memory_summary_current_bytes';
       const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
-      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
+      await api.grafanaApi.waitForMetric(`${metricName}{service_name="${serviceName.service_name}"}`);
     },
   );
 
@@ -34,7 +34,7 @@ pmmTest.describe('PMM metrics tests for upgrade', () => {
       const metricName = 'pg_stat_user_tables_analyze_count';
       const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
 
-      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
+      await api.grafanaApi.waitForMetric(`${metricName}{service_name="${serviceName.service_name}"}`);
     },
   );
 

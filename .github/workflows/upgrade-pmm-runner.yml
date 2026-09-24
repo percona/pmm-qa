@@ -47,33 +47,27 @@ on:
     inputs:
       docker_tag:
         description: 'PMM Server docker tag to upgrade from'
-        default: ''
         type: string
         required: true
       version:
         description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
-        default: ''
         type: string
         required: true
       upgrade_tag:
         description: 'PMM Server docker tag to upgrade to'
-        default: 'perconalab/pmm-server:3-dev-latest'
         type: string
         required: true
       pre_upgrade_version:
         description: 'Expected PMM version before upgrade'
-        default: ''
         type: string
         required: true
       upgrade_version:
         description: 'Expected PMM version after upgrade'
-        default: ''
         type: string
         required: true
       upgrade_type:
         description: "Type of upgrade Docker or UI"
         required: true
-        default: "docker"
         type: string
       client_tarball_upgrade:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
@@ -113,7 +107,7 @@ jobs:
           ver="${${{ inputs.rc_version }}##*:}"
           ver="${ver%-rc*}"
           ver="${ver%.}"
-          echo $ver
+          echo "$ver"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
@@ -187,7 +181,8 @@ jobs:
               -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
               --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
           fi
-          
+
+          # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
@@ -200,8 +195,9 @@ jobs:
       - name: Setup databases + clients
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          echo $CLIENT_INSTALL_VERSION
-          mkdir -m 777 -p /tmp/backup_data
+          echo "$CLIENT_INSTALL_VERSION"
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel \
             --client-version="$CLIENT_INSTALL_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" \
@@ -226,8 +222,8 @@ jobs:
           docker exec "$PG" pkill -f postgres_exporter
           docker exec "$PG" pkill -f node_exporter
           sleep 5
-          docker exec $PG ls $COLLECTORS/custom-queries/postgresql/high-resolution/
-          docker exec $PS ls $COLLECTORS/custom-queries/postgresql/high-resolution/
+          docker exec "$PG" ls "$COLLECTORS/custom-queries/postgresql/high-resolution/"
+          docker exec "$PS" ls "$COLLECTORS/custom-queries/postgresql/high-resolution/"
 
       - name: Check packages before upgrade
         run: |
@@ -241,7 +237,7 @@ jobs:
             git fetch origin "$PMM_QA_BRANCH"
             git checkout FETCH_HEAD
           else
-            git fetch origin $PRE_UPGRADE_BRANCH
+            git fetch origin "$PRE_UPGRADE_BRANCH"
             git checkout FETCH_HEAD
           fi
 
@@ -272,6 +268,7 @@ jobs:
             -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
+          # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: UI Upgrade
@@ -322,7 +319,11 @@ jobs:
               if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
                 docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
                 docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
-                docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
+                docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz &&
+                  d=$(ls -1td pmm-client*/ | head -n1) &&
+                  rm -rf /usr/local/bin/pmm-client &&
+                  mv -f "$d" /usr/local/bin/pmm-client &&
+                  bash -x /usr/local/bin/pmm-client/install_tarball -u'
               else
                 echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
