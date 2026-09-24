@@ -190,7 +190,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       setup_services: '-h'
-      pmm_test_flag: '@alerting'
+      pmm_test_flag: '@alerting|@fb-alerting'
 
   settings:
     name: Settings tests
