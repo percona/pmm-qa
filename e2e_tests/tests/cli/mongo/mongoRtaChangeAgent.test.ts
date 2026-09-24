@@ -194,7 +194,7 @@ pmmTest.describe(
         const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
         const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
         let commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent ge agent rta-mongodb-agent ${rtaAgentId} --server-url=${serverUrl}`,
+          `docker exec ${containerName} pmm-admin inventory change agent rta-mongodb-agent ${rtaAgentId} --server-url=${serverUrl}`,
         ];
 
         for (const command of commands) {
