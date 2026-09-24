@@ -87,14 +87,24 @@
   - name: Install Percona XtraDB Cluster packages from the percona repository
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ pxc_container }} bash -c 'curl -Lf --retry 5 --retry-delay 5 -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb && (dpkg -i /tmp/percona-release.deb || apt-get -y -f install)'
+      - >-
+        docker exec {{ pxc_container }} bash -c 'curl -Lf --retry 5 --retry-delay 5
+        -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+        && (dpkg -i /tmp/percona-release.deb || apt-get -y -f install)'
       - docker exec {{ pxc_container }} percona-release enable-only {{ pxc_repo }} release
       - docker exec {{ pxc_container }} apt-get update
-      - docker exec {{ pxc_container }} env DEBIAN_FRONTEND=noninteractive apt-get -y install percona-xtradb-cluster-server percona-xtradb-cluster-client percona-xtradb-cluster-common percona-xtradb-cluster-test
+      - >-
+        docker exec {{ pxc_container }} env DEBIAN_FRONTEND=noninteractive apt-get -y install
+        percona-xtradb-cluster-server percona-xtradb-cluster-client
+        percona-xtradb-cluster-common percona-xtradb-cluster-test
       # The packaged mysqld carries an apparmor profile that confines it to
       # /var/lib/mysql; the multi-node setup runs several mysqld under /home/pxc,
       # so drop the profile where apparmor is present (a no-op in most containers).
-      - docker exec {{ pxc_container }} bash -c 'if [ -f /etc/apparmor.d/usr.sbin.mysqld ]; then mkdir -p /etc/apparmor.d/disable && ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ && (apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true); fi; true'
+      - >-
+        docker exec {{ pxc_container }} bash -c 'if [ -f /etc/apparmor.d/usr.sbin.mysqld ]; then
+        mkdir -p /etc/apparmor.d/disable
+        && ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
+        && (apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true); fi; true'
 
   - name: Install pmm-client on the pxc_container
     shell: "{{ item }}"
