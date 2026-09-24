@@ -97,7 +97,13 @@ RUN { [[ "$PMM_CLIENT_VERSION" != latest-tarball ]] || \
     sed -i '/ExecStart/a StandardError=file:/var/log/pmm-agent.log' /usr/lib/systemd/system/pmm-agent.service && \
     sed -i '/\[Service\]/a Environment="KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab"' /usr/lib/systemd/system/pmm-agent.service && \
     systemctl enable pmm-agent && \
-    for i in 1 2 3 4 5; do curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && break; [ "$i" -lt 5 ] || exit 1; sleep 10; done && \
+
+    { case "$(uname -m)" in \
+        x86_64) MGO_ARCH=x86_64 ;; \
+        aarch64) MGO_ARCH=arm64 ;; \
+        *) echo "unsupported arch for mgodatagen: $(uname -m)" >&2; exit 1 ;; \
+      esac; } && \
+    for i in 1 2 3 4 5; do curl -Lf --retry 5 --retry-delay 5 --retry-connrefused -o /tmp/mgodatagen.tar.gz "https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_${MGO_ARCH}.tar.gz" && break; [ "$i" -lt 5 ] || exit 1; sleep 10; done && \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin && \
     dnf clean all && \
     rm -rf /var/cache/dnf /data/db && mkdir -p /data/db

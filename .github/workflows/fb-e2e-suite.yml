@@ -28,6 +28,14 @@ on:
         default: '100%'
         required: false
         type: string
+      arch:
+        description: "Runner architecture"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -54,13 +62,17 @@ on:
       sha:
         required: false
         type: string
-
+      arch:
+        type: string
+        required: false
+        default: amd64
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -87,11 +99,13 @@ jobs:
 #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
 ###      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      arch: ${{ inputs.arch }}
 #      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
 #      tags_for_tests: '@bm-mysql'
 
   backup_management_common:
     name: Backup Management Common and Locations UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -108,6 +122,7 @@ jobs:
 
   exporters:
     name: Exporters tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -123,6 +138,7 @@ jobs:
 
   mongo_exporter:
     name: MongoDB Exporter tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -138,6 +154,7 @@ jobs:
 
   instances:
     name: Instances UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -161,11 +178,13 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps --database external --database haproxy'
       pmm_test_flag: '@fb-instances'
 
   alerting_and_settings:
     name: Alerting and Settings UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -189,6 +208,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '-h'
       pmm_test_flag: '@alerting|@fb-alerting'
 
@@ -202,6 +222,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database mysql'
       pmm_test_flag: '@fb-settings'
 
@@ -216,11 +237,13 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps --database psmdb --database pdpgsql'
       pmm_test_flag: '@user-password'
 
   pgsm:
     name: PGSM UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -236,6 +259,7 @@ jobs:
 
   pgss:
     name: PGSS UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -266,6 +290,7 @@ jobs:
 
   psmdb_replica:
     name: PSMDB Replica UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -289,11 +314,13 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps --database psmdb'
       pmm_test_flag: '@user-password'
 
   dump_tool:
     name: Dump Tool UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -319,11 +346,13 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps=8.0'
       pmm_test_flag: '@service-account'
 
   psmdb_arbiter:
     name: PSMDB Arbiter Replica UI tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -347,11 +376,13 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database ps,SETUP_TYPE=replication,MY_ROCKS=true --database ps,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
       pmm_test_flag: '@pmm-ps-integration'
 
   rbac:
     name: PS UI Role based access control
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -367,6 +398,7 @@ jobs:
 
   encryption:
     name: Encryption tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -382,6 +414,7 @@ jobs:
 
   docker_configuration:
     name: Docker configuration tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -404,11 +437,13 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database pdpgsql'
       pmm_test_flag: '@docker-configuration'
 
   nomad:
     name: Nomad tests
+    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -433,6 +468,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
       setup_services: '--database psmdb'
       pmm_test_flag: '@rta'
       workers: 1
