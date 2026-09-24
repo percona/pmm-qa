@@ -592,13 +592,15 @@ ROUTE_EOF
         sleep 15
     done
 
-    # Linode's per-IP rDNS name, for anything that refuses raw-IP HTTPS.
+    PMM_URL="https://${EXTERNAL_HOST}"
+
+    # Linode's per-IP rDNS name, for anything that refuses raw-IP HTTPS - an egress
+    # proxy resets it, so the readiness probe below would never see a 200.
     if [ "$PLATFORM" = "lke" ]; then
         LINODE_HOST="$(echo "$EXTERNAL_HOST" | tr '.' '-').ip.linodeusercontent.com"
         log "Linode rDNS hostname: $LINODE_HOST"
+        PMM_URL="https://${LINODE_HOST}"
     fi
-
-    PMM_URL="https://${EXTERNAL_HOST}"
 
     # Pods Ready does not mean the front end serves; an exact 200 does. `curl -f`
     # would accept a redirect, so the code is compared instead.
