@@ -23,7 +23,7 @@ works around the first limit; it doesn't try to work around the second
       `ALLOW_FALLBACK` gates unregistered people identically on Slack and
       Jira (true = they run on the owner's routines).
 - [x] `PMM AI` router Routine created (`trig_01MJNKVHiPqrZ3Ajv1fzUdQK`) —
-      prompt is just "read `.claude/agents/router.md` and follow it"; it only
+      prompt is just "read the `router` agent and follow it"; it only
       evaluates and routes, never executes.
 - [ ] Fill the two Slack tokens in `/opt/pmm-ai-relay/.env` once the app is
       installed, then `touch /opt/pmm-ai-relay/.env.ready && systemctl
@@ -164,7 +164,7 @@ implemented yet — call this out explicitly when the relay is actually built.
 
 Deterministic, zero-LLM-cost routing (which channel fired) lives in the
 relay itself; the actual message-to-agent matching happens one layer in, in
-[`.claude/agents/router.md`](../../agents/router.md) — the `PMM AI` Routine's
+[`router`](https://github.com/percona/pmm-ai/blob/main/plugins/pmm-qa/agents/router.md) — the `PMM AI` Routine's
 own prompt is just "read `router.md` and follow it," not a mega-prompt
 trying to guess intent itself:
 

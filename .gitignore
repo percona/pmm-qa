@@ -152,21 +152,8 @@ dist
 
 # AI tools
 .claude/*
-!.claude/agents/
-!.claude/agents/**
 !.claude/skills/
 !.claude/skills/**
-!.claude/hooks/
-!.claude/hooks/**
-!.claude/scripts/
-!.claude/scripts/**
-!.claude/integrations/
-!.claude/integrations/**
-!.claude/settings.json
-!.claude/skill-lessons/
-!.claude/skill-lessons/**
-.claude/scripts/node_modules/
-.claude/scripts/.sessions/
 .cursor
 .cursorrules
 

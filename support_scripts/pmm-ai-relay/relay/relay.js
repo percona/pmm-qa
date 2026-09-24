@@ -29,7 +29,7 @@ const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runne
 // leaves this box). An LKE cluster has no on-box self-destruct timer, so the reaper
 // below is its backstop — it deletes any `pmm-qa-ephemeral` cluster past the
 // `expires-<epoch>` tag the create script stamps on it.
-const HA_DIR = process.env.HA_DIR || "/opt/pmm-qa/.claude/skills/linode-ha-provisioning/scripts";
+const HA_DIR = process.env.HA_DIR || "/opt/pmm-qa/support_scripts/pmm-ai-relay/lke";
 const LKE_RUNS_DIR = process.env.LKE_RUNS_DIR || "/opt/pmm-ai-relay/lke-runs";
 const LKE_DEFAULT_TTL_H = Number(process.env.LKE_DEFAULT_TTL_HOURS || 24);
 const LKE_HARD_MAX_TTL_H = Number(process.env.LKE_HARD_MAX_TTL_HOURS || 48); // reaper backstop for an untagged/half-created cluster
