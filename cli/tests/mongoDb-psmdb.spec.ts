@@ -12,8 +12,6 @@ const mongoPullMetricsServiceName = 'mongo_pull_1';
 const mongoServiceName = 'mongo_service_1';
 const containerName = 'rs101';
 let adminVersion: number;
-// pmm-admin with percona/pmm#5781 (PMM-15019): --agent-env-vars on change agent and the POSIX name pattern.
-let hasChangeAgentEnvVars: boolean;
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
@@ -21,8 +19,6 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
     adminVersion = await getPmmAdminMinorVersion(containerName);
-    const changeAgentHelp = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter --help`);
-    hasChangeAgentEnvVars = `${changeAgentHelp.stdout}${changeAgentHelp.stderr.text}`.includes('--agent-env-vars');
   });
 
   test('run pmm-admin', async ({}) => {
@@ -131,13 +127,13 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --agent-env-vars="TEST=123" --service-name=test`);
     await output.exitCodeEquals(1);
-    await output.outContains(!hasChangeAgentEnvVars
+    await output.outContains(adminVersion < 10
       ? 'invalid environment variable name: TEST=123 (must match [A-Z_][A-Z0-9_]*)'
       : 'invalid environment variable name: TEST=123 (must match [A-Za-z_][A-Za-z0-9_]*)');
   });
 
   test('PMM-T2325 - Verify --agent-env-vars can be changed on an existing mongodb_exporter with pmm-admin inventory change agent', async ({}) => {
-    test.skip(!hasChangeAgentEnvVars, 'pmm-admin inventory change agent mongodb-exporter has no --agent-env-vars (PMM-15019)');
+    test.skip(adminVersion < 10, 'This test is relevant for pmm-client version 3.10.0 and above');
 
     const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
@@ -178,7 +174,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   });
 
   test('PMM-T2326 - Verify validation of --agent-env-vars for pmm-admin inventory change agent mongodb-exporter', async ({}) => {
-    test.skip(!hasChangeAgentEnvVars, 'pmm-admin inventory change agent mongodb-exporter has no --agent-env-vars (PMM-15019)');
+    test.skip(adminVersion < 10, 'This test is relevant for pmm-client version 3.10.0 and above');
 
     const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort);
