@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 import { waitForApiReady, waitForPmmServerToBeReady } from '@helpers/custom-assertions';

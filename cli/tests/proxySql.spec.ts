@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as zipHelper from '@helpers/zip-helper';
 import { getPmmAdminMinorVersion } from '@root/helpers/pmm-admin';

@@ -28,7 +28,8 @@ export const removeMongoService = async (containerName: string, serviceName: str
 
 export const getPmmAdminVersion = async (containerName: string): Promise<string> => {
   return test.step('get pmm admin full version', async () => {
-    const output: { Version: string } = JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin --version --json`)).stdout);
+    const prefix = containerName ? `docker exec ${containerName} ` : '';
+    const output: { Version: string } = JSON.parse((await cli.exec(`${prefix}pmm-admin --version --json`)).stdout);
 
     return output.Version.split('-')[0];
   });

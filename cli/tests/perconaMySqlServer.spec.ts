@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion, removeMySQLService } from '@root/helpers/pmm-admin';
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';

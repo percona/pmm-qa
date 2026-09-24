@@ -1,9 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import {
-  addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, getPmmAdminVersion, removeMongoService,
-} from '@root/helpers/pmm-admin';
-import { minPmmClientVersion, versionBelow } from '@helpers/versionGates';
+import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
 
@@ -15,21 +12,16 @@ const mongoPullMetricsServiceName = 'mongo_pull_1';
 const mongoServiceName = 'mongo_service_1';
 const containerName = 'rs101';
 let adminVersion: number;
-let adminFullVersion: string;
 const servicesToRemove: string[] = [];
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
+  test.use({ pmmClientContainer: containerName });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
     adminVersion = await getPmmAdminMinorVersion(containerName);
-    adminFullVersion = await getPmmAdminVersion(containerName);
-  });
-
-  test.beforeEach(async ({}, testInfo) => {
-    const minVersion = minPmmClientVersion[testInfo.title.match(/PMM-T\d+/)?.[0] ?? ''];
-    test.skip(!!minVersion && versionBelow(adminFullVersion, minVersion), `This test is relevant for pmm-client version ${minVersion} and above`);
   });
 
   test.afterEach(async ({}) => {
