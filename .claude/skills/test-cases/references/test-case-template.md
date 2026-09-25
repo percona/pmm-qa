@@ -29,7 +29,7 @@ Every draft carries this block after Findings, one line each; `check_draft.py` f
 
 ```markdown
 Checked:
-- Expected results: <each How to test step, criterion, or comment with an expected result, and the case, cited assertion, or drop that answers it; any bound kept verbatim>
+- Expected results: <each How to test step, criterion, or comment with an expected result, and the case, cited assertion, or drop that answers it; any bound kept verbatim. A row an existing PMM-T case or pmm-qa test already asserts, bound included, cites that key and adds no case>
 - Routes: <for an auth, proxy, or filter change, each nginx location, Grafana route, and direct path to the protected component, and its case or drop>
 - Consumers: <for each accepted write, where the case reads the consumer and which fields it asserts unchanged>
 - Contradicted tests: <each PMM-T key or pmm-qa test whose expectation a Finding contradicts>
