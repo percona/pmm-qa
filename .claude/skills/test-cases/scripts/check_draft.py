@@ -52,10 +52,17 @@ def check(text):
     if not blocks and not any(re.match(r"^Covered by: .+ → .+$", ln) for ln in lines):
         issues.append({"case": None, "line": None, "check": "coverage", "detail": "zero-case draft has no Covered by line"})
 
+    start = next((i for i, ln in enumerate(lines) if ln.strip() == "Checked:"), None)
+    checked = []
+    if start is not None:
+        for ln in lines[start + 1:]:
+            if not ln.startswith("- "):
+                break
+            checked.append(ln)
     for label in CHECKED:
-        if not any(re.match(rf"^- {label}: \S", ln) for ln in lines):
+        if not any(re.match(rf"^- {label}: \S", ln) for ln in checked):
             issues.append({"case": None, "line": None, "check": "checked",
-                           "detail": f"Checked block has no '- {label}: …' line"})
+                           "detail": f"no '- {label}: …' line directly under a 'Checked:' line"})
 
     for n, block in blocks.items():
         body = block["lines"]

@@ -55,9 +55,11 @@ R jira comment "$(jq -n --arg i PMM-15188 --arg b 'h2. QA results' \
   '{issue:$i,body:$b}')"
 ```
 
-`search` returns `{issues:[...], total:N}` directly, not under `body`. Inspect
-the unfiltered payload before trusting an empty filtered result. It does not
-paginate: beyond 100 results, order by `created ASC, key ASC`, advance with
+`search` returns Jira's enhanced-search payload, `{issues:[...], nextPageToken}`,
+directly, not under `body`; `total` may be absent. Inspect the unfiltered payload
+before trusting an empty filtered result. Beyond 100 results, pass the previous
+response's `nextPageToken` in the next body until none comes back. On a relay
+not yet redeployed with token forwarding, order by `created ASC, key ASC`, advance with
 `created >= <last created>`, exclude collected keys, deduplicate by key, and
 fail if a page adds none. Jira's `created` value is minute-precision, so the key
 exclusion is required.

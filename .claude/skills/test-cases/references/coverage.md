@@ -4,7 +4,7 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 
 ## Search order
 
-1. Search `origin/main`, not only this checkout: the working branch can lag it by many commits, including CI restructures. `git fetch origin main` first, then read files with `git show origin/main:<path>` and list them with `git ls-tree -r --name-only origin/main`.
+1. Search `origin/main`, not only this checkout: the working branch can lag it by many commits, including CI restructures. `git fetch origin main` first, then read files with `git show origin/main:<path>` and list them with `git ls-tree -r --name-only origin/main`. For a ticket tied to one feature build, also search the pmm-qa commit that build ran, since it can differ from `origin/main`.
 2. Run `git rev-parse --is-shallow-repository`. Only when it prints `false`, run `git log --all --grep PMM-XXXX` because coverage may have landed with the fix. In a shallow clone skip the log search — its empty result is not evidence of absence, so cite only the tree searches.
 3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value in the fetched tree, not the checkout: `git grep -l <term> origin/main` lists matching files, including CI lanes under `.github/`; then read only the matching lines of the likely hits (`git grep -n <term> origin/main -- <path>`, or a bounded `sed -n` range of `git show origin/main:<path>`). Never print an unbounded search or a whole large file.
 4. Search the feature or page name only after identifiers.

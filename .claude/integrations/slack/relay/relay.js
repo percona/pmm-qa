@@ -680,7 +680,9 @@ async function brokerJira(action, m, by) {
       const fields = (Array.isArray(m.fields) ? m.fields
         : String(m.fields || "summary,status,issuetype,updated").split(","))
         .map((s) => String(s).trim()).filter(Boolean);
-      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify({ jql, maxResults, fields }) });
+      const body = { jql, maxResults, fields };
+      if (m.nextPageToken) body.nextPageToken = String(m.nextPageToken);
+      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify(body) });
     } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
       r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);

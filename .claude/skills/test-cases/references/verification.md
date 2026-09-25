@@ -33,7 +33,7 @@ Confirm effective intervals from the running build or generated configuration. P
 - Absence: trigger one complete opportunity for the unwanted event, then show it absent from bounded evidence; never claim open-ended absence.
 - Deletion: address the immutable id and require not-found after reconciliation; absence by mutable name, label, or tag is insufficient.
 
-Do not substitute adjacent layers: registration is not a running agent, HTTP success is not resulting state, a fresh metric is not a rendered dashboard, and a rendered dashboard is not persistence. An absence query counts only after that exact query has returned a non-empty result on a known-populated environment.
+Do not substitute adjacent layers: registration is not a running agent, HTTP success is not resulting state, a fresh metric is not a rendered dashboard, and a rendered dashboard is not persistence. An absence query counts only after that exact query has returned a non-empty result on a separate known-populated control; the environment under test need not contain the prohibited event.
 
 ## Self-written detectors
 

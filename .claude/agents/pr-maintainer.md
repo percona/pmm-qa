@@ -34,10 +34,10 @@ Judge "blocked" by *understanding* the PR, not by matching a fixed phrase — th
 
 ## 3. Post the digest
 
-Compose one compact message and send it through the shared [`relay` skill](../skills/relay/SKILL.md) (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment; `ACTOR` is your roster-checked `gh api user` login):
+Compose one compact message and send it through the shared [`relay` skill](../skills/relay/SKILL.md) (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment; `ACTOR` is your roster-checked GitHub login from GitHub MCP `get_me`, since Routine sessions have no `gh`):
 
 ```bash
-export ACTOR="$(gh api user --jq .login)"
+export ACTOR=<get_me .login>
 DIGEST=$(cat <<'TXT'
 <the digest>
 TXT
