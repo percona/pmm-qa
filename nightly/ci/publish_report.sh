@@ -28,6 +28,7 @@ trap 'rm -rf "$wt"' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
 git clone --quiet --depth 1 --branch "$PAGES_BRANCH" "$remote" "$wt"
 
+# Called from `if`, so set -e is off inside: every step returns its own failure.
 publish() {
   local dir="$wt/nightly" out
   mkdir -p "$dir/reports" "$dir/data"
@@ -43,13 +44,13 @@ publish() {
         | map(. as $c | select(any($inv[]; .by == $c.by and ((.suites // []) - ($c.suites // []) | length) < (.suites // [] | length)) | not))
       ) as $claims |
       ($old * $new) + {investigations: $inv, claims: $claims}' \
-      "$out" "$RUN_JSON" > "$out.new"
-    mv "$out.new" "$out"
+      "$out" "$RUN_JSON" > "$out.new" || return 1
+    mv "$out.new" "$out" || return 1
   else
-    cp "$RUN_JSON" "$out"
+    cp "$RUN_JSON" "$out" || return 1
   fi
-  jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json"
-  cp -R "$PAGE_SRC"/. "$dir/"
+  jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json" || return 1
+  cp -R "$PAGE_SRC"/. "$dir/" || return 1
   # The site landing page replaces the root only once performance lives under
   # performance/; until then the root is still the performance dashboard.
   if [ -d "$wt/performance" ] && [ -f "$LANDING_SRC" ]; then
@@ -61,8 +62,8 @@ publish() {
   git -C "$wt" \
     -c user.name="${GIT_AUTHOR_NAME:-pmm-nightly-bot}" \
     -c user.email="${GIT_AUTHOR_EMAIL:-pmm-nightly-bot@users.noreply.github.com}" \
-    commit --quiet -m "nightly: publish report ${run_id}"
-  git -C "$wt" push --quiet origin "$PAGES_BRANCH"
+    commit --quiet -m "nightly: publish report ${run_id}" || return 1
+  git -C "$wt" push --quiet origin "$PAGES_BRANCH" || return 1
   echo "published nightly/reports/${run_id}.json to ${PAGES_BRANCH}"
 }
 
