@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@shard-psmdb' }, () => {

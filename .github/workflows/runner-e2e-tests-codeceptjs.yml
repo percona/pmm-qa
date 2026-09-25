@@ -77,6 +77,7 @@ on:
       sha:
         required: false
         type: string
+
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -235,6 +236,26 @@ jobs:
           mkdir -p /tmp/backup_data
           chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Collect pmm-framework setup logs
+        id: framework_logs
+        if: ${{ failure() || cancelled() }}
+        continue-on-error: true
+        env:
+          ARTIFACT_LABEL: ${{ env.TAGS_FOR_TESTS }}
+        run: |
+          script=pmm-qa/.github/scripts/collect-framework-logs.sh
+          # Older pmm-qa refs checked out by callers predate the script.
+          [[ -f $script ]] || { echo "$script is not on this pmm-qa ref"; exit 0; }
+          bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
+
+      - name: Upload pmm-framework setup logs
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.framework_logs.outputs.artifact_name }}
+          path: framework-logs
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

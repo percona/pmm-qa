@@ -34,6 +34,14 @@ on:
         description: "example: @settings-fb"
         required: true
         type: string
+      arch:
+        description: "package for enabling repo"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -66,12 +74,16 @@ on:
       sha:
         required: false
         type: string
+      arch:
+        type: string
+        required: false
+        default: amd64
 
 jobs:
   ui-tests-e2e:
     name: "podman e2e tests: ${{ inputs.pmm_test_flag || '@settings-fb' }}"
     #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.arch == 'amd64' && 'ubuntu-22.04' || 'ubuntu-22.04-arm' }}
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
@@ -230,6 +242,26 @@ jobs:
           HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
           export HOST_IP
           ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Collect pmm-framework setup logs
+        id: framework_logs
+        if: ${{ failure() || cancelled() }}
+        continue-on-error: true
+        env:
+          ARTIFACT_LABEL: ${{ env.PMM_TEST_FLAG }}
+        run: |
+          script=pmm-qa/.github/scripts/collect-framework-logs.sh
+          # Older pmm-qa refs checked out by callers predate the script.
+          [[ -f $script ]] || { echo "$script is not on this pmm-qa ref"; exit 0; }
+          bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
+
+      - name: Upload pmm-framework setup logs
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.framework_logs.outputs.artifact_name }}
+          path: framework-logs
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-qa/e2e_tests
