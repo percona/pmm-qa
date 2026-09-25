@@ -14,11 +14,6 @@ Use this format for every proposed case.
 - Before finishing, read the Step and Expected columns without the Data column, as a tester new to the feature would. If a row cannot be followed that way, or needs the Catches line to make sense, rewrite it.
 - Omit the `Precondition` and `Cleanup` lines when unnecessary; do not write `None` or `N/A`.
 - When a case needs an environment other than its lane's default — another deployment, distribution, setting, or topology — say so in plain words in the Precondition or in its own Step; the exact command goes in Data.
-- Capture the identifier of any state the case will modify in its first step, and address that state by the captured identifier afterwards.
-- Give the first step an assertion that the precondition actually holds.
-- Write every wait as the event waited for, never as a duration; bound an absence assertion with an observable event as well.
-- Assert a prohibited side effect only when the failure model names one, next to the intended result, in its own row when it has its own failure cause.
-- When the case changes persistent or shared state, end with a `Cleanup` line naming what is restored; write it so a failed step cannot skip it. A read-only case has none.
 - Use only `Step`, `Data` and `Expected` columns.
 - Start every table cell with `- `; publishing strips it, so it never reaches Zephyr.
 - Use short sentence fragments.
@@ -27,20 +22,6 @@ Use this format for every proposed case.
 - Keep the fewest useful rows.
 - Merge navigation, input, and submission when they lead to one result.
 - Separate different assertions, failure causes, asynchronous boundaries, or verification layers.
-
-## Zephyr mapping
-
-| Template | Zephyr field |
-| --- | --- |
-| Title | `name` |
-| Priority | `priorityName` |
-| Needs automation / Automation candidate — infra gap / Manual | `statusName` — `Needs Automation` / `Needs Automation` with label `infra-gap` / `Manual Only`; `Draft` for any case whose expected result waits on an open Finding. The automating test later flips it to `Automated` |
-| Catches / Evidence, then the lane, blocker, or manual reason | `objective` |
-| Precondition | `precondition` |
-| Step | step `description`, leading `- ` stripped |
-| Data | step `testData`, leading `- ` stripped; unset when the cell is empty |
-| Expected | step `expectedResult`, leading `- ` stripped |
-| Cleanup, when present | final step, no expected result; in automation it belongs in a fixture teardown, not a step |
 
 ## Template
 

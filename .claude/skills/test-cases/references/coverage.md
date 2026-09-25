@@ -9,7 +9,7 @@ Coverage is an assertion that would fail on the candidate defect, not a matching
 3. Search the exact API field, endpoint, CLI flag, metric, configuration key, or persisted value in the fetched tree, not the checkout: `git grep -l <term> origin/main` lists matching files, including CI lanes under `.github/`; then read only the matching lines of the likely hits (`git grep -n <term> origin/main -- <path>`, or a bounded `sed -n` range of `git show origin/main:<path>`). Never print an unbounded search or a whole large file.
 4. Search the feature or page name only after identifiers.
 5. Read the full setup and assertions of every plausible hit.
-6. Search Zephyr with `scripts/relay.sh zephyr search`, `list`, and `get`.
+6. Search Zephyr through the `relay` skill's Zephyr `search`, `list`, and `get` operations.
 
 Treat broad search results as a candidate pool. Narrow terms before classifying coverage. A skipped scenario, commented table, or loop over an empty data set is not coverage.
 
@@ -37,20 +37,6 @@ An assertion that fails on the defect only under data or timing the test does no
 Classify an existing test as `Extend` only when it would pass on a defect the failure model names. A test that already fails on the broken build is `Covered`, even when it could assert more: checks for defects nobody named are not an extension.
 
 A Zephyr `Automated` status is not coverage. Find the test that carries the key on `origin/main` and read its assertions; recent cases are routinely marked Automated before, or without, a merged test.
-
-## PMM suites
-
-Starting points only — confirm each against `AGENTS.md` and `origin/main` before citing or placing, because suites move during the CodeceptJS → Playwright migration.
-
-| Behavior | Search/placement | Notes |
-|---|---|---|
-| UI, API, dashboard, inventory, QAN | `e2e_tests/tests/` | Active Playwright suite; preferred for new UI and API coverage |
-| HA and the pmm-ha chart | `e2e_tests/tests/ha/` | Runs in `ha-e2e-tests.yml` |
-| `pmm-admin` and `pmm-agent` | `cli/tests/` | Active Playwright-runner CLI suite; `e2e_tests/tests/cli/` holds a few pmm-agent runtime scenarios |
-| Legacy UI | `codeceptjs-e2e/tests/` | Still holds most legacy keys; match both `*_test.js` and `*_migrated.js`. Extend an existing flow only; new UI coverage belongs in `e2e_tests/` |
-| Package install or upgrade | `package_tests/` | Ansible cases; keys may appear in header comments |
-| Helm chart rendering | `k8s/helm-test.bats` | BATS, run by `helm-tests.yml`; no established Zephyr-key title convention |
-| Post-upgrade checks | `support_scripts/check_upgrade.py` | Driven from Jenkins upgrade jobs, not by any pmm-qa workflow |
 
 For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tests/api/`, and endpoint constants in `e2e_tests/helpers/apiEndpoints.ts`. An endpoint constant proves availability, not coverage; find a test that calls it and asserts the result.
 

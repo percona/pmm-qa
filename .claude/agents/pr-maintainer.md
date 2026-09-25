@@ -34,18 +34,16 @@ Judge "blocked" by *understanding* the PR, not by matching a fixed phrase — th
 
 ## 3. Post the digest
 
-Compose one compact message and POST it to the relay's `/slack/announce` endpoint (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment; `X-Actor` (your `gh api user` login) is your identity, roster-checked):
+Compose one compact message and send it through the shared [`relay` skill](../skills/relay/SKILL.md) (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment; `ACTOR` is your roster-checked `gh api user` login):
 
 ```bash
-curl -sS --fail-with-body --connect-timeout 10 --max-time 30 -X POST https://139-162-176-43.ip.linodeusercontent.com/slack/announce \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
-  -H "Content-Type: application/json" \
-  -d @- <<JSON
-{"channel":"#qa-automation","text":$(jq -Rs . <<'TXT'
+export ACTOR="$(gh api user --jq .login)"
+DIGEST=$(cat <<'TXT'
 <the digest>
 TXT
-)}
-JSON
+)
+R slack announce \
+  "$(jq -n --arg channel '#qa-automation' --arg text "$DIGEST" '{channel:$channel,text:$text}')"
 ```
 
 Format: a title line with the date, then one section per **non-empty** bucket (emoji + count), each PR as `#<n> <title> — <one-line status>`. Lead with the buckets that need a human (✅ Ready, 🔓 Unblocked, ❓ Needs a human), then 👀 / 🔧 / ⏳. Omit empty buckets. **No @-mentions.** If nothing is open, post a one-line "all clear".

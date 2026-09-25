@@ -97,18 +97,4 @@ Record the list in the notes. Choose an oracle that differs between the broken a
 
 ## 4. Generate failure hypotheses
 
-For each changed path or invariant, ask how the implementation could violate it. Use [failure-catalogue.md](failure-catalogue.md) as the single failure catalogue and select only mechanisms reachable from the current path.
-
-## 5. Choose where a defect becomes meaningful
-
-Assert at the layer where the defect matters — [test-level-selection.md](test-level-selection.md) picks the layer:
-
-- validation defect -> API rejection + unchanged persisted state;
-- propagation defect -> source of truth + final consumer;
-- reconnect defect -> fresh metric/output after bounded reconnect cycle;
-- aggregation defect -> panel/query result with two controlled entities;
-- authorization defect -> API status + unchanged state.
-
-A UI badge alone is usually insufficient when the owning state is server-side.
-
-Apply the strong-case gate in `strong-case-gate.md` after candidate generation.
+For each changed path or invariant, ask how the implementation could violate it. Use the `failure-catalogue.md` loaded from `SKILL.md` as the single failure catalogue and select only mechanisms reachable from the current path.

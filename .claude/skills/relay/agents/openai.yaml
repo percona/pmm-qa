@@ -1,0 +1,4 @@
+interface:
+  display_name: "Relay Broker"
+  short_description: "Call shared PMM Jira, Zephyr, Linode, Slack relay"
+  default_prompt: "Use $relay to call the appropriate PMM relay service safely."

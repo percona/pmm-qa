@@ -11,7 +11,7 @@ description: >-
 
 Every test is named after its Zephyr test case key. If the case you are
 automating already has one, use it. If you are writing a genuinely new test,
-`create` a case with the `zephyr` skill (status `Automated`) and use the key it
+`create` a case with the `test-cases` skill (status `Automated`) and use the key it
 returns — don't search for an existing case first, and never invent a key. The
 title is `PMM-Txxxx - description @tag`, or `PMM-Txxxx + PMM-Tyyyy - ...` when one
 test covers several cases.

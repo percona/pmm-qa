@@ -68,10 +68,6 @@ One entry per mechanism: how the product could be wrong, how to probe it, and th
 - **Grouping collapses entities:** panels double-count or group by the wrong label. Seed two entities sharing the default grouping key. History: PMM-15184, PMM-15091, PMM-15118, PMM-15114, PMM-15174.
 - **Filter omits a topology:** All or multi-value filters drop standalone or asynchronous nodes. Exercise the non-default topology with several values selected. History: PMM-15240, PMM-13932, PMM-14938.
 
-## Observation rule
-
-Assert at the layer where the defect becomes meaningful. For asynchronous behavior, find the product constant, such as scrape interval, retry budget, evaluation interval, or lookback, and set a bounded window that crosses it. A shorter window passes on the broken build.
-
 ## Fresh history
 
 For each inventory entry whose path touches persisted state, monitoring data flow, agents or exporters, permissions, lifecycle or retry, upgrade or version gates, HA or chart topology, dashboards or QAN, or a shared API, schema, or configuration, run one Jira search built from that entry's own identifiers: the component plus the field, flag, key, metric, state transition, or user-visible failure it names. Record the query and its hits in the notes beside the entry. Keep at most three bugs whose mechanism the current path can reach, and add each as a hypothesis. Whatever the depth tier, also run one search on the ticket's own user-visible symptom: a fix that regresses tends to come back as the same symptom under a new key, and that earlier ticket is the strongest reason to automate the check. Same component or same page alone is not a match. When the search is unavailable or inconclusive, write that in the notes and continue; absence of history is not evidence of safety.

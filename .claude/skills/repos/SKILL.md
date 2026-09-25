@@ -208,11 +208,11 @@ Address the repo with `git -C <repo path>`: the shell working directory is not g
 
 ## Find PRs by ticket
 
-The ticket's **Development panel** already lists its linked PRs (see `jira` skill) —
-that's the authoritative source, use it first. Only if it's absent, list + filter via
-the GitHub MCP: `search_pull_requests` with a query like `repo:percona/pmm PMM-14915`,
-or `list_pull_requests` (state `all`) and match the title/`head.ref`. Read the diff
-with `pull_request_read` (`get_diff`). See the `git-diff` skill for the full recipes.
+The relay cannot read Jira's Development panel. Take PR URLs from ticket text when
+present; otherwise use GitHub MCP `search_pull_requests` with a query such as
+`repo:percona/pmm PMM-14915`, or `list_pull_requests` (state `all`) and match the
+title/`head.ref`. Read the diff with `pull_request_read` (`get_diff`). See the
+`git-diff` skill for the full recipes.
 
 ## pmm-submodules PR
 

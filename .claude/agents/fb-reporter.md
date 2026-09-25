@@ -19,7 +19,7 @@ Needs from whoever handed this to you: the pmm-submodules PR number and the Jira
 | Skill | Path |
 | ------- | ------ |
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
-| Jira field update, attachments | `.claude/skills/jira/SKILL.md` |
+| Jira field update, attachments | `.claude/skills/relay/SKILL.md` + `references/jira.md` |
 | UI screenshot | `.claude/skills/ui-evidence/SKILL.md` |
 | Repo map | `.claude/skills/repos/SKILL.md` |
 
@@ -35,7 +35,7 @@ Needs from whoever handed this to you: the pmm-submodules PR number and the Jira
    fi
    ```
 
-2. **All green** → screenshot the FB Tests Actions run (not the PR checks page, local Playwright/Chromium per `ui-evidence`). Then, both via the `jira` skill's curl-first REST recipes (the Atlassian connector stalls routine runs on the #61015 approval prompt): (a) upload the PNG to the ticket with the attachment `POST`, and (b) `PUT` `customfield_10492` with the run URL + `!fb-test-<PR>-checks.png|width=900!` wiki markup so it renders inline — uploading alone does **not** populate the field. See `fb-tests` for the exact two calls. Done.
+2. **All green** → screenshot the FB Tests Actions run (not the PR checks page, local Playwright/Chromium per `ui-evidence`). Then use the relay Jira reference to (a) upload the PNG with `attach`, and (b) set `customfield_10492` with `field`, including the run URL + `!fb-test-<PR>-checks.png|width=900!` wiki markup so it renders inline — uploading alone does **not** populate the field. See `fb-tests` for the exact payloads. Done.
 3. **Any red** → this might be flakiness, not a real failure:
    - Identify the failed job(s) and their Actions run ID.
    - Re-run only the failed jobs (not the whole matrix) with the GitHub MCP `actions_run_trigger` (`method: rerun_failed_jobs`, owner `Percona-Lab`, repo `pmm-submodules`, `run_id: <run-id>`). Routine sessions have no `gh`; `gh run rerun <run-id> --failed -R Percona-Lab/pmm-submodules` is a fallback only where `gh` exists.

@@ -1,26 +1,35 @@
 ---
 name: test-cases
-description: Design evidence-backed test cases for a PMM Jira ticket, or audit test coverage of an existing PMM feature. Use when asked what to test or verify for PMM-XXXXX, for a test plan or QA plan, where Zephyr or pmm-qa automation coverage has gaps, or whether proposed cases are sufficient, even when the user only pastes a ticket key or pull request and asks how to check it. Produces a review draft first. Only after the user approves it, creates the cases in Zephyr and links them to the ticket. Reads Jira but never writes it. Never executes tests or provisions environments. Not for getting a PMM-T key for a test already being written; use the zephyr skill for that.
-compatibility: Requires the sibling jira, git-diff, zephyr and test-scope skills, plus git, curl, jq and python3 in a pmm-qa checkout, and RELAY_KEY for the Zephyr publishing step.
+description: Design and publish evidence-backed PMM test cases, audit pmm-qa and Zephyr coverage, select QA deployment and regression scope, define verification requirements for cases, and create, look up, or update PMM-T IDs. Use for test plans, what or how to test, coverage gaps, manual QA scope, Zephyr publishing, or standalone PMM-T operations. Not for executing QA or investigating failures; use test-runner or investigator, which load references/verification.md directly. Not for Jira ticket operations; use relay. Not for screenshots or recordings; use ui-evidence.
 ---
 
 # Test cases
 
-Turn a PMM ticket or existing feature into the few test cases most likely to catch meaningful defects.
+Own PMM test-case design, scope, verification quality, and Zephyr test-case workflow. Use the separate `relay` skill only for broker transport and payload schemas.
 
 Do not generate tests from category checklists alone. First understand the change, trace its blast radius, identify invariants and plausible failure mechanisms, choose the appropriate test-design technique, then filter against existing coverage.
+
+## Route the request
+
+Load only the references required by the request:
+
+- Full test-case design or coverage audit: follow the workflow below.
+- Scope or “how should this be tested?” only: read [references/scope.md](references/scope.md) and, when HA is plausible, [references/ha-scope.md](references/ha-scope.md).
+- Direct API, CLI, log, metric, persistence, lifecycle, or absence verification: read [references/verification.md](references/verification.md) after scope is known.
+- Standalone PMM-T creation, lookup, status, or steps: read [references/zephyr.md](references/zephyr.md), then use the `relay` skill's Zephyr reference. Do not run the full design workflow for a test already being automated.
+- Publishing an approved design: read [references/publish.md](references/publish.md), [references/zephyr.md](references/zephyr.md), and the `relay` skill's Zephyr reference.
 
 ## Evidence sources
 
 Load no reference up front. Read it only when its workflow step applies:
 
-- Ticket context and history searches: `scripts/relay.sh jira`
+- Ticket context and history searches: the `relay` skill's Jira reference
 - Linked implementation: the `git-diff` skill
-- Existing manual cases: `scripts/relay.sh zephyr`
-- Environment dimensions when relevant: the `test-scope` skill
+- Zephyr lifecycle and title rules: [references/zephyr.md](references/zephyr.md)
+- Deployment, dimension, and regression scope: [references/scope.md](references/scope.md) and [references/ha-scope.md](references/ha-scope.md) when applicable
+- Direct evidence depth: [references/verification.md](references/verification.md) when a claim is asynchronous, persistent, lifecycle-dependent, or otherwise indirect
 - Change impact and failure modeling: [references/change-impact-and-failure-model.md](references/change-impact-and-failure-model.md)
 - Candidate generation and test-design techniques: [references/scenario-selection.md](references/scenario-selection.md)
-- Which layer each assertion belongs at: [references/test-level-selection.md](references/test-level-selection.md)
 - Failure catalogue with PMM history, read with the model above: [references/failure-catalogue.md](references/failure-catalogue.md)
 - One worked example, only when the model or case boundaries remain unclear: [references/examples.md](references/examples.md)
 - Coverage search and suite placement: [references/coverage.md](references/coverage.md)
@@ -31,7 +40,7 @@ Load no reference up front. Read it only when its workflow step applies:
 
 The references above are prompts for reasoning, not quotas. A technique, historical bug, or risk category never justifies a test by itself.
 
-Scripts, run from the skill directory: `scripts/relay.sh` reads Jira and reads or writes Zephyr, trimmed to the fields this skill needs (`--help` lists the calls and setup; open the `jira` or `zephyr` skill only for a call it lacks); `scripts/check_draft.py <draft.md>` checks a draft against the template (step 9); `scripts/check_publish_plan.py <plan.json>` checks a publish plan before any Zephyr write (step 10). They print JSON and exit non-zero on a finding or error.
+Scripts, run from the skill directory: `scripts/check_draft.py <draft.md>` checks a draft against the template (step 9); `scripts/check_publish_plan.py <plan.json>` checks a publish plan before any Zephyr write (step 10). They print JSON and exit non-zero on a finding or error.
 
 ## Gotchas
 
@@ -39,9 +48,6 @@ Facts about PMM's environment that a reasonable first attempt gets wrong:
 
 - A pull request's own description or docs about how a third-party component behaves — VictoriaMetrics retention, ClickHouse partitions, Grafana routing — are the claim under test, not a contract. One such claim once dropped a ticket's acceptance case; the component's own docs said the opposite.
 - Do not read or cite product-repository tests — unit tests, percona/pmm `api-tests`, exporter CI. Only pmm-qa tests and Zephyr count as coverage, so every defect the draft names gets a pmm-qa case or an explicit drop reason.
-- A Zephyr case marked `Automated` may have no test on `origin/main`. Only the test's assertions are coverage.
-- This checkout can lag `origin/main` by many commits, including CI restructures. Read workflows and tests from `origin/main`.
-- A nightly shard that provisions databases may select no tests. It is not a lane.
 - The implementation can ship under another ticket key named in the ticket's links or comments.
 - Review threads of repositories outside this session's scope return 403; read the commit sequence instead.
 - An nginx `location` that sets any `proxy_set_header` inherits none from the server level, so a server-level header overwrite does not cover it.
@@ -55,7 +61,7 @@ Choose the depth once the step 2 inventory exists, record it and its trigger in 
 - **Focused** when the change is local to one component and touches no persisted state, permission, topology, or version gate — a text, link, or style change, or a local fix whose output other components only read, without the change altering how they read it.
 - **Standard** otherwise.
 
-Focused skips the per-entry history search (step 4 keeps its one symptom search), `test-scope`, and the worked example, and replaces the step 9 subagent with a self-check: every `Covered` row states what its assertion sees on the base branch. Deep adds `test-scope`, the route enumeration in [change-impact-and-failure-model.md](references/change-impact-and-failure-model.md) for any proxy or auth change, and always runs the step 9 subagent.
+Focused skips the per-entry history search (step 4 keeps its one symptom search), scope references, and the worked example, and replaces the step 9 subagent with a self-check: every `Covered` row states what its assertion sees on the base branch. Deep adds the scope references, the route enumeration in [change-impact-and-failure-model.md](references/change-impact-and-failure-model.md) for any proxy or auth change, and always runs the step 9 subagent.
 
 When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. Hand the finished draft back after step 9 and skip step 10: the caller owns execution and any Zephyr writes. Step 10 runs only when a user invoked this skill directly. The workflow below assumes that direct invocation in a fresh session with nothing supplied.
 
@@ -65,7 +71,7 @@ Keep working notes in `<scratchpad>/<ticket or feature>-notes.md`, one section p
 
 ### 1. Establish the test basis
 
-For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with `scripts/relay.sh jira read` when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
+For a ticket, establish the summary, description, acceptance criteria, How to test, comments, components, labels, and fix version — from the caller's supplied ticket context, or with the `relay` skill's Jira `read` operation when none was supplied. Read How to test as a candidate induction mechanism before designing preconditions, then verify that it reaches the implementation branch under test.
 
 Take linked pull requests from the supplied ticket context. When none were supplied, read [edge-cases.md](references/edge-cases.md) for discovery.
 
@@ -130,7 +136,7 @@ For every behavior inventory entry, trace the shortest real product path:
 
 Use the reference to inspect blast radius, derive relevant invariants, and write concrete failure hypotheses that name **how** the product could be wrong. Then read [failure-catalogue.md](references/failure-catalogue.md) and add every mechanism the path can reach.
 
-At Standard and Deep depth, read the `test-scope` skill now and record its decision in the notes: the deployment mode and each extra dimension — HA, upgrade, database or version, role — with a one-line reason. A proxy or auth change also checks the HA request path. Candidates take their topology and environment from this decision; no separate dimension matrix is needed.
+At Standard and Deep depth, read [scope.md](references/scope.md) and, when applicable, [ha-scope.md](references/ha-scope.md). Record the deployment mode and each extra dimension — HA, upgrade, database or version, role — with a one-line reason. A proxy or auth change also checks the HA request path. Candidates take their topology and environment from this decision; no separate dimension matrix is needed.
 
 For every check, gate, filter, or trusted input the change adds or widens, write both directions as separate hypotheses: it fails to apply where it must (missing, skipped, bypassed, forged), and it applies where it must not (over-blocks, over-filters, errors on a legitimate caller). Each direction has its own oracle and its own case.
 
@@ -144,9 +150,9 @@ If Jira search is unavailable or remains inconclusive, report the historical che
 
 ### 5. Choose a test-design technique and build candidates
 
-Read [scenario-selection.md](references/scenario-selection.md) and [test-level-selection.md](references/test-level-selection.md).
+Read [scenario-selection.md](references/scenario-selection.md).
 
-Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. Place each at the lowest pmm-qa layer that observes its defect — API or CLI before UI. A defect no pmm-qa test can reach becomes a Finding. One case may cover several related hypotheses when they traverse the same product path and use compatible setup and verification layers; name one primary failure signal. Split independently selectable branches, environments, or oracles. Reproduce the ticket's original failure as a pmm-qa case when deterministic; see the Regression rule in scenario-selection.md.
+Choose the technique that matches the risk and generate candidates from the failure model, not from a category quota. The strong-case gate owns layer selection and the scenario reference owns candidate boundaries.
 
 ### 6. Find existing coverage
 
@@ -158,9 +164,11 @@ Use the coverage classifications and decisions in `coverage.md`; they are author
 
 ### 7. Apply the strong-case gate
 
-Read [strong-case-gate.md](references/strong-case-gate.md). Keep a candidate only when it passes all six gate conditions and the determinism rules that apply to it; mark it Manual, move its assertion to another layer, or drop it otherwise.
+Read and apply [strong-case-gate.md](references/strong-case-gate.md).
 
 ### 8. Rank and write
+
+Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case.
 
 Assign priority from failure impact, not ticket priority:
 
@@ -168,23 +176,9 @@ Assign priority from failure impact, not ticket priority:
 - **Normal:** meaningful user-visible failure with a workaround;
 - **Low:** cheap supporting coverage that should usually be merged into a stronger case.
 
-Write related actions and assertions as one flow. Set state through APIs or fixtures when UI setup is not the behavior under test. Write each Step as the action a person performs, at the layer a user of the feature uses — UI for UI behavior, `pmm-admin` for CLI behavior, the API only when the API is the contract under test. Even then the Step says what the person does in product words; the exact command, path, header, query, or value goes in Data. A Zephyr case is read by people who did not write it, so it has to make sense without the Data column.
-
-Then mark each case `Needs automation`, `Automation candidate — infra gap`, or `Manual`. Automation is a standing maintenance cost, so it is the exception, not the reward for a good case.
-
-Mark `Needs automation` only when all of these hold:
-
-- the setup and the oracle are deterministic, with no timing race and no dependence on a restart, upgrade, or other multi-minute wait;
-- it runs in the cheapest environment that can host it, and you can name the workflow file and job or shard that already provisions its preconditions;
-- existing helpers and page objects already reach the setup and the oracle, or the gap is one small helper.
-
-Mark `Automation candidate — infra gap` when the case is deterministic and worth automating but no lane runs its preconditions, or it needs more than one small helper; name the missing lane or helper. "No lane provisions this" is a claim about `.github/workflows/` on `origin/main`: search it for each required service or tool and record the search in the notes before making it.
-
-Mark `Manual` otherwise, and say why in one clause. The usual reasons: it needs an expensive environment (HA/LKE) only to re-prove a mechanism an automated case already proves; or it depends on a race, a restart, or wall-clock waiting. A check that confirms this ticket once, and that no later change could regress, is not a case: it belongs in the ticket's own QA run, not in Zephyr. The reason and the lane travel into Zephyr with the case.
+Then use `coverage.md`'s execution-reality rules to mark each case `Needs automation`, `Automation candidate — infra gap`, or `Manual` and record its lane or reason.
 
 ### 9. Produce the review draft and wait for approval
-
-Read and follow [test-case-template.md](references/test-case-template.md) for every proposed case.
 
 Before writing, check the notes: every inventory entry has a ledger row; every hypothesis resolves to a case, a cited assertion, or a drop reason; every `Needs automation` names its lane and every infra gap its blocker; every implementation Evidence names a location. After writing, run `python3 scripts/check_draft.py <draft>` and fix what it reports until it passes, then read each case without its Data column. Then, at Standard and Deep depth, give the diff paths and the notes file, not the draft, to one subagent and ask it for hypotheses the notes miss and for ledger citations that would not fail on the named defect. Wait for its report; it is an input to the draft, not a parallel task. When this session cannot start a subagent, make the same review a separate adversarial pass over the notes before finalizing, and say in the draft that it was a self-review. Add what survives the gate and record the rest as drops. A zero-case draft needs this review most: its every claim is a coverage citation.
 

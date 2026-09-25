@@ -41,7 +41,7 @@
   },
   {
     "query": "I'm writing a playwright test for the RTA filter, can you get me a PMM-T key for it",
-    "should_trigger": false
+    "should_trigger": true
   },
   {
     "query": "run QA on PMM-15379 on a linode box and post the results to jira",
@@ -57,7 +57,7 @@
   },
   {
     "query": "what deployment does PMM-14787 need, HA or plain docker?",
-    "should_trigger": false
+    "should_trigger": true
   },
   {
     "query": "automate PMM-T2295 in the HA suite",
@@ -65,7 +65,7 @@
   },
   {
     "query": "mark PMM-T2290 as deprecated in zephyr",
-    "should_trigger": false
+    "should_trigger": true
   },
   {
     "query": "the FB tests on pmm-submodules PR 4489 failed, which job?",

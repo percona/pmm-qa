@@ -18,7 +18,7 @@ only where `gh` exists — and even there, global search (`gh search`) and
 GraphQL-backed commands (`gh pr diff/view/list`) return HTTP 403, so never use those.
 
 ```bash
-# 1. Get the PR number from the ticket's Development panel (jira skill) — that's
+# 1. Get the PR number from the ticket's Development panel (relay Jira reference) — that's
 #    the authoritative link. Only if it's missing, list + filter by key REST-side:
 gh api "repos/percona/pmm/pulls?state=all&per_page=100" \
   --jq '.[] | select((.title + " " + .head.ref) | test("<JIRA_KEY>")) | {number, title, url: .html_url}'

@@ -102,11 +102,11 @@ If the page renders blank, the repo is private and no GitHub session is loaded i
 
 ## Update Jira
 
-**Use the `jira` skill's curl-first REST recipes for all Jira writes** (reads, comments, attachments, field updates). Do **not** call the Atlassian MCP connector — it stalls routine runs on the #61015 approval prompt. The field IDs and templates below still apply; only the transport is REST, per `jira`.
+**Use the `relay` skill's Jira reference for all Jira writes** (reads, comments, attachments, field updates). Do **not** call the Atlassian MCP connector — it stalls routine runs on the #61015 approval prompt. The field IDs and templates below still apply; transport goes through the relay.
 
 ### Comment visibility (mandatory)
 
-**Every Jira comment** on `perconadev.atlassian.net` PMM tickets MUST be restricted to the **Developers** role. Omitting visibility posts a **public** comment (visible to reporters/customers) — never do that for QA notes, triage, or test results. On the REST path this is the `visibility: {"type":"role","value":"Developers"}` key (see `jira`).
+**Every Jira comment** on `perconadev.atlassian.net` PMM tickets MUST be restricted to the **Developers** role. The relay enforces this server-side; never bypass it for QA notes, triage, or test results.
 
 If visibility can't be set on whatever path is available, **do not post** — show the draft to the user and ask them to paste it with **Restrict to → Developers**.
 
@@ -119,16 +119,16 @@ Updating custom fields (below) does **not** use comment visibility (different me
 | **FB test screenshots** | `customfield_10492` | FB test analysis summary + screenshot reference |
 | **How to test** | `customfield_10083` | Manual test steps (adapt using FB failures + PR diff) |
 
-### Update via the `jira` skill (curl-first REST)
+### Update through the relay
 
-**All checks passed** — attach the screenshot, then set the field. Both via the `jira` skill's recipes:
+**All checks passed** — attach the screenshot, then set the field:
 
-- Attach: `POST $J/issue/PMM-14915/attachments` with `-F "file=@/tmp/fb-test-PMM-14915-checks.png"`.
-- Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (all green)\n\n*Run:* <run_url>\n\n!fb-test-PMM-14915-checks.png|width=900!"}}` (wiki markup; after upload Jira renders it inline).
+- `R jira attach` with `issue`, `filename`, and the screenshot as `content_b64`.
+- `R jira field` with `issue` and `fields.customfield_10492` containing `h2. FB Tests — PR-4376 (all green)`, the run URL, and `!fb-test-PMM-14915-checks.png|width=900!` in wiki markup.
 
 **Any check failed** — text only, no attachment:
 
-- Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (failures — no screenshot)\n\n*Run:* <run_url>\n\n*Failed:* @rta UI tests, CLI tests pmm-server container\n\n*Relevant to ticket:* none (flaky / out of scope)\n\n_Screenshot pending — waiting for all-green FB build._"}}`.
+- `R jira field` with the same issue and field, but a text-only failure summary and no screenshot reference.
 
 Update **How to test** separately when manual steps are finalized (`customfield_10083`).
 

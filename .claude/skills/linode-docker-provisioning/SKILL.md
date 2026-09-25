@@ -1,11 +1,11 @@
 ---
 name: linode-docker-provisioning
-description: Provision PMM Server and monitored databases as single-server Docker on a throwaway Linode VM, using Terraform and the unmodified qa-integration bash pmm-framework. This is the default PMM deployment for QA — use it for setting up PMM for manual QA or reproducing an FB test environment, unless the change needs HA (see test-scope / linode-ha-provisioning).
+description: Provision PMM Server and monitored databases as single-server Docker on a throwaway Linode VM, using Terraform and the unmodified qa-integration bash pmm-framework. This is the default PMM deployment for QA — use it for setting up PMM for manual QA or reproducing an FB test environment, unless test-cases scope selects HA.
 ---
 
 # PMM provisioning (Linode, single-server Docker)
 
-This is the **default** deployment for PMM QA: one PMM Server container on one Linode VM. For HA (Kubernetes / multiple replicas) use [`linode-ha-provisioning`](../linode-ha-provisioning/SKILL.md) instead; the [`test-scope`](../test-scope/SKILL.md) skill decides which a given change needs.
+This is the **default** deployment for PMM QA: one PMM Server container on one Linode VM. For HA (Kubernetes / multiple replicas) use [`linode-ha-provisioning`](../linode-ha-provisioning/SKILL.md) instead; `test-cases`' scope guidance decides which deployment a change needs.
 
 Uses the **same** bash `qa-integration/pmm_qa/pmm-framework/pmm-framework` as Jenkins/EC2/CI — no wrapper scripts, no forked playbooks, no changes to `qa-integration/` ever. A real Linode VM (full kernel, full systemd, real Docker) replaces this session's own constrained sandbox for anything that needs to run containers — that sandbox is fine for reading code and talking to Jira/GitHub, but PMM + monitored databases need a real Docker host.
 
@@ -109,15 +109,9 @@ returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
 environment.
 
-**Identity:** every broker call carries your GitHub login in `X-Actor`. The relay
-checks it against the team roster (the `github` logins in its people files) and
-records who acted — so the audit always names a real person, no self-reported
-email. `RELAY_KEY` is the possession gate; `X-Actor` is the identity.
-
-**Get your login the portable way:** call the GitHub MCP `get_me` tool and read
-`.login`, then `export ACTOR=<that login>` before the block below. Routine-fired
-sessions have **no `gh` CLI**, so `gh api user` returns empty there and the relay
-would 401 on an empty actor — `gh` is only a fallback where it actually exists.
+Use the shared `relay` skill for broker identity and transport. Read its Linode
+reference, resolve `ACTOR` from GitHub MCP `get_me`, and define its `R` and
+`R_STATUS` curl helpers before the block below.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
@@ -125,16 +119,10 @@ RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
-# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
-# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
-command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
-[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
-
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
-curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision-start.json"
+R linode provision "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" \
+  >"$RUN_DIR/provision-start.json"
 
 # Mark the run relay-brokered NOW so the SessionEnd hook can tear it down even if we lose the poll.
 printf '%s' "$RELAY"                      >"$RUN_DIR/relay"        # relay URL for the SessionEnd hook
@@ -143,9 +131,8 @@ printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"   # scopes the 
 # 2) Poll for the result — a dropped connection is recoverable (state is on the relay).
 deadline=$(( $(date +%s) + 900 ))
 while :; do
-  code=$(curl -sS -m 60 -o "$RUN_DIR/provision.json" -w '%{http_code}' -X POST "$RELAY/linode/provision-result" \
-    -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-    -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
+  code=$(R_STATUS "$RUN_DIR/provision.json" linode provision-result \
+    "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
   case "$code" in
     200) echo "VM ready"; break;;
     202) echo "provisioning…";;
@@ -345,15 +332,9 @@ Teardown holds the account token, so it too goes through the relay:
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com
-# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
-# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
-command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
-[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 # Drop the local run markers only after a confirmed destroy — otherwise the SessionEnd
 # hook (and the on-box timer) can still retry teardown of an un-destroyed VM.
-if curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
-     -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
-     -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"; then
+if R linode destroy "$(jq -n --arg id "<run_id>" '{run_id:$id}')"; then
   rm -rf "terraform/linode-runner/runs/<run_id>"
 else
   echo "destroy failed — keeping run markers so the SessionEnd hook / reaper can retry" >&2

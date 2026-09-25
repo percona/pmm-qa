@@ -1,6 +1,6 @@
 ---
 name: linode-ha-provisioning
-description: Provision PMM in High Availability mode on a throwaway Linode LKE (Kubernetes) cluster via Helm, and verify HA behaviour (leader election, failover, shared state). Use once a change is known to be HA-impacted — see the test-scope skill to decide that first. The Linode/LKE counterpart to linode-docker-provisioning.
+description: Provision PMM in High Availability mode on a throwaway Linode LKE (Kubernetes) cluster via Helm, and verify HA behaviour (leader election, failover, shared state). Use once test-cases scope identifies HA impact. The Linode/LKE counterpart to linode-docker-provisioning.
 ---
 
 # PMM HA provisioning (Linode LKE)
@@ -9,11 +9,11 @@ Stands up a real PMM HA cluster to test HA-specific behaviour that a single cont
 
 This is the Kubernetes/LKE counterpart to [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) (the default single-VM Docker deployment). Same discipline: **throwaway, short-lived, torn down on every path** — an LKE cluster bills by the hour. Agent-neutral: Test Runner is the primary caller, Investigator can use it to reproduce an HA-specific FB/CI failure.
 
-**Only run this when HA is actually in scope.** Whether a change needs HA testing is decided upstream, during planning, by the [`test-scope`](../test-scope/SKILL.md) skill (its `references/ha.md` holds the code-grounded criteria). Don't stand up a cluster speculatively.
+**Only run this when HA is actually in scope.** `test-cases` owns that decision in `scope.md` and `ha-scope.md`. Don't stand up a cluster speculatively.
 
 ## Prerequisites
 
-The `LINODE_TOKEN` does **not** live in this environment — it lives only on the relay, exactly as for the single-VM [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) path. This env holds one scoped var, `RELAY_KEY`; identity is your GitHub login in `X-Actor` — get it from the GitHub MCP `get_me` (`.login`) and `export ACTOR=<login>` (Routine sessions have no `gh`; `gh api user` is only a fallback where `gh` exists), roster-checked by the relay. The relay runs `create-lke-pmm-ha.sh` with its own token, stamps the cluster with an `expires-<epoch>` tag (so the reaper can reap it — see Teardown), and returns `{cluster_id, external_ip, url, kubeconfig_b64, passwords}`.
+The `LINODE_TOKEN` lives only on the relay, exactly as for the single-VM [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) path. Read the shared `relay` skill's Linode reference, resolve `ACTOR` from GitHub MCP `get_me`, and define its `R` and `R_STATUS` curl helpers. The relay runs `create-lke-pmm-ha.sh`, stamps the cluster with an expiry tag, and returns `{cluster_id, external_ip, url, kubeconfig_b64, passwords}`.
 
 You still need `kubectl` (and `helm`, for chart pokes) **locally** to drive the returned kubeconfig — the cluster's API server is a public HTTPS endpoint the sandbox can reach. Install with `k8s/install_k8s_tools.sh --kubectl --helm`. No `linode-cli` or token is needed on the session side. The relay's `LINODE_TOKEN` must carry **Kubernetes (LKE): Read/Write** for provision/destroy and the reaper, plus **Volumes: Read/Write** and **NodeBalancers: Read/Write** — `lke cluster-delete` does *not* cascade to the CSI-provisioned volumes (`pvc-*`) or the CCM-provisioned NodeBalancer, so teardown deletes those orphans itself (see Teardown); without those two scopes they leak and bill for weeks.
 
@@ -24,20 +24,14 @@ RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (rese
 RUN_ID=<jira-key-or-run-id>                              # e.g. PMM-14744
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"           # session-side markers (same dir the SessionEnd hook scans)
 mkdir -p "$RUN_DIR"
-# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
-# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
-command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
-[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
-
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
 # k8s_version/namespace, and for a specific release/RC/FB — pmm_chart/deps_chart,
 # chart_version (pin it — default is LATEST), pmm_set/deps_set, or
 # pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Charts" below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
 #    The cluster builds server-side on the relay; this call does NOT hold open.
-curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision-lke" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')" >"$RUN_DIR/provision-start.json"
+R linode provision-lke "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')" \
+  >"$RUN_DIR/provision-start.json"
 
 # Mark the run LKE-brokered NOW so teardown/reaper work even if we lose the poll.
 printf '%s' "$RELAY"                      >"$RUN_DIR/relay"              # relay URL for the SessionEnd hook
@@ -47,9 +41,8 @@ printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"        # scopes
 # 2) Poll for the result — a dropped connection is recoverable (state is on the relay).
 deadline=$(( $(date +%s) + 2400 ))
 while :; do
-  code=$(curl -sS -m 60 -o "$RUN_DIR/provision.json" -w '%{http_code}' -X POST "$RELAY/linode/lke-result" \
-    -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-    -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
+  code=$(R_STATUS "$RUN_DIR/provision.json" linode lke-result \
+    "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
   case "$code" in
     200) echo "cluster ready"; break;;
     202) echo "provisioning… ($(jq -r '.phase // "?"' "$RUN_DIR/provision.json"))";;
@@ -310,7 +303,7 @@ one, and the Playwright helpers read `process.env.ADMIN_PASSWORD` (defaulting to
 so export `ADMIN_PASSWORD` to the value you reset to before any UI test or `pmm-ui-login.js`
 run — otherwise the suite 401s in a way that looks like the bug you're chasing.
 
-Standing up the cluster isn't the test. Exercise what the change actually touched (see `test-scope`'s `references/ha.md`), e.g.:
+Standing up the cluster isn't the test. Exercise what the change actually touched using `test-cases`' HA scope, e.g.:
 
 - `kubectl get pods -n pmm` — replicas, operators, HAProxy all Ready.
 - Leader status: PMM's HA API / `pmm_ha_*` metrics; confirm exactly one leader.
@@ -328,7 +321,7 @@ through `POST /v1/management/services`. Two things about that payload are not gu
 
 A new service's series and QAN rows land a couple of scrape intervals after the add, so
 an empty query right after it means nothing — hold it to the freshness window
-[`verification-depth`](../verification-depth/SKILL.md) requires before calling a metric
+`.claude/skills/test-cases/references/verification.md` requires before calling a metric
 missing.
 
 ## Writing a script that creates or deletes cloud resources
@@ -343,13 +336,7 @@ The sweeps above are the pattern; a new script that lists, creates or deletes Li
 ## Teardown — mandatory, every path
 
 ```bash
-# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
-# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
-command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
-[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
-curl -sS -m 240 --fail-with-body -X POST "$RELAY/linode/destroy-lke" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')"
+R linode destroy-lke "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')"
 ```
 
 Delete the cluster whether the run passed, failed, or was blocked — this is the last step, always. Unlike the single-VM path there is **no on-box self-destruct timer**; the guarantee is the **relay's TTL reaper**, which deletes any `pmm-qa-ephemeral` cluster past its `expires-<epoch>` tag (default 24h) even if this call never runs — the LKE equivalent of the VM's on-box timer. The SessionEnd hook fires the same `/linode/destroy-lke` for any run dir carrying an `lke` marker, so a normal session cleans up on its own; still call it explicitly at end of run — the reaper is the backstop, not the primary path. If you also created a box with `linode-docker-provisioning`, tear that VM down too — destroying the cluster does not touch it. Both teardown and the reaper now delete the cluster's unique account-level tags (`expires-<epoch>`, `pmm-qa-run:<id>`); Linode leaves those behind otherwise, so they pile up. Sweep leftovers on the relay with `LINODE_TOKEN=… terraform/linode-runner/prune-tags.sh --dry-run` (then without `--dry-run`). The **relay reaper** also deletes the orphaned Block Storage volumes and NodeBalancer that `cluster-delete` leaves behind — the biggest HA cost leak — via `.claude/skills/linode-ha-provisioning/scripts/prune-lke-orphans.sh` (`--dry-run` to preview). It deletes by **proof of non-use**, not by ownership tags — so it also reaps orphans from provisioning paths that never tag (e.g. an external load-test script), which a tag-only rule leaked forever. **Volumes**: the sweep first collects **every live LKE cluster's PV names**, then deletes a `pvc-*` volume only when it is **unattached**, older than a grace window (`PRUNE_GRACE_MIN`, default 60m), and referenced by **no** live cluster. "Unattached" alone is never enough — a live cluster's volume is unattached during provisioning (Immediate binding) and failover — so a volume any live cluster still holds is kept. **Fail-safe**: if any live cluster's kubeconfig/PV list can't be read, the whole volume sweep is skipped (delete nothing) rather than risk a live volume. (`create-lke` still tags volumes at birth via the StorageClass `volumeTags`, useful for cost attribution, but the sweep no longer depends on it.) **NodeBalancers**: attributed by their immutable `lke<clusterid>-` label — the Linode CCM reconciles a NodeBalancer's tags back to its defaults, so a `pmm-qa-run` tag does **not** survive on it and cannot be used; the sweep removes one only when its `lke<id>` cluster no longer exists AND it has no backend up. `destroy-lke` does **not** sweep (cluster-delete is async — it would only see other runs' resources); the reaper owns it.
