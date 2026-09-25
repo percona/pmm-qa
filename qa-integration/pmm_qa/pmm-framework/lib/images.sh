@@ -75,6 +75,13 @@ build_psmdb_image() {
     die "Building pmm-qa/psmdb:$tag failed."
 }
 
+# Build pmm-qa/haproxy:ol9 (images/haproxy).
+build_haproxy_image() {
+  [[ $1 == ol9 ]] || die "HAProxy has no prebaked image '$1'; use ol9."
+  docker build --label "$PREBAKED_SOURCE_LABEL" -t pmm-qa/haproxy:ol9 "$FRAMEWORK_DIR/images/haproxy" ||
+    die 'Building pmm-qa/haproxy:ol9 failed.'
+}
+
 # Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL
 pxc_proxysql_tag() {
   if [[ -n ${2:-} ]]; then

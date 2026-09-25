@@ -3,7 +3,7 @@
 Replace a type's Ansible playbook with a prebaked image plus plain `docker`
 commands (`lib/images.sh`, `lib/prebaked.sh`). Port one type at a time, and do
 not start the next until every CI spec for the current one has passed a real
-run. PS, MySQL, PXC, PSMDB and SSL PSMDB are done; copy them.
+run. PS, MySQL, PXC, PSMDB, SSL PSMDB and HAProxy are done; copy them.
 
 ## 1. Measure before you change anything
 

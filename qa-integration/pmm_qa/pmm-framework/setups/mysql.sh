@@ -346,7 +346,7 @@ mf_start_minio() {
   must docker run --detach --name minio --network pmm-qa --volume minio_backups:/backups \
     --publish 9010:9000 --publish 9001:9001 \
     --env MINIO_ROOT_USER=minio1234 --env MINIO_ROOT_PASSWORD=minio1234 \
-    quay.io/minio/minio server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001 >/dev/null
+    pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001 >/dev/null
   retry 60 MinIO docker exec minio mc alias set myminio http://127.0.0.1:9000 minio1234 minio1234 >/dev/null
   local -a buckets=()
   IFS=, read -ra buckets <<<"${BUCKETS:-bcp}"
@@ -494,9 +494,11 @@ pxc_enable_slowlog() {
 
 # The node is registered without the version's dot: dashboards compare
 # node_name with `=` against a multi-value variable, whose value Grafana
-# regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself.
+# regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself. The nightly
+# shard is appended, as the playbook did, so two shards on one PMM Server do
+# not replace each other's node.
 pxc_setup_agent() {
-  setup_pmm_agent "$container" false /pmm-agent.log "${container//./_}"
+  setup_pmm_agent "$container" false /pmm-agent.log "${container//./_}${SHARD_NAME:+-$SHARD_NAME}"
   wait_pmm_agent "$container"
 }
 

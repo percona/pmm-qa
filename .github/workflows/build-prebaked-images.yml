@@ -1,10 +1,10 @@
 # Builds the prebaked database images pmm-framework runs (PS, MySQL, PXC with
-# ProxySQL, and PSMDB) and publishes them to ghcr.io/percona/pmm-qa/<engine>:<version>, so
+# ProxySQL, PSMDB and HAProxy) and publishes them to ghcr.io/percona/pmm-qa/<engine>:<version>, so
 # a CI job pulls a ready image instead of spending 90-160 s building one. Each
 # image is started and checked before it is pushed, so a broken build never
 # replaces a working tag, and each cell publishes on its own.
 #
-# Tags: :<version> and :<version>-YYYY-MM-DD. To roll back, retag a dated one.
+# Tags: :<version> only. To roll back, revert the change and let this rebuild.
 # Keep the matrix in sync with the build_*_image functions in
 # qa-integration/pmm_qa/pmm-framework/lib/images.sh.
 name: Build prebaked database images
@@ -59,7 +59,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
         run: |
-          all='["ps","mysql","pxc-proxysql","psmdb"]'
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy"]'
           if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
@@ -72,11 +72,13 @@ jobs:
               if grep -q '^provisioning/images/engines/mysql/' <<<"$changed"; then picked+=('"mysql"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pxc/' <<<"$changed"; then picked+=('"pxc-proxysql"'); fi
               if grep -qE '^qa-integration/(pmm_qa/pmm-framework/images/psmdb/|pmm_psmdb-pbm_setup/)' <<<"$changed"; then picked+=('"psmdb"'); fi
+              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/haproxy/' <<<"$changed"; then picked+=('"haproxy"'); fi
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
           # PSMDB tags pair a major with an Oracle Linux release.
           cells=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
+            elif $e == "haproxy" then ["ol9"]
             else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
           echo "cells=$cells" >>"$GITHUB_OUTPUT"
           echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
@@ -113,7 +115,9 @@ jobs:
           ENGINE: ${{ matrix.engine }}
           VERSION: ${{ matrix.version }}
         run: |
-          if [ "$ENGINE" = psmdb ]; then
+          if [ "$ENGINE" = haproxy ]; then
+            docker run --rm --entrypoint haproxy "$IMAGE" -vv | grep prometheus-exporter
+          elif [ "$ENGINE" = psmdb ]; then
             # mongod needs the mongod.conf compose mounts, so check the tools run.
             docker run --rm "$IMAGE" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'
           elif [ "$ENGINE" = pxc-proxysql ]; then
@@ -154,12 +158,10 @@ jobs:
           VERSION: ${{ matrix.version }}
         run: |
           name="ghcr.io/${GITHUB_REPOSITORY}/${ENGINE}"
-          dated="${VERSION}-$(date -u +%F)"
           docker tag "$IMAGE" "${name}:${VERSION}"
-          docker tag "$IMAGE" "${name}:${dated}"
 
           for attempt in 1 2 3 4 5; do
-            if docker push "${name}:${VERSION}" && docker push "${name}:${dated}"; then
+            if docker push "${name}:${VERSION}"; then
               break
             fi
             [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
@@ -171,7 +173,7 @@ jobs:
           digest=${digest#*@}
           echo "name=${name}" >>"$GITHUB_OUTPUT"
           echo "digest=${digest}" >>"$GITHUB_OUTPUT"
-          echo "- \`${name}:${VERSION}\` (also \`:${dated}\`) \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
+          echo "- \`${name}:${VERSION}\` \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

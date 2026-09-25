@@ -298,6 +298,15 @@ stub_prebaked_docker() {
   grep -q -- '--mysql-host=127.0.0.1 --mysql-port=6033' "$DOCKER_CALLS"
 }
 
+@test "PXC appends the nightly shard to its node name" {
+  stub_prebaked_docker
+  SHARD_NAME=ps-gr-pxc-valkey
+  parse_database_spec 'PXC=8.4'
+  dispatch_setup
+
+  grep -q -- ' pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4-ps-gr-pxc-valkey$' "$DOCKER_CALLS"
+}
+
 @test "a prebaked setup fails when node_exporter never reaches Running" {
   stub_prebaked_docker
   # shellcheck disable=SC2329,SC2317
@@ -346,7 +355,7 @@ stub_prebaked_docker() {
 @test "multiple specs dispatch sequentially without leaking environment maps" {
   local -a targets=()
   local spec
-  for spec in 'pdpgsql=17' 'external' 'haproxy'; do
+  for spec in 'pdpgsql=17' 'external'; do
     parse_database_spec "$spec"
     dispatch_setup
     targets+=("$CAPTURE_TARGET")
@@ -354,9 +363,7 @@ stub_prebaked_docker() {
 
   [[ ${targets[0]} == percona-distribution-postgresql/percona-distribution-postgres-setup.yml ]]
   [[ ${targets[1]} == external_setup.yml ]]
-  [[ ${targets[2]} == haproxy_setup.yml ]]
   [[ -z ${CAPTURE_ENV[PDPGSQL_VERSION]-} ]]
-  [[ -z ${CAPTURE_ENV[REDIS_EXPORTER_VERSION]-} ]]
 }
 
 @test "SSL variants select their existing playbooks" {
@@ -394,12 +401,21 @@ stub_prebaked_docker() {
   [[ $CAPTURE_TARGET == external_setup.yml ]]
   [[ ${CAPTURE_ENV[REDIS_EXPORTER_VERSION]} == 1.14.0 ]]
   [[ ${CAPTURE_ENV[NODE_PROCESS_EXPORTER_VERSION]} == 0.7.5 ]]
+}
 
+@test "HAProxy runs on the prebaked image and registers as haproxy_setup.yml did" {
+  stub_prebaked_docker
+  SHARD_NAME=extra-pxc-pdpgsql-haproxy
   CLIENT_DEBUG=true
   parse_database_spec haproxy
   dispatch_setup
-  [[ $CAPTURE_TARGET == haproxy_setup.yml ]]
-  [[ ${CAPTURE_ENV[CLIENT_DEBUG]} == true ]]
+
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 pmm-qa/haproxy:ol9$' "$DOCKER_CALLS"
+  grep -q '^cp .*/pmm_qa/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
+  grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
+  grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
+  grep -Eq '^exec haproxy_pmm pmm-admin add haproxy --listen-port=42100 --environment=haproxy haproxy_pmm_service_[0-9]+$' "$DOCKER_CALLS"
+  grep -q '^exec --detach haproxy_pmm sh -c while true; do curl -s http://127.0.0.1:42100/' "$DOCKER_CALLS"
 }
 
 @test "bucket and Docker client setups reuse current targets" {

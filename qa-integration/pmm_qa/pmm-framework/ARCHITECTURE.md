@@ -9,7 +9,7 @@ playbook or shell script under `qa-integration/`. For those, almost every
 question about behaviour is answered by asking *which env map was built, and
 which playbook received it*.
 
-`PS`, `MYSQL`, `PXC`, `PSMDB` and `SSL_PSMDB` are the exception. They run on **prebaked images**:
+`PS`, `MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB` and `HAPROXY` are the exception. They run on **prebaked images**:
 the database and its tooling are baked into an image ahead of time, and the
 setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
 instead of a playbook. Types move to this backend one at a time. See §5,
@@ -86,6 +86,7 @@ and labels), because tests look those up by name.
 | `lib/prebaked.sh` | The docker backend: `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits | common, runners |
 | `build-images` | CLI to prebake images ahead of a run (`./build-images ps=8.4 pxc-proxysql=8.0`) | common, images |
 | `images/pxc/` | The single-container PXC + ProxySQL image; `pmm-pxc` inside it prepares node 1 at build time and starts the cluster at run time | — |
+| `images/haproxy/` | Oracle Linux 9's `haproxy` package, which has the Prometheus exporter; `haproxy.cfg` is copied in at run time | — |
 | `images/psmdb/` | The systemd PSMDB + PBM image, tagged `<major>-ol8` or `<major>-ol9`; built with `qa-integration/pmm_psmdb-pbm_setup` as its context | — |
 | `setups/*.sh` | One `setup_<name>` per type, plus `dispatch_setup` | everything above |
 | `lib/execution.sh` | `preflight_database_setups`, sequential and parallel strategies | everything above |
@@ -102,7 +103,7 @@ without the PMM Client; the setups tag it `replica_member/local`, so the
 stacks' compose files run it unchanged (same containers, networks, ports and
 volumes) and never build. `.github/workflows/build-prebaked-images.yml` builds
 every image weekly, checks that it starts, and publishes it to
-`ghcr.io/percona/pmm-qa/<engine>:<version>` (plus a dated tag for rollback).
+`ghcr.io/percona/pmm-qa/<engine>:<version>`.
 
 ---
 
