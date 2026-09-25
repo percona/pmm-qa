@@ -211,8 +211,11 @@ mf_start_node() {
     )
   fi
   must "${run[@]}" >/dev/null
-  retry 60 "$name to accept MySQL connections" docker exec "$name" mysqladmin ping \
-    --host=127.0.0.1 --protocol=tcp -uroot "-p$password" --silent >/dev/null
+  if ! (retry 60 "$name to accept MySQL connections" docker exec "$name" mysqladmin ping \
+    --host=127.0.0.1 --protocol=tcp -uroot "-p$password" --silent >/dev/null); then
+    docker logs --tail 40 "$name" >&2 || true
+    die "$name did not start."
+  fi
 }
 
 mf_replica_running() {
