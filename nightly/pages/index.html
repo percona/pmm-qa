@@ -16,59 +16,111 @@
   table { width:100%; border-collapse:collapse; }
   th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
   th { color:var(--muted); font-weight:600; }
-  tr.run { cursor:pointer; }
-  tr.run:hover { background:var(--row); }
-  tr.detail td { background:var(--row); }
-  .pass, .success { color:var(--pass); } .fail, .failure, .cancelled { color:var(--fail); } .skipped { color:var(--skip); }
-  .jobs { display:flex; flex-wrap:wrap; gap:4px 16px; margin:0 0 8px; padding:0; list-style:none; }
-  .inv { margin:8px 0 0; padding-left:18px; }
+  .badge { display:inline-block; font-size:12px; padding:0 8px; border-radius:10px; border:1px solid currentColor; vertical-align:middle; }
+  .pass, .success { color:var(--pass); } .fail, .failure, .cancelled, .timed_out { color:var(--fail); } .skipped { color:var(--skip); }
   a { color:inherit; }
   .wrap { overflow-x:auto; }
-  .btn { font-size:12px; padding:1px 8px; border:1px solid var(--line); border-radius:4px; text-decoration:none; }
-  .btn:hover { background:var(--bg); }
+  .actions { white-space:nowrap; text-align:right; }
+  .btn { display:inline-block; font-size:12px; padding:2px 10px; border:1px solid var(--line); border-radius:6px; text-decoration:none; margin-left:4px; }
+  .btn:hover { background:var(--row); }
+  .btn.primary { border-color:var(--fg); font-weight:600; }
+  details.group { border:1px solid var(--line); border-radius:8px; margin:0 0 12px; }
+  details.group > summary { cursor:pointer; padding:10px 12px; display:flex; justify-content:space-between; gap:12px; list-style:none; }
+  details.group > summary::-webkit-details-marker { display:none; }
+  details.group > summary::before { content:'▸'; margin-right:6px; }
+  details.group[open] > summary::before { content:'▾'; }
+  .gname { font-weight:600; flex:1; }
+  .counts { color:var(--muted); white-space:nowrap; }
+  table.jobs { border-top:1px solid var(--line); table-layout:fixed; }
+  table.jobs th:nth-child(2) { width:110px; } table.jobs th:nth-child(3) { width:90px; } table.jobs th:nth-child(4) { width:230px; }
+  table.jobs td:first-child { overflow-wrap:anywhere; }
+  @media (max-width:640px) { table.jobs th:nth-child(3), table.jobs td.dur { display:none; } table.jobs th:nth-child(4) { width:auto; } .actions { white-space:normal; } .btn { margin:2px 0 2px 4px; } }
+  tr.row-fail td { background:var(--row); }
+  .dur { color:var(--muted); white-space:nowrap; }
+  .inv { margin:0; padding:8px 12px 12px 30px; border-top:1px solid var(--line); }
 </style>
 </head>
 <body>
 <main>
-  <h1>PMM Nightly Reports</h1>
-  <p class="sub">One row per Nightly Test Suite run. Click a row for job results and investigator findings. <a href="../">Performance reports</a></p>
-  <div class="wrap">
-    <table>
-      <thead><tr><th>Date</th><th>Tag</th><th>Status</th><th>Summary</th><th>Findings</th><th>Run</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
-    </table>
-  </div>
+  <div id="app">Loading…</div>
 </main>
 <script>
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '#';
-const FAILED = ['failure', 'cancelled'];
-const investigateUrl = (r, j) => 'https://claude.ai/code?' + new URLSearchParams({
+const FAILED = ['failure', 'cancelled', 'timed_out'];
+const fmtDate = d => (d || '').replace('T', ' ').slice(0, 16);
+const fmtDur = s => s == null ? '' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round(s % 3600 / 60)}m` : `${Math.floor(s / 60)}m ${s % 60}s`;
+const investigateUrl = (r, group, j) => 'https://claude.ai/code?' + new URLSearchParams({
   repositories: 'percona/pmm-qa',
   prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
-    `Nightly Test Suite job "${j.name}" ended "${j.result}" for image tag ${r.image_tag}.\nRun: ${r.run_url}\n\n` +
+    `Nightly Test Suite job "${group}${j.name !== group ? ' / ' + j.name : ''}" ended "${j.result}" for image tag ${r.image_tag}.\n` +
+    `Job: ${j.url || r.run_url}\nRun: ${r.run_url}\n\n` +
     `Dedup, reproduce, classify, then publish the finding to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
 }).toString().replace(/\+/g, '%20');
-fetch('data/index.json', {cache: 'no-store'}).then(r => r.json()).then(runs => {
-  const tbody = document.getElementById('rows');
-  if (!runs.length) { tbody.innerHTML = '<tr><td colspan="6">No runs published yet.</td></tr>'; return; }
-  tbody.innerHTML = runs.slice().reverse().map((r, i) => {
-    const inv = r.investigations || [];
-    const jobs = (r.jobs || []).map(j => `<li><span class="${esc(j.result)}">●</span> ${esc(j.name)}: ${esc(j.result)}` +
-      (FAILED.includes(j.result) ? ` <a class="btn" href="${esc(investigateUrl(r, j))}" target="_blank" rel="noopener">Investigate in Claude</a>` : '') + `</li>`).join('');
-    const finds = inv.map(f => `<li><b>${esc(f.verdict)}</b> — ${esc(f.job)}: ${esc(f.summary)}` +
-      (f.link ? ` (<a href="${esc(safeUrl(f.link))}">link</a>)` : '') + '</li>').join('');
-    return `<tr class="run" data-i="${i}"><td>${esc((r.date || '').replace('T', ' ').slice(0, 16))}</td><td>${esc(r.image_tag)}</td>` +
-      `<td class="${esc(r.status)}">${esc(r.status)}</td><td>${esc(r.summary)}</td><td>${inv.length}</td>` +
-      `<td><a href="${esc(safeUrl(r.run_url))}" onclick="event.stopPropagation()">open</a></td></tr>` +
-      `<tr class="detail" id="d${i}" hidden><td colspan="6"><ul class="jobs">${jobs}</ul>` +
-      (finds ? `<ul class="inv">${finds}</ul>` : '<span>No investigator findings yet.</span>') + '</td></tr>';
-  }).join('');
-  tbody.addEventListener('click', e => {
-    const row = e.target.closest('tr.run');
-    if (row) { const d = document.getElementById('d' + row.dataset.i); d.hidden = !d.hidden; }
-  });
-}).catch(() => { document.getElementById('rows').innerHTML = '<tr><td colspan="6">Could not load data/index.json.</td></tr>'; });
+const badge = res => `<span class="badge ${esc(res)}">${esc(res)}</span>`;
+const app = document.getElementById('app');
+let runs = [];
+
+function detailsOf(r) {
+  if (r.job_details && r.job_details.length) return r.job_details;
+  return (r.jobs || []).map(j => ({ group: j.name, name: j.name, result: j.result, url: r.run_url }));
+}
+
+function overview() {
+  document.title = 'PMM Nightly Reports';
+  if (!runs.length) { app.innerHTML = '<h1>PMM Nightly Reports</h1><p class="sub">No runs published yet.</p>'; return; }
+  app.innerHTML = `<h1>PMM Nightly Reports</h1>
+  <p class="sub">One row per Nightly Test Suite run. <a href="../">Performance reports</a></p>
+  <div class="wrap"><table>
+    <thead><tr><th>Date</th><th>Tag</th><th>Status</th><th>Summary</th><th>Failed</th><th>Findings</th><th></th></tr></thead>
+    <tbody>${runs.slice().reverse().map(r => {
+      const failed = detailsOf(r).filter(j => FAILED.includes(j.result)).length;
+      return `<tr><td>${esc(fmtDate(r.date))}</td><td>${esc(r.image_tag)}</td><td>${badge(r.status)}</td>
+        <td>${esc(r.summary)}</td><td class="${failed ? 'failure' : ''}">${failed}</td><td>${(r.investigations || []).length}</td>
+        <td class="actions"><a class="btn primary" href="#run=${encodeURIComponent(r.run_id)}">Details</a>
+        <a class="btn" href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">GitHub run</a></td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function runView(id) {
+  const r = runs.find(x => x.run_id === id);
+  if (!r) { app.innerHTML = '<p><a href="#">← All runs</a></p><p>Run not found.</p>'; return; }
+  document.title = `${r.image_tag} · PMM Nightly`;
+  const jobs = detailsOf(r);
+  const groups = [...new Set(jobs.map(j => j.group))].map(g => ({ g, jobs: jobs.filter(j => j.group === g) }));
+  groups.sort((a, b) => b.jobs.filter(j => FAILED.includes(j.result)).length - a.jobs.filter(j => FAILED.includes(j.result)).length);
+  const inv = r.investigations || [];
+  app.innerHTML = `<p><a href="#">← All runs</a></p>
+  <h1>${esc(r.image_tag)} ${badge(r.status)}</h1>
+  <p class="sub">${esc(fmtDate(r.date))} UTC · ${esc(r.summary)} · <a href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">GitHub run</a></p>
+  ${groups.map(({ g, jobs }) => {
+    const nFail = jobs.filter(j => FAILED.includes(j.result)).length;
+    const nOk = jobs.filter(j => j.result === 'success').length;
+    const finds = inv.filter(f => f.job === g || jobs.some(j => j.name === f.job));
+    return `<details class="group" ${nFail ? 'open' : ''}>
+      <summary><span class="gname">${esc(g)}</span>
+        <span class="counts">${nOk}/${jobs.length} passed${nFail ? ` · <span class="failure">${nFail} failed</span>` : ''}</span></summary>
+      <table class="jobs"><thead><tr><th>Job</th><th>Result</th><th>Duration</th><th></th></tr></thead><tbody>
+      ${jobs.map(j => `<tr class="${FAILED.includes(j.result) ? 'row-fail' : ''}"><td>${esc(j.name)}</td><td>${badge(j.result)}</td>
+        <td class="dur">${esc(fmtDur(j.duration_s))}</td>
+        <td class="actions"><a class="btn" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener">Logs</a>
+        ${FAILED.includes(j.result) ? `<a class="btn primary" href="${esc(investigateUrl(r, g, j))}" target="_blank" rel="noopener">Investigate in Claude</a>` : ''}</td></tr>`).join('')}
+      </tbody></table>
+      ${finds.length ? `<ul class="inv">${finds.map(f => `<li><b>${esc(f.verdict)}</b>: ${esc(f.summary)}` +
+        (f.link ? ` (<a href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">link</a>)` : '') + '</li>').join('')}</ul>` : ''}
+    </details>`;
+  }).join('')}`;
+}
+
+function route() {
+  const m = location.hash.match(/^#run=(.+)$/);
+  m ? runView(decodeURIComponent(m[1])) : overview();
+  window.scrollTo(0, 0);
+}
+
+fetch('data/index.json', { cache: 'no-store' }).then(r => r.json()).then(d => { runs = d; route(); window.addEventListener('hashchange', route); })
+  .catch(() => { app.innerHTML = 'Could not load data/index.json.'; });
 </script>
 </body>
 </html>

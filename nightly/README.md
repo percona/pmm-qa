@@ -7,6 +7,11 @@ one report per run to the `gh-pages` branch under `nightly/`:
 - `nightly/data/index.json` — every report, oldest first; rebuilt on each publish.
 - `nightly/reports/<run_id>.json` — one report per run (`run_id` is `gha-<github.run_id>`).
 
+Each report also carries `job_details`: every job of the run from the GitHub API
+(`group` is the suite, the part of the job name before the first ` / `), which the
+page shows per run, grouped by suite, with a log link and an Investigate in Claude
+button on each failed job.
+
 ## Adding investigator findings
 
 Publishing a JSON with an existing `run_id` merges into that report and appends its
