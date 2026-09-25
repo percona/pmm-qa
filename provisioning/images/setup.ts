@@ -505,7 +505,7 @@ async function startMinio(config: Config, buckets: string[]): Promise<void> {
     '9010:9000',
     '--publish',
     '9001:9001',
-    'quay.io/minio/minio',
+    'pgsty/minio:RELEASE.2026-08-04T00-00-00Z',
     'server',
     '/data',
     '--console-address',
