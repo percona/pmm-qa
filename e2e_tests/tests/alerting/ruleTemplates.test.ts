@@ -57,6 +57,20 @@ pmmTest.afterAll(async ({ browser }) => {
 });
 
 pmmTest(
+  'PMM-T510 - Verify built-in rule templates are non-editable @fb-alerting @grafana-pr',
+  async ({ alertingPage, page }) => {
+    const builtIn = alertingPage.builders.templateRowsBySource('TEMPLATE_SOURCE_BUILT_IN');
+
+    await page.goto(alertingPage.urls.templates);
+    await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(builtIn.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(builtIn.getByTestId('create-from-template-button')).toHaveCount(await builtIn.count());
+    await expect(builtIn.getByTestId('edit-template-button')).toHaveCount(0);
+    await expect(builtIn.getByTestId('delete-template-button')).toHaveCount(0);
+  },
+);
+
+pmmTest(
   'PMM-T496 - Verify rule templates list elements @fb-alerting @grafana-pr',
   async ({ alertingPage, api, page }) => {
     await page.goto(alertingPage.urls.templates);
@@ -376,7 +390,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T825 + PMM-T821 - Verify User can add Alert rule template in the file system @not-ovf @fb-alerting',
+  'PMM-T825 + PMM-T821 - Verify User can add Alert rule template in the file system @fb-alerting',
   async ({ alertingPage, cliHelper, page }) => {
     for (const file of ['customParam.yml', 'spaceInParam.yml', 'template.txt']) {
       cliHelper

@@ -109,7 +109,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@menu`
 - `@new-navigation`
 - `@nightly`
-- `@not-ovf`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`

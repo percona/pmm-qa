@@ -33,6 +33,10 @@ export default class AlertingPage extends BasePage {
       this.grafanaIframe()
         .getByRole('row')
         .filter({ has: this.page.getByText(templateName, { exact: true }) }),
+    templateRowsBySource: (source: string) =>
+      this.grafanaIframe()
+        .getByRole('row')
+        .filter({ has: this.page.getByTitle(source, { exact: true }) }),
   };
   buttons = {
     addTemplate: this.grafanaIframe().getByTestId('alert-rule-template-add-modal-button'),
