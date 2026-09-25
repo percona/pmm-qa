@@ -77,6 +77,9 @@
   header.top nav { margin-left: auto; display: flex; gap: 16px; }
   header.top nav a { color: var(--ink-2); text-decoration: none; }
   header.top nav a:hover { color: var(--ink); }
+  nav.tabs { align-self: stretch; margin-left: 24px !important; margin-right: auto; }
+  nav.tabs a { display: flex; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
 
   main.wrap { padding: 32px 16px 64px; }
   h1 { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -.015em; margin: 0; text-wrap: balance; }
@@ -166,6 +169,10 @@
   .verdict { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
   .verdict .why { color: var(--ink-2); }
   .verdict .also { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .pending.claim { color: var(--warn); }
+  .claimed { color: var(--warn); font-weight: 500; }
+  .ask.busy { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent); }
+  a.ref { white-space: nowrap; font-weight: 500; }
   .pending { display: flex; align-items: center; gap: 8px; padding: 12px 16px 12px 40px; color: var(--ink-3);
     border-bottom: 1px solid var(--line); background: var(--surface); }
 
@@ -208,8 +215,8 @@
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#"><span class="dot" aria-hidden="true"></span>PMM Nightly</a>
-    <nav><a href="../">Performance</a><a href="https://github.com/percona/pmm-qa" target="_blank" rel="noopener">pmm-qa</a></nav>
+    <a class="brand" href="../"><span class="dot" aria-hidden="true"></span>PMM QA Reports</a>
+    <nav class="tabs" aria-label="Reports"><a href="./" aria-current="page">Nightly</a><a href="../performance/">Performance</a></nav>
   </div>
 </header>
 <main class="wrap" id="app" aria-live="polite">
@@ -263,9 +270,31 @@ const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URL
   prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
     `In nightly orchestrator build ${r.run_id} (image tag ${r.image_tag}, client ${r.client_version}), suite "${group}" had ${failed.length} failed job(s):\n` +
     failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\nBuild: ${r.run_url}\n\n` +
+    `Before anything else, claim the suite so others see it is being looked at: publish {"run_id": "${r.run_id}", ` +
+    `"claims": [{"by": "<your GitHub login, from get_me>", "at": "<now, UTC ISO 8601>", "suites": ["${group}"]}]} ` +
+    `with nightly/ci/publish_report.sh. Then read that report's existing investigations and claims for "${group}" ` +
+    `and build on them instead of repeating them.\n\n` +
     `Investigate all of them together: dedup, group failures that share a root cause, reproduce, classify, ` +
-    `then publish the findings to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
+    `then publish the findings, each with the same "by" and a fresh "at", to this run's nightly report ` +
+    `(run_id ${r.run_id}, see nightly/README.md). ultrathink`
 }).toString().replace(/\+/g, '%20');
+const linkLabel = u => {
+  const pr = /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/.exec(u || '');
+  if (pr) return (pr[1] === 'percona/pmm-qa' ? '' : pr[1]) + `PR #${pr[2]}`;
+  const jira = /\/browse\/([A-Z][A-Z0-9]+-\d+)/.exec(u || '');
+  if (jira) return jira[1];
+  return 'Link';
+};
+const ago = at => {
+  const s = (Date.now() - new Date(at)) / 1000;
+  if (!isFinite(s)) return '';
+  if (s < 90) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+};
+const CLAIM_TTL_H = 12;
+const liveClaims = (r, g) => (r.claims || []).filter(c => (c.suites || []).includes(g) && (Date.now() - new Date(c.at)) / 36e5 < CLAIM_TTL_H);
 
 const app = document.getElementById('app');
 let runs = [];
@@ -345,19 +374,23 @@ function runView(id) {
       const verdicts = finds.length ? `<ul class="verdicts">${finds.map(f => {
         const others = suitesOf(f).filter(s => s !== g);
         return `<li class="verdict"><span class="pill ${{ 'product bug': 's-fail', 'test fix': 's-warn' }[f.verdict] || 's-idle'}">${esc(f.verdict)}</span>
-          <div><div class="why">${esc(f.summary)}${f.link ? ` <a href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">Open${icon.ext}</a>` : ''}</div>
-          ${others.length ? `<div class="also">Same cause as ${others.map(esc).join(', ')}</div>` : ''}</div></li>`;
-      }).join('')}</ul>` : x.fail ? `<div class="pending">${icon.clock}Not investigated yet.</div>` : '';
+          <div><div class="why">${esc(f.summary)}${f.link ? ` <a class="ref" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">${esc(linkLabel(f.link))}${icon.ext}</a>` : ''}</div>
+          <div class="also">${f.by ? `By ${esc(f.by)}${f.at ? `, ${esc(ago(f.at))}` : ''}` : ''}${f.by && others.length ? ' · ' : ''}${others.length ? `Same cause as ${others.map(esc).join(', ')}` : ''}</div></div></li>`;
+      }).join('')}</ul>` : '';
+      const claims = liveClaims(r, g);
+      const claimed = claims.map(c => `${c.by} (${ago(c.at)})`).join(', ');
+      const status = claims.length ? `<div class="pending claim">${icon.clock}Being investigated by ${esc(claimed)}.</div>`
+        : x.fail && !finds.length ? `<div class="pending">${icon.clock}Not investigated yet.</div>` : '';
       return `<details class="group" ${x.fail || x.warn ? 'open' : ''}>
         <summary>
           <span class="rail s-${state}" aria-hidden="true"></span>
           ${icon.chev}
-          <div><div class="gname">${srcIcons(jobs)}${esc(g)}</div><div class="gsub">${x.total} job${x.total === 1 ? '' : 's'}${finds.length ? ` · ${finds.length} finding${finds.length > 1 ? 's' : ''}` : ''}</div></div>
+          <div><div class="gname">${srcIcons(jobs)}${esc(g)}</div><div class="gsub">${x.total} job${x.total === 1 ? '' : 's'}${finds.length ? ` · ${finds.length} finding${finds.length > 1 ? 's' : ''}` : ''}${claims.length ? ` · <span class="claimed">being investigated</span>` : ''}</div></div>
           <div class="gmeter">${meter(x)}<div class="counts">${x.pass}/${x.total} passed${x.fail ? ` · ${x.fail} failed` : ''}${x.warn ? ` · ${x.warn} unstable` : ''}</div></div>
-          <div class="gaction">${x.fail ? `<a class="ask tip" href="${esc(investigateUrl(r, g, failed))}" data-open
+          <div class="gaction">${x.fail ? `<a class="ask tip${claims.length ? ' busy' : ''}" href="${esc(investigateUrl(r, g, failed))}" data-open data-claim="${esc(claimed)}" data-group="${esc(g)}"
             data-tip="Investigate ${x.fail} failure${x.fail > 1 ? 's' : ''} in Claude" aria-label="Investigate ${x.fail} failure${x.fail > 1 ? 's' : ''} of ${esc(g)} in Claude">${icon.claude}</a>` : ''}</div>
         </summary>
-        <div class="gbody">${verdicts}
+        <div class="gbody">${verdicts}${status}
           <table class="jobs"><thead><tr><th>Job</th><th>Result</th><th class="dur">Duration</th><th></th></tr></thead><tbody>
           ${jobs.map(j => `<tr class="${FAILED.includes(j.result) ? 'bad' : ''}"><td class="name">${esc(j.name)}</td><td class="res">${pill(j.result)}</td>
             <td class="dur">${esc(fmtDur(j.duration_s))}</td>
@@ -373,6 +406,8 @@ app.addEventListener('click', e => {
   if (!a) return;
   e.preventDefault();
   e.stopPropagation();
+  if (a.dataset.claim && !window.confirm(`${a.dataset.group} is already being investigated by ${a.dataset.claim}.\n\n` +
+      `Starting another investigation will probably duplicate or conflict with that work. Start anyway?`)) return;
   window.open(a.href, '_blank', 'noopener');
 });
 

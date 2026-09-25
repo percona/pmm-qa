@@ -7,6 +7,7 @@ set -Eeuo pipefail
 RUN_JSON="${1:?usage: publish_report.sh <run.json>}"
 PAGES_BRANCH="${PAGES_BRANCH:-gh-pages}"
 PAGE_SRC="$(cd "$(dirname "$0")/../pages" && pwd)"
+LANDING_SRC="$(cd "$(dirname "$0")/../.." && pwd)/pages/index.html"
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 [ -s "$RUN_JSON" ] || { echo "missing or empty: $RUN_JSON" >&2; exit 1; }
 jq -e '.run_id' "$RUN_JSON" >/dev/null || { echo "run.json needs run_id" >&2; exit 1; }
@@ -32,7 +33,16 @@ publish() {
   mkdir -p "$dir/reports" "$dir/data"
   out="$dir/reports/${run_id}.json"
   if [ -f "$out" ]; then
-    jq -s '(.[0] * .[1]) + {investigations: ((.[0].investigations // []) + (.[1].investigations // []) | unique)}' \
+    # Investigations append. A claim ("<by> is investigating <suites>") is replaced by the
+    # same author's newer claim, and dropped once that author publishes a finding for it.
+    jq -s '
+      .[0] as $old | .[1] as $new |
+      (($old.investigations // []) + ($new.investigations // []) | unique) as $inv |
+      (($old.claims // []) + ($new.claims // [])
+        | group_by([.by, (.suites | sort)]) | map(max_by(.at))
+        | map(. as $c | select(any($inv[]; .by == $c.by and ((.suites // []) - ($c.suites // []) | length) < (.suites // [] | length)) | not))
+      ) as $claims |
+      ($old * $new) + {investigations: $inv, claims: $claims}' \
       "$out" "$RUN_JSON" > "$out.new"
     mv "$out.new" "$out"
   else
@@ -40,6 +50,12 @@ publish() {
   fi
   jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json"
   cp -R "$PAGE_SRC"/. "$dir/"
+  # The site landing page replaces the root only once performance lives under
+  # performance/; until then the root is still the performance dashboard.
+  if [ -d "$wt/performance" ] && [ -f "$LANDING_SRC" ]; then
+    cp "$LANDING_SRC" "$wt/index.html"
+    git -C "$wt" add index.html
+  fi
   git -C "$wt" add nightly
   if git -C "$wt" diff --cached --quiet; then echo "nothing new to publish for $run_id"; return 0; fi
   git -C "$wt" \

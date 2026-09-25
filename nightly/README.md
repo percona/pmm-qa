@@ -38,9 +38,9 @@ covers all of that group's failed jobs.
 
 ## Adding investigator findings
 
-Publishing a JSON with an existing `run_id` merges into that report and appends its
-`investigations`. Publish **one finding per root cause**, listing every group it
-explains in `suites` (the group names exactly as the report shows them):
+Publishing a JSON with an existing `run_id` merges into that report. Publish **one
+finding per root cause**, listing every group it explains in `suites` (the group names
+exactly as the table above lists them), and sign it with `by` and `at`:
 
 ```json
 {
@@ -49,16 +49,38 @@ explains in `suites` (the group names exactly as the report shows them):
     { "suites": ["E2E Tests", "Nightly Compatibility"],
       "verdict": "not a bug",
       "summary": "one line",
-      "link": "https://github.com/percona/pmm-qa/pull/..." }
+      "link": "https://github.com/percona/pmm-qa/pull/...",
+      "by": "Investigator routine",
+      "at": "2026-09-25T03:40:00Z" }
   ]
 }
 ```
 
 `verdict` is one of `not reproduced`, `not a bug`, `test fix`, `product bug`; `link` is
-the fix PR or Jira bug when there is one. A group with failures and no finding shows
-"Not investigated yet".
+the fix PR or Jira bug when there is one (the page labels it `PR #N` or `PMM-N`); `by`
+is the routine or the GitHub login of whoever ran the session. Findings only ever append.
+
+### Claiming a suite
+
+Before investigating, publish a claim so others see the suite is being looked at:
+
+```json
+{ "run_id": "jenkins-123",
+  "claims": [{ "by": "<login>", "at": "<now>", "suites": ["CLI Integration Compatibility"] }] }
+```
+
+The page shows "Being investigated by …" on that suite for 12 hours, and the
+Investigate in Claude button asks for confirmation before starting a second,
+conflicting session. A newer claim from the same author replaces the older one, and a
+claim is dropped once its author publishes a finding for those suites.
 
 ```sh
 PAGES_REMOTE=https://x-access-token:${TOKEN}@github.com/percona/pmm-qa.git \
   nightly/ci/publish_report.sh findings.json
 ```
+
+## Site layout
+
+`pages/index.html` is the site landing page (two cards: Nightly and Performance). The
+publisher writes it to the `gh-pages` root only once the performance dashboard lives
+under `performance/`; until then the root stays the performance page.
