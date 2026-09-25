@@ -17,7 +17,7 @@ stub_prebaked_docker() {
     case "$*" in
       *'pmm-admin status'*)
         printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
-          'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
+          'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' 'valkey_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
         ;;
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
@@ -25,6 +25,7 @@ stub_prebaked_docker() {
       'ps --format {{.Ports}}') printf '%s\n' "${PUBLISHED_PORTS:-}" ;;
       *replication_group_members*) printf '3\n' ;;
       *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
+      *'cluster info'*) printf 'cluster_state:ok\n' ;;
       *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
     esac
   }
@@ -343,26 +344,40 @@ stub_prebaked_docker() {
   [[ $output == *'PROXYSQL_VERSION and PROXYSQL_PACKAGE are not supported'* ]]
 }
 
-@test "Valkey sentinel alias selects sentinel playbook" {
+@test "Valkey cluster runs six prebaked nodes and registers them as valkey-cluster.yml did" {
+  stub_prebaked_docker
+  parse_database_spec 'valkey=7'
+  dispatch_setup
+
+  grep -q -- '^run --detach --name valkey-primary-1 --hostname valkey-primary-1-node .*--publish 6379:6379 --volume valkey-primary-1-data:/data pmm-qa/valkey:7 valkey-server --port 6379 ' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name valkey-replica-4 .*--publish 6385:6379 .*--cluster-enabled yes' "$DOCKER_CALLS"
+  grep -q -- '--cluster create valkey-primary-1:6379 valkey-primary-2:6379 valkey-primary-3:6379 valkey-replica-4:6379 valkey-replica-5:6379 valkey-replica-6:6379 --cluster-replicas 1 --cluster-yes$' "$DOCKER_CALLS"
+  grep -q -- ' valkey-replica-5 container valkey-replica-5-node$' "$DOCKER_CALLS"
+  grep -q -- '^exec valkey-replica-5 pmm-admin add valkey --service-name=valkey-replica-5-svc --cluster=valkey-native-cluster --custom-labels=role=replica --environment=valkey-test --username=default --password=VKvl41568AsE --host=valkey-replica-5 --port=6379$' "$DOCKER_CALLS"
+}
+
+@test "Valkey sentinel alias runs the sentinel topology and registers it as valkey-sentinel.yml did" {
+  stub_prebaked_docker
   parse_database_spec 'valkey=8,SETUP_TYPE=sentinels'
   dispatch_setup
 
-  [[ $CAPTURE_TARGET == valkey/valkey-sentinel.yml ]]
-  [[ ${CAPTURE_ENV[VALKEY_VERSION]} == 8 ]]
-  [[ ${CAPTURE_ENV[SETUP_TYPE]} == sentinels ]]
+  grep -q -- '^run --detach --name valkey-replica-2 .*--publish 6381:6379 .*--replicaof valkey-primary 6379$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name sentinel-3 --hostname sentinel-3-node .*--publish 26381:26379 ' "$DOCKER_CALLS"
+  grep -q -- '^exec valkey-replica-1 pmm-admin add valkey --service-name=valkey-replica1-svc --cluster=valkey-cluster --replication-set=valkey-repl --custom-labels=role=replica ' "$DOCKER_CALLS"
+  grep -q -- '^exec sentinel-2 pmm-admin add valkey --service-name=sentinel2-svc --cluster=valkey-cluster --custom-labels=role=sentinel .*--port=26379$' "$DOCKER_CALLS"
 }
 
 @test "multiple specs dispatch sequentially without leaking environment maps" {
   local -a targets=()
   local spec
-  for spec in 'pdpgsql=17' 'external'; do
+  for spec in 'pdpgsql=17' 'ssl_mlaunch=8.0'; do
     parse_database_spec "$spec"
     dispatch_setup
     targets+=("$CAPTURE_TARGET")
   done
 
   [[ ${targets[0]} == percona-distribution-postgresql/percona-distribution-postgres-setup.yml ]]
-  [[ ${targets[1]} == external_setup.yml ]]
+  [[ ${targets[1]} == tls-ssl-setup/mlaunch_tls_setup.yml ]]
   [[ -z ${CAPTURE_ENV[PDPGSQL_VERSION]-} ]]
 }
 
@@ -403,14 +418,21 @@ stub_prebaked_docker() {
   [[ ${CAPTURE_ENV[MODB_SETUP]} == pss ]]
 }
 
-@test "service handlers map exporters and client debug" {
+@test "External runs both exporters on the prebaked image and registers them as external_setup.yml did" {
+  stub_prebaked_docker
+  SHARD_NAME=nightly-shard
   REDIS_VERSION=1.14.0
   NODE_PROCESS_VERSION=0.7.5
   parse_database_spec external
   dispatch_setup
-  [[ $CAPTURE_TARGET == external_setup.yml ]]
-  [[ ${CAPTURE_ENV[REDIS_EXPORTER_VERSION]} == 1.14.0 ]]
-  [[ ${CAPTURE_ENV[NODE_PROCESS_EXPORTER_VERSION]} == 0.7.5 ]]
+
+  grep -q '^image inspect pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name redis_container .*--publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name external_pmm --hostname external_pmm .*--network pmm-qa pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
+  grep -q -- '--web.listen-address=:42200 >/redis.log' "$DOCKER_CALLS"
+  grep -q -- ' external_pmm container external_pmm-nightly-shard$' "$DOCKER_CALLS"
+  grep -Eq '^exec external_pmm pmm-admin add external --listen-port=42200 --group=redis --service-name=redis_external_service_([0-9]+)$' "$DOCKER_CALLS"
+  grep -Eq '^exec external_pmm pmm-admin add external --listen-port=9256 --group=processes --service-name=nodeprocess_service_[0-9]+$' "$DOCKER_CALLS"
 }
 
 @test "HAProxy runs on the prebaked image and registers as haproxy_setup.yml did" {

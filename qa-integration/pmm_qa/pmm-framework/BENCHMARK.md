@@ -167,6 +167,20 @@ The old HAProxy path compiled HAProxy's git master on every run; the image is
 Oracle Linux 9's `haproxy` 2.8 package, which has the Prometheus exporter.
 With setup that fast, PMM-T2103 opened its dashboard before the rate panels had
 data, so it now auto-refreshes and waits, as PMM-T324 does.
+## External and Valkey on the prebaked path
+
+One run each, `CLIENT_VERSION=latest-tarball`, old path from a clean `git archive HEAD` copy.
+
+| Spec | Old | Prebaked | Checked |
+|---|---|---|---|
+| `external` | 115 s | 19 s | PMM Server scrapes `external_pmm:42200`, `redis_up 1`; both services registered |
+| `valkey` (cluster) | 244 s | 62 s | `cluster_state:ok`, 6 nodes, `<name>-svc` / `<name>-node`; CLI `@valkey` 4/4 |
+| `valkey,SETUP_TYPE=sentinel` | 233 s | 66 s | 2 replicas connected, sentinel quorum OK |
+| `valkey=7` | – | 64 s | Valkey 7.2.10 |
+
+The old External path ended up running redis_exporter 1.14.0 (32-bit): it installed
+twice and the second copy landed inside the first one's directory. The image runs
+the 1.58.0 the framework asks for.
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value

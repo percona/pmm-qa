@@ -82,6 +82,23 @@ build_haproxy_image() {
     die 'Building pmm-qa/haproxy:ol9 failed.'
 }
 
+# Build pmm-qa/valkey:VERSION (images/valkey).
+build_valkey_image() {
+  [[ $1 == 7 || $1 == 8 ]] || die "Valkey $1 has no prebaked image; use 7 or 8."
+  docker build --build-arg "VALKEY_VERSION=$1" --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/valkey:$1" \
+    "$FRAMEWORK_DIR/images/valkey" || die "Building pmm-qa/valkey:$1 failed."
+}
+
+# Build pmm-qa/external:TAG (images/external), TAG being
+# <redis_exporter version>-<process-exporter version>.
+build_external_image() {
+  local tag=$1
+  [[ $tag == *-* ]] || die "External image tag '$tag' must be <redis_exporter>-<process-exporter>."
+  docker build --build-arg "REDIS_EXPORTER_VERSION=${tag%-*}" --build-arg "PROCESS_EXPORTER_VERSION=${tag#*-}" \
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/external:$tag" "$FRAMEWORK_DIR/images/external" ||
+    die "Building pmm-qa/external:$tag failed."
+}
+
 # Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL
 pxc_proxysql_tag() {
   if [[ -n ${2:-} ]]; then
