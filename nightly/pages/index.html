@@ -17,7 +17,7 @@
   th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
   th { color:var(--muted); font-weight:600; }
   .badge { display:inline-block; font-size:12px; padding:0 8px; border-radius:10px; border:1px solid currentColor; vertical-align:middle; }
-  .pass, .success { color:var(--pass); } .fail, .failure, .cancelled, .timed_out { color:var(--fail); } .skipped { color:var(--skip); }
+  .pass, .success { color:var(--pass); } .fail, .failure, .cancelled, .timed_out { color:var(--fail); } .skipped, .unstable { color:var(--skip); }
   a { color:inherit; }
   .wrap { overflow-x:auto; }
   .actions { white-space:nowrap; text-align:right; }
@@ -40,6 +40,7 @@
   tr.row-fail td { background:var(--row); }
   .dur { color:var(--muted); white-space:nowrap; }
   .inv { margin:0; padding:8px 12px 12px 30px; border-top:1px solid var(--line); }
+  .pending { margin:0; padding:8px 12px; border-top:1px solid var(--line); color:var(--muted); }
 </style>
 </head>
 <body>
@@ -55,8 +56,8 @@ const fmtDur = s => s == null ? '' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Mat
 const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URLSearchParams({
   repositories: 'percona/pmm-qa',
   prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
-    `In the Nightly Test Suite run for image tag ${r.image_tag}, suite "${group}" had ${failed.length} failed job(s):\n` +
-    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\nRun: ${r.run_url}\n\n` +
+    `In nightly orchestrator build ${r.run_id} (image tag ${r.image_tag}, client ${r.client_version}), suite "${group}" had ${failed.length} failed job(s):\n` +
+    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\nBuild: ${r.run_url}\n\n` +
     `Investigate all of them together: dedup, group failures that share a root cause, reproduce, classify, ` +
     `then publish the findings to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
 }).toString().replace(/\+/g, '%20');
@@ -64,16 +65,14 @@ const badge = res => `<span class="badge ${esc(res)}">${esc(res)}</span>`;
 const app = document.getElementById('app');
 let runs = [];
 
-function detailsOf(r) {
-  if (r.job_details && r.job_details.length) return r.job_details;
-  return (r.jobs || []).map(j => ({ group: j.name, name: j.name, result: j.result, url: r.run_url }));
-}
+const detailsOf = r => (r.jobs || []).map(j => ({ group: j.group || j.name, ...j }));
+const suitesOf = f => f.suites || (f.job ? [f.job] : []);
 
 function overview() {
   document.title = 'PMM Nightly Reports';
   if (!runs.length) { app.innerHTML = '<h1>PMM Nightly Reports</h1><p class="sub">No runs published yet.</p>'; return; }
   app.innerHTML = `<h1>PMM Nightly Reports</h1>
-  <p class="sub">One row per Nightly Test Suite run. <a href="../">Performance reports</a></p>
+  <p class="sub">One row per nightly orchestrator build. <a href="../">Performance reports</a></p>
   <div class="wrap"><table>
     <thead><tr><th>Date</th><th>Tag</th><th>Status</th><th>Summary</th><th>Failed</th><th>Findings</th><th></th></tr></thead>
     <tbody>${runs.slice().reverse().map(r => {
@@ -81,7 +80,7 @@ function overview() {
       return `<tr><td>${esc(fmtDate(r.date))}</td><td>${esc(r.image_tag)}</td><td>${badge(r.status)}</td>
         <td>${esc(r.summary)}</td><td class="${failed ? 'failure' : ''}">${failed}</td><td>${(r.investigations || []).length}</td>
         <td class="actions"><a class="btn primary" href="#run=${encodeURIComponent(r.run_id)}">Details</a>
-        <a class="btn" href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">GitHub run</a></td></tr>`;
+        <a class="btn" href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">Jenkins build</a></td></tr>`;
     }).join('')}</tbody>
   </table></div>`;
 }
@@ -92,27 +91,33 @@ function runView(id) {
   document.title = `${r.image_tag} · PMM Nightly`;
   const jobs = detailsOf(r);
   const groups = [...new Set(jobs.map(j => j.group))].map(g => ({ g, jobs: jobs.filter(j => j.group === g) }));
-  groups.sort((a, b) => b.jobs.filter(j => FAILED.includes(j.result)).length - a.jobs.filter(j => FAILED.includes(j.result)).length);
+  const weight = js => js.filter(j => FAILED.includes(j.result)).length * 1000 + js.filter(j => j.result !== 'success' && j.result !== 'skipped').length;
+  groups.sort((a, b) => weight(b.jobs) - weight(a.jobs));
   const inv = r.investigations || [];
   app.innerHTML = `<p><a href="#">← All runs</a></p>
   <h1>${esc(r.image_tag)} ${badge(r.status)}</h1>
-  <p class="sub">${esc(fmtDate(r.date))} UTC · ${esc(r.summary)} · <a href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">GitHub run</a></p>
+  <p class="sub">${esc(fmtDate(r.date))} UTC · client ${esc(r.client_version)} · ${esc(r.summary)} · <a href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">Jenkins build</a></p>
   ${groups.map(({ g, jobs }) => {
     const failed = jobs.filter(j => FAILED.includes(j.result));
     const nFail = failed.length;
     const nOk = jobs.filter(j => j.result === 'success').length;
-    const finds = inv.filter(f => f.job === g || jobs.some(j => j.name === f.job));
-    return `<details class="group" ${nFail ? 'open' : ''}>
+    const nWarn = jobs.filter(j => j.result === 'unstable' || j.result === 'unknown').length;
+    const finds = inv.filter(f => suitesOf(f).includes(g));
+    return `<details class="group" ${nFail || nWarn ? 'open' : ''}>
       <summary><span class="gname">${esc(g)}</span>
-        <span class="counts">${nOk}/${jobs.length} passed${nFail ? ` · <span class="failure">${nFail} failed</span>` : ''}</span>
+        <span class="counts">${nOk}/${jobs.length} passed${nFail ? ` · <span class="failure">${nFail} failed</span>` : ''}${nWarn ? ` · <span class="unstable">${nWarn} unstable</span>` : ''}</span>
         ${nFail ? `<a class="btn primary" href="${esc(investigateUrl(r, g, failed))}" onclick="event.stopPropagation(); window.open(this.href, '_blank', 'noopener'); return false;">Investigate ${nFail} failure${nFail > 1 ? 's' : ''} in Claude</a>` : ''}</summary>
       <table class="jobs"><thead><tr><th>Job</th><th>Result</th><th>Duration</th><th></th></tr></thead><tbody>
       ${jobs.map(j => `<tr class="${FAILED.includes(j.result) ? 'row-fail' : ''}"><td>${esc(j.name)}</td><td>${badge(j.result)}</td>
         <td class="dur">${esc(fmtDur(j.duration_s))}</td>
         <td class="actions"><a class="btn" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener">Logs</a></td></tr>`).join('')}
       </tbody></table>
-      ${finds.length ? `<ul class="inv">${finds.map(f => `<li><b>${esc(f.verdict)}</b>: ${esc(f.summary)}` +
-        (f.link ? ` (<a href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">link</a>)` : '') + '</li>').join('')}</ul>` : ''}
+      ${finds.length ? `<ul class="inv">${finds.map(f => {
+        const others = suitesOf(f).filter(x => x !== g);
+        return `<li><b>${esc(f.verdict)}</b>: ${esc(f.summary)}` +
+          (f.link ? ` (<a href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">link</a>)` : '') +
+          (others.length ? ` <span class="counts">· same cause as ${others.map(esc).join(', ')}</span>` : '') + '</li>';
+      }).join('')}</ul>` : nFail ? '<p class="pending">Not investigated yet.</p>' : ''}
     </details>`;
   }).join('')}`;
 }
