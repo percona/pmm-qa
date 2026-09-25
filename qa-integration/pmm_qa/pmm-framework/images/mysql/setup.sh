@@ -105,11 +105,18 @@ mf_sql() {
 }
 
 mf_cleanup() {
-  local ids
-  ids=$(docker ps -aq --filter "name=^${engine}_pmm${topology}_${version//./_}_") || die 'docker ps failed.'
+  local ids agent_ids volumes prefix=${engine}_pmm${topology}_${version//./_}_
+  ids=$(docker ps -aq --filter "name=^$prefix") || die 'docker ps failed.'
+  agent_ids=$(docker ps -aq --filter "name=^pmm_nomad_agent_$prefix") || die 'docker ps failed.'
+  ids+=${ids:+$'\n'}$agent_ids
   if [[ -n $ids ]]; then
     # shellcheck disable=SC2086 # one id per word
     must docker rm -fv $ids >/dev/null
+  fi
+  volumes=$(docker volume ls -q --filter "name=^$prefix") || die 'docker volume ls failed.'
+  if [[ -n $volumes ]]; then
+    # shellcheck disable=SC2086 # one volume per word
+    must docker volume rm -f $volumes >/dev/null
   fi
   ensure_pmm_network
 }
@@ -144,7 +151,8 @@ mf_start_node() {
   local -a run=(
     docker run --detach --name "$name" --hostname "$name" --user root
     --label "pmm-qa.engine=$engine" --label "pmm-qa.$engine.setup-type=${setup_type:-single}"
-    --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password" "${NOMAD_CGROUPS[@]}"
+    --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password"
+    --volume "${name}_pmm:/usr/local/percona/pmm" --volume "${name}_tmp:/tmp"
   )
   # As the old Ansible setup: the host reaches node N's socket at
   # /tmp/mysql-sockets/N/mysql.sock, which the CLI socket tests use.
@@ -340,9 +348,17 @@ mf_start_minio() {
 }
 
 mf_setup_agents() {
-  local name
+  local name agent
   for name in "${names[@]}"; do
-    setup_pmm_agent "$name" "$encrypted"
+    agent=pmm_nomad_agent_$name
+    must docker run --detach --name "$agent" --user root \
+      --label pmm-qa.engine=pmm-agent --label "pmm-qa.parent=$name" \
+      --network "container:$name" --pid "container:$name" --volumes-from "$name" \
+      "${NOMAD_CGROUPS[@]}" --entrypoint sleep "pmm-qa/$engine:$version" infinity >/dev/null
+    must docker exec --user root "$agent" sh -c \
+      'ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/local/bin/pmm-admin
+       ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/local/bin/pmm-agent'
+    setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log "$name" "$agent"
   done
   each_node names wait_pmm_agent
 }
@@ -363,7 +379,7 @@ mf_register() {
   retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering $1" \
     docker exec "$1" "${add[@]}" --debug "${1}_$suffix" 127.0.0.1:3306 >/dev/null
   wait_exporter "$1" mysqld_exporter
-  wait_node_exporter "$1" /var/log/pmm-agent.log
+  wait_node_exporter "$1" /tmp/pmm-agent.log
 }
 
 # sysbench runs detached, so the setup does not wait out its run (30 s for PS,

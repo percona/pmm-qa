@@ -25,6 +25,12 @@ Images are pulled from `ghcr.io/percona/pmm-qa`, or built locally from
 always build locally, e.g. to try a Dockerfile change, or prebake them with
 `./build-images ps=8.4 pdpgsql=17`.
 
+PS and MySQL keep the official database container unprivileged. Their
+`pmm-agent` runs in a companion container that shares the database container's
+network, PID namespace, PMM installation, data volumes and temporary files.
+Only that companion receives the host cgroup access Nomad needs, so Nomad
+cannot interfere with mysqld initialization or lifetime.
+
 ## Usage
 
 Run from any working directory:

@@ -80,6 +80,15 @@ and checks each one, and publishes it to
 `ghcr.io/percona/pmm-qa/<engine>:<version>`. On a push it rebuilds only the
 images whose baked-in files changed.
 
+PS and MySQL use their database image twice per node: an unprivileged database
+container, and a privileged `pmm_nomad_agent_<node>` companion with the image
+entrypoint replaced by `sleep`. The companion shares the database container's
+network and PID namespaces plus its PMM, data and `/tmp` volumes. `pmm-agent`
+and Nomad run in the companion; `pmm-admin` remains available in the database
+container through the shared PMM installation and local network. This preserves
+the CLI suite's container contract without exposing mysqld to writable host
+cgroups.
+
 ---
 
 ## 3. What happens on a run

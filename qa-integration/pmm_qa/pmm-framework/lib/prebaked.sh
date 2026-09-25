@@ -191,9 +191,12 @@ install_pmm_client() {
 # named NODE_NAME (default: NODE), and start it without systemd, logging to
 # LOG, where the playbook's client setup put it and tests read it.
 # ENCRYPTED=true stores the agent config encrypted, as ENCRYPTED_CLIENT_CONFIG asks.
-# Usage: setup_pmm_agent NODE ENCRYPTED [LOG] [NODE_NAME]
+# AGENT_NODE defaults to NODE. A separate container can supply the agent while
+# sharing NODE's network and files, which keeps host-level facilities such as
+# Nomad out of a database container.
+# Usage: setup_pmm_agent NODE ENCRYPTED [LOG] [NODE_NAME] [AGENT_NODE]
 setup_pmm_agent() {
-  local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log} node_name=${4:-$1}
+  local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log} node_name=${4:-$1} agent_node=${5:-$1}
   local -a setup=(
     "--config-file=$PMM_AGENT_CONFIG"
     "--server-address=$PMM_SERVER_HOST:$PMM_SERVER_PORT"
@@ -209,17 +212,17 @@ setup_pmm_agent() {
   # Every container of an image inherits the image's /etc/machine-id, which
   # pmm-agent reports as the node's machine_id; the playbooks' systemd
   # containers generated their own at boot.
-  must docker exec --user root "$node" sh -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id'
+  must docker exec --user root "$agent_node" sh -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id'
   if [[ $encrypted == true ]]; then
-    must docker exec --user root "$node" openssl genpkey -algorithm RSA \
+    must docker exec --user root "$agent_node" openssl genpkey -algorithm RSA \
       -pkeyopt rsa_keygen_bits:4096 -aes256 -pass pass:testpass -out "$PMM_AGENT_KEY"
     setup+=('--custom-labels=role=pmm-client, encrypted=true, password=true')
     setup+=("--config-file-key-file=$PMM_AGENT_KEY" --config-file-key-password=testpass)
     start+=("--config-file-key-file=$PMM_AGENT_KEY" --config-file-key-password=testpass)
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
-    docker exec --user root "$node" pmm-agent setup "${setup[@]}" "$node" container "$node_name" >/dev/null
-  must docker exec --detach --user root "$node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
+    docker exec --user root "$agent_node" pmm-agent setup "${setup[@]}" "$node" container "$node_name" >/dev/null
+  must docker exec --detach --user root "$agent_node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
 }
 
 pmm_agent_connected() {
