@@ -180,4 +180,6 @@ jobs:
         with:
           subject-name: ${{ steps.push.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          # Kept in GitHub's attestation store only; pushing them to GHCR adds
+          # a sha256-<digest> package version for every image built.
+          push-to-registry: false
