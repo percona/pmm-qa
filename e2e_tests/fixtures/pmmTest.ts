@@ -20,6 +20,7 @@ import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
@@ -33,6 +34,7 @@ import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
+import AlertingPage from '@pages/alerting.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
@@ -44,6 +46,7 @@ const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   alertStatusPage: AlertStatusPage;
   agentsPage: AgentsPage;
+  alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -72,6 +75,7 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
+  vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
@@ -79,6 +83,7 @@ const pmmTest = base.extend<{
 }>({
   advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
+  alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -200,6 +205,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   // Registering this as a beforeEach hook would only gate the first spec file that imports this
   // module, since the module is evaluated once and the hook attaches to the file loading at that
   // moment. An auto fixture applies to every test instead.

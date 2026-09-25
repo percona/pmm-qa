@@ -508,6 +508,7 @@ export default class Dashboards extends BasePage {
       if (iterator++ == 5) throw new Error(error);
 
       await locator.click();
+      await locator.waitFor({ state: 'detached' });
     }
   };
 }

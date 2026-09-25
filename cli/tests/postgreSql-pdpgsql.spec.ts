@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion, removePGService } from '@helpers/pmm-admin';
 
@@ -30,6 +30,9 @@ const waitForAgentRunning = async (agentName = PgAgent.PGSTATMONITOR_AGENT) => {
 };
 
 test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql' }, () => {
+  // containerName is discovered in beforeAll, so it is read when each test starts.
+  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pmm_\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
