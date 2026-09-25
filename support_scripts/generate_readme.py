@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import ast
 import json
 import re
 import sys
@@ -11,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "qa-integration" / "README.md"
-DATABASE_OPTIONS = ROOT / "qa-integration" / "pmm_qa" / "scripts" / "database_options.py"
+CATALOGUE = ROOT / "qa-integration" / "pmm_qa" / "pmm-framework" / "lib" / "config.sh"
 E2E_README = ROOT / "e2e_tests" / "README.md"
 E2E_TESTS = ROOT / "e2e_tests" / "tests"
 CLI_README = ROOT / "cli" / "README.md"
@@ -44,28 +43,26 @@ TOPOLOGY = {
     "VALKEY": {"default_topology": "cluster", "setup_type": {"sentinel": "sentinel setup", "sentinels": "sentinel setup"}},
     "PROXYSQL": {"default_topology": "package selector used by PXC", "setup_type": {}},
     "HAPROXY": {"default_topology": "fixed HAProxy setup", "setup_type": {}},
+    "EXTERNAL": {"default_topology": "Redis with redis_exporter and process-exporter", "setup_type": {}},
 }
 
 VARIANTS = {
     "SSL_MYSQL": "TLS/SSL MySQL setup.",
     "SSL_PDPGSQL": "TLS/SSL PostgreSQL or Percona Distribution for PostgreSQL setup.",
     "SSL_PSMDB": "TLS/SSL PSMDB setup.",
-    "MLAUNCH_PSMDB": "mlaunch-based PSMDB setup.",
-    "MLAUNCH_MODB": "mlaunch-based MongoDB setup.",
-    "SSL_MLAUNCH": "TLS/SSL mlaunch MongoDB/PSMDB setup.",
-    "DOCKERCLIENTS": "Docker client image setup helper.",
-    "BUCKET": "MinIO bucket setup helper for backup/object-storage scenarios.",
 }
 
 
 def load_database_options() -> dict:
-    tree = ast.parse(DATABASE_OPTIONS.read_text(encoding="utf-8"))
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "database_options":
-                    return ast.literal_eval(node.value)
-    raise RuntimeError(f"Cannot find database_options in {DATABASE_OPTIONS}")
+    # Each `register_database TYPE 'versions' ...` in pmm-framework's catalogue.
+    registrations = re.findall(
+        r"^register_database (\w+)\s+(?:\\\n\s*)?'([^']*)'",
+        CATALOGUE.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    if not registrations:
+        raise RuntimeError(f"Cannot find register_database calls in {CATALOGUE}")
+    return {key: {"versions": versions.split()} for key, versions in registrations}
 
 
 def versions_for(database_options: dict, key: str) -> list[str]:
@@ -87,14 +84,6 @@ def build_setups(database_options: dict) -> str:
     setups = {
         key: {"versions": versions_for(database_options, key), **metadata}
         for key, metadata in TOPOLOGY.items()
-    }
-    setups["EXTERNAL"] = {
-        "versions": {
-            "redis_exporter": database_options["EXTERNAL"]["REDIS"]["versions"],
-            "node_process_exporter": database_options["EXTERNAL"]["NODEPROCESS"]["versions"],
-        },
-        "default_topology": "external exporter setup",
-        "setup_type": {},
     }
     return f"```json\n{compact_string_arrays(json.dumps(setups, indent=2))}\n```"
 

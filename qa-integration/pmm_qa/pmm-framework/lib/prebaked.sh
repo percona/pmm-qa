@@ -7,7 +7,6 @@
 # ignores `set -e` for everything underneath. So nothing here relies on
 # errexit: every helper dies on its own failure.
 
-# Keep in step with busybox_image in vars/pinned_images.yml.
 readonly BUSYBOX_IMAGE=busybox:1.37.0
 readonly PMM_AGENT_CONFIG=/usr/local/percona/pmm/config/pmm-agent.yaml
 readonly PMM_AGENT_KEY=/usr/local/percona/pmm/config/pmm-key.pem

@@ -3,7 +3,7 @@
 ROOT=$(git rev-parse --show-toplevel)
 STAGED_FILES=$(git diff --cached --name-only)
 
-if echo "$STAGED_FILES" | grep -Eqx "qa-integration/pmm_qa/scripts/database_options.py|e2e_tests/tests/.*\.ts|cli/tests/.*\.ts"; then
+if echo "$STAGED_FILES" | grep -Eqx "qa-integration/pmm_qa/pmm-framework/lib/config.sh|e2e_tests/tests/.*\.ts|cli/tests/.*\.ts"; then
     if python3 -c "" >/dev/null 2>&1; then
         PYTHON=python3
     elif python -c "" >/dev/null 2>&1; then
@@ -16,7 +16,7 @@ if echo "$STAGED_FILES" | grep -Eqx "qa-integration/pmm_qa/scripts/database_opti
     "$PYTHON" "$ROOT/support_scripts/generate_readme.py"
 fi
 
-if echo "$STAGED_FILES" | grep -qx "qa-integration/pmm_qa/scripts/database_options.py"; then
+if echo "$STAGED_FILES" | grep -qx "qa-integration/pmm_qa/pmm-framework/lib/config.sh"; then
     git add "$ROOT/qa-integration/README.md"
 fi
 
