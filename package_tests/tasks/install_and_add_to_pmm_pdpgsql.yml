@@ -40,19 +40,12 @@
   when: ansible_distribution == "Rocky" and ansible_distribution_major_version | int >= 9
   ignore_errors: yes
 
-# ppg-testing deleted tasks/install_ppgXX.yml from main in c716c38 (now generated at runtime),
-# so fetch it from the last commit that still ships it.
-- name: Download install_ppg.yml
-  get_url:
-    url: "https://raw.githubusercontent.com/Percona-QA/ppg-testing/beaf39023fd436eafe8d3ffe6ce96687b83cafd7/tasks/install_ppg{{ pg_version }}.yml"
-    dest: /tmp
-    mode: 0777
-
 - name: Enable postgresql repository
   command: "percona-release setup -y ppg-{{ pg_version }}"
 
 - name: Run install_ppg.yml
-  include_tasks: /tmp/install_ppg{{ pg_version }}.yml
+  # Vendored from Percona-QA/ppg-testing@beaf390 (upstream deleted tasks/install_ppgXX.yml in c716c38)
+  include_tasks: "{{ playbook_dir }}/../qa-integration/pmm_qa/tasks/install_ppg{{ pg_version }}.yml"
   vars:
     pg_version_to_install: "{{ pg_version }}"
 
