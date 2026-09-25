@@ -6,7 +6,7 @@ set -Eeuo pipefail
 
 RUN_JSON="${1:?usage: publish_report.sh <run.json>}"
 PAGES_BRANCH="${PAGES_BRANCH:-gh-pages}"
-PAGE_SRC="$(cd "$(dirname "$0")/../pages" && pwd)/index.html"
+PAGE_SRC="$(cd "$(dirname "$0")/../pages" && pwd)"
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 [ -s "$RUN_JSON" ] || { echo "missing or empty: $RUN_JSON" >&2; exit 1; }
 jq -e '.run_id' "$RUN_JSON" >/dev/null || { echo "run.json needs run_id" >&2; exit 1; }
@@ -39,7 +39,7 @@ publish() {
     cp "$RUN_JSON" "$out"
   fi
   jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json"
-  cp "$PAGE_SRC" "$dir/index.html"
+  cp -R "$PAGE_SRC"/. "$dir/"
   git -C "$wt" add nightly
   if git -C "$wt" diff --cached --quiet; then echo "nothing new to publish for $run_id"; return 0; fi
   git -C "$wt" \
