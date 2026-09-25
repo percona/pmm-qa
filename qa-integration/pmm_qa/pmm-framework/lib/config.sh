@@ -8,8 +8,8 @@
 #
 # TO ADD A NEW DATABASE TYPE you normally touch three files:
 #   1. this one          -- register_database ... (validation + defaults)
-#   2. setups/<family>.sh -- a setup_<name> function that builds the env map
-#   3. setups/dispatch.sh -- one case arm pointing DB_TYPE at that function
+#   2. images/<database>/setup.sh -- a setup_<name> function
+#   3. lib/dispatch.sh -- one case arm pointing DB_TYPE at that function
 # See ARCHITECTURE.md for the walkthrough.
 #
 # Data model (four parallel associative arrays, all keyed by uppercase type):
@@ -119,7 +119,7 @@ register_database PXC \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
-# PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
+# PXC setup reads (see images/pxc/setup.sh). dispatch_setup rejects it explicitly.
 # Version 2 is Percona's proxysql2 (PXC 5.7/8.0); 3 is upstream ProxySQL (8.4+).
 register_database PROXYSQL '2 3' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
 

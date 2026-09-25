@@ -20,8 +20,6 @@ on:
     # live test. Remove it before merging to main.
     branches: [main, Pre-Baked-Images-POC]
     paths:
-      - provisioning/images/engines/ps/**
-      - provisioning/images/engines/mysql/**
       - qa-integration/pmm_qa/pmm-framework/images/**
       - qa-integration/pmm_qa/pmm-framework/lib/images.sh
       - qa-integration/pmm_qa/pmm-framework/build-images
@@ -30,13 +28,6 @@ on:
       - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
-      # What images/pgsql/Dockerfile copies from its build context.
-      - qa-integration/pmm_qa/pg_stat_statements_setup.sh
-      - qa-integration/pmm_qa/pgsm_run_queries.sh
-      # What images/ssl-pdpgsql/Dockerfile copies from its build context.
-      - qa-integration/pmm_qa/tls-ssl-setup/create_certs.sh
-      - qa-integration/pmm_qa/tls-ssl-setup/postgres/setup_pgsql.sh
-      - qa-integration/pmm_qa/tls-ssl-setup/postgres/init.sql
       - .github/workflows/build-prebaked-images.yml
 
 permissions:
@@ -77,17 +68,20 @@ jobs:
             if grep -qE '^(qa-integration/pmm_qa/pmm-framework/(lib/images\.sh|build-images)|\.github/workflows/build-prebaked-images\.yml)$' <<<"$changed"; then
               engines=$all
             else
+              # Only the files each image bakes in: a setup.sh edit rebuilds nothing.
               picked=()
-              if grep -q '^provisioning/images/engines/ps/' <<<"$changed"; then picked+=('"ps"'); fi
-              if grep -q '^provisioning/images/engines/mysql/' <<<"$changed"; then picked+=('"mysql"'); fi
-              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pxc/' <<<"$changed"; then picked+=('"pxc-proxysql"'); fi
-              if grep -qE '^qa-integration/(pmm_qa/pmm-framework/images/psmdb/|pmm_psmdb-pbm_setup/)' <<<"$changed"; then picked+=('"psmdb"'); fi
-              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/haproxy/' <<<"$changed"; then picked+=('"haproxy"'); fi
-              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/external/' <<<"$changed"; then picked+=('"external"'); fi
-              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/valkey/' <<<"$changed"; then picked+=('"valkey"'); fi
-              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pdpgsql/' <<<"$changed"; then picked+=('"pdpgsql"'); fi
-              if grep -qE '^qa-integration/pmm_qa/(pmm-framework/images/pgsql/|pg_stat_statements_setup\.sh$|pgsm_run_queries\.sh$)' <<<"$changed"; then picked+=('"pgsql"'); fi
-              if grep -qE '^qa-integration/pmm_qa/(pmm-framework/images/ssl-pdpgsql/|tls-ssl-setup/(create_certs\.sh|postgres/setup_pgsql\.sh|postgres/init\.sql)$)' <<<"$changed"; then picked+=('"ssl-pdpgsql"'); fi
+              images=qa-integration/pmm_qa/pmm-framework/images
+              pick() { if grep -qE "$2" <<<"$changed"; then picked+=("\"$1\""); fi; }
+              pick ps "^$images/ps/"
+              pick mysql "^$images/mysql/Dockerfile$"
+              pick pxc-proxysql "^$images/pxc/(Dockerfile|pmm-pxc)$"
+              pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/)"
+              pick haproxy "^$images/haproxy/Dockerfile$"
+              pick external "^$images/external/Dockerfile$"
+              pick valkey "^$images/valkey/Dockerfile$"
+              pick pdpgsql "^$images/pdpgsql/Dockerfile$"
+              pick ssl-pdpgsql "^$images/pdpgsql/ssl/"
+              pick pgsql "^$images/pgsql/(Dockerfile|pg_stat_statements_setup\.sh|pgsm_run_queries\.sh)$"
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi

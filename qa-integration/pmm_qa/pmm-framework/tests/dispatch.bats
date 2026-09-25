@@ -162,7 +162,7 @@ stub_prebaked_docker() {
 @test "the PS image builds from the shared Dockerfile with the version's base image" {
   stub_prebaked_docker
   build_ps_image 8.0
-  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/ps/Dockerfile --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $PREBAKED_IMAGES_DIR$" "$DOCKER_CALLS"
+  grep -q -- "^build --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $FRAMEWORK_DIR/images/ps$" "$DOCKER_CALLS"
   run build_ps_image 9.9
   [[ $status -ne 0 ]]
 }
@@ -192,7 +192,7 @@ stub_prebaked_docker() {
   grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
 
   build_mysql_image 5.7
-  grep -q -- "^build -f $PREBAKED_IMAGES_DIR/engines/mysql/Dockerfile --target mysql-57 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 " "$DOCKER_CALLS"
+  grep -q -- "^build --target mysql-57 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 $FRAMEWORK_DIR/images/mysql$" "$DOCKER_CALLS"
   build_mysql_image 8.0
   grep -q -- '--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 ' "$DOCKER_CALLS"
 }
@@ -230,17 +230,17 @@ stub_prebaked_docker() {
   [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
-# Stands in for scripts/fetch-pmm-client-deb.sh, recording its arguments.
+# Stands in for lib/fetch-pmm-client-deb.sh, recording its arguments.
 stub_deb_fetch() {
   DEBIAN_NODE=true
-  PMM_QA_ROOT=$BATS_TEST_TMPDIR/pmm_qa
-  mkdir -p "$PMM_QA_ROOT/scripts"
-  cat >"$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh" <<EOF
+  FRAMEWORK_DIR=$BATS_TEST_TMPDIR/framework
+  mkdir -p "$FRAMEWORK_DIR/lib"
+  cat >"$FRAMEWORK_DIR/lib/fetch-pmm-client-deb.sh" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >>'$BATS_TEST_TMPDIR/deb.calls'
 echo /cache/pmm-client.deb
 EOF
-  chmod +x "$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh"
+  chmod +x "$FRAMEWORK_DIR/lib/fetch-pmm-client-deb.sh"
 }
 
 @test "single PDPGSQL runs the prebaked node, installs the Debian client package and registers TCP and socket services" {
@@ -508,7 +508,7 @@ EOF
   dispatch_setup
 
   grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 pmm-qa/haproxy:ol9$' "$DOCKER_CALLS"
-  grep -q '^cp .*/pmm_qa/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
+  grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
   grep -Eq '^exec haproxy_pmm pmm-admin add haproxy --listen-port=42100 --environment=haproxy haproxy_pmm_service_[0-9]+$' "$DOCKER_CALLS"

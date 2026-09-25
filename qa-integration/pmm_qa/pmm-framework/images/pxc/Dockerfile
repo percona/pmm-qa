@@ -25,8 +25,8 @@ RUN set -eux; \
     proxysql --version; \
     sysbench --version
 
-# TARBALL= overlays a pre-release PXC binary tarball onto the packaged install,
-# as provisioning/images/engines/pxc/Dockerfile does. The version check fails a
+# TARBALL= overlays a pre-release PXC binary tarball onto the packaged install.
+# The version check fails a
 # tarball whose layout left the packaged binaries in place, which would
 # otherwise silently test the wrong build.
 ARG PXC_TARBALL=

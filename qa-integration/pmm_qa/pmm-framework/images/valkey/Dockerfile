@@ -1,5 +1,4 @@
-# Valkey's binaries on an EL base, as provisioning/images/engines/valkey does,
-# so setup_valkey can install a package PMM Client into the same container.
+# Valkey's binaries on an EL base, so setup_valkey can install a package PMM Client into the same container.
 ARG VALKEY_VERSION=8
 FROM valkey/valkey:${VALKEY_VERSION}-bookworm AS valkey
 

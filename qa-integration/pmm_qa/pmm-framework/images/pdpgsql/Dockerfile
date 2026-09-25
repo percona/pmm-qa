@@ -1,4 +1,4 @@
-# Percona Distribution for PostgreSQL on the systemd Ubuntu the playbook used,
+# Percona Distribution for PostgreSQL on the systemd Ubuntu the old Ansible setup used,
 # with every package its three topologies install. Tests run
 # `service postgresql restart` and read /var/log/postgresql, so systemd and the
 # Debian cluster layout stay. The single-node postgresql.conf and pg_hba.conf

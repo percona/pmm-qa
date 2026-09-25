@@ -1,4 +1,0 @@
-*
-!create_certs.sh
-!postgres/setup_pgsql.sh
-!postgres/init.sql

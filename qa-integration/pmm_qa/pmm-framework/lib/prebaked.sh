@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # lib/prebaked.sh -- the docker backend: provision on a prebaked image with
-# plain docker commands, instead of handing an env map to a playbook.
+# plain docker commands.
 #
 # A sequential setup runs inside `(run_database_spec) || status=$?`, where bash
 # ignores `set -e` for everything underneath. So nothing here relies on
@@ -108,8 +108,8 @@ fetch_client_tarball() {
   printf '%s' "$file"
 }
 
-# Fetch the CLIENT package for Debian-family NODE's release through the
-# playbooks' verifying cache, which waits out repo.percona.com's publishing race.
+# Fetch the CLIENT package for Debian-family NODE's release through
+# fetch-pmm-client-deb.sh's verifying cache, which waits out repo.percona.com's publishing race.
 # Stdout: the host path of the .deb
 fetch_client_deb() {
   local node=$1 client=$2 component version='' codename
@@ -122,7 +122,7 @@ fetch_client_deb() {
   esac
   # shellcheck disable=SC2016 # expanded by the container's shell
   codename=$(docker exec "$node" sh -c '. /etc/os-release; echo "$VERSION_CODENAME"') || return 1
-  "$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh" "$component" "$codename" /tmp/pmm-client-cache 1800 "$version"
+  "$FRAMEWORK_DIR/lib/fetch-pmm-client-deb.sh" "$component" "$codename" /tmp/pmm-client-cache 1800 "$version"
 }
 
 # Install PMM Client in NODE: from TARBALL (a host path) when given, otherwise

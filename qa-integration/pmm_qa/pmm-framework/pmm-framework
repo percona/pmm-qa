@@ -8,7 +8,7 @@
 #
 # This entrypoint is intentionally thin: it checks the Bash version, works out
 # where the repo lives, sources every module, then hands over to parse_args()
-# and run_database_setups(). All real behaviour lives in lib/ and setups/.
+# and run_database_setups(). All real behaviour lives in lib/ and images/.
 #
 # Layout:
 #   lib/common.sh     logging, die(), small value helpers
@@ -17,7 +17,8 @@
 #   lib/docker.sh     finding the PMM Server
 #   lib/images.sh     building prebaked database images
 #   lib/prebaked.sh   the docker backend: PMM Client install, agent, retries
-#   setups/*.sh       one function per database type, and the dispatch table
+#   images/*/        per database: its Dockerfile, setup.sh and data files
+#   lib/dispatch.sh   the map from a database type to its setup function
 #   lib/execution.sh  preflight and the sequential/parallel strategies
 #
 # See ARCHITECTURE.md for the call flow, a diagram, and how to add a database.
@@ -59,16 +60,24 @@ source "$FRAMEWORK_DIR/lib/docker.sh"
 source "$FRAMEWORK_DIR/lib/images.sh"
 # shellcheck source=lib/prebaked.sh
 source "$FRAMEWORK_DIR/lib/prebaked.sh"
-# shellcheck source=setups/mysql.sh
-source "$FRAMEWORK_DIR/setups/mysql.sh"
-# shellcheck source=setups/postgresql.sh
-source "$FRAMEWORK_DIR/setups/postgresql.sh"
-# shellcheck source=setups/mongodb.sh
-source "$FRAMEWORK_DIR/setups/mongodb.sh"
-# shellcheck source=setups/services.sh
-source "$FRAMEWORK_DIR/setups/services.sh"
-# shellcheck source=setups/dispatch.sh
-source "$FRAMEWORK_DIR/setups/dispatch.sh"
+# shellcheck source=images/mysql/setup.sh
+source "$FRAMEWORK_DIR/images/mysql/setup.sh"
+# shellcheck source=images/pxc/setup.sh
+source "$FRAMEWORK_DIR/images/pxc/setup.sh"
+# shellcheck source=images/pdpgsql/setup.sh
+source "$FRAMEWORK_DIR/images/pdpgsql/setup.sh"
+# shellcheck source=images/pgsql/setup.sh
+source "$FRAMEWORK_DIR/images/pgsql/setup.sh"
+# shellcheck source=images/psmdb/setup.sh
+source "$FRAMEWORK_DIR/images/psmdb/setup.sh"
+# shellcheck source=images/haproxy/setup.sh
+source "$FRAMEWORK_DIR/images/haproxy/setup.sh"
+# shellcheck source=images/external/setup.sh
+source "$FRAMEWORK_DIR/images/external/setup.sh"
+# shellcheck source=images/valkey/setup.sh
+source "$FRAMEWORK_DIR/images/valkey/setup.sh"
+# shellcheck source=lib/dispatch.sh
+source "$FRAMEWORK_DIR/lib/dispatch.sh"
 # shellcheck source=lib/execution.sh
 source "$FRAMEWORK_DIR/lib/execution.sh"
 

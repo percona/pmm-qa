@@ -80,10 +80,9 @@ preflight_database_setups() {
         pgsql_replication_seen=true
         [[ $patroni_seen == true ]] && host_conflict=$pg_port_conflict
       fi
-    # external_setup.yml publishes redis_container on host port 6379, and both
-    # Valkey topologies put a node on that same port -- valkey-cluster.yml's
-    # valkey_cluster_start_port and valkey-sentinel.yml's valkey_primary_port
-    # are both 6379 -- so one of the two cannot bind it.
+    # EXTERNAL publishes redis_container on host port 6379, and both Valkey
+    # topologies put their first primary on that same port, so one of the two
+    # cannot bind it.
     elif [[ $DB_TYPE == EXTERNAL ]]; then
       external_seen=true
       [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict

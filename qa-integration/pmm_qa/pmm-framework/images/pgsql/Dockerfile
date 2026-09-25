@@ -1,7 +1,6 @@
-# PostgreSQL from PGDG with pg_stat_statements, set up by the playbook's own
-# pg_stat_statements_setup.sh on the phusion base it ran on. setup_pgsql starts
-# it with `service`, which tests also restart it through. The build context is
-# qa-integration/pmm_qa; Dockerfile.dockerignore keeps it to the two scripts.
+# PostgreSQL from PGDG with pg_stat_statements, set up by
+# pg_stat_statements_setup.sh on a phusion base. setup_pgsql starts it with
+# `service`, which tests also restart it through.
 FROM phusion/baseimage:jammy-1.0.1
 
 ARG PG_VERSION=17

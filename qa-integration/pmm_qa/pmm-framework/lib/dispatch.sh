@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# setups/dispatch.sh -- the map from a database type to its setup function.
+# lib/dispatch.sh -- the map from a database type to its setup function.
 #
 # Deliberately tiny: it is the one place to look to answer "what actually runs
 # for --database X", and the one place to edit when adding a type.
 #
 # TO ADD A DATABASE TYPE, after registering it in lib/config.sh and writing its
-# setup_<name> function in the matching setups/ file, add one case arm here.
+# setup_<name> function in images/<database>/setup.sh, add one case arm here.
 
 # Call the setup function for the parsed database type.
 #

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# setups/mongodb.sh -- PSMDB and SSL_PSMDB, on the prebaked pmm-qa/psmdb image.
+# images/psmdb/setup.sh -- PSMDB and SSL_PSMDB, on the prebaked psmdb image.
 
 # Percona Server for MongoDB as a replica set or a sharded cluster, on the
-# prebaked pmm-qa/psmdb image (images/psmdb).
+# prebaked pmm-qa/psmdb image (images/psmdb/Dockerfile).
 #
 # The containers still come from pmm_psmdb-pbm_setup's compose files, so names,
 # networks, ports and volumes match what tests expect: the image is tagged

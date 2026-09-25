@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # pmm-pxc -- a whole PXC cluster and its ProxySQL in one container, the layout
-# pxc_proxysql_setup.yml produced: node N listens on port 3305+N, ProxySQL on
+# the old Ansible setup produced: node N listens on port 3305+N, ProxySQL on
 # 6032 (admin) and 6033, all reached through 127.0.0.1.
 #
 #   pmm-pxc prepare VERSION   (image build) node configs, node 1's datadir, users
@@ -76,7 +76,7 @@ EOF
 
 # ProxySQL's own config, read on its first start: the nodes as Galera
 # hostgroups (writer 10, reader 11, backup writer 12, offline 13) and the
-# users pxc_proxysql_setup.yml configured.
+# users the old Ansible setup configured.
 write_proxysql_config() {
   local node servers=''
   for ((node = 1; node <= NODES; node++)); do
@@ -92,7 +92,7 @@ mysql_users=( { username="proxysql_user", password="passw0rd", default_hostgroup
 EOF
 }
 
-# The users pxc_proxysql_setup.yml creates, native-password below 8.4 as there.
+# The users the old Ansible setup created, native-password below 8.4 as there.
 create_users() {
   local version=$1 with=''
   case $version in

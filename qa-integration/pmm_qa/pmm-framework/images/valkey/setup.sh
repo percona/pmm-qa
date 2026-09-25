@@ -1,91 +1,9 @@
 #!/usr/bin/env bash
 #
-# setups/services.sh -- HAProxy, the External exporters and Valkey.
-
-# HAProxy with the PMM Client attached, for the HAProxy dashboards, on the
-# prebaked pmm-qa/haproxy image (images/haproxy). The end state is
-# haproxy_setup.yml's: haproxy_pmm serving haproxy.cfg on host port 42100,
-# registered with --environment=haproxy, with a request every 10 s.
-setup_haproxy() {
-  local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000))
-  client=$(resolved_client_version HAPROXY DB_CONFIG)
-  step 'Prepare image pmm-qa/haproxy:ol9' ensure_image haproxy ol9
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
-  step 'Start HAProxy' haproxy_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  # The playbook named the node after the container plus the nightly shard,
-  # so shards sharing one PMM Server do not replace each other's node.
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering ${container}_service_$suffix" \
-    docker exec "$container" pmm-admin add haproxy --listen-port=42100 --environment=haproxy \
-    "${container}_service_$suffix" >/dev/null
-  wait_node_exporter "$container" /pmm-agent.log
-  must docker exec --detach "$container" sh -c 'while true; do curl -s http://127.0.0.1:42100/ >/dev/null; sleep 10; done'
-  report_agent_status "$container"
-}
-
-haproxy_start() {
-  docker rm -fv "$container" >/dev/null 2>&1 || true
-  ensure_pmm_network
-  must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
-    --network pmm-qa --publish 42100:42100 pmm-qa/haproxy:ol9 >/dev/null
-  must docker cp "$PMM_QA_ROOT/haproxy.cfg" "$container:/haproxy.cfg"
-  must docker exec "$container" haproxy -f /haproxy.cfg -D
-  retry 30 "HAProxy's metrics on :42100" docker exec "$container" curl -fsS http://127.0.0.1:42100/metrics >/dev/null
-}
-
-# External exporters (redis_exporter and process-exporter) registered with PMM,
-# on the prebaked pmm-qa/external image (images/external), with
-# external_setup.yml's end state: redis_container on host port 6379 and
-# external_pmm serving redis_exporter on :42200, which remote-instance tests
-# reach from the server, and process-exporter on :9256.
-#
-# Their versions are not spec options -- override them with the REDIS_VERSION
-# and NODE_PROCESS_VERSION environment variables, which build their own tag.
-setup_external() {
-  local container=external_pmm client tarball='' tag suffix=$((RANDOM % 10000))
-  client=$(resolved_client_version EXTERNAL DB_CONFIG)
-  tag=${REDIS_VERSION:-1.58.0}-${NODE_PROCESS_VERSION:-0.7.10}
-  step "Prepare image pmm-qa/external:$tag" ensure_image external "$tag"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
-  step 'Start Redis and the exporters' external_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /var/log/pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering redis_external_service_$suffix" \
-    docker exec "$container" pmm-admin add external --listen-port=42200 --group=redis \
-    "--service-name=redis_external_service_$suffix" >/dev/null
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering nodeprocess_service_$suffix" \
-    docker exec "$container" pmm-admin add external --listen-port=9256 --group=processes \
-    "--service-name=nodeprocess_service_$suffix" >/dev/null
-  wait_node_exporter "$container" /var/log/pmm-agent.log
-  report_agent_status "$container"
-}
-
-external_start() {
-  docker rm -fv "$container" redis_container >/dev/null 2>&1 || true
-  ensure_pmm_network
-  must docker run --detach --name redis_container --label pmm-qa.engine=external --network pmm-qa \
-    --publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd >/dev/null
-  must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=external \
-    --network pmm-qa "pmm-qa/external:$tag" >/dev/null
-  must docker exec --detach "$container" sh -c 'exec redis_exporter --redis.addr=redis://redis_container:6379 \
-    --redis.password=oFukiBRg7GujAJXq3tmd --web.listen-address=:42200 >/redis.log 2>&1'
-  must docker exec --detach "$container" sh -c 'exec process-exporter --web.listen-address=:9256 >/process-exporter.log 2>&1'
-  retry 60 'redis_exporter on :42200' docker exec "$container" curl -fsS http://127.0.0.1:42200/metrics >/dev/null
-  retry 60 'process-exporter on :9256' docker exec "$container" curl -fsS http://127.0.0.1:9256/metrics >/dev/null
-}
+# images/valkey/setup.sh -- Valkey cluster and sentinel, on the prebaked valkey image.
 
 # Valkey as a cluster (the default) or a sentinel topology, on the prebaked
-# pmm-qa/valkey image (images/valkey), with the end state of
-# valkey/valkey-cluster.yml and valkey-sentinel.yml: the dashboard tests look
+# pmm-qa/valkey image, with the old Ansible setups' end state: the dashboard tests look
 # services up as <container>-svc and nodes as <container>-node, and the CLI
 # test reads /var/log/pmm-agent.log in valkey-primary-1.
 setup_valkey() {
