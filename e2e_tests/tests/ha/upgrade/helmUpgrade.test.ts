@@ -242,7 +242,6 @@ pmmTest(
 
     await grafanaHelper.authorize();
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
-    // The target image has no left-menu leader item any more (PMM-13860).
     await page.goto(nodesPage.url);
     await nodesPage.verifyHaNodeRoles(podNames, leader);
   },

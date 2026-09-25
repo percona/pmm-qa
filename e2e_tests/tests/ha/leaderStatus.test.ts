@@ -11,8 +11,6 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2233 - Verify "pmm_ha_leader_status" tracks the current leader across a leader restart @pmm-ha',
   async ({ api, haClusterHelper, k8sHelper }) => {
-    // The left-menu "Leader:" item this used to read was removed in PMM 3.10 (PMM-13860);
-    // the UI side of a leader change is covered by PMM-T2145 on the Inventory Nodes page.
     const initialLeader = await pmmTest.step('Read the current leader from the cluster', async () =>
       haClusterHelper.leaderFromPods(),
     );
