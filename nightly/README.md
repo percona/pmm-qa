@@ -66,6 +66,6 @@ authenticated; in a session the git credentials of the checkout are used.
 
 ## Site layout
 
-`pages/index.html` is the site landing page (two cards: Nightly and Performance). The
-publisher writes it to the `gh-pages` root only once the performance dashboard lives
-under `performance/`; until then the root stays the performance page.
+`pages/index.html` is the site landing page (two cards: Nightly and Performance); the
+publisher writes it to the `gh-pages` root. The performance dashboard lives under
+`performance/`, published by `performance/ci/publish_report.sh`.

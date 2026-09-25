@@ -51,12 +51,8 @@ publish() {
   fi
   jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json" || return 1
   cp -R "$PAGE_SRC"/. "$dir/" || return 1
-  # The site landing page replaces the root only once performance lives under
-  # performance/; until then the root is still the performance dashboard.
-  if [ -d "$wt/performance" ] && [ -f "$LANDING_SRC" ]; then
-    cp "$LANDING_SRC" "$wt/index.html"
-    git -C "$wt" add index.html
-  fi
+  cp "$LANDING_SRC" "$wt/index.html" || return 1
+  git -C "$wt" add index.html || return 1
   git -C "$wt" add nightly
   if git -C "$wt" diff --cached --quiet; then echo "nothing new to publish for $run_id"; return 0; fi
   git -C "$wt" \
