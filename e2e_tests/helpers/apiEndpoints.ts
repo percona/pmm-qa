@@ -16,6 +16,7 @@ const apiEndpoints = {
     scheduled: '/v1/backups/scheduled',
   },
   grafana: {
+    alertmanager: '/graph/api/alertmanager/grafana/api/v2',
     dashboardByUid: '/graph/api/dashboards/uid',
     dashboards: '/graph/api/dashboards/db',
     datasourceByUid: '/graph/api/datasources/uid',
@@ -23,6 +24,8 @@ const apiEndpoints = {
     dsQuery: '/graph/api/ds/query',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
+    ruler: '/graph/api/ruler/grafana/api/v1/rules',
   },
   ha: {
     nodes: '/v1/ha/nodes',

@@ -52,7 +52,7 @@
   shell: |
     docker exec {{ container_prefix }}{{ index }} apt-get update
     docker exec {{ container_prefix }}{{ index }} apt-get install -y libncurses6 libaio1t64
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+    docker exec {{ container_prefix }}{{ index }} bash -c 'lib=$(ls /usr/lib/*/libaio.so.1t64 2>/dev/null | head -1); if [ -n "$lib" ]; then ln -sf "$lib" "${lib%t64}"; fi'
   when: mysql_version | replace('_', '') | int >= 80
 
 - name: Install MySQL 5.7 dependencies
@@ -72,15 +72,20 @@
   set_fact:
     mysql_exact_version: "{{ mysql_tags_response.json.results | map(attribute='name') | list | select('match', '^[0-9]+\\.[0-9]+\\.[0-9]+$') | first }}"
 
+- name: Select MySQL tarball architecture
+  set_fact:
+    mysql_tarball_arch: "{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
+  when: mysql_version | replace('_', '') | int >= 80
+
 - name: Install MySQL 8.0+
   shell: |
     docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://cdn.mysql.com/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version \
-      }}-linux-glibc2.28-x86_64.tar.xz
+      }}-linux-glibc2.28-{{ mysql_tarball_arch }}.tar.xz
     docker exec {{ container_prefix }}{{ index }} tar -xf mysql.tar.xz
     docker exec {{ container_prefix }}{{ index }} groupadd mysql
     docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql
-    docker exec {{ container_prefix }}{{ index }} mv mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 /usr/local/mysql
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 mysql
+    docker exec {{ container_prefix }}{{ index }} mv mysql-{{ mysql_exact_version }}-linux-glibc2.28-{{ mysql_tarball_arch }} /usr/local/mysql
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-{{ mysql_exact_version }}-linux-glibc2.28-{{ mysql_tarball_arch }} mysql
     docker exec {{ container_prefix }}{{ index }} chown -R mysql:mysql /usr/local/mysql
     docker exec {{ container_prefix }}{{ index }} mkdir /usr/local/mysql/data
     docker exec {{ container_prefix }}{{ index }} chown mysql:mysql /usr/local/mysql/data
