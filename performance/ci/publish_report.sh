@@ -31,13 +31,16 @@ trap 'rm -rf "$wt"' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
 git clone --quiet --depth 1 --branch "$PAGES_BRANCH" "$remote" "$wt"
 
+PAGE_SRC="$(cd "$(dirname "$0")/.." && pwd)/pages/index.html"
+
 # Called from `if`, so set -e is off inside: every step returns its own failure.
 publish() {
   local dir="$wt/performance"
   mkdir -p "$dir/reports" "$dir/data" || return 1
+  cp "$PAGE_SRC" "$dir/index.html" || return 1
   cp "$RUN_JSON" "$dir/reports/${run_id}.json" || return 1
   jq -s 'sort_by(.date)' "$dir"/reports/*.json > "$dir/data/index.json" || return 1
-  git -C "$wt" add "performance/reports/${run_id}.json" performance/data/index.json || return 1
+  git -C "$wt" add "performance/reports/${run_id}.json" performance/data/index.json performance/index.html || return 1
   if git -C "$wt" diff --cached --quiet; then echo "nothing new to publish for $run_id"; return 0; fi
   git -C "$wt" \
     -c user.name="${GIT_AUTHOR_NAME:-pmm-perf-bot}" \
