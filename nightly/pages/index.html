@@ -24,6 +24,8 @@
   .inv { margin:8px 0 0; padding-left:18px; }
   a { color:inherit; }
   .wrap { overflow-x:auto; }
+  .btn { font-size:12px; padding:1px 8px; border:1px solid var(--line); border-radius:4px; text-decoration:none; }
+  .btn:hover { background:var(--bg); }
 </style>
 </head>
 <body>
@@ -40,12 +42,20 @@
 <script>
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '#';
+const FAILED = ['failure', 'cancelled'];
+const investigateUrl = (r, j) => 'https://claude.ai/code?' + new URLSearchParams({
+  repositories: 'percona/pmm-qa',
+  prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
+    `Nightly Test Suite job "${j.name}" ended "${j.result}" for image tag ${r.image_tag}.\nRun: ${r.run_url}\n\n` +
+    `Dedup, reproduce, classify, then publish the finding to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
+}).toString().replace(/\+/g, '%20');
 fetch('data/index.json', {cache: 'no-store'}).then(r => r.json()).then(runs => {
   const tbody = document.getElementById('rows');
   if (!runs.length) { tbody.innerHTML = '<tr><td colspan="6">No runs published yet.</td></tr>'; return; }
   tbody.innerHTML = runs.slice().reverse().map((r, i) => {
     const inv = r.investigations || [];
-    const jobs = (r.jobs || []).map(j => `<li><span class="${esc(j.result)}">●</span> ${esc(j.name)}: ${esc(j.result)}</li>`).join('');
+    const jobs = (r.jobs || []).map(j => `<li><span class="${esc(j.result)}">●</span> ${esc(j.name)}: ${esc(j.result)}` +
+      (FAILED.includes(j.result) ? ` <a class="btn" href="${esc(investigateUrl(r, j))}" target="_blank" rel="noopener">Investigate in Claude</a>` : '') + `</li>`).join('');
     const finds = inv.map(f => `<li><b>${esc(f.verdict)}</b> — ${esc(f.job)}: ${esc(f.summary)}` +
       (f.link ? ` (<a href="${esc(safeUrl(f.link))}">link</a>)` : '') + '</li>').join('');
     return `<tr class="run" data-i="${i}"><td>${esc((r.date || '').replace('T', ' ').slice(0, 16))}</td><td>${esc(r.image_tag)}</td>` +
