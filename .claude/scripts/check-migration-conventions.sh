@@ -269,7 +269,10 @@ for file in "$@"; do
   report_matches 'practices: page.accessibility was removed in Playwright 1.57' 'page[[:space:]]*\.[[:space:]]*accessibility' "$file"
   report_matches 'practices: backgroundPages() is deprecated' 'backgroundPages[[:space:]]*\(' "$file"
   if [[ $file == */e2e_tests/helpers/* || $file == e2e_tests/helpers/* ]]; then
-    report_matches 'helpers must not hide expect()' 'expect[[:space:]]*\(' "$file"
+    if added_lines "$file" | grep -Eq 'expect[[:space:]]*\('; then
+      echo "$file: helpers must not hide expect() - return a value and assert in the test" >&2
+      failures=1
+    fi
   fi
   if added_lines "$file" | grep -Eq 'waitForTimeout[[:space:]]*\('; then
     echo "$file: added fixed pause - use a web-first assertion or expect.poll (SKILL.md Port behaviour, simplify shape)" >&2
