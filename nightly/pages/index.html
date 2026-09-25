@@ -282,7 +282,7 @@ const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URL
     `a one-sentence summary, and the fix PR or Jira URL if any.\n` +
     `4. For each root cause it returns, run in percona/pmm-qa:\n` +
     `   nightly/ci/finding.sh ${r.run_id} <login> "<verdict>" "<summary>" <link or -> "<group>" ["<other group>" ...]\n` +
-    `5. Reply with the findings you published and the report link: https://percona.github.io/pmm-qa/nightly/#run=${r.run_id} ultrathink`
+    `5. Reply with the findings you published and the report link: https://percona.github.io/pmm-qa/nightly/#run=${r.run_id}`
 }).toString().replace(/\+/g, '%20');
 const linkLabel = u => {
   const pr = /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/.exec(u || '');
