@@ -171,7 +171,7 @@ trying to guess intent itself:
 | Channel (placeholder) | Routine | Notes |
 | --- | --- | --- |
 | PMM QA channel(s) | `PMM AI` | Fires `router.md`, which matches the mention to test-runner / investigator / fb-reporter by description, or just answers directly if it's a general question. |
-| Prod/support channel(s) | `PMM AI` (same Routine) | No separate agent needed here — a suspected customer-reported bug, or a "is this expected?" question, is one of `investigator`'s own direct-ask outcomes (`.claude/agents/investigator.md` workflow step 3b), not a distinct triage step in front of it. `router.md` sends it there like anything else that looks like a bug report. |
+| Prod/support channel(s) | `PMM AI` (same Routine) | No separate agent needed here — a suspected customer-reported bug, or a "is this expected?" question, is one of `investigator`'s own direct-ask outcomes (workflow step 3b of the `investigator` agent in percona/pmm-ai), not a distinct triage step in front of it. `router.md` sends it there like anything else that looks like a bug report. |
 
 Fill in real channel IDs once the app is installed and invited to them. An
 earlier draft of this doc proposed a separate future "support-triage" agent

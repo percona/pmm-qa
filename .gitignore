@@ -152,9 +152,7 @@ dist
 /k8s/lib/bats-support/
 
 # AI tools
-.claude/*
-!.claude/skills/
-!.claude/skills/**
+.claude/
 .cursor
 .cursorrules
 
