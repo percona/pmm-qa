@@ -68,36 +68,33 @@ PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-install_pmm_client_from_repo() {
-    local component=$1 attempt
-    percona-release enable-only pmm3-client "$component"
-    for attempt in 1 2 3 4 5; do
-        apt-get update
-        apt-get -y install pmm-client && return 0
-        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
-        sleep 90
-    done
-    return 1
-}
-
-die_on_install_failure() {
+# The framework's fetcher reads the repo index for the real file name and waits
+# out repo.percona.com's index/pool publishing race; COMPONENT is the index
+# component (main|testing|experimental), VERSION an optional exact 3.x.y.
+# This runs under sudo, so it keeps its own cache: a root-owned
+# /tmp/pmm-client-cache would lock out pmm-framework, which runs unprivileged.
+install_pmm_client_deb() {
+    local component=$1 version=${2:-} deb
+    deb=$(bash "$(dirname "$0")/pmm-framework/lib/fetch-pmm-client-deb.sh" \
+        "$component" "$(lsb_release -sc)" /tmp/pmm-client-host-cache 900 "$version") &&
+        apt-get install -y "$deb" && return 0
     echo "pmm-client could not be installed; aborting client setup" >&2
     exit 1
 }
 
-if [[ "$client_version" == "3-dev-latest" ]]; then
-    install_pmm_client_from_repo experimental || die_on_install_failure
-fi
-
-if [[ "$client_version" == "pmm3-rc" ]]; then
-    install_pmm_client_from_repo testing || die_on_install_failure
-fi
-
-if [[ "$client_version" == "pmm3-latest" ]]; then
-    install_pmm_client_from_repo release || die_on_install_failure
-    apt-get -y update
-    percona-release enable-only pmm3-client experimental
-fi
+case "$client_version" in
+    3-dev-latest)
+        percona-release enable-only pmm3-client experimental
+        install_pmm_client_deb experimental ;;
+    pmm3-rc)
+        percona-release enable-only pmm3-client testing
+        install_pmm_client_deb testing ;;
+    pmm3-latest)
+        install_pmm_client_deb main
+        percona-release enable-only pmm3-client experimental ;;
+    3.*.*)
+        install_pmm_client_deb main "$client_version" ;;
+esac
 
 if [[ "$client_version" == "latest-tarball" ]]; then
     # arm64 builds are published under their own bucket prefix.
@@ -106,22 +103,6 @@ if [[ "$client_version" == "latest-tarball" ]]; then
       arm64) bucket=pmm-client-arm ;;
     esac
     client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
-fi
-
-## Only supported for debian based systems for now
-if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  build_number=7
-  minor_version=${client_version#3.}
-  minor_version=${minor_version%%.*}
-  if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
-    build_number=8
-  elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
-    build_number=1
-  fi
-  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
-  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
-  dpkg -i "${deb_file}"
 fi
 
 ## Default Binary path
