@@ -9,6 +9,7 @@ e2e_tests/playwright/.auth/
 e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env
+e2e_tests/testdata/ia/scripts/alert.txt
 .playwright-mcp/
 cli/node_modules/
 e2e_tests/dist/
@@ -18,6 +19,7 @@ cli/playwright-report/*
 cli/test-report/*
 
 .idea
+.claudine
 .vscode
 .DS_Store
 # Logs
