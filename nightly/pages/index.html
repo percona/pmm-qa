@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMM Nightly Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --sunken: #eef1f5;
+    --ink: #151a23; --ink-2: #4a5566; --ink-3: #697586;
+    --line: #dde2ea; --line-strong: #c3cad6;
+    --pass: #137a3a; --pass-bg: #e3f4e9;
+    --fail: #c0262d; --fail-bg: #fbe7e8;
+    --warn: #93600a; --warn-bg: #fbf0da;
+    --idle: #697586; --idle-bg: #eef1f5;
+    --accent: #2447d6; --accent-ink: #ffffff;
+    --focus: #2447d6; --gh: #181717;
+    --shadow: 0 1px 2px rgba(21, 26, 35, .06), 0 4px 12px rgba(21, 26, 35, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+      --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+      --line: #262e3a; --line-strong: #364152;
+      --pass: #4cc47a; --pass-bg: #16301f;
+      --fail: #ff6b6f; --fail-bg: #3a1a1c;
+      --warn: #e8b04a; --warn-bg: #362a12;
+      --idle: #8c97a8; --idle-bg: #1c222c;
+      --accent: #7c95ff; --accent-ink: #0f1218;
+      --focus: #7c95ff; --gh: #f0f3f6;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+    --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+    --line: #262e3a; --line-strong: #364152;
+    --pass: #4cc47a; --pass-bg: #16301f;
+    --fail: #ff6b6f; --fail-bg: #3a1a1c;
+    --warn: #e8b04a; --warn-bg: #362a12;
+    --idle: #8c97a8; --idle-bg: #1c222c;
+    --accent: #7c95ff; --accent-ink: #0f1218;
+    --focus: #7c95ff; --gh: #f0f3f6;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 14px/1.5 "IBM Plex Sans", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  a { color: inherit; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; }
+  .muted { color: var(--ink-3); }
+  svg.logo { fill: currentColor; stroke: none; }
+  svg.logo.jenkins { color: #d24939; }
+  svg.logo.github { color: var(--gh); }
+  img.logo-img { display: block; object-fit: contain; }
+  .src img.logo-img, .btn img.logo-img { display: inline-block; width: 18px; height: 18px; }
+  .src img.logo-img, .src svg.logo { width: 20px; height: 20px; }
+  .src { vertical-align: -5px; }
+  .src { display: inline-flex; gap: 4px; vertical-align: -3px; margin-right: 6px; }
+  svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+  header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  header.top .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+  .brand { font-weight: 600; letter-spacing: -.01em; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+  header.top nav { margin-left: auto; display: flex; gap: 16px; }
+  header.top nav a { color: var(--ink-2); text-decoration: none; }
+  header.top nav a:hover { color: var(--ink); }
+  nav.tabs { align-self: stretch; margin-left: 24px !important; margin-right: auto; }
+  nav.tabs a { display: flex; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+
+  main.wrap { padding: 32px 16px 64px; }
+  h1 { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -.015em; margin: 0; text-wrap: balance; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 40px 0 12px; }
+  .lede { color: var(--ink-2); margin: 6px 0 0; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 500; line-height: 1; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .s-pass { color: var(--pass); background: var(--pass-bg); }
+  .s-fail { color: var(--fail); background: var(--fail-bg); }
+  .s-warn { color: var(--warn); background: var(--warn-bg); }
+  .s-idle { color: var(--idle); background: var(--idle-bg); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+    font: inherit; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer;
+    transition: background-color .15s, border-color .15s; }
+  .btn:hover { background: var(--sunken); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--ink)); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--ink-2); padding: 0 8px; }
+  .btn.ghost:hover { background: var(--sunken); color: var(--ink); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 13px; }
+
+  /* Overview */
+  .trend { display: flex; gap: 4px; height: 28px; margin-top: 24px; }
+  .trend a { flex: 1; max-width: 16px; border-radius: 4px; }
+  .trend a:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .trend-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
+
+  .runs { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .run-row { display: grid; grid-template-columns: 4px 150px 1fr 150px 120px auto; align-items: center; gap: 16px;
+    padding: 14px 16px 14px 0; border-top: 1px solid var(--line); text-decoration: none; }
+  .run-row:first-child { border-top: 0; }
+  .run-row:hover { background: var(--sunken); }
+  .rail { align-self: stretch; }
+  .rail.s-pass { background: var(--pass); } .rail.s-fail { background: var(--fail); } .rail.s-warn { background: var(--warn); } .rail.s-idle { background: var(--idle); }
+  .run-row .tag { font-weight: 600; }
+  .run-row .when { color: var(--ink-3); font-size: 13px; }
+  .meter { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunken); }
+  .meter span { display: block; }
+  .meter .m-pass { background: var(--pass); } .meter .m-fail { background: var(--fail); } .meter .m-warn { background: var(--warn); }
+  .run-row .counts { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+  .findings { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .run-row .go { color: var(--ink-3); justify-self: end; }
+
+  /* Run view */
+  .crumbs { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+  .run-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .run-head .title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; color: var(--ink-2); }
+  .facts b { font-weight: 500; color: var(--ink); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 24px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .stat { background: var(--surface); padding: 14px 16px; }
+  .stat .n { font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+  .stat .l { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .stat.fail .n { color: var(--fail); } .stat.warn .n { color: var(--warn); } .stat.pass .n { color: var(--pass); }
+
+  .groups { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  details.group { border-top: 1px solid var(--line); }
+  details.group:first-child { border-top: 0; }
+  details.group > summary { list-style: none; cursor: pointer; display: grid;
+    grid-template-columns: 4px 20px minmax(0, 1fr) 240px 36px; align-items: center; gap: 12px; padding: 12px 16px 12px 0; }
+  details.group > summary::-webkit-details-marker { display: none; }
+  details.group > summary:hover { background: var(--sunken); }
+  details.group .chev { color: var(--ink-3); transition: transform .2s cubic-bezier(.16, 1, .3, 1); }
+  details.group[open] .chev { transform: rotate(90deg); }
+  .gname { font-weight: 600; overflow-wrap: anywhere; }
+  .gsub { font-size: 13px; color: var(--ink-3); }
+  .gmeter .counts { font-size: 12px; color: var(--ink-3); margin-top: 4px; text-align: right; }
+  .gaction { justify-self: end; width: 36px; height: 36px; }
+  .ask { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line-strong);
+    background: var(--surface); transition: background-color .15s, border-color .15s, transform .15s cubic-bezier(.16, 1, .3, 1); }
+  .ask:hover { background: color-mix(in srgb, #d97757 12%, var(--surface)); border-color: #d97757; transform: translateY(-1px); }
+  .ask img { width: 20px; height: 20px; }
+  .tip { position: relative; }
+  .tip:hover::after, .tip:focus-visible::after { content: attr(data-tip); position: absolute; right: 0; top: calc(100% + 6px); z-index: 2;
+    white-space: nowrap; font-size: 12px; font-weight: 500; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--surface); }
+  .gbody { border-top: 1px solid var(--line); background: var(--bg); }
+  details.group[open] .gbody { animation: reveal .25s cubic-bezier(.16, 1, .3, 1); }
+  @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { details.group[open] .gbody { animation: none; } details.group .chev { transition: none; } }
+
+  .verdicts { margin: 0; padding: 12px 16px 12px 40px; list-style: none; display: grid; gap: 8px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .verdict { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .verdict > .pill { justify-self: start; }
+  .verdict .why { color: var(--ink-2); }
+  .verdict .also { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .pending.claim { color: var(--warn); }
+  .claimed { color: var(--warn); font-weight: 500; }
+  .ask.busy { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent); }
+  a.ref { white-space: nowrap; font-weight: 500; }
+  .pending { display: flex; align-items: center; gap: 8px; padding: 12px 16px 12px 40px; color: var(--ink-3);
+    border-bottom: 1px solid var(--line); background: var(--surface); }
+
+  table.jobs { width: 100%; border-collapse: collapse; }
+  table.jobs th { text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-3); padding: 8px 12px; }
+  table.jobs th:first-child, table.jobs td:first-child { padding-left: 40px; }
+  table.jobs td { padding: 8px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+  table.jobs td.name { overflow-wrap: anywhere; }
+  table.jobs td.dur { color: var(--ink-3); white-space: nowrap; width: 90px; }
+  table.jobs td.res { width: 120px; }
+  table.jobs td.act { width: 72px; text-align: right; padding-right: 16px; }
+  table.jobs tr.bad td.name { font-weight: 500; }
+
+  .state { padding: 48px 24px; text-align: center; color: var(--ink-2); background: var(--surface);
+    border: 1px dashed var(--line-strong); border-radius: 12px; }
+  .state h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; color: var(--ink); }
+  .skel { height: 64px; border-radius: 12px; background: linear-gradient(90deg, var(--sunken), var(--surface), var(--sunken));
+    background-size: 200% 100%; animation: shimmer 1.2s linear infinite; margin-bottom: 8px; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  @media (max-width: 760px) {
+    main.wrap { padding-top: 24px; }
+    .run-row { grid-template-columns: 4px 1fr auto; row-gap: 8px; }
+    .run-row .col-meter, .run-row .findings { grid-column: 2 / 4; }
+    .run-row .go { grid-row: 1; grid-column: 3; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    details.group > summary { grid-template-columns: 4px 20px minmax(0, 1fr) 36px; row-gap: 8px; }
+    details.group .gmeter { grid-column: 3; grid-row: 2; }
+    details.group .gmeter .counts { text-align: left; }
+    details.group .gaction { grid-column: 4; grid-row: 1; }
+    table.jobs th:first-child, table.jobs td:first-child, .verdicts, .pending { padding-left: 16px; }
+    table.jobs td.dur, table.jobs th.dur { display: none; }
+    table.jobs td.res, table.jobs td.act { width: 1%; white-space: nowrap; }
+    table.jobs td.act { padding-right: 8px; }
+    table.jobs td { padding: 8px 6px; }
+    .verdict { grid-template-columns: 1fr; gap: 4px; justify-items: start; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../"><span class="dot" aria-hidden="true"></span>PMM QA Reports</a>
+    <nav class="tabs" aria-label="Reports"><a href="./" aria-current="page">Nightly</a><a href="../performance/">Performance</a></nav>
+  </div>
+</header>
+<main class="wrap" id="app" aria-live="polite">
+  <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+</main>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https:\/\//.test(u || '') ? u : '#';
+const FAILED = ['failure', 'cancelled', 'timed_out'];
+const WARN = ['unstable', 'unknown'];
+const icon = {
+  chev: '<svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  back: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  ext: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  spark: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
+  note: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v12l-4 4H5z"/><path d="M9 9h6M9 13h4"/></svg>',
+  github: '<svg class="i logo github" viewBox="0 0 24 24" role="img" aria-label="GitHub Actions"><title>GitHub Actions</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>',
+  jenkins: '<img class="i logo-img" src="logos/jenkins.svg" alt="Jenkins" title="Jenkins" width="16" height="16">',
+  claude: '<img class="i logo-img" src="logos/claude.svg" alt="" width="18" height="18">',
+  clock: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>',
+};
+const fmtDate = d => {
+  const t = new Date(d);
+  if (isNaN(t)) return '';
+  return t.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
+};
+const fmtDur = s => s == null ? '' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round(s % 3600 / 60)}m` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+const cls = res => FAILED.includes(res) || res === 'fail' ? 's-fail' : WARN.includes(res) ? 's-warn' : res === 'success' || res === 'pass' ? 's-pass' : 's-idle';
+const label = res => ({ success: 'passed', pass: 'passed', failure: 'failed', fail: 'failed', cancelled: 'cancelled', timed_out: 'timed out',
+  unstable: 'unstable', unknown: 'no result', skipped: 'skipped' }[res] || res);
+const pill = res => `<span class="pill ${cls(res)}">${esc(label(res))}</span>`;
+const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade AMD', 'Upgrade AMI', 'Nightly', 'Nightly Compatibility', 'UI',
+  'HA, OpenShift & GSSAPI', 'E2E Tests', 'CLI Integration', 'CLI Integration Compatibility', 'Integrations', 'Other'];
+const orderOf = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
+const srcIcons = jobs => `<span class="src">${[...new Set(jobs.map(j => j.source).filter(Boolean))].map(s => icon[s] || '').join('')}</span>`;
+const detailsOf = r => (r.jobs || []).map(j => ({ group: j.group || j.name, ...j }));
+const suitesOf = f => f.suites || (f.job ? [f.job] : []);
+const tally = jobs => ({
+  total: jobs.length,
+  pass: jobs.filter(j => j.result === 'success').length,
+  fail: jobs.filter(j => FAILED.includes(j.result)).length,
+  warn: jobs.filter(j => WARN.includes(j.result)).length,
+});
+const meter = t => {
+  const pct = n => t.total ? (n / t.total * 100).toFixed(2) + '%' : '0';
+  return `<div class="meter" role="img" aria-label="${t.pass} passed, ${t.fail} failed, ${t.warn} unstable of ${t.total}">
+    <span class="m-pass" style="width:${pct(t.pass)}"></span><span class="m-fail" style="width:${pct(t.fail)}"></span><span class="m-warn" style="width:${pct(t.warn)}"></span></div>`;
+};
+const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URLSearchParams({
+  repositories: 'percona/pmm-qa,percona/pmm-ai',
+  environment: 'relay',
+  prompt: `Coordinate an investigation of one group of the PMM nightly report. Do not investigate yourself; ` +
+    `the investigator subagent does that. Your job is to claim the group, brief the subagent, and publish what it returns.\n\n` +
+    `Build: ${r.run_url} (report ${r.run_id}, image tag ${r.image_tag}, client ${r.client_version})\n` +
+    `Group: "${group}", ${failed.length} failed job(s):\n` +
+    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\n\n` +
+    `1. Claim the group now, before anything else. Get your GitHub login from the GitHub MCP get_me, then in percona/pmm-qa run:\n` +
+    `   nightly/ci/claim.sh ${r.run_id} "${group}" <login>\n` +
+    `2. Read what is already known: https://percona.github.io/pmm-qa/nightly/reports/${r.run_id}.json (its investigations and claims for "${group}").\n` +
+    `3. Launch one subagent with the Agent tool. Its prompt: "Read plugins/pmm-qa/agents/investigator.md in percona/pmm-ai (main) ` +
+    `and act as that role, following it exactly." followed by the failed jobs above, the build URL, and any existing findings from step 2. ` +
+    `Ask it to finish with one line per root cause: the groups it explains, verdict (not reproduced | not a bug | test fix | product bug), ` +
+    `a one-sentence summary, and the fix PR or Jira URL if any.\n` +
+    `4. For each root cause it returns, run in percona/pmm-qa:\n` +
+    `   nightly/ci/finding.sh ${r.run_id} <login> "<verdict>" "<summary>" <link or -> "<group>" ["<other group>" ...]\n` +
+    `5. Reply with the findings you published and the report link: https://percona.github.io/pmm-qa/nightly/#run=${r.run_id}`
+}).toString().replace(/\+/g, '%20');
+const linkLabel = u => {
+  const pr = /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/.exec(u || '');
+  if (pr) return (pr[1] === 'percona/pmm-qa' ? '' : pr[1]) + `PR #${pr[2]}`;
+  const jira = /\/browse\/([A-Z][A-Z0-9]+-\d+)/.exec(u || '');
+  if (jira) return jira[1];
+  return 'Link';
+};
+const ago = at => {
+  const s = (Date.now() - new Date(at)) / 1000;
+  if (!isFinite(s)) return '';
+  if (s < 90) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+};
+const CLAIM_TTL_H = 12;
+const liveClaims = (r, g) => (r.claims || []).filter(c => (c.suites || []).includes(g) && (Date.now() - new Date(c.at)) / 36e5 < CLAIM_TTL_H);
+
+const app = document.getElementById('app');
+let runs = [];
+
+function overview() {
+  document.title = 'PMM Nightly Reports';
+  if (!runs.length) {
+    app.innerHTML = `<h1>Nightly reports</h1>
+      <div class="state" style="margin-top:24px"><h3>No builds published yet</h3>
+      The nightly orchestrator adds a report here at the end of every build.</div>`;
+    return;
+  }
+  const newest = runs.slice().reverse();
+  const recent = runs.slice(-30);
+  const trend = recent.map(r => {
+    return `<a href="#run=${encodeURIComponent(r.run_id)}" class="rail ${cls(r.status)}"
+      title="${esc(r.image_tag)} · ${esc(fmtDate(r.date))} · ${esc(r.summary)}" aria-label="${esc(r.image_tag)} ${esc(label(r.status))}"></a>`;
+  }).join('');
+  app.innerHTML = `<h1>Nightly reports</h1>
+    <p class="lede">One entry per nightly orchestrator build, newest first. Open a build for every job, grouped by suite.</p>
+    <div class="trend" aria-label="Last ${recent.length} builds">${trend}</div>
+    <div class="trend-legend"><span>Last ${recent.length} builds, oldest to newest</span><span>Hover for the tag, click to open</span></div>
+    <h2>Builds</h2>
+    <div class="runs">${newest.map(r => {
+      const t = tally(detailsOf(r));
+      const inv = (r.investigations || []).length;
+      return `<a class="run-row" href="#run=${encodeURIComponent(r.run_id)}">
+        <span class="rail ${cls(r.status)}" aria-hidden="true"></span>
+        <div><div class="tag">${esc(r.image_tag)}</div><div class="when">${esc(fmtDate(r.date))}</div></div>
+        <div class="col-meter">${meter(t)}<div class="counts">${t.pass}/${t.total} passed${t.fail ? ` · ${t.fail} failed` : ''}${t.warn ? ` · ${t.warn} unstable` : ''}</div></div>
+        <div>${pill(r.status)}</div>
+        <div class="findings">${inv ? `${icon.note}${inv} finding${inv > 1 ? 's' : ''}` : t.fail ? '<span class="muted">Not investigated</span>' : ''}</div>
+        <span class="go">${icon.chev}</span>
+      </a>`;
+    }).join('')}</div>`;
+}
+
+function runView(id) {
+  const r = runs.find(x => x.run_id === id);
+  if (!r) {
+    app.innerHTML = `<div class="crumbs"><a class="btn ghost" href="#">${icon.back}All builds</a></div>
+      <div class="state"><h3>Build not found</h3>No report named ${esc(id)} has been published.</div>`;
+    return;
+  }
+  document.title = `${r.image_tag} · PMM Nightly`;
+  const jobs = detailsOf(r);
+  const t = tally(jobs);
+  const inv = r.investigations || [];
+  const groups = [...new Set(jobs.map(j => j.group))].map(g => ({ g, jobs: jobs.filter(j => j.group === g) }));
+  groups.sort((a, b) => orderOf(a.g) - orderOf(b.g) || a.g.localeCompare(b.g));
+  const covered = new Set(inv.flatMap(suitesOf));
+  const openGroups = groups.filter(({ jobs }) => tally(jobs).fail).length;
+  const pendingGroups = groups.filter(({ g, jobs }) => tally(jobs).fail && !covered.has(g)).length;
+
+  app.innerHTML = `<div class="crumbs"><a class="btn ghost" href="#">${icon.back}All builds</a></div>
+    <div class="run-head">
+      <div class="title"><h1>${esc(r.image_tag)}</h1>${pill(r.status)}</div>
+      <a class="btn" href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener" aria-label="Open the Jenkins build">${icon.jenkins}Build${icon.ext}</a>
+    </div>
+    <ul class="facts">
+      <li>${esc(fmtDate(r.date))}</li>
+      <li>Client <b>${esc(r.client_version || '—')}</b></li>
+      <li>Report <span class="mono">${esc(r.run_id)}</span></li>
+    </ul>
+    <div class="stats">
+      <div class="stat pass"><div class="n">${t.pass}</div><div class="l">passed of ${t.total}</div></div>
+      <div class="stat ${t.fail ? 'fail' : ''}"><div class="n">${t.fail}</div><div class="l">failed jobs, in ${openGroups} suite${openGroups === 1 ? '' : 's'}</div></div>
+      <div class="stat ${t.warn ? 'warn' : ''}"><div class="n">${t.warn}</div><div class="l">unstable or no result</div></div>
+      <div class="stat"><div class="n">${inv.length}</div><div class="l">findings${pendingGroups ? `, ${pendingGroups} suite${pendingGroups === 1 ? '' : 's'} pending` : ''}</div></div>
+    </div>
+    <h2>Suites</h2>
+    <div class="groups">${groups.map(({ g, jobs }) => {
+      const x = tally(jobs);
+      const failed = jobs.filter(j => FAILED.includes(j.result));
+      const finds = inv.filter(f => suitesOf(f).includes(g));
+      const state = x.fail ? 'fail' : x.warn ? 'warn' : 'pass';
+      const verdicts = finds.length ? `<ul class="verdicts">${finds.map(f => {
+        const others = suitesOf(f).filter(s => s !== g);
+        return `<li class="verdict"><span class="pill ${{ 'product bug': 's-fail', 'test fix': 's-warn' }[f.verdict] || 's-idle'}">${esc(f.verdict)}</span>
+          <div><div class="why">${esc(f.summary)}${f.link ? ` <a class="ref" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">${esc(linkLabel(f.link))}${icon.ext}</a>` : ''}</div>
+          <div class="also">${f.by ? `By ${esc(f.by)}${f.at ? `, ${esc(ago(f.at))}` : ''}` : ''}${f.by && others.length ? ' · ' : ''}${others.length ? `Same cause as ${others.map(esc).join(', ')}` : ''}</div></div></li>`;
+      }).join('')}</ul>` : '';
+      const claims = liveClaims(r, g);
+      const claimed = claims.map(c => `${c.by} (${ago(c.at)})`).join(', ');
+      const status = claims.length ? `<div class="pending claim">${icon.clock}Being investigated by ${esc(claimed)}.</div>`
+        : x.fail && !finds.length ? `<div class="pending">${icon.clock}Not investigated yet.</div>` : '';
+      return `<details class="group" ${x.fail || x.warn ? 'open' : ''}>
+        <summary>
+          <span class="rail s-${state}" aria-hidden="true"></span>
+          ${icon.chev}
+          <div><div class="gname">${srcIcons(jobs)}${esc(g)}</div><div class="gsub">${x.total} job${x.total === 1 ? '' : 's'}${finds.length ? ` · ${finds.length} finding${finds.length > 1 ? 's' : ''}` : ''}${claims.length ? ` · <span class="claimed">being investigated</span>` : ''}</div></div>
+          <div class="gmeter">${meter(x)}<div class="counts">${x.pass}/${x.total} passed${x.fail ? ` · ${x.fail} failed` : ''}${x.warn ? ` · ${x.warn} unstable` : ''}</div></div>
+          <div class="gaction">${x.fail ? `<a class="ask tip${claims.length ? ' busy' : ''}" href="${esc(investigateUrl(r, g, failed))}" data-open data-claim="${esc(claimed)}" data-group="${esc(g)}"
+            data-tip="Investigate ${x.fail} failure${x.fail > 1 ? 's' : ''} in Claude" aria-label="Investigate ${x.fail} failure${x.fail > 1 ? 's' : ''} of ${esc(g)} in Claude">${icon.claude}</a>` : ''}</div>
+        </summary>
+        <div class="gbody">${verdicts}${status}
+          <table class="jobs"><thead><tr><th>Job</th><th>Result</th><th class="dur">Duration</th><th></th></tr></thead><tbody>
+          ${jobs.map(j => `<tr class="${FAILED.includes(j.result) ? 'bad' : ''}"><td class="name">${esc(j.name)}</td><td class="res">${pill(j.result)}</td>
+            <td class="dur">${esc(fmtDur(j.duration_s))}</td>
+            <td class="act"><a class="btn ghost sm" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener" aria-label="Logs for ${esc(j.name)}">${icon[j.source] || ''}Logs</a></td></tr>`).join('')}
+          </tbody></table>
+        </div>
+      </details>`;
+    }).join('')}</div>`;
+}
+
+app.addEventListener('click', e => {
+  const a = e.target.closest('a[data-open]');
+  if (!a) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (a.dataset.claim && !window.confirm(`${a.dataset.group} is already being investigated by ${a.dataset.claim}.\n\n` +
+      `Starting another investigation will probably duplicate or conflict with that work. Start anyway?`)) return;
+  window.open(a.href, '_blank', 'noopener');
+});
+
+function route() {
+  const m = location.hash.match(/^#run=(.+)$/);
+  m ? runView(decodeURIComponent(m[1])) : overview();
+  window.scrollTo(0, 0);
+}
+
+fetch('data/index.json', { cache: 'no-store' })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { runs = d; route(); window.addEventListener('hashchange', route); })
+  .catch(() => {
+    app.innerHTML = `<div class="state"><h3>Could not load the reports</h3>
+      <span class="mono">data/index.json</span> did not load. Reload the page, or check that the gh-pages branch has been published.</div>`;
+  });
+</script>
+</body>
+</html>
