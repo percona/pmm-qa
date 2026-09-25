@@ -6,9 +6,9 @@ Read [AGENTS.md](AGENTS.md) for the complete guide covering repository map, all 
 
 This is the QA automation repo for [PMM](https://github.com/percona/pmm). For product-wide architecture and domain model, see [percona/pmm AGENTS.md](https://github.com/percona/pmm/blob/main/AGENTS.md).
 
-## House style (applies to every session, agent, and routine)
+## House style (applies to pmm-qa work: sessions, agents and routines)
 
-This section is the single global lever for cross-cutting preferences — it loads in every session, including multi-repo ones where the project `.claude/settings.json` does not. To change how all of PMM AI writes code or behaves, edit **here**, not each agent/routine file.
+This section is the single global lever for cross-cutting preferences — it loads whenever a session touches pmm-qa. To change how PMM QA agents write code or behave, edit **here**, not each agent/routine file.
 
 - **Minimal comments.** Write code that reads like the surrounding file. Only comment the non-obvious — a tricky invariant, a workaround with a reason, a public API contract. Do not narrate what the code plainly says, and do not add header/section banners. Match the comment density already present in the file you are editing.
 - **A local tooling workaround never mutates a tracked file.** Copy it to the scratch directory, patch the copy, and point the tool at it (`--config`, `--project`, …) — editing a tracked lint or build config in place changes what everyone else runs. When the config resolves paths **relatively** (`./codeceptConfigHelper`, `./tests/helper/hooks.js`), a scratch-directory copy cannot load: put the patched copy beside the original under an untracked name and pass it with the tool's own config flag. Either way the tracked file stays untouched.
@@ -18,5 +18,5 @@ This section is the single global lever for cross-cutting preferences — it loa
 - **Read a third-party action's or library's own inputs before hand-rolling behaviour inside it.** Retry, pagination, auth, logging and timeout are usually already parameters — `actions/github-script` takes `retries`, which collapsed a 93-line hand-written backoff into one line per step. For a pinned ref, `curl raw.githubusercontent.com/<owner>/<repo>/<ref>/action.yml` reads them without guessing.
 - **Re-read a copied comment against the file it lands in.** The same block applied to three files carried one justification that was true in one of them and plainly false in the other two. A comment rewritten in response to review gets re-checked for the same defect, not reworded around it.
 - **Kill by pid, not by pattern.** `pkill -f <pattern>` matches your own command line, so it kills the calling shell and takes the rest of the compound command with it. `pgrep` first, then `kill -9 <pid>`.
-- **Never run a `.claude/hooks/` hook by hand as a check.** The harness invokes it with a JSON payload on stdin, so a manual run reads `/dev/null`, reports success having linted nothing, or hangs on stdin. Call the underlying tool instead (`.claude/hooks/lint-changed.sh <files>`) and let the gate fire on `git commit`.
+- **Never run a hook by hand as a check.** The harness invokes it with a JSON payload on stdin, so a manual run reads `/dev/null`, reports success having linted nothing, or hangs on stdin. Call the underlying tool instead (`support_scripts/lint/lint-changed.sh <files>`) and let the gate fire on `git commit`.
 - **Poll a harness background task on its exit marker**, `[exited with code`, as well as on any content string — and prefer the completion notification the harness delivers on its own to an interval poll of the output file. A loop matching only content ran twenty 30-second iterations after the work had already finished.
