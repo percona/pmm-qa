@@ -175,7 +175,7 @@ test.describe(
         ).exitCodeEquals(1);
       };
 
-      test('PMM-15295 Verify warning is logged when PMM_ENABLE_NOMAD is set without PMM_PUBLIC_ADDRESS', async () => {
+      test('PMM-T2328 - Verify warning is logged when PMM_ENABLE_NOMAD is set without PMM_PUBLIC_ADDRESS', async () => {
         const containerName = 'pmm-nomad-without-public-address';
 
         await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1');
@@ -207,7 +207,7 @@ test.describe(
         expect(nomadStatus, 'Verify Nomad server is not running').not.toContain('RUNNING');
       });
 
-      test('PMM-15295 Verify no warning and Nomad is running when PMM_ENABLE_NOMAD and PMM_PUBLIC_ADDRESS are set', async () => {
+      test('PMM-T2329 - Verify no warning and Nomad is running when PMM_ENABLE_NOMAD and PMM_PUBLIC_ADDRESS are set', async () => {
         const containerName = 'pmm-nomad-with-public-address';
 
         await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1 -e PMM_PUBLIC_ADDRESS=1.2.3.4:8443');
@@ -222,7 +222,7 @@ test.describe(
         ).toContain('RUNNING');
       });
 
-      test('PMM-15295 Verify no warning when PMM_ENABLE_NOMAD is explicitly disabled', async () => {
+      test('PMM-T2330 - Verify no warning when PMM_ENABLE_NOMAD is explicitly disabled', async () => {
         const containerName = 'pmm-nomad-disabled';
 
         await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=0');
