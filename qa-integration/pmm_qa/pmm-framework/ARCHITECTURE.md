@@ -9,7 +9,7 @@ playbook or shell script under `qa-integration/`. For those, almost every
 question about behaviour is answered by asking *which env map was built, and
 which playbook received it*.
 
-`PS`, `MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB` and `HAPROXY` are the exception. They run on **prebaked images**:
+`PS`, `MYSQL`, `SSL_MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB` and `HAPROXY` are the exception. They run on **prebaked images**:
 the database and its tooling are baked into an image ahead of time, and the
 setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
 instead of a playbook. Types move to this backend one at a time. See §5,

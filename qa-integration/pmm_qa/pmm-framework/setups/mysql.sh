@@ -411,21 +411,79 @@ mf_workload() {
     [ "$rc" = running ] || [ "$rc" = 0 ] || { tail -20 /tmp/workload.log; exit 1; }'
 }
 
-# MySQL with TLS, monitored over an encrypted connection.
+# Percona Server requiring TLS, on the prebaked pmm-qa/ps image, with
+# mysql_tls_setup.yml's end state: mysql_ssl_VERSION with that script's
+# my.cnf settings, users pmm/pmm and X509-only pmm_tls, registered over TLS
+# with mysqld's own certificates, which tests read from
+# tls-ssl-setup/mysql/VERSION/ on the host.
 setup_ssl_mysql() {
-  local version client
+  local version client tarball='' container password=GRgrO9301RuF suffix=$((RANDOM % 10000))
   version=$(resolved_version MS_VERSION SSL_MYSQL "$DB_VERSION")
   client=$(resolved_client_version SSL_MYSQL DB_CONFIG)
-  declare -A env_map=(
-    [MYSQL_VERSION]="$version"
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [MYSQL_SSL_CONTAINER]="mysql_ssl_$version"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-    [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
+  container=mysql_ssl_$version
+  step "Prepare image pmm-qa/ps:$version" ensure_image ps "$version"
+  if [[ $client == http* ]]; then
+    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
+  fi
+  step 'Start mysqld' ssl_mysql_start
+  step 'Wait for PMM Server' wait_pmm_server_ready
+  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
+  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
+  step 'Wait for pmm-agent' wait_pmm_agent "$container"
+  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering ${container}_ssl_service_$suffix" \
+    docker exec "$container" pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls \
+    --tls-skip-verify --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem \
+    --tls-key=/var/lib/mysql/client-key.pem "${container}_ssl_service_$suffix" >/dev/null
+  wait_exporter "$container" mysqld_exporter
+  wait_node_exporter "$container" /pmm-agent.log
+  step 'Copy the client certificates' ssl_mysql_certs
+  report_agent_status "$container"
+}
+
+ssl_mysql_start() {
+  local -a args=(
+    --server-id=1 --bind-address=0.0.0.0 --require-secure-transport=ON --user=mysql
+    --innodb-buffer-pool-size=256M --innodb-buffer-pool-instances=1 --innodb-flush-method=O_DIRECT
+    --innodb-numa-interleave=1 --innodb-flush-neighbors=0 --innodb-monitor-enable=all --userstat=1
+    --log-bin --log-output=file --slow-query-log=ON --long-query-time=0 --log-slow-rate-limit=1
+    --log-slow-rate-type=query --log-slow-verbosity=full --log-slow-admin-statements=ON
+    --slow-query-log-always-write-time=1 --slow-query-log-use-global-control=all
   )
-  run_playbook 'tls-ssl-setup/mysql_tls_setup.yml' env_map
+  case $version in
+    5.7) args+=(--innodb-log-file-size=1G --expire-logs-days=1 --log-slow-slave-statements=ON) ;;
+    8.0) args+=(--innodb-log-file-size=1G --binlog-expire-logs-seconds=600 --log-slow-slave-statements=ON) ;;
+    8.4) args+=(--innodb-log-file-size=1G --binlog-expire-logs-seconds=600 --log-slow-replica-statements=ON) ;;
+    *) args+=(--innodb-redo-log-capacity=1G --binlog-expire-logs-seconds=600 --log-slow-replica-statements=ON) ;;
+  esac
+  docker rm -fv "$container" >/dev/null 2>&1 || true
+  docker network rm "${container}_network" >/dev/null 2>&1 || true
+  ensure_pmm_network
+  must docker network create "${container}_network" >/dev/null
+  must docker run --detach --name "$container" --hostname "$container" --user root --label pmm-qa.engine=ssl_mysql \
+    --network "${container}_network" --env "MYSQL_ROOT_PASSWORD=$password" "pmm-qa/ps:$version" "${args[@]}" >/dev/null
+  must docker network connect pmm-qa "$container"
+  ssl_mysql_wait
+  # PS 5.7's entrypoint writes the certificates as the container user, root,
+  # so mysqld (running as mysql) cannot read its key and starts without TLS.
+  if [[ $version == 5.7 ]]; then
+    must docker exec "$container" sh -c 'chown mysql:mysql /var/lib/mysql/*.pem'
+    must docker restart "$container" >/dev/null
+    ssl_mysql_wait
+  fi
+  mf_sql "$container" "CREATE USER pmm@'%' IDENTIFIED BY 'pmm'; GRANT ALL ON *.* TO pmm@'%'; CREATE USER 'pmm_tls'@'%' REQUIRE X509;"
+}
+
+ssl_mysql_wait() {
+  retry 180 "$container to accept MySQL connections" docker exec "$container" mysqladmin ping \
+    --host=127.0.0.1 --protocol=tcp -uroot "-p$password" --silent >/dev/null
+}
+
+ssl_mysql_certs() {
+  local dir=$PMM_QA_ROOT/tls-ssl-setup/mysql/$version file
+  must mkdir -p "$dir"
+  for file in ca.pem client-key.pem client-cert.pem; do
+    must docker cp "$container:/var/lib/mysql/$file" "$dir/$file"
+  done
 }
 
 # Percona XtraDB Cluster: three nodes and ProxySQL in the one container

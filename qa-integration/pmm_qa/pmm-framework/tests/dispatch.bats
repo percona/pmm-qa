@@ -366,11 +366,21 @@ stub_prebaked_docker() {
   [[ -z ${CAPTURE_ENV[PDPGSQL_VERSION]-} ]]
 }
 
-@test "SSL variants select their existing playbooks" {
+@test "SSL MySQL runs Percona Server on the PS image, requiring TLS, and registers over TLS" {
+  stub_prebaked_docker
+  SHARD_NAME=nightly-shard
   parse_database_spec 'ssl_mysql=8.4'
   dispatch_setup
-  [[ $CAPTURE_TARGET == tls-ssl-setup/mysql_tls_setup.yml ]]
 
+  grep -q -- '^run --detach --name mysql_ssl_8.4 --hostname mysql_ssl_8.4 --user root .*--network mysql_ssl_8.4_network .* pmm-qa/ps:8.4 .*--require-secure-transport=ON .*--log-slow-replica-statements=ON$' "$DOCKER_CALLS"
+  grep -q '^network connect pmm-qa mysql_ssl_8.4$' "$DOCKER_CALLS"
+  grep -Fq "CREATE USER 'pmm_tls'@'%' REQUIRE X509" "$DOCKER_CALLS"
+  grep -q -- ' mysql_ssl_8.4 container mysql_ssl_8.4-nightly-shard$' "$DOCKER_CALLS"
+  grep -Eq '^exec mysql_ssl_8.4 pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls --tls-skip-verify --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem --tls-key=/var/lib/mysql/client-key.pem mysql_ssl_8.4_ssl_service_[0-9]+$' "$DOCKER_CALLS"
+  grep -q '^cp mysql_ssl_8.4:/var/lib/mysql/client-key.pem .*/pmm_qa/tls-ssl-setup/mysql/8.4/client-key.pem$' "$DOCKER_CALLS"
+}
+
+@test "SSL variants select their existing playbooks" {
   parse_database_spec 'ssl_pdpgsql=16'
   dispatch_setup
   [[ $CAPTURE_TARGET == tls-ssl-setup/postgresql_tls_setup.yml ]]

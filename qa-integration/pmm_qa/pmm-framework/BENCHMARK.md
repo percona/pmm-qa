@@ -153,6 +153,20 @@ none but the cluster for mongos.
 - `psmdb=7.0,SETUP_TYPE=sharding` took 221 s including the one-off 7.0 image
   build. A cold image build is 91-95 s.
 
+## HAProxy and SSL MySQL on the prebaked path
+
+One run each, `CLIENT_VERSION=latest-tarball`, old path timed from a clean `git archive HEAD` copy.
+
+| Spec | Old | Prebaked | Checked |
+|---|---|---|---|
+| `haproxy` | 222 s | 19 s / 11 s | 393 `haproxy_*` series on host :42100, `--environment=haproxy`, annotate works |
+| `ssl_mysql=8.4` | 125 s | 24 s | plain TCP refused (`require_secure_transport`), TLS cipher negotiated, slow log on, certs copied to `tls-ssl-setup/mysql/8.4/` |
+| `ssl_mysql=5.7` / `8.0` / `9.7` | – | 25 s / 19 s / 29 s | same checks |
+
+The old HAProxy path compiled HAProxy's git master on every run; the image is
+Oracle Linux 9's `haproxy` 2.8 package, which has the Prometheus exporter.
+With setup that fast, PMM-T2103 opened its dashboard before the rate panels had
+data, so it now auto-refreshes and waits, as PMM-T324 does.
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value
