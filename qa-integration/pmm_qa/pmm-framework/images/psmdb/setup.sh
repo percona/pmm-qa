@@ -407,7 +407,7 @@ ssl_psmdb_run() {
   retry_on "$PMM_TRANSIENT_ERRORS" 10 'pmm-agent setup on psmdb-server' \
     docker exec psmdb-server pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
     "--server-address=$PMM_SERVER_CONTAINER_ADDRESS" --metrics-mode=auto --server-username=admin \
-    "--server-password=$ADMIN_PASSWORD" --server-insecure-tls >/dev/null
+    "--server-password=$ADMIN_PASSWORD" --server-insecure-tls --force >/dev/null
   wait_pmm_agent psmdb-server
   # shellcheck disable=SC2086 # $tls is two flags
   retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering psmdb-server_$suffix" \

@@ -371,6 +371,7 @@ EOF
   grep -A1 -q '^  test:$' "$BATS_TEST_TMPDIR/override.yml"
   ! grep -Fq 'slash' "$BATS_TEST_TMPDIR/override.yml" || false
   [[ ! -e $(dirname "$(cat "$BATS_TEST_TMPDIR/override.path")") ]]
+  grep -q -- ' --server-insecure-tls --force$' "$DOCKER_CALLS"
   grep -Eq '^exec psmdb-server pmm-admin add mongodb psmdb-server_[0-9]+ --agent-password=mypass --username=pmm_mongodb --password=5M\]\(Q%q/U\+YQ<\^m --host psmdb-server --port 27017 --tls --tls-certificate-key-file=/mongodb_certs/client.pem --tls-ca-file=/mongodb_certs/ca-certs.pem --cluster=mycluster$' "$DOCKER_CALLS"
 }
 
