@@ -9,19 +9,13 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2233 + PMM-T2144 - Verify "pmm_ha_leader_status" and the left-menu leader both track the current leader @pmm-ha',
-  async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    await page.goto(highAvailabilityPage.url);
-
-    const initialLeader = await pmmTest.step('Read the current leader from the HA badge', async () => {
-      await expect(highAvailabilityPage.elements.badge).toBeVisible();
-
-      const leader = await highAvailabilityPage.getLeaderName();
-
-      expect(leader, 'HA badge must name a leader').not.toEqual('Unknown');
-
-      return leader;
-    });
+  'PMM-T2233 - Verify "pmm_ha_leader_status" tracks the current leader across a leader restart @pmm-ha',
+  async ({ api, haClusterHelper, k8sHelper }) => {
+    // The left-menu "Leader:" item this used to read was removed in PMM 3.10 (PMM-13860);
+    // the UI side of a leader change is covered by PMM-T2145 on the Inventory Nodes page.
+    const initialLeader = await pmmTest.step('Read the current leader from the cluster', async () =>
+      haClusterHelper.leaderFromPods(),
+    );
 
     await pmmTest.step(
       `Verify "${HaApi.leaderStatusMetric}" reports "${initialLeader}" as leader`,
@@ -38,7 +32,7 @@ pmmTest(
 
         expect(
           await api.haApi.waitForLeaderInMetrics(undefined, Timeouts.TWO_MINUTES),
-          'The leader in metrics must be the one the HA badge names',
+          'The leader in metrics must be the pod that answers the leader health check',
         ).toEqual(initialLeader);
       },
     );
@@ -95,13 +89,6 @@ pmmTest(
           timeout: Timeouts.TWO_MINUTES,
         })
         .toBeGreaterThan(baseline);
-    });
-
-    await pmmTest.step(`Verify the HA badge shows "${newLeader}" as the new leader`, async () => {
-      await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.elements.leaderNodeName).toHaveText(newLeader, {
-        timeout: Timeouts.TWO_MINUTES,
-      });
     });
 
     await pmmTest.step(

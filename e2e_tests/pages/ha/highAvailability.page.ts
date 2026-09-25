@@ -13,6 +13,8 @@ export default class HighAvailabilityPage extends BasePage {
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),
+    // The leader items exist only before PMM 3.10 (PMM-13860 removed them), so they suit
+    // the released image in the chart-upgrade tests, not the dev image.
     leaderNavItem: this.page.getByTestId('navitem-high-availability-leader-text-item'),
     leaderNodeName: this.page
       .getByTestId('navitem-high-availability-leader-text-item')
