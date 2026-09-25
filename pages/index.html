@@ -58,16 +58,7 @@
   a.card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
   @media (prefers-reduced-motion: reduce) { a.card { transition: none; } a.card:hover { transform: none; } }
   .card h2 { font-size: 18px; font-weight: 600; margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .card p { color: var(--ink-2); margin: 6px 0 18px; }
-  .latest { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; }
-  .latest b { color: var(--ink); font-weight: 600; }
-  .strip { display: flex; gap: 3px; margin-left: auto; }
-  .strip i { width: 8px; height: 18px; border-radius: 2px; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
-  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .s-pass { color: var(--pass); background: var(--pass-bg); } .s-fail { color: var(--fail); background: var(--fail-bg); }
-  .s-warn { color: var(--warn); background: var(--warn-bg); } .s-idle { color: var(--idle); background: var(--idle-bg); }
-  .strip .s-pass { background: var(--pass); } .strip .s-fail { background: var(--fail); } .strip .s-warn { background: var(--warn); } .strip .s-idle { background: var(--idle); }
+  .card p { color: var(--ink-2); margin: 6px 0 0; }
   .go { color: var(--ink-3); font-size: 20px; line-height: 1; }
   @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } }
 </style>
@@ -84,32 +75,12 @@
     <a class="card" href="nightly/">
       <h2>Nightly <span class="go" aria-hidden="true">›</span></h2>
       <p>Every nightly orchestrator build: package, upgrade, nightly and compatibility lanes on Jenkins, and the GitHub suites, grouped by suite with investigator findings.</p>
-      <div class="latest" id="nightly">Loading…</div>
     </a>
     <a class="card" href="performance/">
       <h2>Performance <span class="go" aria-hidden="true">›</span></h2>
       <p>Resource use of PMM Server and clients before and after an upgrade, per client scale, with the deviation trend across releases.</p>
-      <div class="latest" id="performance">Loading…</div>
     </a>
   </div>
 </main>
-<script>
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cls = s => s === 'pass' ? 's-pass' : s === 'fail' ? 's-fail' : s === 'unstable' ? 's-warn' : 's-idle';
-const label = s => ({ pass: 'passed', fail: 'failed', unstable: 'unstable' }[s] || s || 'unknown');
-const when = d => { const t = new Date(d); return isNaN(t) ? '' : t.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }); };
-function latest(id, url, title) {
-  const el = document.getElementById(id);
-  fetch(url, { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.json(); }).then(runs => {
-    if (!runs.length) { el.textContent = 'No runs published yet.'; return; }
-    const last = runs[runs.length - 1];
-    el.innerHTML = `<span class="pill ${cls(last.status)}">${esc(label(last.status))}</span>
-      <span>Latest <b>${esc(title(last))}</b> · ${esc(when(last.date))}</span>
-      <span class="strip" aria-label="Last ${Math.min(runs.length, 14)} runs">${runs.slice(-14).map(r => `<i class="${cls(r.status)}" title="${esc(title(r))} · ${esc(label(r.status))}"></i>`).join('')}</span>`;
-  }).catch(() => { el.textContent = 'Could not load the latest run.'; });
-}
-latest('nightly', 'nightly/data/index.json', r => r.image_tag || r.run_id);
-latest('performance', 'performance/data/index.json', r => r.server ? `${r.server.from} → ${r.server.to}` : r.run_id);
-</script>
 </body>
 </html>

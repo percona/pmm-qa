@@ -166,7 +166,8 @@
   @media (prefers-reduced-motion: reduce) { details.group[open] .gbody { animation: none; } details.group .chev { transition: none; } }
 
   .verdicts { margin: 0; padding: 12px 16px 12px 40px; list-style: none; display: grid; gap: 8px; border-bottom: 1px solid var(--line); background: var(--surface); }
-  .verdict { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+  .verdict { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .verdict > .pill { justify-self: start; }
   .verdict .why { color: var(--ink-2); }
   .verdict .also { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
   .pending.claim { color: var(--warn); }
@@ -266,17 +267,22 @@ const meter = t => {
     <span class="m-pass" style="width:${pct(t.pass)}"></span><span class="m-fail" style="width:${pct(t.fail)}"></span><span class="m-warn" style="width:${pct(t.warn)}"></span></div>`;
 };
 const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URLSearchParams({
-  repositories: 'percona/pmm-qa',
-  prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
-    `In nightly orchestrator build ${r.run_id} (image tag ${r.image_tag}, client ${r.client_version}), suite "${group}" had ${failed.length} failed job(s):\n` +
-    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\nBuild: ${r.run_url}\n\n` +
-    `Before anything else, claim the suite so others see it is being looked at: publish {"run_id": "${r.run_id}", ` +
-    `"claims": [{"by": "<your GitHub login, from get_me>", "at": "<now, UTC ISO 8601>", "suites": ["${group}"]}]} ` +
-    `with nightly/ci/publish_report.sh. Then read that report's existing investigations and claims for "${group}" ` +
-    `and build on them instead of repeating them.\n\n` +
-    `Investigate all of them together: dedup, group failures that share a root cause, reproduce, classify, ` +
-    `then publish the findings, each with the same "by" and a fresh "at", to this run's nightly report ` +
-    `(run_id ${r.run_id}, see nightly/README.md). ultrathink`
+  repositories: 'percona/pmm-qa,percona/pmm-ai',
+  prompt: `Coordinate an investigation of one group of the PMM nightly report. Do not investigate yourself; ` +
+    `the investigator subagent does that. Your job is to claim the group, brief the subagent, and publish what it returns.\n\n` +
+    `Build: ${r.run_url} (report ${r.run_id}, image tag ${r.image_tag}, client ${r.client_version})\n` +
+    `Group: "${group}", ${failed.length} failed job(s):\n` +
+    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\n\n` +
+    `1. Claim the group now, before anything else. Get your GitHub login from the GitHub MCP get_me, then in percona/pmm-qa run:\n` +
+    `   nightly/ci/claim.sh ${r.run_id} "${group}" <login>\n` +
+    `2. Read what is already known: https://percona.github.io/pmm-qa/nightly/reports/${r.run_id}.json (its investigations and claims for "${group}").\n` +
+    `3. Launch one subagent with the Agent tool. Its prompt: "Read plugins/pmm-qa/agents/investigator.md in percona/pmm-ai (main) ` +
+    `and act as that role, following it exactly." followed by the failed jobs above, the build URL, and any existing findings from step 2. ` +
+    `Ask it to finish with one line per root cause: the groups it explains, verdict (not reproduced | not a bug | test fix | product bug), ` +
+    `a one-sentence summary, and the fix PR or Jira URL if any.\n` +
+    `4. For each root cause it returns, run in percona/pmm-qa:\n` +
+    `   nightly/ci/finding.sh ${r.run_id} <login> "<verdict>" "<summary>" <link or -> "<group>" ["<other group>" ...]\n` +
+    `5. Reply with the findings you published and the report link: https://percona.github.io/pmm-qa/nightly/#run=${r.run_id} ultrathink`
 }).toString().replace(/\+/g, '%20');
 const linkLabel = u => {
   const pr = /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/.exec(u || '');

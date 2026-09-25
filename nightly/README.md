@@ -36,48 +36,33 @@ The page lists the builds; Details opens one build, one section per group and on
 per job. A group with failures gets one Investigate in Claude button whose prompt
 covers all of that group's failed jobs.
 
-## Adding investigator findings
+## Claims and findings
 
-Publishing a JSON with an existing `run_id` merges into that report. Publish **one
-finding per root cause**, listing every group it explains in `suites` (the group names
-exactly as the table above lists them), and sign it with `by` and `at`:
-
-```json
-{
-  "run_id": "jenkins-123",
-  "investigations": [
-    { "suites": ["E2E Tests", "Nightly Compatibility"],
-      "verdict": "not a bug",
-      "summary": "one line",
-      "link": "https://github.com/percona/pmm-qa/pull/...",
-      "by": "Investigator routine",
-      "at": "2026-09-25T03:40:00Z" }
-  ]
-}
-```
-
-`verdict` is one of `not reproduced`, `not a bug`, `test fix`, `product bug`; `link` is
-the fix PR or Jira bug when there is one (the page labels it `PR #N` or `PMM-N`); `by`
-is the routine or the GitHub login of whoever ran the session. Findings only ever append.
-
-### Claiming a suite
-
-Before investigating, publish a claim so others see the suite is being looked at:
-
-```json
-{ "run_id": "jenkins-123",
-  "claims": [{ "by": "<login>", "at": "<now>", "suites": ["CLI Integration Compatibility"] }] }
-```
-
-The page shows "Being investigated by …" on that suite for 12 hours, and the
-Investigate in Claude button asks for confirmation before starting a second,
-conflicting session. A newer claim from the same author replaces the older one, and a
-claim is dropped once its author publishes a finding for those suites.
+Two scripts write to a report; both go through `publish_report.sh`, which merges into
+the existing report instead of replacing it.
 
 ```sh
-PAGES_REMOTE=https://x-access-token:${TOKEN}@github.com/percona/pmm-qa.git \
-  nightly/ci/publish_report.sh findings.json
+# Before investigating a group: others see "Being investigated by <login>" on it
+# for 12 hours, and the Investigate in Claude button asks before a second session starts.
+nightly/ci/claim.sh jenkins-123 "CLI Integration Compatibility" <login>
+
+# One finding per root cause, listing every group it explains. Drops that author's claim.
+nightly/ci/finding.sh jenkins-123 <login> "not a bug" "one-line summary" \
+  https://github.com/percona/pmm-qa/pull/1511 "CLI Integration Compatibility" "E2E Tests"
 ```
+
+`verdict` is one of `not reproduced`, `not a bug`, `test fix`, `product bug`. The link
+(or `-` for none) is the fix PR or Jira bug; the page labels it `PR #N` or `PMM-N`.
+Claims are per group: claiming one group never touches another group's claim.
+Findings only ever append.
+
+The Investigate in Claude button opens a session that claims the group, runs the
+investigator from percona/pmm-ai (`plugins/pmm-qa/agents/investigator.md`) as a
+subagent, and publishes what it returns with `finding.sh`. The investigator itself
+knows nothing about this report.
+
+In CI, set `PAGES_REMOTE` (or `GITHUB_TOKEN` and `GITHUB_REPOSITORY`) so the push is
+authenticated; in a session the git credentials of the checkout are used.
 
 ## Site layout
 
