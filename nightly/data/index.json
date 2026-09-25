@@ -2662,5 +2662,449 @@
       }
     ],
     "investigations": []
+  },
+  {
+    "run_id": "jenkins-31",
+    "date": "2026-09-20T03:01:36Z",
+    "image_tag": "3-dev-latest",
+    "client_version": "latest-tarball",
+    "run_url": "https://pmm.cd.percona.com/job/pmm3-nightly-orchestrator/31/",
+    "status": "fail",
+    "summary": "51/54 jobs passed",
+    "jobs": [
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@ia",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11117/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@gcp",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11119/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@instances",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11118/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.0 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23982/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.0 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23988/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.1 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23985/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.1 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23997/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.1 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23991/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.0 SSL",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23994/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.0 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23995/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.0 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23983/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.1 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23992/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.8.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1142/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.1 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23998/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.0 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23989/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.1 EXTERNAL SERVICES",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23986/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.8.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1141/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.7.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1140/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.1 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23993/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.9.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1143/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.9.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1144/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.1 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23999/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.9.0 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23996/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.0 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23984/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.7.1 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23987/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMD",
+        "name": "3.8.0 OTHERS",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23990/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "nightly / gssapi",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gssapi/502/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "ami",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/689/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "docker",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/687/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "docker arm64",
+        "result": "failure",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/688/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "ha",
+        "result": "failure",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/691/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "helm",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/690/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "auth config",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/219/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "integration",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/218/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "auth register",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/220/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "custom port (GA 3.9.1)",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/222/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "custom path (GA 3.9.1)",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/221/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "upgrade custom path (GA 3.9.1)",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/224/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "upgrade",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/223/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package ARM",
+        "name": "upgrade custom port",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-arm64/225/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "custom path",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/221/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "upgrade custom path",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/224/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "auth register",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/220/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "auth config",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/219/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "upgrade custom port",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/225/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "upgrade",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/223/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "custom port",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/222/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Package AMD",
+        "name": "integration",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/nightly-package-testing-amd64/218/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "openshift",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/openshift-helm-tests/189/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.9.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/695/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.8.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/693/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.9.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/696/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.8.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/694/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.7.1",
+        "result": "failure",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/692/",
+        "duration_s": null
+      }
+    ],
+    "investigations": []
   }
 ]
