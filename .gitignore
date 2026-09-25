@@ -9,6 +9,7 @@ e2e_tests/playwright/.auth/
 e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env
+e2e_tests/testdata/ia/scripts/alert.txt
 .playwright-mcp/
 cli/node_modules/
 e2e_tests/dist/
@@ -151,22 +152,7 @@ dist
 /k8s/lib/bats-support/
 
 # AI tools
-.claude/*
-!.claude/agents/
-!.claude/agents/**
-!.claude/skills/
-!.claude/skills/**
-!.claude/hooks/
-!.claude/hooks/**
-!.claude/scripts/
-!.claude/scripts/**
-!.claude/integrations/
-!.claude/integrations/**
-!.claude/settings.json
-!.claude/skill-lessons/
-!.claude/skill-lessons/**
-.claude/scripts/node_modules/
-.claude/scripts/.sessions/
+.claude/
 .cursor
 .cursorrules
 

@@ -210,7 +210,7 @@ jobs:
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch }}
       setup_services: '-h'
-      pmm_test_flag: '@alerting'
+      pmm_test_flag: '@alerting|@fb-alerting'
 
   settings:
     name: Settings tests
