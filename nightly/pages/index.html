@@ -268,6 +268,7 @@ const meter = t => {
 };
 const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URLSearchParams({
   repositories: 'percona/pmm-qa,percona/pmm-ai',
+  environment: 'relay',
   prompt: `Coordinate an investigation of one group of the PMM nightly report. Do not investigate yourself; ` +
     `the investigator subagent does that. Your job is to claim the group, brief the subagent, and publish what it returns.\n\n` +
     `Build: ${r.run_url} (report ${r.run_id}, image tag ${r.image_tag}, client ${r.client_version})\n` +
