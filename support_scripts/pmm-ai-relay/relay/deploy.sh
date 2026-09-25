@@ -84,7 +84,7 @@ runcmd:
   - curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip && unzip -o /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip
   - git clone --depth 1 --branch __PMM_QA_REF__ https://github.com/percona/pmm-qa.git /opt/pmm-qa || git clone --depth 1 https://github.com/percona/pmm-qa.git /opt/pmm-qa
   # relay.js comes from the clone (not baked -- keeps user_data under 16KB)
-  - cp /opt/pmm-qa/.claude/integrations/slack/relay/relay.js /opt/pmm-ai-relay/relay.js
+  - cp /opt/pmm-qa/support_scripts/pmm-ai-relay/relay/relay.js /opt/pmm-ai-relay/relay.js
   # Derive this box's OWN hostname (Linode rDNS <ip-dashes>.ip.linodeusercontent.com)
   # so the same image works for any relay IP -- not pinned to one reserved IP.
   # One shell block so $HOST persists; certbot validates over public HTTP-01.

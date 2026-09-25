@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sourced by session-start.sh (eager) and lint-changed.sh (lazy). Each ensure_*
+# Sourced by lint-changed.sh (lazy) and the pmm-ai SessionStart hook (eager). Each ensure_*
 # is a no-op once the pinned version is present, so it is safe to call from a
 # pre-commit gate on every commit.
 

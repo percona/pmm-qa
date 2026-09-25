@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dispatches the repo's linters over a list of files, one linter per file kind.
-# Shared by the PreToolUse commit gate and .github/workflows/lint.yml so both
+# Shared by the pmm-ai commit gate (percona/pmm-ai plugins/pmm-qa/hooks) and .github/workflows/lint.yml so both
 # enforce exactly the same commands.
 #
 # Usage: lint-changed.sh <file> [<file>...]
@@ -12,8 +12,8 @@ set -uo pipefail
 # $0 -- not CLAUDE_PROJECT_DIR: in a multi-repo cloud session that variable
 # points at the parent of the clones, not at pmm-qa.
 QA_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-# shellcheck source=.claude/hooks/lib/install-linters.sh
-. "$QA_ROOT/.claude/hooks/lib/install-linters.sh"
+# shellcheck source=support_scripts/lint/install-linters.sh
+. "$QA_ROOT/support_scripts/lint/install-linters.sh"
 
 cd "$QA_ROOT" || exit 1
 

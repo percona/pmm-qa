@@ -6,7 +6,7 @@
 # run directory that captures everything needed to reach and tear down the run.
 #
 # Everything is overridable by env var; sane defaults let it run with none.
-# Docs: .claude/skills/linode-ha-provisioning/SKILL.md
+# Docs: the linode-ha-provisioning skill in percona/pmm-ai (plugins/pmm-qa)
 
 set -euo pipefail
 
