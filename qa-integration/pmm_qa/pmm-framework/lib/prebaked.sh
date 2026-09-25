@@ -8,6 +8,9 @@
 # errexit: every helper dies on its own failure.
 
 readonly BUSYBOX_IMAGE=busybox:1.37.0
+# The Nomad agent pmm-agent runs exits unless it can write to cgroups, and a
+# systemd image needs them too.
+readonly -a NOMAD_CGROUPS=(--privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw)
 readonly PMM_AGENT_CONFIG=/usr/local/percona/pmm/config/pmm-agent.yaml
 readonly PMM_AGENT_KEY=/usr/local/percona/pmm/config/pmm-key.pem
 readonly PMM_REPO_ERRORS='mirrors were tried|inconsistent server data|curl error|could not resolve|timed out|status code: 5'

@@ -38,10 +38,12 @@ USER root
 RUN ln -sfn /usr/local/share/sysbench /usr/share/sysbench
 RUN echo /usr/local/lib64 > /etc/ld.so.conf.d/sysbench-mysql.conf \
     && ldconfig
+# iproute: the Nomad agent pmm-agent runs needs `ip`.
 RUN yum install -y \
         curl \
         findutils \
         gzip \
+        iproute \
         openssl \
         tar \
     && yum clean all \
@@ -66,7 +68,7 @@ RUN set -eux; \
         -o /tmp/epel-release.rpm; \
     rpm -Uvh /tmp/epel-release.rpm; \
     rm /tmp/epel-release.rpm; \
-    "$PKG_MGR" install -y sysbench curl findutils gzip openssl tar; \
+    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl tar; \
     "$PKG_MGR" clean all; \
     sysbench --version; \
     tar --version

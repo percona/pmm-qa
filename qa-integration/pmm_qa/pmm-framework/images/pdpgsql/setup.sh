@@ -91,11 +91,9 @@ pdpgsql_start() {
   pdpgsql_sql "${names[0]}" "ALTER USER postgres WITH PASSWORD '$PDPGSQL_PASSWORD';"
 }
 
-# systemd in the container needs the host's cgroups, as the playbook's did.
 pdpgsql_start_node() {
   must docker run --detach --name "$1" --restart=always --label pmm-qa.engine=pdpgsql --network pmm-qa \
-    --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw \
-    --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
+    "${NOMAD_CGROUPS[@]}" --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
   pdpgsql_ready "$1"
   if [[ -n $pgsm_branch ]]; then
     retry 3 "pg_stat_monitor build tools on $1" docker exec --user root "$1" sh -c "apt-get update &&

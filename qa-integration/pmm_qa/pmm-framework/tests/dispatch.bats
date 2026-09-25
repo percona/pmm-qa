@@ -49,7 +49,7 @@ stub_prebaked_docker() {
   dispatch_setup
 
   [[ $(grep -c '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- '--name ps_pmm_gr_8_4_3 .*--publish 3308:3306 pmm-qa/ps:8.4 --server-id=3 ' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_gr_8_4_3 .*--privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw .*--publish 3308:3306 pmm-qa/ps:8.4 --server-id=3 ' "$DOCKER_CALLS"
   grep -q -- '--loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061' "$DOCKER_CALLS"
   grep -q 'START GROUP_REPLICATION' "$DOCKER_CALLS"
   [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
@@ -493,7 +493,7 @@ EOF
 
   grep -q '^image inspect pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
   grep -q -- '^run --detach --name redis_container .*--publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name external_pmm --hostname external_pmm .*--network pmm-qa pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name external_pmm --hostname external_pmm .*--network pmm-qa --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
   grep -q -- '--web.listen-address=:42200 >/redis.log' "$DOCKER_CALLS"
   grep -q -- ' external_pmm container external_pmm-nightly-shard$' "$DOCKER_CALLS"
   grep -Eq '^exec external_pmm pmm-admin add external --listen-port=42200 --group=redis --service-name=redis_external_service_([0-9]+)$' "$DOCKER_CALLS"
@@ -507,7 +507,7 @@ EOF
   parse_database_spec haproxy
   dispatch_setup
 
-  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 pmm-qa/haproxy:ol9$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:ol9$' "$DOCKER_CALLS"
   grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"

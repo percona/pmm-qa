@@ -48,7 +48,8 @@ RUN curl -fL \
     && rpm -Uvh /tmp/libev.rpm \
     && rm /tmp/libev.rpm
 RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then microdnf install -y "${XTRABACKUP_PACKAGE}"; fi
-RUN microdnf install -y qpress tar && microdnf clean all
+# iproute: the Nomad agent pmm-agent runs needs `ip`.
+RUN microdnf install -y iproute qpress tar && microdnf clean all
 RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then xtrabackup --version; fi \
     && sysbench --version
 

@@ -39,7 +39,7 @@ external_start() {
   must docker run --detach --name redis_container --label pmm-qa.engine=external --network pmm-qa \
     --publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd >/dev/null
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=external \
-    --network pmm-qa "pmm-qa/external:$tag" >/dev/null
+    --network pmm-qa "${NOMAD_CGROUPS[@]}" "pmm-qa/external:$tag" >/dev/null
   must docker exec --detach "$container" sh -c 'exec redis_exporter --redis.addr=redis://redis_container:6379 \
     --redis.password=oFukiBRg7GujAJXq3tmd --web.listen-address=:42200 >/redis.log 2>&1'
   must docker exec --detach "$container" sh -c 'exec process-exporter --web.listen-address=:9256 >/process-exporter.log 2>&1'

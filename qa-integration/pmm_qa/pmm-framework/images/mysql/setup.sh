@@ -144,7 +144,7 @@ mf_start_node() {
   local -a run=(
     docker run --detach --name "$name" --hostname "$name" --user root
     --label "pmm-qa.engine=$engine" --label "pmm-qa.$engine.setup-type=${setup_type:-single}"
-    --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password"
+    --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password" "${NOMAD_CGROUPS[@]}"
   )
   # As the old Ansible setup: the host reaches node N's socket at
   # /tmp/mysql-sockets/N/mysql.sock, which the CLI socket tests use.
