@@ -3,164 +3,84 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PMM Performance Reports</title>
+<title>PMM QA Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#fff; --fg:#1f2328; --muted:#656d76; --line:#d0d7de; --pass:#1a7f37; --fail:#cf222e; --warn:#9a6700; --card:#f6f8fa; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --line:#30363d; --pass:#3fb950; --fail:#f85149; --warn:#d29922; --card:#161b22; } }
-  body { margin:0; padding:24px 16px; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg); }
-  main { max-width:1100px; margin:0 auto; }
-  h1 { font-size:22px; margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
-  .cards { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
-  .card { flex:1 1 220px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
-  .card .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  .card .v { font-size:20px; font-weight:600; margin-top:2px; }
-  .up { color:var(--fail); } .down { color:var(--pass); } .flat { color:var(--warn); }
-  .chart { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:20px; }
-  canvas { max-width:100%; }
-  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
-  table { border-collapse:collapse; width:100%; min-width:760px; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th { background:var(--card); color:var(--muted); font-weight:600; font-size:12px; }
-  tr.run { cursor:pointer; } tr.run:hover td { background:var(--card); }
-  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; color:#fff; }
-  .badge.pass { background:var(--pass); } .badge.fail { background:var(--fail); }
-  tr.detail td { background:var(--card); white-space:normal; padding:10px 14px 14px; }
-  .checks { border-collapse:collapse; width:100%; font-size:13px; }
-  .checks th, .checks td { padding:4px 8px; border-bottom:1px solid var(--line); }
-  .checks .bad { color:var(--fail); font-weight:600; }
-  a { color:inherit; } .muted { color:var(--muted); } .empty { padding:24px; text-align:center; color:var(--muted); }
-  .snaps { white-space:normal; min-width:260px; } .snaps a { margin-right:10px; }
-  .filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; color:var(--muted); font-size:13px; }
-  .filters button { font:inherit; padding:3px 10px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--fg); cursor:pointer; }
-  .filters button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
-  .filters label { display:inline-flex; gap:4px; align-items:center; cursor:pointer; }
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --sunken: #eef1f5;
+    --ink: #151a23; --ink-2: #4a5566; --ink-3: #697586;
+    --line: #dde2ea; --line-strong: #c3cad6;
+    --pass: #137a3a; --pass-bg: #e3f4e9; --fail: #c0262d; --fail-bg: #fbe7e8;
+    --warn: #93600a; --warn-bg: #fbf0da; --idle: #697586; --idle-bg: #eef1f5;
+    --accent: #2447d6;
+    --shadow: 0 1px 2px rgba(21, 26, 35, .06), 0 4px 12px rgba(21, 26, 35, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+      --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+      --line: #262e3a; --line-strong: #364152;
+      --pass: #4cc47a; --pass-bg: #16301f; --fail: #ff6b6f; --fail-bg: #3a1a1c;
+      --warn: #e8b04a; --warn-bg: #362a12; --idle: #8c97a8; --idle-bg: #1c222c;
+      --accent: #7c95ff;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+    --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+    --line: #262e3a; --line-strong: #364152;
+    --pass: #4cc47a; --pass-bg: #16301f; --fail: #ff6b6f; --fail-bg: #3a1a1c;
+    --warn: #e8b04a; --warn-bg: #362a12; --idle: #8c97a8; --idle-bg: #1c222c;
+    --accent: #7c95ff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.5 "IBM Plex Sans", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  header .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  .brand { font-weight: 600; letter-spacing: -.01em; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+  nav { display: flex; gap: 16px; align-self: stretch; }
+  nav a { display: flex; align-items: center; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav a:hover { color: var(--ink); }
+  main.wrap { padding: 40px 16px 64px; }
+  h1 { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+  .lede { color: var(--ink-2); margin: 6px 0 28px; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow); padding: 20px; transition: border-color .15s, transform .2s cubic-bezier(.16, 1, .3, 1); }
+  a.card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  @media (prefers-reduced-motion: reduce) { a.card { transition: none; } a.card:hover { transform: none; } }
+  .card h2 { font-size: 18px; font-weight: 600; margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .card p { color: var(--ink-2); margin: 6px 0 0; }
+  .go { color: var(--ink-3); font-size: 20px; line-height: 1; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>PMM Performance Reports</h1>
-  <p class="sub">Each run upgrades a PMM server + clients against a dynamic baseline captured just before the upgrade. A check fails past a <span id="thr">10</span>% deviation. Humans verify via the shared PMM snapshots linked per run.</p>
-
-  <div class="cards" id="cards"></div>
-  <div class="chart"><canvas id="trend" height="110"></canvas><p class="empty" id="nochart" hidden>Trend chart unavailable (chart library did not load); the runs table below is complete.</p></div>
-  <div class="filters" id="filters" hidden>
-    <span>Scale:</span><button data-scale="" class="on">all</button>
-    <label><input type="checkbox" id="failsonly"> failing only</label>
-    <span id="count"></span>
-  </div>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Date</th><th>Run</th><th>Scale</th><th>Server</th><th>Client</th><th>Status</th><th>Max deviation</th><th>Snapshots</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
-    </table>
+<header><div class="wrap">
+  <a class="brand" href="./"><span class="dot" aria-hidden="true"></span>PMM QA Reports</a>
+  <nav aria-label="Reports"><a href="nightly/">Nightly</a><a href="performance/">Performance</a></nav>
+</div></header>
+<main class="wrap">
+  <h1>PMM QA Reports</h1>
+  <p class="lede">Automated test results for PMM, published by the pipelines that produce them.</p>
+  <div class="cards">
+    <a class="card" href="nightly/">
+      <h2>Nightly <span class="go" aria-hidden="true">›</span></h2>
+      <p>Every nightly orchestrator build: package, upgrade, nightly and compatibility lanes on Jenkins, and the GitHub suites, grouped by suite with investigator findings.</p>
+    </a>
+    <a class="card" href="performance/">
+      <h2>Performance <span class="go" aria-hidden="true">›</span></h2>
+      <p>Resource use of PMM Server and clients before and after an upgrade, per client scale, with the deviation trend across releases.</p>
+    </a>
   </div>
 </main>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
-  integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
-<script>
-(async () => {
-  const fmtDate = s => new Date(s).toISOString().replace('T',' ').slice(0,16) + 'Z';
-  const pct = n => (n == null || Number.isNaN(n)) ? '—' : `${n > 0 ? '+' : ''}${Number(n).toFixed(1)}%`;
-  const maxDev = r => Math.max(...(r.checks || []).map(c => Math.abs(c.deviation_pct ?? 0)), 0);
-
-  let runs = [];
-  try { runs = await (await fetch('data/index.json', { cache: 'no-store' })).json(); } catch (e) { runs = []; }
-  runs.sort((a, b) => new Date(a.date) - new Date(b.date));
-  const rows = document.getElementById('rows');
-  if (!runs.length) { rows.innerHTML = '<tr><td colspan="8" class="empty">No runs published yet.</td></tr>'; return; }
-  if (runs[0].deviation_threshold_pct != null) document.getElementById('thr').textContent = runs.at(-1).deviation_threshold_pct;
-
-  // Trend indicator per scale: compare the mean max-deviation of the last 5 runs
-  // to the 5 before them. Lower deviation = getting better. Five smooths out the
-  // run-to-run noise that made 3-run windows flip verdicts.
-  const WIN = 5;
-  const byScale = {};
-  for (const r of runs) (byScale[r.scale] ||= []).push(r);
-  const cards = document.getElementById('cards');
-  for (const [scale, list] of Object.entries(byScale)) {
-    const devs = list.map(maxDev);
-    const recent = devs.slice(-WIN), prior = devs.slice(-2 * WIN, -WIN);
-    const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
-    const m1 = mean(recent), m0 = mean(prior);
-    let cls = 'flat', word = 'stable', arrow = '→';
-    if (m0 != null && m1 != null) {
-      if (m1 < m0 * 0.9) { cls = 'down'; word = 'improving'; arrow = '↓'; }
-      else if (m1 > m0 * 1.1) { cls = 'up'; word = 'regressing'; arrow = '↑'; }
-    } else if (m0 == null) { word = 'not enough history'; }
-    const fails = list.filter(r => r.status !== 'pass').length;
-    cards.insertAdjacentHTML('beforeend', `
-      <div class="card"><div class="k">${scale} clients · ${list.length} run${list.length === 1 ? '' : 's'}</div>
-      <div class="v ${cls}">${arrow} ${word}</div>
-      <div class="muted">last: ${pct(devs.at(-1))} max deviation · ${fails} of ${list.length} failing</div></div>`);
-  }
-
-  // Table filters: one button per scale plus a failing-only toggle.
-  const filters = document.getElementById('filters');
-  for (const scale of Object.keys(byScale)) filters.querySelector('label').insertAdjacentHTML('beforebegin', `<button data-scale="${scale}">${scale}</button>`);
-  filters.hidden = false;
-  const applyFilters = () => {
-    const scale = filters.querySelector('button.on').dataset.scale;
-    const failsOnly = document.getElementById('failsonly').checked;
-    let shown = 0;
-    for (const tr of rows.querySelectorAll('tr.run')) {
-      const hide = (scale && tr.dataset.scale !== scale) || (failsOnly && tr.dataset.status === 'pass');
-      tr.hidden = hide; shown += hide ? 0 : 1;
-      if (hide) rows.querySelector(`tr.detail[data-for="${tr.dataset.id}"]`).hidden = true;
-    }
-    document.getElementById('count').textContent = `${shown} of ${runs.length} runs`;
-  };
-  filters.addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    filters.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); applyFilters();
-  });
-  document.getElementById('failsonly').addEventListener('change', applyFilters);
-
-  // Chart: max deviation over time, one line per scale. Optional — if the CDN is
-  // unreachable the cards and table below still render.
-  const palette = ['#0969da', '#8250df', '#bf8700', '#1a7f37'];
-  if (!window.Chart) { document.getElementById('nochart').hidden = false; } else try { new Chart(document.getElementById('trend'), {
-    type: 'line',
-    data: { datasets: Object.entries(byScale).map(([scale, list], i) => ({
-      label: `${scale} clients`, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
-      tension: .25, pointRadius: 4,
-      data: list.map(r => ({ x: new Date(r.date).getTime(), y: +maxDev(r).toFixed(2), run: r })),
-    })) },
-    options: {
-      parsing: false, responsive: true,
-      // linear epoch-ms axis: avoids the date-adapter the `time` scale requires
-      scales: { x: { type: 'linear', ticks: { color: '#8b949e', callback: v => new Date(v).toISOString().slice(0, 10) } },
-                y: { title: { display: true, text: 'max deviation vs baseline (%)' }, ticks: { color: '#8b949e' }, beginAtZero: true } },
-      plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${pct(c.raw.y)} (${c.raw.run.run_id}, ${c.raw.run.status})` } } },
-    },
-  }); } catch (e) { console.warn('trend chart skipped:', e); document.getElementById('nochart').hidden = false; }
-
-  // Runs table, newest first; click a row for its checks.
-  rows.innerHTML = '';
-  for (const r of [...runs].reverse()) {
-    const snaps = (r.snapshots || []).map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.dashboard}</a>`).join('') || '<span class="muted">—</span>';
-    const server = r.server ? `${r.server.from ?? '?'} → ${r.server.to ?? '?'}` : '—';
-    rows.insertAdjacentHTML('beforeend', `
-      <tr class="run" data-id="${r.run_id}" data-scale="${r.scale ?? ''}" data-status="${r.status}">
-        <td>${fmtDate(r.date)}</td><td><a href="reports/${r.run_id}.json">${r.run_id}</a></td><td>${r.scale ?? '—'}</td>
-        <td>${server}</td><td>${r.client_version ?? '—'}</td>
-        <td><span class="badge ${r.status === 'pass' ? 'pass' : 'fail'}">${r.status}</span></td>
-        <td>${pct(maxDev(r))}</td><td class="snaps">${snaps}</td>
-      </tr>
-      <tr class="detail" data-for="${r.run_id}" hidden><td colspan="8">
-        ${r.summary ? `<p><b>${r.summary}</b></p>` : ''}
-        <table class="checks"><thead><tr><th>check</th><th>baseline</th><th>after</th><th>deviation</th><th>ok</th></tr></thead><tbody>
-        ${(r.checks || []).map(c => `<tr><td>${c.name}</td><td>${c.baseline ?? c.observed ?? '—'} ${c.unit ?? ''}</td><td>${c.after ?? '—'} ${c.unit ?? ''}</td>
-          <td class="${c.ok === false ? 'bad' : ''}">${pct(c.deviation_pct)}</td><td>${c.ok === false ? '✗' : '✓'}</td></tr>`).join('')}
-        </tbody></table>
-      </td></tr>`);
-  }
-  rows.addEventListener('click', e => {
-    const tr = e.target.closest('tr.run'); if (!tr || e.target.closest('a')) return;
-    const d = rows.querySelector(`tr.detail[data-for="${tr.dataset.id}"]`); d.hidden = !d.hidden;
-  });
-  applyFilters();
-})();
-</script>
 </body>
 </html>
