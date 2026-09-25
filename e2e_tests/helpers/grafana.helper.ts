@@ -185,21 +185,6 @@ export default class GrafanaHelper {
     return response;
   };
 
-  createFolder = async (folderName: string) => {
-    const authToken = GrafanaHelper.getToken();
-    const response = await this.page.request.post('graph/api/folders', {
-      data: { title: folderName },
-      headers: { Authorization: `Basic ${authToken}` },
-    });
-
-    expect(
-      response.status(),
-      `Failed to create "${folderName}" folder. Response message is ${response.statusText()}`,
-    ).toEqual(200);
-
-    return await response.json();
-  };
-
   createUser = async (username: string, password: string) => {
     const authToken = GrafanaHelper.getToken();
     const response = await this.page.request.post('graph/api/admin/users', {

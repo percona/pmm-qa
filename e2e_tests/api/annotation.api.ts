@@ -1,9 +1,19 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 
 export default class AnnotationApi {
   constructor(private request: APIRequestContext) {}
+
+  getAnnotationsByTag = async (tag: string): Promise<{ tags: string[]; text: string }[]> => {
+    const response = await this.request.get(`graph/api/annotations?tags=${tag}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return await response.json();
+  };
 
   setAnnotation = async (
     text: string,

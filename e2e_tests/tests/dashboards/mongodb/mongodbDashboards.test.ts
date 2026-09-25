@@ -72,8 +72,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       await dashboard.waitForDashboardToLoad();
       await dashboard.verifyRowMetricsPresent(metric.rowName, metric.metrics);
       await dashboard.verifyRowPanelsHaveData(metric.rowName, noDataMetrics);
-      await dashboard.verifyRowPanelValues(
-        metric.rowName,
+      await dashboard.verifyPanelValuesInView(
         dashboard.mongo.replSetSummary.metricsWithDataForRow(
           metric.rowName,
           services.map((service) => service.service_name),

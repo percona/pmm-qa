@@ -41,14 +41,8 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest('Verify grafana logs after upgrade @post-upgrade', async ({ cliHelper }) => {
-    // The upgrade restarts the PMM Server, so grafana.log accumulates transient
-    // request-lifecycle errors that are not upgrade defects: in-flight requests
-    // aborting ("context canceled"), clients disconnecting mid-response
-    // ("broken pipe") and feature-flag (ofrep) endpoint timeouts. Instead of a
-    // denylist of that ever-changing noise, assert only on the errors that mean
-    // the upgrade actually broke dashboards, datasources or storage: library
-    // panel load failures (this check's original intent) and
-    // provisioning/migration failures.
+    // Only errors meaning the upgrade broke dashboards, datasources or storage: the
+    // restart's transient request-lifecycle errors are noise, not upgrade defects.
     const meaningfulErrorSignatures = [
       'Error while loading library panels',
       'logger=provisioning',
