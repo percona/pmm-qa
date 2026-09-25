@@ -15,9 +15,21 @@ stub_prebaked_docker() {
       printf '%s' "$5" >"$BATS_TEST_TMPDIR/override.path"
     fi
     case "$*" in
+      *'test -f /etc/debian_version'*)
+        [[ ${DEBIAN_NODE:-false} == true ]]
+        return
+        ;;
+      *VERSION_CODENAME*) printf 'noble
+' ;;
+      *'patronictl -c /patroni.yml list'*)
+        printf '| %s | %s:5432 | %s | %s | 1 |
+' pdpgsql_pmm_patroni_17_1 x Leader running           pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
+        ;;
+      *pg_stat_replication*) printf '1
+' ;;
       *'pmm-admin status'*)
         printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
-          'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' 'valkey_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
+          'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' 'valkey_exporter Running' 'postgres_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
         ;;
       *'REPLICA STATUS'* | *'SLAVE STATUS'*)
         printf '%s_IO_Running: Yes\n%s_SQL_Running: Yes\n' Replica Replica Slave Slave
@@ -197,15 +209,71 @@ stub_prebaked_docker() {
   [[ ${CAPTURE_ENV[ENCRYPTED_CLIENT_CONFIG]} == true ]]
 }
 
-@test "PDPGSQL maps patroni and PGSM values" {
-  parse_database_spec 'pdpgsql=17,SETUP_TYPE=patroni,PGSM_BRANCH=feature'
+# Stands in for scripts/fetch-pmm-client-deb.sh, recording its arguments.
+stub_deb_fetch() {
+  DEBIAN_NODE=true
+  PMM_QA_ROOT=$BATS_TEST_TMPDIR/pmm_qa
+  mkdir -p "$PMM_QA_ROOT/scripts"
+  cat >"$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >>'$BATS_TEST_TMPDIR/deb.calls'
+echo /cache/pmm-client.deb
+EOF
+  chmod +x "$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh"
+}
+
+@test "single PDPGSQL runs the prebaked node, installs the Debian client package and registers TCP and socket services" {
+  stub_prebaked_docker
+  stub_deb_fetch
+  parse_database_spec 'pdpgsql=17'
+  GLOBAL_CLIENT_VERSION=3-dev-latest
   dispatch_setup
 
-  [[ $CAPTURE_TARGET == percona-distribution-postgresql/percona-distribution-postgres-setup.yml ]]
-  [[ ${CAPTURE_ENV[PDPGSQL_VERSION]} == 17 ]]
-  [[ ${CAPTURE_ENV[SETUP_TYPE]} == patroni ]]
-  [[ ${CAPTURE_ENV[PGSM_BRANCH]} == feature ]]
-  [[ ${CAPTURE_ENV[PDPGSQL_PGSM_PORT]} == 5447 ]]
+  grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--privileged --cgroupns=host .*--publish 5432:5432 pmm-qa/pdpgsql:17$' "$DOCKER_CALLS"
+  [[ $(cat "$BATS_TEST_TMPDIR/deb.calls") == 'experimental noble /tmp/pmm-client-cache 1800 ' ]]
+  grep -q '^cp /cache/pmm-client.deb pdpgsql_pmm_17_1:/tmp/pmm-client.deb$' "$DOCKER_CALLS"
+  grep -q 'apt-get install -y /tmp/pmm-client.deb' "$DOCKER_CALLS"
+  grep -q "CREATE ROLE pmm LOGIN PASSWORD 'pmm' IN ROLE pg_monitor;" "$DOCKER_CALLS"
+  grep -q -- ' pdpgsql_pmm_17_1 container pdpgsql_pmm_17_1$' "$DOCKER_CALLS"
+  grep -Eq '^exec pdpgsql_pmm_17_1 pmm-admin add postgresql --query-source=pgstatmonitor --username=pmm --password=pmm pdpgsql_pmm_17_1_[0-9]+ --debug 127\.0\.0\.1:5432$' "$DOCKER_CALLS"
+  grep -Eq '^exec pdpgsql_pmm_17_1 pmm-admin add postgresql .* --socket=/var/run/postgresql socket_pdpgsql_pmm_17_1_[0-9]+$' "$DOCKER_CALLS"
+  grep -q "ALTER USER postgres WITH PASSWORD 'pass+this';" "$DOCKER_CALLS"
+  grep -q '^exec --detach pdpgsql_pmm_17_1 bash /pdpgsql_run_queries.sh$' "$DOCKER_CALLS"
+}
+
+@test "PDPGSQL patroni runs three nodes under etcd, builds PGSM_BRANCH and registers the Patroni API" {
+  stub_prebaked_docker
+  stub_deb_fetch
+  SHARD_NAME=nightly
+  parse_database_spec 'pdpgsql=17,SETUP_TYPE=patroni,PGSM_BRANCH=feature,CLIENT_VERSION=3.9.1'
+  dispatch_setup
+
+  grep -q -- '--name pdpgsql_pmm_patroni_17_3 .*--publish 6434:5432 ' "$DOCKER_CALLS"
+  [[ $(grep -c "git clone --branch 'feature'" "$DOCKER_CALLS") -eq 3 ]]
+  grep -q 'main noble /tmp/pmm-client-cache 1800 3.9.1' "$BATS_TEST_TMPDIR/deb.calls"
+  [[ $(grep -c '^exec --detach --user postgres pdpgsql_pmm_patroni_17_[123] sh -c exec patroni /patroni.yml' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q 'stanza=patroni_backup .*stanza-create' "$DOCKER_CALLS"
+  grep -q -- ' pdpgsql_pmm_patroni_17_2 container pdpgsql_pmm_patroni_17_2-nightly$' "$DOCKER_CALLS"
+  grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
+  grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
+  grep -Eq -- '^exec pdpgsql_pmm_patroni_17_3 pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_3_[0-9]+$' "$DOCKER_CALLS"
+}
+
+@test "PDPGSQL replication streams a basebackup replica and rejects an unknown SETUP_TYPE" {
+  stub_prebaked_docker
+  parse_database_spec 'pdpgsql=16,SETUP_TYPE=replication,CLIENT_VERSION=https://example.com/pmm-client.tar.gz'
+  fetch_client_tarball() { printf '/cache/client.tar.gz'; }
+  dispatch_setup
+
+  grep -q -- '^exec --user postgres --env PGPASSWORD=GRgrO9301RuF pdpgsql_pmm_replication_16_2 timeout 120 pg_basebackup .*--host=pdpgsql_pmm_replication_16_1 ' "$DOCKER_CALLS"
+  [[ $(grep -c 'pg_basebackup' "$DOCKER_CALLS") -eq 1 ]]
+  grep -Eq -- '--cluster=pdpgsql_replication_cluster --environment=pdpgsql_replication_environment pdpgsql_pmm_replication_16_2_[0-9]+ ' "$DOCKER_CALLS"
+  grep -q "pg_create_logical_replication_slot('test_slot', 'test_decoding')" "$DOCKER_CALLS"
+
+  parse_database_spec 'pdpgsql=17,SETUP_TYPE=gr'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'PDPGSQL SETUP_TYPE must be empty, replication or patroni'* ]]
 }
 
 @test "PSMDB pss runs the compose stack on the prebaked image and registers it as configure-agents.sh did" {
@@ -370,15 +438,15 @@ stub_prebaked_docker() {
 @test "multiple specs dispatch sequentially without leaking environment maps" {
   local -a targets=()
   local spec
-  for spec in 'pdpgsql=17' 'ssl_mlaunch=8.0'; do
+  for spec in 'mlaunch_psmdb=8.0' 'ssl_mlaunch=8.0'; do
     parse_database_spec "$spec"
     dispatch_setup
     targets+=("$CAPTURE_TARGET")
   done
 
-  [[ ${targets[0]} == percona-distribution-postgresql/percona-distribution-postgres-setup.yml ]]
+  [[ ${targets[0]} == mlaunch_psmdb_setup.yml ]]
   [[ ${targets[1]} == tls-ssl-setup/mlaunch_tls_setup.yml ]]
-  [[ -z ${CAPTURE_ENV[PDPGSQL_VERSION]-} ]]
+  [[ -z ${CAPTURE_ENV[PSMDB_VERSION]-} ]]
 }
 
 @test "SSL MySQL runs Percona Server on the PS image, requiring TLS, and registers over TLS" {

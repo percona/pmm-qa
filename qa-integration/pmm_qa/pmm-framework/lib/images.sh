@@ -99,6 +99,12 @@ build_external_image() {
     die "Building pmm-qa/external:$tag failed."
 }
 
+# Build pmm-qa/pdpgsql:VERSION (images/pdpgsql).
+build_pdpgsql_image() {
+  [[ $1 =~ ^1[4-8]$ ]] || die "PDPGSQL $1 has no prebaked image; use 14 to 18."
+  docker build --build-arg "PG_VERSION=$1" --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/pdpgsql:$1"     "$FRAMEWORK_DIR/images/pdpgsql" || die "Building pmm-qa/pdpgsql:$1 failed."
+}
+
 # Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL
 pxc_proxysql_tag() {
   if [[ -n ${2:-} ]]; then

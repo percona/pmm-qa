@@ -9,7 +9,7 @@ playbook or shell script under `qa-integration/`. For those, almost every
 question about behaviour is answered by asking *which env map was built, and
 which playbook received it*.
 
-`PS`, `MYSQL`, `SSL_MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB`, `HAPROXY`, `EXTERNAL` and `VALKEY` are the exception. They run on **prebaked images**:
+`PS`, `MYSQL`, `SSL_MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB`, `HAPROXY`, `EXTERNAL`, `VALKEY` and `PDPGSQL` are the exception. They run on **prebaked images**:
 the database and its tooling are baked into an image ahead of time, and the
 setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
 instead of a playbook. Types move to this backend one at a time. See §5,
@@ -390,8 +390,10 @@ anything. `reset_framework_state` runs before each test. Prebaked setups call
 setup polls, so a whole setup runs end to end without a daemon.
 
 `integration.bats` needs a sample type that still goes through
-`ansible-playbook`. That is `pdpgsql` today; move it again when that type is
-ported.
+`ansible-playbook`: `mlaunch_psmdb` and `mlaunch_modb` today, which have no CI
+callers left. The two PDPGSQL/PGSQL host-conflict tests keep their real pair and
+count only PGSQL's playbook call; `docker` there is a stub that answers the
+PMM Client probes.
 
 `tests/integration.bats` takes the opposite approach: it puts fake `docker`,
 `ansible-playbook` and `curl` executables on `PATH` and runs the real

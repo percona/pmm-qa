@@ -24,7 +24,7 @@
 # Returns: 0 for playbook-backed types, 1 for script-backed ones
 setup_uses_ansible() {
   case "$1" in
-    PS|MYSQL|SSL_MYSQL|PXC|PSMDB|SSL_PSMDB|HAPROXY|EXTERNAL|VALKEY|DOCKERCLIENTS) return 1 ;;
+    PS|MYSQL|SSL_MYSQL|PXC|PSMDB|SSL_PSMDB|HAPROXY|EXTERNAL|VALKEY|PDPGSQL|DOCKERCLIENTS) return 1 ;;
     *) return 0 ;;
   esac
 }

@@ -181,6 +181,22 @@ One run each, `CLIENT_VERSION=latest-tarball`, old path from a clean `git archiv
 The old External path ended up running redis_exporter 1.14.0 (32-bit): it installed
 twice and the second copy landed inside the first one's directory. The image runs
 the 1.58.0 the framework asks for.
+## PDPGSQL on the prebaked path
+
+One run each, `CLIENT_VERSION=latest-tarball`, PostgreSQL 17 unless noted.
+
+| Spec | Old | Prebaked | Checked |
+|---|---|---|---|
+| `pdpgsql` | 511 s | 18 s | TCP and socket services, pg_stat_monitor collecting; CLI `@pdpgsql` 11/12 (PMM-T1828 reads the host's `ps`, which only a Linux CI runner shows) |
+| `pdpgsql,SETUP_TYPE=patroni` | 1427 s | 64 s | 3 members running under one leader, Patroni API services registered |
+| `pdpgsql,SETUP_TYPE=replication` | – | 31 s | replica streaming, `test_slot` present |
+| `pdpgsql=14` / `15` / `16` / `18` | – | 29 s / 15 s / 15 s / 15 s | same checks; CLI `@pdpgsql` 11/12 each |
+| `pdpgsql`, `CLIENT_VERSION=3-dev-latest` / `3.9.1` | – | 38 s / 35 s | Debian package installed; `3.9.1` with `ENCRYPTED_CLIENT_CONFIG=true` |
+
+The image is the playbook's systemd Ubuntu 24.04 with every package baked in,
+since tests restart PostgreSQL through `service` and read `/var/log/postgresql`.
+Replication first took 143 s: `pg_basebackup` waited out a spread checkpoint,
+so it now asks for a fast one.
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value

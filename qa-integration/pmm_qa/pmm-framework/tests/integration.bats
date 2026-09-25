@@ -8,6 +8,13 @@ setup() {
 
   cat >"$TEST_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
+case "$*" in
+  *'test -f /etc/debian_version'*) exit 1 ;;
+  *'pmm-admin status'*) printf 'Connected : true
+postgres_exporter Running
+node_exporter Running
+' ;;
+esac
 exit 0
 EOF
   cat >"$TEST_BIN/ansible-galaxy" <<'EOF'
@@ -21,31 +28,31 @@ EOF
   printf 'args='
   printf '%q ' "$@"
   echo
-  env | grep -E '^(PDPGSQL_.*|PGSQL_.*|SETUP_TYPE|QUERY_SOURCE|CLIENT_VERSION|PMM_SERVER_IP|ADMIN_PASSWORD)=' | sort
+  env | grep -E '^(PSMDB_.*|MODB_.*|SETUP_TYPE|QUERY_SOURCE|CLIENT_VERSION|PMM_SERVER_IP|ADMIN_PASSWORD)=' | sort
 } >>"$RECORD_FILE"
 if [[ ${PARALLEL_TEST:-false} == true ]]; then
-  if [[ -n ${PDPGSQL_VERSION:-} ]]; then
+  if [[ -n ${PSMDB_VERSION:-} ]]; then
     sleep 1
-    echo 'PDPGSQL parallel log'
-  elif [[ -n ${PGSQL_VERSION:-} ]]; then
-    echo 'PGSQL parallel log'
+    echo 'PSMDB parallel log'
+  elif [[ -n ${MODB_VERSION:-} ]]; then
+    echo 'MODB parallel log'
   fi
 fi
 if [[ -n ${HANG_SECONDS:-} ]]; then
   echo 'setup is working'
   sleep "$HANG_SECONDS"
 fi
-if [[ ${FAIL_PDPGSQL:-false} == true && -n ${PDPGSQL_VERSION:-} ]]; then
-  echo 'PDPGSQL failed as requested'
+if [[ ${FAIL_PSMDB:-false} == true && -n ${PSMDB_VERSION:-} ]]; then
+  echo 'PSMDB failed as requested'
   exit 9
 fi
-if [[ -n ${FAIL_PDPGSQL_ONCE:-} && -n ${PDPGSQL_VERSION:-} ]]; then
-  if [[ ! -e $FAIL_PDPGSQL_ONCE ]]; then
-    : >"$FAIL_PDPGSQL_ONCE"
-    echo 'PDPGSQL failed on its first attempt'
+if [[ -n ${FAIL_PSMDB_ONCE:-} && -n ${PSMDB_VERSION:-} ]]; then
+  if [[ ! -e $FAIL_PSMDB_ONCE ]]; then
+    : >"$FAIL_PSMDB_ONCE"
+    echo 'PSMDB failed on its first attempt'
     exit 9
   fi
-  echo 'PDPGSQL succeeded on its second attempt'
+  echo 'PSMDB succeeded on its second attempt'
 fi
 EOF
   cat >"$TEST_BIN/curl" <<'EOF'
@@ -63,21 +70,21 @@ EOF
       --pmm-server-ip 10.0.0.5 \
       --pmm-server-password secret \
       --client-version latest-tarball \
-      --database pdpgsql=17,SETUP_TYPE=patroni \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0,SETUP_TYPE=sharding \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 
   first_call=$(awk '/--- call ---/{n++} n==1{print}' "$RECORD_FILE")
   second_call=$(awk '/--- call ---/{n++} n==2{print}' "$RECORD_FILE")
-  [[ $first_call == *'percona-distribution-postgres-setup.yml'* ]]
-  [[ $first_call == *'PDPGSQL_VERSION=17'* ]]
-  [[ $first_call == *'SETUP_TYPE=patroni'* ]]
+  [[ $first_call == *'mlaunch_psmdb_setup.yml'* ]]
+  [[ $first_call == *'PSMDB_VERSION=8.0'* ]]
+  [[ $first_call == *'PSMDB_SETUP=sharding'* ]]
   [[ $first_call == *'PMM_SERVER_IP=10.0.0.5'* ]]
-  [[ $second_call == *'pgsql_pgss_setup.yml'* ]]
-  [[ $second_call == *'PGSQL_VERSION=16'* ]]
-  [[ $second_call != *'PDPGSQL_VERSION='* ]]
+  [[ $second_call == *'mlaunch_modb_setup.yml'* ]]
+  [[ $second_call == *'MODB_VERSION=7.0'* ]]
+  [[ $second_call != *'PSMDB_VERSION='* ]]
 }
 
 @test "entrypoint reports invalid database without calling backends" {
@@ -101,22 +108,22 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Starting [1/2] pdpgsql=17'* ]]
-  [[ $output == *'Starting [2/2] pgsql=16'* ]]
-  [[ $output =~ \[1/2\]\ pdpgsql=17:\ OK\ in\ [0-9ms]+\ \(log: ]]
-  [[ $output =~ \[2/2\]\ pgsql=16:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output == *'Starting [1/2] mlaunch_psmdb=8.0'* ]]
+  [[ $output == *'Starting [2/2] mlaunch_modb=7.0'* ]]
+  [[ $output =~ \[1/2\]\ mlaunch_psmdb=8.0:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output =~ \[2/2\]\ mlaunch_modb=7.0:\ OK\ in\ [0-9ms]+\ \(log: ]]
   [[ $output == *'All 2 setups finished in '* ]]
-  [[ $output != *'PDPGSQL parallel log'* ]]
-  [[ $output != *'PGSQL parallel log'* ]]
+  [[ $output != *'PSMDB parallel log'* ]]
+  [[ $output != *'MODB parallel log'* ]]
 
-  # pgsql has no artificial delay, so it should finish before sleeping pdpgsql.
-  pgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] pgsql=16: OK/{print NR; exit}')
-  pdpgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] pdpgsql=17: OK/{print NR; exit}')
-  [[ $pgsql_ok_line -lt $pdpgsql_ok_line ]]
+  # mlaunch_modb has no artificial delay, so it should finish before sleeping mlaunch_psmdb.
+  modb_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] mlaunch_modb=7.0: OK/{print NR; exit}')
+  pdmodb_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] mlaunch_psmdb=8.0: OK/{print NR; exit}')
+  [[ $modb_ok_line -lt $pdmodb_ok_line ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
@@ -124,17 +131,17 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PDPGSQL=true \
+    FAIL_PSMDB=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -ne 0 ]]
-  [[ $output == *'===== [1/2] pdpgsql=17 FAILED (exit=1) in '* ]]
-  [[ $output == *'PDPGSQL failed as requested'* ]]
-  [[ $output == *'[2/2] pgsql=16: OK in '* ]]
+  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 FAILED (exit=1) in '* ]]
+  [[ $output == *'PSMDB failed as requested'* ]]
+  [[ $output == *'[2/2] mlaunch_modb=7.0: OK in '* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
@@ -143,19 +150,19 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PDPGSQL_ONCE="$BATS_TEST_TMPDIR/pdpgsql-attempted" \
+    FAIL_PSMDB_ONCE="$BATS_TEST_TMPDIR/psmdb-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] pdpgsql=17 FAILED (exit=1) in '* ]]
+  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 FAILED (exit=1) in '* ]]
   [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
-  [[ $output == *'[1/2] pdpgsql=17: OK in '* ]]
-  # pgsql provisioned once: the retry must not touch a setup that succeeded.
+  [[ $output == *'[1/2] mlaunch_psmdb=8.0: OK in '* ]]
+  # mlaunch_modb provisioned once: the retry must not touch a setup that succeeded.
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
   [[ $output != *'Parallel setup logs kept at:'* ]]
 }
@@ -164,13 +171,13 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PDPGSQL=true \
+    FAIL_PSMDB=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -ne 0 ]]
   [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
@@ -182,17 +189,17 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PDPGSQL_ONCE="$BATS_TEST_TMPDIR/pdpgsql-attempted" \
+    FAIL_PSMDB_ONCE="$BATS_TEST_TMPDIR/psmdb-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Retrying pdpgsql=17, attempt 2 of 2'* ]]
-  [[ $output == *'pdpgsql=17: OK in '* ]]
-  [[ $output == *'pgsql=16: OK in '* ]]
+  [[ $output == *'Retrying mlaunch_psmdb=8.0, attempt 2 of 2'* ]]
+  [[ $output == *'mlaunch_psmdb=8.0: OK in '* ]]
+  [[ $output == *'mlaunch_modb=7.0: OK in '* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
 }
 
@@ -203,8 +210,8 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
   # `set -m` in run_parallel_setups must not leak "[1]+ Done ..." lines.
@@ -235,8 +242,8 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16 <<<'framework-stdin-payload'
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0 <<<'framework-stdin-payload'
 
   [[ $status -eq 0 ]]
   [[ $(grep -c 'STDIN_EOF' "$RECORD_FILE") -eq 2 ]]
@@ -276,7 +283,7 @@ EOF
   [[ $status -eq 0 ]]
   [[ $output == *'Running setups sequentially'* ]]
   [[ $output == *'shared pgsql_cluster_data and host port 6432'* ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 1 ]]
 }
 
 @test "a host conflict is refused before anything is provisioned" {
@@ -313,7 +320,7 @@ EOF
   # framework must not give up concurrency for this pair.
   [[ $status -eq 0 ]]
   [[ $output != *'Running setups sequentially'* ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 1 ]]
 }
 
 @test "verbose parallel runs echo the logs of successful setups" {
@@ -325,12 +332,12 @@ EOF
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -eq 0 ]]
-  [[ $output == *'PDPGSQL parallel log'* ]]
-  [[ $output == *'PGSQL parallel log'* ]]
+  [[ $output == *'PSMDB parallel log'* ]]
+  [[ $output == *'MODB parallel log'* ]]
   [[ $output == *'setup log ====='* ]]
 }
 
@@ -339,20 +346,20 @@ EOF
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
     PARALLEL_TEST=true \
-    FAIL_PDPGSQL=true \
+    FAIL_PSMDB=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0
 
   [[ $status -ne 0 ]]
   # --verbose echoes both, but the failure keeps its own FAILED banner so it is
   # still findable among the successful logs.
-  [[ $output == *'PDPGSQL failed as requested'* ]]
+  [[ $output == *'PSMDB failed as requested'* ]]
   [[ $output == *'FAILED (exit=1)'* ]]
-  [[ $output == *'PGSQL parallel log'* ]]
+  [[ $output == *'MODB parallel log'* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
 }
 
@@ -366,8 +373,8 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 \
-      --database pgsql=16 >"$out" 2>&1 &
+      --database mlaunch_psmdb=8.0 \
+      --database mlaunch_modb=7.0 >"$out" 2>&1 &
   fw_pid=$!
 
   # Both setups must have written to their buffers before the signal, or the
@@ -384,8 +391,8 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/2] pdpgsql=17 INTERRUPTED ====='* ]]
-  [[ $output == *'===== [2/2] pgsql=16 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [2/2] mlaunch_modb=7.0 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
 
@@ -405,7 +412,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql=17 >"$out" 2>&1 &
+      --database mlaunch_psmdb=8.0 >"$out" 2>&1 &
   fw_pid=$!
 
   until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
@@ -420,7 +427,7 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/1] pdpgsql=17 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/1] mlaunch_psmdb=8.0 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
 
   local log_dir

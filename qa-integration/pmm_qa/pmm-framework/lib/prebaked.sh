@@ -109,10 +109,27 @@ fetch_client_tarball() {
   printf '%s' "$file"
 }
 
+# Fetch the CLIENT package for Debian-family NODE's release through the
+# playbooks' verifying cache, which waits out repo.percona.com's publishing race.
+# Stdout: the host path of the .deb
+fetch_client_deb() {
+  local node=$1 client=$2 component version='' codename
+  case $client in
+    3-dev-latest) component=experimental ;;
+    pmm3-rc) component=testing ;;
+    pmm3-latest) component=main ;;
+    3.*.*) component=main version=$client ;;
+    *) die "CLIENT_VERSION '$client' is not a channel, a 3.x.y release or a tarball URL." ;;
+  esac
+  # shellcheck disable=SC2016 # expanded by the container's shell
+  codename=$(docker exec "$node" sh -c '. /etc/os-release; echo "$VERSION_CODENAME"') || return 1
+  "$PMM_QA_ROOT/scripts/fetch-pmm-client-deb.sh" "$component" "$codename" /tmp/pmm-client-cache 1800 "$version"
+}
+
 # Install PMM Client in NODE: from TARBALL (a host path) when given, otherwise
 # the CLIENT package -- a channel name or an exact 3.x.y release.
 install_pmm_client() {
-  local node=$1 client=$2 tarball=${3:-} install minor build=7
+  local node=$1 client=$2 tarball=${3:-} deb install minor build=7
   if [[ -n $tarball ]]; then
     must docker cp "$tarball" "$node:/tmp/pmm-client.tar.gz"
     # shellcheck disable=SC2016 # expanded by the container's shell
@@ -120,6 +137,10 @@ install_pmm_client() {
       tar -xzf /tmp/pmm-client.tar.gz -C /tmp/pmm-client
       cd "$(dirname "$(find /tmp/pmm-client -type f -name install_tarball -print -quit)")"
       bash ./install_tarball'
+  elif docker exec "$node" test -f /etc/debian_version; then
+    deb=$(fetch_client_deb "$node" "$client") || die "Could not fetch the PMM Client package for $node."
+    must docker cp "$deb" "$node:/tmp/pmm-client.deb"
+    install='apt-get install -y /tmp/pmm-client.deb'
   else
     # Upstream mysql images ship neither percona-release nor, on 5.7, microdnf,
     # and PXC 5.7's is too old to know the pmm3-client repo, so it is always

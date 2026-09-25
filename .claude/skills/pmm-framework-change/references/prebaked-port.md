@@ -3,7 +3,7 @@
 Replace a type's Ansible playbook with a prebaked image plus plain `docker`
 commands (`lib/images.sh`, `lib/prebaked.sh`). Port one type at a time, and do
 not start the next until every CI spec for the current one has passed a real
-run. PS, MySQL, SSL MySQL, PXC, PSMDB, SSL PSMDB, HAProxy, External and Valkey are done;
+run. PS, MySQL, SSL MySQL, PXC, PSMDB, SSL PSMDB, HAProxy, External, Valkey and PDPGSQL are done;
 copy them.
 
 ## 1. Measure before you change anything
@@ -67,7 +67,8 @@ replication-set). Pin down:
   prebaked image with the name compose builds (`replica_member/local` for
   PSMDB) and never call `build`. Names, networks, ports and volumes then match
   for free.
-- Keep systemd in the image when tests `systemctl` inside the container.
+- Keep systemd in the image when tests `systemctl` or `service` inside the
+  container. It needs `--privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw`.
 - Bake everything slow into the image: packages, sysbench, and pre-initialised
   data directories and users. Run time should only start things.
 - Add the image to `.github/workflows/build-prebaked-images.yml`: the matrix and
@@ -80,7 +81,9 @@ replication-set). Pin down:
   images. EL8's curl
   has no `--retry-all-errors`.
 - Install PMM Client at run time, not in the image, so one image serves every
-  `CLIENT_VERSION`.
+  `CLIENT_VERSION`. On a Debian-family image `install_pmm_client` takes the
+  package from `scripts/fetch-pmm-client-deb.sh`, which waits out
+  repo.percona.com's index/pool publishing race.
 - Use `COPY --chmod=0755`. A Windows checkout does not keep the executable
   bit.
 
@@ -99,6 +102,9 @@ replication-set). Pin down:
 - Give each container its own `/etc/machine-id` before `pmm-agent setup`;
   every container of one image otherwise reports the same machine_id.
 - Replace fixed sleeps with probes for the state the next step needs.
+- Time every step once. A wait the playbook hid can dominate:
+  `pg_basebackup` sat out a spread checkpoint for 100 s until given
+  `--checkpoint=fast`.
 - Probe through shell functions, never `sh -c "... docker ..."`: a child
   shell cannot see the test's stubbed `docker`.
 - Run `pmm-agent setup` one node at a time. Install, start and exporter waits

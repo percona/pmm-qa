@@ -1,5 +1,6 @@
 # Builds the prebaked images pmm-framework runs (PS, MySQL, PXC with ProxySQL,
-# PSMDB, HAProxy, Valkey and the External exporters) and publishes them to
+# PSMDB, HAProxy, Valkey, the External exporters and Percona Distribution for
+# PostgreSQL) and publishes them to
 # ghcr.io/percona/pmm-qa/<engine>:<version>, so a CI job pulls a ready image
 # instead of spending 90-160 s building one. Each
 # image is started and checked before it is pushed, so a broken build never
@@ -61,7 +62,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
         run: |
-          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey"]'
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql"]'
           if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
@@ -77,6 +78,7 @@ jobs:
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/haproxy/' <<<"$changed"; then picked+=('"haproxy"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/external/' <<<"$changed"; then picked+=('"external"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/valkey/' <<<"$changed"; then picked+=('"valkey"'); fi
+              if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pdpgsql/' <<<"$changed"; then picked+=('"pdpgsql"'); fi
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
@@ -85,6 +87,7 @@ jobs:
             elif $e == "haproxy" then ["ol9"]
             elif $e == "external" then ["1.58.0-0.7.10"]
             elif $e == "valkey" then ["7", "8"]
+            elif $e == "pdpgsql" then ["14", "15", "16", "17", "18"]
             else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
           echo "engines=$engines" >>"$GITHUB_OUTPUT"
           echo "cells=$cells" >>"$GITHUB_OUTPUT"
@@ -122,7 +125,20 @@ jobs:
           ENGINE: ${{ matrix.engine }}
           VERSION: ${{ matrix.version }}
         run: |
-          if [ "$ENGINE" = valkey ]; then
+          if [ "$ENGINE" = pdpgsql ]; then
+            # systemd starts PostgreSQL with pg_stat_monitor preloaded.
+            docker run -d --name probe --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw "$IMAGE"
+            for i in $(seq 1 60); do
+              docker exec -u postgres probe pg_isready -q 2>/dev/null && break
+              if [ "$i" -eq 60 ]; then
+                docker exec probe journalctl -u "postgresql@$VERSION-main" --no-pager | tail -30
+                exit 1
+              fi
+              sleep 1
+            done
+            docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
+            docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
+          elif [ "$ENGINE" = valkey ]; then
             docker run --rm "$IMAGE" sh -c 'valkey-server --version && valkey-cli --version'
           elif [ "$ENGINE" = external ]; then
             docker run --rm --entrypoint sh "$IMAGE" -c 'redis_exporter --version && process-exporter --version'
