@@ -680,7 +680,9 @@ async function brokerJira(action, m, by) {
       const fields = (Array.isArray(m.fields) ? m.fields
         : String(m.fields || "summary,status,issuetype,updated").split(","))
         .map((s) => String(s).trim()).filter(Boolean);
-      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify({ jql, maxResults, fields }) });
+      const body = { jql, maxResults, fields };
+      if (m.nextPageToken) body.nextPageToken = String(m.nextPageToken);
+      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify(body) });
     } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
       r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
@@ -708,7 +710,7 @@ async function brokerJira(action, m, by) {
 }
 
 // Zephyr Scale (SmartBear) test-case management. Project is FORCED to PMM.
-// Read, create, status and steps — no free-form edit, no delete (the API has
+// Read, create, status, steps, issue links and folders — no free-form edit, no delete (the API has
 // none: a case is retired by moving it to Deprecated), and no execution
 // reporting (CI's own reporter posts executions with the same key from GitHub
 // Actions; see codeceptjs-e2e/tests/helper/reporter_helper.js).
@@ -821,6 +823,19 @@ async function zephyrJiraIssues(issueIds) {
     status: i.fields?.status?.name ?? null,
     issuetype: i.fields?.issuetype?.name ?? null,
   }));
+}
+
+// The reverse of zephyrJiraIssues: a PMM-nnnn key to the numeric id Zephyr's
+// link endpoint wants. Same service account as the /jira broker.
+async function zephyrJiraIssueId(key) {
+  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const r = await fetch(`https://perconadev.atlassian.net/rest/api/2/issue/${key}?fields=id`, {
+    signal: AbortSignal.timeout(30_000),
+    headers: { Authorization: auth, Accept: "application/json" },
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`jira issue lookup ${r.status}`);
+  return Number((await r.json()).id) || null;
 }
 
 async function brokerZephyr(action, m, by) {
@@ -1057,6 +1072,29 @@ async function brokerZephyr(action, m, by) {
       // OVERWRITE by default: a freshly created test case already carries one
       // empty step, which APPEND would leave stranded at the top.
       const r = await z(`/testcases/${key}/teststeps`, { method: "POST", body: JSON.stringify({ mode: m.mode === "APPEND" ? "APPEND" : "OVERWRITE", items }) });
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    if (action === "create-folder") {
+      const name = String(m.name || "").trim();
+      if (!name || name.length > 255) return { status: 400, body: "name_required_1_255_chars" };
+      const body = { projectKey: "PMM", folderType: "TEST_CASE", name, parentId: null };
+      if (m.parentId != null) {
+        if (!/^[0-9]+$/.test(String(m.parentId))) return { status: 400, body: "bad_folder_id" };
+        body.parentId = Number(m.parentId);
+      }
+      const r = await z("/folders", { method: "POST", body: JSON.stringify(body) });
+      if (r.ok) zephyrLookups = { at: 0 };
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    if (action === "link-issue") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      const issue = String(m.issue || "").trim();
+      if (!/^PMM-\d+$/.test(issue)) return { status: 400, body: "issue_must_be_a_PMM_key" };
+      if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
+      const issueId = await zephyrJiraIssueId(issue);
+      if (issueId == null) return { status: 404, body: "jira_issue_not_found" };
+      const r = await z(`/testcases/${key}/links/issues`, { method: "POST", body: JSON.stringify({ issueId }) });
       return { status: r.status, json: true, body: (await r.text()) || "{}" };
     }
     return { status: 400, body: "unknown_action" };
