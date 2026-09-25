@@ -187,8 +187,9 @@ jobs:
           push-to-registry: false
 
   # A registry cannot overwrite an image: each push is a new digest, and the
-  # one its tag moved off stays behind untagged. Drop those, so each package
-  # holds only the images its tags point at.
+  # one its tag moved off stays behind. Keep only the versions carrying one of
+  # the engine's current tags; everything else -- untagged images, old dated
+  # tags, sha256-<digest> attestations -- is deleted.
   cleanup:
     name: prune ${{ matrix.engine }}
     needs: [plan, build]
@@ -200,25 +201,18 @@ jobs:
       matrix:
         engine: ${{ fromJSON(needs.plan.outputs.engines) }}
     steps:
-      # Attestations pushed before push-to-registry was turned off are tagged
-      # sha256-<digest>, so the untagged prune below never reaches them.
-      - name: Delete the sha256-* attestation versions
+      - name: Delete the versions no current tag points at
         env:
           GH_TOKEN: ${{ github.token }}
           VERSIONS: orgs/${{ github.repository_owner }}/packages/container/pmm-qa%2F${{ matrix.engine }}/versions
+          ENGINE: ${{ matrix.engine }}
+          CELLS: ${{ needs.plan.outputs.cells }}
         run: |
-          gh api --paginate "$VERSIONS" --jq '.[]
-            | select((.metadata.container.tags | length) > 0 and all(.metadata.container.tags[]; startswith("sha256-")))
-            | .id' |
+          keep=$(jq -c --arg e "$ENGINE" '[.[] | select(.engine == $e) | .version]' <<<"$CELLS")
+          [ "$keep" != "[]" ] || { echo "no current tags for $ENGINE; refusing to delete"; exit 1; }
+          gh api --paginate "$VERSIONS" |
+            jq -r --argjson keep "$keep" '.[] | select(all(.metadata.container.tags[]; IN($keep[]) | not)) | .id' |
             while read -r id; do
               gh api -X DELETE "$VERSIONS/$id"
               echo "deleted version $id"
             done
-
-      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
-        with:
-          owner: ${{ github.repository_owner }}
-          package-name: pmm-qa/${{ matrix.engine }}
-          package-type: container
-          delete-only-untagged-versions: 'true'
-          min-versions-to-keep: 0
