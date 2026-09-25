@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
+import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
 
@@ -12,6 +12,7 @@ const mongoPullMetricsServiceName = 'mongo_pull_1';
 const mongoServiceName = 'mongo_service_1';
 const containerName = 'rs101';
 let adminVersion: number;
+const servicesToRemove: string[] = [];
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
@@ -21,6 +22,12 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
     adminVersion = await getPmmAdminMinorVersion(containerName);
+  });
+
+  test.afterEach(async ({}) => {
+    for (const serviceName of servicesToRemove.splice(0)) {
+      await removeMongoService(containerName, serviceName);
+    }
   });
 
   test('run pmm-admin', async ({}) => {
@@ -125,11 +132,79 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   });
 
   test('PMM-T2129 verify validation for --agent-env-vars parameter when adding mondogb for monitoring', async ({}) => {
-    test.skip(adminVersion < 6, 'This test is relevant for pmm-client version 3.6.0 and above');
-
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --agent-env-vars="TEST=123" --service-name=test`);
     await output.exitCodeEquals(1);
-    await output.outContains('invalid environment variable name: TEST=123 (must match [A-Z_][A-Z0-9_]*)');
+    await output.outContains('invalid environment variable name: TEST=123 (must match [A-Za-z_][A-Za-z0-9_]*)');
+  });
+
+  test('PMM-T2325 - Verify --agent-env-vars can be changed on an existing mongodb_exporter with pmm-admin inventory change agent', async ({}) => {
+    const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
+    const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
+
+    let output = await cli.exec(`${changeAgent} --agent-env-vars=KRB5_CLIENT_KTNAME,DOES_NOT_EXIST_VAR`);
+    await output.assertSuccess();
+    await output.outContainsMany([
+      'Environment variables : KRB5_CLIENT_KTNAME, DOES_NOT_EXIST_VAR',
+      'updated environment variable names: KRB5_CLIENT_KTNAME, DOES_NOT_EXIST_VAR',
+    ]);
+
+    output = await cli.exec(`${changeAgent} --log-level=debug`);
+    await output.assertSuccess();
+    await output.outContains('Environment variables : KRB5_CLIENT_KTNAME, DOES_NOT_EXIST_VAR');
+
+    await expect(async () => {
+      const agents = JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin list --json`)).stdout).agent;
+      const listenPort = agents.find((a: { agent_id: string }) => a.agent_id === agentId)?.port;
+      expect(listenPort, `mongodb_exporter ${agentId} has no listen port yet`).toBeTruthy();
+      // Other exporters in this container (e.g. PMM-T2128's) carry KRB5_CLIENT_KTNAME too.
+      const environ = await cli.exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f "[e]xporters/mongodb_exporter"); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${listenPort} " && tr "\\0" "\\n" < /proc/$p/environ; done'`);
+      await environ.outContains('KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab');
+      await environ.outNotContains('DOES_NOT_EXIST_VAR');
+      const list = await cli.exec(`docker exec ${containerName} pmm-admin list`);
+      expect(list.getStdOutLines().find((line) => line.includes(agentId))).toContain('Running');
+    }).toPass({ intervals: [5_000], timeout: 60_000 });
+
+    output = await cli.exec(`${changeAgent} --agent-env-vars=MY_TEST_VAR`);
+    await output.assertSuccess();
+    await output.outContains('Environment variables : MY_TEST_VAR');
+
+    output = await cli.exec(`${changeAgent} --agent-env-vars=`);
+    await output.assertSuccess();
+    await output.outContainsMany(['Environment variables : (none)', 'environment variable names are removed']);
+  });
+
+  test('PMM-T2326 - Verify validation of --agent-env-vars for pmm-admin inventory change agent mongodb-exporter', async ({}) => {
+    const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
+    const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
+    const changeAgent = `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId}`;
+
+    let output = await cli.exec(`${changeAgent} --agent-env-vars=VALID_VAR`);
+    await output.assertSuccess();
+
+    const tooManyNames = Array.from({ length: 33 }, (_, i) => `VAR${i}`).join(',');
+    const invalidValues: [string, string][] = [
+      ['MONGODB_URI', 'environment variable name \'MONGODB_URI\' is reserved for mongodb_exporter'],
+      ['mongodb_uri', 'environment variable name \'mongodb_uri\' is reserved for mongodb_exporter'],
+      ['PMM_AGENT_SERVER_PASSWORD', 'environment variable name \'PMM_AGENT_SERVER_PASSWORD\' is reserved for pmm-agent\'s own configuration'],
+      ['VAR1,,VAR2', 'environment variable name cannot be empty'],
+      ['KRB5_KTNAME=/tmp/test.keytab', 'invalid environment variable name: KRB5_KTNAME=/tmp/test.keytab'],
+      [tooManyNames, 'too many environment variable names: 33 (max 32)'],
+    ];
+
+    for (const [value, error] of invalidValues) {
+      output = await cli.exec(`${changeAgent} --agent-env-vars="${value}"`);
+      expect(output.code, `--agent-env-vars="${value}" should be rejected`).not.toEqual(0);
+      expect(`${output.stdout}${output.stderr.text}`).toContain(error);
+    }
+
+    output = await cli.exec(changeAgent);
+    await output.assertSuccess();
+    await output.outContains('Environment variables : VALID_VAR');
+
+    output = await cli.exec(`${changeAgent} --agent-env-vars=lowercase_var`);
+    await output.assertSuccess();
+    await output.outContains('Environment variables : lowercase_var');
   });
 
   test('PMM-T2005 verify PBM Agent health status metric is correct', async ({}) => {
