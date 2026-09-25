@@ -46,6 +46,7 @@ jobs:
     if: github.repository == 'percona/pmm-qa'
     runs-on: ubuntu-latest
     outputs:
+      engines: ${{ steps.pick.outputs.engines }}
       cells: ${{ steps.pick.outputs.cells }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -80,6 +81,7 @@ jobs:
           cells=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
             elif $e == "haproxy" then ["ol9"]
             else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
+          echo "engines=$engines" >>"$GITHUB_OUTPUT"
           echo "cells=$cells" >>"$GITHUB_OUTPUT"
           echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
 
@@ -183,3 +185,25 @@ jobs:
           # Kept in GitHub's attestation store only; pushing them to GHCR adds
           # a sha256-<digest> package version for every image built.
           push-to-registry: false
+
+  # A registry cannot overwrite an image: each push is a new digest, and the
+  # one its tag moved off stays behind untagged. Drop those, so each package
+  # holds only the images its tags point at.
+  cleanup:
+    name: prune ${{ matrix.engine }}
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: ${{ fromJSON(needs.plan.outputs.engines) }}
+    steps:
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          owner: ${{ github.repository_owner }}
+          package-name: pmm-qa/${{ matrix.engine }}
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
