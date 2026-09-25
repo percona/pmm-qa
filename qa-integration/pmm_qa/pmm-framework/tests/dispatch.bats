@@ -53,17 +53,17 @@ stub_prebaked_docker() {
   grep -q -- '--name ps_pmm_gr_8_4_3 .*--volume ps_pmm_gr_8_4_3_pmm:/usr/local/percona/pmm --volume ps_pmm_gr_8_4_3_tmp:/tmp .*--publish 3308:3306 pmm-qa/ps:8.4 --server-id=3 ' "$DOCKER_CALLS"
   database_runs=$(grep '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS")
   [[ $database_runs != *--privileged* ]]
-  [[ $(grep -c '^run --detach --name pmm_nomad_agent_ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- '^run --detach --name pmm_nomad_agent_ps_pmm_gr_8_4_3 .*--network container:ps_pmm_gr_8_4_3 --pid container:ps_pmm_gr_8_4_3 --volumes-from ps_pmm_gr_8_4_3 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --entrypoint sleep pmm-qa/ps:8.4 infinity$' "$DOCKER_CALLS"
+  [[ $(grep -c '^run --detach --name nomad_agent_[0-9]* ' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- '^run --detach --name nomad_agent_[0-9]* .*--label pmm-qa.parent=ps_pmm_gr_8_4_3 --network container:ps_pmm_gr_8_4_3 --pid container:ps_pmm_gr_8_4_3 --volumes-from ps_pmm_gr_8_4_3 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --entrypoint sleep pmm-qa/ps:8.4 infinity$' "$DOCKER_CALLS"
   grep -q -- '--loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061' "$DOCKER_CALLS"
   grep -q 'START GROUP_REPLICATION' "$DOCKER_CALLS"
   [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
   # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
   [[ $(grep -Fc 'enable-only pmm3-client experimental && $pkg install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- '^exec --user root pmm_nomad_agent_ps_pmm_gr_8_4_2 pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2 container ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
-  [[ $(grep -c '^exec --user root pmm_nomad_agent_ps_pmm_gr_8_4_[123] sh -c tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id$' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- '^exec --user root nomad_agent_[0-9]* pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2 container ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --user root nomad_agent_[0-9]* sh -c tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id$' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
-  [[ $(grep -c '^exec --detach --user root pmm_nomad_agent_ps_pmm_gr_8_4_[123] sh -c' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c '^exec --detach --user root nomad_agent_[0-9]* sh -c' "$DOCKER_CALLS") -eq 3 ]]
 }
 
 @test "a second PS topology publishes past the ports the first one holds" {
@@ -99,7 +99,7 @@ stub_prebaked_docker() {
   grep -q 'pmm-client-3.6.0-7.el' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
-  grep -q '^exec --detach --user root pmm_nomad_agent_ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS"
+  grep -q '^exec --detach --user root nomad_agent_[0-9]* sh -c' "$DOCKER_CALLS"
 }
 
 @test "PS rejects what it cannot provision before touching docker" {
@@ -181,7 +181,7 @@ stub_prebaked_docker() {
   grep -q -- '--label pmm-qa.engine=mysql .*--publish 3306:3306 pmm-qa/mysql:8.4 ' "$DOCKER_CALLS"
   database_runs=$(grep '^run --detach --name mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS")
   [[ $database_runs != *--privileged* ]]
-  [[ $(grep -c '^run --detach --name pmm_nomad_agent_mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c '^run --detach --name nomad_agent_[0-9]* ' "$DOCKER_CALLS") -eq 3 ]]
   [[ $(grep -c -- '--userstat' "$DOCKER_CALLS") -eq 0 ]]
   [[ $(grep -c 'log_slow_rate_limit' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=mysql-gr-dev --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication --debug mysql_pmm_gr_8_4_2_[0-9]+ ' "$DOCKER_CALLS"

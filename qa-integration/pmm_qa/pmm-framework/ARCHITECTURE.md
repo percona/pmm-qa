@@ -81,8 +81,10 @@ and checks each one, and publishes it to
 images whose baked-in files changed.
 
 PS and MySQL use their database image twice per node: an unprivileged database
-container, and a privileged `pmm_nomad_agent_<node>` companion with the image
-entrypoint replaced by `sleep`. The companion shares the database container's
+container, and a privileged `nomad_agent_<cksum of node>` companion, labelled
+`pmm-qa.parent=<node>`, with the image entrypoint replaced by `sleep`. Its name
+must not contain `ps` or `mysql`: tests find the database container by grepping
+container names for those. The companion shares the database container's
 network and PID namespaces plus its PMM, data and `/tmp` volumes. `pmm-agent`
 and Nomad run in the companion; `pmm-admin` remains available in the database
 container through the shared PMM installation and local network. This preserves

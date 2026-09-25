@@ -107,8 +107,9 @@ mf_sql() {
 mf_cleanup() {
   local ids agent_ids volumes prefix=${engine}_pmm${topology}_${version//./_}_
   ids=$(docker ps -aq --filter "name=^$prefix") || die 'docker ps failed.'
-  agent_ids=$(docker ps -aq --filter "name=^pmm_nomad_agent_$prefix") || die 'docker ps failed.'
-  ids+=${ids:+$'\n'}$agent_ids
+  agent_ids=$(docker ps -a --filter label=pmm-qa.engine=pmm-agent --format '{{.ID}} {{.Label "pmm-qa.parent"}}') ||
+    die 'docker ps failed.'
+  ids+=${ids:+$'\n'}$(awk -v p="$prefix" 'index($2, p) == 1 { print $1 }' <<<"$agent_ids")
   if [[ -n $ids ]]; then
     # shellcheck disable=SC2086 # one id per word
     must docker rm -fv $ids >/dev/null
@@ -350,7 +351,9 @@ mf_start_minio() {
 mf_setup_agents() {
   local name agent
   for name in "${names[@]}"; do
-    agent=pmm_nomad_agent_$name
+    # Tests find the database container by grepping container names for ps,
+    # ps_pmm or mysql_pmm, so the companion's name must contain none of them.
+    agent=nomad_agent_$(cksum <<<"$name" | cut -d' ' -f1)
     must docker run --detach --name "$agent" --user root \
       --label pmm-qa.engine=pmm-agent --label "pmm-qa.parent=$name" \
       --network "container:$name" --pid "container:$name" --volumes-from "$name" \
