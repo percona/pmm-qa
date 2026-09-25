@@ -24,6 +24,8 @@ Keep candidates only when **all** conditions hold:
 6. **Blast-radius relevance**
    The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.
 
+A Finding becomes a case only when the change decides its expected result deterministically. Behavior the change does not alter, or an expectation resting only on a comment or an open product decision, stays a Finding.
+
 Reject candidates that test an upstream component rather than PMM's contract with it, or values PMM only passes through without adding a contract. A setting PMM configures on the upstream — a retention period, a scrape interval, a flag it renders — is PMM's contract, even when the upstream implements it. Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break," and assertions such as "works," "page loads," "success," "non-zero exit," or "error appears." This gate is the authoritative refusal policy.
 
 Each surviving case must also follow every applicable rule below, whether manual or automated:

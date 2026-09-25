@@ -46,7 +46,7 @@ Scripts, run from the skill directory: `scripts/check_draft.py <draft.md>` check
 
 Facts about PMM's environment that a reasonable first attempt gets wrong:
 
-- A pull request's own description or docs about how a third-party component behaves — VictoriaMetrics retention, ClickHouse partitions, Grafana routing — are the claim under test, not a contract. One such claim once dropped a ticket's acceptance case; the component's own docs said the opposite.
+- A pull request's claim about a third-party component — VictoriaMetrics retention, ClickHouse partitions, Grafana routing — is under test, not a contract.
 - Do not read or cite product-repository tests — unit tests, percona/pmm `api-tests`, exporter CI. Only pmm-qa tests and Zephyr count as coverage, so every defect the draft names gets a pmm-qa case or an explicit drop reason.
 - The implementation can ship under another ticket key named in the ticket's links or comments.
 - Review threads of repositories outside this session's scope return 403; read the commit sequence instead.
@@ -61,7 +61,7 @@ Choose the depth once the step 2 inventory exists, record it and its trigger in 
 - **Focused** when the change is local to one component and touches no persisted state, permission, topology, or version gate — a text, link, or style change, or a local fix whose output other components only read, without the change altering how they read it.
 - **Standard** otherwise.
 
-Focused skips the per-entry history search (step 4 keeps its one symptom search), scope references, and the worked example, and replaces the step 9 subagent with a self-check: every `Covered` row states what its assertion sees on the base branch. Deep adds the scope references, the route enumeration in [change-impact-and-failure-model.md](references/change-impact-and-failure-model.md) for any proxy or auth change, and always runs the step 9 subagent.
+Focused skips the per-entry history search (step 4 keeps its one symptom search), the scope references unless step 3's HA or upgrade question answers yes, and the worked example, and replaces the step 9 subagent with a self-check: every `Covered` row states what its assertion sees on the base branch. Deep adds the scope references, the route enumeration in [change-impact-and-failure-model.md](references/change-impact-and-failure-model.md) for any proxy or auth change, and always runs the step 9 subagent.
 
 When another agent or skill invokes this one, skip whatever that session already has — a skill file it read, ticket fields, pull-request diffs, effective constants, scope decisions — and re-fetch only what is missing. Hand the finished draft back after step 9 and skip step 10: the caller owns execution and any Zephyr writes. Step 10 runs only when a user invoked this skill directly. The workflow below assumes that direct invocation in a fresh session with nothing supplied.
 
@@ -87,6 +87,8 @@ Extract:
 
 Do not invent expected behavior to repair a weak ticket.
 
+In the notes, give every How to test step, acceptance criterion, and comment that states an expected result its own row, with any bound it names kept verbatim; each ends as a case, a cited assertion, or a drop reason.
+
 #### Contract conflicts
 
 Do not silently treat implementation as the source of truth. The implementation is the subject under test.
@@ -99,7 +101,7 @@ For a coverage audit, inspect the current implementation in every relevant repos
 
 Use `git-diff` to inspect every supplied or discovered implementation pull request the session has not already diffed, regardless of repository. Common homes include `percona/pmm`, `percona/grafana`, `percona/percona-helm-charts`, and the exporter repository named by the ticket or dependency change.
 
-Read the list of changed files before any hunk, then read only the hunks of behavior-changing code; skip the pull request's test files. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes.
+Read the list of changed files before any hunk, then read only the hunks of behavior-changing code; skip the pull request's test files. Read the pull request's review threads as well — or, when they are unreachable, its commit sequence, per [edge-cases.md](references/edge-cases.md) — and compare the merged state with the ticket text: behavior that moved during review, which the description or How to test predates, is a Finding. Compare the first commit's intent with the merged state explicitly — a scope that moved (from HA to AMI-only, from one symptom to every link) is always stated in Findings, even when no case changes. Check every claim the pull request makes about a third-party component against that component's own docs or source; a disagreement is a Finding.
 
 Create one inventory entry per distinct externally meaningful behavior, not per hunk, function, or file.
 
@@ -136,7 +138,9 @@ For every behavior inventory entry, trace the shortest real product path:
 
 Use the reference to inspect blast radius, derive relevant invariants, and write concrete failure hypotheses that name **how** the product could be wrong. Then read [failure-catalogue.md](references/failure-catalogue.md) and add every mechanism the path can reach.
 
-At Standard and Deep depth, read [scope.md](references/scope.md) and, when applicable, [ha-scope.md](references/ha-scope.md). Record the deployment mode and each extra dimension — HA, upgrade, database or version, role — with a one-line reason. A proxy or auth change also checks the HA request path. Candidates take their topology and environment from this decision; no separate dimension matrix is needed.
+At every depth, record in the notes whether the change behaves differently on HA and whether it changes stored state, a default, or a chart value that upgrade carries over. A yes, or Standard or Deep depth, reads [scope.md](references/scope.md) and, when applicable, [ha-scope.md](references/ha-scope.md). Record the deployment mode and each extra dimension — HA, upgrade, database or version, role — with a one-line reason. A proxy or auth change also checks the HA request path. Candidates take their topology and environment from this decision; no separate dimension matrix is needed.
+
+For every accepted write, also hypothesize that the value never reaches its consumer and that it alters a field the request did not ask for; the case reads the consumer itself — the exporter's running flags or the agent's reported config, the rendered file, the next query — not only the API response. For an auth or proxy change, list in the notes, before step 5, every nginx `location`, Grafana route (data-source proxy, resources, alerting and ruler) and direct path that reaches the protected component, each with its own ledger row.
 
 For every check, gate, filter, or trusted input the change adds or widens, write both directions as separate hypotheses: it fails to apply where it must (missing, skipped, bypassed, forged), and it applies where it must not (over-blocks, over-filters, errors on a legitimate caller). Each direction has its own oracle and its own case.
 
@@ -180,7 +184,7 @@ Then use `coverage.md`'s execution-reality rules to mark each case `Needs automa
 
 ### 9. Produce the review draft and wait for approval
 
-Before writing, check the notes: every inventory entry has a ledger row; every hypothesis resolves to a case, a cited assertion, or a drop reason; every `Needs automation` names its lane and every infra gap its blocker; every implementation Evidence names a location. After writing, run `python3 scripts/check_draft.py <draft>` and fix what it reports until it passes, then read each case without its Data column. Then, at Standard and Deep depth, give the diff paths and the notes file, not the draft, to one subagent and ask it for hypotheses the notes miss and for ledger citations that would not fail on the named defect. Wait for its report; it is an input to the draft, not a parallel task. When this session cannot start a subagent, make the same review a separate adversarial pass over the notes before finalizing, and say in the draft that it was a self-review. Add what survives the gate and record the rest as drops. A zero-case draft needs this review most: its every claim is a coverage citation.
+Before writing, check the notes: every expected-result row and route row resolves; every infra gap or Manual cites the workflow search behind it; every inventory entry has a ledger row; every hypothesis resolves to a case, a cited assertion, or a drop reason; every `Needs automation` names its lane and every infra gap its blocker; every implementation Evidence names a location. After writing, run `python3 scripts/check_draft.py <draft>` and fix what it reports until it passes, then read each case without its Data column. Then, at Standard and Deep depth, give the diff paths and the notes file, not the draft, to one subagent and ask it for hypotheses the notes miss and for ledger citations that would not fail on the named defect. Wait for its report; it is an input to the draft, not a parallel task. When this session cannot start a subagent, make the same review a separate adversarial pass over the notes before finalizing, and say in the draft that it was a self-review. Add what survives the gate and record the rest as drops. A zero-case draft needs this review most: its every claim is a coverage citation.
 
 The draft is the cases plus the few lines a reader needs to trust them. The impact and failure model, the behavior inventory, the coverage ledger, and the drop reasons stay in the notes file: they decide what gets written, and they stay out of the draft unless the user asks for them.
 
@@ -198,6 +202,8 @@ Findings:
 review, a lane no workflow provides. A Finding changes a case, corrects the ticket, or needs a
 product decision; an observation that does none of these stays in the notes. Omit the block
 when there are none.>
+
+<The Checked block from test-case-template.md.>
 
 | # | Case | Pri | Lane | Status | Folder |
 | --- | --- | --- | --- | --- | --- |

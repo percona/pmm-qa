@@ -36,6 +36,8 @@ An assertion that fails on the defect only under data or timing the test does no
 
 Classify an existing test as `Extend` only when it would pass on a defect the failure model names. A test that already fails on the broken build is `Covered`, even when it could assert more: checks for defects nobody named are not an extension.
 
+A test or Zephyr case covers an expected result only when it asserts the same bound — a count, a duration, a retention-plus-one-day window; one that checks the behavior without that bound is `Extend`.
+
 A Zephyr `Automated` status is not coverage. Find the test that carries the key on `origin/main` and read its assertions; recent cases are routinely marked Automated before, or without, a merged test.
 
 For Playwright, page objects live in `e2e_tests/pages/`, API helpers in `e2e_tests/api/`, and endpoint constants in `e2e_tests/helpers/apiEndpoints.ts`. An endpoint constant proves availability, not coverage; find a test that calls it and asserts the result.

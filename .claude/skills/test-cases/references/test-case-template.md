@@ -23,6 +23,19 @@ Use this format for every proposed case.
 - Merge navigation, input, and submission when they lead to one result.
 - Separate different assertions, failure causes, asynchronous boundaries, or verification layers.
 
+## Checked block
+
+Every draft carries this block after Findings, one line each; `check_draft.py` fails without it. Write `none — <why>` when a line does not apply, never leave it out.
+
+```markdown
+Checked:
+- Expected results: <each How to test step, criterion, or comment with an expected result, and the case, cited assertion, or drop that answers it; any bound kept verbatim>
+- Routes: <for an auth, proxy, or filter change, each nginx location, Grafana route, and direct path to the protected component, and its case or drop>
+- Consumers: <for each accepted write, where the case reads the consumer and which fields it asserts unchanged>
+- Contradicted tests: <each PMM-T key or pmm-qa test whose expectation a Finding contradicts>
+- Third-party claims: <each claim the pull request makes about VictoriaMetrics, ClickHouse, Grafana, or another upstream, and the upstream doc or source line that confirms or refutes it>
+```
+
 ## Template
 
 ```markdown

@@ -14,6 +14,7 @@ FORBIDDEN = [
     ("json", re.compile(r"[{}]")),
     ("header", re.compile(r"\bX-[A-Z][A-Za-z-]+")),
 ]
+CHECKED = ("Expected results", "Routes", "Consumers", "Contradicted tests", "Third-party claims")
 
 
 def cells(line):
@@ -50,6 +51,11 @@ def check(text):
         issues.append({"case": None, "line": None, "check": "numbering", "detail": f"case blocks not 1..n: {list(blocks)}"})
     if not blocks and not any(re.match(r"^Covered by: .+ → .+$", ln) for ln in lines):
         issues.append({"case": None, "line": None, "check": "coverage", "detail": "zero-case draft has no Covered by line"})
+
+    for label in CHECKED:
+        if not any(re.match(rf"^- {label}: \S", ln) for ln in lines):
+            issues.append({"case": None, "line": None, "check": "checked",
+                           "detail": f"Checked block has no '- {label}: …' line"})
 
     for n, block in blocks.items():
         body = block["lines"]
