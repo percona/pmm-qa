@@ -143,9 +143,11 @@ install_pmm_client() {
         elif [[ $client == 3.8.1 ]] || ((minor > 8)); then
           build=1
         fi
-        install+="os=\$(. /etc/os-release; echo \${VERSION_ID%%.*})
-          curl -fL -o /tmp/pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/\$os/RPMS/x86_64/pmm-client-$client-$build.el\$os.x86_64.rpm
-          \$pkg install -y /tmp/pmm-client.rpm"
+        # microdnf cannot install a local rpm, so there rpm itself does; yum
+        # does elsewhere, as it also pulls the rpm's dependencies (perl).
+        install+="os=\$(. /etc/os-release; echo \${VERSION_ID%%.*}) arch=\$(uname -m)
+          curl -fsSL -o /tmp/pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/\$os/RPMS/\$arch/pmm-client-$client-$build.el\$os.\$arch.rpm
+          if [ \$pkg = microdnf ]; then rpm -Uvh /tmp/pmm-client.rpm; else yum install -y /tmp/pmm-client.rpm; fi"
         ;;
       *) die "CLIENT_VERSION '$client' is not a channel, a 3.x.y release or a tarball URL." ;;
     esac
