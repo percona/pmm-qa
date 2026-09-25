@@ -393,7 +393,7 @@ function runView(id) {
       const claimed = claims.map(c => `${c.by} (${ago(c.at)})`).join(', ');
       const status = claims.length ? `<div class="pending claim">${icon.clock}Being investigated by ${esc(claimed)}.</div>`
         : x.fail && !finds.length ? `<div class="pending">${icon.clock}Not investigated yet.</div>` : '';
-      return `<details class="group" ${x.fail || x.warn ? 'open' : ''}>
+      return `<details class="group">
         <summary>
           <span class="rail s-${state}" aria-hidden="true"></span>
           ${icon.chev}
