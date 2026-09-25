@@ -82,7 +82,7 @@ Extract:
 - user-visible behavior and customer goal;
 - each testable acceptance criterion or public contract;
 - supported roles, versions, configurations, topologies, and databases;
-- constraints and defaults;
+- constraints, defaults, and the fix version against the release comments and PRs name;
 - ambiguities, contradictions, and missing expected behavior.
 
 Do not invent expected behavior to repair a weak ticket.

@@ -14,7 +14,7 @@ FORBIDDEN = [
     ("json", re.compile(r"[{}]")),
     ("header", re.compile(r"\bX-[A-Z][A-Za-z-]+")),
 ]
-CHECKED = ("Expected results", "Routes", "Consumers", "Contradicted tests", "Third-party claims")
+CHECKED = ("Expected results", "Routes", "Consumers", "Contradicted tests", "Existing cases", "Third-party claims")
 
 
 def cells(line):
@@ -59,6 +59,9 @@ def check(text):
             if not ln.startswith("- "):
                 break
             checked.append(ln)
+    for label in ("Depth", "History"):
+        if not any(re.match(rf"^{label}: \S", ln) for ln in lines):
+            issues.append({"case": None, "line": None, "check": "checked", "detail": f"no '{label}: …' line"})
     for label in CHECKED:
         if not any(re.match(rf"^- {label}: \S", ln) for ln in checked):
             issues.append({"case": None, "line": None, "check": "checked",

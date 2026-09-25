@@ -58,7 +58,7 @@ A lane is a workflow job that can run the case as written. Find it on `origin/ma
 
 Search every workflow, not only the matrices — HA, Helm, CLI integration, FB, package, and per-database workflows all host lanes. Some upgrade and RC lanes live in `Percona-Lab/jenkins-pipelines`, so absence from GitHub Actions is not proof that a tag never runs.
 
-For `Needs automation`, name the workflow file and job or matrix shard. When a case needs an estate no single job provides, keep it whole as `Automation candidate — infra gap`; split it only when each part catches its own named defect and has a job that runs it as written. A version, dataset shape, or tool the lane must produce goes in Preconditions.
+For `Needs automation`, name the workflow file and job or matrix shard. When a case needs an estate no single job provides, keep it whole as `Automation candidate — infra gap`; split it only when each part catches its own named defect and has a job that runs it as written. A version, dataset shape, or tool the lane must produce goes in Preconditions. An upgrade case needs a lane that installs a source version and upgrades it; a lane that only starts the target image is not one.
 
 When no lane can run a deterministic, valuable case, mark it `Automation candidate — infra gap` and name the missing lane or helper, and report the gap as a Finding; record the workflow search in the notes. `Manual` is for a case that is manual by nature — a subjective or visual judgement, a race, a multi-day wait, a destructive estate — never for a missing lane.
 

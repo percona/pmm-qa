@@ -24,7 +24,7 @@ Keep candidates only when **all** conditions hold:
 6. **Blast-radius relevance**
    The test proves either the changed behavior or a credible affected dependency/caller/consumer identified in the impact model.
 
-A Finding becomes a case only when the change decides its expected result deterministically. Behavior the change does not alter, or an expectation resting only on a comment or an open product decision, stays a Finding.
+A Finding becomes a case only when the change decides its expected result deterministically. Behavior the change does not alter, or an expectation resting only on a comment or an open product decision, stays a Finding. When two existing cases expect opposite behavior, record the conflict as a Finding and publish any case that depends on it as Draft, even when the merged code seems to settle it: a person decides which case is wrong.
 
 Reject candidates that test an upstream component rather than PMM's contract with it, or values PMM only passes through without adding a contract. A setting PMM configures on the upstream — a retention period, a scrape interval, a flag it renders — is PMM's contract, even when the upstream implements it. Reject generic justification such as "best practice," "edge case," "realistic workflow," or "could break," and assertions such as "works," "page loads," "success," "non-zero exit," or "error appears." This gate is the authoritative refusal policy.
 
@@ -32,7 +32,7 @@ Each surviving case must also follow every applicable rule below, whether manual
 
 1. **Verify its preconditions.** Assert the starting state rather than assuming it. A case that silently runs from the wrong state reports a defect that is not there, or hides one that is.
 2. **Modify only explicitly identified test-owned state.** Name the exact row, service, agent, or file the case created, and address it by an identifier the case itself captured. `select max(id)`, "the most recent row", "the first service in the list" and similar are races against anything else using the environment — capture the identifier at setup and use it.
-3. **Synchronize on observable events, not fixed sleeps.** Wait for the request, state transition, log line, or metric. Bound an absence check with a completed opportunity such as a poll cycle or later successful request.
+3. **Synchronize on observable events, not fixed sleeps.** Wait for the request, state transition, log line, or metric. Bound an absence check with a completed opportunity such as a poll cycle or later successful request. Derive every wait bound from the product's own constants — keepalive, backoff, scrape or poll interval — cited in Evidence, never from observed run times.
 4. **Assert the prohibited side effect the failure model names.** The result alone passes when the product reaches it the wrong way, so when a hypothesis names one — a redirect, a second write, an error notification, an extra request, state left behind — assert that it does not happen. Never add a side-effect row the failure model does not name: an invented one costs a step and catches nothing.
 5. **When the case changes persistent or shared state, restore it in cleanup, including when the case fails.** Put restoration where a failure cannot skip it, and say what it restores; a case that changes state only on the happy path poisons every later case in the same environment. An irreversible change — an upgrade, a retention purge — restores by discarding the environment; say so. A read-only case has no cleanup.
 

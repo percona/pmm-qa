@@ -5,9 +5,10 @@ Use this format for every proposed case.
 ## Rules
 
 - Use a short, action-oriented title, numbered to match the summary table.
-- Assign `High`, `Normal`, or `Low` priority from failure impact.
+- Assign `High`, `Normal`, or `Low` priority from failure impact; a read-only check of a cosmetic or navigation fix is `Low`.
 - Assign `Needs automation`, `Automation candidate — infra gap`, or `Manual` on the same line as the priority, followed by its lane, its blocker, or its manual reason.
 - Name the primary defect the case catches and its traceable evidence. Write the Catches part as one or two plain sentences a tester understands — what goes wrong for the user if the defect is back — and put function names, commits, and file references only after "— Evidence:". Implementation evidence carries a location, repository path plus function or line; a claim without one is not evidence.
+- A keyboard shortcut, menu item, or button a person uses is product wording: name it in the Step, not only in Data.
 - Write the step as the action a person performs, in product words, as if explaining it to a colleague who does not know the code: "as the viewer, ask for a snapshot through the data source", never `GET /graph/api/datasources/proxy/<id>/snapshot/create`. No URL, path, endpoint, header name, command, flag, or JSON appears in a Step or Expected cell; every one of them goes in `Data`, empty when the step needs none.
 - Write the expected result as what the person sees or gets, in plain words first; the exact code or value follows in parentheses when the oracle needs it: "the request is refused (403) and no snapshot directory appears". Write a value in Step or Expected in plain quotes, never in backticks; `check_draft.py` rejects backticks there.
 - Give the case a title a product manager would understand: what the user does and what must hold, not the mechanism.
@@ -25,15 +26,18 @@ Use this format for every proposed case.
 
 ## Checked block
 
-Every draft carries this block after Findings, one line each; `check_draft.py` fails without it. Write `none — <why>` when a line does not apply, never leave it out.
+Every draft carries this block after Findings, one line each, with the `Depth` and `History` lines directly above `Checked:`; `check_draft.py` fails without it. Write `none — <why>` when a line does not apply, never leave it out.
 
 ```markdown
+Depth: <Focused | Standard | Deep> — <trigger>
+History: <each Jira query run, including one on the ticket's own symptom> → <keys it found, or none>
 Checked:
-- Expected results: <each How to test step, criterion, or comment with an expected result, and the case, cited assertion, or drop that answers it; any bound kept verbatim. A row an existing PMM-T case or pmm-qa test already asserts, bound included, cites that key and adds no case>
+- Expected results: <each How to test step, criterion, or comment with an expected result, and the case, cited assertion, or drop that answers it; any bound kept verbatim; a retention or expiry criterion asserts that data older than the retention period plus one day is gone. A row an existing PMM-T case or pmm-qa test already asserts, bound included, cites that key and adds no case>
 - Routes: <for an auth, proxy, or filter change, each nginx location, Grafana route, and direct path to the protected component, and its case or drop>
-- Consumers: <for each accepted write, where the case reads the consumer and which fields it asserts unchanged>
+- Consumers: <for each accepted write, where the case reads the consumer and which fields it asserts unchanged; for a changed metric, the panel or alert that reads it and the case that checks it>
 - Contradicted tests: <each PMM-T key or pmm-qa test whose expectation a Finding contradicts>
-- Third-party claims: <each claim the pull request makes about VictoriaMetrics, ClickHouse, Grafana, or another upstream, and the upstream doc or source line that confirms or refutes it>
+- Existing cases: <every PMM-T key and pmm-qa test found for the feature, each marked kept (with what its assertion sees on the base branch), extended, or deprecated. A key whose steps already reach the behavior is extended — its missing assertion goes into that key's flow and the draft adds no new case for it>
+- Third-party claims: <each claim the pull request makes about VictoriaMetrics, ClickHouse, Grafana, or another upstream, labelled implementation-derived, and the upstream doc or source line that confirms or refutes it>
 ```
 
 ## Template
