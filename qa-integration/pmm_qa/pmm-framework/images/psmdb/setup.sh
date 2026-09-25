@@ -83,7 +83,7 @@ psmdb_wait_mongod() {
   retry 120 "mongod on $1" psmdb_js "$1" 'db.adminCommand({ ping: 1 }).ok' >/dev/null
 }
 
-# The users configure-replset.sh and start-sharded.sh create; EXTERNAL=true
+# The users configure-replset.sh and start-sharded-with-pmm.sh create; EXTERNAL=true
 # adds the Kerberos user, which only the pss replica set gets.
 # Usage: psmdb_users_js EXTERNAL
 psmdb_users_js() {
@@ -214,8 +214,7 @@ psmdb_replica_set() {
 
   log_info '==> Register with PMM'
   for node in "${nodes[@]}"; do
-    # The extra set is registered as configure-extra-agents.sh does: no
-    # environment, and a replication set only on its arbiter.
+    # The extra set gets no environment, and a replication set only on its arbiter.
     local -a labels=(--environment=psmdb-dev --cluster=replicaset --replication-set=rs)
     if [[ $node == rs20? ]]; then
       labels=(--cluster=replicaset)
@@ -288,7 +287,7 @@ psmdb_sharded() {
       "--replication-set=${node%0*}" --username=pmm --password=pmmpass "--host=$node" --port=27017
   done
   # FTDC is off on a mongos until it has a directory, and PMM reads the
-  # router's serverStatus metrics out of it (see start-sharded.sh).
+  # router's serverStatus metrics out of it (see start-sharded-with-pmm.sh).
   must docker exec mongos sh -c 'mkdir -p /var/lib/mongo/mongos.diagnostic.data && chown -R mongod:mongod /var/lib/mongo/mongos.diagnostic.data'
   psmdb_js mongos "$PSMDB_ROOT_URI" 'db.adminCommand({ setParameter: 1, diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data" });
     db.adminCommand({ setParameter: 1, diagnosticDataCollectionEnabled: true });' >/dev/null || die 'Enabling FTDC on mongos failed.'
@@ -305,7 +304,7 @@ psmdb_sharded() {
   done
 }
 
-# The two loops start-sharded.sh leaves running: chunk moves and splits every
+# The two loops start-sharded-with-pmm.sh leaves running: chunk moves and splits every
 # 240 s, and generate_opcountersrepl_traffic.sh's insert/update/delete load.
 psmdb_sharded_workload() {
   must docker exec -i mongos tee /tmp/keep_chunks_moving.js >/dev/null <<'EOF'

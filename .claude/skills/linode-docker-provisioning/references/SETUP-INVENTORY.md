@@ -7,9 +7,9 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 
 | # | Command | Script / playbook | Notes |
 | --- | --------- | ------------------- | ------- |
-| 1 | `psmdb` | `start-rs-only.sh` | Default `SETUP_TYPE=pss` |
+| 1 | `psmdb` | `images/psmdb/setup.sh` | Default `SETUP_TYPE=pss` |
 | 2 | `psmdb,SETUP_TYPE=psa` | same | PSA replica set |
-| 3 | `psmdb,SETUP_TYPE=sharding` | `start-sharded.sh` | Sharded cluster + PBM |
+| 3 | `psmdb,SETUP_TYPE=sharding` | same | Sharded cluster + PBM |
 | 4 | `psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra` | same + extra RS | Second replica set |
 | 5 | `psmdb,SETUP_TYPE=pss,STORAGE_ENGINE=inmemory` | same | In-memory storage |
 | 6 | `psmdb,SETUP_TYPE=pss,GSSAPI=true` | same | Kerberos (heavy) |

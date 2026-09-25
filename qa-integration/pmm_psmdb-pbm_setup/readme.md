@@ -2,7 +2,7 @@
 
 ## Setup ##
 
-Here are two scripts to setup and run basic backup/restore tests - start-rs.sh and start-sharded.sh
+Here are two scripts to setup and run basic backup/restore tests - start-rs.sh and start-sharded-with-pmm.sh
 The scripts are using ENV's to define needed versions for each product:
 
 1) PSMDB_VERSION (e.g 6.0.3-2 ) - if not defined the latest 6.0 will be used
@@ -22,7 +22,7 @@ Also there are two more ENV's that allow to skip the tests and (or) to skip clea
 
 - start-rs.sh - builds systemd-based docker-image, installs necessary versions of PBM/PSMDB/PMM-Agent inside, starts them, prepares 3-nodes replicaset,
 starts necessary PMM server, starts minio container for s3-like storage, configure minio, adds some base data with mgodatagen, runs tests and than cleanup
-- start-sharded.sh - does the same, but prepares 9-nodes sharded cluster ( configsvr rs and two shards rs)
+- start-sharded-with-pmm.sh - does the same, but prepares 9-nodes sharded cluster ( configsvr rs and two shards rs)
 
 ## Credentials ##
 
