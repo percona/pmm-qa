@@ -131,4 +131,10 @@ export default class AlertingApi {
       data: { name: templateName, ...yamlBody },
       headers,
     });
+
+  uploadTemplate = async (yaml: string): Promise<void> => {
+    const response = await this.createTemplate(GrafanaHelper.getAuthHeader(), { yaml });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
 }
