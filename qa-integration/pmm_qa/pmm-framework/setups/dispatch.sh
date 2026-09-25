@@ -7,23 +7,6 @@
 #
 # TO ADD A DATABASE TYPE, after registering it in lib/config.sh and writing its
 # setup_<name> function in the matching setups/ file, add one case arm here.
-# Also check setup_requires_server() below, and setup_uses_ansible() in
-# lib/execution.sh, if the new type is unusual in either respect.
-
-# Does this type need a PMM Server to report to?
-#
-# Almost everything does. BUCKET only creates MinIO storage and DOCKERCLIENTS
-# only builds images, so neither needs a server -- and preflight skips server
-# discovery entirely when those are the only setups requested, which means
-# `--database bucket` works with no PMM Server running at all.
-#
-# Returns: 0 when a server is required, 1 when not
-setup_requires_server() {
-  case "$1" in
-    DOCKERCLIENTS|BUCKET) return 1 ;;
-    *) return 0 ;;
-  esac
-}
 
 # Call the setup function for the parsed database type.
 #
@@ -44,14 +27,9 @@ dispatch_setup() {
     SSL_PDPGSQL) setup_ssl_pdpgsql ;;
     PSMDB) setup_psmdb ;;
     SSL_PSMDB) setup_ssl_psmdb ;;
-    MLAUNCH_PSMDB) setup_mlaunch_psmdb ;;
-    MLAUNCH_MODB) setup_mlaunch_modb ;;
-    SSL_MLAUNCH) setup_ssl_mlaunch ;;
     HAPROXY) setup_haproxy ;;
     EXTERNAL) setup_external ;;
     VALKEY) setup_valkey ;;
-    BUCKET) setup_bucket ;;
-    DOCKERCLIENTS) setup_dockerclients ;;
     # Registered so PXC can read its defaults, but never runnable on its own.
     PROXYSQL)
       die "PROXYSQL is a PXC option source and cannot be set up independently."

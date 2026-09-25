@@ -15,28 +15,12 @@
 # Preflight may downgrade parallel to sequential -- see the conflict rules in
 # preflight_database_setups().
 
-# Does this database type provision through Ansible rather than a shell script?
-#
-# Used only to decide whether preflight needs to warm up the Ansible bits
-# before parallel setups start. The actual choice of backend lives in each
-# setup function, which calls run_playbook() or run_setup_script() directly.
-#
-# Returns: 0 for playbook-backed types, 1 for script-backed ones
-setup_uses_ansible() {
-  case "$1" in
-    PS|MYSQL|SSL_MYSQL|PXC|PSMDB|SSL_PSMDB|HAPROXY|EXTERNAL|VALKEY|PDPGSQL|PGSQL|SSL_PDPGSQL|DOCKERCLIENTS) return 1 ;;
-    *) return 0 ;;
-  esac
-}
-
 # Validate the whole run before provisioning anything.
 #
-# Walks every spec once to answer three questions, so that a bad request fails
-# in seconds rather than halfway through a ten-minute provisioning run:
-#
-#   * does anything need a PMM Server address, curl, or Ansible?
-#   * do any two setups conflict, so parallel is unsafe?
-#   * are the shared Ansible prerequisites ready before jobs fork?
+# Walks every spec once, so that a bad request fails in seconds rather than
+# halfway through a ten-minute provisioning run: every spec parses, the PMM
+# Server is found, curl is there if a PSMDB setup needs it, and no two setups
+# conflict.
 #
 # Conflict rule: two setups of the same type, or any two of the MySQL family
 # (PS/MYSQL), reuse the same container names and/or host ports. Rather than
@@ -53,7 +37,7 @@ setup_uses_ansible() {
 # Exits:  via die() on a host conflict, and from the helpers it calls (unknown
 #         type, missing server, ...)
 preflight_database_setups() {
-  local spec needs_server=false needs_curl=false needs_ansible=false
+  local spec needs_curl=false
   local mysql_data_owner='' conflict='' host_conflict='' setup_type
   local patroni_seen=false pgsql_replication_seen=false
   local external_seen=false valkey_seen=false
@@ -63,9 +47,7 @@ preflight_database_setups() {
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
-    setup_requires_server "$DB_TYPE" && needs_server=true
     [[ $DB_TYPE == PSMDB || $DB_TYPE == SSL_PSMDB ]] && needs_curl=true
-    setup_uses_ansible "$DB_TYPE" && needs_ansible=true
 
     # Two setups of the same product, or any two of the MySQL family, reuse the
     # same container names, host ports and data directories, so they cannot run
@@ -123,47 +105,8 @@ preflight_database_setups() {
     PARALLEL=false
   fi
 
-  [[ $needs_server == true ]] && resolve_pmm_server
+  resolve_pmm_server
   [[ $needs_curl == true ]] && require_command curl
-  # Warm these up before forking so parallel jobs cannot race to install the
-  # same Ansible collection.
-  if [[ $PARALLEL == true && $needs_ansible == true ]]; then
-    configure_ansible_python
-    ensure_ansible_collections
-  fi
-  [[ $PARALLEL == true ]] && prepull_base_images
-  return 0
-}
-
-readonly BASE_IMAGES=(
-  'phusion/baseimage:jammy-1.0.1'
-  'antmelekhin/docker-systemd:ubuntu-24.04'
-  'antmelekhin/docker-systemd:ubuntu-22.04'
-)
-
-prepull_base_images() {
-  command -v docker >/dev/null 2>&1 || return 0
-
-  local image attempt pulled
-  for image in "${BASE_IMAGES[@]}"; do
-    if docker image inspect "$image" >/dev/null 2>&1; then
-      continue
-    fi
-
-    pulled=false
-    for ((attempt = 1; attempt <= 3; attempt++)); do
-      if docker pull --quiet "$image" >/dev/null 2>&1; then
-        pulled=true
-        break
-      fi
-      sleep 5
-    done
-
-    if [[ $pulled == false ]]; then
-      log_warn "Could not pre-pull $image; its setup will pull it instead."
-    fi
-  done
-
   return 0
 }
 
@@ -226,31 +169,6 @@ format_duration() {
   fi
 }
 
-# Print the slowest Ansible tasks recorded in a buffered setup log.
-#
-# Usage: print_slowest_tasks LOG_FILE [COUNT] [FLOOR_SECONDS]
-print_slowest_tasks() {
-  local log_file=$1 count=${2:-5} floor=${3:-5}
-  [[ -r $log_file ]] || return 0
-
-  local seconds name
-  while read -r seconds name; do
-    printf '  %7s  %s\n' "$(format_duration "$seconds")" "$name"
-  done < <(
-    awk -v floor="$floor" '
-      { gsub(/\033\[[0-9;]*m/, ""); sub(/\r$/, "") }
-      match($0, /-----+[[:space:]]*[0-9]+\.[0-9]+s$/) {
-        elapsed = $NF
-        sub(/s$/, "", elapsed)
-        if (elapsed + 0 < floor) next
-        name = substr($0, 1, RSTART - 1)
-        sub(/[[:space:]]+$/, "", name)
-        if (name != "") printf "%d %s\n", elapsed + 0.5, name
-      }
-    ' "$log_file" | sort -rn -k1,1 | head -n "$count"
-  )
-}
-
 # Report one finished parallel setup.
 #
 # Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE [ELAPSED_SECONDS]
@@ -273,7 +191,6 @@ print_setup_log() {
 
   if ((status == 0)); then
     printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
-    print_slowest_tasks "$log_file"
     # Prebaked setups end with their agents' states (report_agent_status).
     grep '^agent-status ' "$log_file" 2>/dev/null | sed 's/^agent-status /  /' || true
     if should_dump_successful_logs; then
@@ -317,7 +234,7 @@ run_parallel_setups() {
   total=${#DATABASE_SPECS[@]}
 
   # Job control puts each background setup in its own process group, so an
-  # interrupt can take down ansible-playbook and its children too. Without it
+  # interrupt can take down the docker commands under it too. Without it
   # `kill $pid` would only reap the wrapper subshell and leave the real
   # provisioning work running.
   set -m
@@ -383,7 +300,7 @@ run_parallel_setups() {
 
     # Report each setup as soon as it finishes. Waiting in argument order made
     # completed jobs look stuck behind a slower neighbor (and hid progress when
-    # Docker or a playbook hung).
+    # a docker command hung).
     local -a active_pids=()
     local finished_pid matched
     for index in "${pending[@]}"; do

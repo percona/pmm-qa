@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034  # env_map is passed to run_playbook by name, so shellcheck cannot see the read.
 #
-# setups/services.sh -- non-database targets and Valkey.
-#
-# Same shape as the other setups files (see setups/mysql.sh for the pattern),
-# but these cover things that are not a relational database: proxies, exporters,
-# object storage and the pre-built client images.
+# setups/services.sh -- HAProxy, the External exporters and Valkey.
 
 # HAProxy with the PMM Client attached, for the HAProxy dashboards, on the
 # prebaked pmm-qa/haproxy image (images/haproxy). The end state is
@@ -239,29 +234,4 @@ valkey_workload() {
       valkey-replica*) must docker exec "$node" sh -c "$reads" ;;
     esac
   done
-}
-
-# A MinIO container holding S3 buckets, used as a backup location.
-#
-# BUCKET_NAMES is normalised before the playbook sees it: quotes stripped,
-# lower-cased, and ';' separators turned into ',' -- the playbook splits on
-# commas. So `BUCKET_NAMES=one;two` and `BUCKET_NAMES=one,two` are equivalent.
-# Needs no PMM Server (see setup_requires_server).
-setup_bucket() {
-  local buckets
-  buckets=$(resolve_value BUCKET BUCKET_NAMES DB_CONFIG)
-  buckets=${buckets//\"/}
-  buckets=${buckets,,}
-  buckets=${buckets//;/,}
-  declare -A env_map=([BUCKETS]="$buckets")
-  run_playbook 'tasks/create_minio_container.yml' env_map
-}
-
-# Build the pre-baked client Docker images used by other suites.
-#
-# The only setup with an empty env map: the script takes no parameters. It also
-# needs no PMM Server, and is script-backed rather than playbook-backed.
-setup_dockerclients() {
-  declare -A env_map=()
-  run_setup_script "$PMM_QA_ROOT" 'setup_docker_client_images.sh' env_map
 }

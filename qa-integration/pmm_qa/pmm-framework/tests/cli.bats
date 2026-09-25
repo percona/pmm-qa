@@ -6,7 +6,7 @@ load helpers/test_helper
   parse_args \
     --verbose \
     --parallel \
-    --verbosity-level=2 \
+    --setup-retries=2 \
     --client-version latest-tarball \
     --pmm-server-ip=10.0.0.5 \
     --database ps=8.4,SETUP_TYPE=gr \
@@ -14,7 +14,7 @@ load helpers/test_helper
 
   [[ $VERBOSE == true ]]
   [[ $PARALLEL == true ]]
-  [[ $VERBOSITY_LEVEL == 2 ]]
+  [[ $SETUP_RETRIES == 2 ]]
   [[ $GLOBAL_CLIENT_VERSION == latest-tarball ]]
   [[ $PMM_SERVER_IP_ARG == 10.0.0.5 ]]
   [[ ${#DATABASE_SPECS[@]} == 2 ]]
@@ -71,13 +71,13 @@ load helpers/test_helper
     --pmm-server-ip \
     --pmm-server-password \
     --client-version \
-    --verbosity-level \
+    --setup-retries \
     --database ps=8.4
 
   [[ -z $PMM_SERVER_IP_ARG ]]
   [[ -z $PMM_SERVER_PASSWORD ]]
   [[ -z $GLOBAL_CLIENT_VERSION ]]
-  [[ $VERBOSITY_LEVEL == 1 ]]
+  [[ $SETUP_RETRIES == 0 ]]
   [[ ${DATABASE_SPECS[0]} == ps=8.4 ]]
 }
 
@@ -107,89 +107,6 @@ load helpers/test_helper
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
-@test "selects the existing requests-capable interpreter for Ansible modules" {
-  local fake_python=$BATS_TEST_TMPDIR/python
-  printf '#!/usr/bin/env bash\nexit 0\n' >"$fake_python"
-  chmod +x "$fake_python"
-  PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK=$fake_python
-
-  configure_ansible_python
-
-  [[ $ANSIBLE_PYTHON_INTERPRETER == "$fake_python" ]]
-}
-
-@test "uses a PATH python that already has requests, without provisioning a venv" {
-  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
-  # Invoked indirectly by name through configure_ansible_python's candidate
-  # loop, which shellcheck can't trace.
-  # shellcheck disable=SC2329,SC2317
-  python3() { [[ $1 == -c ]]; }
-  # shellcheck disable=SC2329,SC2317
-  python() { return 1; }
-
-  configure_ansible_python
-
-  [[ $ANSIBLE_PYTHON_INTERPRETER == python3 ]]
-  [[ ! -e $PMM_QA_ROOT/pmm_framework ]]
-}
-
-@test "reuses a previously-provisioned fallback venv instead of recreating it" {
-  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
-  local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
-  mkdir -p "$(dirname "$venv_python")"
-  printf '#!/usr/bin/env bash\nexit 0\n' >"$venv_python"
-  chmod +x "$venv_python"
-
-  # shellcheck disable=SC2329,SC2317
-  python3() { [[ $1 == -c ]] && return 1; echo "python3 should not be invoked to recreate an existing venv" >&2; return 1; }
-  # shellcheck disable=SC2329,SC2317
-  python() { return 1; }
-
-  configure_ansible_python
-
-  [[ $ANSIBLE_PYTHON_INTERPRETER == "$venv_python" ]]
-}
-
-@test "provisions a venv with requests when nothing on PATH has it" {
-  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
-  local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
-
-  # shellcheck disable=SC2329,SC2317
-  python3() {
-    if [[ $1 == -c ]]; then
-      return 1
-    elif [[ $1 == -m && $2 == venv ]]; then
-      mkdir -p "$3/bin"
-      printf '#!/usr/bin/env bash\nexit 0\n' >"$3/bin/python"
-      chmod +x "$3/bin/python"
-      return 0
-    fi
-    return 1
-  }
-  # shellcheck disable=SC2329,SC2317
-  python() { return 1; }
-
-  configure_ansible_python
-
-  [[ $ANSIBLE_PYTHON_INTERPRETER == "$venv_python" ]]
-  [[ -x $venv_python ]]
-}
-
-@test "leaves the interpreter unset when no Python is available at all" {
-  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
-  mkdir -p "$BATS_TEST_TMPDIR/empty-path"
-  local real_path=$PATH
-  # Deliberately shadowing PATH to simulate no python3/python on it.
-  # shellcheck disable=SC2123
-  PATH=$BATS_TEST_TMPDIR/empty-path
-
-  configure_ansible_python
-  local result=${ANSIBLE_PYTHON_INTERPRETER:-}
-  PATH=$real_path
-
-  [[ -z $result ]]
-}
-
 @test "requires at least one database" {
   run parse_args --verbose
   [[ $status -ne 0 ]]
@@ -205,7 +122,6 @@ load helpers/test_helper
 @test "every versioned database pins an explicit default version" {
   local -A expected=(
     [PSMDB]=latest [SSL_PSMDB]=latest
-    [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
     [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
     [PXC]=8.4 [PROXYSQL]=2 [VALKEY]=8
@@ -348,56 +264,6 @@ stub_docker_ps() {
   [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
 }
 
-@test "the slowest tasks inside a setup are reported, worst first" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  cat >"$log" <<'EOF'
-PLAY RECAP *********************************************************************
-===============================================================================
-Install PMM Client packages ------------------------------------------- 421.07s
-Start PS container ----------------------------------------------------- 70.55s
-Gathering Facts ---------------------------------------------------------- 0.45s
-EOF
-
-  run print_slowest_tasks "$log"
-
-  [[ $status -eq 0 ]]
-  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
-  [[ ${lines[1]} == *'1m11s  Start PS container' ]]
-  [[ $output != *'Gathering Facts'* ]]
-}
-
-@test "slowest tasks are pooled across the playbooks one spec runs" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  cat >"$log" <<'EOF'
-===============================================================================
-Start PS container ----------------------------------------------------- 70.55s
-PLAY [Install client] **********************************************************
-===============================================================================
-Install PMM Client packages ------------------------------------------- 421.07s
-EOF
-
-  run print_slowest_tasks "$log" 1
-
-  [[ $status -eq 0 ]]
-  [[ ${#lines[@]} -eq 1 ]]
-  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
-}
-
-@test "a log without task profiling reports no timings" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  printf 'PLAY RECAP\nlocalhost : ok=12 changed=4\nnot -- a duration\n' >"$log"
-
-  run print_slowest_tasks "$log"
-
-  [[ $status -eq 0 ]]
-  [[ -z $output ]]
-
-  run print_slowest_tasks "$BATS_TEST_TMPDIR/missing.log"
-
-  [[ $status -eq 0 ]]
-  [[ -z $output ]]
-}
-
 @test "a successful prebaked setup echoes its agents' states" {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf '%s\n' '==> Run workload' 'agent-status pxc_proxysql_pmm_8.4: node_exporter  Running  42001' 'noise' >"$log"
@@ -410,35 +276,3 @@ EOF
   [[ $output != *noise* ]]
 }
 
-@test "a successful setup reports its slowest tasks before its log is discarded" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  printf 'Install PMM Client packages ------------------------------------------- 421.07s\n' >"$log"
-
-  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
-
-  [[ $status -eq 0 ]]
-  [[ ${lines[0]} == "[1/2] ps=8.4: OK in 7m32s (log: $log)" ]]
-  [[ ${lines[1]} == *'7m01s  Install PMM Client packages' ]]
-}
-
-@test "a collection is detected from the listing, not from ansible-galaxy's exit code" {
-  local stub_bin=$BATS_TEST_TMPDIR/bin
-  mkdir -p "$stub_bin"
-  # ansible-core exits 0 for a collection it does not have, printing only the
-  # table header, so the exit code alone can never answer this.
-  cat >"$stub_bin/ansible-galaxy" <<'EOF'
-#!/usr/bin/env bash
-printf '# /usr/lib/python3/dist-packages/ansible_collections\n'
-printf 'Collection      Version\n--------------- -------\n'
-[[ $3 == ansible.posix ]] && printf 'ansible.posix   1.5.4\n'
-exit 0
-EOF
-  chmod +x "$stub_bin/ansible-galaxy"
-  PATH=$stub_bin:$PATH
-
-  run collection_installed ansible.posix
-  [[ $status -eq 0 ]]
-
-  run collection_installed community.docker
-  [[ $status -eq 1 ]]
-}

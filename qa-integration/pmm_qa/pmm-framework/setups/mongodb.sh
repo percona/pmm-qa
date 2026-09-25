@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034  # env_map is passed to run_playbook by name, so shellcheck cannot see the read.
 #
-# setups/mongodb.sh -- MongoDB-family setups.
-#
-# PSMDB and SSL_PSMDB run on the prebaked pmm-qa/psmdb image (lib/prebaked.sh);
-# MLAUNCH_* and SSL_MLAUNCH hand an env map to their Ansible playbooks, as the
-# setups in setups/mysql.sh used to.
+# setups/mongodb.sh -- PSMDB and SSL_PSMDB, on the prebaked pmm-qa/psmdb image.
 
 # Percona Server for MongoDB as a replica set or a sharded cluster, on the
 # prebaked pmm-qa/psmdb image (images/psmdb).
@@ -338,62 +333,6 @@ EOF
 
 psmdb_traffic() {
   COMPOSE_FILE=docker-compose-sharded.yaml must bash ./generate_opcountersrepl_traffic.sh >/dev/null
-}
-
-# PSMDB launched with mlaunch instead of docker-compose.
-#
-# Playbook-backed, so unlike setup_psmdb it takes a plain major version and
-# uses the usual PMM_SERVER_IP / CLIENT_VERSION key names.
-setup_mlaunch_psmdb() {
-  local version client
-  version=$(resolved_version PSMDB_VERSION MLAUNCH_PSMDB "$DB_VERSION")
-  client=$(resolved_client_version MLAUNCH_PSMDB DB_CONFIG)
-  declare -A env_map=(
-    [PSMDB_VERSION]="$version"
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [PSMDB_CONTAINER]="psmdb_pmm_$version"
-    [PSMDB_SETUP]="$(resolve_value MLAUNCH_PSMDB SETUP_TYPE DB_CONFIG)"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-  )
-  run_playbook 'mlaunch_psmdb_setup.yml' env_map
-}
-
-# Upstream MongoDB launched with mlaunch.
-#
-# Same as setup_mlaunch_psmdb but for MongoDB Community; note the MODB_* key
-# names its playbook expects.
-setup_mlaunch_modb() {
-  local version client
-  version=$(resolved_version MODB_VERSION MLAUNCH_MODB "$DB_VERSION")
-  client=$(resolved_client_version MLAUNCH_MODB DB_CONFIG)
-  declare -A env_map=(
-    [MODB_VERSION]="$version"
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [MODB_CONTAINER]="modb_pmm_$version"
-    [MODB_SETUP]="$(resolve_value MLAUNCH_MODB SETUP_TYPE DB_CONFIG)"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-  )
-  run_playbook 'mlaunch_modb_setup.yml' env_map
-}
-
-# mlaunch-based MongoDB with TLS.
-setup_ssl_mlaunch() {
-  local version client
-  version=$(resolved_version PSMDB_VERSION SSL_MLAUNCH "$DB_VERSION")
-  client=$(resolved_client_version SSL_MLAUNCH DB_CONFIG)
-  declare -A env_map=(
-    [MONGODB_VERSION]="$version"
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [MONGODB_SSL_CONTAINER]="psmdb_ssl_pmm_$version"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-  )
-  run_playbook 'tls-ssl-setup/mlaunch_tls_setup.yml' env_map
 }
 
 # PSMDB with TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack, on the

@@ -456,20 +456,6 @@ EOF
   grep -q -- '^exec sentinel-2 pmm-admin add valkey --service-name=sentinel2-svc --cluster=valkey-cluster --custom-labels=role=sentinel .*--port=26379$' "$DOCKER_CALLS"
 }
 
-@test "multiple specs dispatch sequentially without leaking environment maps" {
-  local -a targets=()
-  local spec
-  for spec in 'mlaunch_psmdb=8.0' 'ssl_mlaunch=8.0'; do
-    parse_database_spec "$spec"
-    dispatch_setup
-    targets+=("$CAPTURE_TARGET")
-  done
-
-  [[ ${targets[0]} == mlaunch_psmdb_setup.yml ]]
-  [[ ${targets[1]} == tls-ssl-setup/mlaunch_tls_setup.yml ]]
-  [[ -z ${CAPTURE_ENV[PSMDB_VERSION]-} ]]
-}
-
 @test "SSL MySQL runs Percona Server on the PS image, requiring TLS, and registers over TLS" {
   stub_prebaked_docker
   SHARD_NAME=nightly-shard
@@ -495,25 +481,6 @@ EOF
   grep -q 'bash create_certs.sh' "$DOCKER_CALLS"
   grep -Eq '^exec pdpgsql_pgsm_ssl_16 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem pdpgsql_pgsm_ssl_16_ssl_service[0-9]+$' "$DOCKER_CALLS"
   grep -q '^cp pdpgsql_pgsm_ssl_16:/artifacts/certificates/client.pem .*/pmm_qa/tls-ssl-setup/postgres/16/client.pem$' "$DOCKER_CALLS"
-}
-
-@test "SSL mlaunch selects its existing playbook" {
-  parse_database_spec 'ssl_mlaunch=8.0'
-  dispatch_setup
-  [[ $CAPTURE_TARGET == tls-ssl-setup/mlaunch_tls_setup.yml ]]
-}
-
-@test "mlaunch variants retain their playbook and variable names" {
-  parse_database_spec 'mlaunch_psmdb=8.0,SETUP_TYPE=sharding'
-  dispatch_setup
-  [[ $CAPTURE_TARGET == mlaunch_psmdb_setup.yml ]]
-  [[ ${CAPTURE_ENV[PSMDB_SETUP]} == sharding ]]
-
-  parse_database_spec 'mlaunch_modb=7.0,SETUP_TYPE=pss'
-  dispatch_setup
-  [[ $CAPTURE_TARGET == mlaunch_modb_setup.yml ]]
-  [[ ${CAPTURE_ENV[MODB_VERSION]} == 7.0 ]]
-  [[ ${CAPTURE_ENV[MODB_SETUP]} == pss ]]
 }
 
 @test "External runs both exporters on the prebaked image and registers them as external_setup.yml did" {
@@ -548,15 +515,3 @@ EOF
   grep -q '^exec --detach haproxy_pmm sh -c while true; do curl -s http://127.0.0.1:42100/' "$DOCKER_CALLS"
 }
 
-@test "bucket and Docker client setups reuse current targets" {
-  parse_database_spec 'bucket,BUCKET_NAMES=one;two'
-  dispatch_setup
-  [[ $CAPTURE_TARGET == tasks/create_minio_container.yml ]]
-  [[ ${CAPTURE_ENV[BUCKETS]} == one,two ]]
-
-  parse_database_spec dockerclients
-  dispatch_setup
-  [[ $CAPTURE_KIND == script ]]
-  [[ $CAPTURE_DIRECTORY == "$PMM_QA_ROOT" ]]
-  [[ $CAPTURE_TARGET == setup_docker_client_images.sh ]]
-}

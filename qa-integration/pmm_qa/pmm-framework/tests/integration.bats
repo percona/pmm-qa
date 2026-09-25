@@ -6,83 +6,80 @@ setup() {
   RECORD_FILE="$BATS_TEST_TMPDIR/calls.log"
   mkdir -p "$TEST_BIN"
 
+  # A fake docker that answers the probes the HAProxy and PGSQL setups poll.
+  # Each `docker run` of a setup's container is one "call", where the knobs
+  # below make that setup slow, fail or hang.
   cat >"$TEST_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
   *'test -f /etc/debian_version'*) exit 1 ;;
   *pg_stat_replication*) echo 1 ;;
   *'pmm-admin status'*) printf '%s\n' 'Connected : true' 'postgres_exporter Running' 'node_exporter Running' ;;
+  *'pmm-agent setup'*) printf 'agent: %s\n' "$*" >>"$RECORD_FILE" ;;
+  'run --detach --name '*)
+    name=$4
+    [[ $name == haproxy_pmm || $name == pgsql_pgss_pmm_* ]] || exit 0
+    printf -- '--- call --- %s\n' "$name" >>"$RECORD_FILE"
+    if [[ ${STDIN_PROBE:-false} == true ]]; then
+      if read -r line; then echo "STDIN_READABLE:$line" >>"$RECORD_FILE"; else echo STDIN_EOF >>"$RECORD_FILE"; fi
+    fi
+    if [[ ${PARALLEL_TEST:-false} == true ]]; then
+      if [[ $name == haproxy_pmm ]]; then
+        sleep 1
+        echo 'HAPROXY parallel log' >&2
+      else
+        echo 'PGSQL parallel log' >&2
+      fi
+    fi
+    if [[ -n ${HANG_SECONDS:-} ]]; then
+      echo 'setup is working' >&2
+      sleep "$HANG_SECONDS"
+    fi
+    if [[ $name == haproxy_pmm ]]; then
+      if [[ ${FAIL_HAPROXY:-false} == true ]]; then
+        echo 'HAPROXY failed as requested' >&2
+        exit 9
+      fi
+      if [[ -n ${FAIL_HAPROXY_ONCE:-} ]]; then
+        if [[ ! -e $FAIL_HAPROXY_ONCE ]]; then
+          : >"$FAIL_HAPROXY_ONCE"
+          echo 'HAPROXY failed on its first attempt' >&2
+          exit 9
+        fi
+        echo 'HAPROXY succeeded on its second attempt' >&2
+      fi
+    fi
+    ;;
 esac
 exit 0
 EOF
-  cat >"$TEST_BIN/ansible-galaxy" <<'EOF'
-#!/usr/bin/env bash
-exit 0
-EOF
-  cat >"$TEST_BIN/ansible-playbook" <<'EOF'
-#!/usr/bin/env bash
-{
-  echo '--- call ---'
-  printf 'args='
-  printf '%q ' "$@"
-  echo
-  env | grep -E '^(PSMDB_.*|MODB_.*|SETUP_TYPE|QUERY_SOURCE|CLIENT_VERSION|PMM_SERVER_IP|ADMIN_PASSWORD)=' | sort
-} >>"$RECORD_FILE"
-if [[ ${PARALLEL_TEST:-false} == true ]]; then
-  if [[ -n ${PSMDB_VERSION:-} ]]; then
-    sleep 1
-    echo 'PSMDB parallel log'
-  elif [[ -n ${MODB_VERSION:-} ]]; then
-    echo 'MODB parallel log'
-  fi
-fi
-if [[ -n ${HANG_SECONDS:-} ]]; then
-  echo 'setup is working'
-  sleep "$HANG_SECONDS"
-fi
-if [[ ${FAIL_PSMDB:-false} == true && -n ${PSMDB_VERSION:-} ]]; then
-  echo 'PSMDB failed as requested'
-  exit 9
-fi
-if [[ -n ${FAIL_PSMDB_ONCE:-} && -n ${PSMDB_VERSION:-} ]]; then
-  if [[ ! -e $FAIL_PSMDB_ONCE ]]; then
-    : >"$FAIL_PSMDB_ONCE"
-    echo 'PSMDB failed on its first attempt'
-    exit 9
-  fi
-  echo 'PSMDB succeeded on its second attempt'
-fi
-EOF
   cat >"$TEST_BIN/curl" <<'EOF'
 #!/usr/bin/env bash
-printf '<option value="percona-server-mongodb-8.0-12.1|fixture">8.0-12.1</option>\n'
+while (($#)); do
+  if [[ $1 == -o ]]; then
+    echo 'fake PMM Client tarball' >"$2"
+  fi
+  shift
+done
 EOF
   chmod +x "$TEST_BIN"/*
 }
 
-@test "entrypoint dispatches multiple databases in order through ansible-playbook" {
+@test "entrypoint provisions multiple databases in order against the given server" {
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
+    XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --pmm-server-ip 10.0.0.5 \
       --pmm-server-password secret \
       --client-version latest-tarball \
-      --database mlaunch_psmdb=8.0,SETUP_TYPE=sharding \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=16
 
   [[ $status -eq 0 ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
-
-  first_call=$(awk '/--- call ---/{n++} n==1{print}' "$RECORD_FILE")
-  second_call=$(awk '/--- call ---/{n++} n==2{print}' "$RECORD_FILE")
-  [[ $first_call == *'mlaunch_psmdb_setup.yml'* ]]
-  [[ $first_call == *'PSMDB_VERSION=8.0'* ]]
-  [[ $first_call == *'PSMDB_SETUP=sharding'* ]]
-  [[ $first_call == *'PMM_SERVER_IP=10.0.0.5'* ]]
-  [[ $second_call == *'mlaunch_modb_setup.yml'* ]]
-  [[ $second_call == *'MODB_VERSION=7.0'* ]]
-  [[ $second_call != *'PSMDB_VERSION='* ]]
+  [[ $(grep -- '--- call ---' "$RECORD_FILE" | tr '\n' ' ') == '--- call --- haproxy_pmm --- call --- pgsql_pgss_pmm_16 ' ]]
+  [[ $(grep -c -- 'agent: .*--server-address=10.0.0.5:443 .*--server-password=secret ' "$RECORD_FILE") -eq 2 ]]
 }
 
 @test "entrypoint reports invalid database without calling backends" {
@@ -106,22 +103,22 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Starting [1/2] mlaunch_psmdb=8.0'* ]]
-  [[ $output == *'Starting [2/2] mlaunch_modb=7.0'* ]]
-  [[ $output =~ \[1/2\]\ mlaunch_psmdb=8.0:\ OK\ in\ [0-9ms]+\ \(log: ]]
-  [[ $output =~ \[2/2\]\ mlaunch_modb=7.0:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output == *'Starting [1/2] haproxy'* ]]
+  [[ $output == *'Starting [2/2] pgsql=17'* ]]
+  [[ $output =~ \[1/2\]\ haproxy:\ OK\ in\ [0-9ms]+\ \(log: ]]
+  [[ $output =~ \[2/2\]\ pgsql=17:\ OK\ in\ [0-9ms]+\ \(log: ]]
   [[ $output == *'All 2 setups finished in '* ]]
-  [[ $output != *'PSMDB parallel log'* ]]
-  [[ $output != *'MODB parallel log'* ]]
+  [[ $output != *'HAPROXY parallel log'* ]]
+  [[ $output != *'PGSQL parallel log'* ]]
 
-  # mlaunch_modb has no artificial delay, so it should finish before sleeping mlaunch_psmdb.
-  modb_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] mlaunch_modb=7.0: OK/{print NR; exit}')
-  pdmodb_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] mlaunch_psmdb=8.0: OK/{print NR; exit}')
-  [[ $modb_ok_line -lt $pdmodb_ok_line ]]
+  # pgsql has no artificial delay, so it should finish before the sleeping haproxy.
+  pgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] pgsql=17: OK/{print NR; exit}')
+  haproxy_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] haproxy: OK/{print NR; exit}')
+  [[ $pgsql_ok_line -lt $haproxy_ok_line ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
@@ -129,17 +126,17 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PSMDB=true \
+    FAIL_HAPROXY=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -ne 0 ]]
-  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 FAILED (exit=1) in '* ]]
-  [[ $output == *'PSMDB failed as requested'* ]]
-  [[ $output == *'[2/2] mlaunch_modb=7.0: OK in '* ]]
+  [[ $output == *'===== [1/2] haproxy FAILED (exit=1) in '* ]]
+  [[ $output == *'HAPROXY failed as requested'* ]]
+  [[ $output == *'[2/2] pgsql=17: OK in '* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
@@ -148,19 +145,19 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PSMDB_ONCE="$BATS_TEST_TMPDIR/psmdb-attempted" \
+    FAIL_HAPROXY_ONCE="$BATS_TEST_TMPDIR/haproxy-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 FAILED (exit=1) in '* ]]
+  [[ $output == *'===== [1/2] haproxy FAILED (exit=1) in '* ]]
   [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
-  [[ $output == *'[1/2] mlaunch_psmdb=8.0: OK in '* ]]
-  # mlaunch_modb provisioned once: the retry must not touch a setup that succeeded.
+  [[ $output == *'[1/2] haproxy: OK in '* ]]
+  # pgsql provisioned once: the retry must not touch a setup that succeeded.
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
   [[ $output != *'Parallel setup logs kept at:'* ]]
 }
@@ -169,13 +166,13 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PSMDB=true \
+    FAIL_HAPROXY=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -ne 0 ]]
   [[ $output == *'Retrying 1 failed setup(s), attempt 2 of 2'* ]]
@@ -187,17 +184,17 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    FAIL_PSMDB_ONCE="$BATS_TEST_TMPDIR/psmdb-attempted" \
+    FAIL_HAPROXY_ONCE="$BATS_TEST_TMPDIR/haproxy-attempted" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --setup-retries 1 \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -eq 0 ]]
-  [[ $output == *'Retrying mlaunch_psmdb=8.0, attempt 2 of 2'* ]]
-  [[ $output == *'mlaunch_psmdb=8.0: OK in '* ]]
-  [[ $output == *'mlaunch_modb=7.0: OK in '* ]]
+  [[ $output == *'Retrying haproxy, attempt 2 of 2'* ]]
+  [[ $output == *'haproxy: OK in '* ]]
+  [[ $output == *'pgsql=17: OK in '* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
 }
 
@@ -208,8 +205,8 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -eq 0 ]]
   # `set -m` in run_parallel_setups must not leak "[1]+ Done ..." lines.
@@ -224,24 +221,15 @@ EOF
   # SIGTTIN and never finishes, so each job must get /dev/null on stdin.
   # Successful parallel runs no longer dump setup stdout, so record the probe
   # result outside the buffered console log.
-  cat >"$TEST_BIN/ansible-playbook" <<'EOF'
-#!/usr/bin/env bash
-if read -r line; then
-  echo "STDIN_READABLE:$line" >>"$RECORD_FILE"
-else
-  echo "STDIN_EOF" >>"$RECORD_FILE"
-fi
-EOF
-  chmod +x "$TEST_BIN/ansible-playbook"
-
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
+    STDIN_PROBE=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0 <<<'framework-stdin-payload'
+      --database haproxy \
+      --database pgsql=17 <<<'framework-stdin-payload'
 
   [[ $status -eq 0 ]]
   [[ $(grep -c 'STDIN_EOF' "$RECORD_FILE") -eq 2 ]]
@@ -258,12 +246,12 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb \
-      --database mlaunch_psmdb,SETUP_TYPE=sharding
+      --database haproxy \
+      --database haproxy
 
   [[ $status -eq 0 ]]
   [[ $output == *'Running setups sequentially'* ]]
-  [[ $output == *'two MLAUNCH_PSMDB setups'* ]]
+  [[ $output == *'two HAPROXY setups'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
@@ -326,12 +314,12 @@ EOF
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -eq 0 ]]
-  [[ $output == *'PSMDB parallel log'* ]]
-  [[ $output == *'MODB parallel log'* ]]
+  [[ $output == *'HAPROXY parallel log'* ]]
+  [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'setup log ====='* ]]
 }
 
@@ -340,20 +328,20 @@ EOF
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
     PARALLEL_TEST=true \
-    FAIL_PSMDB=true \
+    FAIL_HAPROXY=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --verbose \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0
+      --database haproxy \
+      --database pgsql=17
 
   [[ $status -ne 0 ]]
   # --verbose echoes both, but the failure keeps its own FAILED banner so it is
   # still findable among the successful logs.
-  [[ $output == *'PSMDB failed as requested'* ]]
+  [[ $output == *'HAPROXY failed as requested'* ]]
   [[ $output == *'FAILED (exit=1)'* ]]
-  [[ $output == *'MODB parallel log'* ]]
+  [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
 }
 
@@ -367,8 +355,8 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 \
-      --database mlaunch_modb=7.0 >"$out" 2>&1 &
+      --database haproxy \
+      --database pgsql=17 >"$out" 2>&1 &
   fw_pid=$!
 
   # Both setups must have written to their buffers before the signal, or the
@@ -385,8 +373,8 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/2] mlaunch_psmdb=8.0 INTERRUPTED ====='* ]]
-  [[ $output == *'===== [2/2] mlaunch_modb=7.0 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/2] haproxy INTERRUPTED ====='* ]]
+  [[ $output == *'===== [2/2] pgsql=17 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
 
@@ -406,7 +394,7 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database mlaunch_psmdb=8.0 >"$out" 2>&1 &
+      --database haproxy >"$out" 2>&1 &
   fw_pid=$!
 
   until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
@@ -421,7 +409,7 @@ EOF
   run cat "$out"
 
   [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/1] mlaunch_psmdb=8.0 INTERRUPTED ====='* ]]
+  [[ $output == *'===== [1/1] haproxy INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
 
   local log_dir

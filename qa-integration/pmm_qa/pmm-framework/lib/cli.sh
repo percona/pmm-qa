@@ -15,7 +15,7 @@
 #   1. give it a default in the block below
 #   2. add a case arm in parse_args (value-taking flags join the shared arm)
 #   3. document it in print_help
-#   4. read it wherever it applies -- most flags end up in a setup's env map
+#   4. read it wherever it applies
 
 # Raw `--database` values, in the order given on the command line.
 declare -ag DATABASE_SPECS=()
@@ -31,7 +31,6 @@ PMM_SERVER_IP_ARG=''      # --pmm-server-ip; empty means discover via Docker
 PMM_SERVER_PASSWORD=''    # --pmm-server-password; ADMIN_PASSWORD env wins
 GLOBAL_CLIENT_VERSION=''  # --client-version; applies to every setup
 VERBOSE=false             # --verbose/--v
-VERBOSITY_LEVEL=1         # --verbosity-level; becomes that many -v for ansible
 CLIENT_DEBUG=false        # --client-debug
 PARALLEL=false            # --parallel; preflight may turn this back off
 SETUP_RETRIES=0           # --setup-retries; extra attempts for a FAILED setup only
@@ -52,7 +51,6 @@ Options:
   --client-version VALUE       Global PMM Client version/tarball override.
   --verbose, --v               Print resolved setup details, and with --parallel
                                also echo the logs of successful setups.
-  --verbosity-level N          Ansible verbosity level (numeric, default: 1).
   --client-debug               Enable PMM Client debug mode.
   --parallel                   Run setups concurrently; dump logs only on failure.
   --setup-retries N            Retry each failed setup up to N more times; setups
@@ -78,7 +76,7 @@ EOF
 #
 # Writes:  DATABASE_SPECS and every global switch above
 # Exits:   0 via --help; via die() on an unknown flag, a non-numeric
-#          --verbosity-level, or when no --database was supplied
+#          --setup-retries, or when no --database was supplied
 parse_args() {
   DATABASE_SPECS=()
   while (($#)); do
@@ -101,7 +99,7 @@ parse_args() {
         ;;
       # Flags that take a value. Collected here so the "next arg looks like a
       # flag" rule lives in exactly one place, then dispatched below.
-      --pmm-server-ip|--pmm-server-password|--client-version|--verbosity-level|--setup-retries)
+      --pmm-server-ip|--pmm-server-password|--client-version|--setup-retries)
         local value
         if [[ $has_inline == true ]]; then
           value=$inline
@@ -115,12 +113,6 @@ parse_args() {
           --pmm-server-ip) PMM_SERVER_IP_ARG=$value ;;
           --pmm-server-password) PMM_SERVER_PASSWORD=$value ;;
           --client-version) GLOBAL_CLIENT_VERSION=$value ;;
-          --verbosity-level)
-            # A bare --verbosity-level keeps the default rather than blanking it.
-            if [[ $has_inline == true || -n $value ]]; then
-              VERBOSITY_LEVEL=$value
-            fi
-            ;;
           --setup-retries)
             if [[ $has_inline == true || -n $value ]]; then
               SETUP_RETRIES=$value
@@ -140,8 +132,6 @@ parse_args() {
     shift "$consumed"
   done
 
-  [[ $VERBOSITY_LEVEL =~ ^[0-9]+$ ]] ||
-    die "Invalid verbosity level '$VERBOSITY_LEVEL'; provide a number."
   [[ $SETUP_RETRIES =~ ^[0-9]+$ ]] ||
     die "Invalid setup retry count '$SETUP_RETRIES'; provide a number."
   ((${#DATABASE_SPECS[@]} > 0)) ||

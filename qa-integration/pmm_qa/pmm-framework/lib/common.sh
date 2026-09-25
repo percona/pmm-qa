@@ -3,8 +3,8 @@
 # lib/common.sh -- logging, fatal errors and small value helpers.
 #
 # The lowest layer of the framework: it depends on nothing else and is sourced
-# first, so every other module may call these helpers. Keep it free of Docker,
-# Ansible and database knowledge.
+# first, so every other module may call these helpers. Keep it free of Docker
+# and database knowledge.
 #
 # Convention used throughout the framework: helpers that produce a *value*
 # print it to stdout with no trailing newline, so callers can capture it with
@@ -54,11 +54,9 @@ require_command() {
 
 # Normalize a loosely-typed truthy value to exactly 'true' or 'false'.
 #
-# Ansible playbooks read these as `| bool`, which accepts both spellings, but
-# emitting one canonical form keeps --verbose output and tests predictable.
 # Anything unrecognized (including empty) becomes 'false'.
 # Stdout: 'true' or 'false'
-# Usage: env_map[CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
+# Usage: encrypted=$(bool_string "$value")
 bool_string() {
   case "${1:-false}" in
     true|TRUE|True|1|yes|YES|Yes) printf 'true' ;;
@@ -72,7 +70,7 @@ bool_string() {
 #
 # Any other value -- a version like '3-dev-latest', or an explicit URL -- is
 # passed through untouched, so callers can always pipe CLIENT_VERSION through
-# this before handing it to a playbook.
+# this.
 # Stdout: the resolved client version or URL
 # Usage: client=$(normalize_client_version "$raw")
 normalize_client_version() {

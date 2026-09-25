@@ -57,8 +57,7 @@ discover_pmm_server() {
 
 # Decide the PMM Server address for this run.
 #
-# Called once from preflight, and only when at least one requested setup
-# actually needs a server (BUCKET and DOCKERCLIENTS do not).
+# Called once from preflight.
 #
 # Reads:  PMM_SERVER_IP_ARG
 # Writes: PMM_SERVER_HOST, PMM_SERVER_PORT

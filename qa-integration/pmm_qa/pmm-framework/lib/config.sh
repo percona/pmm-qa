@@ -66,24 +66,6 @@ register_database PSMDB \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
-register_database MLAUNCH_PSMDB \
-  '4.4 5.0 6.0 7.0 8.0' \
-  'CLIENT_VERSION SETUP_TYPE TARBALL' \
-  'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'TARBALL='
-
-register_database MLAUNCH_MODB \
-  '4.4 5.0 6.0 7.0 8.0' \
-  'CLIENT_VERSION SETUP_TYPE TARBALL' \
-  'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'TARBALL='
-
-register_database SSL_MLAUNCH \
-  '4.4 5.0 6.0 7.0 8.0' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL' \
-  'DEFAULT_VERSION=8.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
-
 register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
@@ -145,8 +127,6 @@ register_database PROXYSQL '2 3' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
 # logs a note under --verbose and falls back to the (empty) default.
 register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
-register_database DOCKERCLIENTS '' ''
-register_database BUCKET '' 'BUCKET_NAMES' 'BUCKET_NAMES=bcp'
 
 register_database VALKEY \
   '7 8' \
@@ -213,7 +193,7 @@ database_default_value() {
 #
 # Step 2 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
 # but *empty* variable deliberately wins and yields ''. Contrast with
-# resolved_version() in lib/runners.sh, which mirrors `os.getenv(...) or ...`
+# resolved_version() below, which mirrors `os.getenv(...) or ...`
 # and therefore skips empty values -- the two rules are intentionally
 # different. Because `-v` also sees non-exported shell variables, avoid naming
 # any global in lib/cli.sh after a registered option key.
@@ -243,3 +223,44 @@ for _db_type in "${!DB_VERSIONS[@]}"; do
       "${DB_VERSIONS[$_db_type]}"
 done
 unset _db_type
+
+# The PMM Server admin password for this run.
+# Precedence: ADMIN_PASSWORD env > --pmm-server-password > 'admin'.
+# Stdout: the password
+admin_password() {
+  printf '%s' "${ADMIN_PASSWORD:-${PMM_SERVER_PASSWORD:-admin}}"
+}
+
+# Resolve the version for a setup.
+#
+# Usage: resolved_version PS_VERSION PS "$DB_VERSION"
+#   ENV_NAME   product-specific override variable, e.g. PS_VERSION
+#   TYPE       registered database type, for the default lookup
+#   REQUESTED  version from the spec, or '' when none was given
+#
+# Precedence: $ENV_NAME > spec version > registered DEFAULT_VERSION.
+#
+# Note this skips an *empty* $ENV_NAME, mirroring Python's `os.getenv(X) or ...`.
+# resolve_value() in lib/config.sh deliberately does the opposite for options --
+# see the note there.
+#
+# Stdout: the resolved version
+resolved_version() {
+  local env_name=$1 type=$2 requested=$3
+  if [[ -n ${!env_name:-} ]]; then
+    printf '%s' "${!env_name}"
+  elif [[ -n $requested ]]; then
+    printf '%s' "$requested"
+  else
+    database_default_version "$type"
+  fi
+}
+
+# Resolve CLIENT_VERSION for a setup and expand the latest-tarball alias.
+#
+# Usage:  client=$(resolved_client_version PS DB_CONFIG)
+# Stdout: a PMM Client version or tarball URL
+resolved_client_version() {
+  local type=$1 config_name=$2
+  normalize_client_version "$(resolve_value "$type" CLIENT_VERSION "$config_name")"
+}

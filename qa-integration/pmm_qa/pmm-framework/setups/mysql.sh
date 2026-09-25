@@ -1,23 +1,7 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034  # env_map and proxysql_config are looked up by name (run_playbook, resolve_value).
+# shellcheck disable=SC2034  # proxysql_config is looked up by name (resolve_value).
 #
-# setups/mysql.sh -- MySQL-family setups: PS, MYSQL, SSL_MYSQL, PXC.
-#
-# setup_ps, setup_mysql and setup_pxc run prebaked images (lib/prebaked.sh).
-# Every other setup function here follows the same shape:
-#
-#   1. resolve the version, setup type and client version
-#   2. build `declare -A env_map=(...)` -- the contract with the playbook
-#   3. hand it to run_playbook() (or run_setup_script())
-#
-# The env maps are written out in full rather than shared through a helper. The
-# repetition is deliberate: each map mirrors exactly what its playbook reads,
-# and the differences between them are real (setup_external omits CLIENT_DEBUG,
-# the PSMDB setups use PMM_CLIENT_VERSION instead of CLIENT_VERSION). Factoring
-# out the common keys would hide those asymmetries.
-#
-# Reads, in every function: DB_VERSION and DB_CONFIG (set by
-# parse_database_spec), PMM_SERVER_HOST, CLIENT_DEBUG.
+# setups/mysql.sh -- PS, MYSQL, SSL_MYSQL and PXC, on prebaked images.
 
 # Percona Server for MySQL, on the prebaked pmm-qa/ps image.
 setup_ps() {
