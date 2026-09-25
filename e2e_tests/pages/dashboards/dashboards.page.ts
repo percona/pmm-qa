@@ -350,7 +350,11 @@ export default class Dashboards extends BasePage {
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
     await this.loadAllPanels();
+    await this.verifyPanelValuesInView(panels, serviceList);
+  };
 
+  // No loadAllPanels() here: it expands every collapsed row, which breaks a row-by-row walk.
+  verifyPanelValuesInView = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
     const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
 
     for (const panel of panelList) {
