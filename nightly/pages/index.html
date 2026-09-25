@@ -31,8 +31,10 @@
   details.group[open] > summary::before { content:'▾'; }
   .gname { font-weight:600; flex:1; }
   .counts { color:var(--muted); white-space:nowrap; }
+  summary .btn { margin-left:8px; align-self:center; }
+  @media (max-width:640px) { details.group > summary { flex-wrap:wrap; } summary .btn { margin-left:0; } }
   table.jobs { border-top:1px solid var(--line); table-layout:fixed; }
-  table.jobs th:nth-child(2) { width:110px; } table.jobs th:nth-child(3) { width:90px; } table.jobs th:nth-child(4) { width:230px; }
+  table.jobs th:nth-child(2) { width:110px; } table.jobs th:nth-child(3) { width:90px; } table.jobs th:nth-child(4) { width:80px; }
   table.jobs td:first-child { overflow-wrap:anywhere; }
   @media (max-width:640px) { table.jobs th:nth-child(3), table.jobs td.dur { display:none; } table.jobs th:nth-child(4) { width:auto; } .actions { white-space:normal; } .btn { margin:2px 0 2px 4px; } }
   tr.row-fail td { background:var(--row); }
@@ -50,12 +52,13 @@ const safeUrl = u => /^https:\/\//.test(u || '') ? u : '#';
 const FAILED = ['failure', 'cancelled', 'timed_out'];
 const fmtDate = d => (d || '').replace('T', ' ').slice(0, 16);
 const fmtDur = s => s == null ? '' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round(s % 3600 / 60)}m` : `${Math.floor(s / 60)}m ${s % 60}s`;
-const investigateUrl = (r, group, j) => 'https://claude.ai/code?' + new URLSearchParams({
+const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URLSearchParams({
   repositories: 'percona/pmm-qa',
   prompt: `Read .claude/agents/investigator.md in percona/pmm-qa (main) and act as that role, following it exactly.\n\n` +
-    `Nightly Test Suite job "${group}${j.name !== group ? ' / ' + j.name : ''}" ended "${j.result}" for image tag ${r.image_tag}.\n` +
-    `Job: ${j.url || r.run_url}\nRun: ${r.run_url}\n\n` +
-    `Dedup, reproduce, classify, then publish the finding to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
+    `In the Nightly Test Suite run for image tag ${r.image_tag}, suite "${group}" had ${failed.length} failed job(s):\n` +
+    failed.map(j => `- ${j.name} (${j.result}): ${j.url || r.run_url}`).join('\n') + `\nRun: ${r.run_url}\n\n` +
+    `Investigate all of them together: dedup, group failures that share a root cause, reproduce, classify, ` +
+    `then publish the findings to this run's nightly report (run_id ${r.run_id}, see nightly/README.md). ultrathink`
 }).toString().replace(/\+/g, '%20');
 const badge = res => `<span class="badge ${esc(res)}">${esc(res)}</span>`;
 const app = document.getElementById('app');
@@ -95,17 +98,18 @@ function runView(id) {
   <h1>${esc(r.image_tag)} ${badge(r.status)}</h1>
   <p class="sub">${esc(fmtDate(r.date))} UTC · ${esc(r.summary)} · <a href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener">GitHub run</a></p>
   ${groups.map(({ g, jobs }) => {
-    const nFail = jobs.filter(j => FAILED.includes(j.result)).length;
+    const failed = jobs.filter(j => FAILED.includes(j.result));
+    const nFail = failed.length;
     const nOk = jobs.filter(j => j.result === 'success').length;
     const finds = inv.filter(f => f.job === g || jobs.some(j => j.name === f.job));
     return `<details class="group" ${nFail ? 'open' : ''}>
       <summary><span class="gname">${esc(g)}</span>
-        <span class="counts">${nOk}/${jobs.length} passed${nFail ? ` · <span class="failure">${nFail} failed</span>` : ''}</span></summary>
+        <span class="counts">${nOk}/${jobs.length} passed${nFail ? ` · <span class="failure">${nFail} failed</span>` : ''}</span>
+        ${nFail ? `<a class="btn primary" href="${esc(investigateUrl(r, g, failed))}" onclick="event.stopPropagation(); window.open(this.href, '_blank', 'noopener'); return false;">Investigate ${nFail} failure${nFail > 1 ? 's' : ''} in Claude</a>` : ''}</summary>
       <table class="jobs"><thead><tr><th>Job</th><th>Result</th><th>Duration</th><th></th></tr></thead><tbody>
       ${jobs.map(j => `<tr class="${FAILED.includes(j.result) ? 'row-fail' : ''}"><td>${esc(j.name)}</td><td>${badge(j.result)}</td>
         <td class="dur">${esc(fmtDur(j.duration_s))}</td>
-        <td class="actions"><a class="btn" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener">Logs</a>
-        ${FAILED.includes(j.result) ? `<a class="btn primary" href="${esc(investigateUrl(r, g, j))}" target="_blank" rel="noopener">Investigate in Claude</a>` : ''}</td></tr>`).join('')}
+        <td class="actions"><a class="btn" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener">Logs</a></td></tr>`).join('')}
       </tbody></table>
       ${finds.length ? `<ul class="inv">${finds.map(f => `<li><b>${esc(f.verdict)}</b>: ${esc(f.summary)}` +
         (f.link ? ` (<a href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">link</a>)` : '') + '</li>').join('')}</ul>` : ''}

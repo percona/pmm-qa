@@ -9,8 +9,8 @@ one report per run to the `gh-pages` branch under `nightly/`:
 
 Each report also carries `job_details`: every job of the run from the GitHub API
 (`group` is the suite, the part of the job name before the first ` / `), which the
-page shows per run, grouped by suite, with a log link and an Investigate in Claude
-button on each failed job.
+page shows per run, grouped by suite, with a log link per job. A suite with failures
+gets one Investigate in Claude button that opens a session covering all its failed jobs.
 
 ## Adding investigator findings
 
