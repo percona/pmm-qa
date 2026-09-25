@@ -92,7 +92,7 @@
   .s-pass { color: var(--pass); background: var(--pass-bg); }
   .s-fail { color: var(--fail); background: var(--fail-bg); }
   .s-warn { color: var(--warn); background: var(--warn-bg); }
-  .s-heat { color: color-mix(in oklch shorter hue, var(--fail) var(--heat), var(--pass)); background: color-mix(in oklch shorter hue, var(--fail-bg) var(--heat), var(--pass-bg)); }
+  .s-heat { color: var(--fail); background: color-mix(in oklch, var(--fail) calc(var(--heat) * .3), var(--fail-bg)); }
   .s-idle { color: var(--idle); background: var(--idle-bg); }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
@@ -119,7 +119,7 @@
   .run-row:hover { background: var(--sunken); }
   .rail { align-self: stretch; }
   .rail.s-pass { background: var(--pass); } .rail.s-fail { background: var(--fail); } .rail.s-warn { background: var(--warn); } .rail.s-idle { background: var(--idle); }
-  .rail.s-heat { background: color-mix(in oklch shorter hue, var(--fail) var(--heat), var(--pass)); }
+  .rail.s-heat { background: color-mix(in oklch, var(--fail) var(--heat), var(--fail-bg)); }
   .run-row .tag { font-weight: 600; }
   .run-row .when { color: var(--ink-3); font-size: 13px; }
   .meter { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunken); }
@@ -251,8 +251,8 @@ const cls = res => FAILED.includes(res) || res === 'fail' ? 's-fail' : WARN.incl
 const label = res => ({ success: 'passed', pass: 'passed', failure: 'failed', fail: 'failed', cancelled: 'cancelled', timed_out: 'timed out',
   unstable: 'unstable', unknown: 'no result', skipped: 'skipped' }[res] || res);
 const pill = res => `<span class="pill ${cls(res)}">${esc(label(res))}</span>`;
-// A build's colour runs from green to red with its share of failed jobs; a third or more failed is full red.
-const heat = r => { const t = tally(detailsOf(r)); return t.total ? ` s-heat" style="--heat:${Math.round(Math.min(1, 3 * t.fail / t.total) * 100)}%` : ` ${cls(r.status)}`; };
+// A build with failures is red, paler with fewer: its share of failed jobs sets the strength, full at a third.
+const heat = r => { const t = tally(detailsOf(r)); return t.fail ? ` s-heat" style="--heat:${Math.round((.3 + .7 * Math.min(1, 3 * t.fail / t.total)) * 100)}%` : ` ${cls(r.status)}`; };
 const runPill = r => `<span class="pill${heat(r)}">${esc(label(r.status))}</span>`;
 const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade AMD', 'Upgrade AMI', 'Nightly', 'Nightly Compatibility', 'UI',
   'HA, OpenShift & GSSAPI', 'E2E Tests', 'CLI Integration', 'CLI Integration Compatibility', 'Integrations', 'Other'];
