@@ -51,11 +51,29 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       'logger=unifiedstorage-migrator',
       'logger=storage.unified.migrat',
     ];
+    // /srv outlives the image swap, so grafana.log still holds the old server's lines, down to
+    // the provisioning walk `docker stop` cancels. Keep what the running container logged, plus
+    // any line without a timestamp, so a log-format change cannot silence this check.
+    const upgradedAt = Date.parse(
+      cliHelper
+        .execSilent(`docker inspect --format '{{.State.StartedAt}}' pmm-server`)
+        .assertSuccess()
+        .stdout.trim(),
+    );
+
+    expect(upgradedAt, 'Start time of the upgraded pmm-server container should be readable').not.toBeNaN();
+
     const errorLogs = cliHelper.execSilent(
       'docker exec pmm-server cat /srv/logs/grafana.log | grep level=error',
     );
-    const meaningfulErrors = errorLogs.stdout
-      .split('\n')
+    const meaningfulErrors = errorLogs
+      .getStdOutLines()
+      .filter((line) => {
+        const timestamp = /(?:^|\s)t=(\S+)/.exec(line);
+        const loggedAt = timestamp === null ? NaN : Date.parse(timestamp[1]);
+
+        return Number.isNaN(loggedAt) || loggedAt >= upgradedAt;
+      })
       .filter((line) => meaningfulErrorSignatures.some((signature) => line.includes(signature)));
 
     expect(
