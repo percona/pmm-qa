@@ -92,6 +92,7 @@
   .s-pass { color: var(--pass); background: var(--pass-bg); }
   .s-fail { color: var(--fail); background: var(--fail-bg); }
   .s-warn { color: var(--warn); background: var(--warn-bg); }
+  .s-heat { color: var(--fail); background: color-mix(in oklch, var(--fail) calc(var(--heat) * .3), var(--fail-bg)); }
   .s-idle { color: var(--idle); background: var(--idle-bg); }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
@@ -118,6 +119,7 @@
   .run-row:hover { background: var(--sunken); }
   .rail { align-self: stretch; }
   .rail.s-pass { background: var(--pass); } .rail.s-fail { background: var(--fail); } .rail.s-warn { background: var(--warn); } .rail.s-idle { background: var(--idle); }
+  .rail.s-heat { background: color-mix(in oklch, var(--fail) var(--heat), var(--fail-bg)); }
   .run-row .tag { font-weight: 600; }
   .run-row .when { color: var(--ink-3); font-size: 13px; }
   .meter { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunken); }
@@ -249,6 +251,9 @@ const cls = res => FAILED.includes(res) || res === 'fail' ? 's-fail' : WARN.incl
 const label = res => ({ success: 'passed', pass: 'passed', failure: 'failed', fail: 'failed', cancelled: 'cancelled', timed_out: 'timed out',
   unstable: 'unstable', unknown: 'no result', skipped: 'skipped' }[res] || res);
 const pill = res => `<span class="pill ${cls(res)}">${esc(label(res))}</span>`;
+// A build with failures is red, paler with fewer: its share of failed jobs sets the strength, full at a third.
+const heat = r => { const t = tally(detailsOf(r)); return t.fail ? ` s-heat" style="--heat:${Math.round((.3 + .7 * Math.min(1, 3 * t.fail / t.total)) * 100)}%` : ` ${cls(r.status)}`; };
+const runPill = r => `<span class="pill${heat(r)}">${esc(label(r.status))}</span>`;
 const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade AMD', 'Upgrade AMI', 'Nightly', 'Nightly Compatibility', 'UI',
   'HA, OpenShift & GSSAPI', 'E2E Tests', 'CLI Integration', 'CLI Integration Compatibility', 'Integrations', 'Other'];
 const orderOf = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
@@ -317,7 +322,7 @@ function overview() {
   const newest = runs.slice().reverse();
   const recent = runs.slice(-30);
   const trend = recent.map(r => {
-    return `<a href="#run=${encodeURIComponent(r.run_id)}" class="rail ${cls(r.status)}"
+    return `<a href="#run=${encodeURIComponent(r.run_id)}" class="rail${heat(r)}"
       title="${esc(r.image_tag)} · ${esc(fmtDate(r.date))} · ${esc(r.summary)}" aria-label="${esc(r.image_tag)} ${esc(label(r.status))}"></a>`;
   }).join('');
   app.innerHTML = `<h1>Nightly reports</h1>
@@ -329,10 +334,10 @@ function overview() {
       const t = tally(detailsOf(r));
       const inv = (r.investigations || []).length;
       return `<a class="run-row" href="#run=${encodeURIComponent(r.run_id)}">
-        <span class="rail ${cls(r.status)}" aria-hidden="true"></span>
+        <span class="rail${heat(r)}" aria-hidden="true"></span>
         <div><div class="tag">${esc(r.image_tag)}</div><div class="when">${esc(fmtDate(r.date))}</div></div>
         <div class="col-meter">${meter(t)}<div class="counts">${t.pass}/${t.total} passed${t.fail ? ` · ${t.fail} failed` : ''}${t.warn ? ` · ${t.warn} unstable` : ''}</div></div>
-        <div>${pill(r.status)}</div>
+        <div>${runPill(r)}</div>
         <div class="findings">${inv ? `${icon.note}${inv} finding${inv > 1 ? 's' : ''}` : t.fail ? '<span class="muted">Not investigated</span>' : ''}</div>
         <span class="go">${icon.chev}</span>
       </a>`;
@@ -358,7 +363,7 @@ function runView(id) {
 
   app.innerHTML = `<div class="crumbs"><a class="btn ghost" href="#">${icon.back}All builds</a></div>
     <div class="run-head">
-      <div class="title"><h1>${esc(r.image_tag)}</h1>${pill(r.status)}</div>
+      <div class="title"><h1>${esc(r.image_tag)}</h1>${runPill(r)}</div>
       <a class="btn" href="${esc(safeUrl(r.run_url))}" target="_blank" rel="noopener" aria-label="Open the Jenkins build">${icon.jenkins}Build${icon.ext}</a>
     </div>
     <ul class="facts">
@@ -388,7 +393,7 @@ function runView(id) {
       const claimed = claims.map(c => `${c.by} (${ago(c.at)})`).join(', ');
       const status = claims.length ? `<div class="pending claim">${icon.clock}Being investigated by ${esc(claimed)}.</div>`
         : x.fail && !finds.length ? `<div class="pending">${icon.clock}Not investigated yet.</div>` : '';
-      return `<details class="group" ${x.fail || x.warn ? 'open' : ''}>
+      return `<details class="group">
         <summary>
           <span class="rail s-${state}" aria-hidden="true"></span>
           ${icon.chev}
