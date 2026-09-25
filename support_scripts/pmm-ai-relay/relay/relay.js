@@ -1079,7 +1079,7 @@ async function brokerZephyr(action, m, by) {
       if (!name || name.length > 255) return { status: 400, body: "name_required_1_255_chars" };
       const body = { projectKey: "PMM", folderType: "TEST_CASE", name, parentId: null };
       if (m.parentId != null) {
-        if (!/^[0-9]+$/.test(String(m.parentId))) return { status: 400, body: "bad_folder_id" };
+        if (!/^[0-9]+$/.test(String(m.parentId)) || !Number.isSafeInteger(Number(m.parentId))) return { status: 400, body: "bad_folder_id" };
         body.parentId = Number(m.parentId);
       }
       const r = await z("/folders", { method: "POST", body: JSON.stringify(body) });
