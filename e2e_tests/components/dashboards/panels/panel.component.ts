@@ -7,16 +7,34 @@ export default class PanelComponent {
 
   grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
 
-  protected verifyData = async (locator: Locator, panelName: string) => {
+  protected verifyData = async (
+    locator: Locator,
+    panelName: string,
+    verifyTexts = true,
+    requireEveryValue = true,
+  ) => {
     const target = locator.first();
 
     await target.first().waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
-    await target.scrollIntoViewIfNeeded();
 
-    const barGaugeTexts = await locator.allTextContents();
+    try {
+      await target.scrollIntoViewIfNeeded();
+    } catch {
+      /* ignored */
+    }
 
-    for (const barGaugeText of barGaugeTexts) {
-      expect.soft(barGaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    if (verifyTexts) {
+      const values = await locator.allTextContents();
+
+      if (requireEveryValue) {
+        for (const value of values) {
+          expect.soft(value.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+        }
+      } else {
+        const nonEmpty = values.filter((value) => value.trim().length > 0);
+
+        expect.soft(nonEmpty.length, `Panel: ${panelName} has no values!`).toBeGreaterThan(0);
+      }
     }
   };
 }

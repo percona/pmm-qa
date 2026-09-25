@@ -1,0 +1,447 @@
+name: PMM Upgrade runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'PMM Server docker tag to upgrade from'
+        default: ''
+        type: string
+      version:
+        description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
+        default: ''
+        type: string
+      upgrade_tag:
+        description: 'PMM Server docker tag to upgrade to'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
+      pre_upgrade_version:
+        description: 'Expected PMM version before upgrade'
+        default: ''
+        type: string
+      upgrade_version:
+        description: 'Expected PMM version after upgrade'
+        default: ''
+        type: string
+      upgrade_type:
+        description: "Type of upgrade Docker or UI"
+        required: true
+        default: "docker"
+        type: choice
+        options:
+          - docker
+          - ui
+      client_tarball_upgrade:
+        description: 'Client tarball URL to upgrade to (empty = use repo)'
+        default: ''
+        type: string
+      rc_version:
+        description: 'RC Version for upgrade to.'
+        default: ''
+        type: string
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+  workflow_call:
+    inputs:
+      docker_tag:
+        description: 'PMM Server docker tag to upgrade from'
+        type: string
+        required: true
+      version:
+        description: 'PMM version to upgrade from (3.x.x or pmm3-rc)'
+        type: string
+        required: true
+      upgrade_tag:
+        description: 'PMM Server docker tag to upgrade to'
+        type: string
+        required: true
+      pre_upgrade_version:
+        description: 'Expected PMM version before upgrade'
+        type: string
+        required: true
+      upgrade_version:
+        description: 'Expected PMM version after upgrade'
+        type: string
+        required: true
+      upgrade_type:
+        description: "Type of upgrade Docker or UI"
+        required: true
+        type: string
+      client_tarball_upgrade:
+        description: 'Client tarball URL to upgrade to (empty = use repo)'
+        default: ''
+        type: string
+      rc_version:
+        description: 'RC Version for upgrade to.'
+        default: ''
+        type: string
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+
+env:
+  ADMIN_PASSWORD: admin
+  PMM_URL: http://admin:admin@127.0.0.1
+  CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
+  PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Resolve PMM client source
+        id: resolve
+        shell: bash
+        run: |
+          echo ${{ inputs.docker_tag }}
+          echo ${{ inputs.version }}
+          echo ${{ inputs.upgrade_tag }}
+          echo ${{ inputs.upgrade_version }}
+          echo ${{ inputs.pmm_qa_branch }}
+          echo ${{ inputs.rc_version }}
+          echo ${{ inputs.pre_upgrade_version }}
+          ver="${${{ inputs.rc_version }}##*:}"
+          ver="${ver%-rc*}"
+          ver="${ver%.}"
+          echo "$ver"
+          # 1. all X.Y.Z versions available in the apt pool
+          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+            | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
+            | sed -E 's/pmm-client_//' | sort -Vu)
+
+          echo "apt versions available:"
+          echo "$apt_versions"
+
+          # 2. is the requested version installable via apt?
+          if grep -qx "${{ inputs.version }}" <<< "$apt_versions"; then
+            echo "${{ inputs.version }} is available in apt — leaving inputs.version unchanged"
+            TARBALL_URL="${{ inputs.version }}"
+            echo "CLIENT_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          elif [ "${{ inputs.version }}" == "pmm3-rc" ]; then
+            echo "pmm3-rc is a special dev tag and version: $ver"
+            TARBALL_URL="pmm3-rc"
+            echo "CLIENT_VERSION=$ver" >> "$GITHUB_ENV"
+          else
+            echo "${{ inputs.version }} not in apt — building tarball URL"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ inputs.version }}/binary/tarball/pmm-client-${{ inputs.version }}-x86_64.tar.gz"
+            echo "CLIENT_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+
+            # verify it exists before committing to it
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            if [ "$code" != "200" ]; then
+              echo "ERROR: ${{ inputs.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
+              exit 1
+            fi
+          fi
+
+          echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+          echo "PRE_UPGRADE_BRANCH=pmm-${{ inputs.version }}" >> "$GITHUB_ENV"
+          
+          echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
+
+      - name: Checkout pmm-qa
+        uses: actions/checkout@v4
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: pmm-qa
+      - name: Start PMM Server (old image)
+        run: |
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
+          docker network create pmm-qa || true
+          docker volume create pmm-volume
+          if [[ "${{ inputs.upgrade_type }}" == "ui" ]]; then
+            docker run --detach --restart always \
+              --network="pmm-qa" \
+              -e WATCHTOWER_DEBUG=1 \
+              -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
+              -e WATCHTOWER_HTTP_API_UPDATE=1 \
+              --volume /var/run/docker.sock:/var/run/docker.sock \
+              --name watchtower \
+              perconalab/watchtower:dev-latest
+          
+            docker run --detach --restart always --network pmm-qa \
+              -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+              --publish 80:8080 --publish 443:8443 \
+              -e PMM_ENABLE_TELEMETRY=0 \
+              -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ inputs.upgrade_tag }} \
+              -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
+              -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
+              -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
+              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+          else
+            docker run --detach --restart always --network pmm-qa \
+              -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+              --publish 80:8080 --publish 443:8443 \
+              -e PMM_ENABLE_TELEMETRY=0 \
+              -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
+              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+          fi
+
+          # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
+          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Setup databases + clients
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          echo "$CLIENT_INSTALL_VERSION"
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
+          ./pmm-framework/pmm-framework --parallel \
+            --client-version="$CLIENT_INSTALL_VERSION" \
+            --pmm-server-password="$ADMIN_PASSWORD" \
+            --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
+
+      - name: Setup custom queries
+        run: |
+          PS=$(docker ps -a --format '{{.Names}}' | grep ps_pmm)
+          PG=$(docker ps -a --format '{{.Names}}' | grep pgsql_pg)
+          COLLECTORS=/usr/local/percona/pmm/collectors
+          
+          git clone --depth 1 https://github.com/Percona-Lab/pmm-custom-queries
+          ls
+          docker cp pmm-custom-queries/mysql/.      "$PS:$COLLECTORS/custom-queries/mysql/high-resolution/"
+          docker cp pmm-custom-queries/postgresql/. "$PG:$COLLECTORS/custom-queries/postgresql/high-resolution/"
+          
+          echo 'node_role{role="my_monitored_server_1"} 1' > node_role.prom
+          docker cp node_role.prom "$PG:$COLLECTORS/textfile-collector/high-resolution/"
+          
+          # exporters reload their collectors on restart; pmm-agent respawns them
+          docker exec -u root "$PS" pkill -f mysqld_exporter
+          docker exec "$PG" pkill -f postgres_exporter
+          docker exec "$PG" pkill -f node_exporter
+          sleep 5
+          docker exec "$PG" ls "$COLLECTORS/custom-queries/postgresql/high-resolution/"
+          docker exec "$PS" ls "$COLLECTORS/custom-queries/mysql/high-resolution/"
+
+      - name: Check packages before upgrade
+        run: |
+          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p pre
+
+      - name: Checkout pre upgrade branch
+        working-directory: pmm-qa
+        run: |
+          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
+            git fetch origin "$PMM_QA_BRANCH"
+            git checkout FETCH_HEAD
+          else
+            git fetch origin "$PRE_UPGRADE_BRANCH"
+            git checkout FETCH_HEAD
+          fi
+
+
+      - name: Prepare dependencies before upgrade
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Pre-upgrade UI tests
+        working-directory: pmm-qa/e2e_tests
+        env:
+          CLIENT_VERSION: ${{ inputs.pre_upgrade_version }}
+        run: |
+          npx playwright test --grep "@pre-upgrade"
+
+      - name: Docker upgrade (swap server image, keep volume)
+        if: ${{ inputs.upgrade_type == 'docker' }}
+        run: |
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
+          docker stop pmm-server
+          docker pull "$UPGRADE_TAG"
+          docker rename pmm-server pmm-server-old
+          docker run --detach --restart always --network pmm-qa \
+            -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            -e PMM_ENABLE_TELEMETRY=0 \
+            -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
+            --publish 80:8080 --publish 443:8443 \
+            --volumes-from pmm-server-old --name pmm-server "$UPGRADE_TAG"
+          # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
+          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+
+      - name: UI Upgrade
+        if: ${{ inputs.upgrade_type == 'ui' }}
+        working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
+        run: |
+          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
+          npx playwright test --grep "@pmm-upgrade"
+
+      - name: Checkout upgrade branch
+        working-directory: pmm-qa
+        run: |
+          git fetch origin "$PMM_QA_BRANCH"
+          git checkout FETCH_HEAD
+
+      - name: Prepare dependencies for upgrade branch
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Post-server-upgrade UI tests
+        working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
+        run: |
+          echo "Latest PMM Version is: $PMM_SERVER_LATEST"
+          npx playwright test --grep "@post-server-upgrade"
+
+      - name: Upgrade PMM client in every client container to show logs only if error occurs
+        env:
+          LATEST_VERSION: ${{ inputs.upgrade_version }}
+        run: |
+          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
+            export CLIENT_REPOSITORY=experimental
+          else
+            export CLIENT_REPOSITORY=testing
+          fi
+
+          upgrade_client() {
+            c="$1"
+            echo "== upgrading client in $c =="
+            log=$(mktemp)
+            set +e
+            {
+              if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
+                docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
+                docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
+                docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz &&
+                  d=$(ls -1td pmm-client*/ | head -n1) &&
+                  rm -rf /usr/local/bin/pmm-client &&
+                  mv -f "$d" /usr/local/bin/pmm-client &&
+                  bash -x /usr/local/bin/pmm-client/install_tarball -u'
+              else
+                echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
+                docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
+                docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+              fi
+              # The pmm-client package ships a pmm-agent.service, but the QA DB
+              # containers already run pmm-agent as a standalone (nohup) process that
+              # holds the agent's local API port (127.0.0.1:7777). A bare
+              # `systemctl restart` then starts the new binary as a service that cannot
+              # bind that port and crash-loops (Restart=always), while the old process
+              # keeps serving pmm-admin on the previous version. Stop every instance and
+              # wait for the port to free before starting the upgraded agent.
+              docker exec "$c" sh -c '
+                systemctl stop pmm-agent 2>/dev/null || true
+                pkill -x pmm-agent 2>/dev/null || true
+                for _ in $(seq 1 15); do pgrep -x pmm-agent >/dev/null || break; sleep 1; done
+                if systemctl cat pmm-agent >/dev/null 2>&1; then
+                  systemctl restart pmm-agent
+                else
+                  nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 &
+                fi
+              '
+            } >"$log" 2>&1
+            status=$?
+            set -e
+            if [ $status -ne 0 ]; then
+              echo "!! upgrade failed in $c, showing logs:"
+              cat "$log"
+              rm -f "$log"
+              return $status
+            fi
+            UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '2p')
+            CLIENT_UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '3p')
+            verify_failed=0
+            if [[ "$UPGRADE_VERSION" == *"$LATEST_VERSION"* ]]; then
+              echo "OK: version contains $LATEST_VERSION ($UPGRADE_VERSION)"
+            else
+              echo "FAIL: $c: expected $LATEST_VERSION, got $UPGRADE_VERSION"
+              verify_failed=1
+            fi
+            if [[ "$CLIENT_UPGRADE_VERSION" == *"$LATEST_VERSION"* ]]; then
+              echo "OK: version contains $LATEST_VERSION ($CLIENT_UPGRADE_VERSION)"
+            else
+              echo "FAIL: $c: expected $LATEST_VERSION, got $CLIENT_UPGRADE_VERSION"
+              verify_failed=1
+            fi
+            # The checks above read the on-disk binary; also confirm the RUNNING agent
+            # (pmm-admin status) was actually restarted onto the new version, retrying
+            # while it reconnects to the server.
+            RUNNING_VERSION=""
+            for _ in $(seq 1 30); do
+              RUNNING_VERSION=$(docker exec "$c" sh -c 'pmm-admin status 2>/dev/null | awk "/pmm-agent version/ {print \$NF}"')
+              [[ "$RUNNING_VERSION" == *"$LATEST_VERSION"* ]] && break
+              sleep 2
+            done
+            if [[ "$RUNNING_VERSION" == *"$LATEST_VERSION"* ]]; then
+              echo "OK: running pmm-agent contains $LATEST_VERSION ($RUNNING_VERSION)"
+            else
+              echo "FAIL: $c: running pmm-agent expected $LATEST_VERSION, got '$RUNNING_VERSION'"
+              verify_failed=1
+            fi
+            rm -f "$log"
+            if [ "$verify_failed" -ne 0 ]; then
+              echo "== upgrade verification failed in $c =="
+              return 1
+            fi
+            echo "== upgrade succeeded in $c == ($CLIENT_UPGRADE_VERSION)"
+          }
+
+          # upgrade every client container in parallel; each writes its own
+          # output so per-container logs stay contiguous when printed
+          outdir=$(mktemp -d)
+          declare -A pid_container
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
+            upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
+            pid_container[$!]="$c"
+          done
+
+          rc=0
+          for pid in "${!pid_container[@]}"; do
+            wait "$pid" || rc=1
+          done
+
+          for f in "$outdir"/*.out; do
+            [ -e "$f" ] || continue
+            cat "$f"
+          done
+          rm -rf "$outdir"
+          exit $rc
+
+      - name: Post-client-upgrade UI tests
+        working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
+        run: |
+          echo "Latest PMM Version is: $PMM_SERVER_LATEST"
+          npx playwright test --grep "@post-upgrade|@rta"
+
+      - name: Check packages after upgrade
+        run: |
+          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p post
+
+      - name: Collect logs
+        if: always()
+        run: |
+          curl --insecure "$PMM_URL/logs.zip" --output logs.zip || true
+          docker cp pmm-server:/srv/logs srv-logs || true
+          tar -zcf srv-logs.tar.gz srv-logs || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upgrade-logs-${{ inputs.upgrade_type }}-${{ inputs.version }}
+          path: |
+            logs.zip
+            srv-logs.tar.gz
+            pmm-qa/e2e_tests/playwright-report
+            pmm-qa/e2e_tests/logs
+            pmm-qa/e2e_tests/screenshots
+            pmm-qa/e2e_tests/test-results

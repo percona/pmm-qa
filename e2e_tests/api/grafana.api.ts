@@ -83,6 +83,22 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
+    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+
+    expect(
+      response.status(),
+      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    const body = await response.json();
+
+    return body.data.activeTargets.find(
+      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
+    );
+  };
+
   getDataSourceByName = async (name = 'Metrics') => {
     const dataSources = await this.request.get(apiEndpoints.grafana.datasources, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -119,10 +135,7 @@ export default class GrafanaApi {
       from: 'now-1m',
       queries: [
         {
-          datasource: {
-            type: 'prometheus',
-            uid: datasource.uid,
-          },
+          datasource: { type: 'prometheus', uid: datasource.uid },
           datasourceId: datasource.uid,
           expr: metricName,
           intervalMs: 1_000,

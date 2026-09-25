@@ -30,6 +30,29 @@ export default class InventoryApi {
     return ((await response.json()) as { nodes?: GetNode[] }).nodes ?? [];
   };
 
+  getAllServiceDetailsByRegex = async (regexString: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const regex = new RegExp(regexString);
+    const service = services.services.filter((service: GetService) => regex.test(service.service_name));
+
+    if (!service || service.length === 0) throw new Error(`Service matching regex: ${regex} is not present`);
+
+    return service;
+  };
+
+  getAllServicesDetailsByPartialName = async (partialServiceName: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const filteredServices = services.services.filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+
+    if (!filteredServices || filteredServices.length === 0) {
+      throw new Error(`Service with name ${partialServiceName} is not present`);
+    }
+
+    return filteredServices;
+  };
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>
@@ -41,15 +64,8 @@ export default class InventoryApi {
     return service;
   };
 
-  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> => {
-    const services = await this.getServices();
-    const regex = new RegExp(regexString);
-    const service = services.services.find((service: GetService) => regex.test(service.service_name));
-
-    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
-
-    return service;
-  };
+  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> =>
+    (await this.getAllServiceDetailsByRegex(regexString))[0];
 
   getServiceDetailsByRegexAndParameters = async (
     regexString: string,
@@ -121,6 +137,15 @@ export default class InventoryApi {
 
     return service;
   };
+
+  verifyAgentsAreRunning = async (serviceName: string) =>
+    this.getServiceDetailsByPartialName(serviceName)
+      .then((service) =>
+        service.agents
+          .filter((agent) => agent.agent_type !== 'pmm-agent')
+          .every((agent) => agent.status === AgentStatus.running),
+      )
+      .catch(() => false);
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
