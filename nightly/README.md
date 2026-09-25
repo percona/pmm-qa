@@ -9,10 +9,28 @@ Percona-Lab/jenkins-pipelines) publishes one report per build at the end of its
 - `nightly/reports/<run_id>.json` — one report per build (`run_id` is `jenkins-<build number>`).
 
 `nightly/ci/build_report.sh <results.json>` turns the orchestrator's `results` map into
-a report. Each lane becomes a job, grouped by the part of its name before ` / `
-(`compat`, `ui`, `upgrade`, …). A lane that is a GitHub Actions run
-(`github nightly-test-suite`) is expanded into that run's jobs, grouped as
-`GitHub: <suite>`. `nightly/ci/publish_report.sh <report.json>` pushes it.
+a report. A lane that is a GitHub Actions run (`github nightly-test-suite`) is expanded
+into that run's jobs. Every job carries its `source` (`jenkins` or `github`) and one of
+these groups, which is the unit the page summarises and one Investigate button covers:
+
+| Group | Source | Lanes / jobs |
+|-------|--------|--------------|
+| Package AMD | Jenkins | `pkg amd64 / *` |
+| Package ARM | Jenkins | `pkg arm64 / *` |
+| Upgrade AMD | Jenkins | `upgrade / <version> <variant>` |
+| Upgrade AMI | Jenkins | `upgrade / ami <version>` |
+| Nightly | Jenkins | `nightly / docker`, `docker arm64`, `ami`, `helm`, `ha` |
+| Nightly Compatibility | Jenkins | `compat / client <version>` |
+| UI | Jenkins | `ui / <tag>` |
+| HA, OpenShift & GSSAPI | Jenkins | `ha`, `openshift`, `nightly / gssapi` |
+| E2E Tests | GitHub | `E2E Tests Matrix` |
+| CLI Integration | GitHub | `CLI integration` |
+| CLI Integration Compatibility | GitHub | `Compatibility CLI (<version>)` |
+| Integrations | GitHub | `GSSAPI Tests Matrix`, `pmm3-helm`, `PMM_PSMDB_PBM_FULL`, `PMM_PROXYSQL`, `PMM_PDPGSQL` |
+
+A lane or job no rule matches lands in `Other`; add a rule in `build_report.sh`
+(and the page's `GROUP_ORDER`) when the orchestrator gains a lane.
+`nightly/ci/publish_report.sh <report.json>` pushes it.
 
 The page lists the builds; Details opens one build, one section per group and one row
 per job. A group with failures gets one Investigate in Claude button whose prompt
@@ -28,7 +46,7 @@ explains in `suites` (the group names exactly as the report shows them):
 {
   "run_id": "jenkins-123",
   "investigations": [
-    { "suites": ["GitHub: E2E Tests Matrix (CodeceptJS)", "compat"],
+    { "suites": ["E2E Tests", "Nightly Compatibility"],
       "verdict": "not a bug",
       "summary": "one line",
       "link": "https://github.com/percona/pmm-qa/pull/..." }
