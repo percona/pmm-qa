@@ -214,6 +214,20 @@ jobs:
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=8'
       test_name: 'PSMDB Replica 8.x'
 
+  psmdb_83_replica-tests_ol8:
+    name: 'OL8 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      cli_tag: '@psmdb'
+      services_list: '--database psmdb=8.3,SETUP_TYPE=pss,OL_VERSION=8'
+      test_name: 'PSMDB Replica 8.3'
+
   psmdb_6_replica-tests_ol9:
     name: 'OL9 CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -255,6 +269,20 @@ jobs:
       cli_tag: '@psmdb'
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=9'
       test_name: 'PSMDB Replica 8.x'
+
+  psmdb_83_replica-tests_ol9:
+    name: 'OL9 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      cli_tag: '@psmdb'
+      services_list: '--database psmdb=8.3,SETUP_TYPE=pss,OL_VERSION=9'
+      test_name: 'PSMDB Replica 8.3'
 
   mongo_package_tests_integration_ol8:
     name: Package Test - OL 8
