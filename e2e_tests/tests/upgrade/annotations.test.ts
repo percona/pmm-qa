@@ -22,12 +22,12 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
           throw new Error(`Service with name ${service.name} was not found!`);
         }
 
-        await api.annotationsApi.setAnnotation({
-          nodeName: details.node_name,
-          serviceNames: [details.service_name],
-          tags: [tag],
-          text: service.annotationName,
-        });
+        await api.annotationApi.setAnnotation(
+          service.annotationName,
+          tag,
+          details.node_name,
+          details.service_name,
+        );
       },
     );
   }
@@ -36,7 +36,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
     pmmTest(
       `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
-        const annotations = await api.annotationsApi.getAnnotationsByTag(tag);
+        const annotations = await api.annotationApi.getAnnotationsByTag(tag);
 
         expect(
           annotations.some((annotation) => annotation.text.includes(service.annotationName)),

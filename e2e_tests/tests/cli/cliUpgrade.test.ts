@@ -38,53 +38,39 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
     },
   );
 
-  pmmTest('Verify PMM client versions before upgrade @pre-upgrade', async ({ cliHelper }) => {
-    const containers: string[] = cliHelper
-      .execSilent(`docker ps --format "{{.Names }}"`)
-      .stdout.split('\n')
-      .filter((item) => item && !nonClientContainers.includes(item));
+  const versionChecks = [
+    { expected: process.env.CLIENT_VERSION, label: 'before', tag: '@pre-upgrade' },
+    { expected: process.env.PMM_SERVER_LATEST, label: 'after', tag: '@post-upgrade' },
+  ];
 
-    for (const container of containers) {
-      const pmmAdminVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
-      ).stdout;
-      const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
-      ).stdout;
+  for (const { expected, label, tag } of versionChecks) {
+    pmmTest(`Verify PMM client versions ${label} upgrade ${tag}`, async ({ cliHelper }) => {
+      if (!expected?.trim()) {
+        throw new Error(`An expected client version is required for the ${label}-upgrade check`);
+      }
 
-      expect(
-        pmmAdminVersion,
-        `PMM admin version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.CLIENT_VERSION} for service ${container},`,
-      ).toContain(process.env.CLIENT_VERSION);
-      expect(
-        pmmAgentVersion,
-        `PMM agent version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.CLIENT_VERSION} for service ${container},`,
-      ).toContain(process.env.CLIENT_VERSION);
-    }
-  });
+      const containers: string[] = cliHelper
+        .execSilent(`docker ps --format "{{.Names }}"`)
+        .stdout.split('\n')
+        .filter((item) => item && !nonClientContainers.includes(item));
 
-  pmmTest('Verify PMM client versions after upgrade @post-upgrade', async ({ cliHelper }) => {
-    const containers: string[] = cliHelper
-      .execSilent(`docker ps --format "{{.Names }}"`)
-      .stdout.split('\n')
-      .filter((item) => item && !nonClientContainers.includes(item));
+      for (const container of containers) {
+        const pmmAdminVersion: string = cliHelper.execSilent(
+          `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print \\$3}'"`,
+        ).stdout;
+        const pmmAgentVersion: string = cliHelper.execSilent(
+          `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print \\$3}'"`,
+        ).stdout;
 
-    for (const container of containers) {
-      const pmmAdminVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
-      ).stdout;
-      const pmmAgentVersion: string = cliHelper.execSilent(
-        `docker exec ${container} sh -lc "pmm-admin status | grep pmm-agent | awk '{print $3}'"`,
-      ).stdout;
-
-      expect(
-        pmmAdminVersion,
-        `PMM admin version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.PMM_SERVER_LATEST} for service ${container},`,
-      ).toContain(process.env.PMM_SERVER_LATEST);
-      expect(
-        pmmAgentVersion,
-        `PMM agent version: ${pmmAdminVersion} does not equal expected PMM client version ${process.env.PMM_SERVER_LATEST} for service ${container},`,
-      ).toContain(process.env.PMM_SERVER_LATEST);
-    }
-  });
+        expect(
+          pmmAdminVersion,
+          `PMM admin version: ${pmmAdminVersion} does not equal expected PMM client version ${expected} for service ${container},`,
+        ).toContain(expected);
+        expect(
+          pmmAgentVersion,
+          `PMM agent version: ${pmmAgentVersion} does not equal expected PMM client version ${expected} for service ${container},`,
+        ).toContain(expected);
+      }
+    });
+  }
 });

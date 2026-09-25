@@ -17,7 +17,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
     await advisorsPage.builders.advisorsChangeInterval(advisorName).click();
     await advisorsPage.builders.changeIntervalValue('Frequent').click();
     await advisorsPage.buttons.saveInterval.click();
-    await advisorsPage.snackBar.verifySuccessMessage('Interval changed for Check for unsupported PostgreSQL');
+    await advisorsPage.snackBar.verifySuccessMessage(`Interval changed for ${advisorName}`);
     await expect(advisorsPage.builders.advisorIntervalValue(advisorName)).toHaveText('Frequent');
   });
 

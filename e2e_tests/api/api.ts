@@ -8,7 +8,6 @@ import AccessControlApi from '@api/accessControl.api';
 import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 import AnnotationApi from '@api/annotation.api';
-import AnnotationsApi from '@api/annotations.api';
 import RemoteInstanceApi from '@api/remoteInstance.api';
 import HaApi from '@api/ha.api';
 import ManagementApi from '@api/management.api';
@@ -18,7 +17,6 @@ export default class Api {
   readonly accessControlApi: AccessControlApi;
   readonly alertingApi: AlertingApi;
   readonly annotationApi: AnnotationApi;
-  readonly annotationsApi: AnnotationsApi;
   readonly backupsApi: BackupsApi;
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
@@ -34,7 +32,6 @@ export default class Api {
     this.accessControlApi = new AccessControlApi(request);
     this.alertingApi = new AlertingApi(request);
     this.annotationApi = new AnnotationApi(request);
-    this.annotationsApi = new AnnotationsApi(request);
     this.backupsApi = new BackupsApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);

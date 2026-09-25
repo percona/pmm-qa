@@ -442,53 +442,6 @@ export default class Dashboards extends BasePage {
       .toHaveLength(0);
   };
 
-  verifyRowPanelValues = async (rowName: string, panels: GrafanaPanel[], serviceList?: GetService[]) => {
-    const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
-
-    for (const panel of panelList) {
-      switch (panel.type) {
-        case 'timeSeries':
-          await this.panels().timeSeries.verifyPanelData(panel.name);
-          break;
-        case 'stat':
-          await this.panels().stat.verifyPanelData(panel.name);
-          break;
-        case 'gauge':
-          await this.panels().gauge.verifyPanelData(panel.name);
-          break;
-        case 'barGauge':
-          await this.panels().barGauge.verifyPanelData(panel.name);
-          break;
-        case 'barTime':
-          await this.panels().barTime.verifyPanelData(panel.name);
-          break;
-        case 'polyStat':
-          await this.panels().polyStat.verifyPanelData(panel.name);
-          break;
-        case 'table':
-          await this.panels().table.verifyPanelData(panel.name);
-          break;
-        case 'text':
-          await this.panels().text.verifyPanelData(panel.name);
-          break;
-        case 'stateTime':
-          await this.panels().stateTime.verifyPanelData(panel.name);
-          break;
-        case 'singleStateTime':
-          await this.panels().singleStateTime.verifyPanelData(panel.name);
-          break;
-        case 'summary':
-          await this.elements.summaryPanelText.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-          break;
-        case 'unknown':
-        case 'empty':
-          break;
-        default:
-          throw new Error(`Unsupported panel: ${panel.name}`);
-      }
-    }
-  };
-
   waitForDashboardToLoad = async () => {
     const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
 

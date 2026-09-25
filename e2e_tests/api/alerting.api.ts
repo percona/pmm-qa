@@ -8,6 +8,7 @@ import {
   AlertSeverity,
   TemplatedAlertRule,
 } from '@interfaces/alerting';
+import { GrafanaFolder } from '@interfaces/grafana';
 
 type Headers = Record<string, string>;
 
@@ -21,7 +22,7 @@ export interface CreateRuleBody {
   severity?: string;
   template_name: string;
   name?: string;
-  params?: [{ name: string; type: string; float: number }];
+  params?: { name: string; type: string; float: number }[];
   group?: string;
   folder_uid?: string;
   filters?: {
@@ -31,23 +32,11 @@ export interface CreateRuleBody {
   }[];
 }
 
-export interface FoldersResponseBody {
-  id: number;
-  uid: string;
-  title: string;
-  managedBy: string;
-}
-
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
-  createRule = async (headers: Headers, data: CreateRuleBody) => {
-    const response = await this.request.post(apiEndpoints.alerting.rules, { data, headers });
-
-    expect(response.status(), await response.text()).toEqual(200);
-
-    return response;
-  };
+  createRule = async (headers: Headers, data: CreateRuleBody) =>
+    this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
@@ -101,7 +90,7 @@ export default class AlertingApi {
     return (await response.json()) as Pick<AlertInstance, 'labels'>[];
   };
 
-  getFolderByName = async (folderName: string, headers?: Headers): Promise<FoldersResponseBody> => {
+  getFolderByName = async (folderName: string, headers?: Headers): Promise<GrafanaFolder> => {
     const folders = await this.listFolders(headers);
     const folder = folders.find((folder) => folder.title === folderName);
 
@@ -125,7 +114,7 @@ export default class AlertingApi {
     return ((await response.json()) as AlertRulesResponse).data.groups;
   };
 
-  listFolders = async (headers?: Headers): Promise<FoldersResponseBody[]> => {
+  listFolders = async (headers?: Headers): Promise<GrafanaFolder[]> => {
     const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
 
     return await (await this.request.get(apiEndpoints.alerting.folders, { headers: authHeaders })).json();
