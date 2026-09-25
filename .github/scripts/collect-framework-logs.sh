@@ -36,13 +36,11 @@ for dir in "${dirs[@]}"; do
   cp -r "$dir" "$dest/"
   suffixes+=${suffixes:+-}${dir##*.}
 done
+chmod -R u+w "$dest"
 
-if [[ -n ${GITHUB_OUTPUT:-} ]]; then
-  label=$(printf '%s' "${ARTIFACT_LABEL:-setup}" | tr -c 'A-Za-z0-9._-' '-')
-  echo "artifact_name=framework-logs_${label}_${suffixes}" >>"$GITHUB_OUTPUT"
-fi
-
-python3 - "$dest" "$@" <<'EOF'
+# A copy that could not be fully redacted must never be uploaded, so the
+# artifact name is only published once every file has been rewritten.
+if ! python3 - "$dest" "$@" <<'EOF'; then
 import os
 import sys
 from urllib.parse import quote
@@ -69,3 +67,12 @@ for root, _, files in os.walk(dest):
         count += 1
 print(f"Collected {count} pmm-framework log file(s) into {dest}")
 EOF
+  rm -rf -- "$dest"
+  echo "Redaction failed; removed $dest so nothing unredacted is uploaded." >&2
+  exit 1
+fi
+
+if [[ -n ${GITHUB_OUTPUT:-} ]]; then
+  label=$(printf '%s' "${ARTIFACT_LABEL:-setup}" | tr -c 'A-Za-z0-9._-' '-')
+  echo "artifact_name=framework-logs_${label}_${suffixes}" >>"$GITHUB_OUTPUT"
+fi

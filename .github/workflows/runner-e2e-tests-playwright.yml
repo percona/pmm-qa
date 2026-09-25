@@ -239,7 +239,7 @@ jobs:
           bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
 
       - name: Upload pmm-framework setup logs
-        if: ${{ (failure() || cancelled()) && steps.framework_logs.outputs.artifact_name != '' }}
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
