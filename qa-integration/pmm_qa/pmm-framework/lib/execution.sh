@@ -24,7 +24,7 @@
 # Returns: 0 for playbook-backed types, 1 for script-backed ones
 setup_uses_ansible() {
   case "$1" in
-    PS|MYSQL|SSL_MYSQL|PXC|PSMDB|SSL_PSMDB|HAPROXY|EXTERNAL|VALKEY|PDPGSQL|DOCKERCLIENTS) return 1 ;;
+    PS|MYSQL|SSL_MYSQL|PXC|PSMDB|SSL_PSMDB|HAPROXY|EXTERNAL|VALKEY|PDPGSQL|PGSQL|SSL_PDPGSQL|DOCKERCLIENTS) return 1 ;;
     *) return 0 ;;
   esac
 }
@@ -38,21 +38,15 @@ setup_uses_ansible() {
 #   * do any two setups conflict, so parallel is unsafe?
 #   * are the shared Ansible prerequisites ready before jobs fork?
 #
-# Conflict rule: two setups of the same type, any two of the MySQL family
-# (PS/MYSQL), or PDPGSQL with a PGSQL setup that uses replication, reuse the
-# same container names, host ports and/or data directories. Rather than
+# Conflict rule: two setups of the same type, or any two of the MySQL family
+# (PS/MYSQL), reuse the same container names and/or host ports. Rather than
 # refusing the run, the framework keeps every setup and gives up only the
 # concurrency -- the caller asked for something valid that merely cannot
 # happen at the same time.
 #
-# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
-# the same container name or host port for as long as they are up, so waiting
-# is no remedy.
-#
-# The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
-# replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
-# fixed $HOME/pgsql_cluster_data and port 6432 -- PGSQL's default,
-# non-replication path is fully containerized and does not conflict.
+# Two PSMDB setups, EXTERNAL with VALKEY, and PDPGSQL patroni with PGSQL
+# replication are refused instead: they hold the same container name or host
+# port for as long as they are up, so waiting is no remedy.
 #
 # Reads:  DATABASE_SPECS, PARALLEL
 # Writes: PARALLEL (may be turned off), PMM_SERVER_HOST/PORT via resolve_pmm_server
@@ -60,10 +54,11 @@ setup_uses_ansible() {
 #         type, missing server, ...)
 preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
-  local mysql_data_owner='' conflict='' host_conflict=''
-  local pdpgsql_seen=false pgsql_replication_seen=false
+  local mysql_data_owner='' conflict='' host_conflict='' setup_type
+  local patroni_seen=false pgsql_replication_seen=false
   local external_seen=false valkey_seen=false
   local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
+  local pg_port_conflict='PDPGSQL (patroni) and PGSQL (replication) setups (both publish host port 6432)'
   declare -A seen_types=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
@@ -92,16 +87,16 @@ preflight_database_setups() {
       fi
       mysql_data_owner=$DB_TYPE
     elif [[ $DB_TYPE == PDPGSQL ]]; then
-      pdpgsql_seen=true
-      [[ $pgsql_replication_seen == true ]] &&
-        conflict="PGSQL (replication) and PDPGSQL setups (shared pgsql_cluster_data and host port 6432)"
+      setup_type=$(resolve_value PDPGSQL SETUP_TYPE DB_CONFIG)
+      if [[ ${setup_type,,} == patroni ]]; then
+        patroni_seen=true
+        [[ $pgsql_replication_seen == true ]] && host_conflict=$pg_port_conflict
+      fi
     elif [[ $DB_TYPE == PGSQL ]]; then
-      local pgsql_setup_type
-      pgsql_setup_type=$(resolve_value PGSQL SETUP_TYPE DB_CONFIG)
-      if [[ ${pgsql_setup_type,,} == replication ]]; then
+      setup_type=$(resolve_value PGSQL SETUP_TYPE DB_CONFIG)
+      if [[ ${setup_type,,} == replication ]]; then
         pgsql_replication_seen=true
-        [[ $pdpgsql_seen == true ]] &&
-          conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
+        [[ $patroni_seen == true ]] && host_conflict=$pg_port_conflict
       fi
     # external_setup.yml publishes redis_container on host port 6379, and both
     # Valkey topologies put a node on that same port -- valkey-cluster.yml's

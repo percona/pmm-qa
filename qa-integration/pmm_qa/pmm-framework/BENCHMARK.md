@@ -197,6 +197,27 @@ The image is the playbook's systemd Ubuntu 24.04 with every package baked in,
 since tests restart PostgreSQL through `service` and read `/var/log/postgresql`.
 Replication first took 143 s: `pg_basebackup` waited out a spread checkpoint,
 so it now asks for a fast one.
+## PGSQL on the prebaked path
+
+| Spec | Old | Prebaked | Checked |
+|---|---|---|---|
+| `pgsql` | 174 s | 13 s | `service postgresql restart` after `ALTER SYSTEM`, pg_stat_statements populated, load running, `/pmm-agent.log` written |
+| `pgsql,SETUP_TYPE=replication` | 719 s | 29 s | replica streaming, services named `pgsql_pmm_17_<n>` as on a fresh server |
+
+The default image runs the playbook's own `pg_stat_statements_setup.sh` at
+build time. Replication runs the official `postgres` image the playbook used,
+cloning the replica before its first start instead of through a host data
+directory, and leaves the `pgbench` load running rather than waiting out its
+120 s. With no host data directory left, PDPGSQL and replication PGSQL only
+clash when PDPGSQL runs Patroni, on host port 6432.
+## SSL PDPGSQL on the prebaked path
+
+| Spec | Old | Prebaked | Checked |
+|---|---|---|---|
+| `ssl_pdpgsql=16` | 158 s (17) | 25 s | service registered over TLS; PMM Server connects with the copied client certificate, CA verified, TLSv1.3 |
+
+The image drops the certificates its build made, so none is published; each
+container makes its own at start, as the playbook's did.
 ## Notes
 
 - A first pass with `CLIENT_VERSION=3-dev-latest` was dropped. That value

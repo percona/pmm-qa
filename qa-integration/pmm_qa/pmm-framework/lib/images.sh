@@ -102,7 +102,23 @@ build_external_image() {
 # Build pmm-qa/pdpgsql:VERSION (images/pdpgsql).
 build_pdpgsql_image() {
   [[ $1 =~ ^1[4-8]$ ]] || die "PDPGSQL $1 has no prebaked image; use 14 to 18."
-  docker build --build-arg "PG_VERSION=$1" --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/pdpgsql:$1"     "$FRAMEWORK_DIR/images/pdpgsql" || die "Building pmm-qa/pdpgsql:$1 failed."
+  docker build --build-arg "PG_VERSION=$1" --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/pdpgsql:$1" \
+    "$FRAMEWORK_DIR/images/pdpgsql" || die "Building pmm-qa/pdpgsql:$1 failed."
+}
+
+# Build pmm-qa/pgsql:VERSION (images/pgsql).
+build_pgsql_image() {
+  [[ $1 =~ ^1[4-8]$ ]] || die "PGSQL $1 has no prebaked image; use 14 to 18."
+  docker build -f "$FRAMEWORK_DIR/images/pgsql/Dockerfile" --build-arg "PG_VERSION=$1" \
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/pgsql:$1" "$QA_INTEGRATION_ROOT/pmm_qa" || die "Building pmm-qa/pgsql:$1 failed."
+}
+
+# Build pmm-qa/ssl-pdpgsql:VERSION (images/ssl-pdpgsql).
+build_ssl_pdpgsql_image() {
+  [[ $1 =~ ^1[4-7]$ ]] || die "SSL_PDPGSQL $1 has no prebaked image; use 14 to 17."
+  docker build -f "$FRAMEWORK_DIR/images/ssl-pdpgsql/Dockerfile" --build-arg "PG_VERSION=$1" \
+    --label "$PREBAKED_SOURCE_LABEL" -t "pmm-qa/ssl-pdpgsql:$1" "$QA_INTEGRATION_ROOT/pmm_qa/tls-ssl-setup" ||
+    die "Building pmm-qa/ssl-pdpgsql:$1 failed."
 }
 
 # Stdout: the pmm-qa/pxc-proxysql tag for VERSION and an optional TARBALL URL

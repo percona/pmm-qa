@@ -19,14 +19,12 @@ stub_prebaked_docker() {
         [[ ${DEBIAN_NODE:-false} == true ]]
         return
         ;;
-      *VERSION_CODENAME*) printf 'noble
-' ;;
+      *VERSION_CODENAME*) printf 'noble\n' ;;
       *'patronictl -c /patroni.yml list'*)
-        printf '| %s | %s:5432 | %s | %s | 1 |
-' pdpgsql_pmm_patroni_17_1 x Leader running           pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
+        printf '| %s | %s:5432 | %s | %s | 1 |\n' pdpgsql_pmm_patroni_17_1 x Leader running \
+          pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
         ;;
-      *pg_stat_replication*) printf '1
-' ;;
+      *pg_stat_replication*) printf '1\n' ;;
       *'pmm-admin status'*)
         printf 'Connected : true\n%s\n' 'mysqld_exporter Running' 'mysqld_exporter Running' \
           'mysqld_exporter Running' 'proxysql_exporter Running' 'mongodb_exporter Running' 'valkey_exporter Running' 'postgres_exporter Running' "node_exporter ${NODE_EXPORTER_STATE:-Running}"
@@ -199,14 +197,37 @@ stub_prebaked_docker() {
   grep -q -- '--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 ' "$DOCKER_CALLS"
 }
 
-@test "PGSQL replication selects replication playbook" {
+@test "single PGSQL starts the prebaked node through service and registers it as pgsql_pgss_setup.yml did" {
+  stub_prebaked_docker
+  SHARD_NAME=nightly
+  parse_database_spec 'pgsql=17'
+  dispatch_setup
+
+  grep -q -- '^run --detach --name pgsql_pgss_pmm_17 .*--publish 5448:5432 pmm-qa/pgsql:17$' "$DOCKER_CALLS"
+  grep -q '^exec pgsql_pgss_pmm_17 service postgresql start$' "$DOCKER_CALLS"
+  grep -q -- ' pgsql_pgss_pmm_17 container pgsql_pgss_pmm_17-nightly$' "$DOCKER_CALLS"
+  grep -q ">>'/pmm-agent.log'" "$DOCKER_CALLS"
+  grep -Eq '^exec pgsql_pgss_pmm_17 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements pgsql_pgss_pmm_17_service_[0-9]+$' "$DOCKER_CALLS"
+  grep -q '^exec --detach pgsql_pgss_pmm_17 bash /pgsm_run_queries.sh$' "$DOCKER_CALLS"
+}
+
+@test "PGSQL replication clones a replica on the official image and names services as the playbook did" {
+  stub_prebaked_docker
   parse_database_spec 'pgsql=16,SETUP_TYPE=replication,ENCRYPTED_CLIENT_CONFIG=true'
   dispatch_setup
 
-  [[ $CAPTURE_TARGET == postgresql/postgresql-setup.yml ]]
-  [[ ${CAPTURE_ENV[PGSQL_VERSION]} == 16 ]]
-  [[ ${CAPTURE_ENV[SETUP_TYPE]} == replication ]]
-  [[ ${CAPTURE_ENV[ENCRYPTED_CLIENT_CONFIG]} == true ]]
+  grep -q -- '^run --detach --name pgsql_pmm_16_1 .*--publish 6432:5432 postgres:16-bookworm -c config_file=/etc/postgresql/postgresql.conf$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pgsql_pmm_16_2 .*--publish 6433:5432 --entrypoint bash postgres:16-bookworm -ceu ' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $PGDATA, expanded in the container
+  grep -Fq 'pg_basebackup "--pgdata=$PGDATA"' "$DOCKER_CALLS"
+  [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 2 ]]
+  grep -q '^exec pgsql_pmm_16_2 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements pgsql_pmm_16_2 --debug 127.0.0.1:5432$' "$DOCKER_CALLS"
+  grep -q 'pgbench -i -s 1000 pgbench' "$DOCKER_CALLS"
+
+  parse_database_spec 'pgsql=17,SETUP_TYPE=patroni'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
 # Stands in for scripts/fetch-pmm-client-deb.sh, recording its arguments.
@@ -463,11 +484,20 @@ EOF
   grep -q '^cp mysql_ssl_8.4:/var/lib/mysql/client-key.pem .*/pmm_qa/tls-ssl-setup/mysql/8.4/client-key.pem$' "$DOCKER_CALLS"
 }
 
-@test "SSL variants select their existing playbooks" {
+@test "SSL PDPGSQL makes its own certificates, registers over TLS and copies the client certificates out" {
+  stub_prebaked_docker
   parse_database_spec 'ssl_pdpgsql=16'
   dispatch_setup
-  [[ $CAPTURE_TARGET == tls-ssl-setup/postgresql_tls_setup.yml ]]
 
+  grep -q '^network create pdpgsql_pgsm_ssl_16_network$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pdpgsql_pgsm_ssl_16 .*--network pdpgsql_pgsm_ssl_16_network pmm-qa/ssl-pdpgsql:16$' "$DOCKER_CALLS"
+  grep -q '^network connect pmm-qa pdpgsql_pgsm_ssl_16$' "$DOCKER_CALLS"
+  grep -q 'bash create_certs.sh' "$DOCKER_CALLS"
+  grep -Eq '^exec pdpgsql_pgsm_ssl_16 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem pdpgsql_pgsm_ssl_16_ssl_service[0-9]+$' "$DOCKER_CALLS"
+  grep -q '^cp pdpgsql_pgsm_ssl_16:/artifacts/certificates/client.pem .*/pmm_qa/tls-ssl-setup/postgres/16/client.pem$' "$DOCKER_CALLS"
+}
+
+@test "SSL mlaunch selects its existing playbook" {
   parse_database_spec 'ssl_mlaunch=8.0'
   dispatch_setup
   [[ $CAPTURE_TARGET == tls-ssl-setup/mlaunch_tls_setup.yml ]]

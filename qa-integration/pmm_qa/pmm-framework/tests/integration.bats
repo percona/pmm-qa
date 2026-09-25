@@ -10,10 +10,8 @@ setup() {
 #!/usr/bin/env bash
 case "$*" in
   *'test -f /etc/debian_version'*) exit 1 ;;
-  *'pmm-admin status'*) printf 'Connected : true
-postgres_exporter Running
-node_exporter Running
-' ;;
+  *pg_stat_replication*) echo 1 ;;
+  *'pmm-admin status'*) printf '%s\n' 'Connected : true' 'postgres_exporter Running' 'node_exporter Running' ;;
 esac
 exit 0
 EOF
@@ -260,30 +258,28 @@ EOF
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pgsql \
-      --database pgsql,SETUP_TYPE=replication
+      --database mlaunch_psmdb \
+      --database mlaunch_psmdb,SETUP_TYPE=sharding
 
   [[ $status -eq 0 ]]
   [[ $output == *'Running setups sequentially'* ]]
-  [[ $output == *'two PGSQL setups'* ]]
+  [[ $output == *'two MLAUNCH_PSMDB setups'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
-@test "parallel mode falls back to sequential for PDPGSQL and PGSQL replication" {
+@test "PDPGSQL patroni and PGSQL replication cannot share a host" {
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql \
+      --database pdpgsql,SETUP_TYPE=patroni \
       --database pgsql,SETUP_TYPE=replication
 
-  # Both setups must still run; only their concurrency is given up.
-  [[ $status -eq 0 ]]
-  [[ $output == *'Running setups sequentially'* ]]
-  [[ $output == *'shared pgsql_cluster_data and host port 6432'* ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 1 ]]
+  [[ $status -eq 1 ]]
+  [[ $output == *'both publish host port 6432'* ]]
+  [[ $output != *'Running setups sequentially'* ]]
 }
 
 @test "a host conflict is refused before anything is provisioned" {
@@ -305,22 +301,20 @@ EOF
   [[ ! -e "$RECORD_FILE" ]]
 }
 
-@test "parallel mode stays parallel for PDPGSQL and non-replication PGSQL" {
+@test "parallel mode stays parallel for PDPGSQL and PGSQL replication" {
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    PARALLEL_TEST=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
       --pmm-server-ip 10.0.0.5 \
       --database pdpgsql \
-      --database pgsql
+      --database pgsql,SETUP_TYPE=replication
 
-  # No shared data_dir or port when PGSQL doesn't use replication, so the
-  # framework must not give up concurrency for this pair.
+  # Single-node PDPGSQL publishes 5432 and replication PGSQL 6432-6433, and
+  # neither keeps data on the host.
   [[ $status -eq 0 ]]
   [[ $output != *'Running setups sequentially'* ]]
-  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 1 ]]
 }
 
 @test "verbose parallel runs echo the logs of successful setups" {

@@ -1,6 +1,6 @@
 # Builds the prebaked images pmm-framework runs (PS, MySQL, PXC with ProxySQL,
-# PSMDB, HAProxy, Valkey, the External exporters and Percona Distribution for
-# PostgreSQL) and publishes them to
+# PSMDB, HAProxy, Valkey, the External exporters, Percona Distribution for
+# PostgreSQL with and without TLS, and PGDG PostgreSQL) and publishes them to
 # ghcr.io/percona/pmm-qa/<engine>:<version>, so a CI job pulls a ready image
 # instead of spending 90-160 s building one. Each
 # image is started and checked before it is pushed, so a broken build never
@@ -30,6 +30,13 @@ on:
       - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      # What images/pgsql/Dockerfile copies from its build context.
+      - qa-integration/pmm_qa/pg_stat_statements_setup.sh
+      - qa-integration/pmm_qa/pgsm_run_queries.sh
+      # What images/ssl-pdpgsql/Dockerfile copies from its build context.
+      - qa-integration/pmm_qa/tls-ssl-setup/create_certs.sh
+      - qa-integration/pmm_qa/tls-ssl-setup/postgres/setup_pgsql.sh
+      - qa-integration/pmm_qa/tls-ssl-setup/postgres/init.sql
       - .github/workflows/build-prebaked-images.yml
 
 permissions:
@@ -62,7 +69,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
         run: |
-          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql"]'
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
           if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
@@ -79,6 +86,8 @@ jobs:
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/external/' <<<"$changed"; then picked+=('"external"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/valkey/' <<<"$changed"; then picked+=('"valkey"'); fi
               if grep -q '^qa-integration/pmm_qa/pmm-framework/images/pdpgsql/' <<<"$changed"; then picked+=('"pdpgsql"'); fi
+              if grep -qE '^qa-integration/pmm_qa/(pmm-framework/images/pgsql/|pg_stat_statements_setup\.sh$|pgsm_run_queries\.sh$)' <<<"$changed"; then picked+=('"pgsql"'); fi
+              if grep -qE '^qa-integration/pmm_qa/(pmm-framework/images/ssl-pdpgsql/|tls-ssl-setup/(create_certs\.sh|postgres/setup_pgsql\.sh|postgres/init\.sql)$)' <<<"$changed"; then picked+=('"ssl-pdpgsql"'); fi
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
@@ -87,7 +96,8 @@ jobs:
             elif $e == "haproxy" then ["ol9"]
             elif $e == "external" then ["1.58.0-0.7.10"]
             elif $e == "valkey" then ["7", "8"]
-            elif $e == "pdpgsql" then ["14", "15", "16", "17", "18"]
+            elif $e == "pdpgsql" or $e == "pgsql" then ["14", "15", "16", "17", "18"]
+            elif $e == "ssl-pdpgsql" then ["14", "15", "16", "17"]
             else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
           echo "engines=$engines" >>"$GITHUB_OUTPUT"
           echo "cells=$cells" >>"$GITHUB_OUTPUT"
@@ -138,6 +148,20 @@ jobs:
             done
             docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
             docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
+          elif [ "$ENGINE" = ssl-pdpgsql ]; then
+            # The image ships no certificates; make a set as setup_ssl_pdpgsql does.
+            docker run -d --name probe "$IMAGE"
+            docker exec probe sh -ceu "cd /artifacts && bash create_certs.sh >/dev/null 2>&1
+              cp -a certificates/. /var/lib/postgresql/$VERSION/main/
+              chown -R postgres:postgres /var/lib/postgresql/$VERSION/main
+              chmod -R 0700 /var/lib/postgresql/$VERSION/main
+              service postgresql start"
+            docker exec -e PGPASSWORD=pmm probe psql -v ON_ERROR_STOP=1 'host=127.0.0.1 user=pmm dbname=postgres sslmode=require' \
+              -c 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()' -c 'SELECT count(*) FROM pg_stat_statements'
+          elif [ "$ENGINE" = pgsql ]; then
+            docker run -d --name probe "$IMAGE"
+            docker exec probe service postgresql start
+            docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM pg_stat_statements'
           elif [ "$ENGINE" = valkey ]; then
             docker run --rm "$IMAGE" sh -c 'valkey-server --version && valkey-cli --version'
           elif [ "$ENGINE" = external ]; then
