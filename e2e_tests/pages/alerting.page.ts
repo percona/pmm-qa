@@ -1,5 +1,6 @@
-import fs from 'node:fs';
+import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
+import { expect } from '@playwright/test';
 
 export default class AlertingPage extends BasePage {
   url = 'pmm-ui/alerting/status';
@@ -85,20 +86,22 @@ export default class AlertingPage extends BasePage {
     await this.buttons.submitTemplate.click();
   };
 
-  normalizeTemplate = (yaml: string) => yaml.replaceAll(/ +(?= )/g, '');
-
-  readTemplateFile = (path: string) => {
-    const content = fs.readFileSync(path, 'utf8');
-    const templates = content
-      .split(/^(?= {2}- name: )/m)
-      .slice(1)
-      .map((chunk) => ({
-        name: chunk.match(/^ {2}- name: (.+)$/m)?.[1] ?? '',
-        summary: chunk.match(/^ {4}summary: (.+)$/m)?.[1] ?? '',
-        yaml: `templates:\n${chunk.trimEnd()}\n`,
-      }));
-
-    return { content, templates };
+  deleteTemplate = async (summary: string) => {
+    await this.builders.deleteTemplate(summary).click();
+    await expect(this.elements.modalHeader).toContainText('Delete Alert Rule Template', {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+    await expect(this.elements.deleteModalMessage).toHaveText(
+      `Are you sure you want to delete the alert rule template "${summary}"?`,
+    );
+    await this.buttons.confirmDelete.click();
+    await expect(this.messages.popUp).toContainText(
+      `Alert rule template "${summary}" successfully deleted.`,
+      {
+        timeout: Timeouts.THIRTY_SECONDS,
+      },
+    );
+    await expect(this.builders.deleteTemplate(summary)).toBeHidden();
   };
 
   silenceAlert = async (alertName: string) => {
