@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034  # proxysql_config is looked up by name (resolve_value).
 #
 # images/pxc/setup.sh -- PXC with ProxySQL, on the prebaked pxc-proxysql image.
 

@@ -67,11 +67,6 @@ The setups below are the QA integration environments registered in [`pmm_qa/pmm-
       "sentinels": "sentinel setup"
     }
   },
-  "PROXYSQL": {
-    "versions": ["2", "3"],
-    "default_topology": "package selector used by PXC",
-    "setup_type": {}
-  },
   "HAPROXY": {
     "versions": ["default"],
     "default_topology": "fixed HAProxy setup",

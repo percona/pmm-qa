@@ -15,7 +15,7 @@
 # and DB_CONFIG together -- the setup functions read all three.
 #
 # Reads: DB_TYPE (and, through the setup functions, DB_VERSION and DB_CONFIG)
-# Exits: via die() for PROXYSQL or an unmapped type
+# Exits: via die() for an unmapped type
 dispatch_setup() {
   case "$DB_TYPE" in
     PS) setup_ps ;;
@@ -30,10 +30,6 @@ dispatch_setup() {
     HAPROXY) setup_haproxy ;;
     EXTERNAL) setup_external ;;
     VALKEY) setup_valkey ;;
-    # Registered so PXC can read its defaults, but never runnable on its own.
-    PROXYSQL)
-      die "PROXYSQL is a PXC option source and cannot be set up independently."
-      ;;
     # Reached only when a type is registered in lib/config.sh but has no arm
     # here -- parse_database_spec would have rejected a genuinely unknown name.
     *) die "Database type '$DB_TYPE' is not recognized." ;;

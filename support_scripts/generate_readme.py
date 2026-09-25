@@ -41,7 +41,6 @@ TOPOLOGY = {
         "setup_type": {"psa": "PSA replica set", "shards": "sharded setup", "sharding": "sharded setup"},
     },
     "VALKEY": {"default_topology": "cluster", "setup_type": {"sentinel": "sentinel setup", "sentinels": "sentinel setup"}},
-    "PROXYSQL": {"default_topology": "package selector used by PXC", "setup_type": {}},
     "HAPROXY": {"default_topology": "fixed HAProxy setup", "setup_type": {}},
     "EXTERNAL": {"default_topology": "Redis with redis_exporter and process-exporter", "setup_type": {}},
 }

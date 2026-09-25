@@ -61,67 +61,61 @@ register_database() {
 
 register_database PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
   'DEFAULT_VERSION=latest' \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
-  'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
+  'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
+  'CLIENT_VERSION MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
+  'CLIENT_VERSION=3-dev-latest' 'MINIO=false'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
-  'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL ENCRYPTED_CLIENT_CONFIG' \
+  'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
-  'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
   '5.7 8.0 8.4 9.7' \
-  'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
+  'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
   'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
-  'TARBALL=' 'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
+  'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
   '5.7 8.0 8.4 9.7' \
-  'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL' \
+  'CLIENT_VERSION' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' 'TARBALL='
+  'CLIENT_VERSION=3-dev-latest'
 
 register_database PGSQL \
   '14 15 16 17 18' \
-  'QUERY_SOURCE CLIENT_VERSION USE_SOCKET SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
+  'CLIENT_VERSION SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'QUERY_SOURCE=pgstatements' 'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET=' \
-  'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PDPGSQL \
   '14 15 16 17 18' \
-  'CLIENT_VERSION USE_SOCKET SETUP_TYPE PGSM_BRANCH ENCRYPTED_CLIENT_CONFIG' \
+  'CLIENT_VERSION SETUP_TYPE PGSM_BRANCH ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET=' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
   'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database SSL_PDPGSQL \
   '14 15 16 17' \
-  'CLIENT_VERSION USE_SOCKET' \
+  'CLIENT_VERSION' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'USE_SOCKET='
+  'CLIENT_VERSION=3-dev-latest'
 
 register_database PXC \
   '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION QUERY_SOURCE TARBALL' \
   'DEFAULT_VERSION=8.4' \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
-
-# PROXYSQL is not independently setup-able: it only supplies defaults that the
-# PXC setup reads (see images/pxc/setup.sh). dispatch_setup rejects it explicitly.
-# Version 2 is Percona's proxysql2 (PXC 5.7/8.0); 3 is upstream ProxySQL (8.4+).
-register_database PROXYSQL '2 3' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
 # logs a note under --verbose and falls back to the (empty) default.
@@ -130,9 +124,9 @@ register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 
 register_database VALKEY \
   '7 8' \
-  'CLIENT_VERSION SETUP_TYPE TARBALL ENCRYPTED_CLIENT_CONFIG' \
+  'CLIENT_VERSION SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 # --------------------------------------------------------------------------
 # Catalogue queries. All take an already-uppercased TYPE.

@@ -124,7 +124,7 @@ load helpers/test_helper
     [PSMDB]=latest [SSL_PSMDB]=latest
     [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.4 [PROXYSQL]=2 [VALKEY]=8
+    [PXC]=8.4 [VALKEY]=8
   )
   local type actual
   for type in "${!expected[@]}"; do
