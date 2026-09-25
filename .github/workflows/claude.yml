@@ -24,12 +24,20 @@ jobs:
           # so leaving it here makes every push authenticate as github-actions[bot].
           persist-credentials: false
 
+      - name: Checkout pmm-ai marketplace
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: percona/pmm-ai
+          token: ${{ secrets.PMM_AI_READ_TOKEN }}
+          path: .pmm-ai
+          persist-credentials: false
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: https://x-access-token:${{ secrets.PMM_AI_READ_TOKEN }}@github.com/percona/pmm-ai.git
+          plugin_marketplaces: ./.pmm-ai
           plugins: pmm-qa@pmm-ai
 
           # Lets Claude read CI results on PRs.
