@@ -200,6 +200,21 @@ jobs:
       matrix:
         engine: ${{ fromJSON(needs.plan.outputs.engines) }}
     steps:
+      # Attestations pushed before push-to-registry was turned off are tagged
+      # sha256-<digest>, so the untagged prune below never reaches them.
+      - name: Delete the sha256-* attestation versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSIONS: orgs/${{ github.repository_owner }}/packages/container/pmm-qa%2F${{ matrix.engine }}/versions
+        run: |
+          gh api --paginate "$VERSIONS" --jq '.[]
+            | select((.metadata.container.tags | length) > 0 and all(.metadata.container.tags[]; startswith("sha256-")))
+            | .id' |
+            while read -r id; do
+              gh api -X DELETE "$VERSIONS/$id"
+              echo "deleted version $id"
+            done
+
       - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
         with:
           owner: ${{ github.repository_owner }}
