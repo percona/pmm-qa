@@ -121,15 +121,16 @@ install_pmm_client() {
       cd "$(dirname "$(find /tmp/pmm-client -type f -name install_tarball -print -quit)")"
       bash ./install_tarball'
   else
-    # Upstream mysql images ship neither percona-release nor, on 5.7, microdnf.
-    # mysql:5.7 is EL7, where yum would quietly install a PMM 2 client instead.
+    # Upstream mysql images ship neither percona-release nor, on 5.7, microdnf,
+    # and PXC 5.7's is too old to know the pmm3-client repo, so it is always
+    # brought to the latest. mysql:5.7 is EL7, where yum would quietly install a
+    # PMM 2 client instead.
     # shellcheck disable=SC2016 # expanded by the container's shell
     install='case $(. /etc/os-release; echo "$VERSION_ID") in
         7*) echo "PMM 3 Client packages are not published for EL7; use a tarball CLIENT_VERSION." >&2; exit 3 ;;
       esac
       pkg=yum; command -v microdnf >/dev/null && pkg=microdnf
-      command -v percona-release >/dev/null ||
-        rpm -Uvh https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+      rpm -Uvh --replacepkgs https://repo.percona.com/yum/percona-release-latest.noarch.rpm
       '
     case $client in
       3-dev-latest) install+='percona-release enable-only pmm3-client experimental' ;;
