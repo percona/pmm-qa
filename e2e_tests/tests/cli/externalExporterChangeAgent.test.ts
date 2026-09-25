@@ -72,7 +72,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess();
 
   pmmTest(
-    'PMM-T1001 - Verify Change agent username and password @ps-integration',
+    'PMM-T1001 - Verify Change agent username and password @external-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
@@ -118,16 +118,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T1004 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
-    const commands = [
-      `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --debug --trace --json`,
-    ];
+  pmmTest(
+    'PMM-T1004 - Verify Change agent debug, trace and json @external-integration',
+    async ({ cliHelper }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent external-exporter ${externalExporterId} --debug --trace --json`,
+      ];
 
-    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-  });
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    },
+  );
 
   pmmTest(
-    'PMM-T1005 - Verify Change agent enable true/false @ps-integration',
+    'PMM-T1005 - Verify Change agent enable true/false @external-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
