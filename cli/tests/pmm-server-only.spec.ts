@@ -142,6 +142,94 @@ test.describe(
       });
     });
 
+    test.describe('PMM_ENABLE_NOMAD without PMM_PUBLIC_ADDRESS warning', () => {
+      test.describe.configure({ timeout: 180_000 });
+
+      const nomadWarning = 'PMM_ENABLE_NOMAD is set but PMM_PUBLIC_ADDRESS is not; '
+        + 'Nomad will not start unless a public address is configured in PMM settings';
+
+      const startPmmServer = async (containerName: string, envFlags: string) => {
+        await (
+          await cli.exec(`docker run -d --name ${containerName} ${envFlags} ${DOCKER_IMAGE}`)
+        ).assertSuccess();
+        stopList.push(containerName);
+        removeList.push(containerName);
+        // pmm-managed logs "Setup completed." after UpdateSettingsFromEnv, so both warning channels are final by then.
+        await expect(async () => {
+          await (
+            await cli.exec(`docker exec ${containerName} grep -q "Setup completed." /srv/logs/pmm-managed.log`)
+          ).assertSuccess();
+        }).toPass({ intervals: [2_000], timeout: 120_000 });
+      };
+
+      const nomadServerStatus = async (containerName: string) => (
+        await cli.exec(`docker exec ${containerName} supervisorctl status nomad-server 2>&1`)
+      ).stdout;
+
+      const verifyNoNomadWarning = async (containerName: string) => {
+        await (
+          await cli.exec(`docker logs ${containerName} 2>&1 | grep -F "${nomadWarning}"`)
+        ).exitCodeEquals(1);
+        await (
+          await cli.exec(`docker exec ${containerName} grep -F "${nomadWarning}" /srv/logs/pmm-managed.log`)
+        ).exitCodeEquals(1);
+      };
+
+      test('PMM-T2328 - Verify warning is logged when PMM_ENABLE_NOMAD is set without PMM_PUBLIC_ADDRESS', async () => {
+        const containerName = 'pmm-nomad-without-public-address';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1');
+
+        const initWarning = await cli.exec(
+          `docker logs ${containerName} 2>&1 | grep -F "Configuration warning: ${nomadWarning}"`,
+        );
+
+        await initWarning.assertSuccess();
+        expect(initWarning.getStdOutLines(), 'Verify pmm-managed-init logs the warning once').toHaveLength(1);
+        await (
+          await cli.exec(
+            `docker exec ${containerName} grep -F 'level=warning msg="${nomadWarning}"' /srv/logs/pmm-managed.log`,
+          )
+        ).assertSuccess();
+
+        await expect.poll(
+          async () => (await cli.exec(`docker inspect -f '{{.State.Health.Status}}' ${containerName}`)).stdout.trim(),
+          {
+            message: 'Verify PMM Server still becomes healthy',
+            intervals: [2_000],
+            timeout: 60_000,
+          },
+        ).toBe('healthy');
+
+        const nomadStatus = await nomadServerStatus(containerName);
+
+        expect(nomadStatus, 'Verify supervisorctl reported nomad-server status').toContain('nomad-server');
+        expect(nomadStatus, 'Verify Nomad server is not running').not.toContain('RUNNING');
+      });
+
+      test('PMM-T2329 - Verify no warning and Nomad is running when PMM_ENABLE_NOMAD and PMM_PUBLIC_ADDRESS are set', async () => {
+        const containerName = 'pmm-nomad-with-public-address';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1 -e PMM_PUBLIC_ADDRESS=1.2.3.4:8443');
+        await verifyNoNomadWarning(containerName);
+        await expect.poll(
+          async () => nomadServerStatus(containerName),
+          {
+            message: 'Verify Nomad server is running',
+            intervals: [2_000],
+            timeout: 30_000,
+          },
+        ).toContain('RUNNING');
+      });
+
+      test('PMM-T2330 - Verify no warning when PMM_ENABLE_NOMAD is explicitly disabled', async () => {
+        const containerName = 'pmm-nomad-disabled';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=0');
+        await verifyNoNomadWarning(containerName);
+      });
+    });
+
     /**
      * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats#L67
      */
