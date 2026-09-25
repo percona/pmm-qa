@@ -60,9 +60,9 @@ register_database() {
 # --------------------------------------------------------------------------
 
 register_database PSMDB \
-  '4.4 5.0 6.0 7.0 8.0 latest' \
+  '4.4 5.0 6.0 7.0 8.0 8.3 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
-  'DEFAULT_VERSION=latest' \
+  'DEFAULT_VERSION=8.3' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'TARBALL=' 'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
@@ -85,9 +85,9 @@ register_database SSL_MLAUNCH \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
 
 register_database SSL_PSMDB \
-  '4.4 5.0 6.0 7.0 8.0 latest' \
+  '4.4 5.0 6.0 7.0 8.0 8.3 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
-  'DEFAULT_VERSION=latest' \
+  'DEFAULT_VERSION=8.3' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
 
 register_database MYSQL \

@@ -245,7 +245,7 @@ load helpers/test_helper
 
 @test "every versioned database pins an explicit default version" {
   local -A expected=(
-    [PSMDB]=latest [SSL_PSMDB]=latest
+    [PSMDB]=8.3 [SSL_PSMDB]=8.3
     [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
     [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
