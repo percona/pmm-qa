@@ -74,7 +74,9 @@ replication-set). Pin down:
 - Add any script inside the image to `BASH_SOURCES` in the Makefile.
 - Base images differ: check each version's image for `microdnf`, `yum`,
   `percona-release`, `mysqladmin` and its OS release before using them.
-  `microdnf` cannot install a local `.rpm` file; use `rpm -Uvh`. EL8's curl
+  `microdnf` cannot install a local `.rpm` file, and `rpm -Uvh` skips its
+  dependencies: use `yum` where it exists, `rpm -Uvh` only on microdnf-only
+  images. EL8's curl
   has no `--retry-all-errors`.
 - Install PMM Client at run time, not in the image, so one image serves every
   `CLIENT_VERSION`.
