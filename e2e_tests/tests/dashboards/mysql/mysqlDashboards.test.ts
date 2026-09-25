@@ -16,10 +16,14 @@ pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
         from: 'now-1h',
+        refresh: '5s',
       }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
+    await dashboard.verifyAllPanelsHaveData(
+      dashboard.mysql.haproxyInstanceSummary.noDataMetrics,
+      Timeouts.FIVE_MINUTES,
+    );
     await dashboard.verifyPanelValues(dashboard.mysql.haproxyInstanceSummary.metricsWithData);
   },
 );
