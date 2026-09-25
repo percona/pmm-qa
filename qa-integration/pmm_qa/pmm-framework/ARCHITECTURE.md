@@ -3,17 +3,11 @@
 How the framework is put together, what happens on a run, and the exact steps
 to extend it. For installing and *using* it, see [README.md](README.md).
 
-The framework is a **dispatcher**. For most types it turns a `--database` spec
-into a map of environment variables and hands that to an existing Ansible
-playbook or shell script under `qa-integration/`. For those, almost every
-question about behaviour is answered by asking *which env map was built, and
-which playbook received it*.
-
-`PS`, `MYSQL`, `SSL_MYSQL`, `PXC`, `PSMDB`, `SSL_PSMDB`, `HAPROXY`, `EXTERNAL`, `VALKEY`, `PDPGSQL`, `SSL_PDPGSQL` and `PGSQL` are the exception. They run on **prebaked images**:
-the database and its tooling are baked into an image ahead of time, and the
-setup function provisions with plain `docker` commands (`lib/prebaked.sh`)
-instead of a playbook. Types move to this backend one at a time. See §5,
-"Port a type to a prebaked image".
+Every database type runs on a **prebaked image**: the database and its tooling
+are baked into an image ahead of time, and the type's setup function starts it
+with plain `docker` commands, installs PMM Client at run time and registers the
+services. A setup's contract is the **end state** tests look up by name:
+container names, host ports, users, and PMM service names and labels.
 
 ---
 
@@ -33,77 +27,58 @@ flowchart TB
         SEQ["sequential<br/>one spec at a time"]
         PAR["parallel<br/>all specs at once"]
         SPEC["run_database_spec<br/>parse_database_spec → DB_TYPE / DB_VERSION / DB_CONFIG"]
-        DISP["setups/dispatch.sh<br/>dispatch_setup"]
-        SETUP["setups/*.sh<br/>setup_NAME builds env_map"]
-        BAKED["setups/mysql.sh, setups/mongodb.sh<br/>setup_ps / setup_mysql / setup_pxc<br/>setup_psmdb / setup_ssl_psmdb"]
-    end
-
-    subgraph BACK["Backends"]
-        PB["lib/ansible.sh<br/>run_playbook"]
-        SC["lib/runners.sh<br/>run_setup_script"]
-        DK["lib/images.sh + lib/prebaked.sh<br/>ensure_image, docker run/exec"]
-    end
-
-    subgraph REAL["qa-integration/ (not part of this framework)"]
-        YML["Ansible playbooks"]
-        SH["docker-compose setup scripts"]
-        DOCKER[("Docker containers<br/>+ PMM Client")]
+        DISP["lib/dispatch.sh<br/>dispatch_setup"]
+        SETUP["images/&lt;database&gt;/setup.sh<br/>setup_NAME"]
+        DK["lib/images.sh + lib/prebaked.sh<br/>ensure_image, docker run/exec, PMM Client"]
     end
 
     GHCR[("ghcr.io/percona/pmm-qa<br/>prebaked images")]
+    DOCKER[("Docker containers<br/>+ PMM Client")]
 
     ARGS --> PARSE --> PRE --> STRAT
     STRAT -- no --> SEQ --> SPEC
     STRAT -- yes --> PAR --> SPEC
-    SPEC --> DISP --> SETUP
-    DISP --> BAKED
-    SETUP --> PB --> YML --> DOCKER
-    SETUP --> SC --> SH --> DOCKER
-    BAKED --> DK --> DOCKER
+    SPEC --> DISP --> SETUP --> DK --> DOCKER
     GHCR -. pulled by ensure_image .-> DK
 ```
-
-**The one rule to remember:** a playbook-backed setup function's only job is to
-build `env_map`. That map is the contract with the playbook, which reads it via
-`lookup('env', 'KEY')`. A prebaked setup's contract is the **end state** the
-playbook it replaced produced (container names, ports, users, PMM service names
-and labels), because tests look those up by name.
 
 ---
 
 ## 2. Module map
 
-| File | Responsibility | Depends on |
+| Path | Responsibility |
+| --- | --- |
+| `pmm-framework` | Bash version gate, path anchors, sources everything, calls `parse_args` then `run_database_setups` |
+| `lib/common.sh` | `log_*`, `die`, `require_command`, `bool_string`, `normalize_client_version` |
+| `lib/config.sh` | The catalogue (`register_database`), `resolve_value`, and the version, client and password resolvers |
+| `lib/cli.sh` | `parse_args`, `parse_database_spec`, `print_help` |
+| `lib/docker.sh` | `discover_pmm_server`, `resolve_pmm_server` |
+| `lib/images.sh` | `build_<engine>_image` per image and `ensure_image` (local, else pull from `PREBAKED_REGISTRY`, else build) |
+| `lib/prebaked.sh` | `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits |
+| `lib/fetch-pmm-client-deb.sh` | Fetches a verified PMM Client `.deb` for Debian-family images, waiting out repo.percona.com's publishing race |
+| `lib/dispatch.sh` | `dispatch_setup`: the map from a type to its setup function |
+| `lib/execution.sh` | `preflight_database_setups`, the sequential and parallel strategies |
+| `images/<database>/` | That database's `Dockerfile`, its `setup.sh`, and the files either of them copies in |
+| `build-images` | Prebakes images ahead of a run: `./build-images ps=8.4 pxc-proxysql=8.0` |
+
+| `images/` folder | Types | Image |
 | --- | --- | --- |
-| `pmm-framework` | Bash version gate, path anchors, sources everything, calls `parse_args` then `run_database_setups` | — |
-| `lib/common.sh` | `log_*`, `die`, `require_command`, `bool_string`, `normalize_client_version` | nothing |
-| `lib/config.sh` | The catalogue: `register_database`, lookups, `resolve_value` | common |
-| `lib/cli.sh` | `parse_args`, `parse_database_spec`, `print_help` | common, config |
-| `lib/docker.sh` | `discover_pmm_server`, `resolve_pmm_server` | common |
-| `lib/ansible.sh` | `run_playbook`, `print_env_map`, collection/interpreter setup | common |
-| `lib/runners.sh` | `run_setup_script`, version/password/branch resolvers | common, config, ansible |
-| `lib/images.sh` | `build_<engine>_image` per prebaked image, `ensure_image` (local, else pull from `PREBAKED_REGISTRY`, else build) | common |
-| `lib/prebaked.sh` | The docker backend: `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits | common, runners |
-| `build-images` | CLI to prebake images ahead of a run (`./build-images ps=8.4 pxc-proxysql=8.0`) | common, images |
-| `images/pxc/` | The single-container PXC + ProxySQL image; `pmm-pxc` inside it prepares node 1 at build time and starts the cluster at run time | — |
-| `images/haproxy/` | Oracle Linux 9's `haproxy` package, which has the Prometheus exporter; `haproxy.cfg` is copied in at run time | — |
-| `images/psmdb/` | The systemd PSMDB + PBM image, tagged `<major>-ol8` or `<major>-ol9`; built with `qa-integration/pmm_psmdb-pbm_setup` as its context | — |
-| `setups/*.sh` | One `setup_<name>` per type, plus `dispatch_setup` | everything above |
-| `lib/execution.sh` | `preflight_database_setups`, sequential and parallel strategies | everything above |
+| `ps/` | — (Dockerfile only) | `pmm-qa/ps` |
+| `mysql/` | `PS`, `MYSQL`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`) |
+| `pxc/` | `PXC` | `pmm-qa/pxc-proxysql`: three nodes and ProxySQL in one container, driven by `pmm-pxc` |
+| `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged |
+| `pdpgsql/` | `PDPGSQL`, `SSL_PDPGSQL` | `pmm-qa/pdpgsql` (systemd), and `pmm-qa/ssl-pdpgsql` from `pdpgsql/ssl/` |
+| `pgsql/` | `PGSQL` | `pmm-qa/pgsql`; replication runs the official `postgres` image |
+| `haproxy/`, `external/`, `valkey/` | `HAPROXY`, `EXTERNAL`, `VALKEY` | one image each |
 
 Source order matters only because `lib/config.sh` runs `register_database`
-calls and a validation loop at source time — both need `lib/common.sh`'s
-`die()` already defined.
+calls and a validation loop at source time, which need `lib/common.sh`'s
+`die()`.
 
-The PS and MySQL images build from the Dockerfiles in
-`provisioning/images/engines/`, which the TypeScript provisioner shares.
-`images/pxc/` is this framework's own, because the tests expect PXC's
-single-container layout. `images/psmdb/` is the PSMDB stacks' own Dockerfile
-without the PMM Client; the setups tag it `replica_member/local`, so the
-stacks' compose files run it unchanged (same containers, networks, ports and
-volumes) and never build. `.github/workflows/build-prebaked-images.yml` builds
-every image weekly, checks that it starts, and publishes it to
-`ghcr.io/percona/pmm-qa/<engine>:<version>`.
+`.github/workflows/build-prebaked-images.yml` builds every image weekly, starts
+and checks each one, and publishes it to
+`ghcr.io/percona/pmm-qa/<engine>:<version>`. On a push it rebuilds only the
+images whose baked-in files changed.
 
 ---
 
@@ -116,24 +91,21 @@ sequenceDiagram
     participant E as pmm-framework
     participant C as lib/cli.sh
     participant X as lib/execution.sh
-    participant D as setups/dispatch.sh
+    participant D as lib/dispatch.sh
     participant S as setup_NAME
-    participant B as run_playbook / run_setup_script
 
     U->>E: --parallel --database pgsql=16 --database psmdb
     E->>C: parse_args
     C-->>E: DATABASE_SPECS=(pgsql=16, psmdb)
     E->>X: run_database_setups
-    X->>X: preflight — conflicts? server? curl? ansible?
+    X->>X: preflight: server? curl? conflicts?
     Note over X: a conflict here turns --parallel off
     loop each spec
         X->>C: parse_database_spec
         C-->>X: DB_TYPE, DB_VERSION, DB_CONFIG
         X->>D: dispatch_setup
         D->>S: setup_pgsql
-        S->>S: resolve version / client / options → env_map
-        S->>B: run_playbook 'pgsql_pgss_setup.yml' env_map
-        B-->>S: success or die
+        S->>S: ensure_image, docker run, install PMM Client, register
     end
     X-->>U: exit 0, or non-zero if any setup failed
 ```
@@ -141,48 +113,32 @@ sequenceDiagram
 ### Preflight
 
 Every spec is parsed once before anything is provisioned, so a bad request
-fails in seconds rather than halfway through. Preflight decides:
-
-- **does anything need a PMM Server?** — `BUCKET` and `DOCKERCLIENTS` do not,
-  so `--database bucket` works with no server running
-- **does anything need `curl`?** — `PSMDB` and `SSL_PSMDB`
-- **do any two setups conflict?** — see below
-- **warm up Ansible** before parallel jobs fork, so they cannot race to install
-  the same collection
+fails in seconds rather than halfway through. Preflight finds the PMM Server,
+checks for `curl` when a `PSMDB` or `SSL_PSMDB` setup needs it, and applies
+the conflict rules below.
 
 ### The conflict rules
 
 Two setups of the **same type** reuse the same container names and host ports,
 and any two of the **MySQL family** (`PS`/`MYSQL`) both publish host ports from
-3306. They cannot run at the same time.
-
-When `--parallel` is asked for and such a conflict exists, the framework keeps
-every setup and gives up only the concurrency:
+3306. They cannot run at the same time. When `--parallel` is asked for, the
+framework keeps every setup and gives up only the concurrency:
 
 ```text
 WARNING: Running setups sequentially: two PS setups cannot run in parallel.
 ```
 
-This matters because CI passes `--parallel` unconditionally; refusing the run
-would fail jobs that are perfectly valid, just not parallelisable.
+CI passes `--parallel` unconditionally, so refusing would fail valid jobs.
 
-Two pairs are worse than non-parallelisable — they cannot share a **host** at
-all, because each holds the same container name or host port for as long as it
-is up, so the second one fails whether it starts now or after the first has
-finished:
+Three pairs cannot share a **host** at all, because each holds the same
+container name or host port for as long as it is up:
 
-- **two `PSMDB` setups**, replica-set and sharded included:
-  `docker-compose-rs.yaml` and `docker-compose-sharded.yaml` run from separate
-  compose projects but both pin `container_name` `rs101`..`rs203` and publish
-  host port 27027, and a container name is unique per daemon whatever the
-  project.
-- **`EXTERNAL` with `VALKEY`**: `external_setup.yml` publishes its
-  `redis_container` on host port 6379, and both Valkey topologies put a node on
-  that port — `valkey_cluster_start_port` in `valkey/valkey-cluster.yml` and
-  `valkey_primary_port` in `valkey/valkey-sentinel.yml` are both 6379.
+- **two `PSMDB` setups**: the replica-set and sharded compose files both pin
+  `container_name` `rs101`..`rs203` and host port 27027.
+- **`EXTERNAL` with `VALKEY`**: both publish host port 6379.
+- **`PDPGSQL` patroni with `PGSQL` replication**: both publish host port 6432.
 
-These are refused in preflight, naming the collision — the remedy is two
-machines, not two turns:
+These are refused in preflight, naming the collision:
 
 ```text
 ERROR: EXTERNAL and VALKEY setups (both publish host port 6379) cannot share a host; provision them on separate machines.
@@ -195,32 +151,19 @@ ERROR: EXTERNAL and VALKEY setups (both publish host port 6379) cannot share a h
 | Order | argument order | all at once, reported as they finish |
 | Output | streams straight to the console | buffered per setup, printed whole |
 | On failure | stops immediately | every setup still finishes, run exits non-zero |
-| Successful logs | stream live (not buffered) | summary line only, unless `--verbose` |
-| Failed logs | stream live | always dumped, plus the directory is kept |
+| Successful logs | stream live | summary line and agent states only, unless `--verbose` |
+| Failed logs | stream live | always dumped, and the directory is kept |
 
-A **failed** parallel setup always dumps its buffered log — no flag needed,
-since that is what makes a broken setup diagnosable. A **successful** one
-prints just its summary line, so a green CI run stays short; add `--verbose`
-to echo those too when you want to see what a passing setup actually did.
-
-The CI runners deliberately do **not** pass `--verbose`, so day-to-day runs
-stay quiet. Individual callers can still opt in through `services_list` /
-`setup_services`.
-
-Every setup reports how long it took, and a parallel one also reports its
-slowest Ansible tasks — `run_playbook` enables `ansible.posix.profile_tasks`
-and `print_slowest_tasks` lifts the summary back out of the buffered log before
-a green run deletes it. Without that, a spec that is slow because of its
-pmm-client install is indistinguishable from a slow database.
+Every setup reports how long it took, and each `step` in its log carries its
+own duration. `--setup-retries N` reruns only the setups that failed.
 
 Parallel mode enables job control (`set -m`) so each setup gets its own process
-group. That way an interrupt takes down `ansible-playbook` and its children
-too, not just the wrapper subshell. The interrupt handler then dumps the
-buffered log of every setup still running and keeps the log directory, because
-CI wraps the framework in `timeout` and that buffer is the only record of where
-a hung setup got to. It is also why each job gets
-`</dev/null` — a background process group that reads the terminal is stopped by
-`SIGTTIN` and would hang forever.
+group, and an interrupt takes down the docker commands under it too. The
+interrupt handler dumps the buffered log of every setup still running and keeps
+the log directory, because CI wraps the framework in `timeout` and that buffer
+is the only record of where a hung setup got to. Each job gets `</dev/null`: a
+background process group that reads the terminal is stopped by `SIGTTIN` and
+would hang forever.
 
 ---
 
@@ -239,130 +182,59 @@ Two resolvers implement this, and they differ on purpose:
 
 | Helper | Used for | Empty env var |
 | --- | --- | --- |
-| `resolve_value TYPE KEY MAP` | spec options | **wins** — yields `''`, mirroring Python's `os.environ.get` |
-| `resolved_version ENV TYPE REQ` | versions | **skipped** — mirrors Python's `os.getenv(X) or ...` |
+| `resolve_value TYPE KEY MAP` | spec options | **wins**, yielding `''` |
+| `resolved_version ENV TYPE REQ` | versions | **skipped** |
 
 > ⚠️ `resolve_value` looks variables up by name, and bash sees non-exported
 > shell variables too. Never name a global in `lib/cli.sh` after a registered
 > option key, or it will silently win over the spec.
 
-Versions have their own rule: the **order of the version list carries no
-meaning**. The default comes from the explicit `DEFAULT_VERSION=` entry, and a
-versioned type that omits it fails at startup.
+The **order of the version list carries no meaning**. The default comes from
+the explicit `DEFAULT_VERSION=` entry, and a versioned type that omits it fails
+at startup.
 
 ---
 
 ## 5. How to extend
 
-### Add a new database type
+### Add a database type
 
-Three files, in order. Say you are adding `FOODB`:
+Say you are adding `FOODB`:
 
-**1 — register it** in `lib/config.sh`:
+1. **Register it** in `lib/config.sh`. Every option key needs a default; an
+   option without one silently resolves to `''`.
 
-```bash
-register_database FOODB \
-  '1.0 2.0' \
-  'CLIENT_VERSION SETUP_TYPE TARBALL' \
-  'DEFAULT_VERSION=2.0' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'TARBALL='
-```
+   ```bash
+   register_database FOODB \
+     '1.0 2.0' \
+     'CLIENT_VERSION SETUP_TYPE' \
+     'DEFAULT_VERSION=2.0' \
+     'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE='
+   ```
 
-Every option key needs a matching default — an option without one silently
-resolves to `''`.
+2. **Add `images/foodb/`** with its `Dockerfile` and `setup.sh`, and source the
+   `setup.sh` from `pmm-framework` and `tests/helpers/test_helper.bash`. Build
+   `setup_foodb` from the `lib/prebaked.sh` helpers.
+3. **Add `build_foodb_image`** to `lib/images.sh` (`build_image foodb:TAG foodb
+   --build-arg ...`), and the image to `build-prebaked-images.yml`: its matrix,
+   the files the plan job watches, and its "start it and check it works" step.
+4. **Wire up dispatch** in `lib/dispatch.sh`: `FOODB) setup_foodb ;;`
+5. **Add tests** in `tests/dispatch.bats` with `stub_prebaked_docker`,
+   asserting the exact `docker run` and `pmm-admin add` lines, plus one
+   rejection of an unsupported option.
 
-**2 — write the setup function** in the matching `setups/*.sh` (or a new file,
-sourced from `pmm-framework`):
-
-```bash
-# FooDB, monitored by PMM.
-setup_foodb() {
-  local version setup_type client
-  version=$(resolved_version FOODB_VERSION FOODB "$DB_VERSION")
-  setup_type=$(resolve_value FOODB SETUP_TYPE DB_CONFIG)
-  setup_type=${setup_type,,}
-  client=$(resolved_client_version FOODB DB_CONFIG)
-
-  declare -A env_map=(
-    [PMM_SERVER_IP]="$PMM_SERVER_HOST"
-    [FOODB_VERSION]="$version"
-    [SETUP_TYPE]="$setup_type"
-    [CLIENT_VERSION]="$client"
-    [ADMIN_PASSWORD]="$(admin_password)"
-    [PMM_QA_GIT_BRANCH]="$(git_branch)"
-    [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
-  )
-  run_playbook 'foodb/foodb-setup.yml' env_map
-}
-```
-
-Keys must match exactly what the playbook reads. A key the playbook ignores is
-dead weight; a key it expects but you omit falls back to the playbook's own
-`default(...)` with **no error**, which is the most common way to get a setup
-that "succeeds" but is misconfigured.
-
-**3 — wire up dispatch** in `setups/dispatch.sh`:
-
-```bash
-FOODB) setup_foodb ;;
-```
-
-Then check the two capability predicates:
-
-- `setup_requires_server` (`setups/dispatch.sh`) — add it if it needs **no**
-  PMM Server
-- `setup_uses_ansible` (`lib/execution.sh`) — add it if it is **script**-backed
-  or **prebaked**
-
-**4 — add a test** in `tests/dispatch.bats`. The suite stubs the backends and
-asserts on the captured env map, so no containers are involved:
-
-```bash
-@test "FooDB selects its playbook and environment" {
-  parse_database_spec 'foodb=2.0,SETUP_TYPE=cluster'
-  dispatch_setup
-
-  [[ $CAPTURE_KIND == playbook ]]
-  [[ $CAPTURE_TARGET == foodb/foodb-setup.yml ]]
-  [[ ${CAPTURE_ENV[FOODB_VERSION]} == 2.0 ]]
-  [[ ${CAPTURE_ENV[SETUP_TYPE]} == cluster ]]
-}
-```
+The parity checklist and the pitfalls hit on the way are in pmm-ai's
+`pmm-framework-change` skill, `references/prebaked-port.md`.
 
 ### Add a global flag
 
 1. default it in the block at the top of `lib/cli.sh`
-2. add a `case` arm in `parse_args` — value-taking flags join the shared arm so
+2. add a `case` arm in `parse_args`; value-taking flags join the shared arm so
    the "next argument looks like a flag" rule stays in one place
 3. document it in `print_help`
-4. read it where it applies, usually a key in one or more env maps
+4. read it where it applies
 
 Do not name it after a registered option key (see the warning above).
-
-### Add a new backend
-
-`run_playbook` and `run_setup_script` take `(target, env_map_name)`, pass
-variables through `env` rather than exporting, and `die` on failure. A new
-env-map backend should follow the same shape and be reflected in
-`setup_uses_ansible`.
-
-The prebaked backend (`lib/prebaked.sh`) has no single entry point. Its setup
-functions call `docker` directly, through helpers that each `die` on failure.
-
-### Port a type to a prebaked image
-
-1. Record the playbook's end state (names, ports, users, `pmm-admin add`
-   arguments) and the time it takes, before changing anything.
-2. Add `build_<engine>_image` to `lib/images.sh` and the image to the
-   `build-prebaked-images.yml` matrix.
-3. Rewrite `setup_<name>` on the `lib/prebaked.sh` helpers so that it
-   reproduces that end state.
-4. Add the type to `setup_uses_ansible`.
-5. Replace its playbook-capture tests with `stub_prebaked_docker` tests.
-
-The step-by-step recipe, the parity checklist and the pitfalls are in
-`.claude/skills/pmm-framework-change/references/prebaked-port.md`. Leave the old
-playbook in place until every type is ported.
 
 ---
 
@@ -373,30 +245,19 @@ make check     # bash -n, shellcheck -x, and the full bats suite
 make test      # bats only
 ```
 
-Three suites, none of which start a container:
+None of the suites starts a container:
 
 | Suite | Covers |
 | --- | --- |
 | `tests/cli.bats` | parsing, precedence, the catalogue, server discovery, log formatting |
-| `tests/dispatch.bats` | each type selects the right playbook/script and env map; prebaked types issue the exact `docker run` / `pmm-admin add` commands |
-| `tests/integration.bats` | the real entrypoint with stubbed `docker`/`ansible-playbook`/`curl` |
+| `tests/dispatch.bats` | each type issues the exact `docker run` / `pmm-admin add` commands, and the image builders |
+| `tests/preflight.bats` | the conflict rules |
+| `tests/integration.bats` | the real entrypoint, sequential and parallel, against fake `docker` and `curl` executables |
 
-`tests/helpers/test_helper.bash` sources the modules and **replaces**
-`run_playbook` and `run_setup_script` with capture stubs, so a test can assert
-on `CAPTURE_KIND`, `CAPTURE_TARGET` and `CAPTURE_ENV` without provisioning
-anything. `reset_framework_state` runs before each test. Prebaked setups call
-`docker` directly, so their tests use `stub_prebaked_docker` instead. It is a
-`docker` shell function that records every call and answers the probes the
-setup polls, so a whole setup runs end to end without a daemon.
-
-`integration.bats` needs a sample type that still goes through
-`ansible-playbook`: `mlaunch_psmdb` and `mlaunch_modb` today, which have no CI
-callers left. The PDPGSQL/PGSQL conflict tests run the real prebaked pair
-against a `docker` stub that answers the probes they poll.
-
-`tests/integration.bats` takes the opposite approach: it puts fake `docker`,
-`ansible-playbook` and `curl` executables on `PATH` and runs the real
-entrypoint end to end.
+`stub_prebaked_docker` in `tests/dispatch.bats` is a `docker` shell function
+that records every call and answers the probes a setup polls, so a whole setup
+runs end to end without a daemon. `integration.bats` does the same with a
+`docker` executable on `PATH`, using `haproxy` and `pgsql` as its samples.
 
 When you change behaviour, make the test fail first. A test that passes both
 before and after a fix is not testing the fix.
@@ -405,41 +266,37 @@ before and after a fix is not testing the fix.
 
 ## 7. Conventions and gotchas
 
-**Bash 5.1 or newer.** The version gate in `pmm-framework` currently says 4.4,
-but `wait -n -p` in `run_parallel_setups` needs 5.1 — worth tightening.
+**Bash 5.1 or newer**, for `wait -n -p` in `run_parallel_setups`; the
+entrypoint checks it.
 
 **`set -euo pipefail` plus `inherit_errexit`.** A failing `$(...)` aborts the
-run instead of yielding an empty string. Beware `local x=$(...)`: `local`
-masks the exit status, so always split the declaration from the assignment.
+run instead of yielding an empty string. `local x=$(...)` masks the exit
+status, so split the declaration from the assignment.
 
-**Value helpers print, predicates return.** `helper` that yields a value writes
+**Inside a sequential setup, `set -e` is off.** The sequential path runs
+`(run_database_spec) || status=$?`, and bash ignores errexit under a `||`,
+subshells included. Wrap every command in `must`, `step`, `retry` or
+`each_node`, which die on failure, or add `|| die`. A bare failing `docker`
+call is silently skipped.
+
+**Never use `[[ cond ]] && cmd` as a statement.** On the parallel path errexit
+is on, and a false condition kills the setup. Use `if`.
+
+**Value helpers print, predicates return.** A helper that yields a value writes
 it to stdout with no trailing newline; one that answers a question returns 0/1.
 
-**Arrays are passed by name.** Bash cannot pass an associative array by value,
-so `run_playbook 'x.yml' env_map` takes the *name* and re-binds it with
-`local -n`. That is why a caller must never name a local `env_ref`, `map_ref`
-or `config_ref` — each is a nameref in a callee (`run_playbook` and
-`run_setup_script`, `print_env_map`, and `resolve_value` respectively), and a
-caller local of the same name collides with it, raising a circular-reference
-error rather than a clean type error. `resolve_value` is the easiest of the
-three to hit, since nearly every `setup_*` function calls it.
+**Setup helpers read their caller's locals.** `setup_<name>` declares `version`,
+`names`, `suffix` and the like as locals, and its helpers read them through
+bash's dynamic scoping rather than taking them as arguments.
 
-**Env maps are written out in full.** The repetition across setup functions is
-deliberate; the differences between them are real (`setup_external` omits
-`CLIENT_DEBUG`, the PSMDB setups use `PMM_CLIENT_VERSION`). Factoring out the
-common keys would hide those asymmetries.
+**Arrays are passed by name.** `resolve_value` binds `config_ref` and
+`each_node` binds `nodes_ref`, so a caller must never name a local either of
+those.
 
 **Unknown versions and options are not fatal.** They are noted under
-`--verbose` and the default is used, matching the Python framework so a typo
-degrades instead of failing a long CI job. Unknown *database names* are fatal.
+`--verbose` and the default is used, so a typo degrades instead of failing a
+long CI job. Unknown *database names* are fatal.
 
 **`die` exits the current shell.** At top level that ends the run; inside
 `$(...)` or a parallel job it ends only that subshell, and `set -e` propagates
 the failure outward.
-
-**Inside a sequential setup, `set -e` is off.** The sequential path runs
-`(run_database_spec) || status=$?`, and bash ignores errexit for everything
-underneath a `||`, subshells included. A playbook setup does not notice,
-because `run_playbook` dies itself. A prebaked setup must do the same: wrap
-commands in `must`, `step`, `retry` or `each_node`, which die on failure, or
-add an explicit `|| die`. A bare failing `docker` call is silently skipped.

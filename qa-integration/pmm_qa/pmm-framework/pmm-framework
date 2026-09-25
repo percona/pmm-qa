@@ -25,11 +25,9 @@
 
 set -euo pipefail
 
-# Bash 4.4 is the floor: expanding an empty array under `set -u` (setups with
-# no elements) errors on 4.3 and older,
-# and `inherit_errexit` below does not exist there either.
-if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
-  printf 'ERROR: pmm-framework requires Bash 4.4 or newer (found %s).\n' \
+# Bash 5.1 is the floor: run_parallel_setups waits with `wait -n -p`.
+if ((BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 1))); then
+  printf 'ERROR: pmm-framework requires Bash 5.1 or newer (found %s).\n' \
     "$BASH_VERSION" >&2
   exit 1
 fi
