@@ -67,7 +67,6 @@ pmmTest(
     });
 
     await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
-      await leftNavigation.selectMenuItem('inventory');
       await leftNavigation.selectMenuItem('operatingsystem.overview');
       await dashboard.waitForDashboardToLoad();
     });

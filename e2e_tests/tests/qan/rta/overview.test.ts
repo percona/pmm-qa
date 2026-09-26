@@ -27,7 +27,7 @@ pmmTest(
     await pmmTest.step('Simulate long running queries', async () => {
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-1',
+        queryLabel: 'rta-overview-1',
       });
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the query to run for some time
@@ -35,15 +35,17 @@ pmmTest(
 
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-2',
+        queryLabel: 'rta-overview-2',
       });
     });
 
     await pmmTest.step('PMM-T2174 Filter by query text and verify 2 queries are visible', async () => {
-      await queryAnalytics.rta.filterQueriesByText('rta');
+      // The filter is a case-insensitive substring match, and the base64 $clusterTime signature of a
+      // running hello command can contain 'rta' ("z6YIJqRtajW..."); '-' is outside the base64 alphabet.
+      await queryAnalytics.rta.filterQueriesByText('rta-overview-');
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-2')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-1')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-2')).toBeVisible();
     });
 
     await pmmTest.step('Pause RTA', async () => {
@@ -51,8 +53,8 @@ pmmTest(
     });
 
     await pmmTest.step('PMM-T2173 Verify elapsed time for queries is descending by default', async () => {
-      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-1');
-      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-2');
+      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-1');
+      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-2');
 
       expect(elapedTimeForQuery1).toBeGreaterThan(0);
       expect(elapedTimeForQuery2).toBeGreaterThan(0);
