@@ -20445,6 +20445,18 @@
         "duration_s": 1005
       }
     ],
-    "investigations": []
+    "investigations": [
+      {
+        "suites": [
+          "Upgrade AMD"
+        ],
+        "verdict": "test fix",
+        "summary": "RTA PMM-T2173/T2174: the case-insensitive 'rta' filter matched a MongoDB hello command's base64 signature (z6YIJqRtajW...). Reproduced on Linode; fixed with unique labels and an 'rta-overview-' filter.",
+        "link": "https://github.com/percona/pmm-qa/pull/1516",
+        "by": "travagliad",
+        "at": "2026-09-26T10:55:26Z"
+      }
+    ],
+    "claims": []
   }
 ]
