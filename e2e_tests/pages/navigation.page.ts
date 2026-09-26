@@ -217,11 +217,10 @@ export default class LeftNavigation extends BasePage {
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
-          // The parent row is itself a link to its own dashboard, with the default
-          // time range and time zone; only the side toggle expands without navigating.
           expandButton = this.getLocator(item as NestedLocator)
             ?.locator('xpath=..')
-            .getByTestId(/^navitem-.+-toggle$/);
+            .getByRole('button')
+            .first();
 
           if (childLocator && !(await childLocator.isVisible())) {
             await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
