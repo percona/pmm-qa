@@ -2385,6 +2385,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1512",
       "by": "travagliad",
       "at": "2026-09-26T10:55:34Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "compat 3.9.0 PMM-T2048: I.scrollTo waited 20s on a panel visible 40ms earlier. The trace shows a 23.3s renderer paint stall over the whole wait. Timing-shaped; recurs (also 2026-09-25); not fixed.",
+      "link": "",
+      "by": "travagliad",
+      "at": "2026-09-26T10:55:37Z"
     }
   ],
   "claims": []
