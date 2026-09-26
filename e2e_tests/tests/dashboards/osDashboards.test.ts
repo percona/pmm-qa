@@ -66,8 +66,6 @@ pmmTest(
       await leftNavigation.elements.timePickerOpenButton.click();
     });
 
-    // Left-nav links carry the time zone only while a dashboard is open, so this goes
-    // dashboard to dashboard; a detour through Inventory resets it to the browser default.
     await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
       await leftNavigation.selectMenuItem('operatingsystem.overview');
       await dashboard.waitForDashboardToLoad();
