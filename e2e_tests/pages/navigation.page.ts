@@ -217,10 +217,11 @@ export default class LeftNavigation extends BasePage {
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
+          // The parent row is itself a link to its own dashboard, with the default
+          // time range and time zone; only the side toggle expands without navigating.
           expandButton = this.getLocator(item as NestedLocator)
             ?.locator('xpath=..')
-            .getByRole('button')
-            .first();
+            .getByTestId(/^navitem-.+-toggle$/);
 
           if (childLocator && !(await childLocator.isVisible())) {
             await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
@@ -248,32 +249,29 @@ export default class LeftNavigation extends BasePage {
       const currentUrl = this.page.url();
       const href = await locator.getAttribute('href', { timeout: Timeouts.TEN_SECONDS }).catch(() => null);
       const targetPath = href ? new URL(href, currentUrl).pathname : undefined;
-      // A dashboard rewrites its own var-* query params, so "URL changed" alone
-      // can fire before navigation to the clicked link happens.
-      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
-      // path, so the path must also move off the page that was already open.
-      const currentPath = new URL(currentUrl).pathname;
-      const isOnTarget = (url: URL) =>
-        !!targetPath &&
-        url.pathname.startsWith(targetPath) &&
-        (url.pathname !== currentPath || currentPath === targetPath);
-      let attempt = 0;
 
       // The left-nav auto-collapses a submenu after a route change, hiding a
       // just-verified nested item before the click lands (PMM-T2202 flake).
-      // A click that timed out may still have navigated; clicking the expand
-      // button again then follows the parent's own link and drops the time
-      // range and time zone the page carried (PMM-T1090 flake).
       await expect(async () => {
-        if (attempt++ > 0 && isOnTarget(new URL(this.page.url()))) return;
         if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
 
         await locator.click({ timeout: Timeouts.TEN_SECONDS });
       }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
 
+      // A dashboard rewrites its own var-* query params, so "URL changed" alone
+      // can fire before navigation to the clicked link happens.
+      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
+      // path, so the path must also move off the page that was already open.
+      const currentPath = new URL(currentUrl).pathname;
+
       await (
         targetPath
-          ? this.page.waitForURL(isOnTarget, { timeout: Timeouts.TEN_SECONDS })
+          ? this.page.waitForURL(
+              (url) =>
+                url.pathname.startsWith(targetPath) &&
+                (url.pathname !== currentPath || currentPath === targetPath),
+              { timeout: Timeouts.TEN_SECONDS },
+            )
           : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
               timeout: Timeouts.TEN_SECONDS,
             })
