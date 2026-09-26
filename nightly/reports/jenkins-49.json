@@ -2365,6 +2365,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1516",
       "by": "travagliad",
       "at": "2026-09-26T10:55:29Z"
+    },
+    {
+      "suites": [
+        "Nightly"
+      ],
+      "verdict": "not a bug",
+      "summary": "nightly / ha: Helm install fails (vmauth.yaml b64dec) because the orchestrator passes HELM_CHART_BRANCH=main, and pmm3-ha-eks only works with PMM-HA-GA since jenkins-pipelines#4479. Jenkins config, not PMM; the fix is one line at pmm3-nightly-orchestrator.groovy:208.",
+      "link": "",
+      "by": "travagliad",
+      "at": "2026-09-26T10:55:32Z"
     }
   ],
   "claims": []
