@@ -248,29 +248,32 @@ export default class LeftNavigation extends BasePage {
       const currentUrl = this.page.url();
       const href = await locator.getAttribute('href', { timeout: Timeouts.TEN_SECONDS }).catch(() => null);
       const targetPath = href ? new URL(href, currentUrl).pathname : undefined;
-
-      // The left-nav auto-collapses a submenu after a route change, hiding a
-      // just-verified nested item before the click lands (PMM-T2202 flake).
-      await expect(async () => {
-        if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
-
-        await locator.click({ timeout: Timeouts.TEN_SECONDS });
-      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
-
       // A dashboard rewrites its own var-* query params, so "URL changed" alone
       // can fire before navigation to the clicked link happens.
       // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
       // path, so the path must also move off the page that was already open.
       const currentPath = new URL(currentUrl).pathname;
+      const isOnTarget = (url: URL) =>
+        !!targetPath &&
+        url.pathname.startsWith(targetPath) &&
+        (url.pathname !== currentPath || currentPath === targetPath);
+      let attempt = 0;
+
+      // The left-nav auto-collapses a submenu after a route change, hiding a
+      // just-verified nested item before the click lands (PMM-T2202 flake).
+      // A click that timed out may still have navigated; clicking the expand
+      // button again then follows the parent's own link and drops the time
+      // range and time zone the page carried (PMM-T1090 flake).
+      await expect(async () => {
+        if (attempt++ > 0 && isOnTarget(new URL(this.page.url()))) return;
+        if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
+
+        await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
 
       await (
         targetPath
-          ? this.page.waitForURL(
-              (url) =>
-                url.pathname.startsWith(targetPath) &&
-                (url.pathname !== currentPath || currentPath === targetPath),
-              { timeout: Timeouts.TEN_SECONDS },
-            )
+          ? this.page.waitForURL(isOnTarget, { timeout: Timeouts.TEN_SECONDS })
           : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
               timeout: Timeouts.TEN_SECONDS,
             })
