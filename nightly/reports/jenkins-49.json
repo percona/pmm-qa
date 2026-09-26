@@ -2375,6 +2375,16 @@
       "link": "",
       "by": "travagliad",
       "at": "2026-09-26T10:55:32Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "test fix",
+      "summary": "ha: leaderStatus.test.ts still reads the HA left-menu leader item that percona/pmm#5691 removed. Already fixed in an open PR.",
+      "link": "https://github.com/percona/pmm-qa/pull/1512",
+      "by": "travagliad",
+      "at": "2026-09-26T10:55:34Z"
     }
   ],
   "claims": []
