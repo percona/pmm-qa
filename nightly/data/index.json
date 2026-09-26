@@ -20455,6 +20455,17 @@
         "link": "https://github.com/percona/pmm-qa/pull/1516",
         "by": "travagliad",
         "at": "2026-09-26T10:55:26Z"
+      },
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T1090: the test detoured through Inventory, where left-nav links drop the dashboard time zone (timezone=browser). Main failed 5/6 on Linode, fix passed 9/9. Open question: should the time zone survive a non-dashboard page?",
+        "link": "https://github.com/percona/pmm-qa/pull/1516",
+        "by": "travagliad",
+        "at": "2026-09-26T10:55:29Z"
       }
     ],
     "claims": []
