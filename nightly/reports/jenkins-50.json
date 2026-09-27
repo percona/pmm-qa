@@ -2354,6 +2354,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1518",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:19Z"
+    },
+    {
+      "suites": [
+        "Nightly"
+      ],
+      "verdict": "test fix",
+      "summary": "nightly / ha: pmm3-ha-eks #338 got HELM_CHART_BRANCH=main again and failed Install PMM HA on the vmauth.yaml b64dec error; the fix is Percona-Lab/jenkins-pipelines#4493, still open.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4493",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:23Z"
     }
   ],
   "claims": [
@@ -2376,13 +2386,6 @@
       "at": "2026-09-27T07:25:29Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "Nightly"
       ]
     },
     {
