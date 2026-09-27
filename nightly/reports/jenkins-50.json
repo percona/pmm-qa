@@ -2374,6 +2374,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1512",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:25Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "product bug",
+      "summary": "compat / client 3.9.1: PMM-T1090 lost the Europe/London time zone after navigating via Inventory, which is PMM-15557; #1516 parks the test until that is fixed.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15557",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:28Z"
     }
   ],
   "claims": [
@@ -2389,13 +2399,6 @@
       "at": "2026-09-27T07:25:29Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
