@@ -22938,6 +22938,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-09-27T08:08:40Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "not reproduced",
+        "summary": "docker arm64: PMM-T2048 I.scrollTo waited 20 s on the Updated Tuples Rate panel (the same failure as on 09-25 and 09-26, which #1516 noted as a renderer stall); not reproduced, no fix.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-09-27T08:08:43Z"
       }
     ],
     "claims": []
