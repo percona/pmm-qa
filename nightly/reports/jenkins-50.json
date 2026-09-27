@@ -2405,6 +2405,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:34Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "not reproduced",
+      "summary": "ami 3.8.1: /v1/server/version returned a 92-byte body without .version 2 min after clients registered fine, so check_upgrade.py crashed on version=null; 4 of 5 sibling AMI runs passed; no server logs archived; not reproduced (AMI-only).",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:37Z"
     }
   ],
   "claims": [
@@ -2413,13 +2423,6 @@
       "at": "2026-09-27T07:25:29Z",
       "suites": [
         "Upgrade AMD"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "Upgrade AMI"
       ]
     }
   ]
