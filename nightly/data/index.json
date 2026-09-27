@@ -22877,6 +22877,16 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4493",
         "by": "Investigator routine",
         "at": "2026-09-27T08:08:23Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test fix",
+        "summary": "ha: PMM-T2233/PMM-T2144 leaderStatus still reads the left-menu leader that PMM-13860 removed; already covered by the open PR #1512.",
+        "link": "https://github.com/percona/pmm-qa/pull/1512",
+        "by": "Investigator routine",
+        "at": "2026-09-27T08:08:25Z"
       }
     ],
     "claims": [
@@ -22892,13 +22902,6 @@
         "at": "2026-09-27T07:25:29Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-27T07:25:29Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
         ]
       },
       {
