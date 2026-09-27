@@ -20496,6 +20496,17 @@
         "link": "",
         "by": "travagliad",
         "at": "2026-09-26T10:55:37Z"
+      },
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T1090 (supersedes the earlier 'test fix' entry): the time zone is lost when navigating through Inventory, which is the known product bug PMM-15557. The test is kept and skipped until it is fixed in #1516.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15557",
+        "by": "travagliad",
+        "at": "2026-09-27T04:46:07Z"
       }
     ],
     "claims": []
