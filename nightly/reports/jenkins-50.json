@@ -2344,7 +2344,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T2030: the setup's only replica sbtest load is one 30 s sysbench burst, which fell outside the test's now-15m QAN window once the GR setup took 15 min; reproduced on a VM (main fails outside the window, the fix branch passes).",
+      "link": "https://github.com/percona/pmm-qa/pull/1518",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:19Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2358,13 +2369,6 @@
       "at": "2026-09-27T07:25:29Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "E2E Tests"
       ]
     },
     {
