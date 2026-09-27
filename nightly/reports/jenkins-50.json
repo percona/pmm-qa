@@ -2415,15 +2415,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:37Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
       "suites": [
         "Upgrade AMD"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "3.7.0 OTHERS: pg_stat_user_tables_analyze_count (postgres custom query) was present after the server upgrade but missing after the client upgrade; the same test failed on 3.9.0 OTHERS two nights ago (24251) and passed on the other 17 runners tonight; no repro was attempted.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:40Z"
     }
-  ]
+  ],
+  "claims": []
 }
