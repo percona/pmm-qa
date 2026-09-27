@@ -26,8 +26,25 @@ const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
 
 pmmTest(
   'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-integration',
-  async ({ api, page, qanStoredMetrics, urlHelper }) => {
+  async ({ api, cliHelper, credentials, page, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(replicaServiceRegex);
+    // The setup's only sbtest load is one 30 s sysbench burst, which is older than the
+    // 15-minute window below whenever the later setups take long, so query the replica here.
+    const replicaContainer = cliHelper.execSilent(
+      'docker ps --filter \'name=^ps_pmm_replication_.*_2$\' --format "{{.Names }}" | head -n 1',
+    ).stdout;
+    const { password, username } = credentials.perconaServer.ps_84;
+
+    for (const table of ['sbtest1', 'sbtest2', 'sbtest3']) {
+      const result = cliHelper.execSilent(
+        `docker exec ${replicaContainer} mysql -h 127.0.0.1 -u ${username} -p${password} -D sbtest \
+          -e "SELECT COUNT(*) FROM ${table}; SELECT id, k FROM ${table} WHERE id < 100"`,
+      );
+
+      if (result.code != 0) {
+        throw new Error(`Replica query failed with code ${result.code} and message ${result.stderr}`);
+      }
+    }
 
     await page.goto(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
@@ -36,6 +53,7 @@ pmmTest(
         serviceName: service_name,
       }),
     );
+    await qanStoredMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.TWO_MINUTES);
     await qanStoredMetrics.verifyQanStoredMetricsHaveData();
   },
 );

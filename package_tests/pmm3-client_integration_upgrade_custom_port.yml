@@ -121,12 +121,14 @@
       --server-password={{ pmm_server_password }}
       {{ instance_ip }} generic node2_{{ instance_ip }}
 
-  - name: Start agent
-    shell: pmm-agent --debug --config-file={{ install_path }}/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
-
+  # pmm-agent rewrites its config file on startup (truncate + write), so this check
+  # must run before the agent starts or it can read an empty file.
   - name: Verify that config generated with the custom port listening
     shell: "cat {{ install_path }}/config/pmm-agent.yaml | grep -o -c '{{ custom_port }}' | grep '1'"
     become: yes
+
+  - name: Start agent
+    shell: pmm-agent --debug --config-file={{ install_path }}/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 
   - name: Kill pmm-agent process
     command: "pkill -f pmm-agent"
