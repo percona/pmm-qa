@@ -2384,23 +2384,20 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15557",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:28Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility",
+        "CLI Integration"
+      ],
+      "verdict": "not reproduced",
+      "summary": "downloads.percona.com slowed to 136-770 KB/s between 04:40 and 05:30 under the nightly's own fan-out (176 MB client tarball in 15m57s, PS 5.7 package install 1029 s). That cancelled 12 CLI compatibility jobs at 40 min, and PMM-T2227 (tarball upgrade) hit its 120 s timeout in two Generic jobs. Diagnosed from logs only; pmm-framework downloads the tarball once per container. No fix yet.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:31Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-09-27T07:25:29Z",
