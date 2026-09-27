@@ -2395,16 +2395,19 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-27T08:08:31Z"
+    },
+    {
+      "suites": [
+        "Package ARM"
+      ],
+      "verdict": "not reproduced",
+      "summary": "pkg arm64 upgrade custom port (Debian 12 only): pmm-agent.yaml lacked 17788 330 ms after pmm-agent setup. Not reproduced on a VM: 0/30 with the playbook's own agent start, 0/60 with the real 3.9.1 deb and its systemd unit at 0, 9 and 12 CPU hogs.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-27T08:08:34Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-27T07:25:29Z",
-      "suites": [
-        "Package ARM"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-09-27T07:25:29Z",
