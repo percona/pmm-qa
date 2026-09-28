@@ -2344,5 +2344,42 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:20:07Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:20:07Z",
+      "suites": [
+        "E2E Tests"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:20:07Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:20:07Z",
+      "suites": [
+        "Nightly"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:20:07Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    }
+  ]
 }
