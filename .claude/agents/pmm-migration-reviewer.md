@@ -58,7 +58,7 @@ Structure:
 Workflows:
 - A new or retagged test is reachable from a workflow in the same PR; prefer an existing tag and runner. Widening a `--grep` to rescue a test missing its own tag is 🔴.
 - A retired source carrying a tag from the consumer table in `branch-workflow.md` names that consumer in the commit body and whether its Playwright side exists on the ref the job runs; "no workflow consumer" for such a tag is 🔴.
-- Nightly rendezvous prefixes and counters (`audit-checklist.md` Final post-run review) hold; a rename out of prefix or a mismatched counter is 🔴.
+- Nightly barrier step names and shard counts (`audit-checklist.md` Final post-run review) hold; a renamed barrier step or a mismatched count is 🔴.
 - `|| true` on the test step means `if: failure()` on the report upload never fires; use `always()`. A path where a missing `LAUNCHABLE_TOKEN` yields a green job with zero tests is 🔴.
 - Actions pinned consistently within a file. No hardcoded branch name. Every declared secret is consumed. No copied block over about 50 lines; extract a composite action. 🟡
 - When the remedy is deleting a job or test, state the duplication and its cost as a finding; the runner deletes only a job this migration emptied. 🟡
@@ -158,7 +158,7 @@ unselectableScenarios: 0
 vacuousCodeceptJsJobsLeftUndeleted: 0
 surfacesWithCoverageLost: 0
 duplicateRunsInOnePrRun: 0
-expectedTestJobsBeforeAfter:
+nightlyShardCountsBeforeAfter:
 unrelatedChanges: []
 playwrightPracticeViolations: 0
 findings: []

@@ -153,7 +153,7 @@ curl -sf https://raw.githubusercontent.com/percona/grafana/main/.github/workflow
 | `@gssapi-nightly` | Jenkins `pmm3-ui-tests-nightly-gssapi.groovy` (cron, GSSAPI-enabled server) | `Run Playwright UI Tests` stage, same grep. Re-read the groovy at master; an upstream stage lands without touching this row |
 | `@grafana-pr` | `percona/grafana` `.github/workflows/ui-tests.yml` | already runs `npx playwright test --grep @grafana-pr --pass-with-no-tests` beside `npm run e2e:grafana-pr` |
 | `@qan`, `@nightly`, `@menu` | Jenkins `pmm3-ui-tests-nightly.groovy`, CodeceptJS only | dead: no cron, no caller in `pmm/`, last builds failed in under a second. The live nightly is `pmm3-ui-tests-nightly-gha.groovy`, which dispatches `nightly-e2e-tests-matrix.yml` |
-| `@ia`, `@instances`, `@gcp` | Jenkins `pmm3-ui-tests.groovy` (`TAG` parameter), called by `pmm3-ui-tests-matrix.groovy` and `pmm3-nightly-orchestrator.groovy` `ui / <tag>` | `Run Playwright UI Tests Tagged` stage, Percona-Lab/jenkins-pipelines#4477 (open); runs `--grep "${TAG}"` and starts e2e_tests `webhookd` |
+| `@ia`, `@instances`, `@gcp` | Jenkins `pmm3-ui-tests.groovy` (`TAG` parameter), called by `pmm3-ui-tests-matrix.groovy` and `pmm3-nightly-orchestrator.groovy` `ui / <tag>` | `Run Playwright UI Tests Tagged` stage, Percona-Lab/jenkins-pipelines#4477 (merged 2026-09-24); runs `--grep "${TAG}"` and starts e2e_tests `webhookd` |
 | `@ami-upgrade`, `@ami-ovf-*`, `@pmm-upgrade`, `@pmm-migration`, `@pmm-pre-migration` | Jenkins upgrade and migration pipelines | none; the first migrated test carrying one needs a Playwright step in that pipeline before the source retires |
 
 For each migrated tag, name every consumer or state that a cross-repository caller could not be ruled out. A tag in this table is never reported as "no consumer". When two coverage shapes are arguable, read the precedent: `git log -- .github/workflows/` and the last migration's diff.
@@ -176,9 +176,9 @@ Safety rules for every workflow edit:
 - Never route a load-generating test at the shared Jenkins-managed nightly server; FB and PR CI only.
 - A new runner assembled from two parents: diff their `env:` blocks as parsed YAML across workflow, job and step level. A key in both parents and absent from the child is a defect (`CLIENT_VERSION` missing makes `pmm-framework` test stock `3-dev-latest`); a key in one parent is usually machinery deliberately not ported, so say which. Also confirm every `${{ env.X }}` the child references is declared; systemd `Environment=` lines in heredocs and `. /etc/os-release` variables are expected false positives.
 
-### 3. Keep `expected_test_jobs` true
+### 3. Keep the nightly shard counts true
 
-`grep -rn expected_test_jobs .github/workflows/` finds the single counter in `nightly-e2e-tests-matrix.yml`; it is the number of `"test execution / "` jobs the setup shards wait for, CodeceptJS and Playwright alike. Appending a tag changes nothing. Adding or deleting a nightly matrix entry or prefixed job changes it by one, in the same commit. `fb-e2e-suite.yml` jobs are not counted. State the before and after count in the handoff.
+`nightly-e2e-tests-matrix.yml` sets `EXPECTED_SETUP_JOBS` (every `shard` matrix entry) and `EXPECTED_TEST_SHARDS` (entries with a non-empty `tags_for_tests`); its waits count jobs by the exact step names `Barrier: setup complete` and `Barrier: tests complete`. Appending a tag to an existing shard changes neither. Adding or removing a shard, or giving an empty shard tags, changes them in the same commit. `fb-e2e-suite.yml` jobs are not counted. State both counts before and after in the handoff.
 
 ### 4. Check selectability per scenario and across every consumer
 
@@ -231,7 +231,7 @@ The linked run must contain a job that executed the migrated scenarios: `--list 
 
 On control's own checkout, after the PR exists:
 
-1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit and push only the tracker.
+1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
 2. Restore control's worktree:
 
 ```bash

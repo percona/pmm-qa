@@ -42,7 +42,7 @@ SafeOmission registry:
 | --- | --- |
 | `parseInt(x, 10)` | `parseInt(x)` for decimal version segments. |
 | `expect()` inside changed helpers | Assertions stay in tests. |
-| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` Skip policy. |
+| `pmmTest.skip` without the skip-policy comment | Required by `mappings.md` Skip policy. |
 | Copied PR patterns | Flag when old code conflicts with current `mappings.md`. |
 
 ### Dependencies
@@ -93,7 +93,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] Every original tag remains. Existing CodeceptJS jobs and greps unchanged, except a job the retirement emptied, deleted in this PR.
 - [ ] Every surface the source ran on enumerated per workflow file and cross-repository consumer (`branch-workflow.md` Workflow coverage table), `fb-e2e-suite.yml` named explicitly. Where an `@fb-*` CodeceptJS grep selected a scenario, a Playwright job mirroring the retiring source's `setup_services` was added there.
 - [ ] Coverage shape follows `branch-workflow.md` Workflow coverage step 2: a tag appended to an existing `test_execution_playwright` entry where one exists for the surface, a new job only where none exists or on `fb-e2e-suite.yml`, a runner converted in place when this migration retired its last consumer. A nightly append exists only where the source's own tags were already in a nightly grep. No test runs twice in one PR run.
-- [ ] `expected_test_jobs` matches the nightly `"test execution / "` entries after the edit, before and after stated. `expected_setup_jobs` matches the shards. Setup jobs start with `setup / `, nightly consumers with `test execution / `, and the poll step is named exactly `Waiting for tests execution`; a job renamed out of its prefix is invisible to the poller.
+- [ ] `EXPECTED_SETUP_JOBS` and `EXPECTED_TEST_SHARDS` in `nightly-e2e-tests-matrix.yml` match its `shard` entries (all of them, and those with a non-empty `tags_for_tests`) after the edit, before and after stated. The barrier steps keep the exact names `Barrier: setup complete` and `Barrier: tests complete`; a renamed barrier step is invisible to the waits.
 - [ ] Every migrated title selected, proven with `npx playwright test --list --grep '<expression>'` and a count; every tag the edited job already carried still selects what it did. No unescaped literal `|` in a grep (`launchable-prepare.js` compiles it as a regex). An added Launchable job passes a `--test-suite` distinguishing `playwright` from `codeceptjs`.
 - [ ] No `${{ env.X }}` inside a `run:` line the migration wrote.
 - [ ] Publish branch cut from `origin/main` and carries only migrated code, coverage YAML and the source retirement; control carries only the merge and tracker commits, worktree clean. Every commit subject is `<type>(<scope>): <summary>` and every claim in a commit body was re-measured against the tree.
@@ -112,7 +112,7 @@ Unselectable scenarios: 0
 Vacuous CodeceptJS jobs left undeleted: 0
 Surfaces with coverage lost: 0
 Manufactured nightly appends: 0
-expected_test_jobs mismatches: 0
+Nightly shard count mismatches: 0
 Required test execution: PASS
 Target regression: PASS or NOT REQUIRED
 Result: FINAL_REVIEW_PASS

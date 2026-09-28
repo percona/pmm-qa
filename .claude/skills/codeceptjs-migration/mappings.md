@@ -128,18 +128,17 @@ Read `codeceptjs-e2e/tests/custom_steps.js` for any step not listed here; map it
 
 ## Skip policy
 
-`xScenario(...)` becomes `pmmTest.skip(title, fn)` with this pairing, the only recognised skip in this repo (precedent: `e2e_tests/tests/configuration/settingsPageElements.test.ts`):
+`xScenario(...)` becomes `pmmTest.skip(title, fn)` with one comment line naming the ticket and the reactivation condition, the only recognised skip form for a migrated scenario; a separate `TODO` repeating it is a review finding:
 
 ```ts
-// TODO: <reactivation condition, naming the ticket>
-// eslint-disable-next-line playwright/no-skipped-test -- <ticket> is intentionally skipped for <reason>.
+// eslint-disable-next-line playwright/no-skipped-test -- <ticket>: <reason>; unskip once <ticket> is fixed.
 pmmTest.skip(
   '<title>',
   async ({ ... }) => { ... },
 );
 ```
 
-`check-migration-conventions.sh` enforces the pairing and requires the TODO to name a ticket. If the source reason does not fit, stop and report the gap.
+`check-migration-conventions.sh` requires that line and a ticket (PMM-nnn or a URL) in it. If the source reason does not fit, stop and report the gap.
 
 A source scenario guarded by a runtime early `return` reports a pass while asserting nothing. Do not port it as an inline conditional `pmmTest.skip(condition, reason)`; `playwright/no-skipped-test` is `error` for `**/*.test.ts`. Port the guard as an auto fixture calling `testInfo.skip(condition, reason)`, as `versionGate` does in `e2e_tests/fixtures/pmmTest.ts`, extending it or adding one beside it. A suppressed inline skip is the last resort, and the handoff says why the fixture route was ruled out.
 

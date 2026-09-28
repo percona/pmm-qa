@@ -111,8 +111,8 @@ check_single_use_names() {
 }
 
 # Two call shapes, two rules. The unconditional `pmmTest.skip('<title>', fn)` is a migrated
-# xScenario and carries a TODO naming the ticket that would reactivate it. The conditional
-# `pmmTest.skip(<condition>, '<reason>')` has no ticket to name, so demanding a TODO there only
+# xScenario and its eslint-disable reason names the ticket that would reactivate it. The conditional
+# `pmmTest.skip(<condition>, '<reason>')` has no ticket to name, so demanding one there only
 # produces invented filler. Classify by the first argument: a string literal means unconditional.
 check_skip_policy() {
   local file=$1
@@ -133,12 +133,12 @@ check_skip_policy() {
         if (line[n - 1] !~ /^[[:space:]]*\/\/ eslint-disable-next-line playwright\/no-skipped-test -- .+/) {
           printf "%s:%d: unconditional pmmTest.skip requires the eslint-disable-next-line comment from mappings.md Skip policy\n", FILENAME, n > "/dev/stderr"
           failed = 1
-        }
-        if (line[n - 2] !~ /^[[:space:]]*\/\/ TODO: .+/) {
-          printf "%s:%d: unconditional pmmTest.skip requires a TODO naming the reactivation condition (mappings.md Skip policy)\n", FILENAME, n > "/dev/stderr"
+        } else if (line[n - 1] !~ /(PMM-[0-9]+|https?:\/\/)/) {
+          printf "%s:%d: the eslint-disable reason above pmmTest.skip must reference a ticket (PMM-nnn or a URL), not free text\n", FILENAME, n > "/dev/stderr"
           failed = 1
-        } else if (line[n - 2] !~ /(PMM-[0-9]+|https?:\/\/)/) {
-          printf "%s:%d: the TODO above pmmTest.skip must reference a ticket (PMM-nnn or a URL), not free text\n", FILENAME, n > "/dev/stderr"
+        }
+        if (line[n - 2] ~ /^[[:space:]]*\/\/ TODO: /) {
+          printf "%s:%d: drop the TODO above pmmTest.skip; the eslint-disable reason carries the ticket (mappings.md Skip policy)\n", FILENAME, n > "/dev/stderr"
           failed = 1
         }
       }
@@ -159,8 +159,10 @@ added_lines() {
   local dir name
   dir=$(dirname "$1")
   name=$(basename "$1")
+  local paths=("$name")
+  [[ $name == *_migrated.js ]] && paths+=("${name%_migrated.js}_test.js")
   if git -C "$dir" ls-files --error-unmatch "$name" >/dev/null 2>&1; then
-    git -C "$dir" diff -U0 "$base" -- "$name" | grep '^+' | grep -v '^+++' | cut -c2- || true
+    git -C "$dir" diff -M -U0 "$base" -- "${paths[@]}" | grep '^+' | grep -v '^+++' | cut -c2- || true
   else
     cat "$1"
   fi
@@ -180,7 +182,6 @@ count_uses() {
 check_test_comments() {
   added_lines "$1" | awk -v file="$1" '
     /^[[:space:]]*\/\/ eslint-disable-next-line playwright\/no-skipped-test -- / { next }
-    /^[[:space:]]*\/\/ TODO: .*(PMM-[0-9]+|https?:\/\/)/ { next }
     /^[[:space:]]*(\/\/|\/\*|\*)/ || /[[:space:]]\/\/[[:space:]]/ {
       printf "%s: added comment in a migrated test file - delete it (SKILL.md Port behaviour, simplify shape): %s\n", file, $0 > "/dev/stderr"
       failed = 1
@@ -246,7 +247,7 @@ report_workflow_consumers() {
     echo "info: $file: added tag $tag is selected on $(grep -rc -- "$tag" .github/workflows | awk -F: '{ s += $NF } END { print s + 0 }') workflow line(s): $(grep -rl -- "$tag" .github/workflows | tr '\n' ' ')" >&2
   done < <(added_lines "$file" | grep -Eo '@[a-z][a-z0-9-]+' | sort -u)
   if [[ $file == *nightly-e2e-tests-matrix.yml ]]; then
-    echo "info: expected_test_jobs is $(grep -Eo 'expected_test_jobs:[[:space:]]*[0-9]+' "$file" | grep -Eo '[0-9]+') and the file has $(grep -c -- '- tags_for_tests:' "$file") test-execution matrix entries" >&2
+    echo "info: EXPECTED_SETUP_JOBS=$(grep -Eo 'EXPECTED_SETUP_JOBS: [$][{][{] [0-9]+' "$file" | grep -Eo '[0-9]+$') for $(grep -c -- '- shard_name:' "$file") shards; EXPECTED_TEST_SHARDS=$(grep -Eo 'EXPECTED_TEST_SHARDS: [$][{][{] [0-9]+' "$file" | grep -Eo '[0-9]+$') for $(grep -cE "^[[:space:]]+tags_for_tests: '[^']+'" "$file") shards with tags" >&2
   fi
 }
 
