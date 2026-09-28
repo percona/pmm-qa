@@ -52,3 +52,21 @@ services:
       - ./testdata/ia/scripts:/var/opt/webhookd/scripts
     networks:
       - pmm-qa
+
+  pmm-server-encryption:
+    image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
+    profiles: [encryption]
+    container_name: pmm-server-encryption
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENCRYPTION_KEY_PATH=/srv/non-default.key
+
+  postgres:
+    image: perconalab/percona-distribution-postgresql:15.4
+    profiles: [encryption]
+    container_name: postgres
+    command: -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
+    environment:
+      - POSTGRES_PASSWORD=pmm-^*&@agent-password
+    networks:
+      - pmm-qa

@@ -136,6 +136,11 @@ export interface AddRdsParameters {
   username: string;
 }
 
+export interface AddServiceResponse {
+  mysql?: { service: { service_id: string } };
+  postgresql?: { service: { service_id: string } };
+}
+
 export interface AddRdsResponse {
   rds: {
     mysql: {
