@@ -185,12 +185,9 @@ database_default_value() {
 #   3. the per-database option parsed from the --database spec
 #   4. the default registered above
 #
-# Step 2 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
-# but *empty* variable deliberately wins and yields ''. Contrast with
-# resolved_version() below, which mirrors `os.getenv(...) or ...`
-# and therefore skips empty values -- the two rules are intentionally
-# different. Because `-v` also sees non-exported shell variables, avoid naming
-# any global in lib/cli.sh after a registered option key.
+# In step 2 an exported but *empty* variable wins and yields '', unlike
+# resolved_version() below, which skips empty values. Because `-v` also sees
+# non-exported shell variables, never name a global after an option key.
 #
 # Reads:  the named config array (normally DB_CONFIG), GLOBAL_CLIENT_VERSION
 # Stdout: the resolved value (possibly empty)
@@ -234,9 +231,7 @@ admin_password() {
 #
 # Precedence: $ENV_NAME > spec version > registered DEFAULT_VERSION.
 #
-# Note this skips an *empty* $ENV_NAME, mirroring Python's `os.getenv(X) or ...`.
-# resolve_value() in lib/config.sh deliberately does the opposite for options --
-# see the note there.
+# An *empty* $ENV_NAME is skipped, unlike resolve_value() for options.
 #
 # Stdout: the resolved version
 resolved_version() {
@@ -249,6 +244,18 @@ resolved_version() {
     printf '%s' "$requested"
   else
     database_default_version "$type"
+  fi
+}
+
+# ENCRYPTED_CLIENT_CONFIG for TYPE as true/false; PMM Clients before 3.7
+# cannot encrypt their config, so an exact older CLIENT gets false.
+# Usage: encrypted=$(resolved_encrypted PS "$client")
+resolved_encrypted() {
+  local minor=${2#3.}
+  if [[ $2 == 3.*.* ]] && ((${minor%%.*} < 7)); then
+    printf false
+  else
+    bool_string "$(resolve_value "$1" ENCRYPTED_CLIENT_CONFIG DB_CONFIG)"
   fi
 }
 

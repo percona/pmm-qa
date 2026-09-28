@@ -15,9 +15,7 @@ setup_valkey() {
   client=$(resolved_client_version VALKEY DB_CONFIG)
   encrypted=$(bool_string "$(resolve_value VALKEY ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
   step "Prepare image pmm-qa/valkey:$version" ensure_image valkey "$version"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   case $setup_type in
     sentinel | sentinels)
       nodes=(valkey-primary valkey-replica-1 valkey-replica-2 sentinel-1 sentinel-2 sentinel-3)
@@ -36,11 +34,10 @@ setup_valkey() {
     setup_pmm_agent "$node" "$encrypted" /var/log/pmm-agent.log "$node-node"
     wait_pmm_agent "$node"
     mapfile -t labels < <(valkey_labels "$node")
-    retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering ${labels[0]#*=}" \
-      docker exec "$node" pmm-admin add valkey "${labels[@]}" --environment=valkey-test --username=default \
-      "--password=$VALKEY_PASSWORD" "--host=$node" "--port=$(valkey_port "$node")" >/dev/null
+    pmm_register "$node" pmm-admin add valkey "${labels[@]}" --environment=valkey-test --username=default \
+      "--password=$VALKEY_PASSWORD" "--host=$node" "--port=$(valkey_port "$node")"
   done
-  step 'Wait for exporters' each_node nodes valkey_exporters
+  step 'Wait for exporters' each_node nodes wait_exporters /var/log/pmm-agent.log valkey_exporter
   step 'Run workload' valkey_workload
   for node in "${nodes[@]}"; do
     report_agent_status "$node"
@@ -131,11 +128,6 @@ valkey_port() {
   else
     printf 6379
   fi
-}
-
-valkey_exporters() {
-  wait_exporter "$1" valkey_exporter
-  wait_node_exporter "$1" /var/log/pmm-agent.log
 }
 
 # The playbooks' load: writes on each primary, reads on each replica, without

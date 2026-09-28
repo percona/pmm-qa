@@ -34,9 +34,7 @@ setup_psmdb() {
   esac
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   (
     cd "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" || die 'pmm_psmdb-pbm_setup is missing.'
     export PMM_SERVER_CONTAINER_ADDRESS=$PMM_SERVER_HOST:$PMM_SERVER_PORT ADMIN_PASSWORD
@@ -163,13 +161,7 @@ psmdb_register() {
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
     docker exec -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup "${debug[@]}" >/dev/null
   wait_pmm_agent "$node"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering $service" \
-    docker exec "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@" >/dev/null
-}
-
-psmdb_exporters() {
-  wait_exporter "$1" mongodb_exporter
-  wait_node_exporter "$1" /var/log/pmm-agent.log
+  pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
 }
 
 psmdb_replica_set() {
@@ -229,7 +221,7 @@ psmdb_replica_set() {
         "--host=$node" --port=27017
     fi
   done
-  step 'Wait for exporters' each_node nodes psmdb_exporters
+  step 'Wait for exporters' each_node nodes wait_exporters /var/log/pmm-agent.log mongodb_exporter
 
   step 'Load data' psmdb_rs_data
   for node in "${nodes[@]}"; do
@@ -295,39 +287,14 @@ psmdb_sharded() {
   # shard, which the exporter reports as duplicate series.
   psmdb_register mongos "mongos_$suffix" "mongos_$suffix" --disable-collectors=indexstats --environment=mongo-sharded-dev \
     --cluster=sharded --username=pmm --password=pmmpass 127.0.0.1:27017
-  step 'Wait for exporters' each_node clients psmdb_exporters
+  step 'Wait for exporters' each_node clients wait_exporters /var/log/pmm-agent.log mongodb_exporter
 
   step 'Load data' psmdb_sharded_data
-  step 'Start the workloads' psmdb_sharded_workload
+  # Chunk moves and splits come from the compose file's chunk-churn service.
+  step 'Start the workload' psmdb_traffic
   for node in "${clients[@]}"; do
     report_agent_status "$node"
   done
-}
-
-# The two loops start-sharded-with-pmm.sh leaves running: chunk moves and splits every
-# 240 s, and generate_opcountersrepl_traffic.sh's insert/update/delete load.
-psmdb_sharded_workload() {
-  must docker exec -i mongos tee /tmp/keep_chunks_moving.js >/dev/null <<'EOF'
-var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
-var ins = db.getSiblingDB("test").test.insertOne({ ts: new Date() });
-shards.forEach(function (target) {
-    try {
-        sh.moveChunk("test.test", { _id: ins.insertedId }, target);
-    } catch (e) {
-        print("moveChunk to " + target + " failed, skipping: " + e);
-    }
-});
-try {
-    sh.splitFind("test.test", { _id: ins.insertedId });
-} catch (e) {
-    print("splitFind failed, skipping: " + e);
-}
-EOF
-  must docker exec --detach mongos bash -c 'while true; do
-    mongo "mongodb://root:root@localhost" --quiet /tmp/keep_chunks_moving.js > /tmp/keep_chunks_moving.log 2>&1
-    sleep 240
-  done'
-  psmdb_traffic
 }
 
 psmdb_traffic() {
@@ -338,10 +305,10 @@ psmdb_traffic() {
 # prebaked pmm-qa/psmdb image, doing what that stack's test-auth.sh did after
 # `up`.
 #
-# A throwaway compose override disables the stack's own pmm-server, kerberos
-# and test services (the framework supplies the server, and the test image is
-# only used by test-auth.sh's own tests), resets psmdb-server's depends_on, and
-# joins the external pmm-qa network. It references ${ADMIN_PASSWORD} and
+# A throwaway compose override disables the stack's own pmm-server and kerberos
+# services (the framework supplies the server; the test service is behind the
+# stack's "tests" profile), resets psmdb-server's depends_on, and joins the
+# external pmm-qa network. It references ${ADMIN_PASSWORD} and
 # ${PMM_SERVER_CONTAINER_ADDRESS} as literals -- escaped in the heredoc -- so
 # compose expands them at run time and no secret is written to disk.
 setup_ssl_psmdb() {
@@ -355,17 +322,13 @@ setup_ssl_psmdb() {
 
   step "Prepare image pmm-qa/psmdb:$version-ol9" ensure_image psmdb "$version-ol9"
   must docker tag "pmm-qa/psmdb:$version-ol9" replica_member/local
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-ssl-psmdb.XXXXXX")
   cat >"$temp_dir/compose.yml" <<EOF
 services:
   pmm-server:
     profiles: [framework-disabled]
   kerberos:
-    profiles: [framework-disabled]
-  test:
     profiles: [framework-disabled]
   psmdb-server:
     depends_on: !reset {}
@@ -409,10 +372,9 @@ ssl_psmdb_run() {
     "--server-password=$ADMIN_PASSWORD" --server-insecure-tls --force >/dev/null
   wait_pmm_agent psmdb-server
   # shellcheck disable=SC2086 # $tls is two flags
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering psmdb-server_$suffix" \
-    docker exec psmdb-server pmm-admin add mongodb "psmdb-server_$suffix" --agent-password=mypass --username=pmm_mongodb \
-    '--password=5M](Q%q/U+YQ<^m' --host psmdb-server --port 27017 --tls $tls --cluster=mycluster >/dev/null
-  step 'Wait for exporters' psmdb_exporters psmdb-server
+  pmm_register psmdb-server pmm-admin add mongodb "psmdb-server_$suffix" --agent-password=mypass --username=pmm_mongodb \
+    '--password=5M](Q%q/U+YQ<^m' --host psmdb-server --port 27017 --tls $tls --cluster=mycluster
+  step 'Wait for exporters' wait_exporters psmdb-server /var/log/pmm-agent.log mongodb_exporter
   step 'Load data' ssl_psmdb_data
   report_agent_status psmdb-server
 }

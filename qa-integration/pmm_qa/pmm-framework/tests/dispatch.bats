@@ -384,7 +384,7 @@ EOF
   grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
   [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
-  grep -q '^exec --detach mongos bash -c while true' "$DOCKER_CALLS"
+  [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]
   grep -q '^traffic$' "$DOCKER_CALLS"
 }
 
@@ -400,7 +400,7 @@ EOF
   ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
   # shellcheck disable=SC2016
   grep -Fq 'PMM_AGENT_SERVER_PASSWORD: "${ADMIN_PASSWORD}"' "$BATS_TEST_TMPDIR/override.yml"
-  grep -A1 -q '^  test:$' "$BATS_TEST_TMPDIR/override.yml"
+  grep -A1 -q '^  kerberos:$' "$BATS_TEST_TMPDIR/override.yml"
   ! grep -Fq 'slash' "$BATS_TEST_TMPDIR/override.yml" || false
   [[ ! -e $(dirname "$(cat "$BATS_TEST_TMPDIR/override.path")") ]]
   grep -q -- ' --server-insecure-tls --force$' "$DOCKER_CALLS"

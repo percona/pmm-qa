@@ -10,20 +10,12 @@ setup_haproxy() {
   local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000))
   client=$(resolved_client_version HAPROXY DB_CONFIG)
   step 'Prepare image pmm-qa/haproxy:ol9' ensure_image haproxy ol9
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start HAProxy' haproxy_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  # The playbook named the node after the container plus the nightly shard,
-  # so shards sharing one PMM Server do not replace each other's node.
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering ${container}_service_$suffix" \
-    docker exec "$container" pmm-admin add haproxy --listen-port=42100 --environment=haproxy \
-    "${container}_service_$suffix" >/dev/null
-  wait_node_exporter "$container" /pmm-agent.log
+  attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
+  pmm_register "$container" pmm-admin add haproxy --listen-port=42100 --environment=haproxy \
+    "${container}_service_$suffix"
+  wait_exporters "$container" /pmm-agent.log
   must docker exec --detach "$container" sh -c 'while true; do curl -s http://127.0.0.1:42100/ >/dev/null; sleep 10; done'
   report_agent_status "$container"
 }

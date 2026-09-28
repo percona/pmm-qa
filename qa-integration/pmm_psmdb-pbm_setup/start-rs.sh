@@ -33,11 +33,7 @@ docker compose -f docker-compose-pmm.yaml -f docker-compose-rs.yaml up -d
 echo
 echo "waiting for pmm-server to start"
 timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:'"$pmm_server_admin_pass"'" https://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
-if [ $mongo_setup_type == "pss" ]; then
-  bash -e ./configure-replset.sh
-else
-  bash -e ./configure-psa.sh
-fi
+bash -e ./configure-replset.sh
 bash -e ./configure-agents.sh
 
 generate_traffic=${GENERATE_TRAFFIC:-yes}

@@ -90,10 +90,12 @@ wait_pmm_server_ready() {
 
 # Download a PMM Client tarball once per URL, revalidating the cached copy with
 # If-Modified-Since. An unreachable build cache falls back to the cached copy.
+# A CLIENT that is not a URL (a package channel or release) prints nothing.
 # Stdout: the path of the cached tarball
 fetch_client_tarball() {
   local url=$1 dir=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework file temp
   local -a since=()
+  [[ $url == http* ]] || return 0
   file=$dir/pmm-client-$(printf '%s' "$url" | sha256sum | cut -c1-16).tar.gz
   must mkdir -p "$dir"
   if [[ -f $file ]]; then
@@ -234,9 +236,24 @@ wait_pmm_agent() {
   retry 60 "pmm-agent on $1 to connect" pmm_agent_connected "$1" >/dev/null
 }
 
-# Usage: wait_exporter NODE mysqld_exporter
-wait_exporter() {
-  retry 60 "$2 on $1" exporter_running "$1" "$2" >/dev/null
+# Run a pmm-admin add in NODE, retrying while a freshly set up agent is not
+# connected yet.
+# Usage: pmm_register NODE pmm-admin add TYPE ARGS...
+pmm_register() {
+  local node=$1
+  shift
+  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering on $node" \
+    docker exec "$node" "$@" >/dev/null
+}
+
+# Connect a single-container setup's NODE to the PMM Server. NODE_NAME defaults
+# to NODE plus the nightly shard, so shards sharing one server keep their nodes.
+# Usage: attach_pmm_client NODE CLIENT TARBALL PMM_AGENT_LOG [NODE_NAME]
+attach_pmm_client() {
+  step 'Wait for PMM Server' wait_pmm_server_ready
+  step 'Install PMM Client' install_pmm_client "$1" "$2" "$3"
+  step 'Set up PMM agent' setup_pmm_agent "$1" false "$4" "${5:-$1${SHARD_NAME:+-$SHARD_NAME}}"
+  step 'Wait for pmm-agent' wait_pmm_agent "$1"
 }
 
 # Usage: exporter_running NODE EXPORTER [STATES]  (STATES defaults to running|waiting)
@@ -246,10 +263,15 @@ exporter_running() {
   grep -Eiq "$2.*(${3:-running|waiting})" <<<"$status"
 }
 
-# Host dashboards read node_exporter, so a node without it running has no
-# CPU, memory or network data even when its database exporters are fine.
-# Usage: wait_node_exporter NODE PMM_AGENT_LOG
-wait_node_exporter() {
+# Wait for each EXPORTER to be running or waiting, then for node_exporter to be
+# Running: host dashboards read node_exporter, so a node without it has no CPU,
+# memory or network data even when its database exporters are fine.
+# Usage: wait_exporters NODE PMM_AGENT_LOG [EXPORTER...]
+wait_exporters() {
+  local exporter
+  for exporter in "${@:3}"; do
+    retry 60 "$exporter on $1" exporter_running "$1" "$exporter" >/dev/null
+  done
   if ! (retry 60 "node_exporter on $1 to be Running" exporter_running "$1" node_exporter running >/dev/null); then
     docker exec "$1" sh -c "grep -i node_exporter '$2' | tail -20" >&2 || true
     die "node_exporter is not running on $1."

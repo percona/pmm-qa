@@ -15,21 +15,14 @@ setup_external() {
   client=$(resolved_client_version EXTERNAL DB_CONFIG)
   tag=${REDIS_VERSION:-1.58.0}-${NODE_PROCESS_VERSION:-0.7.10}
   step "Prepare image pmm-qa/external:$tag" ensure_image external "$tag"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start Redis and the exporters' external_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /var/log/pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering redis_external_service_$suffix" \
-    docker exec "$container" pmm-admin add external --listen-port=42200 --group=redis \
-    "--service-name=redis_external_service_$suffix" >/dev/null
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering nodeprocess_service_$suffix" \
-    docker exec "$container" pmm-admin add external --listen-port=9256 --group=processes \
-    "--service-name=nodeprocess_service_$suffix" >/dev/null
-  wait_node_exporter "$container" /var/log/pmm-agent.log
+  attach_pmm_client "$container" "$client" "$tarball" /var/log/pmm-agent.log
+  pmm_register "$container" pmm-admin add external --listen-port=42200 --group=redis \
+    "--service-name=redis_external_service_$suffix"
+  pmm_register "$container" pmm-admin add external --listen-port=9256 --group=processes \
+    "--service-name=nodeprocess_service_$suffix"
+  wait_exporters "$container" /var/log/pmm-agent.log
   report_agent_status "$container"
 }
 

@@ -9,5 +9,5 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY pg_stat_statements_setup.sh pgsm_run_queries.sh /
 
 RUN set -eux; \
-    bash -e /pg_stat_statements_setup.sh --pgsql_version "$PG_VERSION"; \
+    bash /pg_stat_statements_setup.sh "$PG_VERSION"; \
     service postgresql stop

@@ -43,8 +43,7 @@
 #   ./generate_opcountersrepl_traffic.sh
 #
 # Env vars:
-#   COMPOSE_FILE      docker-compose-sharded.yaml (default), or
-#                     docker-compose-sharded-with-pmm.yaml, or docker-compose-rs.yaml
+#   COMPOSE_FILE      docker-compose-sharded.yaml (default) or docker-compose-rs.yaml
 #   MONGO_SERVICE     compose service to connect through (default: mongos;
 #                     use rs101 for the plain replica set setup)
 #   MONGO_URI         default: mongodb://root:root@localhost
@@ -82,11 +81,6 @@ echo "ttl expiry:      ${TTL_SECONDS}s"
 echo "read collection: test.${READ_COLLECTION}"
 echo
 
-# Newer PSMDB images only ship mongosh, older ones only ship the legacy `mongo`
-# shell -- both understand the JS below, so pick whichever is present.
-MONGO_BIN=$(docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" bash -c 'command -v mongosh || command -v mongo' | tr -d '\r')
-echo "using shell binary: $MONGO_BIN"
-echo
 
 cont_bool=false
 [ "$CONTINUOUS" = "yes" ] && cont_bool=true
@@ -167,7 +161,7 @@ print("done: " + i + " cycles");
 JS
 } | docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" bash -c 'cat > /tmp/opcounters_traffic.js'
 
-run_cmd="$MONGO_BIN \"$MONGO_URI\" --quiet /tmp/opcounters_traffic.js"
+run_cmd="mongosh \"$MONGO_URI\" --quiet /tmp/opcounters_traffic.js"
 
 if [ "$BACKGROUND" = "yes" ]; then
     echo "launching load loop detached inside '$MONGO_SERVICE' (logs: /tmp/opcounters_traffic.log)"

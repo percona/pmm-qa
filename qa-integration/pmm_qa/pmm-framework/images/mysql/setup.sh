@@ -24,14 +24,14 @@ setup_mysql() {
 setup_mysql_family() {
   local engine=$1 type=$2 version_env=$3
   local version setup_type client nodes=1 query_source my_rocks=false backup=false encrypted
-  local topology='' tarball='' password=GRgrO9301RuF suffix index minor base_port
+  local topology='' tarball='' password=GRgrO9301RuF suffix index base_port
   local -a names=() targets=()
   version=$(resolved_version "$version_env" "$type" "$DB_VERSION")
   setup_type=$(resolve_value "$type" SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
   client=$(resolved_client_version "$type" DB_CONFIG)
   query_source=$(resolve_value "$type" QUERY_SOURCE DB_CONFIG)
-  encrypted=$(bool_string "$(resolve_value "$type" ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
+  encrypted=$(resolved_encrypted "$type" "$client")
   if [[ $engine == ps ]]; then
     nodes=$(resolve_value PS NODES_COUNT DB_CONFIG)
     my_rocks=$(bool_string "$(resolve_value PS MY_ROCKS DB_CONFIG)")
@@ -49,11 +49,6 @@ setup_mysql_family() {
   if [[ $backup == true && $version == 9.7 ]]; then
     die 'PS 9.7 does not support BACKUP=true: no compatible Percona XtraBackup is published.'
   fi
-  if [[ $encrypted == true && $client == 3.*.* ]]; then
-    minor=${client#3.}
-    minor=${minor%%.*}
-    ((minor >= 7)) || encrypted=false
-  fi
 
   for ((index = 1; index <= nodes; index++)); do
     names+=("${engine}_pmm${topology}_${version//./_}_$index")
@@ -65,9 +60,7 @@ setup_mysql_family() {
   fi
 
   step "Prepare image pmm-qa/$engine:$version" ensure_image "$engine" "$version"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Clean previous run' mf_cleanup
   base_port=$(mf_first_free_port) || die 'Could not list the published host ports.'
   step 'Start database nodes' each_node names mf_start_node
@@ -341,11 +334,7 @@ mf_start_minio() {
     --env MINIO_ROOT_USER=minio1234 --env MINIO_ROOT_PASSWORD=minio1234 \
     pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001 >/dev/null
   retry 60 MinIO docker exec minio mc alias set myminio http://127.0.0.1:9000 minio1234 minio1234 >/dev/null
-  local -a buckets=()
-  IFS=, read -ra buckets <<<"${BUCKETS:-bcp}"
-  for bucket in "${buckets[@]}"; do
-    must docker exec minio mc mb --ignore-existing "myminio/$bucket" >/dev/null
-  done
+  must docker exec minio mc mb --ignore-existing myminio/bcp >/dev/null
 }
 
 mf_setup_agents() {
@@ -379,10 +368,8 @@ mf_register() {
       ;;
     *) add+=("--environment=$engine-dev" "--cluster=$engine-single-dev-cluster") ;;
   esac
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering $1" \
-    docker exec "$1" "${add[@]}" --debug "${1}_$suffix" 127.0.0.1:3306 >/dev/null
-  wait_exporter "$1" mysqld_exporter
-  wait_node_exporter "$1" /tmp/pmm-agent.log
+  pmm_register "$1" "${add[@]}" --debug "${1}_$suffix" 127.0.0.1:3306
+  wait_exporters "$1" /tmp/pmm-agent.log mysqld_exporter
 }
 
 # sysbench runs detached, so the setup does not wait out its run (30 s for PS,
@@ -425,20 +412,13 @@ setup_ssl_mysql() {
   client=$(resolved_client_version SSL_MYSQL DB_CONFIG)
   container=mysql_ssl_$version
   step "Prepare image pmm-qa/ps:$version" ensure_image ps "$version"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start mysqld' ssl_mysql_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering ${container}_ssl_service_$suffix" \
-    docker exec "$container" pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls \
+  attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
+  pmm_register "$container" pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls \
     --tls-skip-verify --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem \
-    --tls-key=/var/lib/mysql/client-key.pem "${container}_ssl_service_$suffix" >/dev/null
-  wait_exporter "$container" mysqld_exporter
-  wait_node_exporter "$container" /pmm-agent.log
+    --tls-key=/var/lib/mysql/client-key.pem "${container}_ssl_service_$suffix"
+  wait_exporters "$container" /pmm-agent.log mysqld_exporter
   step 'Copy the client certificates' ssl_mysql_certs
   report_agent_status "$container"
 }

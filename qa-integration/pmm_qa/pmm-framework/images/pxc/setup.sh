@@ -27,17 +27,14 @@ setup_pxc() {
 
   step "Prepare image pmm-qa/pxc-proxysql:$image_tag" \
     ensure_image pxc-proxysql "$image_tag" "$version" "$pxc_tarball"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Clean previous run' pxc_cleanup
   step 'Start PXC nodes and ProxySQL' pxc_start
   if [[ $query_source == slowlog ]]; then
     step 'Enable the slow query log' pxc_enable_slowlog
   fi
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' pxc_setup_agent
+  attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log \
+    "${container//./_}${SHARD_NAME:+-$SHARD_NAME}"
   step 'Register PXC and ProxySQL with PMM' pxc_register
   step 'Run workload' pxc_workload
   report_agent_status "$container"
@@ -71,11 +68,6 @@ pxc_enable_slowlog() {
 # regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself. The nightly
 # shard is appended, as the playbook did, so two shards on one PMM Server do
 # not replace each other's node.
-pxc_setup_agent() {
-  setup_pmm_agent "$container" false /pmm-agent.log "${container//./_}${SHARD_NAME:+-$SHARD_NAME}"
-  wait_pmm_agent "$container"
-}
-
 pxc_exporters_running() {
   local status
   status=$(docker exec "$container" pmm-admin status 2>&1) || return 1
@@ -86,17 +78,15 @@ pxc_exporters_running() {
 pxc_register() {
   local node
   for node in 1 2 3; do
-    retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering PXC node $node" \
-      docker exec "$container" pmm-admin add mysql "--query-source=$query_source" \
+    pmm_register "$container" pmm-admin add mysql "--query-source=$query_source" \
       --username=admin --password=admin --host=127.0.0.1 "--port=$((3305 + node))" \
       --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl \
-      "pxc_node__${node}_$suffix" >/dev/null
+      "pxc_node__${node}_$suffix"
   done
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 'registering ProxySQL' \
-    docker exec "$container" pmm-admin add proxysql --username=admin --password=admin \
-    "--service-name=my-new-proxysql_${container}_$suffix" --host=127.0.0.1 --port=6032 >/dev/null
+  pmm_register "$container" pmm-admin add proxysql --username=admin --password=admin \
+    "--service-name=my-new-proxysql_${container}_$suffix" --host=127.0.0.1 --port=6032
   retry 60 "the PXC and ProxySQL exporters in $container" pxc_exporters_running >/dev/null
-  wait_node_exporter "$container" /pmm-agent.log
+  wait_exporters "$container" /pmm-agent.log
 }
 
 # As in client_container_proxysql_setup.sh, the load keeps running after setup:

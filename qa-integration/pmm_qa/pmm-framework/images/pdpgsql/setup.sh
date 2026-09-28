@@ -15,7 +15,7 @@ readonly -a PDPGSQL_REPLICA_CONF=(
 # node, a streaming replica pair (replication) or three nodes under Patroni
 # and etcd (patroni).
 setup_pdpgsql() {
-  local version setup_type pgsm_branch client encrypted minor node
+  local version setup_type pgsm_branch client encrypted node
   local tarball='' topology='' nodes=1 base_port=5432 suffix index
   local -a names=()
   version=$(resolved_version PDPGSQL_VERSION PDPGSQL "$DB_VERSION")
@@ -24,7 +24,7 @@ setup_pdpgsql() {
   pgsm_branch=$(resolve_value PDPGSQL PGSM_BRANCH DB_CONFIG)
   pgsm_branch=${pgsm_branch,,}
   client=$(resolved_client_version PDPGSQL DB_CONFIG)
-  encrypted=$(bool_string "$(resolve_value PDPGSQL ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
+  encrypted=$(resolved_encrypted PDPGSQL "$client")
   suffix=$((RANDOM % 9999 + 1))
   case $setup_type in
     '') ;;
@@ -32,19 +32,12 @@ setup_pdpgsql() {
     patroni) topology=_patroni nodes=3 base_port=6432 ;;
     *) die "PDPGSQL SETUP_TYPE must be empty, replication or patroni (got '$setup_type')." ;;
   esac
-  if [[ $encrypted == true && $client == 3.*.* ]]; then
-    minor=${client#3.}
-    minor=${minor%%.*}
-    ((minor >= 7)) || encrypted=false
-  fi
   for ((index = 1; index <= nodes; index++)); do
     names+=("pdpgsql_pmm${topology}_${version}_$index")
   done
 
   step "Prepare image pmm-qa/pdpgsql:$version" ensure_image pdpgsql "$version"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start PostgreSQL nodes' pdpgsql_start
   case $setup_type in
     '') step 'Create the pmm user' each_node names pdpgsql_sql "CREATE ROLE pmm LOGIN PASSWORD 'pmm' IN ROLE pg_monitor;" ;;
@@ -306,29 +299,21 @@ pdpgsql_register() {
         --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment)
       ;;
   esac
-  pg_add "$node" "${add[@]}" "${node}_$suffix" --debug 127.0.0.1:5432
+  pmm_register "$node" "${add[@]}" "${node}_$suffix" --debug 127.0.0.1:5432
   case $setup_type in
-    '') pg_add "$node" "${add[@]}" --socket=/var/run/postgresql "socket_${node}_$suffix" ;;
+    '') pmm_register "$node" "${add[@]}" --socket=/var/run/postgresql "socket_${node}_$suffix" ;;
     patroni)
       if ((index == 1)); then
-        pg_add "$node" pmm-admin add external --listen-port=8008 "--service-name=patroni_service_1_$suffix"
+        pmm_register "$node" pmm-admin add external --listen-port=8008 "--service-name=patroni_service_1_$suffix"
       else
-        pg_add "$node" pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster \
+        pmm_register "$node" pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster \
           --environment=pdpgsql_patroni_service_environment "--service-name=patroni_service_${index}_$suffix"
       fi
       ;;
   esac
-  wait_exporter "$node" postgres_exporter
-  wait_node_exporter "$node" /var/log/pmm-agent.log
+  wait_exporters "$node" /var/log/pmm-agent.log postgres_exporter
 }
 
-# Usage: pg_add NODE PMM_ADMIN_ARGS...
-pg_add() {
-  local node=$1
-  shift
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering on $node" \
-    docker exec "$node" "$@" >/dev/null
-}
 
 # The school database everywhere the playbook loaded it, plus each topology's
 # own load, left running as the playbook left it.
@@ -377,19 +362,13 @@ setup_ssl_pdpgsql() {
   container=pdpgsql_pgsm_ssl_$version
 
   step "Prepare image pmm-qa/ssl-pdpgsql:$version" ensure_image ssl-pdpgsql "$version"
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start PostgreSQL with TLS' ssl_pdpgsql_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  pg_add "$container" pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements --tls \
+  attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
+  pmm_register "$container" pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements --tls \
     --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt \
     --tls-key-file=./certificates/client.pem "${container}_ssl_service$suffix"
-  wait_exporter "$container" postgres_exporter
-  wait_node_exporter "$container" /pmm-agent.log
+  wait_exporters "$container" /pmm-agent.log postgres_exporter
   step 'Copy the client certificates to the host' ssl_pdpgsql_certs
   report_agent_status "$container"
 }

@@ -44,14 +44,12 @@ discover_pmm_server() {
       "using '$PMM_SERVER_CONTAINER'. Pass --pmm-server-ip to select one explicitly."
   fi
 
-  if ! docker network inspect pmm-qa >/dev/null 2>&1; then
-    docker network create pmm-qa >/dev/null
-  fi
-
+  # Called under `||`, where errexit is off, so each docker call dies itself.
+  ensure_pmm_network
   if ! docker network inspect pmm-qa \
     --format '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' |
     grep -Fxq "$PMM_SERVER_CONTAINER"; then
-    docker network connect pmm-qa "$PMM_SERVER_CONTAINER"
+    must docker network connect pmm-qa "$PMM_SERVER_CONTAINER"
   fi
 }
 

@@ -77,7 +77,7 @@ jobs:
               pick ps "^$images/ps/"
               pick mysql "^$images/mysql/Dockerfile$"
               pick pxc-proxysql "^$images/pxc/(Dockerfile|pmm-pxc)$"
-              pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/)"
+              pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/(keyfile|conf/(sysconfig|krb)/|conf/mongos/mongos\.service))"
               pick haproxy "^$images/haproxy/Dockerfile$"
               pick external "^$images/external/Dockerfile$"
               pick valkey "^$images/valkey/Dockerfile$"

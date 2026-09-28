@@ -59,6 +59,11 @@ fetch_verified() {
   while :; do
     attempt=$((attempt + 1))
     read -r version size sha file < <(resolve_from_index) || true
+    # By checksum, not version: a rebuild can be republished under the same version.
+    if [ -n "${file:-}" ] && [ -s "$DEB" ] && [ "$(cat "$DEST_DIR/sha256" 2>/dev/null)" = "$sha" ]; then
+      log "reusing cached pmm-client $version for $CODENAME/$COMPONENT"
+      return 0
+    fi
     if [ -z "${file:-}" ]; then
       reason='no-index'
       no_index_streak=$((no_index_streak + 1))
@@ -77,6 +82,7 @@ fetch_verified() {
           if echo "$sha  $DEB.part" | sha256sum -c --quiet -; then
             mv "$DEB.part" "$DEB"
             printf '%s\n' "$version" >"$DEST_DIR/version"
+            printf '%s\n' "$sha" >"$DEST_DIR/sha256"
             log "cached pmm-client $version ($size bytes) for $CODENAME/$COMPONENT"
             return 0
           fi
@@ -94,6 +100,10 @@ fetch_verified() {
     fi
 
     if [ "$(date +%s)" -ge "$deadline" ]; then
+      if [ -s "$DEB" ]; then
+        log "giving up (last failure: $reason); using the cached pmm-client $(cat "$DEST_DIR/version" 2>/dev/null)"
+        return 0
+      fi
       {
         printf '[fetch-pmm-client-deb] giving up after %ss (last failure: %s).\n\n' "$BUDGET" "$reason"
         case $reason in
@@ -130,8 +140,10 @@ EOF
 # so the check-and-fetch has to be one critical section or they race on .part.
 exec 9>"$LOCK"
 flock 9
-if [ -s "$DEB" ]; then
-  log "reusing cached pmm-client $(cat "$DEST_DIR/version" 2>/dev/null || echo '?') for $CODENAME/$COMPONENT"
+# A pinned version never changes; "latest" is reused only while the index
+# still names it (checked in fetch_verified).
+if [ -s "$DEB" ] && [ -n "$VERSION" ]; then
+  log "reusing cached pmm-client $VERSION for $CODENAME/$COMPONENT"
 else
   fetch_verified
 fi

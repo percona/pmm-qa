@@ -5,9 +5,13 @@ pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
+# pss: three data members; psa: rs103 is an arbiter, and there is no Kerberos user.
+mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
+third_member='"priority": 1'
+[ "$mongo_setup_type" = psa ] && third_member='"arbiterOnly": true'
 
 echo
-echo "configuring replicaset with members priorities"
+echo "configuring $mongo_setup_type replicaset with members priorities"
 docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
     config = {
         "_id" : "rs",
@@ -25,7 +29,7 @@ docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
         {
             "_id" : 2,
             "host" : "rs103:27017",
-            "priority": 1
+            ${third_member}
         }
       ]
       };
@@ -101,6 +105,7 @@ db.getSiblingDB("admin").createUser({
     ]
 });
 EOF
+[ "$mongo_setup_type" = psa ] && exit 0
 echo "creating pmm kerberos user"
 docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("\$external").createUser({

@@ -14,6 +14,7 @@ services:
     command: /bin/bash
 
   test:
+    profiles: [tests]
     container_name: test
     hostname: test
     environment:
@@ -142,8 +143,6 @@ services:
 
 volumes:
   psmdb-server-data:
-    driver: local
-  pmm-client-data:
     driver: local
   pmm-server-data:
     driver: local

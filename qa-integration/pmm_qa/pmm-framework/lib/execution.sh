@@ -123,29 +123,8 @@ preflight_database_setups() {
 run_database_spec() {
   local spec=$1
   parse_database_spec "$spec"
-
-  if [[ $VERBOSE == true ]]; then
-    if [[ -n $DB_VERSION ]]; then
-      log_info "Setting up $DB_TYPE version $DB_VERSION"
-    else
-      log_info "Setting up $DB_TYPE"
-    fi
-  fi
+  log_verbose "Setting up $DB_TYPE${DB_VERSION:+ version $DB_VERSION}"
   dispatch_setup
-}
-
-# Should a *successful* setup echo its buffered log to the console?
-#
-# No by default: a green run prints one summary line per setup and keeps the
-# full transcript on disk, so CI logs stay readable. `--verbose` opts in and
-# echoes them too, for when you want to see what a passing setup actually did.
-#
-# A setup that FAILED always dumps its log regardless -- that is not optional.
-#
-# Reads:   VERBOSE
-# Returns: 0 to echo successful logs, 1 to keep them on disk only
-should_dump_successful_logs() {
-  [[ ${VERBOSE:-false} == true ]]
 }
 
 # Echo one buffered log, guaranteeing it ends on a line of its own so the END
@@ -192,7 +171,7 @@ print_setup_log() {
     printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
     # Prebaked setups end with their agents' states (report_agent_status).
     grep '^agent-status ' "$log_file" 2>/dev/null | sed 's/^agent-status /  /' || true
-    if should_dump_successful_logs; then
+    if [[ ${VERBOSE:-false} == true ]]; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
       cat_setup_log "$log_file"
       printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"

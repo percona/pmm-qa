@@ -8,20 +8,8 @@
 #
 # This entrypoint is intentionally thin: it checks the Bash version, works out
 # where the repo lives, sources every module, then hands over to parse_args()
-# and run_database_setups(). All real behaviour lives in lib/ and images/.
-#
-# Layout:
-#   lib/common.sh     logging, die(), small value helpers
-#   lib/config.sh     the database catalogue, value resolution, version helpers
-#   lib/cli.sh        argument parsing and the --database spec grammar
-#   lib/docker.sh     finding the PMM Server
-#   lib/images.sh     building prebaked database images
-#   lib/prebaked.sh   the docker backend: PMM Client install, agent, retries
-#   images/*/        per database: its Dockerfile, setup.sh and data files
-#   lib/dispatch.sh   the map from a database type to its setup function
-#   lib/execution.sh  preflight and the sequential/parallel strategies
-#
-# See ARCHITECTURE.md for the call flow, a diagram, and how to add a database.
+# and run_database_setups(). All real behaviour lives in lib/ and images/; see
+# ARCHITECTURE.md for the module map, the call flow and how to add a database.
 
 set -euo pipefail
 
@@ -84,6 +72,5 @@ parse_args "$@"
 # Checked up front so a missing tool fails in milliseconds. curl is not here:
 # only the PSMDB setups need it, so preflight checks for it conditionally.
 require_command docker
-require_command bash
 
 run_database_setups

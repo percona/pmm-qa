@@ -6,25 +6,18 @@
 # the old Ansible setup's single node on pmm-qa/pgsql; SETUP_TYPE=replication
 # is its primary and replica on the official postgres image, which needs nothing baked in.
 setup_pgsql() {
-  local version setup_type client encrypted minor tarball='' suffix=$((RANDOM % 10000))
+  local version setup_type client encrypted tarball='' suffix=$((RANDOM % 10000))
   version=$(resolved_version PGSQL_VERSION PGSQL "$DB_VERSION")
   setup_type=$(resolve_value PGSQL SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
   client=$(resolved_client_version PGSQL DB_CONFIG)
-  encrypted=$(bool_string "$(resolve_value PGSQL ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
-  if [[ $encrypted == true && $client == 3.*.* ]]; then
-    minor=${client#3.}
-    minor=${minor%%.*}
-    ((minor >= 7)) || encrypted=false
-  fi
+  encrypted=$(resolved_encrypted PGSQL "$client")
   case $setup_type in
     '') ;;
     replication) ;;
     *) die "PGSQL SETUP_TYPE must be empty or replication (got '$setup_type')." ;;
   esac
-  if [[ $client == http* ]]; then
-    tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  fi
+  tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   if [[ -z $setup_type ]]; then
     pgsql_pgss
   else
@@ -37,14 +30,10 @@ pgsql_pgss() {
   local container=pgsql_pgss_pmm_$version
   step "Prepare image pmm-qa/pgsql:$version" ensure_image pgsql "$version"
   step 'Start PostgreSQL' pgsql_pgss_start
-  step 'Wait for PMM Server' wait_pmm_server_ready
-  step 'Install PMM Client' install_pmm_client "$container" "$client" "$tarball"
-  step 'Set up PMM agent' setup_pmm_agent "$container" false /pmm-agent.log "$container${SHARD_NAME:+-$SHARD_NAME}"
-  step 'Wait for pmm-agent' wait_pmm_agent "$container"
-  pg_add "$container" pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements \
+  attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
+  pmm_register "$container" pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements \
     "${container}_service_$suffix"
-  wait_exporter "$container" postgres_exporter
-  wait_node_exporter "$container" /pmm-agent.log
+  wait_exporters "$container" /pmm-agent.log postgres_exporter
   must docker exec --detach "$container" bash /pgsm_run_queries.sh
   report_agent_status "$container"
 }
@@ -117,8 +106,7 @@ pgsql_register() {
   local -a add=(pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements)
   if ! out=$(docker exec "$1" "${add[@]}" "$1" --debug 127.0.0.1:5432 2>&1); then
     [[ $out == *'already exists'* ]] || die "Registering $1 failed: $out"
-    pg_add "$1" "${add[@]}" "${1}_$suffix" --debug 127.0.0.1:5432
+    pmm_register "$1" "${add[@]}" "${1}_$suffix" --debug 127.0.0.1:5432
   fi
-  wait_exporter "$1" postgres_exporter
-  wait_node_exporter "$1" /var/log/pmm-agent.log
+  wait_exporters "$1" /var/log/pmm-agent.log postgres_exporter
 }
