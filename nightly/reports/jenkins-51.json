@@ -2375,15 +2375,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-28T03:31:10Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-09-28T03:20:07Z",
       "suites": [
         "Nightly Compatibility"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "compat / client 3.9.0: PMM-T2048 scrollTo waited 20 s on Top 5 Number of Temp Files (4th night running, on a different panel each time). The trace shows the element resolved visible, then a 36.7 s paint freeze with no network activity: a renderer stall. The test's 230-440 s duration hasn't regressed since 09-19, and the 7 sibling runs passed. No loaded repro attempted; needs a dedicated look.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:31:12Z"
     }
-  ]
+  ],
+  "claims": []
 }
