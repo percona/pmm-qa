@@ -60,6 +60,8 @@ services:
     environment:
       - PMM_DEBUG=1
       - PMM_ENCRYPTION_KEY_PATH=/srv/non-default.key
+    healthcheck:
+      start_period: 2m
 
   postgres:
     image: perconalab/percona-distribution-postgresql:15.4

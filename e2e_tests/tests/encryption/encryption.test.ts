@@ -6,6 +6,7 @@ pmmTest.describe.configure({ mode: 'default' });
 
 const serverKeyCommand = 'docker exec pmm-server cat /srv/pmm-encryption.key';
 const nonDefaultKeyCommand = 'docker exec pmm-server-encryption cat /srv/non-default.key';
+const serverRotationCommand = 'docker exec pmm-server pmm-encryption-rotation';
 const rotationMessages = [
   'DB pmm-managed is successfully decrypted',
   'Rotating encryption key',
@@ -13,6 +14,7 @@ const rotationMessages = [
   'DB pmm-managed is successfully encrypted',
   'Starting PMM Server',
 ];
+let nodeId = '';
 
 pmmTest.beforeAll(async ({ cliHelper }) => {
   cliHelper
@@ -20,9 +22,15 @@ pmmTest.beforeAll(async ({ cliHelper }) => {
     .assertSuccess();
 });
 
+pmmTest.afterEach(async ({ api }) => {
+  if (nodeId) await api.inventoryApi.deleteNode(nodeId, true);
+
+  nodeId = '';
+});
+
 pmmTest('PMM-T1947 verify user is able to rotate encryption key @fb-encryption', async ({ cliHelper }) => {
   const encryptionKey = cliHelper.execute(serverKeyCommand).assertSuccess().stdout.trim();
-  const rotation = cliHelper.execute('docker exec pmm-server pmm-encryption-rotation').assertSuccess();
+  const rotation = cliHelper.execute(serverRotationCommand).assertSuccess();
 
   for (const message of rotationMessages) {
     expect(rotation.stderr, 'Encryption key rotation output').toContain(message);
@@ -80,6 +88,8 @@ pmmTest(
       },
     });
 
+    nodeId = postgresql?.service.node_id ?? '';
+
     await expect
       .poll(
         () => api.prometheusApi.instantQueryValue(`last_over_time(pg_up{service_name="${serviceName}"}[1m])`),
@@ -96,7 +106,7 @@ pmmTest(
 
     const agentsCommand = `docker exec pmm-server psql -Upmm-managed -c "SELECT username, password FROM agents WHERE service_id='${postgresql?.service.service_id}';"`;
     const agentsBeforeRotation = cliHelper.execute(agentsCommand).assertSuccess().stdout.trim();
-    const rotation = cliHelper.execute('docker exec pmm-server pmm-encryption-rotation').assertSuccess();
+    const rotation = cliHelper.execute(serverRotationCommand).assertSuccess();
 
     for (const message of rotationMessages) {
       expect(rotation.stderr, 'Encryption key rotation output').toContain(message);
@@ -170,6 +180,8 @@ pmmTest(
       },
     });
 
+    nodeId = mysql?.service.node_id ?? '';
+
     await expect
       .poll(
         () =>
@@ -188,10 +200,8 @@ pmmTest(
       /^[1-9][0-9]*,[1-9][0-9]*$/,
     );
 
-    const firstRotation = cliHelper.execute('docker exec pmm-server pmm-encryption-rotation').assertSuccess();
-    const secondRotation = cliHelper
-      .execute('docker exec pmm-server pmm-encryption-rotation')
-      .assertSuccess();
+    const firstRotation = cliHelper.execute(serverRotationCommand).assertSuccess();
+    const secondRotation = cliHelper.execute(serverRotationCommand).assertSuccess();
 
     for (const message of rotationMessages) {
       expect(firstRotation.stderr, 'First encryption key rotation output').toContain(message);

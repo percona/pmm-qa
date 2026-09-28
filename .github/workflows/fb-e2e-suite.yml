@@ -407,7 +407,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
-      arch: ${{ inputs.arch }}
+      arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database ps=8.0'
       pmm_test_flag: '@fb-encryption'
 
