@@ -181,7 +181,7 @@ pmmTest(
       )
       .toBeDefined();
 
-    const certLengthsCommand = `docker exec pmm-server psql -Upmm-managed -t -A -F',' -c "SELECT length(mysql_options->>'tls_cert'), length(mysql_options->>'tls_key') FROM agents WHERE service_id='${mysql?.service.service_id}' AND agent_type='mysqld_exporter';"`;
+    const certLengthsCommand = `docker exec pmm-server psql -Upmm-managed -t -A -F, -c "SELECT length(mysql_options->>'tls_cert'), length(mysql_options->>'tls_key') FROM agents WHERE service_id='${mysql?.service.service_id}' AND agent_type='mysqld_exporter';"`;
     const lengthsBeforeRotation = cliHelper.execute(certLengthsCommand).assertSuccess().stdout.trim();
 
     expect(lengthsBeforeRotation, 'tls_cert/tls_key must be stored in mysql_options').toMatch(
