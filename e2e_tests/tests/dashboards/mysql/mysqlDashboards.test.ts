@@ -187,9 +187,8 @@ pmmTest(
   },
 );
 
-// TODO: replace PMM-T0000 with the Zephyr test-case id reserved for PMM-12279.
 pmmTest(
-  'PMM-T0000 - Verify Performance Schema Memory panels on MySQL Performance Schema Details Dashboard (PMM-12279) @pmm-ps-integration',
+  'PMM-T2331 - Verify Performance Schema Memory panels on MySQL Performance Schema Details Dashboard (PMM-12279) @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
 
