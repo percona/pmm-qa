@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # env_map is passed to run_playbook by name, so shellcheck cannot see the read.
 #
 # setups/postgresql.sh -- PostgreSQL-family setups: PDPGSQL, SSL_PDPGSQL, PGSQL.
 #

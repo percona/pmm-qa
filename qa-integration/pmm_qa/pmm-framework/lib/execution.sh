@@ -45,6 +45,10 @@ setup_uses_ansible() {
 # concurrency -- the caller asked for something valid that merely cannot
 # happen at the same time.
 #
+# Two PSMDB setups, and EXTERNAL with VALKEY, are refused instead: they hold
+# the same container name or host port for as long as they are up, so waiting
+# is no remedy.
+#
 # The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
 # replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
 # fixed $HOME/pgsql_cluster_data and port 6432 -- PGSQL's default,
@@ -52,11 +56,14 @@ setup_uses_ansible() {
 #
 # Reads:  DATABASE_SPECS, PARALLEL
 # Writes: PARALLEL (may be turned off), PMM_SERVER_HOST/PORT via resolve_pmm_server
-# Exits:  via die() from the helpers it calls (unknown type, missing server, ...)
+# Exits:  via die() on a host conflict, and from the helpers it calls (unknown
+#         type, missing server, ...)
 preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
-  local mysql_data_owner='' conflict=''
+  local mysql_data_owner='' conflict='' host_conflict=''
   local pdpgsql_seen=false pgsql_replication_seen=false
+  local external_seen=false valkey_seen=false
+  local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   declare -A seen_types=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
@@ -68,8 +75,17 @@ preflight_database_setups() {
     # Two setups of the same product, or any two of the MySQL family, reuse the
     # same container names, host ports and data directories, so they cannot run
     # at the same time.
+    #
+    # The separate compose projects do not make the PSMDB stacks independent:
+    # docker-compose-rs.yaml and docker-compose-sharded.yaml both pin
+    # container_name rs101..rs203 and host port 27027, and a container name is
+    # unique per daemon. Relaxing this needs those keys dropped first.
     if [[ -v "seen_types[$DB_TYPE]" ]]; then
-      conflict="two $DB_TYPE setups"
+      if [[ $DB_TYPE == PSMDB ]]; then
+        host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
+      else
+        conflict="two $DB_TYPE setups"
+      fi
     elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then
         conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
@@ -87,9 +103,23 @@ preflight_database_setups() {
         [[ $pdpgsql_seen == true ]] &&
           conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
       fi
+    # external_setup.yml publishes redis_container on host port 6379, and both
+    # Valkey topologies put a node on that same port -- valkey-cluster.yml's
+    # valkey_cluster_start_port and valkey-sentinel.yml's valkey_primary_port
+    # are both 6379 -- so one of the two cannot bind it.
+    elif [[ $DB_TYPE == EXTERNAL ]]; then
+      external_seen=true
+      [[ $valkey_seen == true ]] && host_conflict=$redis_port_conflict
+    elif [[ $DB_TYPE == VALKEY ]]; then
+      valkey_seen=true
+      [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
     seen_types["$DB_TYPE"]=1
   done
+
+  if [[ -n $host_conflict ]]; then
+    die "$host_conflict cannot share a host; provision them on separate machines."
+  fi
 
   # Fall back to sequential rather than refusing to run: the caller asked for a
   # valid set of setups, they just cannot be provisioned concurrently.
@@ -99,13 +129,47 @@ preflight_database_setups() {
   fi
 
   [[ $needs_server == true ]] && resolve_pmm_server
-  [[ $needs_curl == true ]] && require_command curl
+  [[ $needs_curl == true ]] && require_command curl && require_command gunzip
   # Warm these up before forking so parallel jobs cannot race to install the
   # same Ansible collection.
   if [[ $PARALLEL == true && $needs_ansible == true ]]; then
     configure_ansible_python
-    ensure_docker_collection
+    ensure_ansible_collections
   fi
+  [[ $PARALLEL == true ]] && prepull_base_images
+  return 0
+}
+
+readonly BASE_IMAGES=(
+  'phusion/baseimage:jammy-1.0.1'
+  'antmelekhin/docker-systemd:ubuntu-24.04'
+  'antmelekhin/docker-systemd:ubuntu-22.04'
+)
+
+prepull_base_images() {
+  command -v docker >/dev/null 2>&1 || return 0
+
+  local image attempt pulled
+  for image in "${BASE_IMAGES[@]}"; do
+    if docker image inspect "$image" >/dev/null 2>&1; then
+      continue
+    fi
+
+    pulled=false
+    for ((attempt = 1; attempt <= 3; attempt++)); do
+      if docker pull --quiet "$image" >/dev/null 2>&1; then
+        pulled=true
+        break
+      fi
+      sleep 5
+    done
+
+    if [[ $pulled == false ]]; then
+      log_warn "Could not pre-pull $image; its setup will pull it instead."
+    fi
+  done
+
+  return 0
 }
 
 # Expand one spec and provision it.
@@ -147,9 +211,54 @@ should_dump_successful_logs() {
   [[ ${VERBOSE:-false} == true ]]
 }
 
+# Echo one buffered log, guaranteeing it ends on a line of its own so the END
+# marker that follows it is not appended to the log's last line.
+cat_setup_log() {
+  local log_file=$1
+  cat "$log_file"
+  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
+    printf '\n'
+  fi
+}
+
+# Compact elapsed time for the setup reports: 452 -> 7m32s, 45 -> 45s.
+format_duration() {
+  local seconds=$1
+  if ((seconds >= 60)); then
+    printf '%dm%02ds' "$((seconds / 60))" "$((seconds % 60))"
+  else
+    printf '%ds' "$seconds"
+  fi
+}
+
+# Print the slowest Ansible tasks recorded in a buffered setup log.
+#
+# Usage: print_slowest_tasks LOG_FILE [COUNT] [FLOOR_SECONDS]
+print_slowest_tasks() {
+  local log_file=$1 count=${2:-5} floor=${3:-5}
+  [[ -r $log_file ]] || return 0
+
+  local seconds name
+  while read -r seconds name; do
+    printf '  %7s  %s\n' "$(format_duration "$seconds")" "$name"
+  done < <(
+    awk -v floor="$floor" '
+      { gsub(/\033\[[0-9;]*m/, ""); sub(/\r$/, "") }
+      match($0, /-----+[[:space:]]*[0-9]+\.[0-9]+s$/) {
+        elapsed = $NF
+        sub(/s$/, "", elapsed)
+        if (elapsed + 0 < floor) next
+        name = substr($0, 1, RSTART - 1)
+        sub(/[[:space:]]+$/, "", name)
+        if (name != "") printf "%d %s\n", elapsed + 0.5, name
+      }
+    ' "$log_file" | sort -rn -k1,1 | head -n "$count"
+  )
+}
+
 # Report one finished parallel setup.
 #
-# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
+# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE [ELAPSED_SECONDS]
 #
 # A failed setup always dumps its buffered log; a successful one prints just a
 # summary line unless --verbose asked for more. Only ever used by the parallel
@@ -160,29 +269,28 @@ should_dump_successful_logs() {
 # Stdout: a summary line, plus the buffered log when the setup failed or when
 #         --verbose was given
 print_setup_log() {
-  local index=$1 total=$2 spec=$3 status=$4 log_file=$5
+  local index=$1 total=$2 spec=$3 status=$4 log_file=$5 elapsed=${6:-}
+  local took=''
+
+  if [[ -n $elapsed ]]; then
+    took=" in $(format_duration "$elapsed")"
+  fi
 
   if ((status == 0)); then
-    printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
+    printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
+    print_slowest_tasks "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
-      cat "$log_file"
-      if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-        printf '\n'
-      fi
+      cat_setup_log "$log_file"
       printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
     fi
     return
   fi
 
-  printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
-    "$index" "$total" "$spec" "$status"
+  printf '\n===== [%d/%d] %s FAILED (exit=%d)%s =====\n' \
+    "$index" "$total" "$spec" "$status" "$took"
   printf 'log: %s\n' "$log_file"
-  cat "$log_file"
-  # Keep the END marker on its own line when the log has no trailing newline.
-  if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
-    printf '\n'
-  fi
+  cat_setup_log "$log_file"
   printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
 }
 
@@ -196,16 +304,18 @@ print_setup_log() {
 # Every setup is allowed to finish even after one fails, because tearing down
 # half-provisioned containers mid-run leaves more mess than it saves.
 #
-# On success the log directory is removed; on failure it is kept and its path
-# printed, so the full transcripts survive for inspection.
+# On success the log directory is removed; on failure -- or when a signal cuts
+# the run short -- it is kept and its path printed, so the full transcripts
+# survive for inspection.
 #
 # Requires: bash 5.1+ for `wait -n -p`
 # Reads:    DATABASE_SPECS
 # Returns:  0 when every setup succeeded, 1 when any failed
 # Exits:    130 from the INT/TERM trap
 run_parallel_setups() {
-  local log_dir total index spec status overall_status=0
-  local -a pids=() logs=()
+  local log_dir total index spec status overall_status=0 batch_start attempt
+  local -a pids=() logs=() starts=() pending=() failed=()
+  batch_start=$(date +%s)
   log_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-parallel.XXXXXX")
   total=${#DATABASE_SPECS[@]}
 
@@ -215,68 +325,110 @@ run_parallel_setups() {
   # provisioning work running.
   set -m
 
-  # shellcheck disable=SC2329 # Invoked by the INT/TERM trap.
+  # shellcheck disable=SC2329,SC2317 # Invoked by the INT/TERM trap.
   cleanup_parallel_jobs() {
-    local pid
+    local pid slot
     for pid in "${pids[@]}"; do
       # Negative PID targets the whole process group; fall back to the single
       # process if the group is already gone.
       kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
     done
     wait >/dev/null 2>&1 || true
-    rm -rf "$log_dir"
+    # The signal is usually CI's `timeout` giving up on a setup that hung, so
+    # the buffers of the setups still running are the only record of where it
+    # got stuck.
+    for ((slot = 0; slot < total; slot++)); do
+      [[ -n ${pids[slot]} ]] || continue
+      printf '\n===== [%d/%d] %s INTERRUPTED =====\n' \
+        "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+      printf 'log: %s\n' "${logs[slot]}"
+      # A signal between the fork and the child's own redirect leaves this file
+      # uncreated; errexit must not abandon the remaining slots over it.
+      cat_setup_log "${logs[slot]}" || true
+      printf '===== END [%d/%d] %s =====\n' "$((slot + 1))" "$total" "${DATABASE_SPECS[slot]}"
+    done
+    printf '\nParallel setup logs kept at: %s\n' "$log_dir"
     exit 130
   }
   trap cleanup_parallel_jobs INT TERM
 
   for ((index = 0; index < total; index++)); do
-    spec=${DATABASE_SPECS[index]}
-    logs[index]=$log_dir/setup-$index.log
-    printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
-    # stdin must come from /dev/null: job control puts each setup in a
-    # background process group, where reading the terminal raises SIGTTIN and
-    # stops the job forever. Parallel setups have no usable stdin anyway.
-    (
-      run_database_spec "$spec"
-    ) >"${logs[index]}" 2>&1 </dev/null &
-    pids[index]=$!
+    pending+=("$index")
   done
 
-  # Report each setup as soon as it finishes. Waiting in argument order made
-  # completed jobs look stuck behind a slower neighbor (and hid progress when
-  # Docker or a playbook hung).
-  local -a active_pids=("${pids[@]}")
-  local finished_pid matched
-  while ((${#active_pids[@]} > 0)); do
-    status=0
-    finished_pid=
-    wait -n -p finished_pid "${active_pids[@]}" || status=$?
-    [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+  # Only the setups that failed are re-run
+  for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+    ((${#pending[@]} > 0)) || break
+    if ((attempt > 0)); then
+      printf '\nRetrying %d failed setup(s), attempt %d of %d\n' \
+        "${#pending[@]}" "$((attempt + 1))" "$((SETUP_RETRIES + 1))"
+    fi
 
-    # Map the reaped pid back to its slot so the report names the right spec.
-    matched=false
-    for ((index = 0; index < total; index++)); do
-      if [[ ${pids[index]} == "$finished_pid" ]]; then
-        ((status == 0)) || overall_status=1
-        print_setup_log \
-          "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
-          "$status" "${logs[index]}"
-        pids[index]=
-        matched=true
-        break
+    pids=()
+    failed=()
+    for index in "${pending[@]}"; do
+      spec=${DATABASE_SPECS[index]}
+      if ((attempt == 0)); then
+        logs[index]=$log_dir/setup-$index.log
+      else
+        logs[index]=$log_dir/setup-$index-retry$attempt.log
       fi
+      starts[index]=$(date +%s)
+      printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
+      # stdin must come from /dev/null: job control puts each setup in a
+      # background process group, where reading the terminal raises SIGTTIN and
+      # stops the job forever. Parallel setups have no usable stdin anyway.
+      (
+        run_database_spec "$spec"
+      ) >"${logs[index]}" 2>&1 </dev/null &
+      pids[index]=$!
     done
-    [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
 
-    # Rebuild the still-running set; cleared slots drop out.
-    active_pids=()
-    for ((index = 0; index < total; index++)); do
-      [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+    # Report each setup as soon as it finishes. Waiting in argument order made
+    # completed jobs look stuck behind a slower neighbor (and hid progress when
+    # Docker or a playbook hung).
+    local -a active_pids=()
+    local finished_pid matched
+    for index in "${pending[@]}"; do
+      active_pids+=("${pids[index]}")
     done
+    while ((${#active_pids[@]} > 0)); do
+      status=0
+      finished_pid=
+      wait -n -p finished_pid "${active_pids[@]}" || status=$?
+      [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+
+      # Map the reaped pid back to its slot so the report names the right spec.
+      matched=false
+      for index in "${pending[@]}"; do
+        if [[ ${pids[index]} == "$finished_pid" ]]; then
+          ((status == 0)) || failed+=("$index")
+          print_setup_log \
+            "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
+            "$status" "${logs[index]}" "$(($(date +%s) - starts[index]))"
+          pids[index]=
+          matched=true
+          break
+        fi
+      done
+      [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
+
+      # Rebuild the still-running set; cleared slots drop out.
+      active_pids=()
+      for index in "${pending[@]}"; do
+        [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+      done
+    done
+
+    pending=("${failed[@]}")
   done
+
+  ((${#pending[@]} == 0)) || overall_status=1
 
   trap - INT TERM
   set +m
+  printf 'All %d setups finished in %s\n' "$total" \
+    "$(format_duration "$(($(date +%s) - batch_start))")"
   if ((overall_status == 0)); then
     rm -rf "$log_dir"
   else
@@ -302,8 +454,17 @@ run_database_setups() {
     return
   fi
 
-  local spec
+  local spec start attempt status
   for spec in "${DATABASE_SPECS[@]}"; do
-    run_database_spec "$spec"
+    start=$(date +%s)
+    for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+      ((attempt == 0)) ||
+        log_warn "Retrying $spec, attempt $((attempt + 1)) of $((SETUP_RETRIES + 1))."
+      status=0
+      (run_database_spec "$spec") || status=$?
+      ((status == 0)) && break
+    done
+    ((status == 0)) || die "$spec failed after $((SETUP_RETRIES + 1)) attempt(s)."
+    printf '%s: OK in %s\n' "$spec" "$(format_duration "$(($(date +%s) - start))")"
   done
 }

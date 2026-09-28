@@ -10,7 +10,7 @@ const AUTH = {
 const getAuth = () => Buffer.from(`${AUTH.username}:${AUTH.password}`).toString('base64');
 
 (async () => {
-  const agent = new https.Agent({ rejectUnauthorized: false });
+  const agent = new https.Agent({ rejectUnauthorized: false, keepAlive: false });
   const config = { headers: { Authorization: `Basic ${getAuth()}` }, httpsAgent: agent };
 
   const {

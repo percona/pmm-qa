@@ -43,8 +43,8 @@
       sudo apt-get update
       sudo apt-get install pmm-client
     register: apt_install_result
-    retries: 3
-    delay: 30
+    retries: 10
+    delay: 60
     until: apt_install_result.rc == 0
 
   - name: Install PMM client new rpm packages
@@ -53,8 +53,8 @@
       sudo yum -y update
       sudo yum -y install pmm-client
     register: yum_install_result
-    retries: 3
-    delay: 30
+    retries: 10
+    delay: 60
     until: yum_install_result.rc == 0
 
   - name: check that PMM client version is correct
@@ -62,11 +62,15 @@
 
   - name: configure pmm client to connect to server in push/auto Mode
     when: lookup('env', 'metrics_mode') == "push" or lookup('env', 'metrics_mode') == ""
-    shell: pmm-admin config --force --debug --server-insecure-tls --metrics-mode=auto --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=auto --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
+      {{ instance_ip }} generic node_{{ instance_ip }}
 
   - name: configure pmm client to connect to server in pull Mode
     when: lookup('env', 'metrics_mode') == "pull"
-    shell: pmm-admin config --force --debug --server-insecure-tls --metrics-mode=pull --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=pull --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
+      {{ instance_ip }} generic node_{{ instance_ip }}
 
 ### start PS
   - set_fact:
@@ -102,7 +106,7 @@
     when: '"psmdb-" in enabled_db | join("")'
     include_tasks: ./tasks/install_and_add_to_pmm_psmdb.yml
     vars:
-      psmdb_to_test:  "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
+      psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
   - name: Verify MongoDB Exporter metric endpoint with Auth(including service with socket)
     when: '"psmdb-" in enabled_db | join("")'

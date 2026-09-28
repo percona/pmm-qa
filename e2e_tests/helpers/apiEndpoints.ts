@@ -13,27 +13,52 @@ const apiEndpoints = {
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
+  grafana: {
+    alertmanager: '/graph/api/alertmanager/grafana/api/v2',
+    dashboardByUid: '/graph/api/dashboards/uid',
+    dashboards: '/graph/api/dashboards/db',
+    datasourceByUid: '/graph/api/datasources/uid',
+    datasources: '/graph/api/datasources',
+    dsQuery: '/graph/api/ds/query',
+    folders: '/graph/api/folders',
+    prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
+    ruler: '/graph/api/ruler/grafana/api/v1/rules',
+  },
   ha: {
+    nodes: '/v1/ha/nodes',
     status: '/v1/ha/status',
   },
   inventory: {
     services: '/v1/inventory/services',
   },
   management: {
+    annotations: '/v1/management/annotations',
+    nodes: '/v1/management/nodes',
     services: '/v1/management/services',
   },
   platform: {
     connect: '/v1/platform:connect',
   },
+  prometheus: {
+    // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
+    datasourceProxy: '/graph/api/datasources/proxy/uid',
+  },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
+    sessions: '/v1/realtimeanalytics/sessions',
     sessionsStart: '/v1/realtimeanalytics/sessions:start',
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
+    // 200 only on the HA leader; HAProxy routes on it.
+    leaderHealthCheck: '/v1/server/leaderHealthCheck',
+    logs: '/logs.zip',
     readyz: '/v1/server/readyz',
+    serverVersion: '/v1/server/version',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
+    version: '/v1/version',
   },
   users: {
     me: '**/v1/users/me',

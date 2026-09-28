@@ -35,20 +35,24 @@ load helpers/test_helper
   parse_database_spec 'ps=99'
 
   [[ -z $DB_VERSION ]]
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
-@test "value precedence is environment then global then database then default" {
+@test "value precedence is global flag then environment then database then default" {
   parse_database_spec 'ps,CLIENT_VERSION=from-spec,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=from-global
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == slowlog ]]
 
   CLIENT_VERSION=from-env
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
+
+  GLOBAL_CLIENT_VERSION=''
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-env ]]
   unset CLIENT_VERSION
 
-  GLOBAL_CLIENT_VERSION=''
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-spec ]]
+
   unset 'DB_CONFIG[QUERY_SOURCE]'
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == perfschema ]]
 }
@@ -59,7 +63,7 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 
   DB_VERSION=''
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "optional-value flags do not consume the following option" {
@@ -87,21 +91,61 @@ load helpers/test_helper
   [[ $output == *"Unknown option '--prebaked-ps-image'"* ]]
 }
 
-@test "normalizes latest-tarball client version" {
+@test "normalizes latest-tarball client version on x86_64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'x86_64\n'; }
+
   [[ $(normalize_client_version latest-tarball) == \
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz' ]]
+}
+
+@test "normalizes latest-tarball client version on arm64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'aarch64\n'; }
+
+  [[ $(normalize_client_version latest-tarball) == \
+    'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
 @test "resolves latest PSMDB patch without Python" {
   # Same patch, two builds: only correct if 'patch-build' is compared as
   # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
   # token (see the "-" to "." conversion in latest_psmdb_version()).
+  # 8.0.29-13 is deliberately absent: only what the release repo carries is a
+  # candidate, so a patch still sitting in psmdb-80/yum/testing is never picked.
+  # shellcheck disable=SC2329,SC2317
   curl() {
-    printf '%s' \
-      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.4-2"]}}'
+    case "$*" in
+      *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;
+      *primary.xml.gz)
+        printf '%s\n' \
+          '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.4" rel="1.el9"/>' \
+          '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.4" rel="2.el9"/>' \
+          '<name>percona-server-mongodb-tools</name>' '<version epoch="0" ver="8.0.5" rel="1.el9"/>' |
+          gzip
+        ;;
+    esac
   }
 
   [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
+}
+
+@test "ignores a PSMDB patch that the repo index does not list" {
+  # An RPM can be in the directory listing before the repodata index names it;
+  # dnf only installs what the index lists.
+  # shellcheck disable=SC2329,SC2317
+  curl() {
+    case "$*" in
+      *repomd.xml) printf '%s\n' '<location href="repodata/abc-primary.xml.gz"/>' ;;
+      *primary.xml.gz)
+        printf '%s\n' '<name>percona-server-mongodb-server</name>' '<version epoch="0" ver="8.0.29" rel="13.el9"/>' |
+          gzip
+        ;;
+      *) printf '%s\n' '<a href="percona-server-mongodb-server-8.0.32-14.el9.x86_64.rpm">' ;;
+    esac
+  }
+
+  [[ $(latest_psmdb_version 8.0) == 8.0.29-13 ]]
 }
 
 @test "selects the existing requests-capable interpreter for Ansible modules" {
@@ -119,9 +163,9 @@ load helpers/test_helper
   PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
   # Invoked indirectly by name through configure_ansible_python's candidate
   # loop, which shellcheck can't trace.
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() { [[ $1 == -c ]]; }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -137,9 +181,9 @@ load helpers/test_helper
   printf '#!/usr/bin/env bash\nexit 0\n' >"$venv_python"
   chmod +x "$venv_python"
 
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() { [[ $1 == -c ]] && return 1; echo "python3 should not be invoked to recreate an existing venv" >&2; return 1; }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -151,7 +195,7 @@ load helpers/test_helper
   PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
   local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
 
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python3() {
     if [[ $1 == -c ]]; then
       return 1
@@ -163,7 +207,7 @@ load helpers/test_helper
     fi
     return 1
   }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   python() { return 1; }
 
   configure_ansible_python
@@ -203,9 +247,9 @@ load helpers/test_helper
   local -A expected=(
     [PSMDB]=latest [SSL_PSMDB]=latest
     [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
-    [MYSQL]=9.7 [PS]=8.0 [SSL_MYSQL]=8.0
+    [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
     [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.0 [PROXYSQL]=2 [VALKEY]=8
+    [PXC]=8.4 [PROXYSQL]=2 [VALKEY]=8
   )
   local type actual
   for type in "${!expected[@]}"; do
@@ -314,4 +358,116 @@ stub_docker_ps() {
   [[ $status -eq 0 ]]
   [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) ====='* ]]
   [[ $output == *$'no trailing newline\n===== END [1/2] ps=8.4 ====='* ]]
+}
+
+@test "format_duration renders seconds below a minute and mm/ss above" {
+  [[ $(format_duration 0) == '0s' ]]
+  [[ $(format_duration 45) == '45s' ]]
+  [[ $(format_duration 59) == '59s' ]]
+  [[ $(format_duration 60) == '1m00s' ]]
+  [[ $(format_duration 452) == '7m32s' ]]
+  [[ $(format_duration 3142) == '52m22s' ]]
+}
+
+@test "a reported setup carries how long it took" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'first line\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
+
+  [[ $status -eq 0 ]]
+  [[ $output == *"[1/2] ps=8.4: OK in 7m32s (log: $log)"* ]]
+}
+
+@test "a failed setup carries how long it took" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'first line\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 1 "$log" 45
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
+}
+
+@test "the slowest tasks inside a setup are reported, worst first" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  cat >"$log" <<'EOF'
+PLAY RECAP *********************************************************************
+===============================================================================
+Install PMM Client packages ------------------------------------------- 421.07s
+Start PS container ----------------------------------------------------- 70.55s
+Gathering Facts ---------------------------------------------------------- 0.45s
+EOF
+
+  run print_slowest_tasks "$log"
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
+  [[ ${lines[1]} == *'1m11s  Start PS container' ]]
+  [[ $output != *'Gathering Facts'* ]]
+}
+
+@test "slowest tasks are pooled across the playbooks one spec runs" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  cat >"$log" <<'EOF'
+===============================================================================
+Start PS container ----------------------------------------------------- 70.55s
+PLAY [Install client] **********************************************************
+===============================================================================
+Install PMM Client packages ------------------------------------------- 421.07s
+EOF
+
+  run print_slowest_tasks "$log" 1
+
+  [[ $status -eq 0 ]]
+  [[ ${#lines[@]} -eq 1 ]]
+  [[ ${lines[0]} == *'7m01s  Install PMM Client packages' ]]
+}
+
+@test "a log without task profiling reports no timings" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'PLAY RECAP\nlocalhost : ok=12 changed=4\nnot -- a duration\n' >"$log"
+
+  run print_slowest_tasks "$log"
+
+  [[ $status -eq 0 ]]
+  [[ -z $output ]]
+
+  run print_slowest_tasks "$BATS_TEST_TMPDIR/missing.log"
+
+  [[ $status -eq 0 ]]
+  [[ -z $output ]]
+}
+
+@test "a successful setup reports its slowest tasks before its log is discarded" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf 'Install PMM Client packages ------------------------------------------- 421.07s\n' >"$log"
+
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == "[1/2] ps=8.4: OK in 7m32s (log: $log)" ]]
+  [[ ${lines[1]} == *'7m01s  Install PMM Client packages' ]]
+}
+
+@test "a collection is detected from the listing, not from ansible-galaxy's exit code" {
+  local stub_bin=$BATS_TEST_TMPDIR/bin
+  mkdir -p "$stub_bin"
+  # ansible-core exits 0 for a collection it does not have, printing only the
+  # table header, so the exit code alone can never answer this.
+  cat >"$stub_bin/ansible-galaxy" <<'EOF'
+#!/usr/bin/env bash
+printf '# /usr/lib/python3/dist-packages/ansible_collections\n'
+printf 'Collection      Version\n--------------- -------\n'
+[[ $3 == ansible.posix ]] && printf 'ansible.posix   1.5.4\n'
+exit 0
+EOF
+  chmod +x "$stub_bin/ansible-galaxy"
+  PATH=$stub_bin:$PATH
+
+  run collection_installed ansible.posix
+  [[ $status -eq 0 ]]
+
+  run collection_installed community.docker
+  [[ $status -eq 1 ]]
 }

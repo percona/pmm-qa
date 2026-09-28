@@ -10,6 +10,8 @@
 # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY - self-descriptive
 # TESTS - whether to run tests, by default - yes
 # CLEANUP - whether to remove setup, by default - yes
+minio=${MINIO:-true}
+minio=${minio,,}
 
 set -e
 
@@ -28,7 +30,29 @@ bash -e ./generate-certs.sh
 #Start setup
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build
+
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
+if [ "$minio" != "false" ]; then
+  echo "starting minio container"
+  docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-pmm-psmdb.yml up -d
+
+# mongod is started by systemd, so it isn't listening when `up -d` returns; wait
+# for the healthcheck's rs.initiate() to elect a primary before adding users.
+echo "waiting for the psmdb-server replica set primary"
+for _ in $(seq 1 90); do
+  primary=$(docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server \
+    mongo --quiet --eval 'try { db.isMaster().ismaster } catch (e) { false }' 2>/dev/null | tr -d '\r') || true
+  if [ "$primary" = "true" ]; then
+    break
+  fi
+  sleep 3
+done
+[ "$primary" = "true" ] || { echo "psmdb-server never became primary"; exit 1; }
 
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF
@@ -64,7 +88,7 @@ docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mgodatagen -
 tests=${TESTS:-yes}
 if [ $tests = "yes" ]; then
     echo "running tests"
-    output=$(docker compose -f docker-compose-pmm-psmdb.yml run test pytest -s --verbose test.py)
+    output=$(docker compose -f docker-compose-pmm-psmdb.yml --profile tests run test pytest -s --verbose test.py)
     else
     echo "skipping tests"
 fi

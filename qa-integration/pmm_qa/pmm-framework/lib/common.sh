@@ -66,7 +66,9 @@ bool_string() {
   esac
 }
 
-# Expand the 'latest-tarball' alias into the PMM Client build-cache URL.
+# Expand the 'latest-tarball' alias into the PMM Client build-cache URL for the
+# architecture this host runs; the client containers inherit it. arm64 builds
+# live under their own bucket prefix.
 #
 # Any other value -- a version like '3-dev-latest', or an explicit URL -- is
 # passed through untouched, so callers can always pipe CLIENT_VERSION through
@@ -75,7 +77,11 @@ bool_string() {
 # Usage: client=$(normalize_client_version "$raw")
 normalize_client_version() {
   if [[ ${1:-} == latest-tarball ]]; then
-    printf '%s' 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz'
+    local bucket=pmm-client
+    case "$(uname -m)" in
+      aarch64 | arm64) bucket=pmm-client-arm ;;
+    esac
+    printf '%s' "https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
   else
     printf '%s' "${1:-}"
   fi

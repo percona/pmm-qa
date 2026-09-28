@@ -30,10 +30,18 @@ on:
         description: "Setup arguments, ex.: --addclient=ps,1 --ps-version=5.7"
         required: false
         type: string
-      tags_for_tests:
+      pmm_test_flag:
         description: "example: @settings-fb"
         required: true
         type: string
+      arch:
+        description: "package for enabling repo"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -60,18 +68,22 @@ on:
       setup_services:
         required: false
         type: string
-      tags_for_tests:
+      pmm_test_flag:
         required: true
         type: string
       sha:
         required: false
         type: string
+      arch:
+        type: string
+        required: false
+        default: amd64
 
 jobs:
   ui-tests-e2e:
-    name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
+    name: "podman e2e tests: ${{ inputs.pmm_test_flag || '@settings-fb' }}"
     #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.arch == 'amd64' && 'ubuntu-22.04' || 'ubuntu-22.04-arm' }}
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
@@ -82,7 +94,7 @@ jobs:
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_TEST_FLAG: ${{ inputs.pmm_test_flag || '@settings-fb' }}
       ADMIN_PASSWORD: 'admin-password'
 
     steps:
@@ -92,7 +104,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ env.TAGS_FOR_TESTS }} UI tests"
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
           description: "Test execution ${{ job.status }}"
           state: "pending"
           repository: ${{ github.repository }}
@@ -118,7 +130,6 @@ jobs:
               /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
           curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get -y upgrade
           sudo apt-get install -y clickhouse-client podman
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
@@ -130,6 +141,9 @@ jobs:
 
       - name: Setup PMM3-Server
         working-directory: ./pmm-qa/codeceptjs-e2e
+        # yamllint disable rule:line-length
+        # ExecStart below is a systemd unit line inside a heredoc, not
+        # shell; systemd owns its own continuation syntax.
         run: |
           mkdir -p ~/.config/systemd/user/
           cat > ~/.config/systemd/user/pmm-server.service <<EOF
@@ -185,18 +199,22 @@ jobs:
           export LOGS="pmm-managed entered RUNNING state"
           attempt=0
           while [ $attempt -le 3 ]; do
-            attempt=$(( $attempt + 1 ))
+            attempt=$(( attempt + 1 ))
             echo "Waiting for ${CONTAINER_NAME} to be up (attempt: $attempt)..."
             result=$(systemctl --user status ${CONTAINER_NAME})
-            if grep "${LOGS}" <<< $result ; then
+            if grep "${LOGS}" <<< "$result" ; then
               echo "${CONTAINER_NAME} is ready!"
               break
             fi
             sleep 10
           done;
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" != "200" ]]; do sleep 5; done'
           # bash -x testdata/db_setup.sh
 
+        # yamllint enable rule:line-length
       - name: Print Podman logs on failure
         if: ${{ failure() }}
         run: |
@@ -212,7 +230,7 @@ jobs:
 
       - name: Export path to pmm-qa repo
         working-directory: ./pmm-qa
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Setup PMM3-Client
         working-directory: ./pmm-qa/qa-integration/pmm_qa
@@ -221,32 +239,49 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
-          ./pmm-framework/pmm-framework --parallel --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
+          export HOST_IP
+          ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Collect pmm-framework setup logs
+        id: framework_logs
+        if: ${{ failure() || cancelled() }}
+        continue-on-error: true
+        env:
+          ARTIFACT_LABEL: ${{ env.PMM_TEST_FLAG }}
+        run: |
+          script=pmm-qa/.github/scripts/collect-framework-logs.sh
+          # Older pmm-qa refs checked out by callers predate the script.
+          [[ -f $script ]] || { echo "$script is not on this pmm-qa ref"; exit 0; }
+          bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
+
+      - name: Upload pmm-framework setup logs
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.framework_logs.outputs.artifact_name }}
+          path: framework-logs
 
       - name: Setup npm modules for e2e tests
-        working-directory: ./pmm-qa/codeceptjs-e2e
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install
-          envsubst < env.list > env.generated.list
+          npx playwright install-deps
+          npx playwright install chromium
 
-      - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
-        working-directory: ./pmm-qa/codeceptjs-e2e
+      - name: Execute e2e tests with tags ${{ env.PMM_TEST_FLAG }}
+        working-directory: ./pmm-qa/e2e_tests
         env:
-          SERVER_IP : "127.0.0.1"
-          PMM_UI_URL : "http://127.0.0.1/"
-          PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
-        run: |
-          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
+          PMM_UI_URL: "http://127.0.0.1/"
+        run: npx playwright test --grep "$PMM_TEST_FLAG"
 
       - uses: actions/github-script@v7
         if: ${{ always() }}
         id: artifact_name
         with:
           script: |
-            return `artifacts_for_${process.env.TAGS_FOR_TESTS.replaceAll('|', '')}`
+            return `artifacts_for_${process.env.PMM_TEST_FLAG.replaceAll('|', '')}`
           result-encoding: string
 
       - name: Create status check
@@ -255,7 +290,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ env.TAGS_FOR_TESTS }} UI tests"
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
           repository: ${{ github.repository }}

@@ -40,17 +40,12 @@
   when: ansible_distribution == "Rocky" and ansible_distribution_major_version | int >= 9
   ignore_errors: yes
 
-- name: Download install_ppg.yml
-  get_url:
-    url: "https://raw.githubusercontent.com/Percona-QA/ppg-testing/main/tasks/install_ppg{{ pg_version }}.yml"
-    dest: /tmp
-    mode: 0777
-
 - name: Enable postgresql repository
   command: "percona-release setup -y ppg-{{ pg_version }}"
 
 - name: Run install_ppg.yml
-  include_tasks: /tmp/install_ppg{{ pg_version }}.yml
+  # Vendored from Percona-QA/ppg-testing@beaf390 (upstream deleted tasks/install_ppgXX.yml in c716c38)
+  include_tasks: "{{ playbook_dir }}/../qa-integration/pmm_qa/tasks/install_ppg{{ pg_version }}.yml"
   vars:
     pg_version_to_install: "{{ pg_version }}"
 
@@ -96,12 +91,16 @@
   when: ansible_os_family == "RedHat"
 
 - name: Enable Socket Based Connection for pgsql via pgsql configuration for debian based systems
-  command: sed -i 's/local   all             postgres                                peer/local   all             postgres                                trust/' /etc/postgresql/{{ pg_version }}/main/pg_hba.conf
+  command: >-
+    sed -i 's/local   all             postgres                                peer/local   all             postgres                                trust/' /etc/postgresql/{{ pg_version
+    }}/main/pg_hba.conf
   become: yes
   when: ansible_os_family == "Debian"
 
 - name: Enable Socket Based Connection for pgsql via pgsql configuration for redhat based systems
-  command: sed -i 's/local   all             all                                     peer/local   all             all                                     trust/' /var/lib/pgsql/{{ pg_version }}/data/pg_hba.conf
+  command: >-
+    sed -i 's/local   all             all                                     peer/local   all             all                                     trust/' /var/lib/pgsql/{{ pg_version
+    }}/data/pg_hba.conf
   become: yes
   when: ansible_os_family == "RedHat"
 

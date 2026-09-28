@@ -33,4 +33,3 @@
         CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
         SELECT pg_stat_monitor_version();
       "
-

@@ -18,12 +18,7 @@ Data(serviceList).Scenario(
   async ({
     I, dashboardPage, adminPage, inventoryAPI, current,
   }) => {
-    const { service_name } = await inventoryAPI.getServiceDetailsByPartialDetails(
-      {
-        service_name: current.serviceName,
-        replication_set: replicationSet,
-      },
-    );
+    const { service_name } = await inventoryAPI.getServiceDetailsByRegex(`^ps_pmm_replication_.*${current.serviceName}(_\\d+)?$`);
 
     const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, {
       from: 'now-5m', to: 'now', service_name, refresh: '5s',
@@ -50,12 +45,7 @@ Scenario(
   async ({
     I, queryAnalyticsPage, inventoryAPI,
   }) => {
-    const { service_name } = await inventoryAPI.getServiceDetailsByPartialDetails(
-      {
-        service_name: '_1',
-        replication_set: replicationSet,
-      },
-    );
+    const { service_name } = await inventoryAPI.getServiceDetailsByRegex('^ps_pmm_replication_.*_1(_\\d+)?$');
 
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m', refresh: '5s' }));
     queryAnalyticsPage.waitForLoaded();

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source "$(dirname "${BASH_SOURCE[0]}")/wait-for-pmm-agent.sh"
+
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
@@ -9,7 +11,7 @@ mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 gssapi_enabled=${GSSAPI:-false}
 gssapi_username=${GSSAPI_USERNAME:-pmm@PERCONATEST.COM}
 gssapi_password=${GSSAPI_PASSWORD:-password1}
-client_credentials_flags="--username=${pmm_mongo_user} --password=${pmm_mongo_user_pass}"
+client_credentials_flags=(--username="${pmm_mongo_user}" --password="${pmm_mongo_user_pass}")
 gssapi_service_name_part=""
 
 if [[ $gssapi_enabled == "true" ]]; then
@@ -54,11 +56,12 @@ for node in $nodes
 do
     echo "configuring pmm agent on $node"
     docker compose -f docker-compose-rs.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup ${DEBUG_FLAG}
+    wait_for_pmm_agent docker-compose-rs.yaml "$node"
     if [[ $mongo_setup_type == "psa" && $node == "rs103" ]]; then
       docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     else
       echo
-      docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs ${client_credentials_flags[*]} --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
+      docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs "${client_credentials_flags[@]}" --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     fi
 done
 echo

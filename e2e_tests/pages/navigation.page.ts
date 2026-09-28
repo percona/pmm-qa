@@ -4,7 +4,12 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class LeftNavigation extends BasePage {
-  builders = {};
+  builders = {
+    selectedTimeZone: (timeZone: string): Locator =>
+      this.grafanaIframe().getByRole('region', { name: 'Time zone selection' }).getByText(timeZone),
+    timeZoneOption: (timeZone: string): Locator =>
+      this.grafanaIframe().getByTestId('data-testid Select option').filter({ hasText: timeZone }),
+  };
   buttons: NestedLocatorMap = {
     accounts: {
       changePassword: { locator: this.page.getByTestId('navitem-password-change') },
@@ -160,6 +165,9 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    changeTimeSettingsButton: this.grafanaIframe().getByTestId(
+      'data-testid Time zone picker Change time settings button',
+    ),
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
@@ -173,7 +181,9 @@ export default class LeftNavigation extends BasePage {
     tourMask: this.page.locator('.reactour__mask'),
     tourPopover: this.page.locator('.reactour__popover'),
   };
-  inputs = {};
+  inputs = {
+    timeZonePicker: this.grafanaIframe().getByRole('combobox', { name: 'Time zone picker' }),
+  };
   messages = {};
 
   getBackgroundColor = (): Promise<string> =>
@@ -198,6 +208,7 @@ export default class LeftNavigation extends BasePage {
     await pmmTest.step(`Select menu item: ${path}`, async () => {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
+      let expandButton: Locator | undefined;
 
       for (const [index, part] of parts.entries()) {
         const item = node[part];
@@ -206,12 +217,13 @@ export default class LeftNavigation extends BasePage {
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
+          expandButton = this.getLocator(item as NestedLocator)
+            ?.locator('xpath=..')
+            .getByRole('button')
+            .first();
+
           if (childLocator && !(await childLocator.isVisible())) {
-            await this.getLocator(item as NestedLocator)
-              ?.locator('xpath=..')
-              .getByRole('button')
-              .first()
-              .click({ timeout: Timeouts.TEN_SECONDS });
+            await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
             await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           }
         }
@@ -233,14 +245,36 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-
       const currentUrl = this.page.url();
+      const href = await locator.getAttribute('href', { timeout: Timeouts.TEN_SECONDS }).catch(() => null);
+      const targetPath = href ? new URL(href, currentUrl).pathname : undefined;
 
-      await locator.click({ timeout: Timeouts.TEN_SECONDS });
-      await this.page
-        .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
-        .catch(Boolean);
+      // The left-nav auto-collapses a submenu after a route change, hiding a
+      // just-verified nested item before the click lands (PMM-T2202 flake).
+      await expect(async () => {
+        if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
+
+        await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
+
+      // A dashboard rewrites its own var-* query params, so "URL changed" alone
+      // can fire before navigation to the clicked link happens.
+      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
+      // path, so the path must also move off the page that was already open.
+      const currentPath = new URL(currentUrl).pathname;
+
+      await (
+        targetPath
+          ? this.page.waitForURL(
+              (url) =>
+                url.pathname.startsWith(targetPath) &&
+                (url.pathname !== currentPath || currentPath === targetPath),
+              { timeout: Timeouts.TEN_SECONDS },
+            )
+          : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
+              timeout: Timeouts.TEN_SECONDS,
+            })
+      ).catch(Boolean);
       await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
 
       if (this.isDashboardPage()) {
@@ -275,6 +309,17 @@ export default class LeftNavigation extends BasePage {
       });
     }
   };
+
+  /** The PMM shell at `url`: sidebar up, and the home dashboard rendering in it. */
+  verifyUiRenders = async (url: string): Promise<void> =>
+    await pmmTest.step(`Verify the PMM UI renders at "${url}"`, async () => {
+      await this.page.goto(url, { timeout: Timeouts.TWO_MINUTES });
+      await expect(this.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
+      await this.selectMenuItem('home');
+      await expect(this.elements.iframe, 'The home dashboard must render').toBeVisible({
+        timeout: Timeouts.TWO_MINUTES,
+      });
+    });
 
   dashboardsToVerifyTimeRange(): string[] {
     const dashboards: string[] = [];

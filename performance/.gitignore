@@ -1,0 +1,3 @@
+# Generated at runtime by prepare_ansible_client_inventory.sh -- carries live
+# client IPs and a local key path, so it must never be committed.
+inventory_client_container2

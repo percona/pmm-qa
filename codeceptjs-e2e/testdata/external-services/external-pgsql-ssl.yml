@@ -72,7 +72,9 @@
         creates: "{{ ssl_dir }}/server.csr"
 
     - name: Generate server certificate
-      shell: "openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile ./external-pgsql-ssl-config.cnf"
+      shell: >-
+        openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile
+        ./external-pgsql-ssl-config.cnf
       args:
         creates: "{{ ssl_dir }}/server.crt"
 
@@ -178,5 +180,5 @@
       shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres-ssl
       register: pmm_server_health
       until: "'healthy' in pmm_server_health.stdout"
-      retries: 5
+      retries: 12
       delay: 5

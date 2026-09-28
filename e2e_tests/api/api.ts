@@ -7,13 +7,21 @@ import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
 import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
+import AnnotationApi from '@api/annotation.api';
+import HaApi from '@api/ha.api';
+import ManagementApi from '@api/management.api';
+import PrometheusApi from '@api/prometheus.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
   readonly alertingApi: AlertingApi;
+  readonly annotationApi: AnnotationApi;
   readonly backupsApi: BackupsApi;
   readonly grafanaApi: GrafanaApi;
+  readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
+  readonly managementApi: ManagementApi;
+  readonly prometheusApi: PrometheusApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
   readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
@@ -21,8 +29,12 @@ export default class Api {
   constructor(page: Page, request: APIRequestContext) {
     this.accessControlApi = new AccessControlApi(request);
     this.alertingApi = new AlertingApi(request);
+    this.annotationApi = new AnnotationApi(request);
     this.backupsApi = new BackupsApi(request);
+    this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);
+    this.managementApi = new ManagementApi(request);
+    this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.settingsApi = new SettingsApi(request);

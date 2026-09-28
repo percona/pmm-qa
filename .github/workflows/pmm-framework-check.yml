@@ -1,0 +1,60 @@
+---
+name: pmm-framework check
+
+on:
+  pull_request:
+    paths:
+      - 'qa-integration/pmm_qa/pmm-framework/**'
+      - '.github/workflows/pmm-framework-check.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'qa-integration/pmm_qa/pmm-framework/**'
+      - '.github/workflows/pmm-framework-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pmm-framework-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: make check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: qa-integration/pmm_qa/pmm-framework
+    steps:
+      # persist-credentials: false because `make check` executes PR-controlled
+      # bash -- the framework's own libs and its bats suite. The default leaves
+      # GITHUB_TOKEN readable in .git/config for that code, and nothing here
+      # pushes.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up bats
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/bats-core/bats-core.git /opt/bats
+          sudo /opt/bats/install.sh /usr/local
+
+      - name: Ensure shellcheck
+        run: |
+          set -euo pipefail
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          fi
+
+      # One call to the framework's own target rather than a re-listing of
+      # bash -n / shellcheck / bats here: the Makefile already owns which
+      # sources each tool sees, including tests/*.bats, which the repo-wide
+      # lint dispatcher does not select (it matches \.sh$ only).
+      - name: make check
+        run: make check

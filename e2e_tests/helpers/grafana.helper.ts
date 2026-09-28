@@ -42,6 +42,14 @@ export default class GrafanaHelper {
     return response;
   };
 
+  findOrCreateUser = async (username: string, password: string) => {
+    const existingUser = (await this.listUsers()).users.find((user) => user.login === username);
+
+    return existingUser
+      ? { created: false, id: existingUser.id }
+      : { created: true, id: await this.createUser(username, password) };
+  };
+
   findUserByUsername = async (username: string): Promise<GrafanaUser> => {
     const users = await this.listUsers();
     const user = users.users.find((user) => user.login === username);
@@ -77,6 +85,23 @@ export default class GrafanaHelper {
     });
 
     expect(response.status(), 'Promote user to Editor').toEqual(200);
+  };
+
+  signInAs = async (username: string, password: string): Promise<GrafanaUser> => {
+    await this.unAuthorize();
+    await this.authorize(username, password);
+
+    const response = await this.page.request.get('graph/api/user', {
+      headers: GrafanaHelper.getAuthHeader(username, password),
+    });
+
+    expect(response.status(), `Sign in as "${username}"`).toEqual(200);
+
+    const user = (await response.json()) as GrafanaUser;
+
+    expect(user.login, `The session must belong to "${username}"`).toEqual(username);
+
+    return user;
   };
 
   unAuthorize = async () => {

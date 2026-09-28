@@ -1,10 +1,34 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
+
+  deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
+    const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+  };
+
+  getAllNodes = async (): Promise<GetNode[]> => {
+    const response = await this.request.get(apiEndpoints.management.nodes, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get nodes API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return ((await response.json()) as { nodes?: GetNode[] }).nodes ?? [];
+  };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
@@ -46,6 +70,22 @@ export default class InventoryApi {
     expect(filteredServices.length, `Service matching regex: ${regex} is not present`).toBeGreaterThan(0);
 
     return filteredServices[0];
+  };
+
+  getServiceDetailsByTypeAndPartialName = async (
+    serviceType: ServiceType,
+    partialServiceName: string,
+  ): Promise<GetService> => {
+    const services = (await this.getServicesByType(serviceType)).filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+    const service = services.at(0);
+
+    if (!service) {
+      throw new Error(`Service ${partialServiceName} of type ${serviceType} is not present`);
+    }
+
+    return service;
   };
 
   getServices = async (): Promise<GetServices> => {

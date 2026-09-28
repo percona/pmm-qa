@@ -111,10 +111,16 @@ module.exports = {
 
     const regex = new RegExp(regexPattern);
 
-    return service
+    const foundService = service
       .data
       .services
       .find((service) => regex.test(service.service_name));
+
+    if (!foundService) {
+      throw new Error(`Service matching "${regexPattern}" not found.`);
+    }
+
+    return foundService;
   },
 
   async getServiceDetailsByPartialDetails(details) {

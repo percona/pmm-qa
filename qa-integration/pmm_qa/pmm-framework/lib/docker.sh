@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # set here for setups/ to read; shellcheck sees one file at a time.
 #
 # lib/docker.sh -- locating the PMM Server the setups should report to.
 #

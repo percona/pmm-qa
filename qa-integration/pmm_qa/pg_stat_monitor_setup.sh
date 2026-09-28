@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 while [ $# -gt 0 ]; do
 
@@ -36,11 +36,11 @@ then
 fi
 
 # Need to add a user postgres either here or in Dockerfile
-cd /home
+cd /home || exit 1
 mkdir postgres
 useradd postgres
 chown -R postgres:postgres postgres
-cd postgres
+cd postgres || exit 1
 
 # Install the dependencies
 apt-get update
@@ -51,7 +51,18 @@ sleep 10
 # Install the PG server from selected distribution
 if [[ $distribution == "PGDG" ]];
 then
-      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      for attempt in 1 2 3; do
+        if wget --timeout=30 --tries=2 -O /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+          && grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/pgdg.asc; then
+          break
+        fi
+        if [ "$attempt" = 3 ]; then
+          echo "Failed to download the PGDG signing key after 3 attempts" >&2
+          exit 1
+        fi
+        sleep 15
+      done
+      apt-key add /tmp/pgdg.asc
       sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
       apt update
       apt -y install postgresql-${pgsql_version} postgresql-server-dev-${pgsql_version}
@@ -84,10 +95,10 @@ echo $PATH
 cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
 # Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
-cd /home/postgres
+cd /home/postgres || exit 1
 git clone --depth 1 --branch ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
-cd pg_stat_monitor
+cd pg_stat_monitor || exit 1
 
 # Build PGSM
 make USE_PGXS=1

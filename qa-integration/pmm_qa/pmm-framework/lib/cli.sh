@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # parse_args sets these for lib/ and setups/ to read; shellcheck sees one file at a time.
 #
 # lib/cli.sh -- command-line parsing and the --database spec grammar.
 #
@@ -33,6 +34,7 @@ VERBOSE=false             # --verbose/--v
 VERBOSITY_LEVEL=1         # --verbosity-level; becomes that many -v for ansible
 CLIENT_DEBUG=false        # --client-debug
 PARALLEL=false            # --parallel; preflight may turn this back off
+SETUP_RETRIES=0           # --setup-retries; extra attempts for a FAILED setup only
 
 # Print the user-facing help text. Keep in sync with parse_args.
 print_help() {
@@ -53,6 +55,8 @@ Options:
   --verbosity-level N          Ansible verbosity level (numeric, default: 1).
   --client-debug               Enable PMM Client debug mode.
   --parallel                   Run setups concurrently; dump logs only on failure.
+  --setup-retries N            Retry each failed setup up to N more times; setups
+                               that already succeeded are left alone (default: 0).
   -h, --help                   Show this help.
 
 Database SPEC:
@@ -97,7 +101,7 @@ parse_args() {
         ;;
       # Flags that take a value. Collected here so the "next arg looks like a
       # flag" rule lives in exactly one place, then dispatched below.
-      --pmm-server-ip|--pmm-server-password|--client-version|--verbosity-level)
+      --pmm-server-ip|--pmm-server-password|--client-version|--verbosity-level|--setup-retries)
         local value
         if [[ $has_inline == true ]]; then
           value=$inline
@@ -117,6 +121,11 @@ parse_args() {
               VERBOSITY_LEVEL=$value
             fi
             ;;
+          --setup-retries)
+            if [[ $has_inline == true || -n $value ]]; then
+              SETUP_RETRIES=$value
+            fi
+            ;;
         esac
         ;;
       --verbose|--v) VERBOSE=true ;;
@@ -133,6 +142,8 @@ parse_args() {
 
   [[ $VERBOSITY_LEVEL =~ ^[0-9]+$ ]] ||
     die "Invalid verbosity level '$VERBOSITY_LEVEL'; provide a number."
+  [[ $SETUP_RETRIES =~ ^[0-9]+$ ]] ||
+    die "Invalid setup retry count '$SETUP_RETRIES'; provide a number."
   ((${#DATABASE_SPECS[@]} > 0)) ||
     die "At least one --database SPEC is required."
 }

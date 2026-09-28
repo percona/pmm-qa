@@ -1,5 +1,12 @@
 {
   "root": true,
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "env": {
+    "node": true
+  },
   "overrides": [
     {
       "files": ["*.ts", "*.tsx"],
@@ -19,7 +26,7 @@
       "parserOptions": {
         "ecmaVersion": "latest",
         "parser": "@typescript-eslint/parser",
-        "project": ["./cli/tsconfig.json"]
+        "project": ["./tsconfig.json"]
       },
       "rules": {
         "@typescript-eslint/no-unsafe-assignment": ["off"],
@@ -125,7 +132,7 @@
     "eqeqeq": "error",
     "func-names": "off",
     "func-style": "off",
-    "indent": "error",
+    "indent": ["error", 2],
     "import/extensions": [
       "error",
       "ignorePackages",
@@ -160,7 +167,7 @@
     "no-multi-assign": "off",
     "newline-per-chained-call": "error",
     "no-var": "error",
-    "one-var": "error",
+    "one-var": ["error", "never"],
     "prefer-arrow-callback": "off",
     "prefer-const": "error",
     "padded-blocks": "off",
@@ -172,6 +179,6 @@
     "spaced-comment": "error",
     "space-infix-ops": "error",
     "space-in-parens": "error",
-    "quotes": "error"
+    "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }]
   }
 }

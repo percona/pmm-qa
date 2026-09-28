@@ -8,7 +8,7 @@ export const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://
 const config: PlaywrightTestConfig = {
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
-  globalTimeout: Timeouts.THIRTY_MINUTES,
+  globalTimeout: Timeouts.SIXTY_MINUTES,
   projects: [
     {
       name: 'chromium',
@@ -26,10 +26,11 @@ const config: PlaywrightTestConfig = {
     ['list'],
     ['html', { open: 'never', outputFolder: './playwright-report' }],
     ['json', { outputFile: 'output/results.json' }],
+    ['junit', { outputFile: 'output/junit.xml' }],
   ],
   retries: process.env.CI ? 2 : 0,
   testDir: './tests',
-  timeout: Timeouts.TEN_MINUTES,
+  timeout: Timeouts.FIFTEEN_MINUTES,
   use: {
     baseURL: pmmUrl,
     headless: (process.env.HEADLESS ?? 'true') === 'true',

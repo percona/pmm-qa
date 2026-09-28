@@ -1,7 +1,7 @@
 # PMM-QA Development Guide for AI Agents
 
 <!-- SINGLE ENTRY POINT for all AI coding assistants (Claude Code, Cursor, GitHub Copilot, etc.)
-     Compatibility shims: CLAUDE.md, .cursorrules, .github/copilot-instructions.md
+     Compatibility shim: CLAUDE.md
      Last reviewed: 2026-07 -->
 
 ## Maintaining This Document
@@ -32,16 +32,16 @@ This file is the **single authoritative entry point** for AI agents working with
 Each test suite has its own dependency manifest, lint config and runner. **Read the linked docs before contributing.** Most suites assume `pmm-framework` (the bash CLI under [qa-integration/](qa-integration/)) has already provisioned the required PMM Client and DB containers on the `pmm-qa` Docker network.
 
 | Directory | Purpose | Docs / entry point |
-|-----------|---------|--------------------|
+| ----------- | --------- | -------------------- |
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
 | [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
-| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
+| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), the lint dispatcher, and the automation relay the agents call | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) · [pmm-ai-relay/](support_scripts/pmm-ai-relay/README.md) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
-| [.claude/](.claude/) | Claude Code cloud agents (Test Runner, Investigator, FB Reporter, Router), their skills, and hooks | [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md) · [agents/](.claude/agents/) · [skills/](.claude/skills/) |
+| Claude Code agents & skills | Test Runner, Investigator, FB Reporter, Router, `qa-code-review` and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
 | [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
@@ -86,7 +86,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (24 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -94,21 +94,78 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `nightly-e2e-tests-matrix.yml` — remote nightly E2E matrix (triggered by Jenkins after PMM Server is up).
 - `runner-e2e-tests-codeceptjs-remote-nightly-*.yml` — nightly remote setup and test runners for CodeceptJS.
 - `helm-tests.yml` — the only k8s entry point.
-- `rc-testing-suite.yml` — GitHub Actions portion of RC testing (see [External RC orchestration](#external-rc-orchestration) below).
+- `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
+- `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
 To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github/workflows/](.github/workflows/).
 
-### External RC orchestration
+### External orchestration
 
-Full Release-Candidate testing is **not** driven from this repo. The orchestrator is the Jenkins pipeline [`Percona-Lab/jenkins-pipelines` › `pmm/v3/pmm3-rc-testing.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-rc-testing.groovy). For a given `RC_VERSION` it runs three parallel lanes:
+No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
 
-- **Lane 1**: `pmm3-ui-tests-nightly-gha` against the AMI plus the last 5 GA `percona/pmm-client` tags (backward-compatibility; compat lanes skipped on patch RCs).
-- **Lane 2**: `pmm3-ui-tests-nightly-gha` for OVF / Docker / Helm / HA, `pmm3-ui-tests-nightly-gssapi`, `openshift-helm-tests`.
-- **Lane 3**: `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
+Full Release-Candidate testing is **not** driven from this repo, and no longer has a pipeline of its own: [`pmm3-release-candidate.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-release-candidate.groovy) triggers the same nightly orchestrator, passing the candidate's server image, its AMI and its client tarballs. The orchestrator reads the `-rc` in the image tag and switches the package lanes to the `testing` repository and the candidate's own tarballs; every other lane is the one the nightly runs. `pmm3-rc-testing.groovy` was removed once it had nothing the orchestrator lacked.
 
-**Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+## Linting
+
+One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the pmm-ai `PreToolUse` commit gate (`plugins/pmm-qa/hooks/pre-commit-lint-gate.sh` in percona/pmm-ai) runs it over the staged files before an agent's `git commit`. Both dispatch through [support_scripts/lint/lint-changed.sh](support_scripts/lint/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [support_scripts/lint/install-linters.sh](support_scripts/lint/install-linters.sh) — the same installers the pmm-ai `SessionStart` hook runs eagerly.
+
+| File kind | Command | Config |
+| ----------- | --------- | -------- |
+| `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) — `e2e_tests` **needs Node 22** (`nvm use 22`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
+| `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
+| `.github/workflows/*` | `actionlint` (embedded shellcheck at default severity) | [.github/actionlint.yaml](.github/actionlint.yaml) |
+| `*.sh` | `shellcheck -S warning` (every tracked script) | — |
+| `*.py` | `ruff check` | [ruff.toml](ruff.toml) |
+| `*.tf` | `terraform fmt -check -recursive` | — |
+| `Dockerfile*` | `hadolint --failure-threshold error` | — |
+| `docker-compose*.y*ml` | `docker compose config -q` | — |
+| `*.groovy` | `npm-groovy-lint --failon error` | — |
+
+No group covers `*.md`, so the dispatcher selects nothing for a docs-only diff and exits 0: that is "no gate covers this change", not a pass, and it is what such a change should say rather than "linter clean".
+
+The linters do not model `set -u`/`set -e` **runtime** aborts either. `make syntax`, `shellcheck -x -S warning` and a full bats run all passed a trap that reads `${pids[index]}` on a subscript the startup loop had not reached, which bash 5.2 aborts with `pids[index]: unbound variable` — killing the trap before its `wait`, `rm -rf` and `exit 130`. An indexed-array read on a possibly-unset subscript needs the `:-` form, and a new error or cleanup path is *executed* (a throwaway probe script is enough) rather than reasoned about.
+
+`.yamllint` runs `line-length` at **max 200** and `indentation` with `indent-sequences: whatever`; `trailing-spaces` is still off. 200 is where the repo's real ceiling sits: below it there is nothing left to fix, and every line above it is shell command text, so tightening the max means rewrapping provisioning commands rather than YAML. `indent-sequences: whatever` enforces mapping indentation — the kind that changes meaning — while leaving sequence style to the file, because the Ansible playbooks put `- name:` level with `tasks:` and normalising that would reindent every task block in the repo. Three block scalars carry a `# yamllint disable rule:line-length` region with the reason inline: their length lives inside a single-quoted command (or a systemd unit in a heredoc) that a backslash-newline cannot split. Keep the directive line itself bare — yamllint ignores a `disable` line that carries trailing prose.
+
+actionlint's embedded shellcheck is on at its own default severity — info and style included — with no suppression in `.github/actionlint.yaml` and no `SHELLCHECK_OPTS` narrowing. A `run:` block is shell, and the `.sh` files those blocks invoke are held to `-S warning`, so the inline shell is if anything checked harder than the scripts next to it. Seven findings carry an inline `# shellcheck disable=SC2016` with the reason beside them: five are `bash -c '...'` readiness polls where the inner shell must do the expanding and `%{http_code}` has to reach curl literally, two are a `sed` that substitutes a literal on purpose. Note that a `# shellcheck ...` line inside a `run:` block is script text, so directives work there — unlike yamllint, whose `disable-line` cannot reach inside a block scalar.
+
+`ruff.toml` declares the rule set explicitly. `ruff check` with no config uses whatever `select` the installed ruff defaults to, and that default has widened between releases — so an unpinned ruff reports a different set of findings on CI than on your machine, which is exactly how the gate first went red. The declared set is `E4`/`E7`/`E9`/`F`, ruff's documented default and the set the baseline was measured against; `lint.yml` logs `ruff --version` so a future drift is visible in the run. Widening the set is a deliberate change, not a config to loosen — see the note in `ruff.toml` for what a broader default currently reports.
+
+The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
+
+**`e2e_tests` lints only on Node 22**, which is what `lint.yml` sets; its `eslint-plugin-unicorn@^74` declares `node >=22`. On Node 20 `npm run lint` there never reaches a file: eslint aborts importing that plugin (`TypeError: mapTypes.union is not a function`), and past that the `stylish` formatter aborts on `util.styleText`. The `cli` workspace is on eslint 8 and sets no such floor. Since `lint-changed.sh` runs the owning workspace's command for any staged `.ts`, a Node 20 checkout fails the commit gate on an `e2e_tests` file regardless of the diff. A crash at config load is not a clean diff, and it is never a reason to edit `eslint.config.mjs`.
+
+### Why not a bundled linter action
+
+[super-linter](https://github.com/super-linter/super-linter) has been evaluated
+twice and declined both times; the reasoning, so it does not need re-deriving:
+
+- **It cannot serve the commit gate.** It runs locally only as
+  `docker run` over the whole workspace, and the image is 1.34 GB (slim) to
+  1.81 GB. Per-commit that is unusable, so the gate would still need
+  `install-linters.sh` and `lint-changed.sh` — and CI would then hold a second
+  copy of the linter mapping, which is the duplication `lint.yml` was collapsed
+  to 55 lines to remove.
+- **It does not remove the configs.** `.yamllint`, `ruff.toml` and
+  `.github/actionlint.yaml` are decisions about *this* repo, not wiring, and
+  super-linter reads the same files. Dropping them for its defaults means
+  roughly 5300 findings — 2502 from yamllint alone at `line-length: 80`.
+- **It does not remove the maintenance either.** Its upgrade guide removes
+  linters and variables between majors (16 variables in v7→v8), renames default
+  config filenames, and has added linters in a *minor* bump (v8.1→8.2 added the
+  Ruff formatter and Biome, with documented conflicts). That is the same drift
+  class as the unpinned ruff above, with more tools behind one tag.
+- **It drops three checks we run:** `tsc --noEmit` (it type-checks via eslint
+  only), `docker compose config -q` over the 21 compose files, and the
+  workspace-aware `npm run lint` that resolves each workspace's own plugins.
+
+The tools it would have brought that are worth having were taken directly
+instead: pinned checksums on the downloaded binaries, and a pinned ruff.
+`zizmor` (workflow-security auditing, which would have caught the
+`persist-credentials` issue in `lint.yml`) is still an open candidate — it is a
+single small binary, unlike the image.
 
 ## Playwright E2E Suite (`e2e_tests/`)
 
@@ -127,7 +184,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Test areas (`e2e_tests/tests/`)
 
 | Area | Path | Notes |
-|------|------|-------|
+| ------ | ------ | ------- |
 | Access control | `accessControl/` | LBAC and permissions |
 | Alerting | `api/alerting/` | Alerting permissions API |
 | Dashboards | `dashboards/` | MySQL, Valkey, image renderer |
@@ -142,6 +199,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Page Object Model
 
 Tests use class-based page objects in `e2e_tests/pages/`:
+
 - Page classes encapsulate selectors and actions
 - Locators use `data-testid` attributes where available
 - Path aliases: `@pages/*`, `@helpers/*`, `@fixtures/*` (via `tsconfig.json`)
@@ -172,27 +230,35 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
+Agents working here capture reusable lessons with the `skill-gardener` skill; lessons, targets and the weekly Publish PR all live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa/skills/skill-gardener`).
+
 ### Do
+
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
 - Use **`data-testid`** locators (stable, not CSS-class dependent)
 - Tag tests for CI filtering (`@inventory`, `@dashboards`, `@qan`, etc.)
 - Make tests **idempotent** — clean up created resources
 - Use `e2e_tests/api/` helpers for test setup/teardown via REST API
 - Use path aliases (`@pages/`, `@helpers/`) in imports
-- Use Playwright's `test.step()` for readable test structure
+- Use Playwright's `test.step()` for readable test structure — a **value-returning** `const x = await pmmTest.step(...)` needs expression statements as neighbours: `@stylistic/padding-line-between-statements` in `e2e_tests/eslint.config.mjs` forbids a blank line between adjacent `const`s while requiring one around block-like statements, so placing one next to another `const` is unsatisfiable and `--fix` answers with `ESLintCircularFixesWarning`
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
+- Validating **your own** unmerged script against a live environment: run it from the PR ref, never a working-tree path — `git show origin/<branch>:<path> >/tmp/x.sh` — then fingerprint what actually executed (grep a token unique to the new code) and confirm its result against a raw ground-truth listing. A dry run of a reaper from a checkout sitting on `main` reported `volumes=0`; the PR's own code found 64, against 66 orphans the raw API listing confirmed. The same rule covers anything deployed: verify the deployed artifact's *content*, not a diff against a checkout that may itself be stale. This is for code you are the author of — **reviewing** someone's PR never runs its tooling (`qa-code-review` section 1); inspect it instead
+- Write a skill or agent that wraps an **external CLI against the installed binary** — install the version CI actually pins and read `--help` for the real subcommand tree before documenting a single command
+- Set **both** git identity fields on a fresh worktree before committing — `git -C "$WT" config user.name` and `git -C "$WT" config user.email`, copied from the repo's previous commit by the same author. A single `-c user.name=…` override leaves the container's default email on the commit, and the amend and force-push that would fix it are denied as destructive, so the PR carries the mismatch
 
 ### Don't
+
 - Don't use CSS class selectors for Grafana elements (they change across versions)
 - Don't hardcode PMM Server URLs — use `PMM_UI_URL` env var
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
 - Don't skip cleanup — CI runs accumulate state across tests
 - Don't mix Playwright Test and CodeceptJS patterns — new UI tests go in `e2e_tests/` (Playwright)
+- Don't write a command into a skill or agent on someone else's say-so — vendor docs or a reviewer's suggestion alike; run it in the environment that file targets first. Vendor docs may describe an unreleased, renamed or separately-packaged tool whose commands the installed one doesn't have, and a reviewer's suggestion is a hypothesis until it runs: two on #1274 were unworkable in this environment and only execution showed it. Where it can't be run or authenticated while authoring, mark command names and flags verified but output field names **unverified**, with an instruction to print one payload and correct them on the first real run, rather than inventing plausible keys — the next session reads an unverified command as confirmed, which is worse than an acknowledged gap
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
+| ---------- | --------- | --------- |
 | `PMM_UI_URL` | `http://localhost/` | PMM Server URL |
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |

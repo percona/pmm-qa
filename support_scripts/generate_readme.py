@@ -9,7 +9,6 @@ import re
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "qa-integration" / "README.md"
 DATABASE_OPTIONS = ROOT / "qa-integration" / "pmm_qa" / "scripts" / "database_options.py"
@@ -27,9 +26,10 @@ E2E_TAGS_END = "<!-- E2E-TAGS-END -->"
 CLI_TAGS_START = "<!-- CLI-TAGS-START -->"
 CLI_TAGS_END = "<!-- CLI-TAGS-END -->"
 TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
+TEST_ID_PATTERN = re.compile(r"@PMM-T\d+", re.IGNORECASE)
 PLAYWRIGHT_TAG_PATTERN = re.compile(
     r"tag\s*:\s*(?:'(?P<single>@[A-Za-z0-9][A-Za-z0-9_-]*)'|\"(?P<double>@[A-Za-z0-9][A-Za-z0-9_-]*)\"|\[(?P<array>.*?)\])",
-    re.S,
+    re.DOTALL,
 )
 
 TOPOLOGY = {
@@ -112,24 +112,20 @@ def build_variants_table(database_options: dict) -> str:
     return "\n".join(rows)
 
 
-def discover_e2e_tags() -> list[str]:
+def build_e2e_tags() -> str:
     tags = set()
     for test_file in E2E_TESTS.rglob("*.ts"):
         for line in test_file.read_text(encoding="utf-8").splitlines():
             if line.lstrip().startswith(("import ", "export ")):
                 continue
             tags.update(TAG_PATTERN.findall(line))
-    return sorted(tags, key=str.lower)
-
-
-def build_e2e_tags() -> str:
-    tags = discover_e2e_tags()
+    tags = sorted((tag for tag in tags if not TEST_ID_PATTERN.fullmatch(tag)), key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find e2e tags in {E2E_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)
 
 
-def discover_cli_tags() -> list[str]:
+def build_cli_tags() -> str:
     tags = set()
     for test_file in CLI_TESTS.rglob("*.ts"):
         content = test_file.read_text(encoding="utf-8")
@@ -140,18 +136,14 @@ def discover_cli_tags() -> list[str]:
                 tags.add(match.group("double"))
             elif match.group("array"):
                 tags.update(TAG_PATTERN.findall(match.group("array")))
-    return sorted(tags, key=str.lower)
-
-
-def build_cli_tags() -> str:
-    tags = discover_cli_tags()
+    tags = sorted((tag for tag in tags if not TEST_ID_PATTERN.fullmatch(tag)), key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find CLI tags in {CLI_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)
 
 
 def replace_section(content: str, start_marker: str, end_marker: str, replacement: str) -> str:
-    pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.S)
+    pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.DOTALL)
     updated, count = pattern.subn(f"{start_marker}\n\n{replacement}\n\n{end_marker}", content)
     if count != 1:
         raise RuntimeError(f"Expected exactly one section between {start_marker} and {end_marker}")
@@ -190,7 +182,7 @@ def check_generated_readmes(generated_readmes: dict[Path, str]) -> None:
 def generate() -> None:
     generated_readmes = build_generated_readmes()
     for readme, generated_content in generated_readmes.items():
-        readme.write_text(generated_content, encoding="utf-8")
+        readme.write_text(generated_content, encoding="utf-8", newline="\n")
     print("README generated sections updated")
 
 
@@ -203,6 +195,6 @@ if __name__ == "__main__":
             print("README generated sections are up to date")
         else:
             generate()
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 -- top-level CLI handler
         print(error, file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from error

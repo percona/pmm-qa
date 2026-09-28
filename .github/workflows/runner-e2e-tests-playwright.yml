@@ -24,6 +24,10 @@ on:
         type: string
         default: 'latest-tarball'
         required: true
+      pmm_client_image:
+        description: 'pmm-client docker image used by the client containers'
+        type: string
+        required: false
       setup_services:
         description: 'Clients for pmm-server'
         type: string
@@ -39,6 +43,14 @@ on:
         type: string
         default: '100%'
         required: false
+      arch:
+        description: "package for enabling repo"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
 
   workflow_call:
     inputs:
@@ -54,6 +66,9 @@ on:
       pmm_client_version:
         type: string
         required: true
+      pmm_client_image:
+        type: string
+        required: false
       setup_services:
         type: string
         required: false
@@ -63,13 +78,22 @@ on:
       launchable_confidence:
         type: string
         required: false
+      sha:
+        type: string
+        required: false
+      arch:
+        type: string
+        required: false
+        default: amd64
     secrets:
       LAUNCHABLE_TOKEN:
+        required: false
+      ZEPHYR_PMM_API_KEY:
         required: false
 jobs:
   tests:
     name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.arch == 'amd64' && 'ubuntu-22.04' || 'ubuntu-22.04-arm' }}
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
@@ -86,7 +110,6 @@ jobs:
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || github.event.inputs.tags_for_tests || '@settings-fb' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
@@ -135,8 +158,8 @@ jobs:
           # TODO: add job id for matrix call
           job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/@//" -e "s/|/-/g")
           report_name="$job_tag"
-          echo $report_name
-          echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+          echo "$report_name"
+          echo "REPORT_NAME=$report_name" >> "$GITHUB_ENV"
 
       - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
@@ -145,14 +168,15 @@ jobs:
           launchable verify || true
           
           docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
-          echo "$(cat launchable-subset.txt)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright < test_list.txt > launchable-subset.txt || true
+          cat launchable-subset.txt || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
@@ -180,8 +204,15 @@ jobs:
           ls
           docker network create pmm-qa
           docker volume create pmm-volume
-
+          for attempt in 1 2 3; do
+            PWD=$(pwd) docker compose -f docker-compose.yml pull --quiet && break
+            echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
+            sleep 15
+          done
           PWD=$(pwd) docker compose -f docker-compose.yml up -d
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 
       - name: Setup PMM-Client
@@ -195,15 +226,39 @@ jobs:
         run: |
           ./pmm-framework/pmm-framework --parallel --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
+      - name: Collect pmm-framework setup logs
+        id: framework_logs
+        if: ${{ failure() || cancelled() }}
+        continue-on-error: true
+        env:
+          ARTIFACT_LABEL: ${{ env.PMM_TEST_FLAG }}
+        run: |
+          script=pmm-qa/.github/scripts/collect-framework-logs.sh
+          # Older pmm-qa refs checked out by callers predate the script.
+          [[ -f $script ]] || { echo "$script is not on this pmm-qa ref"; exit 0; }
+          bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
+
+      - name: Upload pmm-framework setup logs
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.framework_logs.outputs.artifact_name }}
+          path: framework-logs
+
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/e2e_tests/
         run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
           npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
 
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
           unzip logs.zip -d logs
@@ -212,7 +267,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
@@ -220,7 +275,7 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()

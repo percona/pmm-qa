@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 import { waitForApiReady, waitForPmmServerToBeReady } from '@helpers/custom-assertions';
@@ -12,7 +12,7 @@ const removeList: string[] = [];
 test.describe(
   'PMM Server CLI tests for Docker Environment Variables',
   { tag: '@server-only' },
-  async () => {
+  () => {
     test.afterEach(async () => {
       while (stopList.length > 0) {
         await (
@@ -245,7 +245,7 @@ test.describe(
 
       await expect(async () => {
         const output = await cli.exec(
-          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database='system' AND name LIKE '%log%';"`,
+          'docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database=\'system\' AND name LIKE \'%log%\';"',
         );
         await output.assertSuccess();
         expect(

@@ -1,0 +1,8 @@
+<clickhouse>
+    <access_control_improvements>
+        <!-- Required by the changeable_in_readonly constraint on the datasource profile in
+             users.d/datasource-user.xml. -->
+        <settings_constraints_replace_previous>true</settings_constraints_replace_previous>
+        <select_from_system_db_requires_grant>true</select_from_system_db_requires_grant>
+    </access_control_improvements>
+</clickhouse>

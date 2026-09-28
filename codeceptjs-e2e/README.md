@@ -1,6 +1,6 @@
 # PMM UI end-to-end tests
-Percona Monitoring and Management UI automated tests. Designed to cover "End to End" scenarios.
 
+Percona Monitoring and Management UI automated tests. Designed to cover "End to End" scenarios.
 
 ## Getting Started
 
@@ -12,50 +12,52 @@ Percona Monitoring and Management UI automated tests. Designed to cover "End to 
 this is it! tests are good to go on specified PMM server.
 
 ### Getting PMM server ready
-  * **Run tests upon local PMM server:**  
+
+* **Run tests upon local PMM server:**  
  execute command in the Project Root folder to start default PMM server: `docker-compose up -d`  
  Or one of the offered configurations:
-    * `docker-compose -f docker-compose-ami-db-setup.yml up -d`
-    * `docker-compose -f docker-compose-mongodb-ssl.yml up -d`
-    * `docker-compose -f docker-compose-mongo-replica.yml up -d`
-    * `docker-compose -f docker-compose-mysql-ssl.yml up -d`
-    * `docker-compose -f docker-compose-postgresql-ssl.yml up -d`
+  * `docker-compose -f docker-compose-ami-db-setup.yml up -d`
+  * `docker-compose -f docker-compose-mongodb-ssl.yml up -d`
+  * `docker-compose -f docker-compose-mongo-replica.yml up -d`
+  * `docker-compose -f docker-compose-mysql-ssl.yml up -d`
+  * `docker-compose -f docker-compose-postgresql-ssl.yml up -d`
 
- 
-  * **Setup environment for backup management tests:**  
+* **Setup environment for backup management tests:**  
     run `bash -x testdata/backup-management/mongodb/setup-replica-and-pbm-local.sh`.
     This will launch docker compose with PMM Server, PMM Client, and set up replica set with 3 Percona MongoDB instance
-      
-  * **Run tests upon remote PMM server:**  
-    set desired instance URL in _**"PMM_UI_URL"**_ local environment variable    
+
+* **Run tests upon remote PMM server:**  
+    set desired instance URL in _**"PMM_UI_URL"**_ local environment variable
     ex: create `.env` file with the following line `PMM_UI_URL=http://myPmmServer.com`
 
-### Running tests:
+### Running tests
+
 Execute command in the Project Root folder
+
 * **run all in single thread tests:** `npx codeceptjs run -c pr.codecept.js`
 * **run all tests in parallel threads:** `npx codeceptjs run-multiple parallel -c pr.codecept.js`
-* **run desired "classes":** `npx codeceptjs run -c pr.codecept.js tests/verifyMysqlDashboards_test.js`   
+* **run desired "classes":** `npx codeceptjs run -c pr.codecept.js tests/verifyMysqlDashboards_test.js`
 * **run desired groups/tags:** `npx codeceptjs run -c pr.codecept.js --steps --grep @settings`
 
 ### Test report
+
 * Allure report in docker(no additional requirements)
    1. run allure server: `docker-compose -f docker-compose-allure.yml up -d`
-   2. open test report in browser: http://localhost:5252/
-
+   2. open test report in browser: <http://localhost:5252/>
 
 * Allure report by **allure-commandline** tool
    1. Allure requires Java 8 or higher
    2. install allure-commandline: `npm install -g allure-commandline --save-dev`
    3. aggregate report: `allure serve tests/output/allure`
 
-
 * HTML report Local(mochawesome):  
   1. run tests with `-R mocha-multi` flag  
-     ex: `npx codeceptjs run -c pr.codecept.js --grep @backup -R mocha-multi` 
+     ex: `npx codeceptjs run -c pr.codecept.js --grep @backup -R mocha-multi`
   2. open report file: `/tests/output/result.html`  
      or reports for each parallel thread `/tests/output/parallel_chunk1_..._1/result.html`
-    
+
 ## **Available Command Line Arguments:**
+
  `--steps`  enables the step-by-step output of running tests to the console, ex:
 
     `npx codeceptjs run-multiple parallel -c pr.codecept.js --steps`
@@ -85,11 +87,11 @@ Execute command in the Project Root folder
     @nightly                executed on a nightly Job, mostly related to Dashboards. Includes tests 
                                 to verify Metrics, Custom Filters and Navigation between Dashboards.
     @pmm-demo               Performs basic Sanity on PMM-Demo, ensures all expected Services are still running 
-    @pmm-upgrade	        upgrade testing Scenarios to verify UI Upgrade for docker based PMM Server
-    @pre-upgrade	        upgrade testing Scenarios to verify Docker way Upgrade. Executed BEFORE the upgrade
-    @post-upgrade	        upgrade testing Scenarios to verify Docker way Upgrade. Executed AFTER the upgrade
+    @pmm-upgrade         upgrade testing Scenarios to verify UI Upgrade for docker based PMM Server
+    @pre-upgrade         upgrade testing Scenarios to verify Docker way Upgrade. Executed BEFORE the upgrade
+    @post-upgrade         upgrade testing Scenarios to verify Docker way Upgrade. Executed AFTER the upgrade
     @post-client-upgrade    executed in the "pmm-upgrade" Job after"pmm-client" has been updated
-    @qan	                Query Analytics(QAN) functionality tests
+    @qan                 Query Analytics(QAN) functionality tests
     @settings               PMM Settings functionality tests
     @stt                    Security Checks (STT) functionality tests
     @perf-testing           UI performance tests for PMM
@@ -104,8 +106,6 @@ Execute command in the Project Root folder
     @fb-instances           remote instances related tests executed on FB
     @fb-settings            settings related tests executed on FB
 
-
 ## Contributing
 
-For the specific contributions guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md) in the project root directory. 
-
+For the specific contributions guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md) in the project root directory.

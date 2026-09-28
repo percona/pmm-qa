@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 // import cli = require('@helpers/cliHelper'); //optional way to import with local name
 import * as cli from '@helpers/cli-helper';
 
 let mongoHosts: string[];
 
-test.describe('MongoDB CLI tests ', { tag: '@mongoDb' }, async () => {
+test.describe('MongoDB CLI tests', { tag: '@mongoDb' }, () => {
   test.beforeAll(async ({}) => {
     mongoHosts = (await cli.exec('sudo pmm-admin list | grep "MongoDB" | awk -F" " \'{print $3}\''))
       .getStdOutLines();

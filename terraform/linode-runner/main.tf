@@ -70,12 +70,18 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  label = substr(
-    "pmmqa-${var.role}-${var.run_id}-${random_string.suffix.result}",
-    0, 63,
-  )
+  # Linode caps instance labels AND tags at 50 chars (API-verified: "expected
+  # length of label to be in the range (3 - 50)"; tags: "Length must be 1-50").
+  # The human-readable part is truncated and the random suffix is appended
+  # AFTER the cut, so per-run uniqueness always survives long run_ids — both
+  # for the label and for the self-destruct tag (a truncated-but-not-unique
+  # tag would let one run's self-destruct timer match another run's instance).
+  label = "${substr("pmmqa-${var.role}-${var.run_id}", 0, 44)}-${random_string.suffix.result}"
+  # 11 ("pmm-qa-run:") + 33 + 1 + 5 = 50 max. cloud-init's self-destruct
+  # filter is passed this same computed value, so tag and filter always match.
+  run_tag = "pmm-qa-run:${substr(var.run_id, 0, 33)}-${random_string.suffix.result}"
   # Linode firewall labels have a stricter 32-char limit than instance
-  # labels (63) -- a separate, more aggressively truncated value, not a
+  # labels -- a separate, more aggressively truncated value, not a
   # prefix on the instance label, which was overflowing it.
   firewall_label = substr(
     "fw-${random_string.suffix.result}-${var.run_id}",
@@ -94,16 +100,16 @@ resource "linode_instance" "runner" {
 
   # The pmm-qa-run tag is also how the self-destruct timer finds its own
   # instance ID at delete time (see cloud-init.yaml.tftpl) -- it must stay
-  # unique per run.
+  # unique per run, which the appended random suffix guarantees.
   tags = [
     "pmm-qa-ephemeral",
     "pmm-qa-role:${var.role}",
-    "pmm-qa-run:${var.run_id}",
+    local.run_tag,
   ]
 
   metadata {
     user_data = base64encode(templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      run_id       = var.run_id
+      run_id       = trimprefix(local.run_tag, "pmm-qa-run:")
       ttl_seconds  = var.ttl_hours * 3600
       linode_token = var.linode_token
       exec_token   = random_password.exec_token.result

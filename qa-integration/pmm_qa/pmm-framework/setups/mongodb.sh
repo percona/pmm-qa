@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # env_map is passed to run_playbook by name, so shellcheck cannot see the read.
 #
 # setups/mongodb.sh -- MongoDB-family setups.
 #
@@ -60,6 +61,7 @@ setup_psmdb() {
     [MONGO_STORAGE_ENGINE]="$(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG)"
     [OL_VERSION]="$(resolve_value PSMDB OL_VERSION DB_CONFIG)"
     [GSSAPI]="$(resolve_value PSMDB GSSAPI DB_CONFIG)"
+    [MINIO]="$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")"
     [TESTS]=no
     [CLEANUP]=no
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
@@ -193,6 +195,7 @@ EOF
     [PMM_CLIENT_VERSION]="$client"
     [COMPOSE_PROFILES]="$(resolve_value SSL_PSMDB COMPOSE_PROFILES DB_CONFIG)"
     [MONGO_SETUP_TYPE]="$(resolve_value SSL_PSMDB SETUP_TYPE DB_CONFIG)"
+    [MINIO]="$(bool_string "$(resolve_value SSL_PSMDB MINIO DB_CONFIG)")"
     [TESTS]=no
     [CLEANUP]=no
   )

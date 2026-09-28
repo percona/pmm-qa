@@ -1,0 +1,307 @@
+import K8sHelper from '@helpers/k8s.helper';
+import GrafanaHelper from '@helpers/grafana.helper';
+import { Timeouts } from '@helpers/timeouts';
+// Type-only: keeps this helper free of a runtime dependency on the api layer.
+import type HaApi from '@api/ha.api';
+import apiEndpoints from '@helpers/apiEndpoints';
+import { HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
+import { expect } from '@playwright/test';
+import pmmTest from '@fixtures/pmmTest';
+
+const leaderLogLine = 'I am the leader!';
+const pmmManagedLog = '/srv/logs/pmm-managed.log';
+const pmmServerPort = 8_443;
+
+export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
+/** The `pmm-ha` chart default. */
+export const defaultReplicas = 3;
+/** The `pmm-ha` chart default for `clickhouse.keeper.replicasCount`. */
+export const clickHouseKeeperReplicas = 3;
+// /v1/version needs credentials even from inside the pod.
+const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
+// POSIX single-quote escaping, so a password containing a quote cannot end the
+// quoted string: close, escape the quote, reopen.
+const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+const curlCredentials = (): string => shellQuote(`admin:${adminPassword()}`);
+
+/** The `version` field, or undefined when the body is not the JSON we expect. */
+const parseVersion = (body: string): unknown => {
+  try {
+    return (JSON.parse(body) as { version?: unknown }).version;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * PMM HA leadership asked of each pod directly, so tests can assert the UI and
+ * the aggregated APIs against an independent source.
+ */
+export default class HaClusterHelper {
+  constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
+
+  /**
+   * Moves leadership onto one of `podNames` by restarting whoever leads until it
+   * lands there. Only the leader removes departing members from the Raft
+   * configuration, so a scale-down that evicts the leader leaves the survivors
+   * in a configuration they can never reach quorum in again.
+   */
+  ensureLeaderAmong = async (podNames: string[]): Promise<string> => {
+    // Each failover is a coin flip between the followers, so allow plenty.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const leader = this.leaderFromPods();
+
+      if (podNames.includes(leader)) return leader;
+
+      const replicas = this.podNames().length;
+
+      this.k8sHelper.deletePod(leader).assertSuccess();
+      await this.waitForLeaderChange(leader);
+      await this.waitForReadyPods(replicas);
+    }
+
+    throw new Error(`Leadership never landed on one of: ${podNames.join(', ')}`);
+  };
+
+  /**
+   * Brings the cluster back to `replicas` ready and *reachable* nodes. A run
+   * killed mid-scale-down never reaches its cleanup, so the next one repairs.
+   */
+  ensureServing = async (haApi: HaApi, replicas: number = defaultReplicas): Promise<void> => {
+    this.k8sHelper.assertReachable();
+
+    const statefulSet = this.statefulSetName();
+
+    if (this.k8sHelper.getStatefulSetReplicas(statefulSet) !== replicas) {
+      this.k8sHelper.scaleStatefulSet(statefulSet, replicas).assertSuccess();
+    }
+
+    await this.waitForReadyPods(replicas);
+
+    await this.waitForApiServing(haApi);
+  };
+
+  /** Restarts the current leader and returns the pod that takes over, once the API serves again. */
+  failoverLeader = async (haApi: HaApi, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<string> => {
+    const initialLeader = await this.waitForLeaderChange(undefined, timeout);
+
+    this.k8sHelper.deletePod(initialLeader).assertSuccess();
+
+    const newLeader = await this.waitForLeaderChange(initialLeader, timeout);
+
+    await this.waitForApiServing(haApi, timeout);
+
+    return newLeader;
+  };
+
+  /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */
+  grafanaDatabaseEnv = (podName: string): Record<string, string> => {
+    const { stdout } = this.k8sHelper.execInPod(podName, 'env', { silent: true });
+    const variables = stdout
+      .split('\n')
+      .map((line) => /^(GF_DATABASE_[A-Z_]+)=(.*)$/.exec(line))
+      .filter((match) => match !== null)
+      .map((match) => [match[1], match[2].trim()]);
+
+    if (variables.length === 0) {
+      throw new Error(`Pod "${podName}" exports no GF_DATABASE_* variables`);
+    }
+
+    return Object.fromEntries(variables);
+  };
+
+  /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
+  haStatusFromPod = (podName: string): string => {
+    const { stdout } = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      { silent: true },
+    );
+
+    return (JSON.parse(stdout) as HaStatusResponse).status;
+  };
+
+  /**
+   * Epoch millis of the pod's last promotion on its own clock, 0 if it never
+   * led. This is history, not current state - use {@link leaderFromPods} to ask
+   * who leads now.
+   */
+  lastPromotionTime = (podName: string): number => {
+    const line = this.k8sHelper
+      .execInPod(podName, `sh -c "grep -a '${leaderLogLine}' ${pmmManagedLog} | tail -1"`, { silent: true })
+      .stdout.trim();
+    const timestamp = /time="([^"]+)"/.exec(line)?.[1];
+
+    return timestamp ? Date.parse(timestamp) : 0;
+  };
+
+  /** The pod answering 200 on the leader health check; followers answer 400. */
+  leaderFromPods = (podNames: string[] = this.podNames()): string => {
+    const leaders = podNames.filter((podName) => this.isLeader(podName));
+
+    if (leaders.length !== 1) {
+      throw new Error(
+        `Expected exactly one pod to answer ${apiEndpoints.server.leaderHealthCheck} with 200, got: ${
+          leaders.length ? leaders.join(', ') : 'none'
+        }`,
+      );
+    }
+
+    return leaders[0];
+  };
+
+  /**
+   * `/v1/ha/nodes` asked of one pod directly. Every external request goes
+   * through HAProxy, which only ever routes to the leader, so this is the only
+   * way to see what an individual follower believes about the cluster.
+   */
+  nodesFromPod = (podName: string): HaNodesResponse => {
+    const stdout = this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -H "Authorization: Basic ${GrafanaHelper.getToken()}" https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.nodes}`,
+        { silent: true },
+      )
+      .assertSuccess()
+      .stdout.trim();
+    let parsed: Partial<HaNodesResponse> | null;
+
+    try {
+      parsed = JSON.parse(stdout) as Partial<HaNodesResponse> | null;
+    } catch {
+      throw new Error(`"${podName}" did not answer ${apiEndpoints.ha.nodes} with JSON, got: ${stdout}`);
+    }
+
+    // `curl -sk` exits 0 on a 401 or a 500, whose body is valid JSON too.
+    if (!Array.isArray(parsed?.nodes) || typeof parsed.expected_nodes !== 'number') {
+      throw new Error(`"${podName}" answered ${apiEndpoints.ha.nodes} with an invalid body, got: ${stdout}`);
+    }
+
+    return parsed as HaNodesResponse;
+  };
+
+  podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
+
+  /** Looked up by label, not hardcoded: the name is the Helm release name. */
+  statefulSetName = (): string => {
+    const names = this.k8sHelper.getStatefulSetNames(pmmServerPodSelector);
+
+    if (names.length !== 1) {
+      throw new Error(
+        `Expected exactly one StatefulSet matching "${pmmServerPodSelector}", got: ${
+          names.length ? names.join(', ') : 'none'
+        }`,
+      );
+    }
+
+    return names[0];
+  };
+
+  verifyHaEnabled = async (haApi: HaApi): Promise<void> =>
+    await pmmTest.step('Verify HA mode is enabled', async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    });
+
+  /**
+   * One leader, agreed on by all three sources: the per-pod health check, the
+   * `pmm_ha_leader_status` sum and `/v1/ha/nodes`.
+   *
+   * @param   podNames  every pod that must be in the cluster
+   * @returns the pod that leads
+   */
+  verifySingleLeader = async (haApi: HaApi, podNames: string[]): Promise<string> =>
+    await pmmTest.step('Verify the cluster has exactly one leader', async () => {
+      const leader = await this.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+
+      await haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
+      expect(await haApi.getNodeNames(), 'Every pod must be in the HA cluster').toEqual(podNames);
+      expect(
+        (await haApi.getLeaderNode())?.node_name,
+        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
+      ).toEqual(leader);
+
+      return leader;
+    });
+
+  /**
+   * Asked of the pod itself rather than through HAProxy, which only ever answers
+   * from the leader - so this is what each replica actually serves.
+   */
+  versionFromPod = (podName: string): string => {
+    // --fail, because without it curl exits 0 on a 401 or 503 whose body is still
+    // JSON: `version` then comes back undefined and the caller reports a version
+    // mismatch instead of a pod that refused the request.
+    const result = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk --fail -u ${curlCredentials()} https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.version}`,
+      { silent: true },
+    );
+    const body = result.stdout.trim();
+    const version = parseVersion(body);
+
+    if (typeof version !== 'string') {
+      throw new Error(
+        `Pod "${podName}" did not serve ${apiEndpoints.server.version}: curl exited ${result.code}, ` +
+          `body ${body || '(empty)'}${result.stderr.trim() ? `, stderr ${result.stderr.trim()}` : ''}`,
+      );
+    }
+
+    return version;
+  };
+
+  /**
+   * Ready pods, and even an elected leader, are not yet reachable: HAProxy has to
+   * re-run its health check and re-point first.
+   */
+  waitForApiServing = async (haApi: HaApi, timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<void> => {
+    await expect(async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+  };
+
+  /**
+   * `toPass`, not `expect.poll`: {@link leaderFromPods} throws mid-election, when
+   * no pod answers 200 and the restarting pod cannot be `exec`ed into at all.
+   *
+   * @param   previousLeader  leader to wait away from; omit to accept any leader
+   */
+  waitForLeaderChange = async (
+    previousLeader?: string,
+    timeout: Timeouts = Timeouts.FIVE_MINUTES,
+  ): Promise<string> => {
+    let leader = '';
+
+    await expect(async () => {
+      leader = this.leaderFromPods();
+
+      expect(leader, `Leadership must move off "${previousLeader}"`).not.toEqual(previousLeader);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+
+    return leader;
+  };
+
+  /**
+   * `kubectl wait` fails outright on pods the StatefulSet has not recreated yet.
+   * The pods are OrderedReady, so they come up one at a time: 0 -> 3 is the slow
+   * path at roughly two minutes.
+   */
+  waitForReadyPods = async (replicas: number, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<void> => {
+    await expect
+      .poll(() => this.k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
+        message: `The HA cluster must have ${replicas} ready pods`,
+        timeout,
+      })
+      .toEqual(replicas);
+  };
+
+  // Hits the pod directly rather than through HAProxy, which only ever routes
+  // to whichever pod passes this same check.
+  private isLeader = (podName: string): boolean =>
+    this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1:${pmmServerPort}${apiEndpoints.server.leaderHealthCheck}`,
+        { silent: true },
+      )
+      .stdout.trim() === '200';
+}

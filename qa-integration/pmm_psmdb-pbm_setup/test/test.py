@@ -1,10 +1,10 @@
-import os
-
-import requests
-import pytest
-import testinfra
-import time
 import json
+import os
+import time
+
+import pytest
+import requests
+import testinfra
 
 docker_rs101 = testinfra.get_host('docker://rs101')
 docker_rs102 = testinfra.get_host('docker://rs102')
@@ -31,9 +31,12 @@ def test_pmm_services():
     assert mongodb
     assert "service_id" in mongodb[0]
     for service in mongodb:
-        assert "rs" or "mongos" in service['service_name']
-        if not "mongos" in service['service_name']:
+        assert "rs" in service['service_name'] or "mongos" in service['service_name']
+        if "mongos" not in service['service_name']:
             pytest.service_id = service['service_id']
+    assert pytest.service_id, \
+        f"no replica-set member among {[s['service_name'] for s in mongodb]}; " \
+        "the later restore tests need one"
     print('This service_id will be used in the next steps')
     print(pytest.service_id)
 
@@ -78,7 +81,7 @@ def test_pmm_logical_backup():
 
 def test_pmm_artifact():
     backup_complete = False
-    for i in range(600):
+    for _ in range(600):
         done = False
         req = requests.get(f"https://{pmm_server_url}/v1/backups/artifacts", json={},
                             headers={"authorization": "Basic YWRtaW46cGFzc3dvcmQ="}, verify=False)
@@ -98,8 +101,7 @@ def test_pmm_artifact():
         if done:
             backup_complete = True
             break
-        else:
-            time.sleep(1)
+        time.sleep(1)
     assert backup_complete
 
 
@@ -114,7 +116,7 @@ def test_pbm_artifact():
 
 
 def test_pmm_start_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     data = {
         'service_id': pytest.service_id,
@@ -129,10 +131,10 @@ def test_pmm_start_restore():
 
 
 def test_pmm_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     restore_complete = False
-    for i in range(600):
+    for _ in range(600):
         done = False
         req = requests.get(f"https://{pmm_server_url}/v1/backups/restores", json={},
                             headers={"authorization": "Basic YWRtaW46cGFzc3dvcmQ="}, verify=False)
@@ -149,13 +151,12 @@ def test_pmm_restore():
         if done:
             restore_complete = True
             break
-        else:
-            time.sleep(1)
+        time.sleep(1)
     assert restore_complete
 
 
 def test_pbm_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     restore_list = docker_rs101.check_output('pbm list --restore --out json')
     parsed_restore_list = json.loads(restore_list)
@@ -180,11 +181,11 @@ def test_metrics():
       command = f"curl -s http://pmm:{agent_id}@127.0.0.1:{agent_port}/metrics"
       metrics = docker_rs101.run(command, timeout=30)
       assert metrics.exit_status == 0, f"Curl command failed with exit status {metrics.exit_status}"
-    except Exception as e:
-      pytest.fail(f"Fail to get metrics from exporter")
+    except Exception as err:  # noqa: BLE001 -- any failure here is a test failure
+      pytest.fail(f"Fail to get metrics from exporter: {err!r}")
 
     try:
-        with open("expected_metrics.txt", "r") as f:
+        with open("expected_metrics.txt") as f:
             expected_metrics = {line.strip() for line in f if line.strip()}
     except FileNotFoundError:
         pytest.fail("Expected metrics file not found")

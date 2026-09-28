@@ -33,8 +33,15 @@
       failed_when: true
 
 - name: "{{ item }}: get port from pmm-admin list output"
-  shell: "pmm-admin list {{ port_flag if port_flag is defined else '' }}| awk '/{{ item }}/ {print $NF}'"
+  shell: |
+    set -o pipefail
+    pmm-admin list {{ port_flag if port_flag is defined else '' }} | awk '/{{ item }}/ {print $NF}'
+  args:
+    executable: /bin/bash
   register: list_port_output
+  until: list_port_output.rc == 0
+  retries: 5
+  delay: 3
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin list"
   assert:
@@ -44,8 +51,15 @@
     success_msg: "Success: {{ port_from_ps.stdout }} == {{ list_port_output.stdout }}"
 
 - name: "{{ item }}: get port from pmm-admin status output"
-  shell: "pmm-admin status {{ port_flag if port_flag is defined else '' }}| awk '/{{ item }}/ {print $NF}'"
+  shell: |
+    set -o pipefail
+    pmm-admin status {{ port_flag if port_flag is defined else '' }} | awk '/{{ item }}/ {print $NF}'
+  args:
+    executable: /bin/bash
   register: status_port_output
+  until: status_port_output.rc == 0
+  retries: 5
+  delay: 3
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin status"
   assert:
@@ -55,8 +69,15 @@
     success_msg: "Success: {{ port_from_ps.stdout }} == {{ status_port_output.stdout }}"
 
 - name: "{{ item }}: get port from pmm-admin inventory list agents output"
-  shell: "pmm-admin inventory list agents {{ port_flag if port_flag is defined else '' }}| awk '/{{ item }}/ {print $NF}'"
+  shell: |
+    set -o pipefail
+    pmm-admin inventory list agents {{ port_flag if port_flag is defined else '' }} | awk '/{{ item }}/ {print $NF}'
+  args:
+    executable: /bin/bash
   register: inventory_list_agents_port_output
+  until: inventory_list_agents_port_output.rc == 0
+  retries: 5
+  delay: 3
   when: item != "vmagent"
 
 - name: "{{ item }}: assert port output is tha same in ps and pmm-admin inventory list agents"

@@ -1,9 +1,53 @@
-import { APIRequestContext } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
+export interface PmmVersion {
+  major: number;
+  minor: number;
+  patch: number;
+  version: string;
+}
+
+interface VersionResponse {
+  version: string;
+}
+
+interface ServerVersionResponse {
+  distribution_method: string;
+}
+
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
+
+  getDistributionMethod = async (): Promise<string> => {
+    const response = await this.request.get(apiEndpoints.server.serverVersion, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return ((await response.json()) as ServerVersionResponse).distribution_method;
+  };
+
+  getPmmVersion = async (): Promise<PmmVersion> => {
+    const response = await this.request.get(apiEndpoints.server.version, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    const data = (await response.json()) as VersionResponse;
+    const [versionMajor, versionMinor, versionPatch] = data.version.split('.');
+
+    return {
+      major: parseInt(versionMajor),
+      minor: parseInt(versionMinor),
+      patch: parseInt(versionPatch),
+      version: data.version,
+    };
+  };
 
   waitForReady = async (overallTimeoutMs: Timeouts = Timeouts.ONE_MINUTE): Promise<void> => {
     const pollIntervalMs = Timeouts.FIVE_SECONDS;

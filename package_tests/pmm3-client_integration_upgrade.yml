@@ -87,14 +87,24 @@
   - name: Install PMM client old deb packages
     when: ansible_os_family == "Debian"
     apt: name={{ pmm_client_old }} update_cache=yes state=present
+    register: apt_install_result
+    retries: 10
+    delay: 60
+    until: apt_install_result is succeeded
 
   - name: Install PMM client old rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name={{ pmm_client_old }} state=present
+    yum: name={{ pmm_client_old }} state=present update_cache=yes
+    register: yum_install_result
+    retries: 10
+    delay: 60
+    until: yum_install_result is succeeded
 
 ### Setup PMM Client
   - name: Use "pmm-admin config" to connect pmm client to server
-    shell: pmm-admin config --debug --force --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --debug --force --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic
+      node_{{ instance_ip }}
 
   - name: Grep pmm-admin status output
     shell: "pmm-admin status"
@@ -142,7 +152,7 @@
     when: '"psmdb-" in enabled_db | join("")'
     include_tasks: ./tasks/install_and_add_to_pmm_psmdb.yml
     vars:
-      psmdb_to_test:  "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
+      psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
   - name: Verify MongoDB Exporter metric endpoint with Auth(including service with socket)
     when: '"psmdb-" in enabled_db | join("")'
@@ -216,10 +226,18 @@
   - name: Upgrade PMM client to the latest deb packages
     when: ansible_os_family == "Debian"
     apt: name=pmm-client update_cache=yes state=latest
+    register: apt_upgrade_result
+    retries: 10
+    delay: 60
+    until: apt_upgrade_result is succeeded
 
   - name: Upgrade PMM client to the latest rpm packages
     when: ansible_os_family == "RedHat"
-    yum: name=pmm-client state=latest
+    yum: name=pmm-client state=latest update_cache=yes
+    register: yum_upgrade_result
+    retries: 10
+    delay: 60
+    until: yum_upgrade_result is succeeded
 
 ### Verifications after upgrade
   - name: Perform standard verifications set for PMM Client

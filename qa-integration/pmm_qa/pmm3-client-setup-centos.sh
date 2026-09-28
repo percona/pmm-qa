@@ -48,7 +48,10 @@ fi
 microdnf install -y wget gnupg2 jq
 wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 rpm -i ./percona-release-latest.noarch.rpm
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+export PMM_AGENT_SETUP_NODE_NAME=${PMM_AGENT_SETUP_NODE_NAME:-client_container_$((1 + $RANDOM % 9999))}
+
+PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-Za-z0-9_-' '_')
+export PMM_AGENT_SETUP_NODE_NAME
 
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
 # which makes microdnf abort. The mismatch usually clears within a minute, so retry.
@@ -63,6 +66,12 @@ retry_microdnf_install() {
     done
     return 1
 }
+
+if [[ "$client_version" == "latest-tarball" ]]; then
+    bucket=pmm-client
+    [[ "$(uname -m)" == aarch64 ]] && bucket=pmm-client-arm
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
+fi
 
 if [[ "$client_version" == "3-dev-latest" ]]; then
     echo "Installing 3-dev-latest pmm client"
@@ -90,8 +99,10 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm
-  rpm -i pmm-client.rpm
+  rpm_file="pmm-client-${client_version}-${build_number}.el9.$(uname -m).rpm"
+  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
+    -O "${rpm_file}" "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/$(uname -m)/${rpm_file}"
+  rpm -i "${rpm_file}"
 fi
 
 ## Default Binary path
@@ -102,21 +113,22 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga "${client_version}"
+       wget -O pmm-client.tar.gz --progress=dot:giga \
+         --timeout=60 --waitretry=15 "${client_version}"
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
-    PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+    PMM_CLIENT=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
     echo ${PMM_CLIENT}
     rm -rf pmm-client
     mv ${PMM_CLIENT} pmm-client
     rm -rf /usr/local/bin/pmm-client
     mv -f pmm-client /usr/local/bin
-    pushd /usr/local/bin/pmm-client
+    pushd /usr/local/bin/pmm-client || exit 1
     ## only setting up all binaries in default path /usr/local/percona/pmm
     bash -x ./install_tarball ${upgrade}
     pwd
-    popd
+    popd || exit 1
     pmm-admin --version
 fi    
 
@@ -124,10 +136,10 @@ fi
 if [[ -z "$upgrade" ]]; then
     if [[ "$use_metrics_mode" == "yes" ]]; then
         echo "setup pmm-agent when metrics mode yes"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
     else 
         echo "setup pmm-agent when metrics mode no"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
     pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > pmm-agent.log 2>&1 &

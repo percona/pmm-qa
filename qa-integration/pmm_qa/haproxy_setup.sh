@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 while [ $# -gt 0 ]; do
@@ -17,6 +17,7 @@ then
 fi
 
 # Install the dependencies
+# shellcheck source=/dev/null
 source ~/.bash_profile || true;
 apt-get update
 apt-get -y install wget curl git gnupg2 lsb-release
@@ -24,7 +25,7 @@ apt-get -y install -y git ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-d
 
 ## Get Haproxy
 git clone https://github.com/haproxy/haproxy.git
-cd haproxy
+cd haproxy || exit 1
 make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 USE_PROMEX=1
 make install-bin
 cp /usr/local/sbin/haproxy /usr/sbin/haproxy

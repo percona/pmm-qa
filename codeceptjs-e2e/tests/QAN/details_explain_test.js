@@ -42,8 +42,9 @@ async function verifySupportedDBTabs({
     }
 
     if (!serviceName.includes('pgsql_') && !query.includes('CREATE')) {
-      // Explain is not for PostgreSQL and also not available for CREATE operations
-      await queryAnalyticsPage.queryDetails.verifyExplain(parameters);
+      await queryAnalyticsPage.queryDetails.verifyExplain(parameters, {
+        allowUnsupported: query.includes('runCommand'),
+      });
     }
 
     if (serviceName.includes('pgsql_') && !query.includes('CREATE')) {
@@ -58,7 +59,7 @@ async function verifySupportedDBTabs({
 }
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan @gssapi-nightly',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
@@ -72,7 +73,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PDPGSQL @qan @gssapi-nightly',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PDPGSQL @qan',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,

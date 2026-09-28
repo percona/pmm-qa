@@ -8,8 +8,16 @@ const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
   builders = {
+    paginationItem: (pageNumber: string) =>
+      this.grafanaIframe().getByRole('listitem', { exact: true, name: pageNumber }),
     serviceTypeCheckbox: (serviceType: string) =>
       this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`),
+    serviceTypeFilter: (serviceType: string) =>
+      this.grafanaIframe().locator(`input[name="service_type;${serviceType}"]`),
+    serviceTypeLabel: (serviceType: string) =>
+      this.grafanaIframe()
+        .locator('label')
+        .filter({ has: this.builders.serviceTypeFilter(serviceType) }),
   };
   buttons = {};
   elements = {
@@ -21,8 +29,20 @@ export default class StoredMetricsPage extends BasePage {
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
   };
-  inputs = {};
+  inputs = {
+    search: this.grafanaIframe().locator('input[name="search"]'),
+  };
   messages = {};
+
+  getTotalQueryCount = async () => {
+    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
+
+    if (!countString) throw new Error('Count of queries is not displayed!');
+
+    const match = countString.match(/of (\d+) items/);
+
+    return match ? parseInt(match[1], 10) : null;
+  };
 
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
     await expect(this.elements.pageTitle).toBeVisible({
@@ -50,14 +70,7 @@ export default class StoredMetricsPage extends BasePage {
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
-    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
-
-    if (!countString) throw new Error('Count of queries is not displayed!');
-
-    const match = countString.match(/of (\d+) items/);
-    const queryCount = match ? parseInt(match[1], 10) : null;
-
-    expect(queryCount).toEqual(expectedQueryCount);
+    expect(await this.getTotalQueryCount()).toEqual(expectedQueryCount);
   };
 
   waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {

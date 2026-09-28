@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -7,12 +7,19 @@ import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
+import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
+import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
 const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+// A viz legend entry reading "N/A" is a series name — a state timeline maps its
+// null state to that text — so it must not count as Grafana's own no-data indicator.
+const noDataMarkerXPath =
+  '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")][not(ancestor-or-self::*[starts-with(@data-testid, "data-testid VizLegend series")])]';
 const hasKnownNoDataMarker = (panelText: string) =>
   panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
   panelText
@@ -22,37 +29,25 @@ const hasKnownNoDataMarker = (panelText: string) =>
 
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
+  readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
+  readonly pmmHealth = new PmmHealthDashboard();
+  readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  builders = {
-    panelByExactName: (panelName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
-    panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
-    panelHeaderByName: (panelName: string) =>
-      this.builders.panelByExactName(panelName).getByTestId('header-container'),
-    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
-    panelMenuItemByName: (menuItemName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-  };
-  buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
-    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
-  };
   elements = {
+    annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
+    // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
+    annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    noDataPanel: this.page.locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
-    ),
-    noDataPanelName: this.grafanaIframe().locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
-    ),
+    noDataPanel: this.page.locator(noDataMarkerXPath),
+    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
+    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
@@ -62,10 +57,127 @@ export default class Dashboards extends BasePage {
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
   };
+  builders = {
+    annotationTagText: (tagValue: string) =>
+      this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
+    dashboardTitle: (dashboardName: string) => this.grafanaIframe().getByText(dashboardName),
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
+    panelByName: (panelName: string) =>
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelContentByExactName: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
+    panelHeaderByName: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
+    panelMenuItemByName: (menuItemName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    selectedVariableValues: (dropDownName: string) =>
+      this.grafanaIframe()
+        .getByTestId('data-testid template variable')
+        .filter({ hasText: dropDownName })
+        .locator('[class*="multi-value-container"], [class*="singleValue"]'),
+  };
+  buttons = {
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
+  };
   inputs = {};
   messages = {};
 
   readonly panels = () => Panels(this.page);
+
+  collectTextsAcrossGridItems = async (locator: Locator): Promise<string[]> => {
+    const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const itemCount = await this.elements.gridItems.count();
+
+    await collect();
+
+    for (let i = 0; i < itemCount; i++) {
+      const item = this.elements.gridItems.nth(i);
+      const previousScrollTop = await item.evaluate(getScrollTop);
+
+      await item.scrollIntoViewIfNeeded();
+
+      if ((await item.evaluate(getScrollTop)) !== previousScrollTop) {
+        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+        await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      }
+
+      await collect();
+    }
+
+    return Array.from(collected);
+  };
+
+  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const anchor = this.elements.gridItems.first();
+    const step = async () =>
+      anchor.evaluate((el) => {
+        const scroller = el.ownerDocument.scrollingElement;
+
+        if (!scroller) return true;
+
+        const before = scroller.scrollTop;
+
+        scroller.scrollTop = before + scroller.clientHeight / 2;
+
+        return scroller.scrollTop === before;
+      });
+
+    await anchor.evaluate((el) => el.ownerDocument.scrollingElement?.scrollTo({ top: 0 }));
+    //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+    await collect();
+
+    for (let done = false; !done;) {
+      done = await step();
+      //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      await collect();
+    }
+
+    return Array.from(collected);
+  };
+
+  hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    // Markers are unlabelled, so the tooltip is the only way to tell them apart.
+    // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
+    const tooltipTitle = this.elements.annotationTooltip
+      .getByText(annotationTitle, { exact: true })
+      .or(this.elements.annotationTooltip.getByText(`${annotationTitle} (`));
+    const deadline = Date.now() + timeout;
+
+    await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
+      await this.elements.annotationMarkers.first().waitFor({ state: 'visible', timeout });
+
+      while (Date.now() < deadline) {
+        for (let i = 0; i < (await this.elements.annotationMarkers.count()); i++) {
+          if (Date.now() >= deadline) break;
+
+          try {
+            // Overlapping markers cover each other, so some cannot be hovered.
+            await this.elements.annotationMarkers.nth(i).hover({ timeout: Timeouts.THREE_SECONDS });
+            await tooltipTitle.waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+
+            return;
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      throw new Error(
+        `No annotation marker on ${this.page.url()} showed an annotation titled "${annotationTitle}"`,
+      );
+    });
+  };
 
   loadAllPanels = async () => {
     await this.waitForDashboardToLoad();
@@ -78,6 +190,7 @@ export default class Dashboards extends BasePage {
         const item = this.elements.gridItems.nth(i);
 
         await item.scrollIntoViewIfNeeded();
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
 
         const expandButton = item.getByLabel('Expand row');
 
@@ -85,8 +198,6 @@ export default class Dashboards extends BasePage {
           await expandButton.click();
           await expectPanel(expandButton).toBeHidden();
         }
-
-        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
     });
 
@@ -131,12 +242,13 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
-    let noDataPanels: string[] = [];
+    const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
-      missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+      const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
+
+      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
       if (missingMetrics.length == 0) break;
 
@@ -147,17 +259,30 @@ export default class Dashboards extends BasePage {
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
-  verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
+  verifyMetricsPresent = async (
+    expectedMetrics: GrafanaPanel[],
+    serviceList?: GetService[],
+    partialMatch = false,
+  ) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
-    const expectedMetricsNames = expectedMetrics.map((e) => e.name);
+    const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
 
     await this.loadAllPanels();
 
-    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
-    const availableMetrics = await this.elements.panelName.allTextContents();
+    let missingMetrics = expectedMetricsNames;
 
-    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+    for (let sweep = 0; sweep < 3 && missingMetrics.length > 0; sweep++) {
+      const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+
+      missingMetrics = missingMetrics.filter((metric) =>
+        partialMatch
+          ? !availableMetrics.some((available) => available.includes(metric))
+          : !availableMetrics.includes(metric),
+      );
+    }
+
+    expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {

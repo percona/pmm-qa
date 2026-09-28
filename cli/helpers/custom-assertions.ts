@@ -25,6 +25,7 @@ export async function waitForApiReady(address: string, httpPort = 80, timeout = 
   const baseURL = `http://${address}:${httpPort}`;
   const path = '/v1/readyz';
   const httpClient: Promise<APIRequestContext> = request.newContext({ baseURL, ignoreHTTPSErrors: true });
+
   await test.step(`Waiting for ${baseURL}:${httpPort}${path} to return 200(${timeout} sec)`, async () => {
     await expect(async () => {
       console.log(`GET: ${baseURL}${path}`);
