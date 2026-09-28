@@ -6,13 +6,12 @@ export default class MysqlPerformanceSchemaDetails implements DashboardInterface
   // Primary memory panel: mysql_perf_schema_memory_events_used_bytes. Populated whenever
   // memory instruments are enabled server-side (default on PS/MySQL 8.0+), so it must
   // render real data end-to-end (collector -> VictoriaMetrics -> panel).
-  memoryCurrentUsedPanel = 'Memory Usage — Current Bytes Used (Top 15 by Event)';
+  memoryCurrentUsedPanel = 'Performance Schema Memory Usage (Current Bytes)';
   // Panels added in PMM-12279 (perf_schema.memory_events collector -> memory panels).
-  // Names are copied verbatim from the dashboard JSON; the first one uses an em dash (U+2014).
   memoryMetrics: GrafanaPanel[] = [
-    { name: 'Memory Usage — Current Bytes Used (Top 15 by Event)', type: 'timeSeries' },
-    { name: 'Memory Allocation Rate (Top 10 by Event)', type: 'timeSeries' },
-    { name: 'Memory Free Rate (Top 10 by Event)', type: 'timeSeries' },
+    { name: 'Performance Schema Memory Usage (Current Bytes)', type: 'timeSeries' },
+    { name: 'Performance Schema Memory Allocation Rate (Bytes)', type: 'timeSeries' },
+    { name: 'Performance Schema Memory Free Rate (Bytes)', type: 'timeSeries' },
   ];
   metrics: GrafanaPanel[] = [
     { name: 'Performance Schema File IO (Events)', type: 'timeSeries' },
@@ -57,8 +56,8 @@ export default class MysqlPerformanceSchemaDetails implements DashboardInterface
   // they can legitimately be empty. They are allow-listed here for any full-dashboard
   // verifyAllPanelsHaveData() check; the feature test asserts data on memoryCurrentUsedPanel.
   noDataMetrics: string[] = [
-    'Memory Allocation Rate (Top 10 by Event)',
-    'Memory Free Rate (Top 10 by Event)',
+    'Performance Schema Memory Allocation Rate (Bytes)',
+    'Performance Schema Memory Free Rate (Bytes)',
   ];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
