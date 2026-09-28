@@ -2354,6 +2354,16 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4493",
       "by": "Investigator routine",
       "at": "2026-09-28T03:30:55Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "test fix",
+      "summary": "ha: PMM-T2233/PMM-T2144 leaderStatus timed out on navitem-high-availability-leader-text-item again (pmm3-ha-tests #97). PMM-13860 removed that left-menu leader, and open PR #1512 already covers it.",
+      "link": "https://github.com/percona/pmm-qa/pull/1512",
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:31:07Z"
     }
   ],
   "claims": [
@@ -2369,13 +2379,6 @@
       "at": "2026-09-28T03:20:07Z",
       "suites": [
         "E2E Tests"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-28T03:20:07Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
       ]
     },
     {
