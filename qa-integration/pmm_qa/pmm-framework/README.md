@@ -21,9 +21,11 @@ On macOS, ensure Homebrew Bash precedes `/bin/bash` in `PATH`; Apple's bundled
 Bash 3.2 is unsupported.
 
 Images are pulled from `ghcr.io/percona/pmm-qa`, or built locally from
-`images/<database>/Dockerfile` when the pull fails. Set `PREBAKED_REGISTRY=` to
-always build locally, e.g. to try a Dockerfile change, or prebake them with
-`./build-images ps=8.4 pdpgsql=17`.
+`images/<database>/Dockerfile` when the pull fails, with a warning saying why.
+A local copy is reused without checking the registry; set `PREBAKED_PULL=always`
+to pull the latest published image anyway, e.g. on a long-lived machine. Set
+`PREBAKED_REGISTRY=` to always build locally, e.g. to try a Dockerfile change,
+or prebake them with `./build-images ps=8.4 pdpgsql=17`.
 
 PS and MySQL keep the official database container unprivileged. Their
 `pmm-agent` runs in a companion container that shares the database container's
@@ -103,7 +105,8 @@ Names and option keys are case-insensitive. Supported setup keys are:
 
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `shards`/`sharding` are aliases for PSMDB,
-and `sentinel`/`sentinels` for Valkey.
+and `sentinel`/`sentinels` for Valkey. A version or option not registered there
+is refused, so a typo cannot quietly run a different setup.
 
 Configuration precedence is:
 

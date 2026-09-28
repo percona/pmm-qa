@@ -163,6 +163,30 @@ stub_prebaked_docker() {
   grep -q '^build .* -t pmm-qa/ps:8.4 ' "$DOCKER_CALLS"
 }
 
+@test "ensure_image says why a pull failed, and PREBAKED_PULL=always pulls over a local copy" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    case $1 in
+      image) [[ ${LOCAL_COPY:-} == yes ]] ;;
+      pull) echo 'Error response from daemon: Head "https://ghcr.io/v2/": unauthorized'; return 1 ;;
+    esac
+  }
+  run ensure_image ps 8.4
+  [[ $output == *'WARNING: Could not pull ghcr.io/percona/pmm-qa/ps:8.4: Error response from daemon: Head "https://ghcr.io/v2/": unauthorized'* ]]
+  grep -q '^build .* -t pmm-qa/ps:8.4 ' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  LOCAL_COPY=yes ensure_image ps 8.4
+  [[ $(grep -c '^pull ' "$DOCKER_CALLS") -eq 0 ]]
+
+  LOCAL_COPY=yes PREBAKED_PULL=always run ensure_image ps 8.4
+  [[ $status -eq 0 && $output == *'WARNING: Could not pull '* ]]
+  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  [[ $(grep -c '^build ' "$DOCKER_CALLS") -eq 0 ]]
+}
+
 @test "the PS image builds from the shared Dockerfile with the version's base image" {
   stub_prebaked_docker
   build_ps_image 8.0
@@ -369,7 +393,7 @@ EOF
   # shellcheck disable=SC2329
   ssl_psmdb_certs() { :; }
   PMM_SERVER_PASSWORD=$'quote" slash\\ newline\nvalue'
-  parse_database_spec 'ssl_psmdb=latest,SETUP_TYPE=pss'
+  parse_database_spec 'ssl_psmdb=latest'
   dispatch_setup
 
   grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"

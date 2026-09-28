@@ -121,18 +121,27 @@ pxc_proxysql_tag() {
 PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa}
 
 # Make pmm-qa/ENGINE:TAG present: keep a local copy, else pull the published
-# one, else build it. The engine's builder gets BUILD_ARGS, or just TAG when
+# one, else build it. PREBAKED_PULL=always pulls over a local copy too, keeping
+# it if the pull fails. The engine's builder gets BUILD_ARGS, or just TAG when
 # there are none.
 # Usage: ensure_image ENGINE TAG [BUILD_ARGS...]
 ensure_image() {
-  local engine=$1 tag=$2 published
+  local engine=$1 tag=$2 published output local_copy=false
   shift 2
   (($# > 0)) || set -- "$tag"
-  docker image inspect "pmm-qa/$engine:$tag" >/dev/null 2>&1 && return 0
-  published=$PREBAKED_REGISTRY/$engine:$tag
-  if [[ -n $PREBAKED_REGISTRY ]] && docker pull --quiet "$published" >/dev/null 2>&1; then
-    must docker tag "$published" "pmm-qa/$engine:$tag"
-    return 0
+  if docker image inspect "pmm-qa/$engine:$tag" >/dev/null 2>&1; then
+    local_copy=true
+    [[ ${PREBAKED_PULL:-} == always ]] || return 0
   fi
+  if [[ -n $PREBAKED_REGISTRY ]]; then
+    published=$PREBAKED_REGISTRY/$engine:$tag
+    if output=$(docker pull --quiet "$published" 2>&1); then
+      must docker tag "$published" "pmm-qa/$engine:$tag"
+      return 0
+    fi
+    # Any failure lands here, not just a missing image, so say which.
+    log_warn "Could not pull $published: ${output##*$'\n'}"
+  fi
+  [[ $local_copy == false ]] || return 0
   "build_${engine//-/_}_image" "$@"
 }

@@ -3,9 +3,8 @@
 # lib/prebaked.sh -- the docker backend: provision on a prebaked image with
 # plain docker commands.
 #
-# A sequential setup runs inside `(run_database_spec) || status=$?`, where bash
-# ignores `set -e` for everything underneath. So nothing here relies on
-# errexit: every helper dies on its own failure.
+# Every helper dies on its own failure with a message, rather than leaving it
+# to errexit.
 
 readonly BUSYBOX_IMAGE=busybox:1.37.0
 # The Nomad agent pmm-agent runs exits unless it can write to cgroups, and a

@@ -146,14 +146,11 @@ parse_args() {
 # Names and option keys are case-insensitive and upper-cased here, so the
 # catalogue in lib/config.sh only ever deals in uppercase.
 #
-# Unknown *versions* and unknown *options* are not fatal: they are noted under
-# --verbose and the registered default is used instead. This matches the Python
-# framework, where a typo degrades to a default rather than failing a long CI
-# job. An unknown database *name* is fatal, since there is nothing to fall back
-# to.
+# An unknown name, version or option is fatal: falling back to a default would
+# let a typo test a different setup and still pass.
 #
 # Writes:  DB_TYPE, DB_VERSION, DB_CONFIG (all reset on entry)
-# Exits:   via die() on an empty spec or unknown database name
+# Exits:   via die() on an empty spec or an unknown name, version or option
 parse_database_spec() {
   local spec=$1
   DB_TYPE=''
@@ -172,28 +169,19 @@ parse_database_spec() {
     die "Database type '$type_token' is not recognized."
 
   if [[ $first == *=* ]]; then
-    local candidate=${first#*=}
-    if database_version_exists "$DB_TYPE" "$candidate"; then
-      DB_VERSION=$candidate
-    else
-      log_verbose "Value '$candidate' is not recognized for $DB_TYPE; using its default version."
-    fi
+    DB_VERSION=${first#*=}
+    database_version_exists "$DB_TYPE" "$DB_VERSION" ||
+      die "Version '$DB_VERSION' is not supported for $DB_TYPE (supported: ${DB_VERSIONS[$DB_TYPE]:-none})."
   fi
 
   # Remaining tokens are OPTION=VALUE pairs.
-  local token key value
+  local token key
   for token in "${tokens[@]:1}"; do
-    if [[ $token != *=* ]]; then
-      log_verbose "Option '$token' is not recognized for $DB_TYPE; using defaults."
-      continue
-    fi
+    [[ $token == *=* ]] || die "Option '$token' for $DB_TYPE must be KEY=VALUE."
     key=${token%%=*}
     key=${key^^}
-    value=${token#*=}
-    if database_option_exists "$DB_TYPE" "$key"; then
-      DB_CONFIG["$key"]=$value
-    else
-      log_verbose "Option '$key' is not recognized for $DB_TYPE; using defaults."
-    fi
+    database_option_exists "$DB_TYPE" "$key" ||
+      die "Option '$key' is not supported for $DB_TYPE (supported: ${DB_OPTIONS[$DB_TYPE]})."
+    DB_CONFIG["$key"]=${token#*=}
   done
 }

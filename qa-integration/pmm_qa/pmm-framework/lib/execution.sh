@@ -373,8 +373,11 @@ run_database_setups() {
     for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
       ((attempt == 0)) ||
         log_warn "Retrying $spec, attempt $((attempt + 1)) of $((SETUP_RETRIES + 1))."
-      status=0
-      (run_database_spec "$spec") || status=$?
+      # Not `(...) || status=$?`: bash would ignore set -e inside the setup.
+      set +e
+      (set -e; run_database_spec "$spec")
+      status=$?
+      set -e
       ((status == 0)) && break
     done
     ((status == 0)) || die "$spec failed after $((SETUP_RETRIES + 1)) attempt(s)."

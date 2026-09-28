@@ -102,3 +102,26 @@ preflight_run() {
   [[ $(parallel_decision pxc pdpgsql haproxy) == true ]]
 }
 
+
+@test "a bare failing command fails a sequential setup, as it does in parallel" {
+  # A fresh shell set up like the entrypoint: bats' own `run` already ignores
+  # errexit for everything it calls.
+  run bash -c '
+    set -euo pipefail
+    shopt -s inherit_errexit
+    BATS_TEST_FILENAME=$1/tests/preflight.bats
+    source "$1/tests/helpers/test_helper.bash"
+    resolve_pmm_server() { :; }
+    require_command() { :; }
+    setup_haproxy() {
+      false
+      echo "ran past the failure"
+    }
+    DATABASE_SPECS=(haproxy)
+    PARALLEL=false
+    SETUP_RETRIES=0
+    run_database_setups' _ "$FRAMEWORK_DIR"
+  [[ $status -ne 0 ]]
+  [[ $output != *'ran past the failure'* ]]
+  [[ $output == *'haproxy failed after 1 attempt(s)'* ]]
+}

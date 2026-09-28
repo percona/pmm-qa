@@ -31,11 +31,17 @@ load helpers/test_helper
   [[ ${DB_CONFIG[QUERY_SOURCE]} == slowlog ]]
 }
 
-@test "invalid version falls back to configured default" {
-  parse_database_spec 'ps=99'
-
-  [[ -z $DB_VERSION ]]
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
+@test "an unknown version, option or bare token is refused" {
+  run parse_database_spec 'ps=99'
+  [[ $status -ne 0 && $output == *"Version '99' is not supported for PS (supported: 5.7 8.0 8.4 9.7)"* ]]
+  run parse_database_spec 'haproxy=1'
+  [[ $status -ne 0 && $output == *"Version '1' is not supported for HAPROXY (supported: none)"* ]]
+  run parse_database_spec 'ps,SETUP_TYP=gr'
+  [[ $status -ne 0 && $output == *"Option 'SETUP_TYP' is not supported for PS"* ]]
+  run parse_database_spec 'ps,gr'
+  [[ $status -ne 0 && $output == *"Option 'gr' for PS must be KEY=VALUE"* ]]
+  PS_VERSION=99 run resolved_version PS_VERSION PS ''
+  [[ $status -ne 0 && $output == *"PS_VERSION='99' is not supported for PS"* ]]
 }
 
 @test "value precedence is global flag then environment then database then default" {
@@ -144,9 +150,8 @@ load helpers/test_helper
 }
 
 @test "DEFAULT_VERSION is not a user-settable database option" {
-  parse_database_spec 'pgsql=16,DEFAULT_VERSION=11'
-  [[ $DB_VERSION == 16 ]]
-  [[ -z ${DB_CONFIG[DEFAULT_VERSION]-} ]]
+  run parse_database_spec 'pgsql=16,DEFAULT_VERSION=11'
+  [[ $status -ne 0 && $output == *"Option 'DEFAULT_VERSION' is not supported for PGSQL"* ]]
 
   DB_VERSION=''
   [[ $(resolved_version PGSQL_VERSION PGSQL "$DB_VERSION") == 17 ]]

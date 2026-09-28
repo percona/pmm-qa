@@ -6,7 +6,9 @@
 # image is started and checked before it is pushed, so a broken build never
 # replaces a working tag, and each cell publishes on its own.
 #
-# Tags: :<version> only. To roll back, revert the change and let this rebuild.
+# Tags: :<version> only, and cleanup keeps no older image. Reverting a change
+# and rebuilding does not restore the previous image: base images and packages
+# float to their newest patch, so the rebuild picks up whatever is current.
 # Keep the matrix in sync with the build_*_image functions in
 # qa-integration/pmm_qa/pmm-framework/lib/images.sh.
 name: Build prebaked database images

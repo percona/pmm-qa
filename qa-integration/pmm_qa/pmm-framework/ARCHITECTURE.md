@@ -284,11 +284,10 @@ entrypoint checks it.
 run instead of yielding an empty string. `local x=$(...)` masks the exit
 status, so split the declaration from the assignment.
 
-**Inside a sequential setup, `set -e` is off.** The sequential path runs
-`(run_database_spec) || status=$?`, and bash ignores errexit under a `||`,
-subshells included. Wrap every command in `must`, `step`, `retry` or
-`each_node`, which die on failure, or add `|| die`. A bare failing `docker`
-call is silently skipped.
+**Both paths run a setup with `set -e` on.** Sequential avoids
+`(run_database_spec) || status=$?`, under which bash ignores errexit. Still wrap
+commands in `must`, `step`, `retry` or `each_node`, or add `|| die`, so a
+failure says what went wrong.
 
 **Never use `[[ cond ]] && cmd` as a statement.** On the parallel path errexit
 is on, and a false condition kills the setup. Use `if`.

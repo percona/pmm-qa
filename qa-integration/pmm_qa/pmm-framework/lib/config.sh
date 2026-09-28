@@ -60,14 +60,14 @@ register_database() {
 # --------------------------------------------------------------------------
 
 register_database PSMDB \
-  '4.4 5.0 6.0 7.0 8.0 latest' \
+  '6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
   'DEFAULT_VERSION=latest' \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database SSL_PSMDB \
-  '4.4 5.0 6.0 7.0 8.0 latest' \
+  '6.0 7.0 8.0 latest' \
   'CLIENT_VERSION MINIO' \
   'DEFAULT_VERSION=latest' \
   'CLIENT_VERSION=3-dev-latest' 'MINIO=false'
@@ -118,7 +118,7 @@ register_database PXC \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
-# logs a note under --verbose and falls back to the (empty) default.
+# is refused.
 register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 
@@ -242,6 +242,8 @@ admin_password() {
 resolved_version() {
   local env_name=$1 type=$2 requested=$3
   if [[ -n ${!env_name:-} ]]; then
+    database_version_exists "$type" "${!env_name}" ||
+      die "$env_name='${!env_name}' is not supported for $type (supported: ${DB_VERSIONS[$type]})."
     printf '%s' "${!env_name}"
   elif [[ -n $requested ]]; then
     printf '%s' "$requested"
