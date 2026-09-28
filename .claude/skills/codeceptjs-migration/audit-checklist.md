@@ -99,7 +99,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] Publish branch cut from `origin/main` and carries only migrated code, coverage YAML and the source retirement; control carries only the merge and tracker commits, worktree clean. Every commit subject is `<type>(<scope>): <summary>` and every claim in a commit body was re-measured against the tree.
 - [ ] `e2e_tests/README.md` generated regions came from `support_scripts/generate_readme.py`.
 - [ ] No debug code, no unrelated files, source safe to retire.
-- [ ] The drafted PR body follows the template in `branch-workflow.md` Push and open the PR: 25 lines and 1,500 characters at most, no evidence or review history. Its `Run:` line names a run containing a job that executed the migrated scenarios.
+- [ ] The drafted PR body follows the template in `branch-workflow.md` Push and open the PR: 25 lines and 1,500 characters at most, no evidence or review history. Its `Run:` line is the exact job URL (`/job/<id>`) of a job that executed the migrated scenarios, from the push's run or a run triggered on the branch.
 
 ## Final decision
 

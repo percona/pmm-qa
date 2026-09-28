@@ -120,7 +120,7 @@ Subject stability, `kind: branch` only: measure HEAD before any review work and 
 Only after `FINAL_REVIEW_PASS`, the runner:
 
 1. revalidates the publish worktree (`branch-workflow.md` Revalidate, every time; the migration scripts are control-only and invoked by absolute path);
-2. pushes, opens the PR against `main`, and attaches the Actions run (`branch-workflow.md` Push and open the PR, Attach CI execution);
+2. pushes, opens the PR against `main`, and attaches the exact Actions job (`branch-workflow.md` Push and open the PR, Attach CI execution);
 3. on control's own checkout, updates the tracker row to `done` with the PR link and commits and pushes only the tracker (`branch-workflow.md` Tracker completion and cleanup);
 4. restores control's worktree to clean and verifies `git status --short` is empty.
 

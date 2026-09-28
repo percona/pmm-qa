@@ -214,18 +214,32 @@ Migrates `<source path>` to `<target path>`.
 **Coverage:** <one line: which job/tag selects them now, e.g. "appended @x to nightly Playwright matrix; FB job `settings` added">.
 **Retired:** `<source>_test.js` -> `_migrated.js`; <job deleted, if any>.
 **Deviations:** <one line per deliberate change from the source, or "none">.
-**Run:** <Actions run URL>
+**Run:** <exact job URL, .../actions/runs/<run>/job/<job>>
 ```
 
 ## Attach CI execution
 
+Attach the exact job URL (`.../actions/runs/<run>/job/<job>`), never the run: a run holds dozens of jobs, including the CodeceptJS job the migrated tests left, and a run link makes the reader guess which one executed them.
+
+1. Name the job: the Playwright-runner job whose expression selects the migrated titles (`--list --grep` it against the branch).
+2. Take it from the run the push started:
+
 ```bash
-PR_NUM=$(gh pr view --json number -q .number)
-RUN_URL=$(gh run list --workflow e2e-tests-matrix.yml --branch "$(git branch --show-current)" --limit 1 --json url -q '.[0].url')
-[ -n "$RUN_URL" ] && gh pr comment "$PR_NUM" --body "GitHub Actions: ${RUN_URL}"
+BR=$(git branch --show-current)
+RUN_ID=$(gh run list --repo percona/pmm-qa --workflow e2e-tests-matrix.yml --branch "$BR" --event pull_request --limit 1 --json databaseId -q '.[0].databaseId')
+JOB_URL=$(gh run view "$RUN_ID" --repo percona/pmm-qa --json jobs -q '.jobs[] | select(.name | startswith("<job name prefix>")) | .url')
 ```
 
-The linked run must contain a job that executed the migrated scenarios: `--list --grep` its job expressions against the branch, list its jobs with `gh run view <id> --json jobs`, and name the one. A cancelled run, or one whose jobs grep other tags, is not a link. A scenario only the `@nightly` bucket selects has no PR-CI run: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>` and link the `nightly-e2e-tests-matrix.yml` run it dispatches, or write "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" on the `Run:` line. Do not wait for CI before marking `done`.
+3. If the push started no run containing that job, trigger the workflow that owns the job on the branch and take the job from that run instead. Pass only inputs `gh workflow view <workflow.yml> --yaml` declares; `fb-e2e-suite.yml` checks out `inputs.pmm_qa_branch` outside `pull_request`, so without it the job tests `main`:
+
+```bash
+gh workflow run <workflow.yml> --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR"
+RUN_ID=$(gh run list --repo percona/pmm-qa --workflow <workflow.yml> --branch "$BR" --event workflow_dispatch --limit 1 --json databaseId -q '.[0].databaseId')
+```
+
+4. Put `$JOB_URL` on the body's `Run:` line and post it: `gh pr comment "$PR_NUM" --body "GitHub Actions: $JOB_URL (<job name>)"`.
+
+A job still running is linked as it is; do not wait for CI before marking `done`. A cancelled job, or one whose expression selects none of the migrated titles, is not a link. A scenario only the `@nightly` bucket selects has no PR-CI job: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>` and link the job in the `nightly-e2e-tests-matrix.yml` run it dispatches, or write "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" on the `Run:` line.
 
 ## Tracker completion and cleanup
 
