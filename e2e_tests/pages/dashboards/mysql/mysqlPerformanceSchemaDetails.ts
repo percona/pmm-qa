@@ -3,11 +3,7 @@ import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlPerformanceSchemaDetails implements DashboardInterface {
   url = 'graph/d/mysql-performance-schema/mysql-performance-schema-details';
-  // Primary memory panel: mysql_perf_schema_memory_events_used_bytes. Populated whenever
-  // memory instruments are enabled server-side (default on PS/MySQL 8.0+), so it must
-  // render real data end-to-end (collector -> VictoriaMetrics -> panel).
   memoryCurrentUsedPanel = 'Performance Schema Memory Usage (Current Bytes)';
-  // Panels added in PMM-12279 (perf_schema.memory_events collector -> memory panels).
   memoryMetrics: GrafanaPanel[] = [
     { name: 'Performance Schema Memory Usage (Current Bytes)', type: 'timeSeries' },
     { name: 'Performance Schema Memory Allocation Rate (Bytes)', type: 'timeSeries' },
@@ -52,9 +48,7 @@ export default class MysqlPerformanceSchemaDetails implements DashboardInterface
     { name: 'Network Traffic', type: 'timeSeries' },
     ...this.memoryMetrics,
   ];
-  // The two rate panels only plot series whose alloc/free rate is > 0, so under low load
-  // they can legitimately be empty. They are allow-listed here for any full-dashboard
-  // verifyAllPanelsHaveData() check; the feature test asserts data on memoryCurrentUsedPanel.
+  // rate(...) > 0 panels: empty under idle load.
   noDataMetrics: string[] = [
     'Performance Schema Memory Allocation Rate (Bytes)',
     'Performance Schema Memory Free Rate (Bytes)',

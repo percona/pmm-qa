@@ -206,14 +206,10 @@ pmmTest(
       }),
     );
 
-    // Feature under test: the "Performance Schema Memory" row and its three panels are present.
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlPerformanceSchemaDetails.memoryMetrics);
 
-    // End-to-end proof (perf_schema.memory_events collector -> VictoriaMetrics -> panel):
-    // Current Bytes Used is populated whenever memory instruments are enabled server-side,
-    // which is the default on PS/MySQL 8.0+, so it must render real data.
-    await dashboard.verifyNamedPanelsHaveData([
-      dashboard.mysql.mysqlPerformanceSchemaDetails.memoryCurrentUsedPanel,
-    ]);
+    await dashboard
+      .panels()
+      .timeSeries.verifyPanelData(dashboard.mysql.mysqlPerformanceSchemaDetails.memoryCurrentUsedPanel);
   },
 );
