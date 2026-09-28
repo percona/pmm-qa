@@ -47,6 +47,7 @@ stub_prebaked_docker() {
   parse_database_spec 'ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=3-dev-latest
   CLIENT_DEBUG=true
+  NOMAD=true
   dispatch_setup
 
   [[ $(grep -c '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
@@ -99,7 +100,8 @@ stub_prebaked_docker() {
   grep -q 'pmm-client-3.6.0-7.el' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
-  grep -q '^exec --detach --user root nomad_agent_[0-9]* sh -c' "$DOCKER_CALLS"
+  [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q '^exec --detach --user root ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS"
 }
 
 @test "PS rejects what it cannot provision before touching docker" {
@@ -205,7 +207,7 @@ stub_prebaked_docker() {
   grep -q -- '--label pmm-qa.engine=mysql .*--publish 3306:3306 pmm-qa/mysql:8.4 ' "$DOCKER_CALLS"
   database_runs=$(grep '^run --detach --name mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS")
   [[ $database_runs != *--privileged* ]]
-  [[ $(grep -c '^run --detach --name nomad_agent_[0-9]* ' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
   [[ $(grep -c -- '--userstat' "$DOCKER_CALLS") -eq 0 ]]
   [[ $(grep -c 'log_slow_rate_limit' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=mysql-gr-dev --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication --debug mysql_pmm_gr_8_4_2_[0-9]+ ' "$DOCKER_CALLS"

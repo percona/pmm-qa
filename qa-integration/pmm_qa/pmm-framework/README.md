@@ -28,7 +28,8 @@ to pull the latest published image anyway, e.g. on a long-lived machine. Set
 or prebake them with `./build-images ps=8.4 pdpgsql=17`.
 
 PS and MySQL keep the official database container unprivileged. Their
-`pmm-agent` runs in a companion container that shares the database container's
+`pmm-agent` runs there too, unless `--nomad` is passed; then it runs in a
+companion container that shares the database container's
 network, PID namespace, PMM installation, data volumes and temporary files.
 Only that companion receives the host cgroup access Nomad needs, so Nomad
 cannot interfere with mysqld initialization or lifetime.

@@ -80,8 +80,9 @@ and checks each one, and publishes it to
 `ghcr.io/percona/pmm-qa/<engine>:<version>`. On a push it rebuilds only the
 images whose baked-in files changed.
 
-PS and MySQL use their database image twice per node: an unprivileged database
-container, and a privileged `nomad_agent_<cksum of node>` companion, labelled
+By default PS and MySQL run `pmm-agent` in their unprivileged database
+container, where Nomad cannot start. With `--nomad` they use their database
+image twice per node: an unprivileged database container, and a privileged `nomad_agent_<cksum of node>` companion, labelled
 `pmm-qa.parent=<node>`, with the image entrypoint replaced by `sleep`. Its name
 must not contain `ps` or `mysql`: tests find the database container by grepping
 container names for those. The companion shares the database container's

@@ -340,6 +340,10 @@ mf_start_minio() {
 mf_setup_agents() {
   local name agent
   for name in "${names[@]}"; do
+    if [[ $NOMAD != true ]]; then
+      setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log
+      continue
+    fi
     # Tests find the database container by grepping container names for ps,
     # ps_pmm or mysql_pmm, so the companion's name must contain none of them.
     agent=nomad_agent_$(cksum <<<"$name" | cut -d' ' -f1)

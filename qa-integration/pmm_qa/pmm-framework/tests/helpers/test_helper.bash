@@ -36,6 +36,7 @@ reset_framework_state() {
   VERBOSE=false
   CLIENT_DEBUG=false
   PARALLEL=false
+  NOMAD=false
   SETUP_RETRIES=0
 }
 

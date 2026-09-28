@@ -33,6 +33,7 @@ GLOBAL_CLIENT_VERSION=''  # --client-version; applies to every setup
 VERBOSE=false             # --verbose/--v
 CLIENT_DEBUG=false        # --client-debug
 PARALLEL=false            # --parallel; preflight may turn this back off
+NOMAD=false               # --nomad
 SETUP_RETRIES=0           # --setup-retries; extra attempts for a FAILED setup only
 
 # Print the user-facing help text. Keep in sync with parse_args.
@@ -53,6 +54,8 @@ Options:
                                also echo the logs of successful setups.
   --client-debug               Enable PMM Client debug mode.
   --parallel                   Run setups concurrently; dump logs only on failure.
+  --nomad                      Run PS/MySQL pmm-agents in a privileged
+                               nomad_agent_* companion, so Nomad can start.
   --setup-retries N            Retry each failed setup up to N more times; setups
                                that already succeeded are left alone (default: 0).
   -h, --help                   Show this help.
@@ -123,6 +126,7 @@ parse_args() {
       --verbose|--v) VERBOSE=true ;;
       --client-debug) CLIENT_DEBUG=true ;;
       --parallel) PARALLEL=true ;;
+      --nomad) NOMAD=true ;;
       -h|--help)
         print_help
         exit 0
