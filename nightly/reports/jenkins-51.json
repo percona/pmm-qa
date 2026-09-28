@@ -2364,23 +2364,20 @@
       "link": "https://github.com/percona/pmm-qa/pull/1512",
       "by": "Investigator routine",
       "at": "2026-09-28T03:31:07Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility",
+        "E2E Tests"
+      ],
+      "verdict": "not reproduced",
+      "summary": "downloads.percona.com and repo.percona.com slowed to 160-290 KB/s between 00:45 and 01:25, the second night running in the nightly window. The 184 MB client tarball took 15m28s per Valkey container, and PS/PXC package installs took 24-43 min. That cancelled 12 CLI compatibility jobs at their 40 min budget and the PS/PXC/HAProxy e2e job at 60 min. In the same jobs the S3 tarball took 7 s, and both origins served about 50 MB/s at 03:27. Diagnosed from logs only; no fix yet.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-28T03:31:10Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-28T03:20:07Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-28T03:20:07Z",
-      "suites": [
-        "E2E Tests"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-09-28T03:20:07Z",
