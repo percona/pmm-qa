@@ -25298,7 +25298,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "test fix",
+        "summary": "nightly / ha: pmm3-ha-eks #339 got HELM_CHART_BRANCH=main from the orchestrator and failed Install PMM HA on the vmauth.yaml b64dec error (4th night running, #336-#339). Main's chart reads VMAGENT_remoteWrite_basicAuth_* but pmm3-ha-eks now writes PMM_HA_VM_*. The fix is Percona-Lab/jenkins-pipelines#4493, still open and unreviewed.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4493",
+        "by": "Investigator routine",
+        "at": "2026-09-28T03:30:55Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -25319,13 +25330,6 @@
         "at": "2026-09-28T03:20:07Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-28T03:20:07Z",
-        "suites": [
-          "Nightly"
         ]
       },
       {
