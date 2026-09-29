@@ -31,8 +31,8 @@
 #   opcountersRepl is only ever reported by mongod replica-set members (it counts
 #   ops applied from the oplog); mongos routers never expose it. So on the sharded
 #   cluster point the panel's service_name at the shard/config members, NOT only
-#   at the mongos. Every node started by start-sharded-with-pmm.sh or pmm-framework
-#   shares the mongos' random suffix, e.g. for mongos service "mongos_31226":
+#   at the mongos. Every node pmm-framework starts shares the mongos' random
+#   suffix, e.g. for mongos service "mongos_31226":
 #       rs101_31226 rs102_31226 rs103_31226 rs201_31226 rs202_31226 rs203_31226
 #       rscfg01_31226 rscfg02_31226 rscfg03_31226
 #   On a plain replica set point it at the secondaries (rs102_/rs103_), not the

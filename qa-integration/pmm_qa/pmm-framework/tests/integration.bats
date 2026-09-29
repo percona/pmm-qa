@@ -120,6 +120,8 @@ EOF
   haproxy_ok_line=$(printf '%s\n' "$output" | awk '/\[1\/2\] haproxy: OK/{print NR; exit}')
   [[ $pgsql_ok_line -lt $haproxy_ok_line ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+  # `set -m` in run_parallel_setups must not leak "[1]+ Done ..." lines.
+  ! grep -qE '^\[[0-9]+\][-+]?[[:space:]]' <<<"$output" || false
 }
 
 @test "parallel mode waits for all setups and dumps only failed logs" {
@@ -198,24 +200,6 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 3 ]]
 }
 
-@test "parallel mode job control emits no job-status noise" {
-  run env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database haproxy \
-      --database pgsql=17
-
-  [[ $status -eq 0 ]]
-  # `set -m` in run_parallel_setups must not leak "[1]+ Done ..." lines.
-  if grep -qE '^\[[0-9]+\][-+]?[[:space:]]' <<<"$output"; then
-    echo "job-control notifications leaked into parallel output"
-    return 1
-  fi
-}
-
 @test "parallel setups run with stdin detached" {
   # Under job control a background setup that reads the terminal is stopped by
   # SIGTTIN and never finishes, so each job must get /dev/null on stdin.
@@ -253,56 +237,6 @@ EOF
   [[ $output == *'Running setups sequentially'* ]]
   [[ $output == *'two HAPROXY setups'* ]]
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
-}
-
-@test "PDPGSQL patroni and PGSQL replication cannot share a host" {
-  run env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql,SETUP_TYPE=patroni \
-      --database pgsql,SETUP_TYPE=replication
-
-  [[ $status -eq 1 ]]
-  [[ $output == *'both publish host port 6432'* ]]
-  [[ $output != *'Running setups sequentially'* ]]
-}
-
-@test "a host conflict is refused before anything is provisioned" {
-  run env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database external \
-      --database valkey
-
-  # Unlike the downgrades above, rejected -- and rejected before either
-  # setup started.
-  [[ $status -eq 1 ]]
-  [[ $output == *'EXTERNAL and VALKEY setups'* ]]
-  [[ $output == *'host port 6379'* ]]
-  [[ $output != *'Running setups sequentially'* ]]
-  [[ ! -e "$RECORD_FILE" ]]
-}
-
-@test "parallel mode stays parallel for PDPGSQL and PGSQL replication" {
-  run env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database pdpgsql \
-      --database pgsql,SETUP_TYPE=replication
-
-  # Single-node PDPGSQL publishes 5432 and replication PGSQL 6432-6433, and
-  # neither keeps data on the host.
-  [[ $status -eq 0 ]]
-  [[ $output != *'Running setups sequentially'* ]]
 }
 
 @test "verbose parallel runs echo the logs of successful setups" {
@@ -377,40 +311,6 @@ EOF
   [[ $output == *'===== [2/2] pgsql=17 INTERRUPTED ====='* ]]
   [[ $(grep -c 'setup is working' "$out") -eq 2 ]]
   [[ $output == *'Parallel setup logs kept at:'* ]]
-
-  local log_dir
-  log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")
-  [[ -d $log_dir ]]
-  rm -rf "$log_dir"
-}
-
-@test "a signalled single-setup parallel run dumps its buffer too" {
-  local out="$BATS_TEST_TMPDIR/signalled-one.out" waited=0 fw_pid fw_status=0
-
-  env \
-    PATH="$TEST_BIN:$PATH" \
-    RECORD_FILE="$RECORD_FILE" \
-    HANG_SECONDS=120 \
-    "$FRAMEWORK_DIR/pmm-framework" \
-      --parallel \
-      --pmm-server-ip 10.0.0.5 \
-      --database haproxy >"$out" 2>&1 &
-  fw_pid=$!
-
-  until [[ $(grep -c -- '--- call ---' "$RECORD_FILE" 2>/dev/null) == 1 ]]; do
-    ((waited += 1))
-    [[ $waited -lt 100 ]] || { kill "$fw_pid" 2>/dev/null; return 1; }
-    sleep 0.2
-  done
-  sleep 1
-
-  kill -TERM "$fw_pid"
-  wait "$fw_pid" || fw_status=$?
-  run cat "$out"
-
-  [[ $fw_status -eq 130 ]]
-  [[ $output == *'===== [1/1] haproxy INTERRUPTED ====='* ]]
-  [[ $(grep -c 'setup is working' "$out") -eq 1 ]]
 
   local log_dir
   log_dir=$(sed -n 's/^Parallel setup logs kept at: //p' "$out")

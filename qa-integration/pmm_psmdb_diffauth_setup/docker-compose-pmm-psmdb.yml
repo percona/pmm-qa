@@ -1,18 +1,5 @@
 ---
 services:
-  build_member:
-    image: replica_member/local
-    build:
-      dockerfile: ../pmm_psmdb-pbm_setup/Dockerfile
-      context: ../pmm_psmdb-pbm_setup/
-      args:
-        - REPO=${REPO:-testing}
-        - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-latest}
-        - PSMDB_VERSION=${PSMDB_VERSION:-latest}
-        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
-    command: /bin/bash
-
   test:
     profiles: [tests]
     container_name: test

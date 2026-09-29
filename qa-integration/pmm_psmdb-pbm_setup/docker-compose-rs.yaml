@@ -14,8 +14,6 @@ x-volumes: &volumes
 
 x-rs-node: &rs-node
   depends_on:
-    build_member:
-      condition: service_started
     kerberos:
       condition: service_healthy
   image: replica_member/local
@@ -33,21 +31,6 @@ x-rs-node: &rs-node
   entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
 services:
-  build_member:
-    image: replica_member/local
-    profiles: ["classic", "extra"]
-    build:
-      dockerfile: ./Dockerfile
-      context: .
-      args:
-        - REPO=${REPO:-release}
-        - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
-        - PSMDB_VERSION=${PSMDB_VERSION:-latest}
-        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
-        - OL_VERSION=${OL_VERSION:-9}
-    command: /bin/bash
-
   rs101:
     <<: *rs-node
     ports:

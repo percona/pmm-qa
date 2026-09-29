@@ -331,7 +331,7 @@ EOF
   [[ $output == *'PDPGSQL SETUP_TYPE must be empty, replication or patroni'* ]]
 }
 
-@test "PSMDB pss runs the compose stack on the prebaked image and registers it as configure-agents.sh did" {
+@test "PSMDB pss runs the compose stack on the prebaked image and registers every member" {
   stub_prebaked_docker
   parse_database_spec 'psmdb=7.0,SETUP_TYPE=pss,GSSAPI=true,OL_VERSION=8'
   GLOBAL_CLIENT_VERSION=3-dev-latest
@@ -411,25 +411,17 @@ EOF
 
 @test "PXC runs in one container and registers its nodes and ProxySQL as the playbook did" {
   stub_prebaked_docker
+  SHARD_NAME=ps-gr-pxc-valkey
   parse_database_spec 'PXC=8.4,QUERY_SOURCE=slowlog'
   dispatch_setup
 
   grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 .*--publish 6033:6033 pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
   grep -q '^exec --user root pxc_proxysql_pmm_8.4 pmm-pxc start$' "$DOCKER_CALLS"
-  grep -q -- '^exec --user root pxc_proxysql_pmm_8.4 pmm-agent setup .* pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4$' "$DOCKER_CALLS"
+  grep -q -- '^exec --user root pxc_proxysql_pmm_8.4 pmm-agent setup .* pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4-ps-gr-pxc-valkey$' "$DOCKER_CALLS"
   [[ $(grep -c "SET GLOBAL log_slow_rate_limit=1" "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add mysql --query-source=slowlog --username=admin --password=admin --host=127.0.0.1 --port=3308 --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node__3_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pxc_proxysql_pmm_8.4 pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_pxc_proxysql_pmm_8.4_[0-9]+ --host=127.0.0.1 --port=6032$' "$DOCKER_CALLS"
   grep -q -- '--mysql-host=127.0.0.1 --mysql-port=6033' "$DOCKER_CALLS"
-}
-
-@test "PXC appends the nightly shard to its node name" {
-  stub_prebaked_docker
-  SHARD_NAME=ps-gr-pxc-valkey
-  parse_database_spec 'PXC=8.4'
-  dispatch_setup
-
-  grep -q -- ' pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4-ps-gr-pxc-valkey$' "$DOCKER_CALLS"
 }
 
 @test "a prebaked setup fails when node_exporter never reaches Running" {
@@ -478,6 +470,17 @@ EOF
   grep -q -- '--cluster create valkey-primary-1:6379 valkey-primary-2:6379 valkey-primary-3:6379 valkey-replica-4:6379 valkey-replica-5:6379 valkey-replica-6:6379 --cluster-replicas 1 --cluster-yes$' "$DOCKER_CALLS"
   grep -q -- ' valkey-replica-5 container valkey-replica-5-node$' "$DOCKER_CALLS"
   grep -q -- '^exec valkey-replica-5 pmm-admin add valkey --service-name=valkey-replica-5-svc --cluster=valkey-native-cluster --custom-labels=role=replica --environment=valkey-test --username=default --password=VKvl41568AsE --host=valkey-replica-5 --port=6379$' "$DOCKER_CALLS"
+}
+
+@test "Valkey skips encryption on a client older than 3.7 and reports every node" {
+  stub_prebaked_docker
+  parse_database_spec 'valkey=7,ENCRYPTED_CLIENT_CONFIG=true,CLIENT_VERSION=3.6.0'
+  run dispatch_setup
+
+  [[ $status -eq 0 ]]
+  [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
+  [[ $(grep -c '^agent-status valkey-' <<<"$output") -ge 6 ]]
+  [[ $output == *'agent-status valkey-replica-6: '* ]]
 }
 
 @test "Valkey sentinel alias runs the sentinel topology and registers it as valkey-sentinel.yml did" {

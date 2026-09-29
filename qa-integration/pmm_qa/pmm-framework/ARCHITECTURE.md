@@ -56,7 +56,7 @@ flowchart TB
 | `lib/images.sh` | `build_<engine>_image` per image and `ensure_image` (local, else pull from `PREBAKED_REGISTRY`, else build) |
 | `lib/prebaked.sh` | `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits |
 | `lib/fetch-pmm-client-deb.sh` | Fetches a verified PMM Client `.deb` for Debian-family images, waiting out repo.percona.com's publishing race |
-| `lib/dispatch.sh` | `dispatch_setup`: the map from a type to its setup function |
+| `lib/dispatch.sh` | `dispatch_setup`: runs `setup_<type>` for the parsed type |
 | `lib/execution.sh` | `preflight_database_setups`, the sequential and parallel strategies |
 | `images/<database>/` | That database's `Dockerfile`, its `setup.sh`, and the files either of them copies in |
 | `build-images` | Prebakes images ahead of a run: `./build-images ps=8.4 pxc-proxysql=8.0` |
@@ -230,8 +230,7 @@ Say you are adding `FOODB`:
 3. **Add `build_foodb_image`** to `lib/images.sh` (`build_image foodb:TAG foodb
    --build-arg ...`), and the image to `build-prebaked-images.yml`: its matrix,
    the files the plan job watches, and its "start it and check it works" step.
-4. **Wire up dispatch** in `lib/dispatch.sh`: `FOODB) setup_foodb ;;`
-5. **Add tests** in `tests/dispatch.bats` with `stub_prebaked_docker`,
+4. **Add tests** in `tests/dispatch.bats` with `stub_prebaked_docker`,
    asserting the exact `docker run` and `pmm-admin add` lines, plus one
    rejection of an unsupported option.
 
@@ -304,9 +303,8 @@ bash's dynamic scoping rather than taking them as arguments.
 `each_node` binds `nodes_ref`, so a caller must never name a local either of
 those.
 
-**Unknown versions and options are not fatal.** They are noted under
-`--verbose` and the default is used, so a typo degrades instead of failing a
-long CI job. Unknown *database names* are fatal.
+**Unknown database names, versions and options are fatal.** Falling back to a
+default would let a typo test a different setup and still pass.
 
 **`die` exits the current shell.** At top level that ends the run; inside
 `$(...)` or a parallel job it ends only that subshell, and `set -e` propagates

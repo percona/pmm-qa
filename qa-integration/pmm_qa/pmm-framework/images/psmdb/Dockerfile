@@ -1,6 +1,5 @@
-# Built with qa-integration/pmm_psmdb-pbm_setup as the context: the same
-# systemd layout as that stack's Dockerfile, minus the PMM Client, which
-# setup_psmdb installs at run time.
+# Built with qa-integration/pmm_psmdb-pbm_setup as the context, for that stack's
+# compose files. The PMM Client is left out: setup_psmdb installs it at run time.
 ARG OL_VERSION=9
 FROM oraclelinux:${OL_VERSION}
 

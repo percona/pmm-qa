@@ -6,8 +6,6 @@ x-networks: &networks
   - pmm-ui-tests3
 
 x-member: &member
-  depends_on:
-    - build_member
   image: replica_member/local
   privileged: true
   cgroup: host
@@ -20,19 +18,6 @@ x-member: &member
   networks: *networks
 
 services:
-  build_member:
-    image: replica_member/local
-    build:
-      dockerfile: ./Dockerfile
-      context: .
-      args:
-        - REPO=${REPO:-release}
-        - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
-        - PSMDB_VERSION=${PSMDB_VERSION:-latest}
-        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
-    command: /bin/bash
-
   rs101:
     <<: *member
     volumes:
@@ -141,7 +126,6 @@ services:
     entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks: *networks
     depends_on:
-      - build_member
       - rscfg01
       - rscfg02
       - rscfg03
@@ -195,7 +179,6 @@ services:
         done
     networks: *networks
     depends_on:
-      - build_member
       - mongos
 
   # Behind the "minio" profile, with a fixed container_name, so one minio is

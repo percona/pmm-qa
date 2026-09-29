@@ -11,7 +11,7 @@ COPY create_certs.sh /artifacts/
 COPY setup_pgsql.sh init.sql /
 
 RUN set -eux; \
-    bash -e /setup_pgsql.sh --pgsql_version "$PG_VERSION"; \
+    bash -e /setup_pgsql.sh "$PG_VERSION"; \
     service postgresql stop; \
     rm -rf /artifacts/certificates; \
     cd "/var/lib/postgresql/$PG_VERSION/main"; \

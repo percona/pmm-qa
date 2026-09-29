@@ -87,16 +87,6 @@ load helpers/test_helper
   [[ ${DATABASE_SPECS[0]} == ps=8.4 ]]
 }
 
-@test "prebaked PS options are no longer accepted" {
-  run parse_args --use-prebaked-ps --database ps=8.4
-  [[ $status -ne 0 ]]
-  [[ $output == *"Unknown option '--use-prebaked-ps'"* ]]
-
-  run parse_args --prebaked-ps-image pmm-qa/ps:8.4 --database ps=8.4
-  [[ $status -ne 0 ]]
-  [[ $output == *"Unknown option '--prebaked-ps-image'"* ]]
-}
-
 @test "normalizes latest-tarball client version on x86_64" {
   # shellcheck disable=SC2329,SC2317
   uname() { printf 'x86_64\n'; }
@@ -123,30 +113,6 @@ load helpers/test_helper
   run parse_args --not-a-real-option
   [[ $status -ne 0 ]]
   [[ $output == *"Unknown option '--not-a-real-option'"* ]]
-}
-
-@test "every versioned database pins an explicit default version" {
-  local -A expected=(
-    [PSMDB]=latest [SSL_PSMDB]=latest
-    [MYSQL]=8.4 [PS]=8.4 [SSL_MYSQL]=8.4
-    [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.4 [VALKEY]=8
-  )
-  local type actual
-  for type in "${!expected[@]}"; do
-    actual=$(database_default_version "$type")
-    if [[ $actual != "${expected[$type]}" ]]; then
-      echo "$type default is '$actual', expected '${expected[$type]}'"
-      return 1
-    fi
-  done
-}
-
-@test "default version is independent of version list order" {
-  register_database ORDERTEST '9.9 1.1 5.5' 'CLIENT_VERSION' \
-    'DEFAULT_VERSION=1.1' 'CLIENT_VERSION=3-dev-latest'
-
-  [[ $(database_default_version ORDERTEST) == 1.1 ]]
 }
 
 @test "DEFAULT_VERSION is not a user-settable database option" {
@@ -210,10 +176,10 @@ stub_docker_ps() {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
 
-  run print_setup_log 1 2 'ps=8.4' 0 "$log"
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
 
   [[ $status -eq 0 ]]
-  [[ $output == *"[1/2] ps=8.4: OK (log: $log)"* ]]
+  [[ $output == *"[1/2] ps=8.4: OK in 7m32s (log: $log)"* ]]
   [[ $output != *'first line'* ]]
 }
 
@@ -233,10 +199,10 @@ stub_docker_ps() {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
 
-  run print_setup_log 1 2 'ps=8.4' 1 "$log"
+  run print_setup_log 1 2 'ps=8.4' 1 "$log" 45
 
   [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) ====='* ]]
+  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
   [[ $output == *$'no trailing newline\n===== END [1/2] ps=8.4 ====='* ]]
 }
 
@@ -247,26 +213,6 @@ stub_docker_ps() {
   [[ $(format_duration 60) == '1m00s' ]]
   [[ $(format_duration 452) == '7m32s' ]]
   [[ $(format_duration 3142) == '52m22s' ]]
-}
-
-@test "a reported setup carries how long it took" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  printf 'first line\n' >"$log"
-
-  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
-
-  [[ $status -eq 0 ]]
-  [[ $output == *"[1/2] ps=8.4: OK in 7m32s (log: $log)"* ]]
-}
-
-@test "a failed setup carries how long it took" {
-  local log=$BATS_TEST_TMPDIR/setup.log
-  printf 'first line\n' >"$log"
-
-  run print_setup_log 1 2 'ps=8.4' 1 "$log" 45
-
-  [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
 }
 
 @test "a successful prebaked setup echoes its agents' states" {

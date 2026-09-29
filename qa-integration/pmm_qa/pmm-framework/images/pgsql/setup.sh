@@ -13,8 +13,7 @@ setup_pgsql() {
   client=$(resolved_client_version PGSQL DB_CONFIG)
   encrypted=$(resolved_encrypted PGSQL "$client")
   case $setup_type in
-    '') ;;
-    replication) ;;
+    '' | replication) ;;
     *) die "PGSQL SETUP_TYPE must be empty or replication (got '$setup_type')." ;;
   esac
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -39,8 +38,7 @@ pgsql_pgss() {
 }
 
 pgsql_pgss_start() {
-  docker rm -fv "$container" >/dev/null 2>&1 || true
-  ensure_pmm_network
+  fresh_containers "$container"
   must docker run --detach --name "$container" --label pmm-qa.engine=pgsql --network pmm-qa \
     --publish 5448:5432 "pmm-qa/pgsql:$version" >/dev/null
   must docker exec "$container" service postgresql start >/dev/null
@@ -48,7 +46,7 @@ pgsql_pgss_start() {
 }
 
 pgsql_replication() {
-  local image=postgres:$version-bookworm node
+  local image=postgres:$version-bookworm
   local -a names=("pgsql_pmm_${version}_1" "pgsql_pmm_${version}_2")
   step 'Start the primary and its replica' pgsql_replication_start
   step 'Wait for PMM Server' wait_pmm_server_ready
@@ -58,16 +56,13 @@ pgsql_replication() {
   # pgbench runs detached: the playbook waited out its 120 s.
   must docker exec --detach --user postgres "${names[0]}" sh -c \
     'pgbench -i -s 1000 pgbench && pgbench -c 10 -T 120 -j 4 pgbench >/tmp/pgbench.log 2>&1'
-  for node in "${names[@]}"; do
-    report_agent_status "$node"
-  done
+  report_agent_status "${names[@]}"
 }
 
 pgsql_replication_start() {
   local conf=$FRAMEWORK_DIR/images/pgsql hba=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework/pgsql_pg_hba.conf
   local primary=${names[0]} replica=${names[1]}
-  docker rm -fv "${names[@]}" >/dev/null 2>&1 || true
-  ensure_pmm_network
+  fresh_containers "${names[@]}"
   must mkdir -p "${hba%/*}"
   printf '%s\n' 'host    replication     repl_user      0.0.0.0/0       md5' \
     'host    all             all             0.0.0.0/0       md5' \

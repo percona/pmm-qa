@@ -28,7 +28,7 @@ setup_pxc() {
   step "Prepare image pmm-qa/pxc-proxysql:$image_tag" \
     ensure_image pxc-proxysql "$image_tag" "$version" "$pxc_tarball"
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
-  step 'Clean previous run' pxc_cleanup
+  step 'Clean previous run' fresh_containers "$container"
   step 'Start PXC nodes and ProxySQL' pxc_start
   if [[ $query_source == slowlog ]]; then
     step 'Enable the slow query log' pxc_enable_slowlog
@@ -38,11 +38,6 @@ setup_pxc() {
   step 'Register PXC and ProxySQL with PMM' pxc_register
   step 'Run workload' pxc_workload
   report_agent_status "$container"
-}
-
-pxc_cleanup() {
-  docker rm -fv "$container" >/dev/null 2>&1 || true
-  ensure_pmm_network
 }
 
 pxc_start() {

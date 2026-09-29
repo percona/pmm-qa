@@ -6,11 +6,8 @@
 # versions it accepts, which spec options are valid, and the default for each.
 # Nothing in this file runs a setup; it only answers questions about them.
 #
-# TO ADD A NEW DATABASE TYPE you normally touch three files:
-#   1. this one          -- register_database ... (validation + defaults)
-#   2. images/<database>/setup.sh -- a setup_<name> function
-#   3. lib/dispatch.sh -- one case arm pointing DB_TYPE at that function
-# See ARCHITECTURE.md for the walkthrough.
+# TO ADD A NEW DATABASE TYPE, register it here and write setup_<name> in
+# images/<database>/setup.sh. See ARCHITECTURE.md for the walkthrough.
 #
 # Data model (four parallel associative arrays, all keyed by uppercase type):
 #   DB_VERSIONS[TYPE]         space-separated list of accepted versions

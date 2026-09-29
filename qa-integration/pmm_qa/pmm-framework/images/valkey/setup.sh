@@ -13,7 +13,7 @@ setup_valkey() {
   setup_type=$(resolve_value VALKEY SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
   client=$(resolved_client_version VALKEY DB_CONFIG)
-  encrypted=$(bool_string "$(resolve_value VALKEY ENCRYPTED_CLIENT_CONFIG DB_CONFIG)")
+  encrypted=$(resolved_encrypted VALKEY "$client")
   step "Prepare image pmm-qa/valkey:$version" ensure_image valkey "$version"
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   case $setup_type in
@@ -39,9 +39,7 @@ setup_valkey() {
   done
   step 'Wait for exporters' each_node nodes wait_exporters /var/log/pmm-agent.log valkey_exporter
   step 'Run workload' valkey_workload
-  for node in "${nodes[@]}"; do
-    report_agent_status "$node"
-  done
+  report_agent_status "${nodes[@]}"
 }
 
 readonly VALKEY_PASSWORD=VKvl41568AsE

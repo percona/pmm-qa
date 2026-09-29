@@ -27,8 +27,7 @@ setup_external() {
 }
 
 external_start() {
-  docker rm -fv "$container" redis_container >/dev/null 2>&1 || true
-  ensure_pmm_network
+  fresh_containers "$container" redis_container
   must docker run --detach --name redis_container --label pmm-qa.engine=external --network pmm-qa \
     --publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd >/dev/null
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=external \

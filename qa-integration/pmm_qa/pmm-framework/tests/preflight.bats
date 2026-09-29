@@ -88,6 +88,16 @@ preflight_run() {
   done
 }
 
+@test "PDPGSQL patroni and PGSQL replication cannot share a host" {
+  preflight_run 'pdpgsql,SETUP_TYPE=patroni' 'pgsql,SETUP_TYPE=replication'
+  [[ $status -eq 1 ]]
+  [[ $output == *'both publish host port 6432'* ]]
+}
+
+@test "single-node PDPGSQL and PGSQL replication run in parallel" {
+  [[ $(parallel_decision pdpgsql 'pgsql,SETUP_TYPE=replication') == true ]]
+}
+
 @test "EXTERNAL and VALKEY each parallelize with other setups" {
   [[ $(parallel_decision external haproxy pdpgsql) == true ]]
   [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]

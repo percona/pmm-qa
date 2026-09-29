@@ -81,6 +81,12 @@ ensure_pmm_network() {
   fi
 }
 
+# Remove any leftover CONTAINER... from a previous run.
+fresh_containers() {
+  docker rm -fv "$@" >/dev/null 2>&1 || true
+  ensure_pmm_network
+}
+
 # Only a discovered local server can be probed; an --pmm-server-ip is trusted.
 wait_pmm_server_ready() {
   [[ -n $PMM_SERVER_CONTAINER ]] || return 0
@@ -278,8 +284,11 @@ wait_exporters() {
   fi
 }
 
-# Print NODE's agents and their states as `agent-status NODE: ...` lines, which
-# the parallel runner echoes even for a setup that succeeded.
+# Print each NODE's agents and their states as `agent-status NODE: ...` lines,
+# which the parallel runner echoes even for a setup that succeeded.
 report_agent_status() {
-  docker exec "$1" pmm-admin status 2>&1 | grep -Ei 'exporter|vmagent|agent_' | sed "s/^[[:space:]]*/agent-status $1: /" || true
+  local node
+  for node; do
+    docker exec "$node" pmm-admin status 2>&1 | grep -Ei 'exporter|vmagent|agent_' | sed "s/^[[:space:]]*/agent-status $node: /" || true
+  done
 }

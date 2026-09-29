@@ -139,12 +139,6 @@ dist
 **/__pycache__
 **/.pytest_cache
 
-# Local-only QA artifacts/inventory
-/qa-integration/pmm_qa/artifacts/
-/qa-integration/pmm_qa/inventory/
-/qa-integration/pmm_qa/pmm_framework/
-/qa-integration/pmm_qa/virtenv/
-
 # Local-only k8s helper libs
 /k8s/lib/bats-assert/
 /k8s/lib/bats-support/
@@ -180,5 +174,3 @@ terraform/linode-runner/*.tfstate.backup
 terraform/linode-runner/id_ed25519
 terraform/linode-runner/id_ed25519.pub
 terraform/linode-runner/*.pem
-
-provisioning-artifacts/*

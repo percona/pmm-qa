@@ -1,0 +1,7 @@
+# Client certificates the SSL setups copy out, one folder per version.
+/pmm_qa/tls-ssl-setup/
+
+# Written by generate-certs.sh on every run.
+/pmm_psmdb_diffauth_setup/certs/
+/pmm_psmdb_diffauth_setup/easy-rsa/
+/pmm_psmdb_diffauth_setup/pki/

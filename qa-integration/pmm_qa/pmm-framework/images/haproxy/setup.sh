@@ -21,8 +21,7 @@ setup_haproxy() {
 }
 
 haproxy_start() {
-  docker rm -fv "$container" >/dev/null 2>&1 || true
-  ensure_pmm_network
+  fresh_containers "$container"
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
     --network pmm-qa --publish 42100:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:ol9 >/dev/null
   must docker cp "$FRAMEWORK_DIR/images/haproxy/haproxy.cfg" "$container:/haproxy.cfg"

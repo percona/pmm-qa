@@ -81,8 +81,8 @@ psmdb_wait_mongod() {
   retry 120 "mongod on $1" psmdb_js "$1" 'db.adminCommand({ ping: 1 }).ok' >/dev/null
 }
 
-# The users configure-replset.sh and start-sharded-with-pmm.sh create; EXTERNAL=true
-# adds the Kerberos user, which only the pss replica set gets.
+# The root, pbm and pmm users; EXTERNAL=true adds the Kerberos user, which only
+# the pss replica set gets.
 # Usage: psmdb_users_js EXTERNAL
 psmdb_users_js() {
   local roles='[{ role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" },
@@ -126,14 +126,14 @@ psmdb_replset() {
     'rs.status().members.every(m => [1, 2, 7].includes(m.state))'
 }
 
-# Point pbm-agent at the pbm user and restart it, as configure-agents.sh does.
+# Point pbm-agent at the pbm user and restart it.
 psmdb_pbm_agent() {
   must docker exec "$1" sh -c 'echo "PBM_MONGODB_URI=mongodb://pbm:pbmpass@127.0.0.1:27017" > /etc/sysconfig/pbm-agent'
   must docker exec "$1" systemctl restart pbm-agent
 }
 
-# Install PMM Client and run pmm-agent under systemd, with the log path and
-# Kerberos keytab the stack's Dockerfile gave the unit.
+# Install PMM Client and run pmm-agent under systemd, logging to
+# /var/log/pmm-agent.log with the Kerberos keytab.
 psmdb_client() {
   install_pmm_client "$1" "$client" "$tarball"
   # shellcheck disable=SC2016 # expanded by the container's shell
@@ -224,9 +224,7 @@ psmdb_replica_set() {
   step 'Wait for exporters' each_node nodes wait_exporters /var/log/pmm-agent.log mongodb_exporter
 
   step 'Load data' psmdb_rs_data
-  for node in "${nodes[@]}"; do
-    report_agent_status "$node"
-  done
+  report_agent_status "${nodes[@]}"
 }
 
 psmdb_rs_data() {
@@ -279,7 +277,7 @@ psmdb_sharded() {
       "--replication-set=${node%0*}" --username=pmm --password=pmmpass "--host=$node" --port=27017
   done
   # FTDC is off on a mongos until it has a directory, and PMM reads the
-  # router's serverStatus metrics out of it (see start-sharded-with-pmm.sh).
+  # router's serverStatus metrics out of it.
   must docker exec mongos sh -c 'mkdir -p /var/lib/mongo/mongos.diagnostic.data && chown -R mongod:mongod /var/lib/mongo/mongos.diagnostic.data'
   psmdb_js mongos "$PSMDB_ROOT_URI" 'db.adminCommand({ setParameter: 1, diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data" });
     db.adminCommand({ setParameter: 1, diagnosticDataCollectionEnabled: true });' >/dev/null || die 'Enabling FTDC on mongos failed.'
@@ -292,9 +290,7 @@ psmdb_sharded() {
   step 'Load data' psmdb_sharded_data
   # Chunk moves and splits come from the compose file's chunk-churn service.
   step 'Start the workload' psmdb_traffic
-  for node in "${clients[@]}"; do
-    report_agent_status "$node"
-  done
+  report_agent_status "${clients[@]}"
 }
 
 psmdb_traffic() {
@@ -302,8 +298,7 @@ psmdb_traffic() {
 }
 
 # PSMDB with TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack, on the
-# prebaked pmm-qa/psmdb image, doing what that stack's test-auth.sh did after
-# `up`.
+# prebaked pmm-qa/psmdb image.
 #
 # A throwaway compose override disables the stack's own pmm-server and kerberos
 # services (the framework supplies the server; the test service is behind the

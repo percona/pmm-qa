@@ -87,9 +87,7 @@ setup_mysql_family() {
   # `docker ps` lists first, which can be a group-replication secondary.
   step 'Clear read-only' each_node names mf_sql 'SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;'
   step 'Run workload' each_node targets mf_workload
-  for index in "${names[@]}"; do
-    report_agent_status "$index"
-  done
+  report_agent_status "${names[@]}"
 }
 
 mf_sql() {
@@ -442,9 +440,8 @@ ssl_mysql_start() {
     8.4) args+=(--innodb-log-file-size=1G --binlog-expire-logs-seconds=600 --log-slow-replica-statements=ON) ;;
     *) args+=(--innodb-redo-log-capacity=1G --binlog-expire-logs-seconds=600 --log-slow-replica-statements=ON) ;;
   esac
-  docker rm -fv "$container" >/dev/null 2>&1 || true
+  fresh_containers "$container"
   docker network rm "${container}_network" >/dev/null 2>&1 || true
-  ensure_pmm_network
   must docker network create "${container}_network" >/dev/null
   must docker run --detach --name "$container" --hostname "$container" --user root --label pmm-qa.engine=ssl_mysql \
     --network "${container}_network" --env "MYSQL_ROOT_PASSWORD=$password" "pmm-qa/ps:$version" "${args[@]}" >/dev/null

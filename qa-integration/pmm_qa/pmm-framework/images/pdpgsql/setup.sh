@@ -15,7 +15,7 @@ readonly -a PDPGSQL_REPLICA_CONF=(
 # node, a streaming replica pair (replication) or three nodes under Patroni
 # and etcd (patroni).
 setup_pdpgsql() {
-  local version setup_type pgsm_branch client encrypted node
+  local version setup_type pgsm_branch client encrypted
   local tarball='' topology='' nodes=1 base_port=5432 suffix index
   local -a names=()
   version=$(resolved_version PDPGSQL_VERSION PDPGSQL "$DB_VERSION")
@@ -49,9 +49,7 @@ setup_pdpgsql() {
   step 'Set up PMM agents' pdpgsql_setup_agents
   step 'Register PostgreSQL with PMM' each_node names pdpgsql_register
   step 'Load data and start the workload' pdpgsql_workload
-  for node in "${names[@]}"; do
-    report_agent_status "$node"
-  done
+  report_agent_status "${names[@]}"
 }
 
 # Usage: pdpgsql_sql NODE SQL [DATABASE]
@@ -77,8 +75,7 @@ pdpgsql_append_conf() {
 }
 
 pdpgsql_start() {
-  docker rm -fv "${names[@]}" >/dev/null 2>&1 || true
-  ensure_pmm_network
+  fresh_containers "${names[@]}"
   each_node names pdpgsql_start_node
   pdpgsql_sql "${names[0]}" 'CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;'
   pdpgsql_sql "${names[0]}" "ALTER USER postgres WITH PASSWORD '$PDPGSQL_PASSWORD';"
@@ -375,10 +372,9 @@ setup_ssl_pdpgsql() {
 
 ssl_pdpgsql_start() {
   local data=/var/lib/postgresql/$version/main
-  docker rm -fv "$container" >/dev/null 2>&1 || true
+  fresh_containers "$container"
   docker network rm "${container}_network" >/dev/null 2>&1 || true
   must docker network create "${container}_network" >/dev/null
-  ensure_pmm_network
   must docker run --detach --name "$container" --label pmm-qa.engine=ssl-pdpgsql --network "${container}_network" \
     "pmm-qa/ssl-pdpgsql:$version" >/dev/null
   must docker network connect pmm-qa "$container"
