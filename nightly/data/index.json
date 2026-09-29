@@ -27759,6 +27759,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-09-29T03:37:31Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test fix",
+        "summary": "ha PMM-T2109 update: the fix branch passed on pmm3-ha-tests #100, on the same PMM-HA-GA chart (154d14c) and 3-dev-latest image as the failing #99.",
+        "link": "https://github.com/percona/pmm-qa/pull/1522",
+        "by": "Investigator routine",
+        "at": "2026-09-29T04:08:41Z"
       }
     ],
     "claims": []
