@@ -2354,6 +2354,16 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4505",
       "by": "Investigator routine",
       "at": "2026-09-29T03:37:10Z"
+    },
+    {
+      "suites": [
+        "Nightly"
+      ],
+      "verdict": "test fix",
+      "summary": "nightly / ha: pmm3-ha-eks #343 hit the vmauth.yaml b64dec error again (HELM_CHART_BRANCH=main). #4493 fixed this on master, but pmm3-nightly-orchestrator reads its Jenkinsfile from branch claude/meeting-action-items-qw3ogn (PR #4489), which is 6 commits behind master and still has 'main'. Merge master into #4489's branch, or point the job at master.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4489",
+      "by": "Investigator routine",
+      "at": "2026-09-29T03:37:14Z"
     }
   ],
   "claims": [
@@ -2369,13 +2379,6 @@
       "at": "2026-09-29T03:23:14Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-29T03:23:14Z",
-      "suites": [
-        "Nightly"
       ]
     },
     {
