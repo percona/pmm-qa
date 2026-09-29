@@ -6,7 +6,16 @@ const advisorName = 'Check for unsupported PostgreSQL';
 const groupName = 'Version Configuration';
 const ruleName = 'Alert Rule for upgrade';
 const checkName = 'MongoDB version check';
-const beforeUpgradePmmVersion = process.env.CLIENT_VERSION ? parseInt(process.env.CLIENT_VERSION.replace(/\./g, ''), 10) : 300;
+const preUpgradeVersion = (() => {
+  const [major, minor] = (process.env.DOCKER_TAG || '').split(':').pop().split('.')
+    .map((part) => parseInt(part, 10));
+
+  return Number.isInteger(major) && Number.isInteger(minor) ? { major, minor } : null;
+})();
+
+const preUpgradeAtLeast = (major, minor) => !preUpgradeVersion
+  || preUpgradeVersion.major > major
+  || (preUpgradeVersion.major === major && preUpgradeVersion.minor >= minor);
 
 Before(async ({ I }) => {
   I.Authorize();
@@ -48,7 +57,7 @@ Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async 
   I,
   advisorsPage,
 }) => {
-  if (beforeUpgradePmmVersion > 340) {
+  if (preUpgradeAtLeast(3, 5)) {
     I.amOnPage(advisorsPage.urlConfiguration);
     I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
     I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -79,7 +88,7 @@ Scenario(
     I,
     advisorsPage,
   }) => {
-    if (beforeUpgradePmmVersion > 340) {
+    if (preUpgradeAtLeast(3, 5)) {
       I.amOnPage(advisorsPage.urlConfiguration);
       I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
       I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
@@ -100,6 +109,8 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
+    if (!preUpgradeAtLeast(3, 8)) return;
+
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
     I.fillField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
@@ -118,6 +129,8 @@ Scenario(
     I,
     pmmSettingsPage,
   }) => {
+    if (!preUpgradeAtLeast(3, 8)) return;
+
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.switchTo();
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);

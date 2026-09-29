@@ -10,7 +10,7 @@ services:
         - PMM_REPO=${PMM_REPO:-experimental}
         - PBM_VERSION=${PBM_VERSION:-latest}
         - PSMDB_VERSION=${PSMDB_VERSION:-latest}
-        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
+        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-latest-tarball}
     command: /bin/bash
 
   test:
@@ -117,7 +117,7 @@ services:
 
   minio:
     profiles: [minio]
-    image: quay.io/minio/minio
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: minio
     ports:
       - "9001:9000"
@@ -134,7 +134,7 @@ services:
   createbucket:
     profiles: [minio]
     container_name: createbucket
-    image: quay.io/minio/mc
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       - minio
     entrypoint: >

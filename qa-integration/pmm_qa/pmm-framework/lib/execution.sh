@@ -129,13 +129,47 @@ preflight_database_setups() {
   fi
 
   [[ $needs_server == true ]] && resolve_pmm_server
-  [[ $needs_curl == true ]] && require_command curl
+  [[ $needs_curl == true ]] && require_command curl && require_command gunzip
   # Warm these up before forking so parallel jobs cannot race to install the
   # same Ansible collection.
   if [[ $PARALLEL == true && $needs_ansible == true ]]; then
     configure_ansible_python
-    ensure_docker_collection
+    ensure_ansible_collections
   fi
+  [[ $PARALLEL == true ]] && prepull_base_images
+  return 0
+}
+
+readonly BASE_IMAGES=(
+  'phusion/baseimage:jammy-1.0.1'
+  'antmelekhin/docker-systemd:ubuntu-24.04'
+  'antmelekhin/docker-systemd:ubuntu-22.04'
+)
+
+prepull_base_images() {
+  command -v docker >/dev/null 2>&1 || return 0
+
+  local image attempt pulled
+  for image in "${BASE_IMAGES[@]}"; do
+    if docker image inspect "$image" >/dev/null 2>&1; then
+      continue
+    fi
+
+    pulled=false
+    for ((attempt = 1; attempt <= 3; attempt++)); do
+      if docker pull --quiet "$image" >/dev/null 2>&1; then
+        pulled=true
+        break
+      fi
+      sleep 5
+    done
+
+    if [[ $pulled == false ]]; then
+      log_warn "Could not pre-pull $image; its setup will pull it instead."
+    fi
+  done
+
+  return 0
 }
 
 # Expand one spec and provision it.
@@ -187,9 +221,44 @@ cat_setup_log() {
   fi
 }
 
+# Compact elapsed time for the setup reports: 452 -> 7m32s, 45 -> 45s.
+format_duration() {
+  local seconds=$1
+  if ((seconds >= 60)); then
+    printf '%dm%02ds' "$((seconds / 60))" "$((seconds % 60))"
+  else
+    printf '%ds' "$seconds"
+  fi
+}
+
+# Print the slowest Ansible tasks recorded in a buffered setup log.
+#
+# Usage: print_slowest_tasks LOG_FILE [COUNT] [FLOOR_SECONDS]
+print_slowest_tasks() {
+  local log_file=$1 count=${2:-5} floor=${3:-5}
+  [[ -r $log_file ]] || return 0
+
+  local seconds name
+  while read -r seconds name; do
+    printf '  %7s  %s\n' "$(format_duration "$seconds")" "$name"
+  done < <(
+    awk -v floor="$floor" '
+      { gsub(/\033\[[0-9;]*m/, ""); sub(/\r$/, "") }
+      match($0, /-----+[[:space:]]*[0-9]+\.[0-9]+s$/) {
+        elapsed = $NF
+        sub(/s$/, "", elapsed)
+        if (elapsed + 0 < floor) next
+        name = substr($0, 1, RSTART - 1)
+        sub(/[[:space:]]+$/, "", name)
+        if (name != "") printf "%d %s\n", elapsed + 0.5, name
+      }
+    ' "$log_file" | sort -rn -k1,1 | head -n "$count"
+  )
+}
+
 # Report one finished parallel setup.
 #
-# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE
+# Usage: print_setup_log INDEX TOTAL SPEC STATUS LOG_FILE [ELAPSED_SECONDS]
 #
 # A failed setup always dumps its buffered log; a successful one prints just a
 # summary line unless --verbose asked for more. Only ever used by the parallel
@@ -200,10 +269,16 @@ cat_setup_log() {
 # Stdout: a summary line, plus the buffered log when the setup failed or when
 #         --verbose was given
 print_setup_log() {
-  local index=$1 total=$2 spec=$3 status=$4 log_file=$5
+  local index=$1 total=$2 spec=$3 status=$4 log_file=$5 elapsed=${6:-}
+  local took=''
+
+  if [[ -n $elapsed ]]; then
+    took=" in $(format_duration "$elapsed")"
+  fi
 
   if ((status == 0)); then
-    printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
+    printf '[%d/%d] %s: OK%s (log: %s)\n' "$index" "$total" "$spec" "$took" "$log_file"
+    print_slowest_tasks "$log_file"
     if should_dump_successful_logs; then
       printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
       cat_setup_log "$log_file"
@@ -212,8 +287,8 @@ print_setup_log() {
     return
   fi
 
-  printf '\n===== [%d/%d] %s FAILED (exit=%d) =====\n' \
-    "$index" "$total" "$spec" "$status"
+  printf '\n===== [%d/%d] %s FAILED (exit=%d)%s =====\n' \
+    "$index" "$total" "$spec" "$status" "$took"
   printf 'log: %s\n' "$log_file"
   cat_setup_log "$log_file"
   printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
@@ -238,8 +313,9 @@ print_setup_log() {
 # Returns:  0 when every setup succeeded, 1 when any failed
 # Exits:    130 from the INT/TERM trap
 run_parallel_setups() {
-  local log_dir total index spec status overall_status=0
-  local -a pids=() logs=()
+  local log_dir total index spec status overall_status=0 batch_start attempt
+  local -a pids=() logs=() starts=() pending=() failed=()
+  batch_start=$(date +%s)
   log_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-parallel.XXXXXX")
   total=${#DATABASE_SPECS[@]}
 
@@ -277,53 +353,82 @@ run_parallel_setups() {
   trap cleanup_parallel_jobs INT TERM
 
   for ((index = 0; index < total; index++)); do
-    spec=${DATABASE_SPECS[index]}
-    logs[index]=$log_dir/setup-$index.log
-    printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
-    # stdin must come from /dev/null: job control puts each setup in a
-    # background process group, where reading the terminal raises SIGTTIN and
-    # stops the job forever. Parallel setups have no usable stdin anyway.
-    (
-      run_database_spec "$spec"
-    ) >"${logs[index]}" 2>&1 </dev/null &
-    pids[index]=$!
+    pending+=("$index")
   done
 
-  # Report each setup as soon as it finishes. Waiting in argument order made
-  # completed jobs look stuck behind a slower neighbor (and hid progress when
-  # Docker or a playbook hung).
-  local -a active_pids=("${pids[@]}")
-  local finished_pid matched
-  while ((${#active_pids[@]} > 0)); do
-    status=0
-    finished_pid=
-    wait -n -p finished_pid "${active_pids[@]}" || status=$?
-    [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+  # Only the setups that failed are re-run
+  for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+    ((${#pending[@]} > 0)) || break
+    if ((attempt > 0)); then
+      printf '\nRetrying %d failed setup(s), attempt %d of %d\n' \
+        "${#pending[@]}" "$((attempt + 1))" "$((SETUP_RETRIES + 1))"
+    fi
 
-    # Map the reaped pid back to its slot so the report names the right spec.
-    matched=false
-    for ((index = 0; index < total; index++)); do
-      if [[ ${pids[index]} == "$finished_pid" ]]; then
-        ((status == 0)) || overall_status=1
-        print_setup_log \
-          "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
-          "$status" "${logs[index]}"
-        pids[index]=
-        matched=true
-        break
+    pids=()
+    failed=()
+    for index in "${pending[@]}"; do
+      spec=${DATABASE_SPECS[index]}
+      if ((attempt == 0)); then
+        logs[index]=$log_dir/setup-$index.log
+      else
+        logs[index]=$log_dir/setup-$index-retry$attempt.log
       fi
+      starts[index]=$(date +%s)
+      printf 'Starting [%d/%d] %s\n' "$((index + 1))" "$total" "$spec"
+      # stdin must come from /dev/null: job control puts each setup in a
+      # background process group, where reading the terminal raises SIGTTIN and
+      # stops the job forever. Parallel setups have no usable stdin anyway.
+      (
+        run_database_spec "$spec"
+      ) >"${logs[index]}" 2>&1 </dev/null &
+      pids[index]=$!
     done
-    [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
 
-    # Rebuild the still-running set; cleared slots drop out.
-    active_pids=()
-    for ((index = 0; index < total; index++)); do
-      [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+    # Report each setup as soon as it finishes. Waiting in argument order made
+    # completed jobs look stuck behind a slower neighbor (and hid progress when
+    # Docker or a playbook hung).
+    local -a active_pids=()
+    local finished_pid matched
+    for index in "${pending[@]}"; do
+      active_pids+=("${pids[index]}")
     done
+    while ((${#active_pids[@]} > 0)); do
+      status=0
+      finished_pid=
+      wait -n -p finished_pid "${active_pids[@]}" || status=$?
+      [[ -n $finished_pid ]] || die "Parallel wait lost track of setup processes."
+
+      # Map the reaped pid back to its slot so the report names the right spec.
+      matched=false
+      for index in "${pending[@]}"; do
+        if [[ ${pids[index]} == "$finished_pid" ]]; then
+          ((status == 0)) || failed+=("$index")
+          print_setup_log \
+            "$((index + 1))" "$total" "${DATABASE_SPECS[index]}" \
+            "$status" "${logs[index]}" "$(($(date +%s) - starts[index]))"
+          pids[index]=
+          matched=true
+          break
+        fi
+      done
+      [[ $matched == true ]] || die "Parallel wait reaped unknown pid $finished_pid."
+
+      # Rebuild the still-running set; cleared slots drop out.
+      active_pids=()
+      for index in "${pending[@]}"; do
+        [[ -n ${pids[index]} ]] && active_pids+=("${pids[index]}")
+      done
+    done
+
+    pending=("${failed[@]}")
   done
+
+  ((${#pending[@]} == 0)) || overall_status=1
 
   trap - INT TERM
   set +m
+  printf 'All %d setups finished in %s\n' "$total" \
+    "$(format_duration "$(($(date +%s) - batch_start))")"
   if ((overall_status == 0)); then
     rm -rf "$log_dir"
   else
@@ -349,8 +454,17 @@ run_database_setups() {
     return
   fi
 
-  local spec
+  local spec start attempt status
   for spec in "${DATABASE_SPECS[@]}"; do
-    run_database_spec "$spec"
+    start=$(date +%s)
+    for ((attempt = 0; attempt <= SETUP_RETRIES; attempt++)); do
+      ((attempt == 0)) ||
+        log_warn "Retrying $spec, attempt $((attempt + 1)) of $((SETUP_RETRIES + 1))."
+      status=0
+      (run_database_spec "$spec") || status=$?
+      ((status == 0)) && break
+    done
+    ((status == 0)) || die "$spec failed after $((SETUP_RETRIES + 1)) attempt(s)."
+    printf '%s: OK in %s\n' "$spec" "$(format_duration "$(($(date +%s) - start))")"
   done
 }

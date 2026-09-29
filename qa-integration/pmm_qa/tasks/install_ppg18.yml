@@ -1,0 +1,96 @@
+- name: Set Facts.
+  set_fact:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"
+    cacheable: true
+
+- debug:
+    msg: "Value of PERCONA_TELEMETRY_URL is : {{ PERCONA_TELEMETRY_URL }}"
+
+- name: Clean dnf
+  become: true
+  command: dnf clean all -y
+  when: ansible_os_family == "RedHat"
+
+- name: Disable dnf postgresql for RHEL8
+  become: true
+  command: dnf module disable postgresql -y
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "8"
+
+- name: install Percona Platform for PostgreSQL deb packages
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: latest
+  vars:
+    packages:
+    - percona-postgresql
+    - percona-postgresql-18
+    - percona-postgresql-all
+    - percona-postgresql-client
+    - percona-postgresql-client-18
+    - percona-postgresql-common
+    - percona-postgresql-contrib
+    - percona-postgresql-doc
+    - percona-postgresql-doc-18
+    - percona-postgresql-plperl-18
+    - percona-postgresql-plpython3-18
+    - percona-postgresql-pltcl-18
+    - percona-postgresql-server-dev-18
+    - percona-postgresql-server-dev-all
+    - percona-postgresql-18-dbgsym
+    - percona-postgresql-client-18-dbgsym
+    - percona-postgresql-plperl-18-dbgsym
+    - percona-postgresql-plpython3-18-dbgsym
+    - percona-postgresql-pltcl-18-dbgsym
+    - postgresql-client-common
+    - postgresql-common
+  when: ansible_os_family == "Debian"
+  environment:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"
+
+- name: install Percona Platform for PostgreSQL deb packages
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: latest
+  vars:
+    packages:
+    - percona-postgresql-plpython3-18
+    - percona-postgresql-plpython3-18-dbgsym
+  when:
+    - ansible_os_family == "Debian"
+
+- name: install Percona Platform for PostgreSQL rpm packages for RHEL
+  yum:
+    name: "{{ packages }}"
+    state: latest
+    update_cache: yes
+  vars:
+    packages:
+      - percona-postgresql-client-common
+      - percona-postgresql-common
+      - percona-postgresql18
+      - percona-postgresql18-contrib
+      - percona-postgresql18-debuginfo
+      - percona-postgresql18-devel
+      - percona-postgresql18-docs
+      - percona-postgresql18-libs
+      - percona-postgresql18-llvmjit
+      - percona-postgresql18-plpython3
+      - percona-postgresql18-plperl
+      - percona-postgresql18-pltcl
+      - percona-postgresql18-server
+      - percona-postgresql18-test
+      - percona-postgresql18-contrib-debuginfo
+      - percona-postgresql18-debuginfo
+      - percona-postgresql18-debugsource
+      - percona-postgresql18-devel-debuginfo
+      - percona-postgresql18-libs-debuginfo
+      - percona-postgresql18-plperl-debuginfo
+      - percona-postgresql18-pltcl-debuginfo
+      - percona-postgresql18-plpython3-debuginfo
+      - percona-postgresql18-server-debuginfo
+      - percona-postgresql-common-dev
+  when: ansible_os_family == "RedHat"
+  environment:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"

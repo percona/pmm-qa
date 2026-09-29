@@ -5,9 +5,10 @@
     mongodb_version: "{{ lookup('vars', 'extra_mongodb_version', default=lookup('env','MONGODB_VERSION') | default('4.4', true) ) }}"
     mongodb_ssl_container: "{{ lookup('vars', 'extra_mongodb_ssl_container', default=lookup('env','MONGODB_SSL_CONTAINER') | default('mongodb_ssl', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+    shard_node_name: "{{ mongodb_ssl_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
 
   tasks:
   - name: Cleanup Docker container for client and DB setup
@@ -34,6 +35,11 @@
       docker run -d --name={{ mongodb_ssl_container }}
       --network "{{ mongodb_ssl_container }}_network"
       phusion/baseimage:jammy-1.0.1
+
+  - name: Configure apt inside the container
+    include_tasks: ../tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ mongodb_ssl_container }}"
 
   - name: Copy all required Artifacts to the docker mongodb_ssl_container
     shell: "{{ item }}"
@@ -66,8 +72,8 @@
     with_items:
       - docker network connect pmm-qa {{ mongodb_ssl_container }}
       - >-
-        docker exec {{ mongodb_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
-        --use_metrics_mode no
+        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ shard_node_name }} {{ mongodb_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version
+        }} --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Add pmm-admin binary to path when tar ball installation
     shell: docker exec {{ mongodb_ssl_container }} echo "export PATH=$PATH:/pmm-client/bin" > setup_path.sh

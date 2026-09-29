@@ -85,13 +85,13 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[MINIO]} == false ]]
 }
 
-@test "PXC tarball selects PXC and ProxySQL playbook" {
-  parse_database_spec 'PXC=8.0,TARBALL=/tmp/pxc.tar.gz'
+@test "PXC 8.0 selects PXC and ProxySQL playbook" {
+  parse_database_spec 'PXC=8.0'
   dispatch_setup
 
   [[ $CAPTURE_TARGET == pxc_proxysql_setup.yml ]]
   [[ ${CAPTURE_ENV[PXC_VERSION]} == 8.0 ]]
-  [[ ${CAPTURE_ENV[PXC_TARBALL]} == /tmp/pxc.tar.gz ]]
+  [[ -z ${CAPTURE_ENV[PXC_TARBALL]+set} ]]
   [[ ${CAPTURE_ENV[PROXYSQL_VERSION]} == 2 ]]
   [[ ${CAPTURE_ENV[PXC_NODES]} == 3 ]]
   [[ -z ${CAPTURE_ENV[PROXYSQL_PACKAGE]} ]]

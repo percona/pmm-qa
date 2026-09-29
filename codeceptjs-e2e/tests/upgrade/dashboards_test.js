@@ -1,4 +1,8 @@
+const path = require('path');
+
 const { isOvFAmiJenkinsJob } = require('../helper/constants');
+
+const duplicateDashboardsFile = path.resolve(__dirname, '../../dashboard.json');
 
 Feature('PMM upgrade tests for dashboards');
 
@@ -48,15 +52,14 @@ Scenario(
 
     const resp1 = await grafanaAPI.createCustomDashboard('test-dashboard', insightFolder.id);
     const resp2 = await grafanaAPI.createCustomDashboard('test-dashboard', experimentalFolder.id);
-    const workFolder = await I.verifyCommand('pwd');
 
-    await I.writeFileSync(`${workFolder}/dashboard.json`, JSON.stringify({
+    await I.writeFileSync(duplicateDashboardsFile, JSON.stringify({
       DASHBOARD1_UID: resp1.uid,
       DASHBOARD2_UID: resp2.uid,
     }), false);
 
     // Check if file with Dashboard info is present.
-    I.assertNotEqual(I.fileSize(`${workFolder}/dashboard.json`, false), 0, 'Was expecting Dashboard info in the File, but its empty');
+    I.assertNotEqual(I.fileSize(duplicateDashboardsFile, false), 0, 'Was expecting Dashboard info in the File, but its empty');
   },
 );
 
@@ -74,7 +77,7 @@ Scenario(
     let errorLogs;
 
     if (!isOvFAmiJenkinsJob) {
-      errorLogs = await I.verifyCommand('docker exec pmm-server cat /srv/logs/grafana.log | grep "level=error"');
+      errorLogs = await I.verifyCommand("docker exec pmm-server sh -c 'grep level=error /srv/logs/grafana.log; [ $? -le 1 ]'");
 
       const loadingLibraryErrorLine = errorLogs.split('\n')
         .filter((line) => line.includes('Error while loading library panels'));
@@ -156,7 +159,7 @@ Scenario(
   async ({
     I, grafanaAPI, dashboardPage,
   }) => {
-    const resp = JSON.parse(await I.readFileSync('/home/ec2-user/workspace/pmm3-upgrade-test-runner/dashboard.json', false));
+    const resp = JSON.parse(await I.readFileSync(duplicateDashboardsFile, false));
 
     const resp1 = await grafanaAPI.getDashboard(resp.DASHBOARD1_UID);
     const resp2 = await grafanaAPI.getDashboard(resp.DASHBOARD2_UID);

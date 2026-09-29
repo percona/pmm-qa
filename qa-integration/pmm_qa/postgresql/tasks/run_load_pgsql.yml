@@ -17,6 +17,11 @@
         ) | trim
       }}
 
+- name: Configure apt inside the container
+  include_tasks: ../tasks/configure_container_apt.yml
+  vars:
+    container_name: "{{ node_name }}"
+
 - name: Ensure pgbench is installed (Debian-based container)
   community.docker.docker_container_exec:
     container: "{{ node_name }}"

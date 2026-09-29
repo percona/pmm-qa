@@ -39,9 +39,9 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
-| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
+| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), the lint dispatcher, and the automation relay the agents call | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) · [pmm-ai-relay/](support_scripts/pmm-ai-relay/README.md) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
-| [.claude/](.claude/) | Claude Code cloud agents (Test Runner, Investigator, FB Reporter, Router), their skills, and hooks | [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md) · [agents/](.claude/agents/) · [skills/](.claude/skills/) |
+| Claude Code agents & skills | Test Runner, Investigator, FB Reporter, Router, `qa-code-review` and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
 | [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
@@ -95,25 +95,21 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `runner-e2e-tests-codeceptjs-remote-nightly-*.yml` — nightly remote setup and test runners for CodeceptJS.
 - `helm-tests.yml` — the only k8s entry point.
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
-- `rc-testing-suite.yml` — GitHub Actions portion of RC testing (see [External RC orchestration](#external-rc-orchestration) below).
+- `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
 To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github/workflows/](.github/workflows/).
 
-### External RC orchestration
+### External orchestration
 
-Full Release-Candidate testing is **not** driven from this repo. The orchestrator is the Jenkins pipeline [`Percona-Lab/jenkins-pipelines` › `pmm/v3/pmm3-rc-testing.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-rc-testing.groovy). For a given `RC_VERSION` it runs three parallel lanes:
+No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
 
-- **Lane 1**: `pmm3-ui-tests-nightly-gha` against the AMI plus the last 5 GA `percona/pmm-client` tags (backward-compatibility; compat lanes skipped on patch RCs).
-- **Lane 2**: `pmm3-ui-tests-nightly-gha` for OVF / Docker / Helm / HA, `pmm3-ui-tests-nightly-gssapi`, `openshift-helm-tests`.
-- **Lane 3**: `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
-
-**Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+Full Release-Candidate testing is **not** driven from this repo, and no longer has a pipeline of its own: [`pmm3-release-candidate.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-release-candidate.groovy) triggers the same nightly orchestrator, passing the candidate's server image, its AMI and its client tarballs. The orchestrator reads the `-rc` in the image tag and switches the package lanes to the `testing` repository and the candidate's own tarballs; every other lane is the one the nightly runs. `pmm3-rc-testing.groovy` was removed once it had nothing the orchestrator lacked.
 
 ## Linting
 
-One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the `PreToolUse` hook [.claude/hooks/pre-commit-lint-gate.sh](.claude/hooks/pre-commit-lint-gate.sh) runs it over the staged files before an agent's `git commit`. Both dispatch through [.claude/hooks/lint-changed.sh](.claude/hooks/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [.claude/hooks/lib/install-linters.sh](.claude/hooks/lib/install-linters.sh) — the same installers `session-start.sh` runs eagerly.
+One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the pmm-ai `PreToolUse` commit gate (`plugins/pmm-qa/hooks/pre-commit-lint-gate.sh` in percona/pmm-ai) runs it over the staged files before an agent's `git commit`. Both dispatch through [support_scripts/lint/lint-changed.sh](support_scripts/lint/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [support_scripts/lint/install-linters.sh](support_scripts/lint/install-linters.sh) — the same installers the pmm-ai `SessionStart` hook runs eagerly.
 
 | File kind | Command | Config |
 | ----------- | --------- | -------- |
@@ -234,7 +230,7 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
-The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to the current ISO week's shared `skill-gardener/<YYYY>-W<WW>` branch (`date -u +%G-W%V`) — cut from `main`, created only if this week's does not exist yet, and given no PR by the session (a week whose PR already merged and took its branch has the rest of its captures routed to the next week's branch, since recreating the merged name would strand them). Reviewing entries, editing a target, and opening a PR happen only in the scheduled weekly Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md), Sundays), never inside a user session: it applies the worthwhile lessons and deletes their entries on that same branch, then opens the single PR against `main`, whose review is the gate in front of every target edit. No lesson branch to publish means no PR; a branch a failed run stranded without a PR is picked up by the next. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly. The session hooks are not the only capture source: [`review-feedback-gardener`](.claude/agents/review-feedback-gardener.md) sweeps a window of pull request comments on a daily Routine, keeps the ones a person wrote — a login not ending in `[bot]`, the reviewing skill's own threads carved out by their severity marker — and hands what generalizes to the same Capture mode, so reviewer feedback reaches the reviewing skill through the one weekly PR rather than dying in the thread. It names no repository, skill or schedule of its own: it carries its own filter and takes the rest from its caller.
+Agents working here capture reusable lessons with the `skill-gardener` skill; lessons, targets and the weekly Publish PR all live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa/skills/skill-gardener`).
 
 ### Do
 

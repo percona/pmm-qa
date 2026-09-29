@@ -9,11 +9,12 @@
     ms_container: "{{ lookup('vars', 'extra_ms_container', default=lookup('env','MS_CONTAINER') | default('ms_container', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('slowlog', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','MS_NODES') | default('1', true) ) }}"
     group_replication: "{{ lookup('vars', 'extra_group_replication', default=lookup('env','GROUP_REPLICATION') | default('', true) ) }}"
+    shard_node_name: "{{ ms_container }}{{ ('-' ~ lookup('env', 'SHARD_NAME')) if lookup('env', 'SHARD_NAME') else '' }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -50,6 +51,11 @@
     set_fact:
       ms_tarball: "{{tarball.stdout | default(ms_tarball,true)}}"
 
+  - name: Configure apt inside the container
+    include_tasks: ./tasks/configure_container_apt.yml
+    vars:
+      container_name: "{{ ms_container }}"
+
   - name: Setup libraries required inside the container
     shell: "{{ item }}"
     with_items:
@@ -63,8 +69,8 @@
     with_items:
       - docker network connect pmm-qa {{ ms_container }}
       - >-
-        docker exec {{ ms_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode
-        no
+        docker exec -e PMM_AGENT_SETUP_NODE_NAME={{ shard_node_name }} {{ ms_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }}
+        --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Execute Setup script inside the MySQL ms_container
     shell: "{{ item }}"

@@ -17,6 +17,9 @@
 - name: Set pmm-admin list output
   shell: "pmm-admin list {{ port_flag if port_flag is defined else '' }}"
   register: list_output
+  until: list_output.rc == 0
+  delay: "{{ delay if delay is defined else 5 }}"
+  retries: "{{ retries if retries is defined else 5 }}"
 
 - block:
     - name: "Validate pmm-admin list output contains '{{ expected }}'"

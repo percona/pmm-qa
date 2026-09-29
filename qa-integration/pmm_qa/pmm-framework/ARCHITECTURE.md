@@ -176,6 +176,12 @@ The CI runners deliberately do **not** pass `--verbose`, so day-to-day runs
 stay quiet. Individual callers can still opt in through `services_list` /
 `setup_services`.
 
+Every setup reports how long it took, and a parallel one also reports its
+slowest Ansible tasks — `run_playbook` enables `ansible.posix.profile_tasks`
+and `print_slowest_tasks` lifts the summary back out of the buffered log before
+a green run deletes it. Without that, a spec that is slow because of its
+pmm-client install is indistinguishable from a slow database.
+
 Parallel mode enables job control (`set -m`) so each setup gets its own process
 group. That way an interrupt takes down `ansible-playbook` and its children
 too, not just the wrapper subshell. The interrupt handler then dumps the

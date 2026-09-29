@@ -5,7 +5,7 @@
   vars:
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     metrics_mode: "{{ lookup('env', 'metrics_mode') }}"
-    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('latest-tarball', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     valkey_version: "{{ lookup('env', 'VALKEY_VERSION') | default('7', true) }}"
     valkey_image: "valkey/valkey:{{ valkey_version }}-bookworm"
@@ -23,15 +23,37 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
-    - name: Set Random Number Fact
-      set_fact:
-        random_number: "{{ (10000 | random) | int }}"
-
     - name: Validate cluster counts
       assert:
         that:
           - valkey_cluster_node_count == valkey_cluster_primaries + (valkey_cluster_primaries * valkey_cluster_replicas)
         fail_msg: "Mismatch: total nodes must equal primaries + primaries*replicas"
+
+    - name: Remove primary node containers left by a previous run
+      community.docker.docker_container:
+        name: "{{ valkey_primary_prefix }}{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Remove replica node containers left by a previous run
+      community.docker.docker_container:
+        name: "{{ valkey_replica_prefix }}{{ item }}"
+        state: absent
+        force_kill: true
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Remove primary node volumes left by a previous run
+      community.docker.docker_volume:
+        name: "{{ valkey_primary_prefix }}{{ item }}-data"
+        state: absent
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Remove replica node volumes left by a previous run
+      community.docker.docker_volume:
+        name: "{{ valkey_replica_prefix }}{{ item }}-data"
+        state: absent
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
 
     - name: Create Docker network
       community.docker.docker_network:
@@ -118,7 +140,7 @@
     - name: Start primary node containers
       community.docker.docker_container:
         name: "{{ valkey_primary_prefix }}{{ item }}"
-        hostname: "{{ valkey_primary_prefix }}{{ item }}-node-{{ random_number }}"
+        hostname: "{{ valkey_primary_prefix }}{{ item }}-node"
         image: "{{ valkey_image }}"
         state: started
         restart_policy: unless-stopped
@@ -140,7 +162,7 @@
     - name: Start replica node containers
       community.docker.docker_container:
         name: "{{ valkey_replica_prefix }}{{ item }}"
-        hostname: "{{ valkey_replica_prefix }}{{ item }}-node-{{ random_number }}"
+        hostname: "{{ valkey_replica_prefix }}{{ item }}-node"
         image: "{{ valkey_image }}"
         state: started
         restart_policy: unless-stopped
@@ -223,7 +245,7 @@
         container: "{{ item }}"
         command: >-
           pmm-admin add valkey --cluster=valkey-native-cluster --environment=valkey-test --username=default 
-          --password="{{ valkey_password }}" --service-name={{ item }}-svc-{{ random_number }} 
+          --password="{{ valkey_password }}" --service-name={{ item }}-svc 
           --host={{ item }} --port=6379 --custom-labels='role=primary'
       loop: "{{ primary_nodes }}"
       ignore_errors: yes
@@ -233,7 +255,7 @@
         container: "{{ item }}"
         command: >-
           pmm-admin add valkey --cluster=valkey-native-cluster --environment=valkey-test --username=default 
-          --password="{{ valkey_password }}" --service-name={{ item }}-svc-{{ random_number }} 
+          --password="{{ valkey_password }}" --service-name={{ item }}-svc 
           --host={{ item }} --port=6379 --custom-labels='role=replica'
       loop: "{{ replica_nodes }}"
       ignore_errors: yes

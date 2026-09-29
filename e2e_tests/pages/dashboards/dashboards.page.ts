@@ -10,6 +10,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
 import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
@@ -28,6 +29,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
 
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
+  readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
@@ -45,6 +47,7 @@ export default class Dashboards extends BasePage {
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
     noDataPanel: this.page.locator(noDataMarkerXPath),
     noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
+    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
@@ -84,14 +87,16 @@ export default class Dashboards extends BasePage {
 
   readonly panels = () => Panels(this.page);
 
-  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+  collectTextsAcrossGridItems = async (locator: Locator): Promise<string[]> => {
     const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
     const collected = new Set<string>();
     const collect = async () =>
       (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
     const itemCount = await this.elements.gridItems.count();
 
-    const visit = async (i: number) => {
+    await collect();
+
+    for (let i = 0; i < itemCount; i++) {
       const item = this.elements.gridItems.nth(i);
       const previousScrollTop = await item.evaluate(getScrollTop);
 
@@ -103,12 +108,39 @@ export default class Dashboards extends BasePage {
       }
 
       await collect();
-    };
+    }
 
+    return Array.from(collected);
+  };
+
+  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const anchor = this.elements.gridItems.first();
+    const step = async () =>
+      anchor.evaluate((el) => {
+        const scroller = el.ownerDocument.scrollingElement;
+
+        if (!scroller) return true;
+
+        const before = scroller.scrollTop;
+
+        scroller.scrollTop = before + scroller.clientHeight / 2;
+
+        return scroller.scrollTop === before;
+      });
+
+    await anchor.evaluate((el) => el.ownerDocument.scrollingElement?.scrollTo({ top: 0 }));
+    //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
     await collect();
 
-    for (let i = 0; i < itemCount; i++) {
-      await visit(i);
+    for (let done = false; !done;) {
+      done = await step();
+      //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      await collect();
     }
 
     return Array.from(collected);
@@ -214,7 +246,7 @@ export default class Dashboards extends BasePage {
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+      const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
 
       missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
@@ -227,15 +259,28 @@ export default class Dashboards extends BasePage {
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
-  verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
+  verifyMetricsPresent = async (
+    expectedMetrics: GrafanaPanel[],
+    serviceList?: GetService[],
+    partialMatch = false,
+  ) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
 
     await this.loadAllPanels();
 
-    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
-    const missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
+    let missingMetrics = expectedMetricsNames;
+
+    for (let sweep = 0; sweep < 3 && missingMetrics.length > 0; sweep++) {
+      const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+
+      missingMetrics = missingMetrics.filter((metric) =>
+        partialMatch
+          ? !availableMetrics.some((available) => available.includes(metric))
+          : !availableMetrics.includes(metric),
+      );
+    }
 
     expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };

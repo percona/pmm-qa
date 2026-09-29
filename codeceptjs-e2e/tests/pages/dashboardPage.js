@@ -1193,23 +1193,41 @@ module.exports = {
     I.click(this.fields.reportTitle);
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
-      I.waitForElement(this.graphsLocator(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocator(metrics[i]));
       I.scrollTo(this.graphsLocator(metrics[i]));
     }
   },
 
   async verifyMetricsExistencePartialMatch(metrics) {
+    await this.expandEachDashboardRow();
+
     for (const i in metrics) {
       I.pressKey('PageDown');
-      await this.expandEachDashboardRow();
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
+      await this.waitForPanelToMount(this.graphsLocatorPartialMatch(metrics[i]));
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
     }
+  },
+
+  async waitForPanelToMount(panelLocator) {
+    /* eslint-disable no-await-in-loop */
+    for (let waited = 0; waited < 30; waited += 5) {
+      if (await I.grabNumberOfVisibleElements(panelLocator) > 0) {
+        return;
+      }
+
+      I.wait(5);
+    }
+    /* eslint-enable no-await-in-loop */
+
+    await this.expandEachDashboardRow();
+    await this.scrollBackToPanel(panelLocator);
+    I.waitForElement(panelLocator, 120);
   },
 
   // The metric walk pages down blindly and Grafana unmounts whatever is off-screen, so a
@@ -1381,6 +1399,9 @@ module.exports = {
   },
 
   async expandEachDashboardRow() {
+    I.pressKey('End');
+    I.wait(2);
+
     let collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
     let maxTries = 20;
 

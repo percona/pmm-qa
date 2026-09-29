@@ -120,7 +120,6 @@ setup_pxc() {
     [PXC_NODES]=3
     [PXC_VERSION]="$version"
     [PROXYSQL_VERSION]="$proxysql_version"
-    [PXC_TARBALL]="$(resolve_value PXC TARBALL DB_CONFIG)"
     [PROXYSQL_PACKAGE]="$(resolve_value PROXYSQL PACKAGE proxysql_config)"
     [PMM_SERVER_IP]="$PMM_SERVER_HOST"
     [PXC_CONTAINER]="pxc_proxysql_pmm_$version"

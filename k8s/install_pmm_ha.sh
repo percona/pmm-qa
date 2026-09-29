@@ -493,8 +493,8 @@ else
         --from-literal=GF_PASSWORD="$GF_PASSWORD" \
         --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
         --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
-        --from-literal=VMAGENT_remoteWrite_basicAuth_username="victoriametrics_pmm" \
-        --from-literal=VMAGENT_remoteWrite_basicAuth_password="$VM_PASSWORD" \
+        --from-literal=PMM_HA_VM_USERNAME="victoriametrics_pmm" \
+        --from-literal=PMM_HA_VM_PASSWORD="$VM_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     SECRET_CREATED="true"
     log "Created pmm-secret in $NAMESPACE"

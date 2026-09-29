@@ -11,7 +11,8 @@ setup() {
   resolve_pmm_server() { :; }
   require_command() { :; }
   configure_ansible_python() { :; }
-  ensure_docker_collection() { :; }
+  ensure_ansible_collections() { :; }
+  prepull_base_images() { :; }
   WARNINGS=''
   log_warn() { WARNINGS+="$*"$'\n'; }
 }
@@ -93,3 +94,19 @@ preflight_run() {
   [[ $(parallel_decision 'ps,QUERY_SOURCE=slowlog,MY_ROCKS=true' 'pdpgsql,SETUP_TYPE=patroni' external) == true ]]
   [[ $(parallel_decision pxc pdpgsql haproxy) == true ]]
 }
+
+@test "the pre-pull runs only when the fan-out will" {
+  CALLED=0
+  prepull_base_images() { CALLED=$((CALLED + 1)); }
+
+  DATABASE_SPECS=(ps)
+  PARALLEL=false
+  preflight_database_setups
+  [ "$CALLED" -eq 0 ]
+
+  DATABASE_SPECS=(ps psmdb)
+  PARALLEL=true
+  preflight_database_setups
+  [ "$CALLED" -eq 1 ]
+}
+

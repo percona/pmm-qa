@@ -46,6 +46,10 @@ cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.help
 constructor — change it there, or pass one in. Nothing skips itself: an unreachable
 namespace fails the test with kubectl's own error.
 
+PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
+It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
+start it by name from `e2e_tests/`: `docker compose up -d --no-deps webhookd`.
+
 ## Running Tests
 
 Run commands from `e2e_tests/`.
@@ -93,10 +97,12 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
+- `@fb-alerting`
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ia`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`

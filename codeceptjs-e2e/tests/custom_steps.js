@@ -1,6 +1,5 @@
 const assert = require('assert');
 const AdmZip = require('adm-zip');
-const buildUrl = require('build-url');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -207,9 +206,7 @@ module.exports = () => actor({
    */
   buildUrlWithParams(url, parameters) {
     const queryParams = {};
-
-    queryParams.from = 'now-5m';
-    queryParams.to = 'now';
+    const defaults = { from: 'now-5m', to: 'now' };
     Object.entries(parameters).forEach(([key, value]) => {
       switch (key) {
         case 'environment':
@@ -258,7 +255,23 @@ module.exports = () => actor({
       }
     });
 
-    return buildUrl(url, { queryParams });
+    const [path, search = ''] = url.split('?');
+    const merged = new Map();
+
+    search.split('&').filter(Boolean).forEach((pair) => {
+      const separator = pair.indexOf('=');
+
+      merged.set(
+        separator === -1 ? pair : pair.slice(0, separator),
+        separator === -1 ? '' : pair.slice(separator + 1),
+      );
+    });
+    Object.entries(defaults).forEach(([key, value]) => {
+      if (!merged.has(key)) merged.set(key, encodeURIComponent(value));
+    });
+    Object.entries(queryParams).forEach(([key, value]) => merged.set(key, encodeURIComponent(value)));
+
+    return `${path}?${[...merged].map(([key, value]) => `${key}=${value}`).join('&')}`;
   },
 
   signOut() {

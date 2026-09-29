@@ -41,9 +41,9 @@ Data(sslinstances).Scenario(
         password: credentials.pdpgsql_ssl.password,
         cluster: 'pgsql_remote_cluster',
         environment: 'pgsql_remote_cluster',
-        tlsCAFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/postgres/${version}/ca.crt`),
-        tlsKeyFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/postgres/${version}/client.pem`),
-        tlsCertFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/postgres/${version}/client.crt`),
+        tlsCAFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/postgres/${version}/ca.crt`),
+        tlsKeyFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/postgres/${version}/client.pem`),
+        tlsCertFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/postgres/${version}/client.crt`),
       };
       await addInstanceAPI.addPostgreSqlSSL(details);
       I.wait(5);
@@ -66,9 +66,9 @@ Data(sslinstances).Scenario(
         password: 'pmm',
         cluster: 'mysql_ssl_remote_cluster',
         environment: 'mysql_ssl_remote_cluster',
-        tlsCAFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/mysql/${version}/ca.pem`),
-        tlsKeyFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/mysql/${version}/client-key.pem`),
-        tlsCertFile: await remoteInstancesPage.getFileContent(`/srv/qa-integration/pmm_qa/tls-ssl-setup/mysql/${version}/client-cert.pem`),
+        tlsCAFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/mysql/${version}/ca.pem`),
+        tlsKeyFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/mysql/${version}/client-key.pem`),
+        tlsCertFile: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}tls-ssl-setup/mysql/${version}/client-cert.pem`),
       };
       await addInstanceAPI.addMysqlSSL(details);
       I.wait(5);
@@ -91,7 +91,7 @@ Data(sslinstances).Scenario(
         environment: 'mongodb_ssl_remote_cluster',
         tls_certificate_file_password: '',
         tls_certificate_key: await I.verifyCommand(`docker exec ${container} cat /mongodb_certs/client.pem`),
-        tls_ca: await remoteInstancesPage.getFileContent('/srv/qa-integration/pmm_psmdb_diffauth_setup/pki/ca.crt'),
+        tls_ca: await remoteInstancesPage.getFileContent(`${pathToPMMFramework}../pmm_psmdb_diffauth_setup/pki/ca.crt`),
       };
       await addInstanceAPI.addMongoDBSSL(details);
       I.wait(5);
