@@ -2344,7 +2344,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "UI"
+      ],
+      "verdict": "test fix",
+      "summary": "ui / @ia: pmm-qa#1515 moved the last CodeceptJS @ia scenarios to Playwright. pmm3-ui-tests' CodeceptJS stage now finds 0 tests and exits 1 ('No tests found by pattern: /@ia/'), so the Playwright stage that holds @ia is skipped. Reproduced locally (exit 1 on main; exit 0 with DONT_FAIL_ON_EMPTY_RUN). The fix sets that variable, matching Playwright's --pass-with-no-tests.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4505",
+      "by": "Investigator routine",
+      "at": "2026-09-29T03:37:10Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2372,13 +2383,6 @@
       "at": "2026-09-29T03:23:14Z",
       "suites": [
         "Nightly Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-29T03:23:14Z",
-      "suites": [
-        "UI"
       ]
     },
     {
