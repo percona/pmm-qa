@@ -27749,16 +27749,18 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-09-29T03:37:27Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-09-29T03:23:14Z",
         "suites": [
           "Upgrade AMD"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "3.7.1 EXTERNAL SERVICES post-upgrade @rta. Attempt 1: PMM-T2185 (Filter by Host fill hit a detached input, then 8 rs102 rows stayed) and PMM-T2268 (mongodb service_type filter label not found) failed. Stage retry: PMM-T2268 and T2185 passed, but PMM-T2159 couldn't find rs101 in Inventory. A different set failed each attempt; T2185 also failed once in 24325, which passed. Timing/data-shaped. No loaded repro attempted.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-09-29T03:37:31Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
