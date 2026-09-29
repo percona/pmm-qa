@@ -192,3 +192,24 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
   },
 );
+
+pmmTest(
+  'PMM-T2331 - Verify Performance Schema Memory panels on MySQL Performance Schema Details Dashboard (PMM-12279) @pmm-ps-integration',
+  async ({ api, dashboard, page, urlHelper }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
+
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlPerformanceSchemaDetails.url, {
+        from: 'now-15m',
+        refresh: '5s',
+        serviceName: service_name,
+      }),
+    );
+
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlPerformanceSchemaDetails.memoryMetrics);
+
+    await dashboard
+      .panels()
+      .timeSeries.verifyPanelData(dashboard.mysql.mysqlPerformanceSchemaDetails.memoryCurrentUsedPanel);
+  },
+);

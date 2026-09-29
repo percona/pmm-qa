@@ -45,15 +45,14 @@ pmmTest.beforeAll(async ({ browser }) => {
     severity: AlertSeverity.Critical,
   });
 
-  const { users } = await grafanaHelper.listUsers();
-  const existingViewer = users.find((user) => user.login === viewer.username);
-  const existingEditor = users.find((user) => user.login === editor.username);
-  const editorId = existingEditor?.id ?? (await grafanaHelper.createUser(editor.username, editor.password));
+  const editorUser = await grafanaHelper.findOrCreateUser(editor.username, editor.password);
+  const viewerUser = await grafanaHelper.findOrCreateUser(viewer.username, viewer.password);
 
-  if (!existingViewer) createdUserIds.push(await grafanaHelper.createUser(viewer.username, viewer.password));
-  if (!existingEditor) createdUserIds.push(editorId);
+  for (const { created, id } of [editorUser, viewerUser]) {
+    if (created) createdUserIds.push(id);
+  }
 
-  await grafanaHelper.promoteToEditor(editorId);
+  await grafanaHelper.promoteToEditor(editorUser.id);
   await page.close();
 });
 

@@ -45,7 +45,9 @@ pmmTest(
   },
 );
 
-pmmTest(
+// skip-until: 2026-11-23 -- the time zone is lost when navigating through Inventory (PMM-15557); unskip once it is fixed.
+// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15557, see the skip-until line above.
+pmmTest.skip(
   'PMM-T1090 - Verify time zones and navigation between dashboards @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, leftNavigation, page, urlHelper }) => {
     const timeZone = 'Europe/London';
