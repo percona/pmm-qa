@@ -1200,7 +1200,8 @@ module.exports = {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
       await this.waitForPanelToMount(this.graphsLocator(metrics[i]));
-      await this.anchorToPanel(this.graphsLocator(metrics[i]));
+      // Positioning only: waitForPanelToMount already asserted the panel.
+      await tryTo(() => I.scrollTo(this.graphsLocator(metrics[i])));
     }
   },
 
@@ -1211,13 +1212,9 @@ module.exports = {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
       await this.waitForPanelToMount(this.graphsLocatorPartialMatch(metrics[i]));
-      await this.anchorToPanel(this.graphsLocatorPartialMatch(metrics[i]));
+      // Positioning only: waitForPanelToMount already asserted the panel.
+      await tryTo(() => I.scrollTo(this.graphsLocatorPartialMatch(metrics[i])));
     }
-  },
-
-  // Positioning only: waitForPanelToMount already asserted the panel; scrollBackToPanel recovers a skipped anchor.
-  async anchorToPanel(panelLocator) {
-    await tryTo(() => I.scrollTo(panelLocator));
   },
 
   async waitForPanelToMount(panelLocator) {
