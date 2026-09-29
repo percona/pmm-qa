@@ -27719,6 +27719,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1522",
         "by": "Investigator routine",
         "at": "2026-09-29T03:37:17Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test fix",
+        "summary": "ha: PMM-T2233/PMM-T2144 leaderStatus timed out again on the left-menu leader that PMM-13860 removed (pmm3-ha-tests #99). Open PR #1512 already covers it.",
+        "link": "https://github.com/percona/pmm-qa/pull/1512",
+        "by": "Investigator routine",
+        "at": "2026-09-29T03:37:21Z"
       }
     ],
     "claims": [
