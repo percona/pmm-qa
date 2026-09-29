@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 // import cli = require('@helpers/cliHelper'); //optional way to import with local name
 import * as cli from '@helpers/cli-helper';
 

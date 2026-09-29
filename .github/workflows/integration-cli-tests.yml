@@ -58,8 +58,6 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
-      INVESTIGATOR_ROUTINE_TOKEN:
-        required: false
 
 jobs:
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):

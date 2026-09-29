@@ -11,6 +11,10 @@ export default class Credentials {
     },
     username: 'root',
   };
+  postgresContainer = {
+    password: 'pmm-^*&@agent-password',
+    username: 'postgres',
+  };
   rdsMysql84 = {
     address: process.env.PMM_QA_MYSQL_RDS_8_4_HOST ?? '',
     password: process.env.PMM_QA_MYSQL_RDS_8_4_PASSWORD ?? '',

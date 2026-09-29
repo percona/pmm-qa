@@ -58,7 +58,9 @@ pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, le
   });
 });
 
-pmmTest(
+// skip-until: 2026-11-23 -- the selected time range is lost when switching dashboards (PMM-15557); unskip once it is fixed.
+// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15557, see the skip-until line above.
+pmmTest.skip(
   'PMM-T2198 verify custom time range persists on any dashboard @new-navigation',
   async ({ leftNavigation, page }, testInfo) => {
     const selectedTimeRange = 'Last 15 minutes';

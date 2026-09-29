@@ -21,7 +21,7 @@ if [ -z "$pmm_server_ip" ]; then
 fi
 
 if [ -z "$client_version" ]; then
-    export client_version=3-dev-latest
+    export client_version=latest-tarball
 fi
 
 if [ -z "$install_client" ]; then

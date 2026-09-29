@@ -9,7 +9,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2233 Verify "pmm_ha_leader_status" metric correctly reflects the current leader status @pmm-ha',
+  'PMM-T2233 + PMM-T2144 - Verify "pmm_ha_leader_status" and the left-menu leader both track the current leader @pmm-ha',
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
     await page.goto(highAvailabilityPage.url);
 

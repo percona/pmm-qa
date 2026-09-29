@@ -221,7 +221,7 @@ Say you are adding `FOODB`:
      '1.0 2.0' \
      'CLIENT_VERSION SETUP_TYPE' \
      'DEFAULT_VERSION=2.0' \
-     'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE='
+     'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE='
    ```
 
 2. **Add `images/foodb/`** with its `Dockerfile` and `setup.sh`, and source the

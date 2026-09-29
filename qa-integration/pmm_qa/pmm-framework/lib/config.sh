@@ -60,70 +60,70 @@ register_database PSMDB \
   '6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database SSL_PSMDB \
   '6.0 7.0 8.0 latest' \
   'CLIENT_VERSION MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'MINIO=false'
+  'CLIENT_VERSION=latest-tarball' 'MINIO=false'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
+  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
   'DEFAULT_VERSION=8.4' \
-  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
+  'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
   '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION' \
   'DEFAULT_VERSION=8.4' \
-  'CLIENT_VERSION=3-dev-latest'
+  'CLIENT_VERSION=latest-tarball'
 
 register_database PGSQL \
   '14 15 16 17 18' \
   'CLIENT_VERSION SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PDPGSQL \
   '14 15 16 17 18' \
   'CLIENT_VERSION SETUP_TYPE PGSM_BRANCH ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=' 'PGSM_BRANCH=' \
   'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database SSL_PDPGSQL \
   '14 15 16 17' \
   'CLIENT_VERSION' \
   'DEFAULT_VERSION=17' \
-  'CLIENT_VERSION=3-dev-latest'
+  'CLIENT_VERSION=latest-tarball'
 
 register_database PXC \
   '5.7 8.0 8.4 9.7' \
   'CLIENT_VERSION QUERY_SOURCE TARBALL' \
   'DEFAULT_VERSION=8.4' \
-  'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
+  'CLIENT_VERSION=latest-tarball' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
 # is refused.
-register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
-register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
+register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
+register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
 
 register_database VALKEY \
   '7 8' \
   'CLIENT_VERSION SETUP_TYPE ENCRYPTED_CLIENT_CONFIG' \
   'DEFAULT_VERSION=8' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
+  'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 # --------------------------------------------------------------------------
 # Catalogue queries. All take an already-uppercased TYPE.
