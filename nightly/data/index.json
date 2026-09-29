@@ -27709,6 +27709,16 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4489",
         "by": "Investigator routine",
         "at": "2026-09-29T03:37:14Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test fix",
+        "summary": "ha: PMM-T2109 failed 3/3 because PUT /v1/server/settings returned 400 'Data retention ... is set via PMM_DATA_RETENTION'. The PMM-HA-GA chart has pinned retention since percona-helm-charts#933 (PMM-14787, merged 09-28), which is intended, so the test now changes only the public address. HA verification run is pending.",
+        "link": "https://github.com/percona/pmm-qa/pull/1522",
+        "by": "Investigator routine",
+        "at": "2026-09-29T03:37:17Z"
       }
     ],
     "claims": [
@@ -27717,13 +27727,6 @@
         "at": "2026-09-29T03:23:14Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-29T03:23:14Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
         ]
       },
       {
