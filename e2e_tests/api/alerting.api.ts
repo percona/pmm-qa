@@ -6,6 +6,7 @@ import {
   AlertRule,
   AlertRulesResponse,
   AlertSeverity,
+  RulerRulesResponse,
   TemplatedAlertRule,
 } from '@interfaces/alerting';
 
@@ -89,7 +90,19 @@ export default class AlertingApi {
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
 
   removeAllAlertRules = async (): Promise<void> => {
-    for (const { folderUid, name } of await this.getRuleGroups()) {
+    const rulerResponse = await this.request.get(apiEndpoints.grafana.ruler, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(rulerResponse.status()).toEqual(200);
+
+    const groups = Object.values((await rulerResponse.json()) as RulerRulesResponse).flat();
+
+    for (const { name, rules } of groups) {
+      // Provisioned groups, like PMM's built-in self-monitoring rules, are read-only and cannot be deleted.
+      if (rules.some(({ grafana_alert }) => grafana_alert.provenance)) continue;
+
+      const folderUid = rules[0].grafana_alert.namespace_uid;
       const response = await this.request.delete(`${apiEndpoints.grafana.ruler}/${folderUid}/${name}`, {
         headers: GrafanaHelper.getAuthHeader(),
         params: { subtype: 'cortex' },
