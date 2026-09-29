@@ -2,8 +2,6 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-// Data retention is left alone: in HA the pmm-ha chart pins it (PMM_DATA_RETENTION, PMM-14787),
-// so PMM refuses a change to it with FailedPrecondition.
 const newPublicAddress = 'pmm-ha.test.percona.com';
 let original: { pmm_public_address: string };
 
