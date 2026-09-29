@@ -1215,9 +1215,7 @@ module.exports = {
     }
   },
 
-  // Only positions the walk for the next PageDown; waitForPanelToMount already proved the
-  // panel exists. A Grafana render stall blocks Playwright's in-page polling past scrollTo's
-  // 20s actionability wait, and the next iteration's scrollBackToPanel recovers the position.
+  // Positioning only: waitForPanelToMount already asserted the panel; scrollBackToPanel recovers a skipped anchor.
   async anchorToPanel(panelLocator) {
     await tryTo(() => I.scrollTo(panelLocator));
   },
