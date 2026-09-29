@@ -27729,6 +27729,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1512",
         "by": "Investigator routine",
         "at": "2026-09-29T03:37:21Z"
+      },
+      {
+        "suites": [
+          "Nightly Compatibility"
+        ],
+        "verdict": "test fix",
+        "summary": "compat / client 3.8.1 and 3.7.1: PMM-T2048 I.scrollTo timed out on 'Max Inserted Tuples' and 'Conflicts', the same renderer-stall failure as the previous nights. Open PR #1521 (opened 03:11 today) makes the anchor scroll tolerant.",
+        "link": "https://github.com/percona/pmm-qa/pull/1521",
+        "by": "Investigator routine",
+        "at": "2026-09-29T03:37:24Z"
       }
     ],
     "claims": [
@@ -27737,13 +27747,6 @@
         "at": "2026-09-29T03:23:14Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-29T03:23:14Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
