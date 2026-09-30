@@ -18,7 +18,6 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      rc_version: ${{ steps.set.outputs.rc_version }}
       matrix: ${{ steps.set.outputs.matrix }}
     steps:
       - name: Compute upgrade matrix (last 6 releases)
@@ -30,7 +29,6 @@ jobs:
           RC_VERSION=$(curl -fsS 'https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated' \
             | jq -r 'first(.results[].name | select(test("-rc$")))')
           DEV_LATEST_VERSION=$(curl -fsS https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
-          echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
           MATRIX=$(jq -Rnc --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" '
             [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver, pre_upgrade_version: .}] as $ga
             | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] + $ga),
@@ -53,7 +51,6 @@ jobs:
       upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: docker
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      rc_version: ${{ needs.prepare.outputs.rc_version }}
       pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
 
   upgrade-ui:
@@ -73,5 +70,4 @@ jobs:
       upgrade_version: ${{ matrix.upgrade_version }}
       upgrade_type: ui
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      rc_version: ${{ needs.prepare.outputs.rc_version }}
       pre_upgrade_version: ${{ matrix.pre_upgrade_version }}

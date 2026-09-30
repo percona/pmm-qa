@@ -35,10 +35,6 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
-      rc_version:
-        description: 'RC Version for upgrade to.'
-        default: ''
-        type: string
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
@@ -73,10 +69,6 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
-      rc_version:
-        description: 'RC Version for upgrade to.'
-        default: ''
-        type: string
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
@@ -102,12 +94,7 @@ jobs:
           echo ${{ inputs.upgrade_tag }}
           echo ${{ inputs.upgrade_version }}
           echo ${{ inputs.pmm_qa_branch }}
-          echo ${{ inputs.rc_version }}
           echo ${{ inputs.pre_upgrade_version }}
-          ver="${${{ inputs.rc_version }}##*:}"
-          ver="${ver%-rc*}"
-          ver="${ver%.}"
-          echo "$ver"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
@@ -122,9 +109,9 @@ jobs:
             TARBALL_URL="${{ inputs.version }}"
             echo "CLIENT_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
           elif [ "${{ inputs.version }}" == "pmm3-rc" ]; then
-            echo "pmm3-rc is a special dev tag and version: $ver"
+            echo "pmm3-rc is a special dev tag and version: ${{ inputs.pre_upgrade_version }}"
             TARBALL_URL="pmm3-rc"
-            echo "CLIENT_VERSION=$ver" >> "$GITHUB_ENV"
+            echo "CLIENT_VERSION=${{ inputs.pre_upgrade_version }}" >> "$GITHUB_ENV"
           else
             echo "${{ inputs.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ inputs.version }}/binary/tarball/pmm-client-${{ inputs.version }}-x86_64.tar.gz"
