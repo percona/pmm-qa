@@ -3,13 +3,16 @@
 # reports the expected version. Logs are printed only for containers that fail.
 #
 # Usage: upgrade_clients.sh <expected-version>
-# Env:   CLIENT_INSTALL_VERSION  pmm3-rc upgrades from the experimental repository, anything else from testing
+# Env:   CLIENT_UPGRADE_REPOSITORY  pmm3-client repository to upgrade from (optional)
+#        CLIENT_INSTALL_VERSION  without CLIENT_UPGRADE_REPOSITORY, pmm3-rc upgrades from experimental, anything else from testing
 #        CLIENT_TARBALL_UPGRADE  tarball URL to upgrade from instead of the repository (optional)
 set -uo pipefail
 
 want="${1:?usage: $0 <expected-version>}"
 
-if [[ "${CLIENT_INSTALL_VERSION:-}" == "pmm3-rc" ]]; then
+if [[ -n "${CLIENT_UPGRADE_REPOSITORY:-}" ]]; then
+  repository=$CLIENT_UPGRADE_REPOSITORY
+elif [[ "${CLIENT_INSTALL_VERSION:-}" == "pmm3-rc" ]]; then
   repository=experimental
 else
   repository=testing

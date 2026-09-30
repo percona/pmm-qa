@@ -47,11 +47,14 @@ jobs:
           fi
           RC_VERSION=${RC_TAG##*:}
           DEV_LATEST_VERSION=$(curl -fsS https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
-          MATRIX=$(jq -Rnc --arg rc_tag "$RC_TAG" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" '
+          MATRIX=$(jq -Rnc --arg rc_tag "$RC_TAG" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" --arg custom "$PMM_SERVER_UPGRADE" '
             def supports_ui_upgrade: split(".") | map(tonumber) as [$major, $minor]
               | $major < 3 or ($major == 3 and ($minor // 0) < 9);
-            [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver, pre_upgrade_version: .}] as $ga
-            | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] + $ga),
+            (if $custom != "" then {client_upgrade_repository: "experimental"} else {} end) as $client
+            | (if $custom != "" then {pre_upgrade_client: "latest-tarball"} else {} end) as $rc_client
+            | [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver, pre_upgrade_version: .} + $client] as $ga
+            | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}
+                         + $client + $rc_client] + $ga),
                ui: [$ga[] | select(.version | supports_ui_upgrade)]}' <<< "$VERSIONS")
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "$MATRIX"
@@ -72,6 +75,8 @@ jobs:
       upgrade_type: docker
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
+      pre_upgrade_client: ${{ matrix.pre_upgrade_client }}
+      client_upgrade_repository: ${{ matrix.client_upgrade_repository }}
 
   upgrade-ui:
     name: UI way upgrade for PMM
@@ -91,3 +96,4 @@ jobs:
       upgrade_type: ui
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
+      client_upgrade_repository: ${{ matrix.client_upgrade_repository }}
