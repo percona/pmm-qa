@@ -2354,6 +2354,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1512",
       "by": "Investigator routine",
       "at": "2026-09-30T03:34:41Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "compat / client 3.8.1: PMM-T2048 I.scrollTo timed out on 'Allocated Buffers' (verifyMetricsExistencePartialMatch), the same renderer-stall failure open PR #1521 handles.",
+      "link": "https://github.com/percona/pmm-qa/pull/1521",
+      "by": "Investigator routine",
+      "at": "2026-09-30T03:34:44Z"
     }
   ],
   "claims": [
@@ -2376,13 +2386,6 @@
       "at": "2026-09-30T03:26:36Z",
       "suites": [
         "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-09-30T03:26:36Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
