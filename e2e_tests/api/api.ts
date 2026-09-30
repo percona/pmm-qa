@@ -11,12 +11,14 @@ import AnnotationApi from '@api/annotation.api';
 import HaApi from '@api/ha.api';
 import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
+import DumpApi from '@api/dump.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
   readonly alertingApi: AlertingApi;
   readonly annotationApi: AnnotationApi;
   readonly backupsApi: BackupsApi;
+  readonly dumpApi: DumpApi;
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
@@ -31,6 +33,7 @@ export default class Api {
     this.alertingApi = new AlertingApi(request);
     this.annotationApi = new AnnotationApi(request);
     this.backupsApi = new BackupsApi(request);
+    this.dumpApi = new DumpApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);
     this.managementApi = new ManagementApi(request);

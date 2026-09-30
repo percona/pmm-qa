@@ -190,6 +190,8 @@ pmmTest(
     highAvailabilityPage,
     k8sHelper,
     leftNavigation,
+    nodesPage,
+    page,
   }) => {
     const before = readBaseline();
 
@@ -240,6 +242,7 @@ pmmTest(
 
     await grafanaHelper.authorize();
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
-    await highAvailabilityPage.verifyLeaderBadge(leader);
+    await page.goto(nodesPage.url);
+    await nodesPage.verifyHaNodeRoles(podNames, leader);
   },
 );

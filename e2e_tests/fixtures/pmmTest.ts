@@ -35,6 +35,7 @@ import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import AlertingPage from '@pages/alerting.page';
+import DumpPage from '@pages/dump.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 
@@ -48,6 +49,7 @@ const pmmTest = base.extend<{
   loginPage: LoginPage;
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
+  dumpPage: DumpPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
@@ -127,6 +129,7 @@ const pmmTest = base.extend<{
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
+  dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 

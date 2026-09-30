@@ -13,6 +13,12 @@ const apiEndpoints = {
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
+  dumps: {
+    batchDelete: '/v1/dumps:batchDelete',
+    download: '/dump',
+    list: '/v1/dumps',
+    start: '/v1/dumps:start',
+  },
   grafana: {
     alertmanager: '/graph/api/alertmanager/grafana/api/v2',
     dashboardByUid: '/graph/api/dashboards/uid',
