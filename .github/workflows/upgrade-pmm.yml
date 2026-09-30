@@ -20,7 +20,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set.outputs.matrix }}
     steps:
-      - name: Compute upgrade matrix (latest -> 5 minors back)
+      - name: Compute upgrade matrix (last 5 minor versions)
         id: set
         shell: bash
         run: |
