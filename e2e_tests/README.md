@@ -97,6 +97,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
+- `@dump`
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
