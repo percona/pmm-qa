@@ -32,9 +32,11 @@ jobs:
             | jq -r 'first(.results[].name | select(test("-rc$")))')
           DEV_LATEST_VERSION=$(curl -fsS https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
           MATRIX=$(jq -Rnc --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" '
+            def supports_ui_upgrade: split(".") | map(tonumber) as [$major, $minor]
+              | $major < 3 or ($major == 3 and ($minor // 0) < 9);
             [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $rc_tag, upgrade_version: $rc_ver, pre_upgrade_version: .}] as $ga
             | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] + $ga),
-               ui: [$ga[] | select(.version | split(".")[1] | tonumber < 9)]}' <<< "$VERSIONS")
+               ui: [$ga[] | select(.version | supports_ui_upgrade)]}' <<< "$VERSIONS")
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "$MATRIX"
 
