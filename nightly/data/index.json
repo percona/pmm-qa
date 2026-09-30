@@ -30139,23 +30139,20 @@
         "link": "https://github.com/percona/pmm-qa/pull/1521",
         "by": "Investigator routine",
         "at": "2026-09-30T03:34:44Z"
+      },
+      {
+        "suites": [
+          "CLI Integration Compatibility",
+          "E2E Tests"
+        ],
+        "verdict": "not reproduced",
+        "summary": "downloads.percona.com / repo.percona.com were slow in the nightly window for the fourth night running: an apt install of PS 9.7 took 29m45s (00:37-01:06), so 22 CLI compat jobs hit their 40 min budget in setup, the PS/PXC/HAProxy e2e setup took 47 min (job cancelled at 60 min), and PMM-T2227 (3.8.0, 3.9.0 Generic) hit its 120 s test timeout while the tarball install ran. Jobs started after ~00:50 were normal, and a 20 MB fetch at 03:34 ran at 31 MB/s. Logs only, no VM; no Jira or fix yet.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-09-30T03:34:47Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-30T03:26:36Z",
-        "suites": [
-          "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-09-30T03:26:36Z",
-        "suites": [
-          "E2E Tests"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-09-30T03:26:36Z",
