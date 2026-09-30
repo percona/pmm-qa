@@ -9,9 +9,10 @@ RUN set -eux; \
     dnf install -y findutils gzip tar; \
     dnf clean all; \
     rm -rf /var/cache/dnf; \
-    curl -fsSL "https://github.com/oliver006/redis_exporter/releases/download/v${REDIS_EXPORTER_VERSION}/redis_exporter-v${REDIS_EXPORTER_VERSION}.linux-amd64.tar.gz" \
+    arch=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/'); \
+    curl -fsSL "https://github.com/oliver006/redis_exporter/releases/download/v${REDIS_EXPORTER_VERSION}/redis_exporter-v${REDIS_EXPORTER_VERSION}.linux-${arch}.tar.gz" \
         | tar -xz -C /usr/local/bin --strip-components=1 --wildcards '*/redis_exporter'; \
-    curl -fsSL "https://github.com/ncabatoff/process-exporter/releases/download/v${PROCESS_EXPORTER_VERSION}/process-exporter-${PROCESS_EXPORTER_VERSION}.linux-amd64.tar.gz" \
+    curl -fsSL "https://github.com/ncabatoff/process-exporter/releases/download/v${PROCESS_EXPORTER_VERSION}/process-exporter-${PROCESS_EXPORTER_VERSION}.linux-${arch}.tar.gz" \
         | tar -xz -C /usr/local/bin --strip-components=1 --wildcards '*/process-exporter'; \
     redis_exporter --version; \
     process-exporter --version

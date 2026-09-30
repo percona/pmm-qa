@@ -196,7 +196,7 @@ install_pmm_client() {
 
 # Register NODE's pmm-agent with the server as a container node at address NODE
 # named NODE_NAME (default: NODE), and start it without systemd, logging to
-# LOG, where the playbook's client setup put it and tests read it.
+# LOG, where the tests read it.
 # ENCRYPTED=true stores the agent config encrypted, as ENCRYPTED_CLIENT_CONFIG asks.
 # AGENT_NODE defaults to NODE. A separate container can supply the agent while
 # sharing NODE's network and files, which keeps host-level facilities such as
@@ -217,8 +217,7 @@ setup_pmm_agent() {
     setup+=(--debug)
   fi
   # Every container of an image inherits the image's /etc/machine-id, which
-  # pmm-agent reports as the node's machine_id; the playbooks' systemd
-  # containers generated their own at boot.
+  # pmm-agent reports as the node's machine_id, so nodes must not share one.
   must docker exec --user root "$agent_node" sh -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id'
   if [[ $encrypted == true ]]; then
     must docker exec --user root "$agent_node" openssl genpkey -algorithm RSA \

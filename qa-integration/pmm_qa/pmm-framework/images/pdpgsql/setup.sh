@@ -11,7 +11,7 @@ readonly -a PDPGSQL_REPLICA_CONF=(
 )
 
 # Percona Distribution for PostgreSQL, monitored through pg_stat_monitor, on
-# pmm-qa/pdpgsql. Keeps the end state of the old Ansible setup: one
+# pmm-qa/pdpgsql: one
 # node, a streaming replica pair (replication) or three nodes under Patroni
 # and etcd (patroni).
 setup_pdpgsql() {
@@ -312,8 +312,7 @@ pdpgsql_register() {
 }
 
 
-# The school database everywhere the playbook loaded it, plus each topology's
-# own load, left running as the playbook left it.
+# The school database on every node, plus each topology's own load, left running.
 pdpgsql_workload() {
   local primary=${names[0]} data=$FRAMEWORK_DIR/images/pdpgsql node
   local -a loaded=("$primary")
@@ -348,7 +347,7 @@ pdpgsql_workload() {
 }
 
 # Percona Distribution for PostgreSQL with TLS on pmm-qa/ssl-pdpgsql
-# (images/pdpgsql/ssl). Keeps the old Ansible setup's end state: the container
+# (images/pdpgsql/ssl): the container
 # on its own network plus pmm-qa, certificates made in the container and
 # copied to tls-ssl-setup/postgres/<version>/ for the tests, and a
 # pg_stat_statements service registered over TLS.

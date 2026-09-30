@@ -3,8 +3,7 @@
 # images/haproxy/setup.sh -- HAProxy, on the prebaked haproxy image.
 
 # HAProxy with the PMM Client attached, for the HAProxy dashboards, on the
-# prebaked pmm-qa/haproxy image The end state is the old Ansible
-# setup's: haproxy_pmm serving haproxy.cfg on host port 42100,
+# prebaked pmm-qa/haproxy image: haproxy_pmm serving haproxy.cfg on host port 42100,
 # registered with --environment=haproxy, with a request every 10 s.
 setup_haproxy() {
   local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000))

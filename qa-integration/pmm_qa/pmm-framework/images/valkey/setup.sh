@@ -3,7 +3,7 @@
 # images/valkey/setup.sh -- Valkey cluster and sentinel, on the prebaked valkey image.
 
 # Valkey as a cluster (the default) or a sentinel topology, on the prebaked
-# pmm-qa/valkey image, with the old Ansible setups' end state: the dashboard tests look
+# pmm-qa/valkey image. The dashboard tests look
 # services up as <container>-svc and nodes as <container>-node, and the CLI
 # test reads /var/log/pmm-agent.log in valkey-primary-1.
 setup_valkey() {
@@ -76,7 +76,7 @@ valkey_cluster_start() {
   mapfile -t server < <(valkey_server_args)
   ensure_pmm_network
   for node in "${nodes[@]}"; do
-    # Replicas start at host port 6385, as the playbook's (6379+3-1)+N put them.
+    # Replicas start at host port 6385: 6379+3-1+N.
     if [[ $node == valkey-replica-4 ]]; then
       port=6385
     fi
@@ -108,7 +108,7 @@ valkey_sentinel_start() {
   done
 }
 
-# The playbooks' service name (first) and labels, per node. The sentinel
+# Service name (first) and labels, per node. The sentinel
 # topology's replicas and sentinels drop the dash before their number.
 valkey_labels() {
   case $1 in
@@ -128,7 +128,7 @@ valkey_port() {
   fi
 }
 
-# The playbooks' load: writes on each primary, reads on each replica, without
+# Load: writes on each primary, reads on each replica, without
 # -c, so a key owned by another primary just gets a MOVED reply.
 valkey_workload() {
   local node cli="valkey-cli -a $VALKEY_PASSWORD --no-auth-warning"

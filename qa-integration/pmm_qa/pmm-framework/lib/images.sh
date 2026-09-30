@@ -54,7 +54,7 @@ build_pxc_proxysql_image() {
   local version=$1 tarball=${2:-} package='' tag=$1
   case $version in
     5.7 | 8.0) ;;
-    8.4 | 9.7) package=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.x86_64.rpm ;;
+    8.4 | 9.7) package=https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql-3.0.11-1-almalinux9.$(uname -m).rpm ;;
     *) die "PXC $version has no prebaked image; use 5.7, 8.0, 8.4 or 9.7." ;;
   esac
   if [[ -n $tarball ]]; then

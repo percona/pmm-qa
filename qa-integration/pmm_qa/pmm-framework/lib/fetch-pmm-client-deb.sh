@@ -111,7 +111,7 @@ fetch_verified() {
             cat <<'EOF'
   repo.percona.com is serving an index and a payload that disagree, so apt
   cannot install pmm-client. This is an upstream publishing race, not a problem
-  with this host or this playbook. Observed windows last 6-8 minutes.
+  with this host. Observed windows last 6-8 minutes.
 EOF
             ;;
           no-index)

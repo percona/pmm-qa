@@ -17,7 +17,7 @@ setup_mysql() {
 #
 # SETUP_TYPE selects the topology ('' single, replication, gr); the node count
 # is raised to the topology's minimum. Container names, host ports, PMM service
-# names and labels match what the old Ansible setups produced, because tests look them up.
+# names and labels are what the tests look up.
 #
 # The mf_* helpers below read this function's locals through bash's dynamic
 # scoping.
@@ -83,7 +83,7 @@ setup_mysql_family() {
   # ones with a bare 'Internal server error'.
   step 'Set up PMM agents' mf_setup_agents
   step 'Register MySQL with PMM' each_node names mf_register
-  # As the playbooks do on every node: tests write through whichever container
+  # On every node: tests write through whichever container
   # `docker ps` lists first, which can be a group-replication secondary.
   step 'Clear read-only' each_node names mf_sql 'SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;'
   step 'Run workload' each_node targets mf_workload
@@ -113,9 +113,8 @@ mf_cleanup() {
   ensure_pmm_network
 }
 
-# The first host port from 3306 with room for every node after it, as
-# the old Ansible setup picked it, so a second topology on the same
-# host does not collide with the ports the first one published.
+# The first host port from 3306 with room for every node after it, so a
+# second topology on the same host does not collide with the ports the first one published.
 # Stdout: the base port
 mf_first_free_port() {
   local published port=3306 offset taken
@@ -138,7 +137,7 @@ mf_first_free_port() {
 
 mf_start_node() {
   local name=$1 node=${1##*_} seed seeds=''
-  # Root, as the playbooks' containers were: tests `docker exec` without --user
+  # Root: tests `docker exec` without --user
   # and read pmm-agent's root-owned config. mysqld itself still runs as mysql.
   local -a run=(
     docker run --detach --name "$name" --hostname "$name" --user root
@@ -146,7 +145,7 @@ mf_start_node() {
     --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$password"
     --volume "${name}_pmm:/usr/local/percona/pmm" --volume "${name}_tmp:/tmp"
   )
-  # As the old Ansible setup: the host reaches node N's socket at
+  # The host reaches node N's socket at
   # /tmp/mysql-sockets/N/mysql.sock, which the CLI socket tests use.
   if [[ $engine == mysql ]]; then
     must docker run --rm --volume /tmp:/host-tmp "$BUSYBOX_IMAGE" sh -c "
@@ -154,7 +153,7 @@ mf_start_node() {
       chmod 0777 /host-tmp/mysql-sockets/$node && ln -s mysqld.sock /host-tmp/mysql-sockets/$node/mysql.sock"
     run+=(--volume "/tmp/mysql-sockets/$node:/var/run/mysqld")
   fi
-  # As in the playbooks: node N on host port base+N-1, except PS 5.7, which has none.
+  # Node N on host port base+N-1, except PS 5.7, which has none.
   if [[ $engine != ps || $version != 5.7 ]]; then
     run+=(--publish "$((base_port + node - 1)):3306")
   fi
@@ -169,7 +168,7 @@ mf_start_node() {
   if [[ $engine == ps ]]; then
     run+=(--userstat=1)
   fi
-  # The playbook's my.cnf loads native password auth below 9.x; only 8.4 ships it off.
+  # Native password auth is needed below 9.x; only 8.4 ships it off.
   if [[ $version == 8.4 ]]; then
     run+=(--mysql-native-password=ON)
   fi
@@ -248,8 +247,7 @@ mf_configure_replication() {
 }
 
 # The upstream mysql image logs its first-boot user setup, and a member carrying
-# GTIDs the group lacks is refused (ERROR 3092), so each member starts clean, as
-# in the playbooks.
+# GTIDs the group lacks is refused (ERROR 3092), so each member starts clean.
 mf_prepare_gr_member() {
   local grants reset='RESET MASTER;'
   if [[ $version != 5.7 && $version != 8.0 ]]; then
@@ -322,7 +320,7 @@ mf_check_myrocks() {
     die "MyRocks is not enabled on $1."
 }
 
-# Same container, volume, ports and buckets as the old Ansible setup.
+# The container, volume, ports and bucket the backup tests expect.
 mf_start_minio() {
   local bucket
   docker rm -fv minio >/dev/null 2>&1 || true
@@ -375,7 +373,7 @@ mf_register() {
 }
 
 # sysbench runs detached, so the setup does not wait out its run (30 s for PS,
-# 60 s for MySQL, as in the playbooks); the rc check at the end only catches a
+# 60 s for MySQL); the rc check at the end only catches a
 # workload that already failed.
 mf_workload() {
   local seconds=30
@@ -404,7 +402,7 @@ mf_workload() {
 }
 
 # Percona Server requiring TLS, on the prebaked pmm-qa/ps image, with
-# the old Ansible setup's end state: mysql_ssl_VERSION with its my.cnf
+# mysql_ssl_VERSION with its my.cnf
 # settings, users pmm/pmm and X509-only pmm_tls, registered over TLS
 # with mysqld's own certificates, which tests read from
 # tls-ssl-setup/mysql/VERSION/ on the host.

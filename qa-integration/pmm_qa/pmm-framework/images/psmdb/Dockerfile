@@ -29,7 +29,7 @@ RUN set -eux; \
         "percona-server-mongodb-server${pin}" "percona-server-mongodb-mongos${pin}" \
         "percona-backup-mongodb-${PBM_VERSION}.el${OL_VERSION}"; \
     curl -fL --retry 5 -o /tmp/mgodatagen.tar.gz \
-        "https://github.com/feliixx/mgodatagen/releases/download/v${MGODATAGEN_VERSION}/mgodatagen_${MGODATAGEN_VERSION}_Linux_x86_64.tar.gz"; \
+        "https://github.com/feliixx/mgodatagen/releases/download/v${MGODATAGEN_VERSION}/mgodatagen_${MGODATAGEN_VERSION}_Linux_$(uname -m | sed s/aarch64/arm64/).tar.gz"; \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin mgodatagen; \
     sed -i 's/Type=forking/#Type=forking/' /usr/lib/systemd/system/mongod.service; \
     systemctl enable mongod pbm-agent; \

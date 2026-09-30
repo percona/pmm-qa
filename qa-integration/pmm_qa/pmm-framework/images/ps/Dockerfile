@@ -43,7 +43,7 @@ RUN . /etc/os-release \
     && rpm -Uvh /tmp/epel-release.rpm \
     && rm /tmp/epel-release.rpm
 RUN curl -fL \
-        "https://repo.almalinux.org/almalinux/8/AppStream/x86_64/os/Packages/libev-4.24-6.el8.x86_64.rpm" \
+        "https://repo.almalinux.org/almalinux/8/AppStream/$(uname -m)/os/Packages/libev-4.24-6.el8.$(uname -m).rpm" \
         -o /tmp/libev.rpm \
     && rpm -Uvh /tmp/libev.rpm \
     && rm /tmp/libev.rpm

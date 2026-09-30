@@ -81,9 +81,6 @@ jobs:
         run: |
           echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/${PXC_VERSION_PATH}/Percona-XtraDB-Cluster_${PXC_VERSION_TAR}_Linux.x86_64.glibc${PXC_GLIBC}.tar.gz" >> "$GITHUB_ENV"
 
-      - name: Install Ansible and update the node
-        run: sudo apt-get update -y && sudo apt-get install ansible -y
-
       - name: Run the PMM Server container
         run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
 

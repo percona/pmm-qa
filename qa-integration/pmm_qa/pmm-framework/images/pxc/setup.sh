@@ -4,12 +4,12 @@
 
 # Percona XtraDB Cluster: three nodes and ProxySQL in the one container
 # pxc_proxysql_pmm_VERSION, on the prebaked pmm-qa/pxc-proxysql image
-# (images/pxc/pmm-pxc), matching the layout the old Ansible setup produced:
+# (images/pxc/pmm-pxc):
 # node N on 127.0.0.1:3305+N, ProxySQL admin on 6032 and host port 6033, and
 # one pmm-agent monitoring all of them. Tests exec into the container by name.
 #
 # ProxySQL is 2 below PXC 8.4 and 3 from it, baked into the image, so the
-# playbook's PROXYSQL_VERSION and PROXYSQL_PACKAGE overrides are refused rather
+# old PROXYSQL_VERSION and PROXYSQL_PACKAGE overrides are refused rather
 # than silently ignored. TARBALL builds a pre-release into its own image tag.
 setup_pxc() {
   local version client query_source pxc_tarball image_tag container tarball='' suffix
@@ -61,7 +61,7 @@ pxc_enable_slowlog() {
 # The node is registered without the version's dot: dashboards compare
 # node_name with `=` against a multi-value variable, whose value Grafana
 # regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself. The nightly
-# shard is appended, as the playbook did, so two shards on one PMM Server do
+# shard is appended so two shards on one PMM Server do
 # not replace each other's node.
 pxc_exporters_running() {
   local status

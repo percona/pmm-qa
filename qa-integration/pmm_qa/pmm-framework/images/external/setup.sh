@@ -3,8 +3,7 @@
 # images/external/setup.sh -- the External exporters, on the prebaked external image.
 
 # External exporters (redis_exporter and process-exporter) registered with PMM,
-# on the prebaked pmm-qa/external image, keeping the old Ansible setup's end
-# state: redis_container on host port 6379 and
+# on the prebaked pmm-qa/external image: redis_container on host port 6379 and
 # external_pmm serving redis_exporter on :42200, which remote-instance tests
 # reach from the server, and process-exporter on :9256.
 #

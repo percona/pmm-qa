@@ -60,8 +60,6 @@ flowchart LR
 
     subgraph Setup["qa-integration"]
         framework["pmm-framework (bash)"]
-        ansible["Ansible playbooks"]
-        framework --> ansible
     end
 
     subgraph Suites["Test suites"]

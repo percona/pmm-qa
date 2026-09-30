@@ -4,11 +4,13 @@
 # ghcr.io/percona/pmm-qa/<engine>:<version>, so a CI job pulls a ready image
 # instead of spending 90-160 s building one. Each
 # image is started and checked before it is pushed, so a broken build never
-# replaces a working tag, and each cell publishes on its own.
+# replaces a working tag, and each cell publishes on its own. A pull request
+# that touches a baked file gets the same build and check, without publishing.
 #
-# Tags: :<version> only, and cleanup keeps no older image. Reverting a change
-# and rebuilding does not restore the previous image: base images and packages
-# float to their newest patch, so the rebuild picks up whatever is current.
+# Tags: :<version>, for amd64 and arm64 (5.7 is amd64 only), made from the
+# per-architecture :<version>-<arch>; cleanup keeps no older image. Reverting a
+# change and rebuilding does not restore the previous image: base images and
+# packages float to their newest patch, so the rebuild picks up whatever is current.
 # Keep the matrix in sync with the build_*_image functions in
 # qa-integration/pmm_qa/pmm-framework/lib/images.sh.
 name: Build prebaked database images
@@ -18,9 +20,7 @@ on:
     - cron: '23 3 * * 1' # Mondays, off the hour
   workflow_dispatch:
   push:
-    # TEMPORARY: Pre-Baked-Images-POC publishes from the branch for the first
-    # live test. Remove it before merging to main.
-    branches: [main, Pre-Baked-Images-POC]
+    branches: [main]
     paths:
       - qa-integration/pmm_qa/pmm-framework/images/**
       - qa-integration/pmm_qa/pmm-framework/lib/images.sh
@@ -31,24 +31,37 @@ on:
       - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
       - .github/workflows/build-prebaked-images.yml
+  pull_request:
+    paths:
+      - qa-integration/pmm_qa/pmm-framework/images/**
+      - qa-integration/pmm_qa/pmm-framework/lib/images.sh
+      - qa-integration/pmm_qa/pmm-framework/build-images
+      - qa-integration/pmm_psmdb-pbm_setup/keyfile
+      - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      - .github/workflows/build-prebaked-images.yml
 
 permissions:
   contents: read
 
+# Publishing runs serialise on main; each pull request has its own lane and a
+# newer push to it cancels the older build.
 concurrency:
-  group: build-prebaked-images
-  cancel-in-progress: false
+  group: build-prebaked-images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Rebuild only the engines a push touched. A schedule or manual run, a push
-  # whose previous commit is unknown (a new branch or a force-push), or a change
-  # to the shared build logic rebuilds all of them.
+  # Rebuild only the engines a push or pull request touched. A schedule or
+  # manual run, a push whose previous commit is unknown (a new branch or a
+  # force-push), or a change to the shared build logic rebuilds all of them.
   plan:
     # A fork's schedule must not try to publish into percona's registry.
     if: github.repository == 'percona/pmm-qa'
     runs-on: ubuntu-latest
     outputs:
       engines: ${{ steps.pick.outputs.engines }}
+      tags: ${{ steps.pick.outputs.tags }}
       cells: ${{ steps.pick.outputs.cells }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -60,10 +73,10 @@ jobs:
         id: pick
         env:
           EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
-          if [ "$EVENT" != push ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+          if { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
             changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
@@ -87,23 +100,31 @@ jobs:
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
-          # PSMDB tags pair a major with an Oracle Linux release.
-          cells=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
+          # PSMDB tags pair a major with an Oracle Linux release. The 5.7 base
+          # images (PS, MySQL, PXC) are amd64-only, so 5.7 gets no arm64 build.
+          tags=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
             elif $e == "haproxy" then ["ol9"]
             elif $e == "external" then ["1.58.0-0.7.10"]
             elif $e == "valkey" then ["7", "8"]
             elif $e == "pdpgsql" or $e == "pgsql" then ["14", "15", "16", "17", "18"]
             elif $e == "ssl-pdpgsql" then ["14", "15", "16", "17"]
-            else ["5.7", "8.0", "8.4", "9.7"] end)[] | {engine: $e, version: .}]' <<<"$engines")
-          echo "engines=$engines" >>"$GITHUB_OUTPUT"
-          echo "cells=$cells" >>"$GITHUB_OUTPUT"
+            else ["5.7", "8.0", "8.4", "9.7"] end)[]
+            | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$engines")
+          cells=$(jq -c '[.[] | {engine, version, arch: .arches[]}]' <<<"$tags")
+          {
+            echo "engines=$engines"
+            echo "tags=$tags"
+            echo "cells=$cells"
+          } >>"$GITHUB_OUTPUT"
           echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
 
+  # Each architecture builds natively and publishes as <version>-<arch>; the
+  # manifest job then points <version> at all of them.
   build:
-    name: ${{ matrix.engine }}:${{ matrix.version }}
+    name: ${{ matrix.engine }}:${{ matrix.version }} ${{ matrix.arch }}
     needs: plan
     if: needs.plan.outputs.cells != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -193,22 +214,24 @@ jobs:
           docker rm -fv probe 2>/dev/null || true
 
       - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
       - name: Publish
+        if: github.event_name != 'pull_request'
         id: push
         env:
           ENGINE: ${{ matrix.engine }}
-          VERSION: ${{ matrix.version }}
+          TAG: ${{ matrix.version }}-${{ matrix.arch }}
         run: |
           name="ghcr.io/${GITHUB_REPOSITORY}/${ENGINE}"
-          docker tag "$IMAGE" "${name}:${VERSION}"
+          docker tag "$IMAGE" "${name}:${TAG}"
 
           for attempt in 1 2 3 4 5; do
-            if docker push "${name}:${VERSION}"; then
+            if docker push "${name}:${TAG}"; then
               break
             fi
             [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
@@ -216,13 +239,14 @@ jobs:
             sleep "$((attempt * 20))"
           done
 
-          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${name}:${VERSION}")
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${name}:${TAG}")
           digest=${digest#*@}
           echo "name=${name}" >>"$GITHUB_OUTPUT"
           echo "digest=${digest}" >>"$GITHUB_OUTPUT"
-          echo "- \`${name}:${VERSION}\` \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
+          echo "- \`${name}:${TAG}\` \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
 
       - name: Attest build provenance
+        if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ steps.push.outputs.name }}
@@ -231,13 +255,56 @@ jobs:
           # a sha256-<digest> package version for every image built.
           push-to-registry: false
 
+  # Point <version> at every <version>-<arch> that is published. An architecture
+  # whose build failed this run keeps its previous image.
+  manifest:
+    name: ${{ matrix.engine }}:${{ matrix.version }}
+    needs: [plan, build]
+    if: always() && github.event_name != 'pull_request' && needs.plan.result == 'success' && needs.plan.outputs.tags != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.tags) }}
+    steps:
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Publish the multi-arch tag
+        env:
+          NAME: ghcr.io/${{ github.repository }}/${{ matrix.engine }}
+          VERSION: ${{ matrix.version }}
+          ARCHES: ${{ join(matrix.arches, ' ') }}
+        run: |
+          sources=()
+          for arch in $ARCHES; do
+            if docker buildx imagetools inspect "$NAME:$VERSION-$arch" >/dev/null 2>&1; then
+              sources+=("$NAME:$VERSION-$arch")
+            else
+              echo "::warning::$NAME:$VERSION-$arch is not published, so $VERSION leaves out $arch"
+            fi
+          done
+          [ "${#sources[@]}" -gt 0 ] || { echo "nothing published for $NAME:$VERSION"; exit 1; }
+          for attempt in 1 2 3; do
+            docker buildx imagetools create -t "$NAME:$VERSION" "${sources[@]}" && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 20
+          done
+          echo "- \`$NAME:$VERSION\`: ${sources[*]}" >>"$GITHUB_STEP_SUMMARY"
+
   # A registry cannot overwrite an image: each push is a new digest, and the
   # one its tag moved off stays behind. Keep only the versions carrying one of
   # the engine's current tags; everything else -- untagged images, old dated
   # tags, sha256-<digest> attestations -- is deleted.
   cleanup:
     name: prune ${{ matrix.engine }}
-    needs: [plan, build]
+    needs: [plan, build, manifest]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -251,9 +318,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSIONS: orgs/${{ github.repository_owner }}/packages/container/pmm-qa%2F${{ matrix.engine }}/versions
           ENGINE: ${{ matrix.engine }}
-          CELLS: ${{ needs.plan.outputs.cells }}
+          TAGS: ${{ needs.plan.outputs.tags }}
         run: |
-          keep=$(jq -c --arg e "$ENGINE" '[.[] | select(.engine == $e) | .version]' <<<"$CELLS")
+          keep=$(jq -c --arg e "$ENGINE" '[.[] | select(.engine == $e) | .version, .version + "-" + .arches[]]' <<<"$TAGS")
           [ "$keep" != "[]" ] || { echo "no current tags for $ENGINE; refusing to delete"; exit 1; }
           gh api --paginate "$VERSIONS" |
             jq -r --argjson keep "$keep" '.[] | select(all(.metadata.container.tags[]; IN($keep[]) | not)) | .id' |

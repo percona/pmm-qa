@@ -3,7 +3,7 @@
 # images/pgsql/setup.sh -- PGSQL, on the prebaked pgsql image or the official postgres image.
 
 # Upstream PostgreSQL, monitored through pg_stat_statements. The default is
-# the old Ansible setup's single node on pmm-qa/pgsql; SETUP_TYPE=replication
+# a single node on pmm-qa/pgsql; SETUP_TYPE=replication
 # is its primary and replica on the official postgres image, which needs nothing baked in.
 setup_pgsql() {
   local version setup_type client encrypted tarball='' suffix=$((RANDOM % 10000))
@@ -24,7 +24,7 @@ setup_pgsql() {
   fi
 }
 
-# Only the replication playbook read ENCRYPTED_CLIENT_CONFIG.
+# ENCRYPTED_CLIENT_CONFIG applies to replication only.
 pgsql_pgss() {
   local container=pgsql_pgss_pmm_$version
   step "Prepare image pmm-qa/pgsql:$version" ensure_image pgsql "$version"
@@ -53,7 +53,7 @@ pgsql_replication() {
   step 'Install PMM Client' each_node names install_pmm_client "$client" "$tarball"
   step 'Set up PMM agents' pdpgsql_setup_agents
   step 'Register PostgreSQL with PMM' each_node names pgsql_register
-  # pgbench runs detached: the playbook waited out its 120 s.
+  # pgbench runs detached rather than blocking the setup for its 120 s.
   must docker exec --detach --user postgres "${names[0]}" sh -c \
     'pgbench -i -s 1000 pgbench && pgbench -c 10 -T 120 -j 4 pgbench >/tmp/pgbench.log 2>&1'
   report_agent_status "${names[@]}"
@@ -95,7 +95,7 @@ pgsql_replication_start() {
   pdpgsql_sql "$primary" 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements;'
 }
 
-# The playbook suffixed a service name only when the server already had it.
+# The service name gets a suffix only when the server already has it.
 pgsql_register() {
   local out
   local -a add=(pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements)
