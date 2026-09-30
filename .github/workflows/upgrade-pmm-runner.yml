@@ -79,6 +79,12 @@ env:
   PMM_URL: http://admin:admin@127.0.0.1
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+  DOCKER_TAG: ${{ inputs.docker_tag }}
+  FROM_VERSION: ${{ inputs.version }}
+  PRE_UPGRADE_VERSION: ${{ inputs.pre_upgrade_version }}
+  UPGRADE_TAG: ${{ inputs.upgrade_tag }}
+  UPGRADE_TYPE: ${{ inputs.upgrade_type }}
+  UPGRADE_VERSION: ${{ inputs.upgrade_version }}
 
 jobs:
   upgrade:
@@ -89,12 +95,12 @@ jobs:
         id: resolve
         shell: bash
         run: |
-          echo ${{ inputs.docker_tag }}
-          echo ${{ inputs.version }}
-          echo ${{ inputs.upgrade_tag }}
-          echo ${{ inputs.upgrade_version }}
-          echo ${{ inputs.pmm_qa_branch }}
-          echo ${{ inputs.pre_upgrade_version }}
+          echo "$DOCKER_TAG"
+          echo "$FROM_VERSION"
+          echo "$UPGRADE_TAG"
+          echo "$UPGRADE_VERSION"
+          echo "$PMM_QA_BRANCH"
+          echo "$PRE_UPGRADE_VERSION"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
@@ -104,26 +110,26 @@ jobs:
           echo "$apt_versions"
 
           # 2. is the requested version installable via apt?
-          if grep -qx "${{ inputs.version }}" <<< "$apt_versions"; then
-            echo "${{ inputs.version }} is available in apt — leaving inputs.version unchanged"
-            TARBALL_URL="${{ inputs.version }}"
-          elif [ "${{ inputs.version }}" == "pmm3-rc" ]; then
-            echo "pmm3-rc is a special dev tag and version: ${{ inputs.pre_upgrade_version }}"
+          if grep -qx "$FROM_VERSION" <<< "$apt_versions"; then
+            echo "$FROM_VERSION is available in apt — leaving inputs.version unchanged"
+            TARBALL_URL="$FROM_VERSION"
+          elif [ "$FROM_VERSION" == "pmm3-rc" ]; then
+            echo "pmm3-rc is a special dev tag and version: $PRE_UPGRADE_VERSION"
             TARBALL_URL="pmm3-rc"
           else
-            echo "${{ inputs.version }} not in apt — building tarball URL"
-            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ inputs.version }}/binary/tarball/pmm-client-${{ inputs.version }}-x86_64.tar.gz"
+            echo "$FROM_VERSION not in apt — building tarball URL"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/$FROM_VERSION/binary/tarball/pmm-client-$FROM_VERSION-x86_64.tar.gz"
 
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
             if [ "$code" != "200" ]; then
-              echo "ERROR: ${{ inputs.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
+              echo "ERROR: $FROM_VERSION missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
               exit 1
             fi
           fi
 
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
-          echo "PRE_UPGRADE_BRANCH=pmm-${{ inputs.version }}" >> "$GITHUB_ENV"
+          echo "PRE_UPGRADE_BRANCH=pmm-$FROM_VERSION" >> "$GITHUB_ENV"
           
           echo "CLIENT_INSTALL_VERSION set to: $TARBALL_URL"
 
@@ -135,10 +141,9 @@ jobs:
           path: pmm-qa
       - name: Start PMM Server (old image)
         run: |
-          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           docker network create pmm-qa || true
           docker volume create pmm-volume
-          if [[ "${{ inputs.upgrade_type }}" == "ui" ]]; then
+          if [[ "$UPGRADE_TYPE" == "ui" ]]; then
             docker run --detach --restart always \
               --network="pmm-qa" \
               -e WATCHTOWER_DEBUG=1 \
@@ -152,18 +157,18 @@ jobs:
               -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
               --publish 80:8080 --publish 443:8443 \
               -e PMM_ENABLE_TELEMETRY=0 \
-              -e PMM_DEV_UPDATE_DOCKER_IMAGE=${{ inputs.upgrade_tag }} \
+              -e PMM_DEV_UPDATE_DOCKER_IMAGE="$UPGRADE_TAG" \
               -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
               -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
               -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
-              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+              --volume pmm-volume:/srv --name pmm-server "$DOCKER_TAG"
           else
             docker run --detach --restart always --network pmm-qa \
               -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
               --publish 80:8080 --publish 443:8443 \
               -e PMM_ENABLE_TELEMETRY=0 \
               -e GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true \
-              --volume pmm-volume:/srv --name pmm-server "${{ inputs.docker_tag }}"
+              --volume pmm-volume:/srv --name pmm-server "$DOCKER_TAG"
           fi
 
           # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
@@ -242,7 +247,6 @@ jobs:
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
-          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           docker stop pmm-server
           docker pull "$UPGRADE_TAG"
           docker rename pmm-server pmm-server-old
@@ -261,7 +265,6 @@ jobs:
         env:
           PMM_SERVER_LATEST: ${{ inputs.upgrade_version }}
         run: |
-          export UPGRADE_TAG="${{ inputs.upgrade_tag }}"
           npx playwright test --grep "@pmm-upgrade"
 
       - name: Checkout upgrade branch
