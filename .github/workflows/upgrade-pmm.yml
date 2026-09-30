@@ -20,12 +20,14 @@ jobs:
     outputs:
       matrix: ${{ steps.set.outputs.matrix }}
     steps:
-      - name: Compute upgrade matrix (last 6 releases)
+      - name: Compute upgrade matrix (latest -> 5 minors back)
         id: set
         shell: bash
         run: |
           VERSIONS=$(curl -fsS 'https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100' \
-            | jq -r '.results[].name | select(test("^3\\.[0-9]+\\.[0-9]+$"))' | sort -V | tail -6)
+            | jq -r '[.results[].name | select(test("^3\\.[0-9]+\\.[0-9]+$")) | split(".") | map(tonumber)]
+                | (map(.[1]) | unique | .[-5:]) as $minors
+                | map(select(.[1] | IN($minors[]))) | sort[] | map(tostring) | join(".")')
           RC_VERSION=$(curl -fsS 'https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated' \
             | jq -r 'first(.results[].name | select(test("-rc$")))')
           DEV_LATEST_VERSION=$(curl -fsS https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
@@ -57,7 +59,7 @@ jobs:
     name: UI way upgrade for PMM
     uses: ./.github/workflows/upgrade-pmm-runner.yml
     needs: prepare
-    # An empty include fails the job; skip once none of the last 6 releases is below 3.9.
+    # An empty include fails the job; skip once none of the last 5 minors is below 3.9.
     if: fromJSON(needs.prepare.outputs.matrix).ui[0] != null
     strategy:
       fail-fast: false
