@@ -128,12 +128,12 @@ pmmTest(
 
     const archive = `${sftpVolume}/${dumpId}.tar.gz`;
 
-    await expect.poll(() => fs.existsSync(archive), { timeout: Timeouts.ONE_MINUTE }).toBe(true);
+    await expect(() => {
+      const { dirs, files } = extractTarGz(fs.readFileSync(archive), testInfo.outputPath(dumpId));
 
-    const { dirs, files } = extractTarGz(fs.readFileSync(archive), testInfo.outputPath(dumpId));
-
-    expect(dirs, `Expected 2 folders in the archive but found ${dirs}`).toHaveLength(2);
-    expect(files, `Expected 5 files in the archive but found ${files}`).toHaveLength(5);
+      expect(dirs, `Expected 2 folders in the archive but found ${dirs}`).toHaveLength(2);
+      expect(files, `Expected 5 files in the archive but found ${files}`).toHaveLength(5);
+    }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.ONE_MINUTE });
   },
 );
 

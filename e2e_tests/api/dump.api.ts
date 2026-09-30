@@ -2,7 +2,11 @@ import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { Dump } from '@interfaces/dump';
+
+interface Dump {
+  dump_id: string;
+  status: string;
+}
 
 export default class DumpApi {
   constructor(private request: APIRequestContext) {}
