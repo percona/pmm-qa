@@ -328,11 +328,63 @@
   until: pmm_agent_config_ready.rc == 0
   changed_when: false
 
+- name: Detect whether the container runs systemd
+  shell: docker exec --user root {{ container_name }} test -d /run/systemd/system
+  register: container_systemd
+  failed_when: false
+  changed_when: false
+
+- name: Resolve the pmm-agent binary inside the container
+  shell: docker exec --user root {{ container_name }} sh -c 'command -v pmm-agent'
+  register: pmm_agent_binary
+  changed_when: false
+  when: container_systemd.rc == 0
+
+- name: Build the pmm-agent command line for the unit
+  set_fact:
+    pmm_agent_exec_start: >-
+      {{ pmm_agent_binary.stdout | trim }}
+      --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml
+      {{ '--config-file-key-file=/usr/local/percona/pmm/config/pmm-key.pem --config-file-key-password=testpass'
+         if use_encrypted_client_config | default(false) | bool else '' }}
+  when: container_systemd.rc == 0
+
+- name: Start pmm client under systemd
+  # A unit in /etc/systemd/system outranks the one the deb/rpm ships under
+  # /usr/lib, so this one unit covers every install method -- the tarball,
+  # which is the default client_version here, ships none at all.
+  # Tests grep /var/log/pmm-agent.log, so the unit keeps writing it rather than
+  # logging to the journal. StandardOutput=append: needs systemd 240+; every
+  # systemd image these playbooks start is Ubuntu 22.04 or 24.04.
+  shell: |
+    docker exec --user root -i {{ container_name }} tee /etc/systemd/system/pmm-agent.service >/dev/null <<'UNIT'
+    [Unit]
+    Description=pmm-agent
+    After=time-sync.target network.target
+
+    [Service]
+    Type=simple
+    ExecStart={{ pmm_agent_exec_start | trim }}
+    Restart=always
+    RestartSec=2s
+    StandardOutput=append:/var/log/pmm-agent.log
+    StandardError=append:/var/log/pmm-agent.log
+
+    [Install]
+    WantedBy=multi-user.target
+    UNIT
+    docker exec --user root {{ container_name }} systemctl daemon-reload
+    docker exec --user root {{ container_name }} systemctl enable pmm-agent
+    docker exec --user root {{ container_name }} systemctl restart pmm-agent
+  when: container_systemd.rc == 0
+
 - name: Start pmm client without encrypted client config
   shell: |
     docker exec --user root {{ container_name }} \
       sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > /var/log/pmm-agent.log 2>&1 &'
-  when: not (use_encrypted_client_config | default(false) | bool)
+  when:
+    - container_systemd.rc != 0
+    - not (use_encrypted_client_config | default(false) | bool)
 
 - name: Start pmm client with encrypted client config
   # yamllint disable rule:line-length
@@ -342,7 +394,9 @@
     docker exec --user root {{ container_name }} \
       sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" --config-file-key-password="testpass" > /var/log/pmm-agent.log 2>&1 &'
   # yamllint enable rule:line-length
-  when: use_encrypted_client_config | default(false) | bool
+  when:
+    - container_systemd.rc != 0
+    - use_encrypted_client_config | default(false) | bool
 
 - name: Wait until pmm-agent is running and connected
   shell: |
