@@ -107,15 +107,12 @@ jobs:
           if grep -qx "${{ inputs.version }}" <<< "$apt_versions"; then
             echo "${{ inputs.version }} is available in apt — leaving inputs.version unchanged"
             TARBALL_URL="${{ inputs.version }}"
-            echo "CLIENT_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
           elif [ "${{ inputs.version }}" == "pmm3-rc" ]; then
             echo "pmm3-rc is a special dev tag and version: ${{ inputs.pre_upgrade_version }}"
             TARBALL_URL="pmm3-rc"
-            echo "CLIENT_VERSION=${{ inputs.pre_upgrade_version }}" >> "$GITHUB_ENV"
           else
             echo "${{ inputs.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ inputs.version }}/binary/tarball/pmm-client-${{ inputs.version }}-x86_64.tar.gz"
-            echo "CLIENT_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
 
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
@@ -128,7 +125,7 @@ jobs:
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
           echo "PRE_UPGRADE_BRANCH=pmm-${{ inputs.version }}" >> "$GITHUB_ENV"
           
-          echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
+          echo "CLIENT_INSTALL_VERSION set to: $TARBALL_URL"
 
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
