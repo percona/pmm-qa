@@ -2375,6 +2375,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-30T03:34:47Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "compat / client 3.8.0: PMM-T2030 filter click timed out because Grafana's 'Inspect: PMM Query Analytics' drawer was open over it. The trace shows the drawer opening during I.fillField's keystroke typing of 'ps-async-replication' into the filter search box, whose value stayed empty, so the keys most likely reached Grafana's 'i' panel-inspect shortcut. No paint stall; passed in the other 3 runs of the batch. Trace only, not reproduced on a VM. A likely fix is locator.fill() in selectFilterInGroup.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-30T03:34:50Z"
     }
   ],
   "claims": [
