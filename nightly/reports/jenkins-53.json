@@ -2385,15 +2385,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-09-30T03:34:50Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-09-30T03:26:36Z",
       "suites": [
         "Nightly"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "nightly / ha: the first night on record that HA got past Helm install and ran @nightly. 12 tests failed on 2 shards. Several assume a docker server: PMM-T1226 and the PostgreSQL dashboards BeforeSuite look up 'pmm-server-postgresql', which HA doesn't have, and Node Summary, PMM Health and VM dashboards show no data. HA pg-db service pmm-pmm-ha-pg-db-instance1-5jdd-0 was Failed (PMM-T554, PMM-T2146, PMM-T2007 9 vs 8 PG). Logs only; needs an HA repro to split test assumptions from product.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-09-30T03:34:53Z"
     }
-  ]
+  ],
+  "claims": []
 }
