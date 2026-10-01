@@ -2354,23 +2354,20 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4511",
       "by": "Investigator routine",
       "at": "2026-10-01T04:49:59Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility",
+        "E2E Tests"
+      ],
+      "verdict": "not reproduced",
+      "summary": "azure.archive.ubuntu.com (the GitHub runners' own Ubuntu mirror, 20.106.104.242) returned hard 502 Proxy Errors between 00:46 and 01:25, past apt's existing Acquire::Retries 3, failing the 3.8.0 MySQL 8.4 and PXC 5.7 setups and the PS/PXC/HAProxy e2e pxc setup; the degraded repo.percona.com throughput alongside it (90.7 MB in 9m22s at 162 kB/s, a 15-minute client setup) cancelled 10 CLI compat jobs at their 40-minute budget and blew PMM-T2227's 120 s timeout on 3.9.1 Generic, where 3 sibling shards ran the same test in 24-29 s. Both origins serve the same files normally now - 5th night of this class, diagnosed from logs only, no fix.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-01T04:50:08Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-01T04:35:00Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-01T04:35:00Z",
-      "suites": [
-        "E2E Tests"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-01T04:35:00Z",
