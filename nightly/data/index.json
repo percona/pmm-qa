@@ -32541,16 +32541,19 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-01T04:50:08Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "not reproduced",
+        "summary": "nightly / ha (INSTALLATION_TYPE=ha), 2nd night since HA got past the Helm install: 11 actionable failures over 3 shards, most of them shaped by the HA server having no self-monitored PMM Server - PMM-T878 fails on 'Service with name pmm-server is not present', PMM-T1226 and the PostgreSQL dashboards BeforeSuite destructure an undefined service lookup, and PMM-T2298/T300/T2039/T1988/T506 report empty Node Summary, PMM Health, VictoriaMetrics and Prometheus Exporters panels; QAN adds PMM-T1061 and PMM-T1142. The 7 sibling runs of the same batch (docker, ami, helm, 4 compat clients) all passed, so this is HA-specific; splitting docker-only test assumptions from a real HA gap still needs an LKE repro, which was not attempted.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-01T04:50:18Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-01T04:35:00Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-10-01T04:35:00Z",
