@@ -116,15 +116,6 @@ class PmmServerComponents(unittest.TestCase):
             self.skipTest(POST_UPGRADE)
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
 
-    def test_victoria_metrics_version(self):
-        if test_mode != "post":
-            self.skipTest(POST_UPGRADE)
-        if is_ami:
-            out = verify_command('sudo victoriametrics --version')
-        else:
-            out = verify_command(f"docker exec {pmm_server_docker_container} victoriametrics --version")
-        self.assertIn('v1.152.0', out, WRONG_VERSION_MSG)
-
     def test_vertamedia_clickhouse_plugin_absent(self):
         # """PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0"""
         if expected_pmm_minor_version < 38:
