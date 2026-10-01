@@ -48,6 +48,11 @@ on:
         required: false
         default: false
         type: boolean
+      feature_build:
+        description: 'Feature build tag PR-<n>-<sha>: test perconalab/pmm-server-fb:<tag>, pmm-client-fb:<tag> and its client tarball instead of pmm_image_tag'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   resolve:
@@ -64,6 +69,7 @@ jobs:
         shell: bash
         env:
           IMAGE_TAG: ${{ inputs.pmm_image_tag }}
+          FB_TAG: ${{ inputs.feature_build }}
         run: |
           set -euo pipefail
           # The tag is taken as given -- nothing is appended to it. A tag
@@ -76,9 +82,16 @@ jobs:
             repository=dev-latest
             client_version=latest-tarball
           fi
+          server_image=perconalab/pmm-server:${IMAGE_TAG}
+          client_image=perconalab/pmm-client:${IMAGE_TAG}
+          if [[ -n "$FB_TAG" ]]; then
+            server_image=perconalab/pmm-server-fb:${FB_TAG}
+            client_image=perconalab/pmm-client-fb:${FB_TAG}
+            client_version=https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-${FB_TAG}.tar.gz
+          fi
           {
-            echo "server_image=perconalab/pmm-server:${IMAGE_TAG}"
-            echo "client_image=perconalab/pmm-client:${IMAGE_TAG}"
+            echo "server_image=${server_image}"
+            echo "client_image=${client_image}"
             echo "client_version=${client_version}"
             echo "repository=${repository}"
           } >> "$GITHUB_OUTPUT"
