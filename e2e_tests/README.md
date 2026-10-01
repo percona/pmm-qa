@@ -98,6 +98,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@docker-configuration`
 - `@downloads`
 - `@fb-alerting`
+- `@fb-encryption`
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
