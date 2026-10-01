@@ -60,7 +60,8 @@ for (const { outage, restore, title } of [
 
     await pmmTest.step('Cut pmm-agent off from PMM Server and restore the connection', async () => {
       cliHelper.execute(outage).assertSuccess();
-      await cliHelper.hold(
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- the outage length is the stimulus
+      await page.waitForTimeout(
         Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE + Timeouts.THIRTY_SECONDS + Timeouts.TEN_SECONDS,
       );
       cliHelper.execute(restore).assertSuccess();
