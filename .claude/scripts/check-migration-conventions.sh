@@ -181,7 +181,7 @@ count_uses() {
 # Added lines only: 24 existing spec files carry comments a migration did not write.
 check_test_comments() {
   added_lines "$1" | awk -v file="$1" '
-    /^[[:space:]]*\/\/ eslint-disable-next-line playwright\/no-skipped-test -- / { next }
+    /^[[:space:]]*\/\/ eslint-disable-next-line playwright\/no-(skipped-test|wait-for-timeout) -- / { next }
     /^[[:space:]]*(\/\/|\/\*|\*)/ || /[[:space:]]\/\/[[:space:]]/ {
       printf "%s: added comment in a migrated test file - delete it (SKILL.md Port behaviour, simplify shape): %s\n", file, $0 > "/dev/stderr"
       failed = 1
@@ -275,8 +275,8 @@ for file in "$@"; do
       failures=1
     fi
   fi
-  if added_lines "$file" | grep -Eq 'waitForTimeout[[:space:]]*\('; then
-    echo "$file: added fixed pause - use a web-first assertion or expect.poll (SKILL.md Port behaviour, simplify shape)" >&2
+  if added_lines "$file" | awk '/waitForTimeout[[:space:]]*\(/ && prev !~ /no-wait-for-timeout --/ {bad=1} {prev=$0} END {exit !bad}'; then
+    echo "$file: added fixed pause without a no-wait-for-timeout suppression - use a web-first assertion or expect.poll (SKILL.md Port behaviour, simplify shape)" >&2
     failures=1
   fi
   if [[ $file == *.test.ts ]]; then
