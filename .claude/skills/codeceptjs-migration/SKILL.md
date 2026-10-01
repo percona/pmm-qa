@@ -5,7 +5,7 @@ description: Migrate one CodeceptJS test to native Playwright, provision its PMM
 
 # CodeceptJS to Playwright Migration
 
-Migrate exactly one CodeceptJS source at a time. `done` means the PR is open against `main`; merge is not required. Every open migration PR collides on the files all migrations touch (the nightly Playwright matrix, `e2e_tests/README.md`), so `orchestration.md` step 1 allows none open before a new row starts.
+Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`orchestration.md` step 1b). `done` means the PR is open against `main`; merge is not required. Every open migration PR collides on the files all migrations touch (the nightly Playwright matrix, `e2e_tests/README.md`), so `orchestration.md` step 1 allows none open before a new row starts.
 
 | Topic | File |
 | --- | --- |

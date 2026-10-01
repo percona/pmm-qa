@@ -2,7 +2,7 @@
 
 The parent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Workers read `run.md`, not this file.
 
-Run exactly one row at a time. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout is never switched away from, publication uses an isolated `git worktree`. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
+Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout is never switched away from, publication uses an isolated `git worktree`. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
 
 ## Parent rules
 
@@ -69,6 +69,19 @@ Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in
 
 Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .claude/migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
+## 1b. Batch small rows
+
+Before the `in-progress` commit, estimate the row's diff: test lines plus new POM, API and helper lines, source retirement excluded. Under 200 lines, add the next `pending` row whose confirmed setup provisions the same environment, and keep adding while the batch estimate stays under 200. Skip a candidate with a different setup; never re-provision mid-batch.
+
+A batch runs as one row:
+
+- one tracker commit marks every row `in-progress`; one timeline and one gate ledger, named after the first row;
+- one writer spawn migrates every row, and each gate (initial review, runner, final review) is one spawn covering the whole batch;
+- every row's tests still run and pass, and every row still gets its own worth-porting and coverage evidence;
+- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row `done` with that PR link.
+
+Once the writer returns, measure the real size (`git diff --numstat` plus untracked new files) and record estimate and actual on the timeline. An actual over 200 does not split the batch.
+
 ## Test-run mode
 
 When the parent designates a dry run, skip only: tracker status writes, step 5b and 7 (publish branch, retirement, coverage commit, push, PR), and the open-PR preflight check. Every gate still runs. The final gate's subject is then control's worktree: `kind: worktree`, no `startRef`/`endRef`, never `STALE_SUBJECT`. Coverage is designed and its greps verified but not committed.
@@ -132,6 +145,7 @@ pending
 -> check no other row is in-progress
 -> check no migration PR is open
 -> merge main into control
+-> estimate the diff; under 200 lines, batch the next same-setup pending rows
 -> in-progress (tracker-only commit; marks the active row)
 -> linked-file discovery
 -> inspect local resources, then start provisioning in the background
