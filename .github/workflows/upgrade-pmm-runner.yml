@@ -35,10 +35,6 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
-      pre_upgrade_client:
-        description: 'PMM Client to install before the upgrade, e.g. latest-tarball (empty = derived from version)'
-        default: ''
-        type: string
       client_upgrade_repository:
         description: 'pmm3-client repository to upgrade clients from (empty = experimental for pmm3-rc, testing otherwise)'
         default: ''
@@ -77,10 +73,6 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
-      pre_upgrade_client:
-        description: 'PMM Client to install before the upgrade, e.g. latest-tarball (empty = derived from version)'
-        default: ''
-        type: string
       client_upgrade_repository:
         description: 'pmm3-client repository to upgrade clients from (empty = experimental for pmm3-rc, testing otherwise)'
         default: ''
@@ -101,7 +93,6 @@ env:
   UPGRADE_TAG: ${{ inputs.upgrade_tag }}
   UPGRADE_TYPE: ${{ inputs.upgrade_type }}
   UPGRADE_VERSION: ${{ inputs.upgrade_version }}
-  PRE_UPGRADE_CLIENT: ${{ inputs.pre_upgrade_client }}
   CLIENT_UPGRADE_REPOSITORY: ${{ inputs.client_upgrade_repository }}
 
 jobs:
@@ -122,9 +113,7 @@ jobs:
           echo "$apt_versions"
 
           # 2. is the requested version installable via apt?
-          if [ -n "$PRE_UPGRADE_CLIENT" ]; then
-            TARBALL_URL="$PRE_UPGRADE_CLIENT"
-          elif grep -qx "$FROM_VERSION" <<< "$apt_versions"; then
+          if grep -qx "$FROM_VERSION" <<< "$apt_versions"; then
             echo "$FROM_VERSION is available in apt — leaving inputs.version unchanged"
             TARBALL_URL="$FROM_VERSION"
           elif [ "$FROM_VERSION" == "pmm3-rc" ]; then
