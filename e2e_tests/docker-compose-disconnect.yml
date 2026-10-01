@@ -1,4 +1,5 @@
 ---
+name: pmm-disconnect
 
 networks:
   server-network:
@@ -16,13 +17,15 @@ networks:
 
 services:
   pmm-server-disconnect:
-    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server-disconnect
     ports:
       - '8180:8080'
       - '8143:8443'
     environment:
       - PMM_DEBUG=1
+    healthcheck:
+      start_period: 2m
     networks:
       - server-network
 
@@ -55,6 +58,6 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 7B*53@lCdflR
+      MYSQL_ROOT_PASSWORD: GRgrO9301RuF
     networks:
       - mysql-network

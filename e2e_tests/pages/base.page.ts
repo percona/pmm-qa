@@ -13,7 +13,7 @@ export type NestedLocator = Locator | NestedLocators;
 export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
-  abstract builders: Record<string, (...args: string[]) => Locator>;
+  abstract builders: Record<string, (...args: never[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
