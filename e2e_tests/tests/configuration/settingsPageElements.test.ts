@@ -18,6 +18,7 @@ pmmTest.afterEach(async ({ api }) => {
   await api.serverApi.waitForReady();
   await api.settingsApi.enableBackupManagement();
   await api.settingsApi.updateSettings({ enable_azurediscover: false });
+  await api.settingsApi.restoreSettingsDefaults();
 });
 
 for (const row of dataRetentionRows) {
