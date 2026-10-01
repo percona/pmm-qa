@@ -457,7 +457,7 @@ jobs:
       tags_for_tests: '@nomad'
 
   nomad_playwright:
-    name: Nomad tests
+    name: Nomad tests (Playwright)
     if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
