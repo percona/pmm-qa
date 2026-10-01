@@ -379,9 +379,9 @@ EOF
   ! grep -Fq '$external' "$DOCKER_CALLS" || false
   grep -q '^exec rs103 systemctl stop pbm-agent$' "$DOCKER_CALLS"
   grep -q '^exec rs203 systemctl stop pbm-agent$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=rs103 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=rs203 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
