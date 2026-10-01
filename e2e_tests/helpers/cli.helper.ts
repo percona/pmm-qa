@@ -106,4 +106,7 @@ export default class CliHelper {
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
   };
+
+  /** Fixed hold for a stimulus with no completion signal, such as an outage window. */
+  hold = async (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
