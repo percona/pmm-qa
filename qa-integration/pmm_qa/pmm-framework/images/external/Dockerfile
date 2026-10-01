@@ -2,8 +2,8 @@
 # and installs PMM Client at run time.
 FROM oraclelinux:9
 
-ARG REDIS_EXPORTER_VERSION=1.58.0
-ARG PROCESS_EXPORTER_VERSION=0.7.10
+ARG REDIS_EXPORTER_VERSION
+ARG PROCESS_EXPORTER_VERSION
 
 RUN set -eux; \
     dnf install -y findutils gzip tar; \

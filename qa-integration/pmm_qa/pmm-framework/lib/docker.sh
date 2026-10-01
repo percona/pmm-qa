@@ -45,7 +45,6 @@ discover_pmm_server() {
   fi
 
   # Called under `||`, where errexit is off, so each docker call dies itself.
-  ensure_pmm_network
   if ! docker network inspect pmm-qa \
     --format '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' |
     grep -Fxq "$PMM_SERVER_CONTAINER"; then
@@ -61,6 +60,9 @@ discover_pmm_server() {
 # Writes: PMM_SERVER_HOST, PMM_SERVER_PORT
 # Exits:  via die() when no server is running and no address was given
 resolve_pmm_server() {
+  # Once, before any setup forks: parallel setups racing to create it would
+  # fail all but one.
+  ensure_pmm_network
   if [[ -n ${PMM_SERVER_IP_ARG:-} ]]; then
     PMM_SERVER_HOST=$PMM_SERVER_IP_ARG
     PMM_SERVER_PORT=443

@@ -19,16 +19,14 @@ build_image() {
 
 # Build pmm-qa/ps:VERSION.
 build_ps_image() {
-  local version=$1 base xtrabackup
+  local version=$1 xtrabackup
   case $version in
-    5.7) base=percona/percona-server:5.7 xtrabackup=percona-xtrabackup-24 ;;
-    8.0) base=percona/percona-server:8.0.46 xtrabackup=percona-xtrabackup-80 ;;
-    8.4) base=percona/percona-server:8.4.10 xtrabackup=percona-xtrabackup-84 ;;
-    # No XtraBackup is published for 9.7, so setup_ps refuses BACKUP=true there.
-    9.7) base=percona/percona-server:9.7.1-1.1 xtrabackup='' ;;
+    5.7) xtrabackup=percona-xtrabackup-24 ;;
+    8.0 | 8.4 | 9.7) xtrabackup=percona-xtrabackup-${version/./} ;;
     *) die "PS $version has no prebaked image; use 5.7, 8.0, 8.4 or 9.7." ;;
   esac
-  build_image "ps:$version" ps --build-arg "PS_IMAGE=$base" --build-arg "XTRABACKUP_PACKAGE=$xtrabackup"
+  build_image "ps:$version" ps --build-arg "PS_IMAGE=percona/percona-server:$version" \
+    --build-arg "XTRABACKUP_PACKAGE=$xtrabackup"
 }
 
 # Build pmm-qa/mysql:VERSION. 5.7 has its own stage because mysql:5.7 is
@@ -75,8 +73,8 @@ build_psmdb_image() {
 }
 
 build_haproxy_image() {
-  [[ $1 == ol9 ]] || die "HAProxy has no prebaked image '$1'; use ol9."
-  build_image haproxy:ol9 haproxy
+  [[ $1 == latest ]] || die "HAProxy has no prebaked image '$1'; use latest."
+  build_image haproxy:latest haproxy
 }
 
 build_valkey_image() {
@@ -135,7 +133,7 @@ ensure_image() {
   fi
   if [[ -n $PREBAKED_REGISTRY ]]; then
     published=$PREBAKED_REGISTRY/$engine:$tag
-    if output=$(docker pull --quiet "$published" 2>&1); then
+    if output=$(timeout 600 docker pull --quiet "$published" 2>&1); then
       must docker tag "$published" "pmm-qa/$engine:$tag"
       return 0
     fi

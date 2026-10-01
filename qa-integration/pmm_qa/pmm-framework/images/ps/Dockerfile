@@ -1,4 +1,4 @@
-ARG PS_IMAGE=percona/percona-server:8.4.10
+ARG PS_IMAGE=percona/percona-server:8.4
 FROM ${PS_IMAGE} AS sysbench-builder
 
 USER root
@@ -30,27 +30,22 @@ COPY --from=sysbench-builder /sysbench-root/usr/local/share/sysbench /usr/local/
 
 USER root
 ARG XTRABACKUP_PACKAGE=percona-xtrabackup-84
-RUN curl -fL https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
-        -o /tmp/percona-release.rpm \
-    && rpm -Uvh --replacepkgs /tmp/percona-release.rpm \
-    && rm /tmp/percona-release.rpm
-RUN ln -sfn /usr/local/share/sysbench /usr/share/sysbench
-RUN percona-release enable tools release
-RUN . /etc/os-release \
-    && curl -fL \
-        "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" \
-        -o /tmp/epel-release.rpm \
-    && rpm -Uvh /tmp/epel-release.rpm \
-    && rm /tmp/epel-release.rpm
-RUN curl -fL \
-        "https://repo.almalinux.org/almalinux/8/AppStream/$(uname -m)/os/Packages/libev-4.24-6.el8.$(uname -m).rpm" \
-        -o /tmp/libev.rpm \
-    && rpm -Uvh /tmp/libev.rpm \
-    && rm /tmp/libev.rpm
-RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then microdnf install -y "${XTRABACKUP_PACKAGE}"; fi
 # iproute: the Nomad agent pmm-agent runs needs `ip`.
-RUN microdnf install -y iproute qpress tar && microdnf clean all
-RUN if [ -n "${XTRABACKUP_PACKAGE}" ]; then xtrabackup --version; fi \
-    && sysbench --version
+RUN set -eux; \
+    curl -fL https://repo.percona.com/yum/percona-release-latest.noarch.rpm -o /tmp/percona-release.rpm; \
+    rpm -Uvh --replacepkgs /tmp/percona-release.rpm; \
+    percona-release enable tools release; \
+    case "${XTRABACKUP_PACKAGE}" in *-9*) percona-release enable "pxb-${XTRABACKUP_PACKAGE##*-}-lts" release ;; esac; \
+    . /etc/os-release; \
+    curl -fL "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" -o /tmp/epel-release.rpm; \
+    rpm -Uvh /tmp/epel-release.rpm; \
+    curl -fL "https://repo.almalinux.org/almalinux/8/AppStream/$(uname -m)/os/Packages/libev-4.24-6.el8.$(uname -m).rpm" -o /tmp/libev.rpm; \
+    rpm -Uvh /tmp/libev.rpm; \
+    microdnf install -y iproute qpress tar ${XTRABACKUP_PACKAGE}; \
+    microdnf clean all; \
+    rm -f /tmp/*.rpm; \
+    ln -sfn /usr/local/share/sysbench /usr/share/sysbench; \
+    xtrabackup --version; \
+    sysbench --version
 
 USER mysql

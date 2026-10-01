@@ -46,9 +46,6 @@ setup_mysql_family() {
     gr) topology=_gr nodes=$((nodes < 3 ? 3 : nodes)) ;;
     *) die "$type SETUP_TYPE must be empty, replication or gr (got '$setup_type')." ;;
   esac
-  if [[ $backup == true && $version == 9.7 ]]; then
-    die 'PS 9.7 does not support BACKUP=true: no compatible Percona XtraBackup is published.'
-  fi
 
   for ((index = 1; index <= nodes; index++)); do
     names+=("${engine}_pmm${topology}_${version//./_}_$index")
@@ -175,8 +172,18 @@ mf_start_node() {
   if [[ -n $setup_type ]]; then
     run+=(
       --gtid-mode=ON --enforce-gtid-consistency=ON --log-bin=binlog --binlog-checksum=NONE
-      "--relay-log=$name-relay-bin" --relay-log-recovery=ON
+      "--relay-log=$name-relay-bin" --relay-log-recovery=ON --relay-log-purge=ON
+      "--disabled-storage-engines=MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
     )
+    if [[ $setup_type == replication ]]; then
+      run+=(--sync-binlog=1)
+    fi
+    if [[ $setup_type == replication && $node -gt 1 && $version != 5.7 ]]; then
+      run+=(--replica-parallel-workers=4 --replica-preserve-commit-order=ON)
+    fi
+    if [[ $setup_type == replication && $node -gt 1 && $version == 8.* ]]; then
+      run+=(--replica-parallel-type=LOGICAL_CLOCK)
+    fi
     if [[ $version == 5.7 ]]; then
       run+=(--log-slave-updates=ON)
     else
@@ -337,7 +344,7 @@ mf_setup_agents() {
   local name agent
   for name in "${names[@]}"; do
     if [[ $NOMAD != true ]]; then
-      setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log
+      setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log "$name${SHARD_NAME:+-$SHARD_NAME}"
       continue
     fi
     # Tests find the database container by grepping container names for ps,
@@ -350,7 +357,7 @@ mf_setup_agents() {
     must docker exec --user root "$agent" sh -c \
       'ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/local/bin/pmm-admin
        ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/local/bin/pmm-agent'
-    setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log "$name" "$agent"
+    setup_pmm_agent "$name" "$encrypted" /tmp/pmm-agent.log "$name${SHARD_NAME:+-$SHARD_NAME}" "$agent"
   done
   each_node names wait_pmm_agent
 }
@@ -401,11 +408,9 @@ mf_workload() {
     [ "$rc" = running ] || [ "$rc" = 0 ] || { tail -20 /tmp/workload.log; exit 1; }'
 }
 
-# Percona Server requiring TLS, on the prebaked pmm-qa/ps image, with
-# mysql_ssl_VERSION with its my.cnf
-# settings, users pmm/pmm and X509-only pmm_tls, registered over TLS
-# with mysqld's own certificates, which tests read from
-# tls-ssl-setup/mysql/VERSION/ on the host.
+# Percona Server requiring TLS, on the prebaked pmm-qa/ps image: mysql_ssl_VERSION
+# with users pmm/pmm and X509-only pmm_tls, registered over TLS with mysqld's own
+# certificates, which tests read from tls-ssl-setup/mysql/VERSION/ on the host.
 setup_ssl_mysql() {
   local version client tarball='' container password=GRgrO9301RuF suffix=$((RANDOM % 10000))
   version=$(resolved_version MS_VERSION SSL_MYSQL "$DB_VERSION")

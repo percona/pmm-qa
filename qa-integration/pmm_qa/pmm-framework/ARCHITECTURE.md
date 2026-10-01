@@ -27,7 +27,7 @@ flowchart TB
         SEQ["sequential<br/>one spec at a time"]
         PAR["parallel<br/>all specs at once"]
         SPEC["run_database_spec<br/>parse_database_spec → DB_TYPE / DB_VERSION / DB_CONFIG"]
-        DISP["lib/dispatch.sh<br/>dispatch_setup"]
+        DISP["dispatch_setup"]
         SETUP["images/&lt;database&gt;/setup.sh<br/>setup_NAME"]
         DK["lib/images.sh + lib/prebaked.sh<br/>ensure_image, docker run/exec, PMM Client"]
     end
@@ -56,8 +56,7 @@ flowchart TB
 | `lib/images.sh` | `build_<engine>_image` per image and `ensure_image` (local, else pull from `PREBAKED_REGISTRY`, else build) |
 | `lib/prebaked.sh` | `must`, `step`, `retry`/`retry_on`, `each_node`, PMM Client install, `pmm-agent` setup, exporter waits |
 | `lib/fetch-pmm-client-deb.sh` | Fetches a verified PMM Client `.deb` for Debian-family images, waiting out repo.percona.com's publishing race |
-| `lib/dispatch.sh` | `dispatch_setup`: runs `setup_<type>` for the parsed type |
-| `lib/execution.sh` | `preflight_database_setups`, the sequential and parallel strategies |
+| `lib/execution.sh` | `preflight_database_setups`, `dispatch_setup`, the sequential and parallel strategies |
 | `images/<database>/` | That database's `Dockerfile`, its `setup.sh`, and the files either of them copies in |
 | `build-images` | Prebakes images ahead of a run: `./build-images ps=8.4 pxc-proxysql=8.0` |
 
@@ -75,10 +74,13 @@ Source order matters only because `lib/config.sh` runs `register_database`
 calls and a validation loop at source time, which need `lib/common.sh`'s
 `die()`.
 
-`.github/workflows/build-prebaked-images.yml` builds every image weekly, starts
-and checks each one, and publishes it to
-`ghcr.io/percona/pmm-qa/<engine>:<version>`. On a push it rebuilds only the
-images whose baked-in files changed.
+`.github/workflows/build-prebaked-images.yml` builds every image on Sundays,
+starts and checks each one, and publishes it to
+`ghcr.io/percona/pmm-qa/<engine>:<version>`, labelled
+`pmm-qa.upstream-version` with what `upstream-version` reported. Daily it
+rebuilds the engines whose label no longer matches `upstream-version`, so a new
+database patch is baked within a day. On a push it rebuilds only the images
+whose baked-in files changed.
 
 By default PS and MySQL run `pmm-agent` in their unprivileged database
 container, where Nomad cannot start. With `--nomad` they use their database
@@ -103,20 +105,18 @@ sequenceDiagram
     participant E as pmm-framework
     participant C as lib/cli.sh
     participant X as lib/execution.sh
-    participant D as lib/dispatch.sh
     participant S as setup_NAME
 
     U->>E: --parallel --database pgsql=16 --database psmdb
     E->>C: parse_args
     C-->>E: DATABASE_SPECS=(pgsql=16, psmdb)
     E->>X: run_database_setups
-    X->>X: preflight: server? curl? conflicts?
+    X->>X: preflight: server? conflicts?
     Note over X: a conflict here turns --parallel off
     loop each spec
         X->>C: parse_database_spec
         C-->>X: DB_TYPE, DB_VERSION, DB_CONFIG
-        X->>D: dispatch_setup
-        D->>S: setup_pgsql
+        X->>S: dispatch_setup → setup_pgsql
         S->>S: ensure_image, docker run, install PMM Client, register
     end
     X-->>U: exit 0, or non-zero if any setup failed
@@ -125,9 +125,8 @@ sequenceDiagram
 ### Preflight
 
 Every spec is parsed once before anything is provisioned, so a bad request
-fails in seconds rather than halfway through. Preflight finds the PMM Server,
-checks for `curl` when a `PSMDB` or `SSL_PSMDB` setup needs it, and applies
-the conflict rules below.
+fails in seconds rather than halfway through. Preflight finds the PMM Server
+and applies the conflict rules below.
 
 ### The conflict rules
 
@@ -172,8 +171,8 @@ own duration. `--setup-retries N` reruns only the setups that failed.
 Parallel mode enables job control (`set -m`) so each setup gets its own process
 group, and an interrupt takes down the docker commands under it too. The
 interrupt handler dumps the buffered log of every setup still running and keeps
-the log directory, because CI wraps the framework in `timeout` and that buffer
-is the only record of where a hung setup got to. Each job gets `</dev/null`: a
+the log directory, because under a CI `timeout` wrapper (the nightly and HA
+jobs) that buffer is the only record of where a hung setup got to. Each job gets `</dev/null`: a
 background process group that reads the terminal is stopped by `SIGTTIN` and
 would hang forever.
 
@@ -235,7 +234,8 @@ Say you are adding `FOODB`:
    rejection of an unsupported option.
 
 The parity checklist and the pitfalls hit on the way are in pmm-ai's
-`pmm-framework-change` skill, `references/prebaked-port.md`.
+`pmm-framework-change` skill, `references/prebaked-port.md` (draft PR
+percona/pmm-ai#19, not on pmm-ai's main yet).
 
 ### Add a global flag
 

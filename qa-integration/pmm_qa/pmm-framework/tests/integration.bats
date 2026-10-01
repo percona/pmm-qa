@@ -4,6 +4,7 @@ setup() {
   FRAMEWORK_DIR=$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)
   TEST_BIN="$BATS_TEST_TMPDIR/bin"
   RECORD_FILE="$BATS_TEST_TMPDIR/calls.log"
+  export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
   mkdir -p "$TEST_BIN"
 
   # A fake docker that answers the probes the HAProxy and PGSQL setups poll.
@@ -69,7 +70,6 @@ EOF
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
-    XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache" \
     "$FRAMEWORK_DIR/pmm-framework" \
       --pmm-server-ip 10.0.0.5 \
       --pmm-server-password secret \

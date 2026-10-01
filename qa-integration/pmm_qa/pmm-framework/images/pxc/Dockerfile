@@ -2,7 +2,8 @@ ARG PXC_VERSION=8.0
 FROM percona/percona-xtradb-cluster:${PXC_VERSION}
 
 ARG PXC_VERSION
-# Empty installs Percona's proxysql2; a URL installs that ProxySQL rpm instead.
+# Empty installs Percona's proxysql2 2.7.3, as the Ansible setup pinned; a URL
+# installs that ProxySQL rpm instead.
 ARG PROXYSQL_PACKAGE=
 
 USER root
@@ -18,7 +19,7 @@ RUN set -eux; \
         rm /tmp/proxysql.rpm; \
     else \
         percona-release enable-only proxysql release; \
-        microdnf install -y proxysql2; \
+        microdnf install -y proxysql2-2.7.3; \
     fi; \
     microdnf install -y sysbench findutils gzip openssl tar; \
     microdnf clean all; \

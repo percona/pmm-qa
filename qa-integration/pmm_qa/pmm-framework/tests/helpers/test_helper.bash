@@ -16,13 +16,12 @@ source "$FRAMEWORK_DIR/images/psmdb/setup.sh"
 source "$FRAMEWORK_DIR/images/haproxy/setup.sh"
 source "$FRAMEWORK_DIR/images/external/setup.sh"
 source "$FRAMEWORK_DIR/images/valkey/setup.sh"
-source "$FRAMEWORK_DIR/lib/dispatch.sh"
 source "$FRAMEWORK_DIR/lib/execution.sh"
 
 reset_framework_state() {
   unset PS_VERSION MS_VERSION PSMDB_VERSION PDPGSQL_VERSION PGSQL_VERSION
   unset PXC_VERSION PROXYSQL_VERSION VALKEY_VERSION CLIENT_VERSION
-  unset REDIS_VERSION NODE_PROCESS_VERSION ADMIN_PASSWORD PMM_QA_GIT_BRANCH
+  unset REDIS_VERSION NODE_PROCESS_VERSION ADMIN_PASSWORD
   DATABASE_SPECS=()
   DB_CONFIG=()
   DB_TYPE=''
@@ -42,4 +41,8 @@ reset_framework_state() {
 
 setup() {
   reset_framework_state
+  export XDG_CACHE_HOME=$BATS_TEST_TMPDIR/cache
+  # No test downloads a PMM Client tarball.
+  # shellcheck disable=SC2329,SC2317
+  curl() { while (($#)); do [[ $1 == -o ]] && printf 'tarball\n' >"$2"; shift; done; }
 }

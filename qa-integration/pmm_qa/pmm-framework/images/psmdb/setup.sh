@@ -15,9 +15,9 @@
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
 setup_psmdb() {
   local version ol client setup_type profile gssapi minio tarball='' suffix
-  version=${PSMDB_VERSION:-${DB_VERSION:-latest}}
+  version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   if [[ $version == latest ]]; then
-    version=8.0
+    version=8.3
   fi
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -308,17 +308,18 @@ psmdb_traffic() {
 # compose expands them at run time and no secret is written to disk.
 setup_ssl_psmdb() {
   local version client minio tarball='' temp_dir
-  version=${PSMDB_VERSION:-${DB_VERSION:-latest}}
+  version=$(resolved_version PSMDB_VERSION SSL_PSMDB "$DB_VERSION")
   if [[ $version == latest ]]; then
-    version=8.0
+    version=8.3
   fi
   client=$(resolved_client_version SSL_PSMDB DB_CONFIG)
   minio=$(bool_string "$(resolve_value SSL_PSMDB MINIO DB_CONFIG)")
 
   step "Prepare image pmm-qa/psmdb:$version-ol9" ensure_image psmdb "$version-ol9"
-  must docker tag "pmm-qa/psmdb:$version-ol9" replica_member/local
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-ssl-psmdb.XXXXXX")
+  # The image is set here, not retagged replica_member/local: a PSMDB setup
+  # running alongside tags that name with its own version.
   cat >"$temp_dir/compose.yml" <<EOF
 services:
   pmm-server:
@@ -326,6 +327,7 @@ services:
   kerberos:
     profiles: [framework-disabled]
   psmdb-server:
+    image: pmm-qa/psmdb:$version-ol9
     depends_on: !reset {}
     environment:
       PMM_AGENT_SERVER_PASSWORD: "\${ADMIN_PASSWORD}"

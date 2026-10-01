@@ -10,13 +10,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y curl gnupg2 iproute2 jq lsb-release wget; \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg2 iproute2 jq lsb-release wget; \
     curl -fsSL --retry 5 -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb; \
     apt-get install -y /tmp/percona-release.deb; \
     rm /tmp/percona-release.deb; \
     percona-release enable "ppg-$PG_VERSION"; \
     apt-get install -y "percona-postgresql-$PG_VERSION" percona-pgbackrest "percona-pg-stat-monitor$PG_VERSION" \
       percona-patroni etcd python3-etcd; \
+    rm -rf /var/lib/apt/lists/*; \
     patroni --version
 
 RUN set -eux; \

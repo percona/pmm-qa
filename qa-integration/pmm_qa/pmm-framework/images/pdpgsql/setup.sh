@@ -147,8 +147,8 @@ pdpgsql_patroni() {
   retry 120 "Patroni to run all ${#names[@]} members" pdpgsql_patroni_members "$primary" >/dev/null
 }
 
-# Write NODE's etcd and Patroni configs, as data/*.j2 render them, and start
-# etcd, which Patroni needs all three members of for a quorum.
+# Write NODE's etcd and Patroni configs and start etcd, which Patroni needs all
+# three members of for a quorum.
 pdpgsql_etcd() {
   local node=$1 index=${1##*_} cluster='' peer prefix=pdpgsql_pmm_patroni_${version}_
   for peer in "${names[@]}"; do

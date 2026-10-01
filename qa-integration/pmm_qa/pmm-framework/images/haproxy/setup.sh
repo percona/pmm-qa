@@ -8,7 +8,7 @@
 setup_haproxy() {
   local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000))
   client=$(resolved_client_version HAPROXY DB_CONFIG)
-  step 'Prepare image pmm-qa/haproxy:ol9' ensure_image haproxy ol9
+  step 'Prepare image pmm-qa/haproxy:latest' ensure_image haproxy latest
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   step 'Start HAProxy' haproxy_start
   attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
@@ -22,7 +22,7 @@ setup_haproxy() {
 haproxy_start() {
   fresh_containers "$container"
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
-    --network pmm-qa --publish 42100:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:ol9 >/dev/null
+    --network pmm-qa --publish 42100:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:latest >/dev/null
   must docker cp "$FRAMEWORK_DIR/images/haproxy/haproxy.cfg" "$container:/haproxy.cfg"
   must docker exec "$container" haproxy -f /haproxy.cfg -D
   retry 30 "HAProxy's metrics on :42100" docker exec "$container" curl -fsS http://127.0.0.1:42100/metrics >/dev/null

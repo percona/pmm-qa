@@ -33,6 +33,8 @@ setup_pxc() {
   if [[ $query_source == slowlog ]]; then
     step 'Enable the slow query log' pxc_enable_slowlog
   fi
+  # Registered without the version's dot: dashboards compare node_name with `=`
+  # against a regex-escaped variable, so pxc_proxysql_pmm_8.4 would never match itself.
   attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log \
     "${container//./_}${SHARD_NAME:+-$SHARD_NAME}"
   step 'Register PXC and ProxySQL with PMM' pxc_register
@@ -58,11 +60,6 @@ pxc_enable_slowlog() {
   done
 }
 
-# The node is registered without the version's dot: dashboards compare
-# node_name with `=` against a multi-value variable, whose value Grafana
-# regex-escapes, so pxc_proxysql_pmm_8.4 would never match itself. The nightly
-# shard is appended so two shards on one PMM Server do
-# not replace each other's node.
 pxc_exporters_running() {
   local status
   status=$(docker exec "$container" pmm-admin status 2>&1) || return 1
@@ -84,8 +81,8 @@ pxc_register() {
   wait_exporters "$container" /pmm-agent.log
 }
 
-# As in client_container_proxysql_setup.sh, the load keeps running after setup:
-# a 12000 s read-only run and an unbounded read-write run through ProxySQL.
+# The load keeps running after setup: a 12000 s read-only run and an unbounded
+# read-write run through ProxySQL.
 pxc_workload() {
   local sysbench='sysbench --mysql-db=sbtest --mysql-user=proxysql_user --mysql-password=passw0rd
     --mysql-host=127.0.0.1 --mysql-port=6033 --db-driver=mysql --threads=1 --tables=10 --table-size=1000'

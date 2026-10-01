@@ -1,23 +1,12 @@
-# Builds the prebaked images pmm-framework runs (PS, MySQL, PXC with ProxySQL,
-# PSMDB, HAProxy, Valkey, the External exporters, Percona Distribution for
-# PostgreSQL with and without TLS, and PGDG PostgreSQL) and publishes them to
-# ghcr.io/percona/pmm-qa/<engine>:<version>, so a CI job pulls a ready image
-# instead of spending 90-160 s building one. Each
-# image is started and checked before it is pushed, so a broken build never
-# replaces a working tag, and each cell publishes on its own. A pull request
-# that touches a baked file gets the same build and check, without publishing.
-#
-# Tags: :<version>, for amd64 and arm64 (5.7 is amd64 only), made from the
-# per-architecture :<version>-<arch>; cleanup keeps no older image. Reverting a
-# change and rebuilding does not restore the previous image: base images and
-# packages float to their newest patch, so the rebuild picks up whatever is current.
-# Keep the matrix in sync with the build_*_image functions in
-# qa-integration/pmm_qa/pmm-framework/lib/images.sh.
+# Publishes pmm-qa/<engine>:<version> to ghcr.io/percona/pmm-qa for ensure_image
+# in qa-integration/pmm_qa/pmm-framework/lib/images.sh. Keep the matrix in sync
+# with the build_*_image functions there.
 name: Build prebaked database images
 
 on:
   schedule:
-    - cron: '23 3 * * 1' # Mondays, off the hour
+    - cron: '23 3 * * 0' # Sundays: everything, for base-image OS updates
+    - cron: '23 4 * * *' # daily: engines whose upstream version moved (DAILY below)
   workflow_dispatch:
   push:
     branches: [main]
@@ -45,16 +34,15 @@ on:
 permissions:
   contents: read
 
-# Publishing runs serialise on main; each pull request has its own lane and a
-# newer push to it cancels the older build.
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: build-prebaked-images-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Rebuild only the engines a push or pull request touched. A schedule or
-  # manual run, a push whose previous commit is unknown (a new branch or a
-  # force-push), or a change to the shared build logic rebuilds all of them.
   plan:
     # A fork's schedule must not try to publish into percona's registry.
     if: github.repository == 'percona/pmm-qa'
@@ -73,10 +61,40 @@ jobs:
         id: pick
         env:
           EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          DAILY: '23 4 * * *'
           BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
+          # PSMDB tags pair a major with an Oracle Linux release. The 5.7 base
+          # images (PS, MySQL, PXC) are amd64-only, so 5.7 gets no arm64 build.
+          tags_of() {
+            jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9", "8.3-ol8", "8.3-ol9"]
+              elif $e == "haproxy" then ["latest"]
+              elif $e == "external" then ["1.58.0-0.7.10"]
+              elif $e == "valkey" then ["7", "8"]
+              elif $e == "pdpgsql" or $e == "pgsql" then ["14", "15", "16", "17", "18"]
+              elif $e == "ssl-pdpgsql" then ["14", "15", "16", "17"]
+              else ["5.7", "8.0", "8.4", "9.7"] end)[]
+              | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$1"
+          }
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
-          if { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+          if [ "$SCHEDULE" = "$DAILY" ]; then
+            # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
+            stale=()
+            while read -r engine version; do
+              if ! want=$(qa-integration/pmm_qa/pmm-framework/upstream-version "$engine=$version"); then
+                echo "::warning::could not read the upstream version of $engine:$version"
+                continue
+              fi
+              have=$(docker buildx imagetools inspect "ghcr.io/$GITHUB_REPOSITORY/$engine:$version" --format '{{json .Image}}' 2>/dev/null |
+                jq -r 'if has("config") then . else .["linux/amd64"] end | .config.Labels["pmm-qa.upstream-version"] // ""') || have=''
+              if [ "$want" != "$have" ]; then
+                echo "- \`$engine:$version\`: ${have:-unlabelled} -> $want" >>"$GITHUB_STEP_SUMMARY"
+                stale+=("\"$engine\"")
+              fi
+            done < <(tags_of "$all" | jq -r '.[] | "\(.engine) \(.version)"')
+            engines=$(printf '%s\n' "${stale[@]}" | sort -u | jq -sc .)
+          elif { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
             changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
@@ -100,16 +118,7 @@ jobs:
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
-          # PSMDB tags pair a major with an Oracle Linux release. The 5.7 base
-          # images (PS, MySQL, PXC) are amd64-only, so 5.7 gets no arm64 build.
-          tags=$(jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9"]
-            elif $e == "haproxy" then ["ol9"]
-            elif $e == "external" then ["1.58.0-0.7.10"]
-            elif $e == "valkey" then ["7", "8"]
-            elif $e == "pdpgsql" or $e == "pgsql" then ["14", "15", "16", "17", "18"]
-            elif $e == "ssl-pdpgsql" then ["14", "15", "16", "17"]
-            else ["5.7", "8.0", "8.4", "9.7"] end)[]
-            | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$engines")
+          tags=$(tags_of "$engines")
           cells=$(jq -c '[.[] | {engine, version, arch: .arches[]}]' <<<"$tags")
           {
             echo "engines=$engines"
@@ -118,8 +127,6 @@ jobs:
           } >>"$GITHUB_OUTPUT"
           echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
 
-  # Each architecture builds natively and publishes as <version>-<arch>; the
-  # manifest job then points <version> at all of them.
   build:
     name: ${{ matrix.engine }}:${{ matrix.version }} ${{ matrix.arch }}
     needs: plan
@@ -139,79 +146,25 @@ jobs:
         include: ${{ fromJSON(needs.plan.outputs.cells) }}
     env:
       IMAGE: pmm-qa/${{ matrix.engine }}:${{ matrix.version }}
+      ENGINE: ${{ matrix.engine }}
+      VERSION: ${{ matrix.version }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Build the image
-        run: bash qa-integration/pmm_qa/pmm-framework/build-images '${{ matrix.engine }}=${{ matrix.version }}'
+        run: qa-integration/pmm_qa/pmm-framework/build-images "$ENGINE=$VERSION"
 
       - name: Start it and check it works
-        env:
-          ENGINE: ${{ matrix.engine }}
-          VERSION: ${{ matrix.version }}
+        run: qa-integration/pmm_qa/pmm-framework/check-image "$ENGINE=$VERSION"
+
+      # The daily plan compares this label with upstream-version.
+      - name: Label the upstream version
         run: |
-          if [ "$ENGINE" = pdpgsql ]; then
-            # systemd starts PostgreSQL with pg_stat_monitor preloaded.
-            docker run -d --name probe --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw "$IMAGE"
-            for i in $(seq 1 60); do
-              docker exec -u postgres probe pg_isready -q 2>/dev/null && break
-              if [ "$i" -eq 60 ]; then
-                docker exec probe journalctl -u "postgresql@$VERSION-main" --no-pager | tail -30
-                exit 1
-              fi
-              sleep 1
-            done
-            docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
-            docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
-          elif [ "$ENGINE" = ssl-pdpgsql ]; then
-            # The image ships no certificates; make a set as setup_ssl_pdpgsql does.
-            docker run -d --name probe "$IMAGE"
-            docker exec probe sh -ceu "cd /artifacts && bash create_certs.sh >/dev/null 2>&1
-              cp -a certificates/. /var/lib/postgresql/$VERSION/main/
-              chown -R postgres:postgres /var/lib/postgresql/$VERSION/main
-              chmod -R 0700 /var/lib/postgresql/$VERSION/main
-              service postgresql start"
-            docker exec -e PGPASSWORD=pmm probe psql -v ON_ERROR_STOP=1 'host=127.0.0.1 user=pmm dbname=postgres sslmode=require' \
-              -c 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()' -c 'SELECT count(*) FROM pg_stat_statements'
-          elif [ "$ENGINE" = pgsql ]; then
-            docker run -d --name probe "$IMAGE"
-            docker exec probe service postgresql start
-            docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM pg_stat_statements'
-          elif [ "$ENGINE" = valkey ]; then
-            docker run --rm "$IMAGE" sh -c 'valkey-server --version && valkey-cli --version'
-          elif [ "$ENGINE" = external ]; then
-            docker run --rm --entrypoint sh "$IMAGE" -c 'redis_exporter --version && process-exporter --version'
-          elif [ "$ENGINE" = haproxy ]; then
-            docker run --rm --entrypoint haproxy "$IMAGE" -vv | grep prometheus-exporter
-          elif [ "$ENGINE" = psmdb ]; then
-            # mongod needs the mongod.conf compose mounts, so check the tools run.
-            docker run --rm "$IMAGE" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'
-          elif [ "$ENGINE" = pxc-proxysql ]; then
-            # The full cluster: three nodes synced and ProxySQL seeing all of them.
-            docker run -d --init --name probe "$IMAGE"
-            docker exec --user root probe pmm-pxc start
-            docker exec probe sysbench --version
-          else
-            docker run -d --name probe -e MYSQL_ROOT_PASSWORD=probe "$IMAGE"
-            for i in $(seq 1 90); do
-              if docker exec -e MYSQL_PWD=probe probe mysql -uroot -h127.0.0.1 -e 'SELECT VERSION()'; then
-                break
-              fi
-              if [ "$i" -eq 90 ]; then
-                docker logs probe
-                exit 1
-              fi
-              sleep 1
-            done
-            docker exec probe sysbench --version
-            # PS 9.7 has no compatible XtraBackup; setup_ps refuses BACKUP=true there.
-            if [ "$ENGINE" = ps ] && [ "$VERSION" != 9.7 ]; then
-              docker exec --user root probe xtrabackup --version
-            fi
-          fi
-          docker rm -fv probe 2>/dev/null || true
+          upstream=$(qa-integration/pmm_qa/pmm-framework/upstream-version "$ENGINE=$VERSION")
+          echo "FROM $IMAGE" | docker build --label "pmm-qa.upstream-version=$upstream" -t "$IMAGE" -
+          echo "- \`$IMAGE\`: $upstream" >>"$GITHUB_STEP_SUMMARY"
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
@@ -224,7 +177,6 @@ jobs:
         if: github.event_name != 'pull_request'
         id: push
         env:
-          ENGINE: ${{ matrix.engine }}
           TAG: ${{ matrix.version }}-${{ matrix.arch }}
         run: |
           name="ghcr.io/${GITHUB_REPOSITORY}/${ENGINE}"
@@ -255,8 +207,7 @@ jobs:
           # a sha256-<digest> package version for every image built.
           push-to-registry: false
 
-  # Point <version> at every <version>-<arch> that is published. An architecture
-  # whose build failed this run keeps its previous image.
+  # always(): an architecture whose build failed this run keeps its previous image.
   manifest:
     name: ${{ matrix.engine }}:${{ matrix.version }}
     needs: [plan, build]
@@ -297,14 +248,11 @@ jobs:
           done
           echo "- \`$NAME:$VERSION\`: ${sources[*]}" >>"$GITHUB_STEP_SUMMARY"
 
-  # A registry cannot overwrite an image: each push is a new digest, and the
-  # one its tag moved off stays behind. Keep only the versions carrying one of
-  # the engine's current tags; everything else -- untagged images, old dated
-  # tags, sha256-<digest> attestations -- is deleted.
+  # A push never overwrites: the digest a tag moved off stays until deleted.
   cleanup:
     name: prune ${{ matrix.engine }}
     needs: [plan, build, manifest]
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.engines != '[]'
     runs-on: ubuntu-latest
     permissions:
       packages: write

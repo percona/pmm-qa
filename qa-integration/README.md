@@ -51,7 +51,7 @@ The setups below are the QA integration environments registered in [`pmm_qa/pmm-
     }
   },
   "PSMDB": {
-    "versions": ["6.0", "7.0", "8.0", "latest"],
+    "versions": ["6.0", "7.0", "8.0", "8.3", "latest"],
     "default_topology": "pss replica set",
     "setup_type": {
       "psa": "PSA replica set",
@@ -90,7 +90,7 @@ The setups below are the QA integration environments registered in [`pmm_qa/pmm-
 | --------------- | ---------------------------------------------------------------- | ------------------------------------------- |
 | `SSL_MYSQL`     | TLS/SSL MySQL setup.                                             | `5.7`, `8.0`, `8.4`, `9.7`                  |
 | `SSL_PDPGSQL`   | TLS/SSL PostgreSQL or Percona Distribution for PostgreSQL setup. | `14`, `15`, `16`, `17`                      |
-| `SSL_PSMDB`     | TLS/SSL PSMDB setup.                                             | `6.0`, `7.0`, `8.0`, `latest`               |
+| `SSL_PSMDB`     | TLS/SSL PSMDB setup.                                             | `6.0`, `7.0`, `8.0`, `8.3`, `latest`        |
 
 <!-- DB-VARIANTS-END -->
 

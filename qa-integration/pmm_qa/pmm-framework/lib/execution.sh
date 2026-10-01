@@ -19,8 +19,7 @@
 #
 # Walks every spec once, so that a bad request fails in seconds rather than
 # halfway through a ten-minute provisioning run: every spec parses, the PMM
-# Server is found, curl is there if a PSMDB setup needs it, and no two setups
-# conflict.
+# Server is found, and no two setups conflict.
 #
 # Conflict rule: two setups of the same type, or any two of the MySQL family
 # (PS/MYSQL), reuse the same container names and/or host ports. Rather than
@@ -37,7 +36,7 @@
 # Exits:  via die() on a host conflict, and from the helpers it calls (unknown
 #         type, missing server, ...)
 preflight_database_setups() {
-  local spec needs_curl=false
+  local spec
   local mysql_data_owner='' conflict='' host_conflict='' setup_type
   local patroni_seen=false pgsql_replication_seen=false
   local external_seen=false valkey_seen=false
@@ -47,7 +46,6 @@ preflight_database_setups() {
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
-    [[ $DB_TYPE == PSMDB || $DB_TYPE == SSL_PSMDB ]] && needs_curl=true
 
     # Two setups of the same product, or any two of the MySQL family, reuse the
     # same container names, host ports and data directories, so they cannot run
@@ -105,8 +103,14 @@ preflight_database_setups() {
   fi
 
   resolve_pmm_server
-  [[ $needs_curl == true ]] && require_command curl
-  return 0
+}
+
+# Run setup_<type> for the DB_TYPE that parse_database_spec just set; the setup
+# functions read DB_TYPE, DB_VERSION and DB_CONFIG.
+dispatch_setup() {
+  local fn=setup_${DB_TYPE,,}
+  declare -F "$fn" >/dev/null || die "Database type '$DB_TYPE' has no $fn."
+  "$fn"
 }
 
 # Expand one spec and provision it.

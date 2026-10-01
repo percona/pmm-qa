@@ -84,14 +84,13 @@ ensure_pmm_network() {
 # Remove any leftover CONTAINER... from a previous run.
 fresh_containers() {
   docker rm -fv "$@" >/dev/null 2>&1 || true
-  ensure_pmm_network
 }
 
 # Only a discovered local server can be probed; an --pmm-server-ip is trusted.
 wait_pmm_server_ready() {
   [[ -n $PMM_SERVER_CONTAINER ]] || return 0
   retry 180 'PMM Server readiness' \
-    docker exec "$PMM_SERVER_CONTAINER" curl -fsS http://127.0.0.1:8080/v1/server/readyz >/dev/null
+    docker exec "$PMM_SERVER_CONTAINER" curl -fsS --max-time 5 http://127.0.0.1:8080/v1/server/readyz >/dev/null
 }
 
 # Download a PMM Client tarball once per URL, revalidating the cached copy with
@@ -107,10 +106,9 @@ fetch_client_tarball() {
   if [[ -f $file ]]; then
     since=(-z "$file")
   fi
-  # Parallel setups fetch the same URL at once, and $$ is the parent shell's
-  # pid in all of them, so each needs a temp file of its own.
+  # Parallel setups fetch the same URL at once.
   temp=$(mktemp "$file.XXXXXX") || die "Could not create a temp file in $dir."
-  if curl -fsSL "${since[@]}" -o "$temp" "$url" && [[ -s $temp ]]; then
+  if curl -fsSL --connect-timeout 30 --max-time 600 "${since[@]}" -o "$temp" "$url" && [[ -s $temp ]]; then
     must mv -f "$temp" "$file"
   fi
   rm -f "$temp"
@@ -118,27 +116,10 @@ fetch_client_tarball() {
   printf '%s' "$file"
 }
 
-# Fetch the CLIENT package for Debian-family NODE's release through
-# fetch-pmm-client-deb.sh's verifying cache, which waits out repo.percona.com's publishing race.
-# Stdout: the host path of the .deb
-fetch_client_deb() {
-  local node=$1 client=$2 component version='' codename
-  case $client in
-    3-dev-latest) component=experimental ;;
-    pmm3-rc) component=testing ;;
-    pmm3-latest) component=main ;;
-    3.*.*) component=main version=$client ;;
-    *) die "CLIENT_VERSION '$client' is not a channel, a 3.x.y release or a tarball URL." ;;
-  esac
-  # shellcheck disable=SC2016 # expanded by the container's shell
-  codename=$(docker exec "$node" sh -c '. /etc/os-release; echo "$VERSION_CODENAME"') || return 1
-  "$FRAMEWORK_DIR/lib/fetch-pmm-client-deb.sh" "$component" "$codename" /tmp/pmm-client-cache 1800 "$version"
-}
-
 # Install PMM Client in NODE: from TARBALL (a host path) when given, otherwise
 # the CLIENT package -- a channel name or an exact 3.x.y release.
 install_pmm_client() {
-  local node=$1 client=$2 tarball=${3:-} deb install minor build=7
+  local node=$1 client=$2 tarball=${3:-} deb install component version='' codename
   if [[ -n $tarball ]]; then
     must docker cp "$tarball" "$node:/tmp/pmm-client.tar.gz"
     # shellcheck disable=SC2016 # expanded by the container's shell
@@ -147,7 +128,19 @@ install_pmm_client() {
       cd "$(dirname "$(find /tmp/pmm-client -type f -name install_tarball -print -quit)")"
       bash ./install_tarball'
   elif docker exec "$node" test -f /etc/debian_version; then
-    deb=$(fetch_client_deb "$node" "$client") || die "Could not fetch the PMM Client package for $node."
+    case $client in
+      3-dev-latest) component=experimental ;;
+      pmm3-rc) component=testing ;;
+      pmm3-latest) component=main ;;
+      3.*.*) component=main version=$client ;;
+      *) die "CLIENT_VERSION '$client' is not a channel, a 3.x.y release or a tarball URL." ;;
+    esac
+    # shellcheck disable=SC2016 # expanded by the container's shell
+    codename=$(docker exec "$node" sh -c '. /etc/os-release; echo "$VERSION_CODENAME"') ||
+      die "Could not read the release codename of $node."
+    # The fetcher's verifying cache waits out repo.percona.com's publishing race.
+    deb=$("$FRAMEWORK_DIR/lib/fetch-pmm-client-deb.sh" "$component" "$codename" /tmp/pmm-client-cache 1800 "$version") ||
+      die "Could not fetch the PMM Client package for $node."
     must docker cp "$deb" "$node:/tmp/pmm-client.deb"
     install='apt-get install -y /tmp/pmm-client.deb'
   else
@@ -162,30 +155,14 @@ install_pmm_client() {
       pkg=yum; command -v microdnf >/dev/null && pkg=microdnf
       rpm -Uvh --replacepkgs https://repo.percona.com/yum/percona-release-latest.noarch.rpm
       '
+    # shellcheck disable=SC2016 # expanded by the container's shell
     case $client in
-      3-dev-latest) install+='percona-release enable-only pmm3-client experimental' ;;
-      pmm3-rc) install+='percona-release enable-only pmm3-client testing' ;;
-      pmm3-latest) install+='percona-release enable-only pmm3-client release' ;;
-      3.*.*)
-        minor=${client#3.}
-        minor=${minor%%.*}
-        if [[ $client == 3.7.1 || $client == 3.8.0 ]]; then
-          build=8
-        elif [[ $client == 3.8.1 ]] || ((minor > 8)); then
-          build=1
-        fi
-        # microdnf cannot install a local rpm, so there rpm itself does; yum
-        # does elsewhere, as it also pulls the rpm's dependencies (perl).
-        install+="os=\$(. /etc/os-release; echo \${VERSION_ID%%.*}) arch=\$(uname -m)
-          curl -fsSL -o /tmp/pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/\$os/RPMS/\$arch/pmm-client-$client-$build.el\$os.\$arch.rpm
-          if [ \$pkg = microdnf ]; then rpm -Uvh /tmp/pmm-client.rpm; else yum install -y /tmp/pmm-client.rpm; fi"
-        ;;
+      3-dev-latest) install+='percona-release enable-only pmm3-client experimental && $pkg install -y pmm-client' ;;
+      pmm3-rc) install+='percona-release enable-only pmm3-client testing && $pkg install -y pmm-client' ;;
+      pmm3-latest) install+='percona-release enable-only pmm3-client release && $pkg install -y pmm-client' ;;
+      3.*.*) install+="percona-release enable-only pmm3-client release && \$pkg install -y pmm-client-$client" ;;
       *) die "CLIENT_VERSION '$client' is not a channel, a 3.x.y release or a tarball URL." ;;
     esac
-    if [[ $client != 3.*.* ]]; then
-      # shellcheck disable=SC2016 # expanded by the container's shell
-      install+=' && $pkg install -y pmm-client'
-    fi
   fi
   retry_on "$PMM_REPO_ERRORS" 3 "PMM Client install on $node" \
     docker exec --user root "$node" sh -ceu "$install

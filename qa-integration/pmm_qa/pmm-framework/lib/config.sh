@@ -57,16 +57,16 @@ register_database() {
 # --------------------------------------------------------------------------
 
 register_database PSMDB \
-  '6.0 7.0 8.0 latest' \
+  '6.0 7.0 8.0 8.3 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
-  'DEFAULT_VERSION=latest' \
+  'DEFAULT_VERSION=8.3' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
 register_database SSL_PSMDB \
-  '6.0 7.0 8.0 latest' \
+  '6.0 7.0 8.0 8.3 latest' \
   'CLIENT_VERSION MINIO' \
-  'DEFAULT_VERSION=latest' \
+  'DEFAULT_VERSION=8.3' \
   'CLIENT_VERSION=latest-tarball' 'MINIO=false'
 
 register_database MYSQL \

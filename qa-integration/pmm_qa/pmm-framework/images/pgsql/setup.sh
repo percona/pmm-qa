@@ -60,16 +60,12 @@ pgsql_replication() {
 }
 
 pgsql_replication_start() {
-  local conf=$FRAMEWORK_DIR/images/pgsql hba=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework/pgsql_pg_hba.conf
+  local conf=$FRAMEWORK_DIR/images/pgsql
   local primary=${names[0]} replica=${names[1]}
   fresh_containers "${names[@]}"
-  must mkdir -p "${hba%/*}"
-  printf '%s\n' 'host    replication     repl_user      0.0.0.0/0       md5' \
-    'host    all             all             0.0.0.0/0       md5' \
-    'local   all             postgres                        trust' >"$hba" || die "Could not write $hba."
   must docker run --detach --name "$primary" --restart=always --label pmm-qa.engine=pgsql --network pmm-qa \
     --env POSTGRES_PASSWORD=GRgrO9301RuF --volume "$conf/postgresql-primary.conf:/etc/postgresql/postgresql.conf:ro" \
-    --volume "$hba:/etc/postgresql/pg_hba.conf:ro" --publish 6432:5432 \
+    --volume "$conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro" --publish 6432:5432 \
     "$image" -c config_file=/etc/postgresql/postgresql.conf >/dev/null
   # Over TCP: the entrypoint's first-boot server listens on the socket only.
   retry 120 "PostgreSQL on $primary" docker exec --user postgres "$primary" pg_isready -q -h 127.0.0.1 >/dev/null
@@ -85,7 +81,7 @@ pgsql_replication_start() {
   # shellcheck disable=SC2016 # expanded by the container's shell
   must docker run --detach --name "$replica" --label pmm-qa.engine=pgsql --network pmm-qa \
     --env POSTGRES_PASSWORD=GRgrO9301RuF --volume "$conf/postgres-replica.conf:/etc/postgresql/postgresql.conf:ro" \
-    --volume "$hba:/etc/postgresql/pg_hba.conf:ro" --publish 6433:5432 --entrypoint bash "$image" -ceu \
+    --volume "$conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro" --publish 6433:5432 --entrypoint bash "$image" -ceu \
     'mkdir -p "$PGDATA" && chown postgres "$PGDATA"
      gosu postgres env PGPASSWORD=GRgrO9301RuF pg_basebackup "--pgdata=$PGDATA" -R -Fp -Xs --checkpoint=fast \
        "--host=$0" --port=5432 -U repl_user

@@ -68,11 +68,8 @@ PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-# The framework's fetcher reads the repo index for the real file name and waits
-# out repo.percona.com's index/pool publishing race; COMPONENT is the index
-# component (main|testing|experimental), VERSION an optional exact 3.x.y.
-# This runs under sudo, so it keeps its own cache: a root-owned
-# /tmp/pmm-client-cache would lock out pmm-framework, which runs unprivileged.
+# Runs under sudo, so it keeps its own cache: a root-owned /tmp/pmm-client-cache
+# would lock out pmm-framework, which runs unprivileged.
 install_pmm_client_deb() {
     local component=$1 version=${2:-} deb
     deb=$(bash "$(dirname "$0")/pmm-framework/lib/fetch-pmm-client-deb.sh" \

@@ -2,11 +2,13 @@
 
 load helpers/test_helper
 
-# Records every docker call and answers the probes setup_ps polls, so a PS
-# setup runs end to end without a daemon.
+# Records every docker call and answers the readiness probes the setups poll,
+# so a setup runs end to end without a daemon.
 stub_prebaked_docker() {
   DOCKER_CALLS=$BATS_TEST_TMPDIR/docker.calls
   : >"$DOCKER_CALLS"
+  # shellcheck disable=SC2329,SC2317
+  timeout() { shift; "$@"; }
   # shellcheck disable=SC2329,SC2317
   docker() {
     printf '%s\n' "$*" >>"$DOCKER_CALLS"
@@ -87,6 +89,19 @@ stub_prebaked_docker() {
   grep -q -- '--log-slave-updates=ON' "$DOCKER_CALLS"
   grep -q "CHANGE MASTER TO MASTER_HOST='ps_pmm_replication_5_7_1'" "$DOCKER_CALLS"
   grep -Eq -- '--environment=ps-replication-dev --cluster=ps-replication-dev-cluster --replication-set=ps-async-replication --debug ps_pmm_replication_5_7_2_[0-9]+ ' "$DOCKER_CALLS"
+  [[ $(grep -c -- '--replica-parallel-workers' "$DOCKER_CALLS") -eq 0 ]]
+}
+
+@test "PS replication applies the playbook's replica settings and names nodes with SHARD_NAME" {
+  stub_prebaked_docker
+  SHARD_NAME=nightly
+  parse_database_spec 'ps=8.4,SETUP_TYPE=replication'
+  dispatch_setup
+
+  grep -q -- '--name ps_pmm_replication_8_4_1 .*--sync-binlog=1' "$DOCKER_CALLS"
+  [[ $(grep -c -- '--name ps_pmm_replication_8_4_1 .*--replica-parallel-workers' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q -- '--name ps_pmm_replication_8_4_2 .*--disabled-storage-engines=MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY .*--replica-parallel-workers=4 --replica-preserve-commit-order=ON --replica-parallel-type=LOGICAL_CLOCK' "$DOCKER_CALLS"
+  grep -q -- ' ps_pmm_replication_8_4_2 container ps_pmm_replication_8_4_2-nightly$' "$DOCKER_CALLS"
 }
 
 @test "single PS honours MY_ROCKS and skips encryption on a client older than 3.7" {
@@ -97,7 +112,8 @@ stub_prebaked_docker() {
   grep -q -- '--name ps_pmm_8_0_1 .*--publish 3306:3306 --env INIT_ROCKSDB=1 pmm-qa/ps:8.0 ' "$DOCKER_CALLS"
   grep -q -- '--name ps_pmm_8_0_1 --hostname ps_pmm_8_0_1 --user root .* --user=mysql' "$DOCKER_CALLS"
   [[ $(grep -c 'mysql-sockets' "$DOCKER_CALLS") -eq 0 ]]
-  grep -q 'pmm-client-3.6.0-7.el' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
+  grep -Fq 'pmm3-client release && $pkg install -y pmm-client-3.6.0' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
   [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
@@ -107,7 +123,7 @@ stub_prebaked_docker() {
 @test "PS rejects what it cannot provision before touching docker" {
   stub_prebaked_docker
   local spec
-  for spec in 'ps=9.7,BACKUP=true' 'ps,SETUP_TYPE=bogus' 'ps,NODES_COUNT=two'; do
+  for spec in 'ps,SETUP_TYPE=bogus' 'ps,NODES_COUNT=two'; do
     parse_database_spec "$spec"
     run dispatch_setup
     [[ $status -ne 0 ]]
@@ -116,7 +132,6 @@ stub_prebaked_docker() {
 }
 
 @test "parallel setups can fetch the same client tarball at once" {
-  export XDG_CACHE_HOME=$BATS_TEST_TMPDIR/cache
   # shellcheck disable=SC2329
   curl() {
     local out
@@ -192,7 +207,7 @@ stub_prebaked_docker() {
 @test "the PS image builds from the shared Dockerfile with the version's base image" {
   stub_prebaked_docker
   build_ps_image 8.0
-  grep -q -- "^build --build-arg PS_IMAGE=percona/percona-server:8.0.46 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $FRAMEWORK_DIR/images/ps$" "$DOCKER_CALLS"
+  grep -q -- "^build --build-arg PS_IMAGE=percona/percona-server:8.0 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $FRAMEWORK_DIR/images/ps$" "$DOCKER_CALLS"
   run build_ps_image 9.9
   [[ $status -ne 0 ]]
 }
@@ -264,7 +279,6 @@ stub_prebaked_docker() {
   [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
-# Stands in for lib/fetch-pmm-client-deb.sh, recording its arguments.
 stub_deb_fetch() {
   DEBIAN_NODE=true
   FRAMEWORK_DIR=$BATS_TEST_TMPDIR/framework
@@ -357,7 +371,7 @@ EOF
   parse_database_spec 'psmdb,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false'
   dispatch_setup
 
-  grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"
+  grep -q '^tag pmm-qa/psmdb:8.3-ol9 replica_member/local$' "$DOCKER_CALLS"
   ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
   grep -Fq '{ _id: 2, host: "rs103:27017", arbiterOnly: true }' "$DOCKER_CALLS"
   grep -Fq '{ _id: 2, host: "rs203:27017", arbiterOnly: true }' "$DOCKER_CALLS"
@@ -398,7 +412,8 @@ EOF
   parse_database_spec 'ssl_psmdb=latest'
   dispatch_setup
 
-  grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"
+  ! grep -q 'replica_member/local' "$DOCKER_CALLS" || false
+  grep -q '^    image: pmm-qa/psmdb:8.3-ol9$' "$BATS_TEST_TMPDIR/override.yml"
   ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
   # shellcheck disable=SC2016
   grep -Fq 'PMM_AGENT_SERVER_PASSWORD: "${ADMIN_PASSWORD}"' "$BATS_TEST_TMPDIR/override.yml"
@@ -545,7 +560,7 @@ EOF
   parse_database_spec haproxy
   dispatch_setup
 
-  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:ol9$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
   grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
