@@ -53,6 +53,20 @@ services:
     networks:
       - pmm-qa
 
+  sftp-server:
+    image: atmoz/sftp
+    profiles: [sftp]
+    container_name: sftp-server
+    command: foo:password
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/22"]
+      interval: 1s
+      retries: 30
+    volumes:
+      - ./output/sftp:/home/foo/upload
+    networks:
+      - pmm-qa
+
   pmm-server-encryption:
     image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
     profiles: [encryption]
