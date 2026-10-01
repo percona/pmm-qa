@@ -50,7 +50,7 @@ for (const { outage, restore, title } of [
       await expect(async () => {
         await page.goto(urlHelper.buildUrlWithParameters(overviewUrl, { from: 'now-2m', to: 'now' }));
         await dashboard.loadAllPanels();
-        await expect(dashboard.builders.panelContentByExactName('Services')).not.toHaveText('N/A', {
+        await expect(dashboard.builders.panelContentByExactName('Services')).toHaveText(/^[1-9]\d*$/, {
           timeout: Timeouts.TEN_SECONDS,
         });
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.ONE_MINUTE });

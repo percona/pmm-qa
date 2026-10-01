@@ -51,6 +51,11 @@ on:
         options:
           - amd64
           - arm64
+      enable_nomad:
+        description: 'Start PMM Server with PMM_ENABLE_NOMAD=1 (for @nomad)'
+        type: boolean
+        default: false
+        required: false
 
   workflow_call:
     inputs:
