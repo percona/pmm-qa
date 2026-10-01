@@ -42,7 +42,9 @@ fi
   exit 1
 }
 
-RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
+# Run state lives outside the checkout when LINODE_RUNS_DIR is set (the chaos-pmm hosts
+# share it across runners and clean checkouts between sessions).
+RUN_DIR="${LINODE_RUNS_DIR:-$MODULE_DIR/runs}/$RUN_ID"
 [ -f "$RUN_DIR/ip" ] || {
   echo "No such run_id '$RUN_ID' (expected $RUN_DIR/ip) -- run up.sh first." >&2
   exit 1

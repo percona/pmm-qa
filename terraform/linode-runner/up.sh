@@ -42,7 +42,9 @@ PMM_QA_REF="${PMM_QA_REF:-main}"
 # scope it to; set ALLOWED_INBOUND_CIDR to your own IP/32 if you have one.
 ALLOWED_INBOUND_CIDR="${ALLOWED_INBOUND_CIDR:-0.0.0.0/0}"
 
-RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
+# Run state lives outside the checkout when LINODE_RUNS_DIR is set (the chaos-pmm hosts
+# share it across runners and clean checkouts between sessions).
+RUN_DIR="${LINODE_RUNS_DIR:-$MODULE_DIR/runs}/$RUN_ID"
 if [ -f "$RUN_DIR/terraform.tfstate" ]; then
   echo "run_id '$RUN_ID' already has a state file at $RUN_DIR -- pick a unique run_id, or down.sh it first." >&2
   exit 1

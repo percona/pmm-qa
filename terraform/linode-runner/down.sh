@@ -21,7 +21,9 @@ if ! [[ "$RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]]; then
   echo "invalid run_id '$RUN_ID' -- letters, digits, '.', '_', '-' only" >&2
   exit 1
 fi
-RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
+# Run state lives outside the checkout when LINODE_RUNS_DIR is set (the chaos-pmm hosts
+# share it across runners and clean checkouts between sessions).
+RUN_DIR="${LINODE_RUNS_DIR:-$MODULE_DIR/runs}/$RUN_ID"
 
 if [ ! -d "$RUN_DIR" ]; then
   echo "No run directory for '$RUN_ID' -- nothing to destroy." >&2
