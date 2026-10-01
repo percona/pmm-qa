@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { GrafanaFolder, GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
+import customDashboard from '@testdata/customDashboard.json';
 
 export default class GrafanaHelper {
   constructor(private page: Page) {}
@@ -29,154 +30,9 @@ export default class GrafanaHelper {
     ).toEqual(200);
   };
 
-  createCustomDashboard = async (
-    name: string,
-    folderId: number,
-    customPanelName: string,
-    tags: string[] = ['pmm-qa'],
-  ) => {
-    const body = {
-      dashboard: {
-        annotations: {
-          list: [
-            {
-              builtIn: 1,
-              datasource: '-- Grafana --',
-              enable: true,
-              hide: true,
-              iconColor: 'rgba(0, 211, 255, 1)',
-              name: 'Annotations & Alerts',
-              type: 'dashboard',
-            },
-          ],
-        },
-        editable: true,
-        panels: [
-          {
-            datasource: 'Metrics',
-            fieldConfig: {
-              defaults: {
-                color: {
-                  fixedColor: 'rgb(31, 120, 193)',
-                  mode: 'fixed',
-                },
-                links: [],
-                mappings: [
-                  {
-                    options: {
-                      match: 'null',
-                      result: {
-                        index: 0,
-                        text: 'N/A',
-                      },
-                    },
-                    type: 'special',
-                  },
-                ],
-                thresholds: {
-                  mode: 'absolute',
-                  steps: [
-                    {
-                      color: '#1F60C4',
-                      value: null,
-                    },
-                    {
-                      color: 'rgba(237, 129, 40, 0.89)',
-                      value: 100,
-                    },
-                    {
-                      color: '#d44a3a',
-                    },
-                  ],
-                },
-                unit: 'none',
-              },
-              overrides: [],
-            },
-            gridPos: {
-              h: 5,
-              w: 12,
-              x: 0,
-              y: 0,
-            },
-            id: 2,
-            links: [],
-            maxDataPoints: 100,
-            options: {
-              colorMode: 'value',
-              graphMode: 'none',
-              justifyMode: 'center',
-              orientation: 'vertical',
-              reduceOptions: {
-                calcs: ['lastNotNull'],
-                fields: '',
-                values: false,
-              },
-              text: {
-                titleSize: 14,
-                valueSize: 24,
-              },
-              textMode: 'auto',
-            },
-            pluginVersion: '9.2.20',
-            targets: [
-              {
-                datasource: 'Metrics',
-                editorMode: 'code',
-                expr: 'count by (service_type) (mysql_global_status_uptime)',
-                format: 'time_series',
-                hide: false,
-                intervalFactor: 1,
-                legendFormat: 'MySQL',
-                range: true,
-                refId: 'A',
-              },
-              {
-                datasource: 'Metrics',
-                editorMode: 'code',
-                expr: 'count by (service_type) (mongodb_up)',
-                hide: false,
-                legendFormat: 'MongoDB',
-                range: true,
-                refId: 'B',
-              },
-              {
-                datasource: 'Metrics',
-                editorMode: 'code',
-                expr: 'count by (service_type)  (group by (service_name, service_type) (pg_up))',
-                hide: false,
-                legendFormat: 'PostgreSQL',
-                range: true,
-                refId: 'C',
-              },
-              {
-                datasource: 'Metrics',
-                editorMode: 'code',
-                expr: 'count by (service_type)  (group by (service_name, service_type) (proxysql_mysql_status_active_transactions))',
-                hide: false,
-                legendFormat: 'ProxySQL',
-                range: true,
-                refId: 'D',
-              },
-            ],
-            title: customPanelName,
-            type: 'stat',
-          },
-        ],
-        schemaVersion: 26,
-        style: 'dark',
-        tags,
-        time: {
-          from: 'now-6h',
-          to: 'now',
-        },
-        title: name,
-        version: 0,
-      },
-      folderId,
-    };
+  createCustomDashboard = async (name: string, folderId: number, tags: string[] = ['pmm-qa']) => {
     const response = await this.page.request.post('graph/api/dashboards/db/', {
-      data: body,
+      data: { dashboard: { ...customDashboard, tags, title: name }, folderId },
       headers: GrafanaHelper.getAuthHeader(),
     });
 

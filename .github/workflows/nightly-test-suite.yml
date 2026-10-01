@@ -213,3 +213,12 @@ jobs:
       pdpgsql_version: ${{ inputs.pdpgsql_version }}
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
+
+  upgrade_tests:
+    name: PMM Upgrade
+    needs: [plan, resolve]
+    uses: ./.github/workflows/upgrade-pmm.yml
+    with:
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      # Upgrades to 3-dev-latest for a nightly testing. To the newest -rc tag on RC testing
+      nightly_tests: ${{ needs.resolve.outputs.repository == 'dev-latest' }}

@@ -1,9 +1,10 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import customDashboard from '@testdata/customDashboard.json';
 
-pmmTest.describe('PMM settings tests for upgrade', () => {
+pmmTest.describe('PMM upgrade tests for dashboards', () => {
   const dashboardName = 'upgrade-dashboard';
-  const panelName = 'Monitored DB';
+  const panelName = customDashboard.panels[0].title;
 
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -13,21 +14,20 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'PMM-T391 - Verify user is able to create and set custom home dashboard @pre-upgrade',
     async ({ dashboard, grafanaHelper, page }) => {
       const folder = await grafanaHelper.getFolderDetailsByName('Insight');
-      const customDashboard = await grafanaHelper.createCustomDashboard(
-        dashboardName,
-        folder.id,
-        `${panelName}`,
-        ['pmm-qa', 'tag-upgrade'],
-      );
+      const response = await grafanaHelper.createCustomDashboard(dashboardName, folder.id, [
+        'pmm-qa',
+        'tag-upgrade',
+      ]);
+      const { uid } = await response.json();
 
-      await grafanaHelper.starDashboard((await customDashboard.json()).uid);
-      await grafanaHelper.setHomeDashboard((await customDashboard.json()).uid);
+      await grafanaHelper.starDashboard(uid);
+      await grafanaHelper.setHomeDashboard(uid);
 
       await page.goto('pmm-ui/graph/');
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
       expect(page.url()).toContain(dashboardName);
-      expect(page.url()).toContain((await customDashboard.json()).uid);
-      await page.goto((await grafanaHelper.getDashboard((await customDashboard.json()).uid)).meta.url);
+      expect(page.url()).toContain(uid);
+      await page.goto((await grafanaHelper.getDashboard(uid)).meta.url);
     },
   );
 
@@ -90,12 +90,10 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       const firstCustomDashboard = await grafanaHelper.createCustomDashboard(
         'test-dashboard',
         insightFolder.id,
-        panelName,
       );
       const secondCustomDashboard = await grafanaHelper.createCustomDashboard(
         'test-dashboard',
         experimentalFolder.id,
-        panelName,
       );
       const firstDashboardUid = (await firstCustomDashboard.json()).uid;
       const secondDashboardUid = (await secondCustomDashboard.json()).uid;
