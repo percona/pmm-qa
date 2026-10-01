@@ -2375,15 +2375,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-01T04:50:18Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-01T04:35:00Z",
       "suites": [
         "Nightly Compatibility"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "compat / client 3.8.0: GitHub cancelled every test step of run 36796817384 at 01:58 and then never finalised the run - it is still 'in_progress' hours later with updated_at frozen at 01:42:40Z although all 5 jobs' steps completed by 02:03:46 - so the Jenkins lane polled it until its 4-hour stage budget expired. Nothing in the repo cancels that run (nightly-e2e-tests-matrix.yml has no concurrency group and no self-cancel), the one test that did run passed, and the 7 sibling runs of the same batch on the same SHA all completed, so this is a GitHub Actions platform fault with nothing to reproduce or fix.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-01T04:50:28Z"
     }
-  ]
+  ],
+  "claims": []
 }
