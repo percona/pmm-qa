@@ -26,7 +26,7 @@ linode-cli lke cluster-delete "$CLUSTER_ID"
 echo "[pmm-ha] Deleted."
 
 # Sweep the cluster's orphan tags (best-effort).
-PRUNE="$SCRIPT_DIR/../../../../terraform/linode-runner/prune-tags.sh"
+PRUNE="$SCRIPT_DIR/../linode-runner/prune-tags.sh"
 if [ -x "$PRUNE" ]; then
   LINODE_TOKEN="$LINODE_TOKEN" "$PRUNE" || echo "[pmm-ha] tag prune skipped (non-fatal)" >&2
 else
