@@ -36,11 +36,14 @@ import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
+import AddInstancePage from '@pages/inventory/addInstance.page';
+import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
+  addInstancePage: AddInstancePage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -58,6 +61,7 @@ const pmmTest = base.extend<{
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
+  scheduledBackupsPage: ScheduledBackupsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   searchDashboardsPage: SearchDashboardsPage;
@@ -77,6 +81,7 @@ const pmmTest = base.extend<{
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
 }>({
+  addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   api: async ({ page, request }, use) => {
@@ -182,6 +187,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
