@@ -220,5 +220,5 @@ jobs:
     uses: ./.github/workflows/upgrade-pmm.yml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-      # Upgrades to 3-dev-latest for a dev tag, to the newest -rc tag on Docker Hub for an -rc one, not to pmm_image_tag itself.
+      # Upgrades to 3-dev-latest for a nightly testing. To the newest -rc tag on RC testing
       nightly_tests: ${{ needs.resolve.outputs.repository == 'dev-latest' }}
