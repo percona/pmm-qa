@@ -2344,7 +2344,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Package ARM"
+      ],
+      "verdict": "test fix",
+      "summary": "All three arm64 package builds died only in their Ubuntu 24.04 branch, within 2 s of each other, on one truncated read of Launchpad's 2.65 MB WADL by the unretried 'apt-add-repository --yes --update ppa:ansible/ansible' (IncompleteRead at 83-86 kB); the 22.04 and 26.04 branches ran the same command fine seconds earlier and later, and api.launchpad.net serves the full document in 1.1 s now, so it was not reproducible - jenkins-pipelines#4511 wraps the call in a bounded retry in all four PMM package-testing pipelines.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4511",
+      "by": "Investigator routine",
+      "at": "2026-10-01T04:49:59Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2372,13 +2383,6 @@
       "at": "2026-10-01T04:35:00Z",
       "suites": [
         "Nightly Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-01T04:35:00Z",
-      "suites": [
-        "Package ARM"
       ]
     }
   ]
