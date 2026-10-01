@@ -51,10 +51,10 @@ class PmmServerComponents(unittest.TestCase):
     """
 
     def test_percona_qan_api2_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('percona-qan-api2-'), WRONG_VERSION_MSG)
+        self.assertIn(expected_pmm_version, server_command('percona-qan-api2 --version'), WRONG_VERSION_MSG)
 
     def test_percona_dashboards_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('percona-dashboards-'), WRONG_VERSION_MSG)
+        self.assertIn(expected_pmm_version, server_command('cat /usr/share/percona-dashboards/VERSION'), WRONG_VERSION_MSG)
 
     def test_clickhouse_version(self):
         """PMM-12223 - Verify Clickhouse is v23.8 or later since 2.41.0"""
@@ -75,7 +75,7 @@ class PmmServerComponents(unittest.TestCase):
         self.assertNotIn("pmm-update", out, UPDATE_NOT_REMOVED)
 
     def test_pmm_managed_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('pmm-managed-'), WRONG_VERSION_MSG)
+        self.assertIn(expected_pmm_version, server_command('pmm-managed --version'), WRONG_VERSION_MSG)
 
     def test_pmm_client_version(self):
         self.assertIn(expected_pmm_version, verify_command("docker exec " + pmm_server_docker_container + " pmm-admin --version | grep PMMVersion | awk -F \" \" \'{print $2}\'"), WRONG_VERSION_MSG)
@@ -83,7 +83,7 @@ class PmmServerComponents(unittest.TestCase):
     def test_pmm_dump_version(self):
         if test_mode != "post":
             self.skipTest(POST_UPGRADE)
-        self.assertIn(expected_pmm_version, grep_rpm('pmm-dump-'), WRONG_VERSION_MSG)
+        self.assertIn(expected_pmm_version, server_command('pmm-dump version'), WRONG_VERSION_MSG)
 
     def test_qan_api2_status(self):
         self.assertIn(RUNNING, grep_supervisor_status('qan-api2'), NOT_RUNNING_MSG)
@@ -165,11 +165,11 @@ if __name__ == '__main__':
         assert pmm_server_docker_container, "No docker container found!"
 
 
-    def grep_rpm(query):
-        """Polymorphic shortcut to use in test"""
+    def server_command(command):
+        """Polymorphic shortcut to use in test. Keeps stderr: pmm-managed and qan-api2 print --version there."""
         if is_ami:
-            return verify_command(f"rpm -qa | grep {query}")
-        return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
+            return verify_command(f"sudo {command} 2>&1")
+        return verify_command(f"docker exec {pmm_server_docker_container} {command} 2>&1")
 
 
     def grep_supervisor_status(name):
