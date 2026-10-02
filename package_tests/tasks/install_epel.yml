@@ -1,8 +1,6 @@
 # Install EPEL and required GPG
 #
-# dl.fedoraproject.org round-robins over several backends, and one of them can
-# serve 404 for everything under /pub/epel while the others are fine. Each retry
-# opens a new connection, so it usually lands on a healthy backend.
+# dl.fedoraproject.org has a backend that 404s /pub/epel; retries reconnect to a healthy one.
 - name: install GPG key for epel {{ ansible_distribution_major_version }}
   when: ansible_os_family == "RedHat" and not (ansible_distribution == "Amazon")
   rpm_key:
@@ -10,8 +8,8 @@
     key: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}
   register: epel_key_result
   until: epel_key_result is succeeded
-  retries: 5
-  delay: 5
+  retries: 10
+  delay: 3
 
 - name: install GPG key for Percona repos
   when: ansible_os_family == "RedHat" and (ansible_distribution_major_version|int == 8 or ansible_distribution_major_version|int == 9)
@@ -30,5 +28,5 @@
   yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm state=present
   register: epel_release_result
   until: epel_release_result is succeeded
-  retries: 5
-  delay: 5
+  retries: 10
+  delay: 3
