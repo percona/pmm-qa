@@ -158,8 +158,10 @@ psmdb_register() {
     debug=(--debug)
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
-    docker exec -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup "${debug[@]}" >/dev/null
-  # Started only now: `pmm-agent setup` skips the reload of an agent not yet listening.
+    docker exec -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup \
+    --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml "${debug[@]}" >/dev/null
+  # Started only now: `pmm-agent setup` skips the reload of an agent not yet listening,
+  # and needs --config-file when none is running.
   must docker exec "$node" systemctl restart pmm-agent
   wait_pmm_agent "$node"
   pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"

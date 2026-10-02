@@ -361,7 +361,7 @@ EOF
   [[ $(grep -c '^exec rs10[123] systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 3 ]]
   grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
   [[ $(grep -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id' "$DOCKER_CALLS") -eq 3 ]]
-  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup$' "$DOCKER_CALLS"
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
   # shellcheck disable=SC2016 # a literal $external
   grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
   grep -q '^exec rs101 mgodatagen -f /etc/datagen/replicaset.json' "$DOCKER_CALLS"
