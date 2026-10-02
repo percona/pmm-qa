@@ -2352,5 +2352,84 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "CLI Integration"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "E2E Tests"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Integrations"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Nightly"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Package AMD"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Package ARM"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "UI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Upgrade AMD"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-02T02:38:19Z",
+      "suites": [
+        "Upgrade AMI"
+      ]
+    }
+  ]
 }
