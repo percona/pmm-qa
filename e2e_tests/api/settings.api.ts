@@ -97,10 +97,10 @@ export default class SettingsApi {
 
     const { message } = (await response.json()) as { message?: string };
 
-    expect(message, 'Unexpected 400 from the settings restore').toContain(
-      'Telemetry is configured via PMM_ENABLE_TELEMETRY',
-    );
+    // A server started with PMM_ENABLE_TELEMETRY or PMM_DATA_RETENTION refuses to change them.
+    expect(message, 'Unexpected 400 from the settings restore').toContain('environment variable');
 
+    delete body.data_retention;
     delete body.enable_advisor;
     delete body.enable_telemetry;
 
