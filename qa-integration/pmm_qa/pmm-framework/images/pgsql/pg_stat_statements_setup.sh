@@ -13,7 +13,7 @@ chown -R postgres:postgres /home/postgres
 
 apt-get update
 apt-get -y install wget curl gnupg2 lsb-release
-# For support_scripts/upgrade_clients.sh, which upgrades pmm-client by package.
+# support_scripts/upgrade_clients.sh upgrades pmm-client through percona-release.
 curl -fsSL --retry 5 -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 apt-get -y install /tmp/percona-release.deb
 rm /tmp/percona-release.deb

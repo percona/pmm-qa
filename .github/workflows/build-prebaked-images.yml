@@ -8,7 +8,6 @@ on:
     - cron: '23 3 * * *' # daily: everything, for new database and base-image releases
   workflow_dispatch: # everything
   push:
-    branches: [main]
     paths:
       - qa-integration/pmm_qa/pmm-framework/images/**
       - qa-integration/pmm_qa/pmm-framework/lib/images.sh
@@ -83,7 +82,7 @@ jobs:
             engines=$all
           else
             changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
-            if grep -qE '^(qa-integration/pmm_qa/pmm-framework/(lib/images\.sh|build-images)|\.github/workflows/build-prebaked-images\.yml)$' <<<"$changed"; then
+            if grep -qE '^qa-integration/pmm_qa/pmm-framework/(lib/images\.sh|build-images)$' <<<"$changed"; then
               engines=$all
             else
               # Only the files each image bakes in: a setup.sh edit rebuilds nothing.
