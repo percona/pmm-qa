@@ -53,6 +53,10 @@ GRANT pg_monitor TO pmm;
 ALTER USER postgres PASSWORD 'pass+this';
 ALTER SYSTEM SET max_locks_per_transaction = 1024;
 CREATE DATABASE contrib_regression;
+-- pg_stat_user_tables_* only has rows while a user table exists; keep one, analyzed.
+CREATE TABLE IF NOT EXISTS pmm_qa_stat_user_tables_seed (id serial PRIMARY KEY, note text);
+INSERT INTO pmm_qa_stat_user_tables_seed (note) VALUES ('pmm-qa seed');
+ANALYZE pmm_qa_stat_user_tables_seed;
 EOF
 service postgresql start
 su postgres bash -c 'psql -v ON_ERROR_STOP=1 -f /home/postgres/init.sql'

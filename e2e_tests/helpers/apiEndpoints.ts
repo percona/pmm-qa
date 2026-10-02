@@ -4,6 +4,8 @@ const apiEndpoints = {
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
   alerting: {
+    folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
   },
@@ -12,6 +14,12 @@ const apiEndpoints = {
     locations: '/v1/backups/locations',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
+  },
+  dumps: {
+    batchDelete: '/v1/dumps:batchDelete',
+    download: '/dump',
+    list: '/v1/dumps',
+    start: '/v1/dumps:start',
   },
   grafana: {
     alertmanager: '/graph/api/alertmanager/grafana/api/v2',
@@ -41,8 +49,9 @@ const apiEndpoints = {
     connect: '/v1/platform:connect',
   },
   prometheus: {
-    // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
+    // PMM's /prometheus route 500s on HA, so PrometheusApi uses the Grafana datasource proxy.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
+    query: '/prometheus/api/v1/query',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',

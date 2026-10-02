@@ -35,11 +35,20 @@ import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import AlertingPage from '@pages/alerting.page';
+import DumpPage from '@pages/dump.page';
+import AddInstancePage from '@pages/inventory/addInstance.page';
+import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AdvisorsPage from '@pages/advisors/advisors.page';
+import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
+  advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
+  addInstancePage: AddInstancePage;
+  alertStatusPage: AlertStatusPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -48,6 +57,7 @@ const pmmTest = base.extend<{
   loginPage: LoginPage;
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
+  dumpPage: DumpPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
@@ -56,6 +66,7 @@ const pmmTest = base.extend<{
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
+  scheduledBackupsPage: ScheduledBackupsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   searchDashboardsPage: SearchDashboardsPage;
@@ -74,9 +85,13 @@ const pmmTest = base.extend<{
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
+  testState: TestState;
 }>({
+  addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
+  advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
+  alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -127,6 +142,7 @@ const pmmTest = base.extend<{
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
+  dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
@@ -179,12 +195,14 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
+  testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 

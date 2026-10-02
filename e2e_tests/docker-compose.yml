@@ -25,6 +25,7 @@ services:
       - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
+      - PMM_ENABLE_NOMAD=${PMM_ENABLE_NOMAD:-0}
     volumes:
       - pmm-volume:/srv
     networks:
@@ -50,6 +51,20 @@ services:
       - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
     volumes:
       - ./testdata/ia/scripts:/var/opt/webhookd/scripts
+    networks:
+      - pmm-qa
+
+  sftp-server:
+    image: atmoz/sftp
+    profiles: [sftp]
+    container_name: sftp-server
+    command: foo:password
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/22"]
+      interval: 1s
+      retries: 30
+    volumes:
+      - ./output/sftp:/home/foo/upload
     networks:
       - pmm-qa
 
