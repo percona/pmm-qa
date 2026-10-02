@@ -65,7 +65,7 @@ flowchart TB
 | `ps/` | — (Dockerfile only) | `pmm-qa/ps` |
 | `mysql/` | `PS`, `MYSQL`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`) |
 | `pxc/` | `PXC` | `pmm-qa/pxc-proxysql`: three nodes and ProxySQL in one container, driven by `pmm-pxc` |
-| `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged |
+| `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged; the replica set also runs `pmm-qa/kerberos`, tagged `kerberos/local`, built from that stack's `Dockerfile-kerberos` |
 | `pdpgsql/` | `PDPGSQL`, `SSL_PDPGSQL` | `pmm-qa/pdpgsql` (systemd), and `pmm-qa/ssl-pdpgsql` from `pdpgsql/ssl/` |
 | `pgsql/` | `PGSQL` | `pmm-qa/pgsql`; replication runs the official `postgres` image |
 | `haproxy/`, `external/`, `valkey/` | `HAPROXY`, `EXTERNAL`, `VALKEY` | one image each |

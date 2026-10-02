@@ -14,11 +14,13 @@ on:
       - qa-integration/pmm_qa/pmm-framework/images/**
       - qa-integration/pmm_qa/pmm-framework/lib/images.sh
       - qa-integration/pmm_qa/pmm-framework/build-images
-      # What images/psmdb/Dockerfile copies from its build context.
+      # The build context of images/psmdb/Dockerfile and Dockerfile-kerberos.
       - qa-integration/pmm_psmdb-pbm_setup/keyfile
       - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      - qa-integration/pmm_psmdb-pbm_setup/Dockerfile-kerberos
+      - qa-integration/pmm_psmdb-pbm_setup/conf/configure_krb5.sh
       - .github/workflows/build-prebaked-images.yml
   pull_request:
     paths:
@@ -29,6 +31,8 @@ on:
       - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
       - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      - qa-integration/pmm_psmdb-pbm_setup/Dockerfile-kerberos
+      - qa-integration/pmm_psmdb-pbm_setup/conf/configure_krb5.sh
       - .github/workflows/build-prebaked-images.yml
 
 permissions:
@@ -69,7 +73,7 @@ jobs:
           # images (PS, MySQL, PXC) are amd64-only, so 5.7 gets no arm64 build.
           tags_of() {
             jq -c '[.[] as $e | (if $e == "psmdb" then ["6.0-ol8", "6.0-ol9", "7.0-ol8", "7.0-ol9", "8.0-ol8", "8.0-ol9", "8.3-ol8", "8.3-ol9"]
-              elif $e == "haproxy" then ["latest"]
+              elif $e == "haproxy" or $e == "kerberos" then ["latest"]
               elif $e == "external" then ["1.58.0-0.7.10"]
               elif $e == "valkey" then ["7", "8"]
               elif $e == "pdpgsql" or $e == "pgsql" then ["14", "15", "16", "17", "18"]
@@ -77,7 +81,7 @@ jobs:
               else ["5.7", "8.0", "8.4", "9.7"] end)[]
               | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$1"
           }
-          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
           if [ "$SCHEDULE" = "$DAILY" ] || [ "$EVENT" = workflow_dispatch ]; then
             # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
             stale=()
@@ -110,6 +114,7 @@ jobs:
               pick pxc-proxysql "^$images/pxc/(Dockerfile|pmm-pxc)$"
               pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/(keyfile|conf/(sysconfig|krb)/|conf/mongos/mongos\.service))"
               pick haproxy "^$images/haproxy/Dockerfile$"
+              pick kerberos "^qa-integration/pmm_psmdb-pbm_setup/(Dockerfile-kerberos|conf/configure_krb5\.sh)$"
               pick external "^$images/external/Dockerfile$"
               pick valkey "^$images/valkey/Dockerfile$"
               pick pdpgsql "^$images/pdpgsql/Dockerfile$"

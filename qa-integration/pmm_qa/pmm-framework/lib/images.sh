@@ -77,6 +77,13 @@ build_haproxy_image() {
   build_image haproxy:latest haproxy
 }
 
+# The KDC the PSMDB replica set compose file runs as kerberos/local.
+build_kerberos_image() {
+  [[ $1 == latest ]] || die "Kerberos has no prebaked image '$1'; use latest."
+  build_image kerberos:latest "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" \
+    -f "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup/Dockerfile-kerberos"
+}
+
 build_valkey_image() {
   [[ $1 == 7 || $1 == 8 ]] || die "Valkey $1 has no prebaked image; use 7 or 8."
   build_image "valkey:$1" valkey --build-arg "VALKEY_VERSION=$1"

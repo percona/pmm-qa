@@ -54,6 +54,9 @@ case $engine in
   haproxy)
     docker run --rm --entrypoint haproxy "$image" -vv | grep prometheus-exporter
     ;;
+  kerberos)
+    docker run --rm --entrypoint sh "$image" -c 'command -v krb5kdc && command -v kadmin.local && command -v kdb5_util'
+    ;;
   psmdb)
     # mongod needs the mongod.conf compose mounts, so check the tools run.
     docker run --rm "$image" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'

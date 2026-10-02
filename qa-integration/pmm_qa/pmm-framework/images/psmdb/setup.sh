@@ -184,6 +184,8 @@ psmdb_replica_set() {
     export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-inmemory
   fi
 
+  step 'Prepare image pmm-qa/kerberos:latest' ensure_image kerberos latest
+  must docker tag pmm-qa/kerberos:latest kerberos/local
   step 'Start replica set containers' psmdb_start docker-compose-rs.yaml
   step 'Wait for mongod' each_node nodes psmdb_wait_mongod
   if [[ $setup_type == psa ]]; then

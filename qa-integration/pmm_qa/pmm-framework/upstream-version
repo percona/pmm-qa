@@ -35,6 +35,7 @@ case $engine in
   pxc-proxysql) hub percona/percona-xtradb-cluster "$tag" ;;
   valkey) hub valkey/valkey "$tag-bookworm" ;;
   haproxy) hub library/haproxy "$tag" ;;
+  kerberos) hub library/alpine "$tag" ;;
   external) echo "$tag" ;;
   psmdb)
     version=${tag%-ol*}

@@ -352,6 +352,7 @@ EOF
   dispatch_setup
 
   grep -q '^tag pmm-qa/psmdb:7.0-ol8 replica_member/local$' "$DOCKER_CALLS"
+  grep -q '^tag pmm-qa/kerberos:latest kerberos/local$' "$DOCKER_CALLS"
   grep -q '^compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket$' "$DOCKER_CALLS"
   ! grep -q 'compose.* build' "$DOCKER_CALLS" || false
   grep -Fq 'exec -i rs101 mongo --quiet --eval rs.initiate({ _id: "rs", members: [{ _id: 0, host: "rs101:27017", priority: 2 },{ _id: 1, host: "rs102:27017", priority: 1 },{ _id: 2, host: "rs103:27017", priority: 1 }] })' "$DOCKER_CALLS"
@@ -392,6 +393,7 @@ EOF
   dispatch_setup
 
   grep -q '^compose -f docker-compose-sharded.yaml up -d$' "$DOCKER_CALLS"
+  ! grep -q kerberos/local "$DOCKER_CALLS" || false
   for name in rs1 rs2 rscfg; do
     grep -Fq "rs.initiate({ _id: \"$name\", members: [{ _id: 0, host: \"${name}01:27017\", priority: 2 }" "$DOCKER_CALLS"
   done
