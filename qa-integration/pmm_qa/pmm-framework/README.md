@@ -56,7 +56,7 @@ Set up multiple databases sequentially:
 ```bash
 qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database ps=8.4,SETUP_TYPE=gr \
-  --database psmdb=8.0,SETUP_TYPE=sharding,GSSAPI=true \
+  --database psmdb=8.3,SETUP_TYPE=sharding,GSSAPI=true \
   --database valkey=8,SETUP_TYPE=sentinel
 ```
 
