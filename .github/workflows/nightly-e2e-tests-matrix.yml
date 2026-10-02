@@ -314,7 +314,6 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps
-          envsubst < env.list > env.generated.list
 
       - name: Setup npm modules for Playwright tests
         if: ${{ matrix.tests_framework == 'playwright' }}
