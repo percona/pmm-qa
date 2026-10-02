@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '23 3 * * 0' # Sundays: everything, for base-image OS updates
     - cron: '23 4 * * *' # daily: engines whose upstream version moved (DAILY below)
-  workflow_dispatch:
+  workflow_dispatch: # same as the daily run
   push:
     branches: [main]
     paths:
@@ -78,7 +78,7 @@ jobs:
               | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$1"
           }
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
-          if [ "$SCHEDULE" = "$DAILY" ]; then
+          if [ "$SCHEDULE" = "$DAILY" ] || [ "$EVENT" = workflow_dispatch ]; then
             # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
             stale=()
             while read -r engine version; do
