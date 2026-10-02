@@ -143,7 +143,12 @@ pdpgsql_patroni() {
   pdpgsql_sql "$primary" 'GRANT pg_monitor TO postgres;'
   must docker exec --user postgres "$primary" sh -ceu "mkdir -p /var/lib/pgbackrest/archive/patroni_backup
     pgbackrest --stanza=patroni_backup --pg1-path=$data stanza-create" >/dev/null
-  each_node names pdpgsql_patroni_start "$subnet"
+  # The primary must hold the leader key before the replicas start: a replica's
+  # empty data dir otherwise races it for the initialize key and bootstraps a
+  # second cluster the primary can never join.
+  pdpgsql_patroni_start "$primary" "$subnet"
+  retry 60 "Patroni leader on $primary" docker exec "$primary" curl -fs -o /dev/null http://localhost:8008/primary
+  each_node replicas pdpgsql_patroni_start "$subnet"
   retry 120 "Patroni to run all ${#names[@]} members" pdpgsql_patroni_members "$primary" >/dev/null
 }
 
