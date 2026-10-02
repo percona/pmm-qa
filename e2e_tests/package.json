@@ -23,8 +23,8 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^26.6.3",
     "@types/shelljs": "^0.10.0",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
+    "@typescript-eslint/parser": "^8.71.0",
     "adm-zip": "^0.6.1",
     "build-url-ts": "^6.3.0",
     "dotenv": "^18.0.4",
@@ -39,12 +39,12 @@
     "husky": "^9.1.7",
     "jiti": "^2.7.0",
     "lint-staged": "^17.6.0",
-    "mongodb": "^7.6.0",
+    "mongodb": "^7.7.0",
     "playwright": "^1.62.1",
     "prettier": "^3.9.9",
     "shelljs": "^0.10.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1"
+    "typescript-eslint": "^8.71.0"
   }
 }
