@@ -439,8 +439,8 @@ jobs:
       setup_services: '--database pdpgsql'
       pmm_test_flag: '@docker-configuration'
 
-  nomad_playwright:
-    name: Nomad tests (Playwright)
+  nomad:
+    name: Nomad tests
     if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
