@@ -98,17 +98,21 @@ wait_pmm_server_ready() {
 # A CLIENT that is not a URL (a package channel or release) prints nothing.
 # Stdout: the path of the cached tarball
 fetch_client_tarball() {
-  local url=$1 dir=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework file temp
+  local url=$1 dir=${XDG_CACHE_HOME:-$HOME/.cache}/pmm-framework file temp lock
   local -a since=()
   [[ $url == http* ]] || return 0
   file=$dir/pmm-client-$(printf '%s' "$url" | sha256sum | cut -c1-16).tar.gz
   must mkdir -p "$dir"
+  # One download per URL; parallel setups wait, then revalidate it.
+  exec {lock}>"$file.lock"
+  flock "$lock"
   if [[ -f $file ]]; then
     since=(-z "$file")
   fi
-  # Parallel setups fetch the same URL at once.
   temp=$(mktemp "$file.XXXXXX") || die "Could not create a temp file in $dir."
-  if curl -fsSL --connect-timeout 30 --max-time 600 "${since[@]}" -o "$temp" "$url" && [[ -s $temp ]]; then
+  # Abort a stall, not a slow host: downloads.percona.com can run at ~250 KB/s.
+  if curl -fsSL --connect-timeout 30 --speed-limit 51200 --speed-time 120 --retry 3 \
+    "${since[@]}" -o "$temp" "$url" && [[ -s $temp ]]; then
     must mv -f "$temp" "$file"
   fi
   rm -f "$temp"
