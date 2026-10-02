@@ -4,11 +4,13 @@ import apiEndpoints from '@helpers/apiEndpoints';
 
 interface SettingsResponse {
   settings: {
+    advisor_enabled: boolean;
     backup_management_enabled: boolean;
     data_retention: string;
     default_role_id?: number | string;
     enable_access_control: boolean;
     pmm_public_address: string;
+    telemetry_summaries: string[];
   };
 }
 
