@@ -2402,6 +2402,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-02T08:16:51Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "not reproduced",
+      "summary": "ami 3.9.0 (1243) failed its psmdb setup on a one-off Docker Hub 'connection reset by peer' pulling alpine:latest for the kerberos image; the AMI job does not retry setup.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-02T08:16:55Z"
     }
   ],
   "claims": []
