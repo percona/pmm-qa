@@ -1,0 +1,38 @@
+# Performance-test checks + thresholds for the "Performance Analyst" skill.
+#
+# TODO(Shruti + Nailya, per the 2026-09-04 perf meeting): confirm the PromQL and
+# the numbers. The queries below are plausible placeholders keyed off standard
+# exporter/process metrics; they have NOT been validated against a live PMM
+# server. collect_metrics.sh runs each `promql` as a range query over the test
+# window and records max/avg/last per check; the skill compares those to `max`.
+#
+# comparison: the recorded statistic is compared to `max` with `op`
+#   stat: max | avg | last     op: lte (value must be <= max) is the only one implemented
+window: 30m          # how far back collect_metrics.sh samples (overridable by the workflow)
+step: 15s            # range-query resolution
+
+checks:
+  - name: exporter_memory_rss_bytes
+    promql: 'max(process_resident_memory_bytes{job=~".*exporter.*"})'
+    stat: max
+    op: lte
+    max: 268435456          # 256 MiB -- PLACEHOLDER
+    unit: bytes
+  - name: exporter_cpu_cores
+    promql: 'max(rate(process_cpu_seconds_total{job=~".*exporter.*"}[5m]))'
+    stat: max
+    op: lte
+    max: 0.5                 # half a core -- PLACEHOLDER
+    unit: cores
+  - name: pmm_server_memory_rss_bytes
+    promql: 'max(process_resident_memory_bytes{job="pmm-managed"})'
+    stat: max
+    op: lte
+    max: 2147483648          # 2 GiB -- PLACEHOLDER
+    unit: bytes
+  - name: pmm_server_cpu_cores
+    promql: 'sum(rate(process_cpu_seconds_total{job=~"pmm-.*"}[5m]))'
+    stat: max
+    op: lte
+    max: 4                   # PLACEHOLDER
+    unit: cores
