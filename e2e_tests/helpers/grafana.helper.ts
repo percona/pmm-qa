@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
-import { GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
+import { GrafanaFolder, GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
+import customDashboard from '@testdata/customDashboard.json';
 
 export default class GrafanaHelper {
   constructor(private page: Page) {}
@@ -14,6 +15,30 @@ export default class GrafanaHelper {
     });
 
     return this.page;
+  };
+
+  changePassword = async (oldPassword: string, newPassword: string) => {
+    const response = await this.page.request.put('graph/api/user/password', {
+      data: { confirmNew: newPassword, newPassword, oldPassword },
+      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
+      ignoreHTTPSErrors: true,
+    });
+
+    expect(
+      response.status(),
+      `Failed to change user account password! Response message is ${response.statusText()}`,
+    ).toEqual(200);
+  };
+
+  createCustomDashboard = async (name: string, folderId: number, tags: string[] = ['pmm-qa']) => {
+    const response = await this.page.request.post('graph/api/dashboards/db/', {
+      data: { dashboard: { ...customDashboard, tags, title: name }, folderId },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return response;
   };
 
   createUser = async (username: string, password: string) => {
@@ -65,6 +90,37 @@ export default class GrafanaHelper {
     Authorization: `Basic ${this.getToken(username, password)}`,
   });
 
+  getDashboard = async (uid: string) => {
+    const response = await this.page.request.get(`graph/api/dashboards/uid/${uid}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get Dashboard api call for dashboard: ${uid} fails with error: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return await response.json();
+  };
+
+  getFolderDetailsByName = async (folderName: string): Promise<GrafanaFolder> => {
+    const response = await this.page.request.get('graph/api/folders', {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    const responseBody = ((await response.json()) as GrafanaFolder[]).find(
+      (folder) => folder.title === folderName,
+    );
+
+    if (!responseBody) {
+      throw new Error(`Failed to get a folder with name ${folderName}`);
+    }
+
+    return responseBody;
+  };
+
   static getToken = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') =>
     Buffer.from(`${username}:${password}`).toString('base64');
 
@@ -87,6 +143,21 @@ export default class GrafanaHelper {
     expect(response.status(), 'Promote user to Editor').toEqual(200);
   };
 
+  setHomeDashboard = async (uid: string) => {
+    const authToken = GrafanaHelper.getToken();
+    const response = await this.page.request.put('graph/api/user/preferences', {
+      data: { homeDashboardUID: uid },
+      headers: { Authorization: `Basic ${authToken}` },
+    });
+
+    expect(
+      response.status(),
+      `Failed to set home dashboard: "${uid}" dashboard. Response message is ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()).id as number;
+  };
+
   signInAs = async (username: string, password: string): Promise<GrafanaUser> => {
     await this.unAuthorize();
     await this.authorize(username, password);
@@ -102,6 +173,20 @@ export default class GrafanaHelper {
     expect(user.login, `The session must belong to "${username}"`).toEqual(username);
 
     return user;
+  };
+
+  starDashboard = async (uid: string) => {
+    const authToken = GrafanaHelper.getToken();
+    const response = await this.page.request.post(`graph/api/user/stars/dashboard/uid/${uid}`, {
+      headers: { Authorization: `Basic ${authToken}` },
+    });
+
+    expect(
+      response.status(),
+      `Failed to star "${uid}" dashboard. Response message is ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()).id as number;
   };
 
   unAuthorize = async () => {

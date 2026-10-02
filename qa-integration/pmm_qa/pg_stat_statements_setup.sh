@@ -97,6 +97,13 @@ echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
 echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
 echo "ALTER SYSTEM SET max_locks_per_transaction = 1024;" >> /home/postgres/init.sql
 
+# The pg_stat_user_tables custom query only emits rows while a user table exists;
+# the load loop below only creates transient tables, so keep one permanent table
+# (analyzed, so analyze_count is populated) to make pg_stat_user_tables_* stable.
+echo "CREATE TABLE IF NOT EXISTS pmm_qa_stat_user_tables_seed (id serial PRIMARY KEY, note text);" >> /home/postgres/init.sql
+echo "INSERT INTO pmm_qa_stat_user_tables_seed (note) VALUES ('pmm-qa seed');" >> /home/postgres/init.sql
+echo "ANALYZE pmm_qa_stat_user_tables_seed;" >> /home/postgres/init.sql
+
 # Start server, run init.sql and Create extension PGSM
 service postgresql start
 su postgres bash -c 'psql -f /home/postgres/init.sql'
