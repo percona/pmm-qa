@@ -2381,22 +2381,18 @@
       "link": "https://github.com/percona/pmm-qa/pull/1542",
       "by": "Investigator routine",
       "at": "2026-10-02T08:16:43Z"
-    }
-  ],
-  "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "Package AMD"
-      ]
     },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
       "suites": [
+        "Package AMD",
         "Package ARM"
-      ]
+      ],
+      "verdict": "test fix",
+      "summary": "Same EPEL 404 (dl.fedoraproject.org backend 38.145.32.22) failed all 31 OL8/OL9/AlmaLinux 10 package-test branches at the EPEL key/RPM fetch; added bounded retries in install_epel.yml and the gflags tasks. The AlmaLinux 10 pipeline step in jenkins-pipelines needs the same.",
+      "link": "https://github.com/percona/pmm-qa/pull/1544",
+      "by": "Investigator routine",
+      "at": "2026-10-02T08:16:47Z"
     }
-  ]
+  ],
+  "claims": []
 }
