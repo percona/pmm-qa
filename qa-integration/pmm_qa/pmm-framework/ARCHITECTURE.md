@@ -74,13 +74,11 @@ Source order matters only because `lib/config.sh` runs `register_database`
 calls and a validation loop at source time, which need `lib/common.sh`'s
 `die()`.
 
-`.github/workflows/build-prebaked-images.yml` builds every image on Sundays,
-starts and checks each one, and publishes it to
-`ghcr.io/percona/pmm-qa/<engine>:<version>`, labelled
-`pmm-qa.upstream-version` with what `upstream-version` reported. Daily it
-rebuilds the engines whose label no longer matches `upstream-version`, so a new
-database patch is baked within a day. On a push it rebuilds only the images
-whose baked-in files changed.
+`.github/workflows/build-prebaked-images.yml` builds every image daily
+and on a manual run, starts and checks each one, and publishes it to
+`ghcr.io/percona/pmm-qa/<engine>:<version>`, so a new database patch is baked
+within a day. On a push to main it rebuilds only the images whose baked-in
+files changed.
 
 By default PS and MySQL run `pmm-agent` in their unprivileged database
 container, where Nomad cannot start. With `--nomad` they use their database
