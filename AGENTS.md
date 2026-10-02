@@ -42,7 +42,6 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), and the lint dispatcher | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
 | Claude Code agents & skills | Test Runner, Investigator, FB Reporter, `qa-code-review`, the `@pmm-ai` Slack listener and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
-| [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
 ## Cross-Suite Architecture
