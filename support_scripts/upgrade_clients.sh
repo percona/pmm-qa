@@ -19,7 +19,7 @@ else
 fi
 
 upgrade_client() {
-  local c="$1" log status running versions got fail=0
+  local c="$1" log status running versions got attempt fail=0
   echo "== upgrading client in $c =="
   log=$(mktemp)
   {
@@ -34,7 +34,15 @@ upgrade_client() {
     else
       echo "Upgrading using packages to repository: $repository"
       docker exec "$c" percona-release enable-only pmm3-client "$repository"
-      docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+      # A new dev build replaces the package under the same version, and a mirror still
+      # syncing it can pair the old metadata with the new file, which dnf and apt reject.
+      for attempt in 1 2 3; do
+        docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client' && break
+        [ "$attempt" -lt 3 ] || break
+        echo "pmm-client install failed (attempt $attempt/3); refreshing repository metadata in 30s"
+        sleep 30
+        docker exec "$c" sh -c 'command -v apt >/dev/null && apt-get update || dnf clean metadata'
+      done
     fi
     # The pmm-client package ships a pmm-agent.service, but the QA DB
     # containers already run pmm-agent as a standalone (nohup) process that
