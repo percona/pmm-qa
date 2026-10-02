@@ -15,7 +15,7 @@ export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
   snackBar: SnackbarComponent;
-  abstract builders: Record<string, (...args: string[]) => Locator>;
+  abstract builders: Record<string, (...args: never[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;

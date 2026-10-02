@@ -3,9 +3,15 @@ import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
 export default class AgentsPage extends BasePage {
-  builders = {};
-  buttons = {};
+  builders = {
+    agentTypeCell: (agentType: string) =>
+      this.grafanaIframe().getByRole('cell', { exact: true, name: agentType }),
+  };
+  buttons = {
+    backToNodes: this.grafanaIframe().getByRole('link', { name: 'Go back to nodes' }),
+  };
   elements = {
+    agentTypes: this.grafanaIframe().getByTestId('table-tbody-tr').locator('xpath=td[3]'),
     rtaAgentStatus: this.grafanaIframe().locator(
       '//td[@title="rta-mongodb-agent"]//parent::tr//td[position()="2"]',
     ),
