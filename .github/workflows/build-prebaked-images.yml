@@ -5,7 +5,8 @@ name: Build prebaked database images
 
 on:
   schedule:
-    - cron: '23 3 * * *' # daily: everything, for new database and base-image releases
+    - cron: '0 0 * * 0' # Sundays 00:00 UTC: everything, for base-image OS updates
+    - cron: '0 0 * * 1-6' # other days 00:00 UTC: engines whose upstream version moved (DAILY below)
   workflow_dispatch: # everything
   push:
     paths:
@@ -63,6 +64,8 @@ jobs:
         id: pick
         env:
           EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          DAILY: '0 0 * * 1-6'
           BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           # PSMDB tags pair a major with an Oracle Linux release. The 5.7 base
@@ -78,7 +81,23 @@ jobs:
               | {engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}]' <<<"$1"
           }
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
-          if { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+          if [ "$SCHEDULE" = "$DAILY" ]; then
+            # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
+            stale=()
+            while read -r engine version; do
+              if ! want=$(qa-integration/pmm_qa/pmm-framework/upstream-version "$engine=$version"); then
+                echo "::warning::could not read the upstream version of $engine:$version"
+                continue
+              fi
+              have=$(docker buildx imagetools inspect "ghcr.io/$GITHUB_REPOSITORY/$engine:$version" --format '{{json .Image}}' 2>/dev/null |
+                jq -r 'if has("config") then . else .["linux/amd64"] end | .config.Labels["pmm-qa.upstream-version"] // ""') || have=''
+              if [ "$want" != "$have" ]; then
+                echo "- \`$engine:$version\`: ${have:-unlabelled} -> $want" >>"$GITHUB_STEP_SUMMARY"
+                stale+=("\"$engine\"")
+              fi
+            done < <(tags_of "$all" | jq -r '.[] | "\(.engine) \(.version)"')
+            engines=$(printf '%s\n' "${stale[@]}" | sort -u | jq -sc .)
+          elif { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             engines=$all
           else
             changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
@@ -143,6 +162,13 @@ jobs:
 
       - name: Start it and check it works
         run: qa-integration/pmm_qa/pmm-framework/check-image "$ENGINE=$VERSION"
+
+      # The daily plan compares this label with upstream-version.
+      - name: Label the upstream version
+        run: |
+          upstream=$(qa-integration/pmm_qa/pmm-framework/upstream-version "$ENGINE=$VERSION")
+          echo "FROM $IMAGE" | docker build --label "pmm-qa.upstream-version=$upstream" -t "$IMAGE" -
+          echo "- \`$IMAGE\`: $upstream" >>"$GITHUB_STEP_SUMMARY"
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
