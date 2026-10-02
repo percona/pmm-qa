@@ -2352,7 +2352,21 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "UI",
+        "Upgrade AMD",
+        "Upgrade AMI",
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "test fix",
+      "summary": "mocha 12 (#1538) broke mocha-junit-reporter 2.2.1 ('Class constructor Base cannot be invoked without new'), so every CodeceptJS run with --reporter mocha-multi crashed before its first test; pinned mocha back to 11.",
+      "link": "https://github.com/percona/pmm-qa/pull/1544",
+      "by": "Investigator routine",
+      "at": "2026-10-02T08:16:39Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2373,13 +2387,6 @@
       "at": "2026-10-02T02:38:19Z",
       "suites": [
         "E2E Tests"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
       ]
     },
     {
@@ -2408,27 +2415,6 @@
       "at": "2026-10-02T02:38:19Z",
       "suites": [
         "Package ARM"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "UI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "Upgrade AMD"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "Upgrade AMI"
       ]
     }
   ]
