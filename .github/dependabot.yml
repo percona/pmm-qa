@@ -73,3 +73,11 @@ updates:
       - dependency-name: codeceptjs
         versions:
           - ">=4.0.0"
+      # Mocha 12 made reporters.Base an ES class. mocha-junit-reporter 2.2.1,
+      # loaded through `--reporter mocha-multi`, still calls `Base.call(this)`,
+      # so every CodeceptJS run dies with "Class constructor Base cannot be
+      # invoked without 'new'" before the first test. Lift once a junit
+      # reporter release supports Mocha 12.
+      - dependency-name: mocha
+        versions:
+          - ">=12.0.0"
