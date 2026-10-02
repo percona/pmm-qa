@@ -1,8 +1,8 @@
 # Playwright Authoring Practices
 
 ```text
-verifiedAgainst: 1.62.1
-source: https://playwright.dev/docs/best-practices plus release notes 1.52-1.62
+verifiedAgainst: 1.63.0
+source: https://playwright.dev/docs/best-practices plus release notes 1.52-1.63
 ```
 
 How migrated code is written. `SKILL.md` decides whether behaviour is preserved; this file decides how it is expressed. `verifiedAgainst` must match `@playwright/test` in `e2e_tests/package.json`; `orchestration.md` step 1 checks it, and on drift this file is refreshed against the release notes before migrating. A migration never upgrades Playwright and never edits `playwright.config.ts`.

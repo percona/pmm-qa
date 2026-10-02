@@ -71,7 +71,7 @@ For a legacy remote-instance test, derive the database container's DNS name, int
 | `I.scrollTo(l)` | `await l.scrollIntoViewIfNeeded()`; on a dashboard `loadAllPanels()` replaces `I.scrollPageToBottom()` |
 | `I.switchTo(frame)` / `I.switchTo()` | scope the locator through `grafanaIframe()`; the switch back has no counterpart |
 | `I.forceClick(l)` | `await l.click({ force: true })`, with the obstruction named in the handoff |
-| `I.grabNumberOfVisibleElements(l)` | `await expect(l).toHaveCount(n)` when asserted; `l.filter({ visible: true }).count()` when branched on |
+| `I.grabNumberOfVisibleElements(l)` | `await expect(l).toHaveCount(n)` when asserted; `l.visible().count()` (1.63) when branched on |
 | `I.grabCssPropertyFrom(l, p)` | `await expect(l).toHaveCSS(p, v)` |
 | `I.seeCheckboxIsChecked(l)` | `await expect(l).toBeChecked()` |
 | `I.isElementDisplayed(l, s)` | `await l.isVisible()` only to branch; never inside `expect` |
@@ -88,7 +88,7 @@ For a legacy remote-instance test, derive the database container's DNS name, int
 | `I.openNewTab()` | `duplicateCurrentPage()` in `base.page.ts`, or `context.newPage()` |
 | `I.assertNotEqual(a, b)`, `I.assertEndsWith(a, b)`, `I.assertEmpty(x)` | `expect(a, 'why').not.toBe(b)` / `.toMatch(/b$/)` / `.toHaveLength(0)` |
 | `I.assertDeepMembers(a, b)`, `I.assertDeepIncludeMembers(a, b)` | same set: `expect([...a].sort()).toEqual([...b].sort())`; superset: `expect(a).toEqual(expect.arrayContaining(b))` |
-| `I.seeNumberOfVisibleElements(l, n)`, `I.waitNumberOfVisibleElements(l, n, s)` | `await expect(l.filter({ visible: true })).toHaveCount(n, { timeout })` |
+| `I.seeNumberOfVisibleElements(l, n)`, `I.waitNumberOfVisibleElements(l, n, s)` | `await expect(l.visible()).toHaveCount(n, { timeout })` (1.63) |
 | `I.seeElementInDOM(l)`, `I.dontSeeElementInDOM(l)` | `await expect(l).toBeAttached()` / `.not.toBeAttached()` |
 | `I.checkOption(l)`, `I.dontSeeCheckboxIsChecked(l)` | `await l.check()`; `await expect(l).not.toBeChecked()` |
 | `I.appendField(l, v)` | `await l.press('End'); await l.pressSequentially(v)` |
