@@ -2365,44 +2365,25 @@
       "link": "https://github.com/percona/pmm-qa/pull/1544",
       "by": "Investigator routine",
       "at": "2026-10-02T08:16:39Z"
+    },
+    {
+      "suites": [
+        "Nightly",
+        "Integrations",
+        "CLI Integration",
+        "CLI Integration Compatibility",
+        "E2E Tests",
+        "Upgrade AMD",
+        "Upgrade AMI"
+      ],
+      "verdict": "test fix",
+      "summary": "dl.fedoraproject.org backend 38.145.32.22 returns 404 for all of /pub/epel; the PSMDB Docker image (Dockerfile EPEL install) failed whenever it hit that backend, breaking every psmdb setup. Fixed by #1542, which drops EPEL from the image.",
+      "link": "https://github.com/percona/pmm-qa/pull/1542",
+      "by": "Investigator routine",
+      "at": "2026-10-02T08:16:43Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "E2E Tests"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-02T02:38:19Z",
-      "suites": [
-        "Nightly"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-02T02:38:19Z",
