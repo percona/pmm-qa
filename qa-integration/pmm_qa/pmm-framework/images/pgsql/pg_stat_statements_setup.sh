@@ -13,6 +13,10 @@ chown -R postgres:postgres /home/postgres
 
 apt-get update
 apt-get -y install wget curl gnupg2 lsb-release
+# For support_scripts/upgrade_clients.sh, which upgrades pmm-client by package.
+curl -fsSL --retry 5 -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+apt-get -y install /tmp/percona-release.deb
+rm /tmp/percona-release.deb
 for attempt in 1 2 3; do
   if wget --timeout=30 --tries=2 -O /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc &&
     grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/pgdg.asc; then
