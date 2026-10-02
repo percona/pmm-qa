@@ -8,7 +8,21 @@ export default class NodesPage extends BasePage {
   readonly url = 'graph/inventory/nodes';
   readonly apiUrl = '';
   readonly pagination = new InventoryPagination(this.grafanaIframe());
+  thresholdsModal = {
+    overrideInput: (ruleName: string) =>
+      this.page.getByRole('dialog').getByRole('row').filter({ hasText: ruleName }).getByRole('spinbutton'),
+    resetButton: (ruleName: string) =>
+      this.page
+        .getByRole('dialog')
+        .getByRole('row')
+        .filter({ hasText: ruleName })
+        .getByRole('button', { name: 'Reset to default' }),
+    submit: this.page.getByRole('dialog').getByRole('button', { name: 'Submit changes' }),
+    title: this.page.getByRole('dialog').getByTestId('modal-title'),
+  };
   builders = {
+    actionsMenu: (nodeName: string) =>
+      this.builders.nodeNameCell(nodeName).locator('xpath=..').getByTestId('dropdown-menu-toggle'),
     monitoringLinkByIndex: (index: number) =>
       this.grafanaIframe()
         .locator('tbody')
@@ -31,6 +45,12 @@ export default class NodesPage extends BasePage {
   };
   inputs = {};
   messages = {};
+
+  openAlertThresholds = async (nodeName: string): Promise<void> => {
+    await this.builders.actionsMenu(nodeName).click();
+    await this.grafanaIframe().getByText('Override alert thresholds', { exact: true }).click();
+    await expect(this.thresholdsModal.title).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
 
   verifyHaNodeRoles = async (podNames: string[], leader: string): Promise<void> => {
     for (const podName of podNames) {

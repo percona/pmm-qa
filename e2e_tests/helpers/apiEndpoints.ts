@@ -8,6 +8,7 @@ const apiEndpoints = {
     listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
+    thresholds: '/v1/alerting/thresholds',
   },
   backups: {
     artifacts: '/v1/backups/artifacts',

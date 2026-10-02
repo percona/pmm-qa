@@ -12,6 +12,25 @@ import { GrafanaFolder } from '@interfaces/grafana';
 
 type Headers = Record<string, string>;
 
+export type ThresholdScope = 'THRESHOLD_SCOPE_NODE' | 'THRESHOLD_SCOPE_SERVICE' | 'THRESHOLD_SCOPE_CLUSTER';
+
+export interface Threshold {
+  rule_id: string;
+  param_name: string;
+  default_value: number;
+  effective_value: number;
+  is_overridden: boolean;
+  scope?: ThresholdScope;
+  target?: string;
+}
+
+export interface ThresholdTarget {
+  scope: ThresholdScope;
+  target: string;
+  rule_id: string;
+  param_name: string;
+}
+
 export interface AlertTemplateBody {
   yaml: string;
 }
@@ -35,10 +54,13 @@ export interface CreateRuleBody {
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
+  clearThreshold = async (headers: Headers, data: ThresholdTarget) =>
+    this.request.post(`${apiEndpoints.alerting.thresholds}:clear`, { data, headers });
+
   createRule = async (headers: Headers, data: CreateRuleBody) =>
     this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
-  createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
+  createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<string | undefined> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
       filters: rule.serviceName
         ? [{ label: 'service_name', regexp: rule.serviceName, type: 'FILTER_TYPE_MATCH' }]
@@ -54,6 +76,8 @@ export default class AlertingApi {
     });
 
     expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { rule_id?: string }).rule_id;
   };
 
   createTemplate = async (headers: Headers, yamlBody: AlertTemplateBody) =>
@@ -122,6 +146,17 @@ export default class AlertingApi {
 
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
 
+  listThresholds = async (scope: ThresholdScope, target: string, ruleId?: string): Promise<Threshold[]> => {
+    const response = await this.request.get(apiEndpoints.alerting.thresholds, {
+      headers: GrafanaHelper.getAuthHeader(),
+      params: { scope, target, ...(ruleId && { rule_id: ruleId }) },
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { thresholds?: Threshold[] }).thresholds ?? [];
+  };
+
   removeAllAlertRules = async (): Promise<void> => {
     for (const { folderUid, name } of await this.getRuleGroups()) {
       const response = await this.request.delete(`${apiEndpoints.grafana.ruler}/${folderUid}/${name}`, {
@@ -159,6 +194,9 @@ export default class AlertingApi {
 
     expect(response.status(), await response.text()).toEqual(200);
   };
+
+  setThreshold = async (headers: Headers, data: ThresholdTarget & { value: number }) =>
+    this.request.post(apiEndpoints.alerting.thresholds, { data, headers });
 
   updateTemplate = async (headers: Headers, templateName: string, yamlBody: AlertTemplateBody) =>
     this.request.put(`${apiEndpoints.alerting.templates}/${templateName}`, {
