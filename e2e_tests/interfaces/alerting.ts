@@ -26,6 +26,11 @@ export interface AlertRulesResponse {
   };
 }
 
+export type RulerRulesResponse = Record<
+  string,
+  { name: string; rules: { grafana_alert: { namespace_uid: string; provenance?: string } }[] }[]
+>;
+
 export interface TemplatedAlertRule {
   folderUid: string;
   group: string;
