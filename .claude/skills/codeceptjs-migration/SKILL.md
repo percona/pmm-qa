@@ -87,7 +87,7 @@ Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads
 
 ## Skips
 
-Do not migrate commented-out scenarios. An `xScenario` goes through the worth-porting gate first; one that fails it is proposed `retired` on static evidence (the source TODO, the product default, sibling sources), for the reviewer to confirm live. One that passes follows the skip policy in `mappings.md`; stop if no policy fits rather than inventing one. Check the skip's stated reason first, ticket or `TODO`: the ticket's status, or the product state it names on the live server. If the reason no longer holds, verify live and port unskipped, gating on the fix version in `versionGates.ts` when there is one.
+Do not migrate commented-out scenarios. A skipped scenario (`xScenario`, `Scenario.skip`) whose source names no reason, no ticket or `TODO` beside it, is `retired` directly: no worth-porting gate, no live check; the missing reason is the evidence. Any other skipped scenario goes through the worth-porting gate first; one that fails it is proposed `retired` on static evidence (the source TODO, the product default, sibling sources), for the reviewer to confirm live. One that passes follows the skip policy in `mappings.md`; stop if no policy fits rather than inventing one. Check the skip's stated reason first, ticket or `TODO`: the ticket's status, or the product state it names on the live server. If the reason no longer holds, verify live and port unskipped, gating on the fix version in `versionGates.ts` when there is one.
 
 ## Workflow coverage
 
