@@ -256,6 +256,8 @@
     docker exec --user root {{ container_name }} openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -aes256 -pass pass:testpass -out "/usr/local/percona/pmm/config/pmm-key.pem"
   when: use_encrypted_client_config | default(false) | bool
 
+# Two agents registering at once on a fresh server can race in Grafana while it creates their
+# service accounts; the loser gets a 500 and goes through on a retry.
 - name: Connect pmm client to pmm server using metrics mode without encrypted client config
   shell: |
     docker exec --user root -e PMM_AGENT_SETUP_NODE_NAME={{ pmm_node_name }} {{ container_name }} \
@@ -267,6 +269,10 @@
         --server-username=admin \
         --server-password={{ admin_password }}{{ (debug_client | default(false) | bool) | ternary(' --debug', '') }}\
         {{ container_name }}
+  register: pmm_agent_setup
+  retries: 3
+  delay: 10
+  until: pmm_agent_setup.rc == 0 or 'Internal server error' not in pmm_agent_setup.stdout
   when:
     - metrics_mode | length > 0
     - not (use_encrypted_client_config | default(false) | bool)
@@ -281,6 +287,10 @@
         --server-username=admin \
         --server-password={{ admin_password }} {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
+  register: pmm_agent_setup
+  retries: 3
+  delay: 10
+  until: pmm_agent_setup.rc == 0 or 'Internal server error' not in pmm_agent_setup.stdout
   when:
     - metrics_mode | length == 0
     - not (use_encrypted_client_config | default(false) | bool)
@@ -298,6 +308,10 @@
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
         --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
+  register: pmm_agent_setup
+  retries: 3
+  delay: 10
+  until: pmm_agent_setup.rc == 0 or 'Internal server error' not in pmm_agent_setup.stdout
   when:
     - metrics_mode | length == 0
     - use_encrypted_client_config | default(false) | bool
@@ -316,6 +330,10 @@
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
         --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
+  register: pmm_agent_setup
+  retries: 3
+  delay: 10
+  until: pmm_agent_setup.rc == 0 or 'Internal server error' not in pmm_agent_setup.stdout
   when:
     - metrics_mode | length > 0
     - use_encrypted_client_config | default(false) | bool
