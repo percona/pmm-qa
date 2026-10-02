@@ -8,17 +8,17 @@ export default class NodesPage extends BasePage {
   readonly url = 'graph/inventory/nodes';
   readonly apiUrl = '';
   readonly pagination = new InventoryPagination(this.grafanaIframe());
+  // The modal renders in the PMM shell, outside the Grafana iframe, and has no dialog role.
   thresholdsModal = {
     overrideInput: (ruleName: string) =>
-      this.page.getByRole('dialog').getByRole('row').filter({ hasText: ruleName }).getByRole('spinbutton'),
+      this.page.getByRole('row').filter({ hasText: ruleName }).getByRole('spinbutton'),
     resetButton: (ruleName: string) =>
       this.page
-        .getByRole('dialog')
         .getByRole('row')
         .filter({ hasText: ruleName })
         .getByRole('button', { name: 'Reset to default' }),
-    submit: this.page.getByRole('dialog').getByRole('button', { name: 'Submit changes' }),
-    title: this.page.getByRole('dialog').getByTestId('modal-title'),
+    submit: this.page.getByRole('button', { name: 'Submit changes' }),
+    title: this.page.getByTestId('modal-title'),
   };
   builders = {
     actionsMenu: (nodeName: string) =>
