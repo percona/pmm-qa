@@ -146,8 +146,7 @@ psmdb_client() {
     ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/sbin/pmm-admin
     tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id
     systemctl daemon-reload
-    systemctl enable pmm-agent
-    systemctl restart pmm-agent'
+    systemctl enable pmm-agent'
 }
 
 # Usage: psmdb_register NODE NODE_NAME SERVICE_NAME PMM_ADMIN_ADD_ARGS...
@@ -160,6 +159,8 @@ psmdb_register() {
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
     docker exec -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup "${debug[@]}" >/dev/null
+  # Started only now: `pmm-agent setup` skips the reload of an agent not yet listening.
+  must docker exec "$node" systemctl restart pmm-agent
   wait_pmm_agent "$node"
   pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
 }
@@ -371,6 +372,7 @@ ssl_psmdb_run() {
     docker exec psmdb-server pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml \
     "--server-address=$PMM_SERVER_CONTAINER_ADDRESS" --metrics-mode=auto --server-username=admin \
     "--server-password=$ADMIN_PASSWORD" --server-insecure-tls --force >/dev/null
+  must docker exec psmdb-server systemctl restart pmm-agent
   wait_pmm_agent psmdb-server
   # shellcheck disable=SC2086 # $tls is two flags
   pmm_register psmdb-server pmm-admin add mongodb "psmdb-server_$suffix" --agent-password=mypass --username=pmm_mongodb \
@@ -389,7 +391,8 @@ ssl_psmdb_start() {
   if [[ $minio == true ]]; then
     must "${compose[@]}" up -d --no-deps minio createbucket
   fi
-  must "${compose[@]}" up -d
+  # Pulls bitnamilegacy/openldap from Docker Hub, whose CDN sometimes resets.
+  retry_on "$PMM_TRANSIENT_ERRORS" 5 'Start psmdb-server and ldap-server' "${compose[@]}" up -d
 }
 
 ssl_psmdb_data() {
