@@ -38,7 +38,6 @@ RUN set -ex; \
     percona-release enable pbm ${REPO} && \
     percona-release enable ${PSMDB_REPO} ${REPO} && \
     percona-release enable pmm3-client ${PMM_REPO} && \
-    dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
     dnf update --refresh -y && \
     if [[ $PSMDB_VERSION == "latest" || "$PSMDB_VERSION" =~ ^[0-9]\.[0-9]$ ]] ; then \
         dnf -y install percona-server-mongodb \
