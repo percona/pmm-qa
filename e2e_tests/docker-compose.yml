@@ -25,6 +25,7 @@ services:
       - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
+      - PMM_ENABLE_NOMAD=${PMM_ENABLE_NOMAD:-0}
     volumes:
       - pmm-volume:/srv
     networks:
