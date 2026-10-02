@@ -1,0 +1,100 @@
+name: PMM Upgrade
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+      nightly_tests:
+        description: 'Upgrade every version to 3-dev-latest instead of the latest RC'
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+      nightly_tests:
+        description: 'Upgrade every version to 3-dev-latest instead of the latest RC'
+        default: false
+        type: boolean
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - name: Compute upgrade matrix (last 5 minor versions)
+        id: set
+        shell: bash
+        env:
+          NIGHTLY_TESTS: ${{ inputs.nightly_tests }}
+        run: |
+          VERSIONS=$(curl -fsS 'https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100' \
+            | jq -r '[.results[].name | select(test("^3\\.[0-9]+\\.[0-9]+$")) | split(".") | map(tonumber)]
+                | (map(.[1]) | unique | .[-5:]) as $minors
+                | map(select(.[1] | IN($minors[]))) | sort[] | map(tostring) | join(".")')
+          RC_VERSION=$(curl -fsS 'https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated' \
+            | jq -r 'first(.results[].name | select(test("-rc$")))')
+          DEV_LATEST_VERSION=$(curl -fsS https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
+          if [ "$NIGHTLY_TESTS" = true ]; then
+            GA_UPGRADE_TAG=perconalab/pmm-server:3-dev-latest
+            GA_UPGRADE_VERSION=$DEV_LATEST_VERSION
+            GA_CLIENT_REPOSITORY=experimental
+          else
+            GA_UPGRADE_TAG=perconalab/pmm-server:$RC_VERSION
+            GA_UPGRADE_VERSION=${RC_VERSION%-rc*}
+            GA_CLIENT_REPOSITORY=
+          fi
+          MATRIX=$(jq -Rnc --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" \
+            --arg ga_tag "$GA_UPGRADE_TAG" --arg ga_ver "$GA_UPGRADE_VERSION" --arg ga_repo "$GA_CLIENT_REPOSITORY" '
+            def supports_ui_upgrade: split(".") | map(tonumber) as [$major, $minor]
+              | $major < 3 or ($major == 3 and ($minor // 0) < 9);
+            (if $ga_repo != "" then {client_upgrade_repository: $ga_repo} else {} end) as $client
+            | [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $ga_tag, upgrade_version: $ga_ver, pre_upgrade_version: .} + $client] as $ga
+            | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] + $ga),
+               ui: [$ga[] | select(.version | supports_ui_upgrade)]}' <<< "$VERSIONS")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "$MATRIX"
+
+  upgrade-docker:
+    name: Docker way upgrade for PMM
+    uses: ./.github/workflows/upgrade-pmm-runner.yml
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix).docker }}
+    with:
+      docker_tag: ${{ matrix.docker_tag }}
+      version: ${{ matrix.version }}
+      upgrade_tag: ${{ matrix.upgrade_tag }}
+      upgrade_version: ${{ matrix.upgrade_version }}
+      upgrade_type: docker
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
+      client_upgrade_repository: ${{ matrix.client_upgrade_repository }}
+
+  upgrade-ui:
+    name: UI way upgrade for PMM
+    uses: ./.github/workflows/upgrade-pmm-runner.yml
+    needs: prepare
+    # An empty include fails the job; skip once none of the last 5 minors is below 3.9.
+    if: fromJSON(needs.prepare.outputs.matrix).ui[0] != null
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix).ui }}
+    with:
+      docker_tag: ${{ matrix.docker_tag }}
+      version: ${{ matrix.version }}
+      upgrade_tag: ${{ matrix.upgrade_tag }}
+      upgrade_version: ${{ matrix.upgrade_version }}
+      upgrade_type: ui
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pre_upgrade_version: ${{ matrix.pre_upgrade_version }}
+      client_upgrade_repository: ${{ matrix.client_upgrade_repository }}

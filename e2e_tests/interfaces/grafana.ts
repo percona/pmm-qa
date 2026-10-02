@@ -29,3 +29,10 @@ export interface GrafanaQueryFrame {
 export interface GrafanaQueryResponse {
   results: Record<string, { error?: string; frames: GrafanaQueryFrame[] }>;
 }
+
+export interface GrafanaFolder {
+  id: number;
+  uid: string;
+  title: string;
+  managedBy: string;
+}
