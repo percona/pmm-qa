@@ -2392,6 +2392,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1544",
       "by": "Investigator routine",
       "at": "2026-10-02T08:16:47Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "downloads.percona.com/repo.percona.com served GitHub runners at 180-370 KB/s during the run, so 9 CLI compat jobs hit the 40-minute timeout and PMM-T2227 overran its 120 s budget in the 3 Generic jobs; transient, and the downloads are fast now.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-02T08:16:51Z"
     }
   ],
   "claims": []
