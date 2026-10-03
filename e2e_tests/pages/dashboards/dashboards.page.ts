@@ -59,6 +59,8 @@ export default class Dashboards extends BasePage {
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    panelRegionByName: (panelName: string) =>
+      this.grafanaIframe().getByRole('region', { exact: true, name: panelName }),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -340,11 +342,14 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panelText = await this.grafanaIframe()
-        .getByRole('region', { exact: true, name: panelName })
-        .innerText();
+      const panel = this.builders.panelRegionByName(panelName);
 
-      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+      await expect
+        .poll(async () => hasKnownNoDataMarker(await panel.innerText()), {
+          message: `Panel ${panelName} should show a no-data marker`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        })
+        .toBeTruthy();
     }
   };
 
