@@ -110,8 +110,12 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga \
-         --timeout=60 --waitretry=15 "${client_version}"
+       # Fetch into pmm-framework's cache as the calling user, so a later
+       # pmm-framework run reuses this download instead of repeating it.
+       lib="$(dirname "${BASH_SOURCE[0]}")/pmm-framework/lib"
+       tarball=$(${SUDO_USER:+sudo -H -u "$SUDO_USER"} bash -c \
+         'source "$1/common.sh" && source "$1/prebaked.sh" && fetch_client_tarball "$2"' _ "$lib" "$client_version") || exit 1
+       cp "$tarball" pmm-client.tar.gz
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
