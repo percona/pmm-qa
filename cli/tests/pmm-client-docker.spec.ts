@@ -24,7 +24,8 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
     await cli.exec(startCommand);
     await expect(async () => {
       const status = await cli.exec('docker exec pmm-client-1 pmm-admin status');
-      await status.assertSuccess();
+      // A disconnected agent still exits 0 and prints "Connected : false".
+      expect(status.stdout).toMatch(/Connected\s+:\s+true/);
     }, { message: `"${startCommand}" failed to start.\nLogs:${(await cli.exec('docker logs pmm-server-1')).stdout}` }).toPass({
       timeout: 60_000,
       intervals: [2_000],
