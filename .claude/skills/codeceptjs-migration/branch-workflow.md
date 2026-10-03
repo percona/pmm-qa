@@ -158,7 +158,7 @@ curl -sf https://raw.githubusercontent.com/percona/grafana/main/.github/workflow
 
 For each migrated tag, name every consumer or state that a cross-repository caller could not be ruled out. A tag in this table is never reported as "no consumer". When two coverage shapes are arguable, read the precedent: `git log -- .github/workflows/` and the last migration's diff.
 
-Count the source's active scenarios per tag, matching `Scenario(`, `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(`, and cross-check against a plain tag grep; a `^`-anchored regex without `m` under-counts. If retirement leaves a job's grep with no active matches, delete the job in the same commit as the replacement coverage.
+Count the source's active scenarios per tag, matching `Scenario(`, `Scenario.skip(`, `xScenario(` and `Data(...).Scenario(`, and cross-check against a plain tag grep; a `^`-anchored regex without `m` under-counts. If retirement leaves a job's grep with no active matches, delete the job in the same commit as the replacement coverage; the Playwright job that replaces it takes over its id and display name.
 
 ### 2. Choose the coverage shape
 
