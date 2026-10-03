@@ -69,7 +69,7 @@ for (const subPage of ['services', 'nodes'] as const) {
   );
 
   pmmTest(
-    `PMM-T1441 Check all checkboxes button should work fine for selected agents/nodes/services @inventory | ${subPage}`,
+    `PMM-T1441 - Check all checkboxes button should work fine for selected agents/nodes/services @inventory | ${subPage}`,
     async ({ nodesPage, page, servicesPage }) => {
       const inventoryPage = subPage === 'services' ? servicesPage : nodesPage;
       const { pagination } = inventoryPage;
@@ -94,7 +94,7 @@ for (const subPage of ['services', 'nodes'] as const) {
   );
 
   pmmTest(
-    `PMM-T1445 Verification of Select all Functiality for multiple page @inventory | ${subPage}`,
+    `PMM-T1445 - Verification of Select all Functiality for multiple page @inventory | ${subPage}`,
     async ({ nodesPage, page, servicesPage }) => {
       const { pagination, url } = subPage === 'services' ? servicesPage : nodesPage;
 
