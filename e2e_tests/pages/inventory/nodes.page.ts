@@ -23,14 +23,18 @@ export default class NodesPage extends BasePage {
     showRowDetailsByIndex: (index: string) =>
       this.grafanaIframe().getByTestId('show-row-details').nth(Number(index)),
   };
-  buttons = {};
+  buttons = {
+    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
+  };
   elements = {
     detailsContent: this.grafanaIframe().getByTestId('details-row-content'),
     nodeRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
     runningAgents: this.grafanaIframe().locator('[data-testid^="status-badge"]'),
   };
   inputs = {};
-  messages = {};
+  messages = {
+    deleteConfirmation: this.grafanaIframe().getByRole('dialog').getByRole('heading', { level: 4 }),
+  };
 
   verifyHaNodeRoles = async (podNames: string[], leader: string): Promise<void> => {
     for (const podName of podNames) {
