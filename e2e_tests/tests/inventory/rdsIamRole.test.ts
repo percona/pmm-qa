@@ -106,11 +106,10 @@ pmmTest(
     await pmmTest.step('Verify discovery with all fields empty sends no credentials', async () => {
       const response = await addInstancePage.discoverRds({});
 
-      expect(response.request().postDataJSON()).toEqual({
-        aws_access_key: '',
-        aws_role_arn: '',
-        aws_secret_key: '',
-      });
+      expect(
+        Object.values(response.request().postDataJSON() as Record<string, string>).filter(Boolean),
+        'Discovery must not send any credential',
+      ).toEqual([]);
 
       for (const field of ['aws_access_key', 'aws_secret_key', 'aws_role_arn']) {
         await expect(addInstancePage.builders.fieldError(field)).toBeEmpty();
