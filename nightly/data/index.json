@@ -42702,6 +42702,17 @@
         "link": "https://github.com/percona/pmm-qa/pull/1549",
         "by": "Investigator routine",
         "at": "2026-10-05T03:29:55Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI",
+          "Upgrade AMI"
+        ],
+        "verdict": "not reproduced",
+        "summary": "nightly / ha: same failure set as nightly 54 (PMM-T2298/T300/T2039/T418/T1988/T506/T878, empty Node Summary, PMM Health and VictoriaMetrics panels), all in one shard; HA-specific, an HA cluster repro was not attempted. gssapi and ami 3.8.0 are Jenkins-only and their consoles returned 403, so they were not diagnosed.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-05T03:29:58Z"
       }
     ],
     "claims": [
@@ -42710,20 +42721,6 @@
         "at": "2026-10-05T03:08:12Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-05T03:08:12Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-05T03:08:12Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       }
     ]
