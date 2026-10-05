@@ -183,6 +183,8 @@ pmmTest(
       .assertSuccess()
       .stdout.trim();
 
+    expect(containerName, 'No ps_pmm_ container found').not.toBe('');
+
     cliHelper
       .execute(
         `docker exec ${containerName} mysql -h 127.0.0.1 -u ${username} -p${password} --port 3306 -e "SET MAX_EXECUTION_TIME = 1000;"`,
