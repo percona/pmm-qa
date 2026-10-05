@@ -2472,5 +2472,49 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "Nightly"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "Upgrade AMD"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:08:12Z",
+      "suites": [
+        "Upgrade AMI"
+      ]
+    }
+  ]
 }
