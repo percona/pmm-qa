@@ -84,34 +84,40 @@ export default class SettingsApi {
       remove_email_alerting_settings: true,
       remove_slack_alerting_settings: true,
     };
-    // A setting pinned by an environment variable rejects any other value with a 400 naming that variable.
-    const envPinned: Record<string, string[]> = {
-      PMM_DATA_RETENTION: ['data_retention'],
-      PMM_ENABLE_TELEMETRY: ['enable_advisor', 'enable_telemetry'],
-    };
-    const pending = new Set(Object.keys(envPinned));
-    const dropped = new Set<string>();
+    const response = await this.request.put(apiEndpoints.server.settings, {
+      data: body,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
-    for (;;) {
-      const response = await this.request.put(apiEndpoints.server.settings, {
-        data: Object.fromEntries(Object.entries(body).filter(([field]) => !dropped.has(field))),
+    if (response.status() !== 400) {
+      expect(response.status()).toEqual(200);
+
+      return;
+    }
+
+    const { message } = (await response.json()) as { message?: string };
+
+    expect(message, 'Unexpected 400 from the settings restore').toContain(
+      'Telemetry is configured via PMM_ENABLE_TELEMETRY',
+    );
+
+    delete body.enable_advisor;
+    delete body.enable_telemetry;
+
+    let retry = await this.request.put(apiEndpoints.server.settings, {
+      data: body,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    if (retry.status() === 400 && (await retry.text()).includes('PMM_DATA_RETENTION')) {
+      delete body.data_retention;
+      retry = await this.request.put(apiEndpoints.server.settings, {
+        data: body,
         headers: GrafanaHelper.getAuthHeader(),
       });
-
-      if (response.status() !== 400) {
-        expect(response.status()).toEqual(200);
-
-        return;
-      }
-
-      const { message = '' } = (await response.json()) as { message?: string };
-      const variable = [...pending].find((name) => message.includes(name));
-
-      if (!variable) throw new Error(`Unexpected 400 from the settings restore: ${message}`);
-
-      pending.delete(variable);
-      envPinned[variable].forEach((field) => dropped.add(field));
     }
+
+    expect(retry.status()).toEqual(200);
   };
 
   setPublicAddress = async (address: string): Promise<void> =>
