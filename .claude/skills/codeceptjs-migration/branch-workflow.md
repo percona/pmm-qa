@@ -239,7 +239,13 @@ RUN_ID=$(gh run list --repo percona/pmm-qa --workflow <workflow.yml> --branch "$
 
 4. Put `$JOB_URL` on the body's `Run:` line and post it: `gh pr comment "$PR_NUM" --body "GitHub Actions: $JOB_URL (<job name>)"`.
 
-A job still running is linked as it is; do not wait for CI before marking `done`. A cancelled job, or one whose expression selects none of the migrated titles, is not a link. A scenario only the `@nightly` bucket selects has no PR-CI job: trigger Jenkins `pmm3-ui-tests-nightly-gha` with `PMM_QA_GIT_BRANCH=<publish branch>` and link the job in the `nightly-e2e-tests-matrix.yml` run it dispatches, or write "no PR-CI job selects `@nightly`; executed locally, ledger `<path>`" on the `Run:` line.
+A job still running is linked as it is; do not wait for CI before marking `done`. A cancelled job, or one whose expression selects none of the migrated titles, is not a link. Every migrated title needs a linked job that ran it. When no job the push started selects a title (a tag only the Jenkins-dispatched nightly picks, such as `@qan` or `@nightly`), dispatch the Playwright runner on the publish branch with that tag and the setup the tests need, and link its job; a local run is not a substitute:
+
+```bash
+gh workflow run runner-e2e-tests-playwright.yml --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR" -f pmm_test_flag='<tag>' -f setup_services='<--database ...>' -f pmm_server_version='perconalab/pmm-server:3-dev-latest' -f pmm_client_version='latest-tarball'
+```
+
+A later push cancels the jobs of the run it supersedes: after every push, re-take each linked job from the new head's run and update the `Run:` line.
 
 ## Tracker completion and cleanup
 
