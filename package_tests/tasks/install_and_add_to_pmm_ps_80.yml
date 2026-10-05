@@ -61,6 +61,10 @@
     name: https://dl.fedoraproject.org/pub/epel/9/Everything/aarch64/Packages/g/gflags-2.2.2-9.el9.aarch64.rpm
     state: present
     disable_gpg_check: yes
+  register: gflags_result
+  until: gflags_result is succeeded
+  retries: 10
+  delay: 3
   when:
     - ansible_os_family == "RedHat"
     - (ansible_distribution_major_version == "9") or (ansible_distribution == "Amazon" and ansible_distribution_major_version == "2023")
@@ -71,6 +75,10 @@
     name: https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/g/gflags-2.2.2-9.el9.x86_64.rpm
     state: present
     disable_gpg_check: yes
+  register: gflags_result
+  until: gflags_result is succeeded
+  retries: 10
+  delay: 3
   when:
     - ansible_os_family == "RedHat"
     - (ansible_distribution_major_version == "9") or (ansible_distribution == "Amazon")
