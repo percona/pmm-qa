@@ -42692,6 +42692,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1549",
         "by": "Investigator routine",
         "at": "2026-10-05T03:29:50Z"
+      },
+      {
+        "suites": [
+          "Upgrade AMD"
+        ],
+        "verdict": "test fix",
+        "summary": "All 18 Upgrade AMD lanes: #1432 deleted support_scripts/check_client_upgrade.py, which pmm3-upgrade-test-runner still runs in its Check Client before/after Upgrade stages (python3 exits 2 on the missing file; reproduced). Restored unchanged; Jenkins consoles were unreadable (403), so attribution is from the pipeline source.",
+        "link": "https://github.com/percona/pmm-qa/pull/1549",
+        "by": "Investigator routine",
+        "at": "2026-10-05T03:29:55Z"
       }
     ],
     "claims": [
@@ -42707,13 +42717,6 @@
         "at": "2026-10-05T03:08:12Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-05T03:08:12Z",
-        "suites": [
-          "Upgrade AMD"
         ]
       },
       {
