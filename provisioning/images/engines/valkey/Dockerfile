@@ -1,7 +1,7 @@
 ARG VALKEY_VERSION=8
 FROM valkey/valkey:${VALKEY_VERSION}-bookworm AS valkey
 
-FROM rockylinux:9
+FROM rockylinux/rockylinux:9
 RUN dnf install -y findutils gzip openssl tar \
     && ln -s /usr/bin/dnf /usr/bin/microdnf \
     && dnf clean all \
