@@ -18,7 +18,7 @@ import {
 } from '@testdata/datasourceProxy';
 import { mysqlAllowedPanels, mysqlDisallowedPanels } from './accessControl.constants';
 
-pmmTest.describe.configure({ mode: 'serial' });
+pmmTest.describe.configure({ mode: 'default' });
 
 const mysqlOverviewUrl = 'pmm-ui/graph/d/mysql-instance-overview/mysql-instances-overview?from=now-1h&to=now';
 let ids: ProxyUserIds;

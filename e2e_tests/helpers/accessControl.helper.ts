@@ -62,7 +62,7 @@ export default class AccessControlHelper {
     await this.api.settingsApi.updateSettings({ enable_access_control: enabled });
 
     const { id, uid } = await this.getMetricsDataSource();
-    const path = `${dataSourceRoutes(id, uid).proxyByUid}${queryUp}`;
+    const path = `${dataSourceRoutes(id, uid).proxyById}${queryUp}`;
     const probeResults = async () =>
       DatasourceProxyApi.countResults((await this.api.datasourceProxyApi.get(path, probe)).body);
     const options = { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES };

@@ -6,7 +6,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { admin, editor, fullAccessRoleTitle, noAccessRole } from '@testdata/datasourceProxy';
 
-pmmTest.describe.configure({ mode: 'serial' });
+pmmTest.describe.configure({ mode: 'default' });
 
 let ids: ProxyUserIds;
 let folderUid: string;
