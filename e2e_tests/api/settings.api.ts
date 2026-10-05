@@ -109,7 +109,10 @@ export default class SettingsApi {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    if (retry.status() === 400 && (await retry.text()).includes('PMM_DATA_RETENTION')) {
+    if (
+      retry.status() === 400 &&
+      (await retry.text()).includes('is set via PMM_DATA_RETENTION environment variable')
+    ) {
       delete body.data_retention;
       retry = await this.request.put(apiEndpoints.server.settings, {
         data: body,
