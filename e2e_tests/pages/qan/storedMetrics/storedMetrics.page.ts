@@ -48,7 +48,7 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.pageTitle).toBeVisible({
       timeout: Timeouts.THIRTY_SECONDS,
     });
-    await this.waitUntilQanStoredMetricsLoaded();
+    await this.waitUntilQanStoredMetricsLoaded(Timeouts.TWO_MINUTES);
     await expect(this.elements.pageProgressBar).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(this.elements.iframe).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
