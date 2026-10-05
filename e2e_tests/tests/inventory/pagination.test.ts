@@ -55,16 +55,7 @@ for (const subPage of ['services', 'nodes'] as const) {
 
       await page.goto(url);
       await expect(pagination.itemsInterval).toContainText('1-25', { timeout: Timeouts.THIRTY_SECONDS });
-      await expect(pagination.rowsPerPageDropdown).toHaveText('25', { timeout: Timeouts.THIRTY_SECONDS });
-
-      const totalItems = Number((await pagination.itemsInterval.textContent())?.split(' ')[3]);
-
-      await expect(pagination.previousPageButton).toBeDisabled();
-      await pagination.nextPageButton.click();
-      await expect(pagination.activePageButton).toHaveText('2', { timeout: Timeouts.THIRTY_SECONDS });
-      await expect(pagination.itemsInterval).toContainText(`26-${totalItems <= 50 ? totalItems : 50}`);
-      await pagination.firstPageButton.click();
-      await expect(pagination.itemsInterval).toContainText('1-25');
+      await pagination.verifyPaginationFunctionality();
     },
   );
 
@@ -75,16 +66,12 @@ for (const subPage of ['services', 'nodes'] as const) {
       const { pagination } = inventoryPage;
 
       await page.goto(inventoryPage.url);
-      await pagination.selectAllCheckbox.click({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(pagination.selectedRowCheckboxes.first()).toBeVisible();
 
-      const firstPageSelected = await pagination.selectedRowCheckboxes.count();
+      const firstPageSelected = await pagination.selectAllRows();
 
       await pagination.nextPageButton.click();
-      await pagination.selectRowCheckboxes.first().click();
-      await expect(pagination.selectedRowCheckboxes.first()).toBeVisible();
 
-      const selected = firstPageSelected + (await pagination.selectedRowCheckboxes.count());
+      const selected = firstPageSelected + (await pagination.selectFirstRow());
 
       await inventoryPage.buttons.delete.click();
       await expect(inventoryPage.messages.deleteConfirmation).toHaveText(
@@ -99,7 +86,7 @@ for (const subPage of ['services', 'nodes'] as const) {
       const { pagination, url } = subPage === 'services' ? servicesPage : nodesPage;
 
       await page.goto(url);
-      await pagination.selectAllCheckbox.click({ timeout: Timeouts.THIRTY_SECONDS });
+      await pagination.selectAllRows();
       await expect(pagination.selectedRowCheckboxes).toHaveCount(
         Number(await pagination.rowsPerPageDropdown.textContent()),
       );

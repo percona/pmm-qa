@@ -1,4 +1,4 @@
-import { FrameLocator, Locator } from '@playwright/test';
+import { expect, FrameLocator, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
 type RowsPerPage = '25' | '50' | '100';
@@ -29,8 +29,35 @@ export default class InventoryPagination {
   rowsPerPageOption = (rowsPerPage: RowsPerPage) =>
     this.frame.getByRole('option', { exact: true, name: rowsPerPage });
 
+  selectAllRows = async (): Promise<number> => {
+    await this.selectAllCheckbox.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.selectedRowCheckboxes.first()).toBeVisible();
+
+    return this.selectedRowCheckboxes.count();
+  };
+
+  selectFirstRow = async (): Promise<number> => {
+    await this.selectRowCheckboxes.first().click();
+    await expect(this.selectedRowCheckboxes.first()).toBeVisible();
+
+    return this.selectedRowCheckboxes.count();
+  };
+
   selectRowsPerPage = async (rowsPerPage: RowsPerPage) => {
     await this.rowsPerPageDropdown.click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.rowsPerPageOption(rowsPerPage).click({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  verifyPaginationFunctionality = async () => {
+    await expect(this.rowsPerPageDropdown).toHaveText('25', { timeout: Timeouts.THIRTY_SECONDS });
+
+    const totalItems = Number((await this.itemsInterval.textContent())?.split(' ')[3]);
+
+    await expect(this.previousPageButton).toBeDisabled();
+    await this.nextPageButton.click();
+    await expect(this.activePageButton).toHaveText('2', { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.itemsInterval).toContainText(`26-${totalItems <= 50 ? totalItems : 50}`);
+    await this.firstPageButton.click();
+    await expect(this.itemsInterval).toContainText('1-25');
   };
 }
