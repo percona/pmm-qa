@@ -2472,7 +2472,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly",
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T2004 failed 3/3 on all 7 docker runs: the nightly server sets PMM_DATA_RETENTION=48h, so restoreSettingsDefaults got a 400 ('Data retention for queries is set via PMM_DATA_RETENTION') after dropping telemetry; reproduced on a VM with the same image and env, fixed by dropping whichever env-pinned field the 400 names.",
+      "link": "https://github.com/percona/pmm-qa/pull/1549",
+      "by": "Investigator routine",
+      "at": "2026-10-05T03:29:50Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2486,20 +2498,6 @@
       "at": "2026-10-05T03:08:12Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-05T03:08:12Z",
-      "suites": [
-        "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-05T03:08:12Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
