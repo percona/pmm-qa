@@ -59,8 +59,6 @@ export default class Dashboards extends BasePage {
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-    panelRegionByName: (panelName: string) =>
-      this.grafanaIframe().getByRole('region', { exact: true, name: panelName }),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -342,7 +340,7 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panel = this.builders.panelRegionByName(panelName);
+      const panel = this.grafanaIframe().getByRole('region', { exact: true, name: panelName });
 
       await expect
         .poll(async () => hasKnownNoDataMarker(await panel.innerText()), {
