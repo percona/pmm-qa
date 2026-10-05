@@ -11,6 +11,7 @@ export default class AlertingPage extends BasePage {
     alertRules: 'graph/alerting/list',
     alertSettings: 'graph/alerting/admin',
     contactPoints: 'graph/alerting/notifications',
+    newAlertRule: 'graph/alerting/new/alerting',
     notificationPolicies: 'graph/alerting/routes',
     silences: '/graph/alerting/silences',
     templates: 'graph/alerting/alert-rule-templates',
@@ -29,6 +30,8 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByTestId('delete-template-button'),
     editTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('edit-template-button'),
+    evaluationIntervalOption: (interval: string) =>
+      this.grafanaIframe().getByRole('option', { exact: true, name: interval }),
     folderOption: (folder: string) =>
       this.grafanaIframe().getByTestId('folder-picker').getByRole('treeitem', { exact: true, name: folder }),
     rowActions: (alertName: string) =>
@@ -90,6 +93,7 @@ export default class AlertingPage extends BasePage {
       'data-testid alert-rule new-evaluation-group-button',
     ),
     newSilence: this.grafanaIframe().getByRole('link', { name: /^(add|create) silence$/i }),
+    runQueries: this.grafanaIframe().getByRole('button', { exact: true, name: 'Run queries' }),
     save: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save' }),
     saveRule: this.grafanaIframe().getByTestId('save-rule'),
     saveRuleAndExit: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save rule and exit' }),
@@ -115,6 +119,7 @@ export default class AlertingPage extends BasePage {
     modalWarning: this.grafanaIframe().getByTestId('alert-rule-name-warning'),
     noAlerts: this.page.getByRole('heading', { name: 'Nothing to show here yet' }),
     pageContent: this.grafanaIframe().getByRole('main'),
+    queryNoData: this.grafanaIframe().getByText('No data', { exact: true }),
     ruleDetails: this.grafanaIframe().getByTestId('data-testid expanded-content'),
     ruleName: this.grafanaIframe().locator('[data-column="Name"]'),
     templateNames: this.grafanaIframe().locator('//tr/td[1]'),
@@ -180,6 +185,46 @@ export default class AlertingPage extends BasePage {
       },
     );
     await expect(this.builders.deleteTemplate(summary)).toBeHidden();
+  };
+
+  openNewRuleWithQuery = async (datasourceUid: string, expr: string) => {
+    const defaults = {
+      condition: 'A',
+      queries: [
+        {
+          datasourceUid,
+          model: { editorMode: 'code', expr, instant: true, range: false, refId: 'A' },
+          refId: 'A',
+          relativeTimeRange: { from: 600, to: 0 },
+        },
+      ],
+      type: 'grafana',
+    };
+
+    await this.page.goto(
+      `${this.urls.newAlertRule}?defaults=${encodeURIComponent(JSON.stringify(defaults))}`,
+    );
+    await expect(this.buttons.runQueries).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openRuleGroupEditor = async (folderUid: string, group: string) => {
+    await this.page.goto(
+      `graph/alerting/grafana/namespaces/${folderUid}/groups/${encodeURIComponent(group)}/edit`,
+    );
+  };
+
+  runQueries = async (): Promise<number> => {
+    const response = this.page.waitForResponse((r) => r.url().includes('/api/v1/eval'));
+
+    await this.buttons.runQueries.click();
+
+    const body = (await (await response).json()) as {
+      results: Record<string, { frames?: { data?: { values?: unknown[][] } }[] }>;
+    };
+
+    return Object.values(body.results)
+      .flatMap((result) => result.frames ?? [])
+      .filter((frame) => (frame.data?.values?.[0]?.length ?? 0) > 0).length;
   };
 
   silenceAlert = async (alertName: string) => {
