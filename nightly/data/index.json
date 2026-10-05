@@ -42713,16 +42713,18 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-05T03:29:58Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-05T03:08:12Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "CLI compat one-offs, each green on the other 5 client versions: PMM-T2227 timed out after a 9.7 min run on 3.8.0 Generic (30-60 s elsewhere), and ps-8.0 never appeared in pmm-admin list on 3.7.1 client-docker, the setup race open PR #1548 hardens. Nightly runs cannot be re-run.",
+        "link": "https://github.com/percona/pmm-qa/pull/1548",
+        "by": "Investigator routine",
+        "at": "2026-10-05T03:30:02Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
