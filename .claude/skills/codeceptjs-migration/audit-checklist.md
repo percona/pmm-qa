@@ -7,7 +7,7 @@ The reviewer works this twice: before execution and after. Clear the Shape block
 ### Shape
 
 - [ ] `bash .claude/scripts/check-migration-conventions.sh <every changed file>` run by the reviewer, output pasted, zero failures, every advisory answered. Advisories on pre-existing lines are not blockers.
-- [ ] No name with one consumer anywhere in the diff (method, `const`, interface, type alias, row field, helper file), counted across files. Pre-existing methods exposed for reuse are not findings; `e2e_tests/eslint.config.mjs` whitelists single-caller assertion helpers by name.
+- [ ] No name with one consumer anywhere in the diff (method, `const`, interface, type alias, row field, helper file), counted across files. Pre-existing methods exposed for reuse, and POM or component methods that group a page's actions, are not findings; `e2e_tests/eslint.config.mjs` whitelists single-caller assertion helpers by name.
 - [ ] A dashboard source produced a `DashboardInterface` page object registered on `Dashboards`, panels listed there as an inline `metrics` literal, no field outside the interface; the test iterates through the fixture, never `new <X>Dashboard()`.
 - [ ] One test per `Data(...)` row, distinguishable by title; a bare `Scenario` whose loop lives in a page-object method is one test with a `for` loop. Row titles end in the one distinguishing value, no JSON.
 - [ ] Zero comments in `*.test.ts`; no added comment outside tests narrates a decision.

@@ -210,9 +210,10 @@ check_narrative_comments() {
   ' || failures=1
 }
 
-# A method added to a POM, API client, component or helper with one call site across e2e_tests is inlined.
+# A method added to an API client or helper with one call site across e2e_tests is inlined; POM and component methods may group a page's actions.
 check_new_method_callers() {
   local file=$1 name callers
+  [[ $file == *.page.ts || $file == */components/* ]] && return
   while read -r name; do
     [[ -z $name || $name == constructor ]] && continue
     callers=$(count_uses "\.${name}\(" "$file")
