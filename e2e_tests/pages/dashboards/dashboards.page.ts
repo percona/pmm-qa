@@ -36,28 +36,6 @@ export default class Dashboards extends BasePage {
   readonly pmmHealth = new PmmHealthDashboard();
   readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  elements = {
-    annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
-    // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
-    annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
-    collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
-    expandRow: this.grafanaIframe().getByLabel('Expand row'),
-    gridItems: this.grafanaIframe().locator('.react-grid-item'),
-    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
-    loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
-    loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    noDataPanel: this.page.locator(noDataMarkerXPath),
-    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
-    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
-    panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
-    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
-    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
-    refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
-    summaryPanelText: this.grafanaIframe().locator(
-      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
-    ),
-  };
   builders = {
     annotationTagText: (tagValue: string) =>
       this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
@@ -90,6 +68,28 @@ export default class Dashboards extends BasePage {
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
     imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
+  };
+  elements = {
+    annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
+    // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
+    annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
+    collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
+    expandRow: this.grafanaIframe().getByLabel('Expand row'),
+    gridItems: this.grafanaIframe().locator('.react-grid-item'),
+    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
+    loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
+    loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
+    noDataPanel: this.page.locator(noDataMarkerXPath),
+    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
+    panelHeaders: this.grafanaIframe().getByTestId('header-container'),
+    panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
+    refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
+    summaryPanelText: this.grafanaIframe().locator(
+      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
+    ),
   };
   inputs = {};
   messages = {};
@@ -340,11 +340,14 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panelText = await this.grafanaIframe()
-        .getByRole('region', { exact: true, name: panelName })
-        .innerText();
+      const panel = this.grafanaIframe().getByRole('region', { exact: true, name: panelName });
 
-      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+      await expect
+        .poll(async () => hasKnownNoDataMarker(await panel.innerText()), {
+          message: `Panel ${panelName} should show a no-data marker`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        })
+        .toBeTruthy();
     }
   };
 
