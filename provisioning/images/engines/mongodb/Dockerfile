@@ -1,4 +1,4 @@
-FROM rockylinux:9
+FROM rockylinux/rockylinux:9
 
 ARG MONGODB_VERSION=8.0
 ARG MGODATAGEN_VERSION=0.11.2

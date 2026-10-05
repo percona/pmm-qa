@@ -1,4 +1,4 @@
-FROM rockylinux:9
+FROM rockylinux/rockylinux:9
 # pmm-framework's REDIS_VERSION / NODE_PROCESS_VERSION, pinned at build time here because the
 # exporters are baked into the image instead of installed by a playbook on every run. Change one and
 # rebuild the image (npm run build -- external) for it to take effect.
