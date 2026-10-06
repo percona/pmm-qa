@@ -5,9 +5,9 @@
 # The only tag is :latest. The matrix also calls this when run with build_images,
 # which republishes :latest from the branch it runs on before testing it.
 #
-# amd64 only: nothing can use arm64 images until pmm-server ships an arm64 build.
-# To add it, give the matrix an `arch` axis with a `runner` per arch, push one tag
-# each, and join them with `docker buildx imagetools create`.
+# :latest is multi-arch. Each OS is built natively on an amd64 and an arm64 runner
+# and pushed by digest alone; publish then joins the two digests as :latest, and
+# only once both have built, so no OS ever loses an architecture.
 name: Build package test images
 
 on:
@@ -34,32 +34,31 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: ${{ matrix.os.name }} / ${{ matrix.arch }}
     # A fork cannot push to percona's registry namespace.
     if: github.repository == 'percona/pmm-qa'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
     strategy:
       fail-fast: false
       max-parallel: 5 # more than this and GHCR starts rejecting the pushes
       matrix:
-        # Keep this list in sync with pmm3-package-tests-matrix.yml.
+        arch: [amd64, arm64]
+        # Keep this list in sync with publish below and pmm3-package-tests-matrix.yml.
         # privileged: matches how the test matrix runs each image, so the check here
         # reflects the real thing.
-        include:
-          - { os: ol8, base: 'oraclelinux:8', family: rpm, privileged: false }
-          - { os: ol9, base: 'oraclelinux:9', family: rpm, privileged: false }
-          - { os: ol10, base: 'oraclelinux:10', family: rpm, privileged: true }
-          - { os: debian12, base: 'debian:12', family: deb, privileged: true }
-          - { os: debian13, base: 'debian:13', family: deb, privileged: true }
-          - { os: ubuntu2204, base: 'ubuntu:22.04', family: deb, privileged: true }
-          - { os: ubuntu2404, base: 'ubuntu:24.04', family: deb, privileged: true }
-          - { os: ubuntu2604, base: 'ubuntu:26.04', family: deb, privileged: true }
+        os:
+          - { name: ol8, base: 'oraclelinux:8', family: rpm, privileged: false }
+          - { name: ol9, base: 'oraclelinux:9', family: rpm, privileged: false }
+          - { name: ol10, base: 'oraclelinux:10', family: rpm, privileged: true }
+          - { name: debian12, base: 'debian:12', family: deb, privileged: true }
+          - { name: debian13, base: 'debian:13', family: deb, privileged: true }
+          - { name: ubuntu2204, base: 'ubuntu:22.04', family: deb, privileged: true }
+          - { name: ubuntu2404, base: 'ubuntu:24.04', family: deb, privileged: true }
+          - { name: ubuntu2604, base: 'ubuntu:26.04', family: deb, privileged: true }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,20 +71,20 @@ jobs:
       - name: Build the image
         run: |
           sudo podman build \
-            --file "package_tests/docker/Dockerfile.${{ matrix.family }}" \
-            --build-arg "BASE_IMAGE=${{ matrix.base }}" \
+            --file "package_tests/docker/Dockerfile.${{ matrix.os.family }}" \
+            --build-arg "BASE_IMAGE=${{ matrix.os.base }}" \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            --tag "staged:${{ matrix.os }}" \
+            --tag "staged:${{ matrix.os.name }}" \
             package_tests/docker
 
       - name: Boot it and check systemd comes up
         env:
-          PRIVILEGED: ${{ matrix.privileged }}
+          PRIVILEGED: ${{ matrix.os.privileged }}
         run: |
           PRIV=""
           [ "$PRIVILEGED" = "true" ] && PRIV="--privileged"
           # shellcheck disable=SC2086
-          sudo podman run -d --name probe --systemd=always $PRIV "staged:${{ matrix.os }}"
+          sudo podman run -d --name probe --systemd=always $PRIV "staged:${{ matrix.os.name }}"
 
           sudo podman exec probe bash -c '
             for i in $(seq 1 90); do
@@ -112,6 +111,71 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      # No tag here: a tag pushed per architecture would point :latest at one of
+      # them until publish ran. skopeo pushes the OCI layout byte for byte, so the
+      # digest read from it is the digest the registry stores.
+      - name: Push by digest
+        env:
+          OS: ${{ matrix.os.name }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          # The arm64 runner image lists "associated container tools", not skopeo by name.
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+
+          name="${IMAGE_REPO}/package_tests_${OS}"
+          oci="${RUNNER_TEMP}/oci"
+          sudo podman push "staged:${OS}" "oci:${oci}:image"
+          digest=$(sudo jq -r '.manifests[0].digest' "${oci}/index.json")
+
+          # GHCR rate-limits concurrent pushes, so back off and try again.
+          for attempt in 1 2 3 4 5; do
+            sudo skopeo copy --preserve-digests "oci:${oci}:image" "docker://${name}@${digest}" && break
+            [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
+            echo "push failed, retrying in $((attempt * 20))s"
+            sleep "$((attempt * 20))"
+          done
+
+          echo "$digest" > "digest-${OS}-${ARCH}"
+          echo "- \`${name}@${digest}\` (${ARCH})" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digest-${{ matrix.os.name }}-${{ matrix.arch }}
+          path: digest-${{ matrix.os.name }}-${{ matrix.arch }}
+          retention-days: 1
+
+  # Runs for every OS even when some builds failed, so one broken OS or
+  # architecture holds back only its own :latest.
+  publish:
+    name: publish ${{ matrix.os }}
+    needs: build
+    if: ${{ !cancelled() && github.repository == 'percona/pmm-qa' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ol8, ol9, ol10, debian12, debian13, ubuntu2204, ubuntu2404, ubuntu2604]
+    steps:
+      # A failed build uploads nothing; the next step says which one is missing.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true
+        with:
+          pattern: digest-${{ matrix.os }}-*
+          merge-multiple: true
+          path: digests
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           # podman for the push. docker runs no container here -- it only leaves
           # credentials in ~/.docker/config.json, which is where the attestation
@@ -119,15 +183,23 @@ jobs:
           echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-      - name: Publish
+      - name: Publish :latest
         id: push
+        env:
+          OS: ${{ matrix.os }}
         run: |
-          name="${IMAGE_REPO}/package_tests_${{ matrix.os }}"
-          sudo podman tag "staged:${{ matrix.os }}" "${name}:latest"
+          name="${IMAGE_REPO}/package_tests_${OS}"
+          for arch in amd64 arm64; do
+            [ -s "digests/digest-${OS}-${arch}" ] || { echo "no ${arch} image was built, so :latest stays as it is"; exit 1; }
+          done
 
-          # GHCR rate-limits concurrent pushes, so back off and try again.
+          sudo podman manifest create images
+          for arch in amd64 arm64; do
+            sudo podman manifest add images "docker://${name}@$(cat "digests/digest-${OS}-${arch}")"
+          done
+
           for attempt in 1 2 3 4 5; do
-            sudo podman push --digestfile=digest.txt "${name}:latest" && break
+            sudo podman manifest push --all --digestfile digest.txt images "docker://${name}:latest" && break
             [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
             echo "push failed, retrying in $((attempt * 20))s"
             sleep "$((attempt * 20))"

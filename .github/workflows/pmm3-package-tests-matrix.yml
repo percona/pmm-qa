@@ -1,7 +1,8 @@
-# The Jenkins pmm3-package-tests-matrix job, on GitHub Actions: 8 playbooks x 8
-# operating systems = 64 cells, each on its own runner with its own PMM Server and
-# its own systemd-capable client container. Debian 11 is left out: past its end of
-# life, its security archive is gone from deb.debian.org.
+# The Jenkins pmm3-package-tests-matrix jobs (amd64 and arm64), on GitHub Actions:
+# 8 playbooks x 8 operating systems = 64 cells per architecture, each on its own
+# runner with its own PMM Server and its own systemd-capable client container.
+# Debian 11 is left out: past its end of life, its security archive is gone from
+# deb.debian.org.
 #
 # The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
 # images, built from package_tests/docker/ by build-package-test-images.yml.
@@ -26,6 +27,12 @@ on:
         default: all
         options:
           [all, ol8, ol9, ol10, debian12, debian13, ubuntu2204, ubuntu2404, ubuntu2604]
+      arch:
+        description: 'CPU architecture ("all" runs both). arm64 needs a pmm-server
+          image built for arm64, such as perconalab/pmm-server:3-dev-latest.'
+        type: choice
+        default: amd64
+        options: [amd64, arm64, all]
       test:
         description: 'Playbook ("all" runs every test)'
         type: choice
@@ -106,9 +113,21 @@ jobs:
       # the fully qualified name it prints spares podman its short-name lookup.
       - name: Pin pmm-server to a digest
         id: server
+        env:
+          ARCHES: ${{ inputs.arch || 'amd64' }}
         run: |
           image=$(skopeo inspect --retry-times 3 --format '{{.Name}}@{{.Digest}}' "docker://${SERVER_IMAGE}")
           echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+          # Caught here rather than in every arm64 cell, at the pull or as an exec
+          # format error. Release images, such as percona/pmm-server:3, are amd64 only.
+          if [ "$ARCHES" != amd64 ]; then
+            arch=$(skopeo --override-arch arm64 inspect --retry-times 3 --format '{{.Architecture}}' "docker://${image}" || true)
+            if [ "$arch" != arm64 ]; then
+              echo "::error::${SERVER_IMAGE} has no arm64 build; run with arch=amd64 or a multi-arch pmm-server image."
+              exit 1
+            fi
+          fi
 
       - name: Resolve the expected client version
         id: version
@@ -141,6 +160,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           REF: ${{ github.ref_name }}@${{ github.sha }}
           BUILD: ${{ inputs.build_images || false }}
+          ARCHES: ${{ inputs.arch || 'amd64' }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           ## PMM package tests matrix
@@ -154,6 +174,7 @@ jobs:
           | metrics_mode | \`${METRICS_MODE}\` |
           | tarball | \`${TARBALL_LINK:-none}\` |
           | pmm-qa | \`${REF}\` |
+          | arch | \`${ARCHES}\` |
           | build_images | \`${BUILD}\` |
           EOF
 
@@ -169,12 +190,12 @@ jobs:
     uses: ./.github/workflows/build-package-test-images.yml
 
   test:
-    name: ${{ matrix.os }} / ${{ matrix.test }}
+    name: ${{ matrix.os }}-${{ matrix.arch }} / ${{ matrix.test }}
     needs: [prepare, images]
     # Runs whether images succeeded, failed or was skipped. An OS whose image did
     # not build is tested on its previous :latest.
     if: ${{ !cancelled() && needs.prepare.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 90 # same as the Jenkins job
     permissions:
       contents: read
@@ -189,6 +210,10 @@ jobs:
           ${{ fromJSON((inputs.os || 'all') == 'all'
           && '["ol8","ol9","ol10","debian12","debian13","ubuntu2204","ubuntu2404","ubuntu2604"]'
           || format('["{0}"]', inputs.os)) }}
+        arch: >-
+          ${{ fromJSON((inputs.arch || 'amd64') == 'all'
+          && '["amd64","arm64"]'
+          || format('["{0}"]', inputs.arch || 'amd64')) }}
         test: >-
           ${{ fromJSON((inputs.test || 'all') == 'all'
           && '["pmm3-client_integration","pmm3-client_integration_auth_config","pmm3-client_integration_auth_register",
@@ -399,14 +424,16 @@ jobs:
         if: always()
         env:
           RESULT: ${{ job.status }}
-        run: echo "${{ matrix.os }}|${{ matrix.test }}|${RESULT}" > "result-${{ matrix.os }}-${{ matrix.test }}.txt"
+        run: |
+          echo "${{ matrix.os }}-${{ matrix.arch }}|${{ matrix.test }}|${RESULT}" \
+            > "result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt"
 
       - name: Upload the result
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: result-${{ matrix.os }}-${{ matrix.test }}
-          path: result-${{ matrix.os }}-${{ matrix.test }}.txt
+          name: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}
+          path: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt
           retention-days: 7
 
       # ansible -vvv is far too big to read in the browser and is exactly what you
@@ -415,7 +442,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: logs-${{ matrix.os }}-${{ matrix.test }}
+          name: logs-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}
           path: |
             ansible.log
             diagnostics.log
@@ -466,7 +493,7 @@ jobs:
           oses=$(printf '%s\n' "${!result[@]}" | cut -d/ -f1 | sort -uV)
           tests=$(printf '%s\n' "${!result[@]}" | cut -d/ -f2 | sort -u)
 
-          header="| OS |"; divider="|---|"
+          header="| OS-arch |"; divider="|---|"
           for t in $tests; do
             header+=" ${t#pmm3-client_} |"
             divider+="---|"
@@ -500,7 +527,7 @@ jobs:
             if [ "$failed" -gt 0 ]; then
               echo
               # shellcheck disable=SC2016  # backticks are markdown, not a subshell
-              echo 'Failed cells attach their logs as `logs-<os>-<test>` artifacts.'
+              echo 'Failed cells attach their logs as `logs-<os>-<arch>-<test>` artifacts.'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

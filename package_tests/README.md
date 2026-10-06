@@ -111,7 +111,7 @@ yamllint <path>
 
 GitHub Actions package workflows call these playbooks through `../.github/workflows/runner-package-test.yml`.
 
-`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across eight operating systems, each in a systemd container next to its own PMM Server. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/package_tests_<os>` weekly, and whenever a change to `docker/` reaches `main`, by `../.github/workflows/build-package-test-images.yml`. The only tag is `latest`. Run the matrix with `build_images` ticked to rebuild and republish it from the selected branch before testing.
+`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across eight operating systems on amd64, arm64 (the `arch` input) or both, each in a systemd container next to its own PMM Server. arm64 needs a pmm-server image built for arm64, such as `perconalab/pmm-server:3-dev-latest`. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/package_tests_<os>` weekly, and whenever a change to `docker/` reaches `main`, by `../.github/workflows/build-package-test-images.yml`. The only tag is `latest`, a multi-arch image built natively for amd64 and arm64. Run the matrix with `build_images` ticked to rebuild and republish it from the selected branch before testing.
 
 ## Related Workspaces
 
