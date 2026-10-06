@@ -93,7 +93,6 @@ Execute command in the Project Root folder
     @post-client-upgrade    executed in the "pmm-upgrade" Job after"pmm-client" has been updated
     @qan                 Query Analytics(QAN) functionality tests
     @settings               PMM Settings functionality tests
-    @stt                    Security Checks (STT) functionality tests
     @perf-testing           UI performance tests for PMM
     @docker-configuration  Tests containing different docker configuration (env variables, ports, volumes etc.)
     @pmm-ami                legacy/deprecated
@@ -101,7 +100,6 @@ Execute command in the Project Root folder
     @not-pr-pipeline        legacy/deprecated
     @cli                    cli related tests
     @fb-alerting            alerting related tests executed on FB
-    @advisors-fb            advisors related tests executed on FB
     @bm-fb                  backup management related tests executed on FB
     @fb-instances           remote instances related tests executed on FB
     @fb-settings            settings related tests executed on FB

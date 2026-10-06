@@ -11,17 +11,6 @@ class HomeDashboard {
         pgsql: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(3),
         proxysql: () => locate(this.panels.monitoredServicesPanelLocator).find('span').at(4),
       },
-      failedAdvisors: '//section[@data-testid="data-testid Panel header Failed advisors"]',
-
-    };
-    this.panelData = {
-      failedAdvisors: {
-        insufficientPrivilege: `${this.panels.failedAdvisors}//[@data-testid="unauthorized"]`,
-        criticalFailedAdvisors: `${this.panels.failedAdvisors}//span[@data-testid="db-check-panel-critical"]`,
-        errorFailedAdvisors: `${this.panels.failedAdvisors}//span[@data-testid="db-check-panel-error"]`,
-        warningFailedAdvisors: `${this.panels.failedAdvisors}//span[@data-testid="db-check-panel-warning"]`,
-        noticeFailedAdvisors: `${this.panels.failedAdvisors}//span[@data-testid="db-check-panel-notice"]`,
-      },
     };
     this.metrics = [
       'CPU Busy',

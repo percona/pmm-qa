@@ -64,15 +64,6 @@ Scenario('Verify Advanced Section Elements @settings @grafana-pr', async ({ I, p
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesLabel);
 });
 
-Scenario('Verify Advisors Section Elements @settings @grafana-pr', async ({ I, pmmSettingsPage }) => {
-  I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
-
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  I.see('Advisors', pmmSettingsPage.fields.sttLabel);
-  I.seeElement(pmmSettingsPage.fields.sttSwitchSelectorInput);
-  I.seeElement(pmmSettingsPage.fields.sttLabel);
-});
-
 // Scenario('PMM-T89 - Verify validation for invalid SSH Key @settings @grafana-pr', async ({ I, pmmSettingsPage }) => {
 //   const sshKeyForTest = 'ssh-rsa testKey test@key.local';
 //   const sectionNameToExpand = pmmSettingsPage.sectionTabsList.ssh;

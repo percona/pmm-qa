@@ -3,21 +3,18 @@ import pmmTest from '../../fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-export type SettingsFieldLabel =
-  'advanced' | 'advanced-advisors' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
+export type SettingsFieldLabel = 'advanced' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
 
 export default class SettingsPage extends BasePage {
   url = '/pmm-ui/settings';
   urls = {
     advanced: '/pmm-ui/settings/advanced-settings',
-    advisors: '/pmm-ui/settings/advisors',
     metrics: '/pmm-ui/settings/metrics-resolution',
     ssh: '/pmm-ui/settings/ssh-key',
   };
   haQanErrorMessage = "Enabling QAN on PMM's own database is not supported in HA mode.";
   tabs = {
     advanced: this.page.getByTestId('settings-tab-advanced'),
-    advisors: this.page.getByTestId('settings-tab-advisors'),
     metrics: this.page.getByTestId('settings-tab-metrics'),
     ssh: this.page.getByTestId('settings-tab-ssh'),
   };
@@ -27,7 +24,6 @@ export default class SettingsPage extends BasePage {
   };
   buttons = {
     applyAdvancedChanges: this.page.getByTestId('advanced-button'),
-    applyAdvisorsChanges: this.page.getByTestId('advisors-button'),
     applyMetricsChanges: this.page.getByTestId('metrics-resolution-button'),
     applySshKeyChanges: this.page.getByTestId('ssh-key-button'),
     getPublicAddressFromBrowser: this.page.getByTestId('public-address-button'),
@@ -38,7 +34,6 @@ export default class SettingsPage extends BasePage {
     telemetrySummaries: this.page.getByTestId('telemetry-summaries-link'),
     toggles: {
       accessControl: { locator: this.page.getByTestId('switch-input-access-control') },
-      advisors: { locator: this.page.getByTestId('switch-input-stt') },
       azureDiscover: {
         input: this.page.getByTestId('switch-input-azure-discover').getByRole('switch'),
         locator: this.page.getByTestId('switch-input-azure-discover'),
@@ -58,7 +53,6 @@ export default class SettingsPage extends BasePage {
   };
   elements = {
     advancedLabel: this.page.getByTestId('advanced-label'),
-    advisorsLabel: this.page.getByTestId('advanced-advisors'),
     alertingInfoIcon: this.page.getByTestId('advanced-alerting').getByTestId('info-icon'),
     checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
     errorAlert: this.page.getByTestId('data-testid Alert error'),
@@ -76,14 +70,11 @@ export default class SettingsPage extends BasePage {
   };
   inputs = {
     dataRetention: this.page.getByTestId('retention-number-input'),
-    frequentAdvisorInterval: this.page.getByTestId('frequentInterval-number-input'),
     high: this.page.getByTestId('hr-number-input'),
     low: this.page.getByTestId('lr-number-input'),
     medium: this.page.getByTestId('mr-number-input'),
     publicAddress: this.page.getByTestId('publicAddress-text-input'),
-    rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
     sshKey: this.page.getByTestId('text-input-ssh-key'),
-    standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
   };
   messages = {
     popUp: this.page.getByRole('status').or(this.page.getByRole('alert')),
@@ -102,11 +93,9 @@ export default class SettingsPage extends BasePage {
 
   enableToggleAndApplyChanges = async (toggleName: keyof typeof this.buttons.toggles): Promise<void> =>
     await pmmTest.step(`Enable ${toggleName} and apply changes`, async () => {
-      const isAdvisors = toggleName === 'advisors';
-
-      await this.page.goto(isAdvisors ? this.urls.advisors : this.urls.advanced);
+      await this.page.goto(this.urls.advanced);
       await this.buttons.toggles[toggleName].locator.click();
-      await (isAdvisors ? this.buttons.applyAdvisorsChanges : this.buttons.applyAdvancedChanges).click();
+      await this.buttons.applyAdvancedChanges.click();
     });
 
   waitForPageLoaded = async (): Promise<void> =>

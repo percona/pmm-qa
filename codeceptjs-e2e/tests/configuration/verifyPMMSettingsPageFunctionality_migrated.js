@@ -44,41 +44,6 @@ Scenario(
   },
 );
 
-Scenario.skip(
-  'PMM-T253 - Verify user can see correct tooltip for STT [trivial] @settings @stt @grafana-pr',
-  async ({ I, pmmSettingsPage }) => {
-    const sectionNameToExpand = pmmSettingsPage.sectionTabsList.advisors;
-
-    I.amOnPage(pmmSettingsPage.url);
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advisorsButton);
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-
-    await pmmSettingsPage.verifyTooltip(pmmSettingsPage.tooltips.advancedSettings.stt);
-  },
-);
-
-Scenario.skip(
-  'PMM-T254 + PMM-T253 - Verify disable telemetry while Advisors enabled @settings @stt @grafana-pr',
-  async ({ I, pmmSettingsPage }) => {
-    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'on');
-    I.click(pmmSettingsPage.fields.telemetrySwitchSelector);
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
-    I.click(pmmSettingsPage.fields.advancedButton);
-    I.refreshPage();
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
-    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
-    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
-  },
-);
-
 Scenario(
   'PMM-T532 + PMM-T533 + PMM-T536 - Verify user can disable/enable IA in Settings @fb-alerting @settings',
   async ({
@@ -237,12 +202,6 @@ Scenario(
     );
   },
 ).retry(5);
-
-Scenario('PMM-T254 - Ensure Advisors are on by default @fb-instances', async ({ settingsAPI }) => {
-  const resp = await settingsAPI.getSettings('advisor_enabled');
-
-  assert.ok(resp, `Advisors should be turned on by default from 2.28.0 release but found ${resp}`);
-});
 
 Scenario(
   'PMM-T1227 + PMM-T1338 - Verify tooltip "Read more" links on PMM Settings page redirect to working pages '

@@ -12,7 +12,6 @@ module.exports = {
   publicAddress: process.env.VM_IP ? process.env.VM_IP : process.env.SERVER_IP || '127.0.0.1',
   metricsResolutionUrl: '/pmm-ui/settings/metrics-resolution',
   advancedSettingsUrl: '/pmm-ui/settings/advanced-settings',
-  advisorsSettingsUrl: '/pmm-ui/settings/advisors',
   sshKeyUrl: '/pmm-ui/settings/ssh-key',
   alertManagerIntegrationUrl: 'graph/settings/am-integration',
   communicationSettingsUrl: 'graph/settings/communication',
@@ -83,7 +82,6 @@ module.exports = {
   sectionTabsList: {
     metrics: 'Metrics Resolution',
     advanced: 'Advanced Settings',
-    advisors: 'Advisors',
     ssh: 'SSH Key',
   },
   sectionButtonText: {
@@ -123,20 +121,9 @@ module.exports = {
         text: 'Option to check new versions and ability to update PMM from UI.',
         link: links.checkForUpdates,
       },
-      stt: {
-        nativeTextLocator: locate('$advisors-label-description').as('Advisors tooltip'),
-        nativeLinkLocator: locate('$advisors-label-description').find('a').as('Advisors tooltip Read more link'),
-        text: 'Run automated checks to identify potential database performance and configuration issues.',
-        link: links.advisorsDocs,
-      },
       publicAddress: {
         nativeTextLocator: locate('$public-address-label-description').as('Public address tooltip'),
         text: 'The address or hostname PMM Server will be accessible at.',
-        link: false,
-      },
-      executionIntervals: {
-        iconLocator: locate('$check-intervals-label').find(I.useDataQA('info-icon')).as('Execution intervals tooltip'),
-        text: 'Interval between check runs',
         link: false,
       },
       backupManagement: {
@@ -250,7 +237,6 @@ module.exports = {
   fields: {
     advancedLabel: '$advanced-label',
     advancedButton: '$advanced-button',
-    advisorsButton: '$advisors-button',
     addAlertRuleButton: '//span[text()="Apply Alertmanager settings"]/parent::span',
     alertRulesInput: '$alertmanager-rules',
     alertURLInput: '$alertmanager-url',
@@ -307,9 +293,6 @@ module.exports = {
     sshKeyInput: '$ssh-key',
     sshKeyLabel: '$ssh-key-label',
     sshKeyButton: '$ssh-key-button',
-    sttLabel: locate('$advisors-settings').find('span'),
-    sttSwitchSelectorInput: locate('$advisors-settings').find('input'),
-    sttSwitchSelector: locate('$advisors-settings').find('label'),
     subSectionHeader: '//following-sibling::div//div[@class="ant-collapse-header"]',
     signUpEmail: '$email-text-input',
     signUpPassword: '$password-password-input',
@@ -328,12 +311,6 @@ module.exports = {
     tabContent: '$settings-tab-content',
     termsOfService: '//span[contains(text(), "Terms of Service")]',
     validationMessage: 'span.error-message',
-    rareIntervalInput: '$rareInterval-number-input',
-    rareIntervalValidation: '$rareInterval-field-error-message',
-    standartIntervalInput: '$standardInterval-number-input',
-    standartIntervalValidation: '$standardInterval-field-error-message',
-    frequentIntervalInput: '$frequentInterval-number-input',
-    frequentIntervalValidation: '$frequentInterval-field-error-message',
     pmmServerNameInput: '$pmmServerName-text-input',
     perconaAccountEmailInput: '$email-text-input',
     perconaAccountPasswordInput: '$password-password-input',
@@ -342,11 +319,6 @@ module.exports = {
 
   async openAdvancedSettings() {
     I.amOnPage(this.advancedSettingsUrl);
-    await this.waitForPmmSettingsPageLoaded();
-  },
-
-  async openAdvisorsSettings() {
-    I.amOnPage(this.advisorsSettingsUrl);
     await this.waitForPmmSettingsPageLoaded();
   },
 
@@ -375,9 +347,6 @@ module.exports = {
         break;
       case 'advanced settings':
         sectionExpandLocator = I.useDataQA('settings-tab-advanced');
-        break;
-      case 'advisors':
-        sectionExpandLocator = I.useDataQA('settings-tab-advisors');
         break;
       case 'ssh key':
         sectionExpandLocator = I.useDataQA('settings-tab-ssh');
@@ -681,12 +650,6 @@ module.exports = {
         tooltips: {
           dataRetention: this.tooltips.advancedSettings.dataRetention,
           telemetry: this.tooltips.advancedSettings.telemetry,
-        },
-      },
-      {
-        subPage: this.advisorsSettingsUrl,
-        tooltips: {
-          stt: this.tooltips.advancedSettings.stt,
         },
       },
     ];
