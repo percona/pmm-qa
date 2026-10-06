@@ -183,6 +183,11 @@ export default class AlertingPage extends BasePage {
     await expect(this.builders.deleteTemplate(summary)).toBeHidden();
   };
 
+  filterByState = async (state: string) => {
+    await this.inputs.stateSelect.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders.stateOption(state).click();
+  };
+
   silenceAlert = async (alertName: string) => {
     await this.builders.rowActions(alertName).click();
     await this.buttons.silence.click();
