@@ -111,7 +111,7 @@ yamllint <path>
 
 GitHub Actions package workflows call these playbooks through `../.github/workflows/runner-package-test.yml`.
 
-`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across nine operating systems, each in a systemd container next to its own PMM Server. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/<os>` weekly, and whenever a change to `docker/` reaches `main`, by `../.github/workflows/build-package-test-images.yml`. Roll back by running the matrix with a `YYYY-MM-DD` `client_image_tag`.
+`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across nine operating systems, each in a systemd container next to its own PMM Server. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/<os>` weekly, and whenever a change to `docker/` reaches `main`, by `../.github/workflows/build-package-test-images.yml`. A pull request that changes `docker/` builds its own images, tagged `pr-<number>`, and the matrix tests those instead. Roll back by running the matrix with a `YYYY-MM-DD` `client_image_tag`.
 
 ## Related Workspaces
 
