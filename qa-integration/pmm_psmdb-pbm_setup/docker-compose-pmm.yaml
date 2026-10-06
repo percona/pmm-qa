@@ -1,7 +1,7 @@
 version: "3"
 services:
   pmm-server:
-    image: ${PMM_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    image: ${PMM_SERVER_IMAGE:-${PMM_IMAGE:-perconalab/pmm-server:3-dev-latest}}
     container_name: pmm-server
     environment:
       - "PMM_DEBUG=1"
@@ -15,25 +15,9 @@ services:
     volumes:
       - pmm-server:/srv
 
-  test:
-    profiles: ["tests"]
-    build:
-      dockerfile: ./Dockerfile-testinfra
-      context: .
-    environment:
-      PMM_SERVER_CONTAINER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
-    volumes:
-      - ./test:/test
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    container_name: test
-    hostname: test
-    networks:
-      - qa-integration
-
 networks:
   qa-integration:
     external: true
 
 volumes:
   pmm-server: null
-  backups: null

@@ -1,0 +1,274 @@
+# Publishes pmm-qa/<engine>:<version> to ghcr.io/percona/pmm-qa for ensure_image
+# in qa-integration/pmm_qa/pmm-framework/lib/images.sh.
+name: Build prebaked database images
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Sundays 00:00 UTC: everything, for base-image OS updates
+    - cron: '0 0 * * 1-6' # other days 00:00 UTC: engines whose upstream version moved (DAILY below)
+  workflow_dispatch: # everything
+  push:
+    paths:
+      - qa-integration/pmm_qa/pmm-framework/images/**
+      - qa-integration/pmm_qa/pmm-framework/lib/images.sh
+      - qa-integration/pmm_qa/pmm-framework/build_images
+      # The build context of images/psmdb/Dockerfile.
+      - qa-integration/pmm_psmdb-pbm_setup/keyfile
+      - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      - .github/workflows/build-prebaked-images.yml
+  pull_request:
+    paths:
+      - qa-integration/pmm_qa/pmm-framework/images/**
+      - qa-integration/pmm_qa/pmm-framework/lib/images.sh
+      - qa-integration/pmm_qa/pmm-framework/build_images
+      - qa-integration/pmm_psmdb-pbm_setup/keyfile
+      - qa-integration/pmm_psmdb-pbm_setup/conf/sysconfig/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/krb/**
+      - qa-integration/pmm_psmdb-pbm_setup/conf/mongos/mongos.service
+      - .github/workflows/build-prebaked-images.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: build-prebaked-images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    # A fork's schedule must not try to publish into percona's registry.
+    if: github.repository == 'percona/pmm-qa'
+    runs-on: ubuntu-latest
+    outputs:
+      engines: ${{ steps.pick.outputs.engines }}
+      tags: ${{ steps.pick.outputs.tags }}
+      cells: ${{ steps.pick.outputs.cells }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pick the engines to build
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          DAILY: '0 0 * * 1-6'
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Tags come from the framework's catalogue (lib/config.sh). The 5.7 base
+          # images (PS, MySQL, PXC) are amd64-only, so 5.7 gets no arm64 build.
+          tags_of() {
+            local engine
+            for engine in $(jq -r '.[]' <<<"$1"); do
+              qa-integration/pmm_qa/pmm-framework/build_images --tags "$engine" |
+                jq -R --arg e "$engine" '{engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}'
+            done | jq -sc .
+          }
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
+          if [ "$SCHEDULE" = "$DAILY" ]; then
+            # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
+            stale=()
+            while read -r engine version; do
+              if ! want=$(qa-integration/pmm_qa/pmm-framework/upstream_version "$engine=$version"); then
+                echo "::warning::could not read the upstream version of $engine:$version"
+                continue
+              fi
+              have=$(docker buildx imagetools inspect "ghcr.io/$GITHUB_REPOSITORY/$engine:$version" --format '{{json .Image}}' 2>/dev/null |
+                jq -r 'if has("config") then . else .["linux/amd64"] end | .config.Labels["pmm-qa.upstream-version"] // ""') || have=''
+              if [ "$want" != "$have" ]; then
+                echo "- \`$engine:$version\`: ${have:-unlabelled} -> $want" >>"$GITHUB_STEP_SUMMARY"
+                stale+=("\"$engine\"")
+              fi
+            done < <(tags_of "$all" | jq -r '.[] | "\(.engine) \(.version)"')
+            engines=$(printf '%s\n' "${stale[@]}" | sort -u | jq -sc .)
+          elif { [ "$EVENT" != push ] && [ "$EVENT" != pull_request ]; } || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            engines=$all
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+            if grep -qE '^qa-integration/pmm_qa/pmm-framework/(lib/images\.sh|build_images)$' <<<"$changed"; then
+              engines=$all
+            else
+              # Only the files each image bakes in: a setup.sh edit rebuilds nothing.
+              picked=()
+              images=qa-integration/pmm_qa/pmm-framework/images
+              pick() { if grep -qE "$2" <<<"$changed"; then picked+=("\"$1\""); fi; }
+              pick ps "^$images/ps/"
+              pick mysql "^$images/mysql/Dockerfile$"
+              pick pxc-proxysql "^$images/pxc-proxysql/(Dockerfile|pmm_pxc)$"
+              pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/(keyfile|conf/(sysconfig|krb)/|conf/mongos/mongos\.service))"
+              pick haproxy "^$images/haproxy/Dockerfile$"
+              pick kerberos "^$images/kerberos/"
+              pick external "^$images/external/Dockerfile$"
+              pick valkey "^$images/valkey/Dockerfile$"
+              pick pdpgsql "^$images/pdpgsql/Dockerfile$"
+              pick ssl-pdpgsql "^$images/ssl-pdpgsql/"
+              pick pgsql "^$images/pgsql/(Dockerfile|pgss_setup\.sh|run_queries\.sh)$"
+              engines="[$(IFS=,; echo "${picked[*]}")]"
+            fi
+          fi
+          tags=$(tags_of "$engines")
+          cells=$(jq -c '[.[] | {engine, version, arch: .arches[]}]' <<<"$tags")
+          {
+            echo "engines=$engines"
+            echo "tags=$tags"
+            echo "cells=$cells"
+          } >>"$GITHUB_OUTPUT"
+          echo "Building: \`$engines\`" >>"$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: ${{ matrix.engine }}:${{ matrix.version }} ${{ matrix.arch }}
+    needs: plan
+    if: needs.plan.outputs.cells != '[]'
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      max-parallel: 5 # GHCR starts rejecting concurrent pushes beyond this
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.cells) }}
+    env:
+      IMAGE: pmm-qa/${{ matrix.engine }}:${{ matrix.version }}
+      ENGINE: ${{ matrix.engine }}
+      VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Build the image
+        run: qa-integration/pmm_qa/pmm-framework/build_images "$ENGINE=$VERSION"
+
+      - name: Start it and check it works
+        run: qa-integration/pmm_qa/pmm-framework/check_image "$ENGINE=$VERSION"
+
+      # The daily plan compares this label with upstream_version.
+      - name: Label the upstream version
+        run: |
+          upstream=$(qa-integration/pmm_qa/pmm-framework/upstream_version "$ENGINE=$VERSION")
+          echo "FROM $IMAGE" | docker build --label "pmm-qa.upstream-version=$upstream" -t "$IMAGE" -
+          echo "- \`$IMAGE\`: $upstream" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        id: push
+        env:
+          TAG: ${{ matrix.version }}-${{ matrix.arch }}
+        run: |
+          name="ghcr.io/${GITHUB_REPOSITORY}/${ENGINE}"
+          docker tag "$IMAGE" "${name}:${TAG}"
+
+          for attempt in 1 2 3 4 5; do
+            if docker push "${name}:${TAG}"; then
+              break
+            fi
+            [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
+            echo "push failed, retrying in $((attempt * 20))s"
+            sleep "$((attempt * 20))"
+          done
+
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${name}:${TAG}")
+          digest=${digest#*@}
+          echo "name=${name}" >>"$GITHUB_OUTPUT"
+          echo "digest=${digest}" >>"$GITHUB_OUTPUT"
+          echo "- \`${name}:${TAG}\` \`${digest}\`" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Attest build provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          # Kept in GitHub's attestation store only; pushing them to GHCR adds
+          # a sha256-<digest> package version for every image built.
+          push-to-registry: false
+
+  # always(): an architecture whose build failed this run keeps its previous image.
+  manifest:
+    name: ${{ matrix.engine }}:${{ matrix.version }}
+    needs: [plan, build]
+    if: always() && github.event_name != 'pull_request' && needs.plan.result == 'success' && needs.plan.outputs.tags != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.tags) }}
+    steps:
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Publish the multi-arch tag
+        env:
+          NAME: ghcr.io/${{ github.repository }}/${{ matrix.engine }}
+          VERSION: ${{ matrix.version }}
+          ARCHES: ${{ join(matrix.arches, ' ') }}
+        run: |
+          sources=()
+          for arch in $ARCHES; do
+            if docker buildx imagetools inspect "$NAME:$VERSION-$arch" >/dev/null 2>&1; then
+              sources+=("$NAME:$VERSION-$arch")
+            else
+              echo "::warning::$NAME:$VERSION-$arch is not published, so $VERSION leaves out $arch"
+            fi
+          done
+          [ "${#sources[@]}" -gt 0 ] || { echo "nothing published for $NAME:$VERSION"; exit 1; }
+          for attempt in 1 2 3; do
+            docker buildx imagetools create -t "$NAME:$VERSION" "${sources[@]}" && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 20
+          done
+          echo "- \`$NAME:$VERSION\`: ${sources[*]}" >>"$GITHUB_STEP_SUMMARY"
+
+  # A push never overwrites: the digest a tag moved off stays until deleted.
+  cleanup:
+    name: prune ${{ matrix.engine }}
+    needs: [plan, build, manifest]
+    if: github.event_name != 'pull_request' && needs.plan.outputs.engines != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: ${{ fromJSON(needs.plan.outputs.engines) }}
+    steps:
+      - name: Delete the versions no current tag points at
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSIONS: orgs/${{ github.repository_owner }}/packages/container/pmm-qa%2F${{ matrix.engine }}/versions
+          ENGINE: ${{ matrix.engine }}
+          TAGS: ${{ needs.plan.outputs.tags }}
+        run: |
+          keep=$(jq -c --arg e "$ENGINE" '[.[] | select(.engine == $e) | .version, .version + "-" + .arches[]]' <<<"$TAGS")
+          [ "$keep" != "[]" ] || { echo "no current tags for $ENGINE; refusing to delete"; exit 1; }
+          gh api --paginate "$VERSIONS" |
+            jq -r --argjson keep "$keep" '.[] | select(all(.metadata.container.tags[]; IN($keep[]) | not)) | .id' |
+            while read -r id; do
+              gh api -X DELETE "$VERSIONS/$id"
+              echo "deleted version $id"
+            done

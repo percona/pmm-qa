@@ -1,0 +1,3 @@
+# Globals and the mysql_* helpers' locals are read across sourced files, which a
+# per-file run (support_scripts/lint/lint-changed.sh) cannot see.
+disable=SC2034

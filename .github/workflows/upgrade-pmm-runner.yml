@@ -191,10 +191,12 @@ jobs:
           echo "$CLIENT_INSTALL_VERSION"
           mkdir -p /tmp/backup_data
           chmod 777 /tmp/backup_data
+          # PSMDB 8.0: an 8.3 mongos has no serverStatus globalLock, so Router Summary's
+          # Queued Operations and Reads & Writes panels show No data.
           ./pmm-framework/pmm-framework --parallel \
             --client-version="$CLIENT_INSTALL_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" \
-            --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
+            --database pgsql --database ps=8.4 --database psmdb=8.0,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
 
       - name: Setup custom queries
         run: |
@@ -276,6 +278,9 @@ jobs:
         run: |
           git fetch origin "$PMM_QA_BRANCH"
           git checkout FETCH_HEAD
+          # Pre-upgrade branches before pmm-3.9.1 have no conf/chunk-churn, so their
+          # checkout deleted the folder chunk-churn bind-mounts; re-create it to remount.
+          docker compose -p psmdb_sharded -f qa-integration/pmm_psmdb-pbm_setup/docker-compose-sharded.yaml up -d --no-deps --force-recreate chunk-churn
 
       - name: Prepare dependencies for upgrade branch
         working-directory: pmm-qa/e2e_tests
