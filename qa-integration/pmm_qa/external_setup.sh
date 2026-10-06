@@ -33,15 +33,22 @@ apt-get update
 apt-get -y install wget curl git gnupg2 lsb-release
 apt-get -y install -y git ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
 
+# Pick the exporter release architecture; keep the amd64 hosts' existing
+# assets (redis_exporter 386, process-exporter amd64) and add arm64.
+case "$(uname -m)" in
+  aarch64 | arm64) redis_arch=arm64; process_arch=arm64 ;;
+  *) redis_arch=386; process_arch=amd64 ;;
+esac
+
 if [[ "$setup_type" == "redis" ]]; then
-    wget https://github.com/oliver006/redis_exporter/releases/download/v${setup_version}/redis_exporter-v${setup_version}.linux-386.tar.gz
-    tar -xvf redis_exporter-v${setup_version}.linux-386.tar.gz
+    wget https://github.com/oliver006/redis_exporter/releases/download/v${setup_version}/redis_exporter-v${setup_version}.linux-${redis_arch}.tar.gz
+    tar -xvf redis_exporter-v${setup_version}.linux-${redis_arch}.tar.gz
     sleep 10
     rm redis_exporter*.tar.gz
     mv redis_exporter-* redis_exporter || exit
 elif [[ "$setup_type" == "nodeprocess" ]]; then
-    wget https://github.com/ncabatoff/process-exporter/releases/download/v${setup_version}/process-exporter-${setup_version}.linux-amd64.tar.gz
-    tar -xvf process-exporter-${setup_version}.linux-amd64.tar.gz || exit
+    wget https://github.com/ncabatoff/process-exporter/releases/download/v${setup_version}/process-exporter-${setup_version}.linux-${process_arch}.tar.gz
+    tar -xvf process-exporter-${setup_version}.linux-${process_arch}.tar.gz || exit
     sleep 10
     rm process-exporter*.tar.gz
     mv process-exporter-* process-exporter || exit

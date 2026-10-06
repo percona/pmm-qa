@@ -1,5 +1,10 @@
 import BasePage from '../base.page';
 import pmmTest from '../../fixtures/pmmTest';
+import apiEndpoints from '@helpers/apiEndpoints';
+import { Timeouts } from '@helpers/timeouts';
+
+export type SettingsFieldLabel =
+  'advanced' | 'advanced-advisors' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
 
 export default class SettingsPage extends BasePage {
   url = '/pmm-ui/settings';
@@ -16,41 +21,84 @@ export default class SettingsPage extends BasePage {
     metrics: this.page.getByTestId('settings-tab-metrics'),
     ssh: this.page.getByTestId('settings-tab-ssh'),
   };
-  builders = {};
+  builders = {
+    fieldDescription: (label: SettingsFieldLabel) => this.page.getByTestId(`${label}-label-description`),
+    fieldReadMoreLink: (label: SettingsFieldLabel) => this.builders.fieldDescription(label).getByRole('link'),
+  };
   buttons = {
     applyAdvancedChanges: this.page.getByTestId('advanced-button'),
     applyAdvisorsChanges: this.page.getByTestId('advisors-button'),
     applyMetricsChanges: this.page.getByTestId('metrics-resolution-button'),
     applySshKeyChanges: this.page.getByTestId('ssh-key-button'),
-    getPublicAddressFromBrowser: this.page.getByRole('button', { name: 'Get from browser' }),
+    getPublicAddressFromBrowser: this.page.getByTestId('public-address-button'),
     metricsResolutionCustom: this.page.getByTestId('radio-option-custom'),
     metricsResolutionFrequent: this.page.getByTestId('radio-option-frequent'),
     metricsResolutionRare: this.page.getByTestId('radio-option-rare'),
     metricsResolutionStandard: this.page.getByTestId('radio-option-standard'),
+    telemetrySummaries: this.page.getByTestId('telemetry-summaries-link'),
     toggles: {
       accessControl: { locator: this.page.getByTestId('switch-input-access-control') },
       advisors: { locator: this.page.getByTestId('switch-input-stt') },
-      azureDiscover: { locator: this.page.getByTestId('switch-input-azure-discover') },
-      backupManagement: { locator: this.page.getByTestId('switch-input-backup') },
+      azureDiscover: {
+        input: this.page.getByTestId('switch-input-azure-discover').getByRole('switch'),
+        locator: this.page.getByTestId('switch-input-azure-discover'),
+      },
+      backupManagement: {
+        input: this.page.getByTestId('switch-input-backup').getByRole('switch'),
+        locator: this.page.getByTestId('switch-input-backup'),
+      },
       checkForUpdates: { locator: this.page.getByTestId('switch-input-updates') },
-      perconaAlerting: { locator: this.page.getByTestId('switch-input-alerting') },
+      perconaAlerting: {
+        input: this.page.getByTestId('switch-input-alerting').getByRole('switch'),
+        locator: this.page.getByTestId('switch-input-alerting'),
+      },
       qanForPmmServer: { locator: this.page.getByTestId('switch-input-enable-internal-pg-qan') },
       telemetry: { locator: this.page.getByTestId('switch-input-telemetry') },
     },
   };
   elements = {
+    advancedLabel: this.page.getByTestId('advanced-label'),
+    advisorsLabel: this.page.getByTestId('advanced-advisors'),
+    alertingInfoIcon: this.page.getByTestId('advanced-alerting').getByTestId('info-icon'),
+    checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
+    errorAlert: this.page.getByTestId('data-testid Alert error'),
+    infoTooltip: this.page.getByTestId('info-tooltip'),
+    infoTooltipLink: this.page.getByTestId('info-tooltip').getByRole('link'),
+    metricsResolutionLabel: this.page.getByTestId('metrics-resolution-label'),
     //review this selector - seems redundant
     pageBody: this.page.locator('body'),
     pageTitle: this.page.getByRole('heading', { name: 'Settings' }),
+    publicAddressLabel: this.page.getByTestId('public-address-label'),
+    sshKeyLabel: this.page.getByTestId('ssh-key-label'),
+    tabContent: this.page.getByTestId('settings-tab-content'),
+    telemetryLabel: this.page.getByTestId('advanced-telemetry'),
+    telemetrySummariesContent: this.page.getByTestId('telemetry-summaries-dialog'),
   };
   inputs = {
-    high: this.page.locator('[name="hr"]'),
-    low: this.page.locator('[name="lr"]'),
-    medium: this.page.locator('[name="mr"]'),
-    publicAddress: this.page.getByTestId('text-input-public-address'),
+    dataRetention: this.page.getByTestId('retention-number-input'),
+    frequentAdvisorInterval: this.page.getByTestId('frequentInterval-number-input'),
+    high: this.page.getByTestId('hr-number-input'),
+    low: this.page.getByTestId('lr-number-input'),
+    medium: this.page.getByTestId('mr-number-input'),
+    publicAddress: this.page.getByTestId('publicAddress-text-input'),
+    rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
     sshKey: this.page.getByTestId('text-input-ssh-key'),
+    standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
   };
-  messages = {};
+  messages = {
+    popUp: this.page.getByRole('status').or(this.page.getByRole('alert')),
+  };
+
+  applyAdvancedChanges = async (): Promise<void> => {
+    const saved = this.page.waitForResponse(
+      (response) =>
+        response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+
+    await this.buttons.applyAdvancedChanges.click();
+    await saved;
+  };
 
   enableToggleAndApplyChanges = async (toggleName: keyof typeof this.buttons.toggles): Promise<void> =>
     await pmmTest.step(`Enable ${toggleName} and apply changes`, async () => {
@@ -60,4 +108,7 @@ export default class SettingsPage extends BasePage {
       await this.buttons.toggles[toggleName].locator.click();
       await (isAdvisors ? this.buttons.applyAdvisorsChanges : this.buttons.applyAdvancedChanges).click();
     });
+
+  waitForPageLoaded = async (): Promise<void> =>
+    await this.elements.tabContent.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
 }

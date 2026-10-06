@@ -1,6 +1,6 @@
 const { SERVICE_TYPE } = require('../helper/constants');
 
-const { inventoryAPI } = inject();
+const { inventoryAPI, serverApi } = inject();
 const serviceList = [];
 
 Feature('Test Dashboards inside the PostgreSQL Folder');
@@ -8,11 +8,16 @@ Feature('Test Dashboards inside the PostgreSQL Folder');
 BeforeSuite(async ({ I }) => {
   const pdpgsql_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pdpgsql_');
   const pgsql_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pgsql_');
-  const pmm_server = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
 
   serviceList.push(pdpgsql_service_response.service_name);
   serviceList.push(pgsql_service_response.service_name);
-  serviceList.push(pmm_server.service_name);
+
+  // HA keeps PMM's own database outside the server, so there is no pmm-server-postgresql service.
+  if (!await serverApi.isHaEnabled()) {
+    const pmm_server = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
+
+    serviceList.push(pmm_server.service_name);
+  }
 });
 
 Before(async ({ I }) => {
@@ -37,6 +42,14 @@ Scenario(
 Scenario(
   'PMM-T2049 - Verify PostgreSQL Instances Overview Dashboard @nightly @dashboards',
   async ({ I, dashboardPage }) => {
+    const { major, minor } = await serverApi.getPmmVersion();
+
+    if (major === 3 && minor < 10) {
+      I.say(`Skipping: expects the 3.10 panel names, server is ${major}.${minor}`);
+
+      return;
+    }
+
     const url = I.buildUrlWithParams(dashboardPage.postgresqlInstanceOverviewDashboard.url, { from: 'now-5m' });
 
     I.amOnPage(url);
@@ -56,7 +69,7 @@ Scenario(
       {
         from: 'now-5m',
       },
-    );
+    ) + serviceList.map((service) => `&var-service_name=${encodeURIComponent(service)}`).join('');
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();

@@ -35,7 +35,7 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
 
   // Test
   const url = I.buildUrlWithParams(dashboardPage.mongodbBackupDetailsDashboard.url, {
-    from: 'now-5m',
+    from: 'now-30m',
     cluster: 'replicaset',
   });
 
@@ -46,5 +46,7 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.verifyMetricsExistence(dashboardPage.mongodbBackupDetailsDashboard.metrics);
   await dashboardPage.mongodbBackupDetailsDashboard.waitForLastSuccessfulBackupValue();
+  await dashboardPage.mongodbBackupDetailsDashboard.waitForGraphPanelData('Backup Sizes');
+  await dashboardPage.mongodbBackupDetailsDashboard.waitForGraphPanelData('Backup Duration');
   await dashboardPage.verifyThereAreNoGraphsWithoutData();
 });

@@ -4,6 +4,8 @@ const apiEndpoints = {
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
   alerting: {
+    folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
   },
@@ -13,6 +15,24 @@ const apiEndpoints = {
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
+  dumps: {
+    batchDelete: '/v1/dumps:batchDelete',
+    download: '/dump',
+    list: '/v1/dumps',
+    start: '/v1/dumps:start',
+  },
+  grafana: {
+    alertmanager: '/graph/api/alertmanager/grafana/api/v2',
+    dashboardByUid: '/graph/api/dashboards/uid',
+    dashboards: '/graph/api/dashboards/db',
+    datasourceByUid: '/graph/api/datasources/uid',
+    datasources: '/graph/api/datasources',
+    dsQuery: '/graph/api/ds/query',
+    folders: '/graph/api/folders',
+    prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
+    ruler: '/graph/api/ruler/grafana/api/v1/rules',
+  },
   ha: {
     nodes: '/v1/ha/nodes',
     status: '/v1/ha/status',
@@ -21,15 +41,17 @@ const apiEndpoints = {
     services: '/v1/inventory/services',
   },
   management: {
+    annotations: '/v1/management/annotations',
+    nodes: '/v1/management/nodes',
     services: '/v1/management/services',
   },
   platform: {
     connect: '/v1/platform:connect',
   },
   prometheus: {
-    // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
+    // PMM's /prometheus route 500s on HA, so PrometheusApi uses the Grafana datasource proxy.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
-    datasources: '/graph/api/datasources',
+    query: '/prometheus/api/v1/query',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
@@ -40,7 +62,9 @@ const apiEndpoints = {
   server: {
     // 200 only on the HA leader; HAProxy routes on it.
     leaderHealthCheck: '/v1/server/leaderHealthCheck',
+    logs: '/logs.zip',
     readyz: '/v1/server/readyz',
+    serverVersion: '/v1/server/version',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
     version: '/v1/version',

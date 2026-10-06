@@ -8,8 +8,8 @@ let sortedHostNames: string[];
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
+  const service1 = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
+  const service2 = await api.inventoryApi.getServiceDetailsByRegex('^rs102_');
 
   sortedHostNames = [service1.service_name, service2.service_name].sort();
 
@@ -27,7 +27,7 @@ pmmTest(
     await pmmTest.step('Simulate long running queries', async () => {
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-1',
+        queryLabel: 'rta-overview-1',
       });
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the query to run for some time
@@ -35,15 +35,17 @@ pmmTest(
 
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-2',
+        queryLabel: 'rta-overview-2',
       });
     });
 
     await pmmTest.step('PMM-T2174 Filter by query text and verify 2 queries are visible', async () => {
-      await queryAnalytics.rta.filterQueriesByText('rta');
+      // The filter is a case-insensitive substring match, and the base64 $clusterTime signature of a
+      // running hello command can contain 'rta' ("z6YIJqRtajW..."); '-' is outside the base64 alphabet.
+      await queryAnalytics.rta.filterQueriesByText('rta-overview-');
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-2')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-1')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-2')).toBeVisible();
     });
 
     await pmmTest.step('Pause RTA', async () => {
@@ -51,8 +53,8 @@ pmmTest(
     });
 
     await pmmTest.step('PMM-T2173 Verify elapsed time for queries is descending by default', async () => {
-      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-1');
-      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-2');
+      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-1');
+      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-2');
 
       expect(elapedTimeForQuery1).toBeGreaterThan(0);
       expect(elapedTimeForQuery2).toBeGreaterThan(0);
@@ -185,20 +187,20 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
   });
 
-  await pmmTest.step('Filter by Host substring and verify only matching rows remain', async () => {
+  await pmmTest.step('Filter by Host and verify only matching rows remain', async () => {
     const rs101HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs101')) as string;
     const rs102HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs102')) as string;
-    const [rs101HostSubstring] = rs101HostName.split('_');
-    const [rs102HostSubstring] = rs102HostName.split('_');
 
-    expect(rs101HostSubstring).not.toBe(rs101HostName);
-    expect(rs102HostSubstring).not.toBe(rs102HostName);
-    await queryAnalytics.rta.openFilters();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
+    // The Host column uses a fuzzy filter, so a shared substring such as the
+    // rsXXX prefix also matches the other host (rs102 is a subsequence of
+    // rs101_23853 via the trailing port). Filter on the full host name, which
+    // fuzzy-matches only its own rows.
+    await queryAnalytics.rta.openFiltersIfHidden();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
-    await queryAnalytics.rta.openFilters();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
+    await queryAnalytics.rta.openFiltersIfHidden();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
   });
@@ -271,30 +273,32 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
 
-    expect(headers).toEqual(
-      expect.arrayContaining([
-        'operation_id',
-        'elapsed_exec_time_sec',
-        'db_instance_address',
-        'client_address',
-        'database_name',
-        'service',
-        'user_name',
-        'collection',
-        'operation',
-        'plan_summary',
-        'client_app_name',
-        'operation_start_time',
-        'data_capture_time',
-        'raw_query',
-        'service_id',
-        'query_text',
-      ]),
-    );
+    // client_app_name is dropped when empty (proto3 omits empty scalars), so
+    // it is not required. service_id, query_text and the injected
+    // future_export_field are unlisted API fields the dynamic export appends.
+    const requiredHeaders = [
+      'operation_id',
+      'elapsed_exec_time_sec',
+      'db_instance_address',
+      'client_address',
+      'database_name',
+      'service',
+      'user_name',
+      'collection',
+      'operation',
+      'plan_summary',
+      'operation_start_time',
+      'data_capture_time',
+      'raw_query',
+      'service_id',
+      'query_text',
+      dynamicHeader,
+    ];
+
+    expect(headers).toEqual(expect.arrayContaining(requiredHeaders));
     expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
-    expect(headers).toContain(dynamicHeader);
-    expect(csvContent).toContain(dynamicValue);
     expect(headers).not.toContain('query_execution_duration');
+    expect(csvContent).toContain(dynamicValue);
   });
 
   await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);

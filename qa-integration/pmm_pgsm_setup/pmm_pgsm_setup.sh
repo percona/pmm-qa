@@ -45,7 +45,7 @@ while [ $# -gt 0 ]; do
       printf "***************************\n"
       printf "Invalid Argument Passed, usage of this script:\n"
       echo "--pgsql-version=14                                                Pass PGSQL Version that needs to be setup for monitoring, default is 14"
-      echo "--client-version=dev-latest                                       Pass the pmm2-client version, acceptable values are dev-latest (Default, if no value passed), pmm2-latest, 2.x.x, or a binary tarball http url"
+      echo "--client-version=dev-latest                                       Pass the pmm-client version, acceptable values are dev-latest (Default, if no value passed), pmm2-latest, 2.x.x, or a binary tarball http url"
       echo "--pgsql-pgsm-container=pgsql_pgsm                                 PGSQL & PMM-CLient Docker container name prefix, default value is pgsql_pgsm"
       echo "--pmm-container-name=pmm-server                                   Pass the pmm-server name, default container name is pmm-server"
       echo "--pmm-container-port=443                                          Pass the pmm-server port, default port number is 443"

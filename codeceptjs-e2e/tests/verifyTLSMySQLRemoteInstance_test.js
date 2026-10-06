@@ -6,6 +6,11 @@ const { adminPage } = inject();
 
 Feature('Monitoring SSL/TLS MYSQL instances');
 
+// The CI leg runs `--database ssl_mysql` with no version, so this tracks SSL_MYSQL's
+// DEFAULT_VERSION in qa-integration/pmm_qa/pmm-framework/lib/config.sh -- the setup names
+// the container and the registered service after it.
+const mysqlSslVersion = '8.4';
+
 const instances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric']);
 const maxQueryLengthInstances = new DataTable(['serviceName', 'version', 'container', 'serviceType', 'metric', 'maxQueryLength']);
 const maxQueryLengthTestData = new DataTable(['text']);
@@ -17,19 +22,23 @@ maxQueryLengthTestData.add(['`']);
 maxQueryLengthTestData.add(['"']);
 
 // instances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections']);
-instances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections']);
+instances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections']);
 
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
 // maxQueryLengthInstances.add(['mysql_5.7_ssl_service', '5.7', 'mysql_5.7', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
-maxQueryLengthInstances.add(['mysql_8.0_ssl_service', '8.0', 'mysql_ssl_8.0', 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '10']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '-1']);
+maxQueryLengthInstances.add([`mysql_${mysqlSslVersion}_ssl_service`, mysqlSslVersion, `mysql_ssl_${mysqlSslVersion}`, 'mysql_ssl', 'mysql_global_status_max_used_connections', '']);
+
+// The probe query is found by table name, so it needs a table nothing else on the SSL
+// MySQL instance reads.
+const exampleQueryMarker = 'character_sets';
 
 let serviceName;
 
 BeforeSuite(async ({ inventoryAPI }) => {
-  const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'mysql_ssl_8.0_ssl_service', 'remote');
+  const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, `mysql_ssl_${mysqlSslVersion}_ssl_service`, 'remote');
 
   serviceName = service_name;
 });
@@ -266,6 +275,12 @@ Data(maxQueryLengthInstances).Scenario(
       await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.QAN_MYSQL_PERFSCHEMA_AGENT, `max_query_length=${maxQueryLength}`);
     }
 
+    if (maxQueryLength === '' || maxQueryLength === '-1') {
+      // QAN has an Example only while the digest is still in performance_schema.events_statements_history,
+      // which holds live threads only, so the client holds the connection open and idles on stdin.
+      await I.verifyCommand(`docker exec -d ${container} bash -c '{ echo "SELECT COUNT(*) FROM information_schema.${exampleQueryMarker};"; sleep 120; } | mysql -upmm -ppmm'`);
+    }
+
     // This extra time is needed for queries to appear in QAN
     await I.wait(70);
     // Check max visible query length is less than max_query_length option
@@ -281,6 +296,8 @@ Data(maxQueryLengthInstances).Scenario(
     } else {
       // 6 is chosen because it's the length of "SELECT" any query that starts with that word should be longer
       assert.ok(queryFromRow.length >= 6, `Query length is equal to ${queryFromRow.length} which is less than minimal possible length`);
+      queryAnalyticsPage.data.searchByValue(exampleQueryMarker);
+      queryAnalyticsPage.waitForLoaded();
       queryAnalyticsPage.data.selectRow(1);
       queryAnalyticsPage.waitForLoaded();
       queryAnalyticsPage.queryDetails.checkExamplesTab();

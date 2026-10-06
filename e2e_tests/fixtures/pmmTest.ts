@@ -19,31 +19,58 @@ import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
+import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
+import ServerAdminSettingsPage from '@pages/serverAdminSettings.page';
+import StatsAndLicensePage from '@pages/statsAndLicense.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import DataSourcesPage from '@pages/dataSources.page';
+import LoginPage from '@pages/login.page';
+import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
+import SearchDashboardsPage from '@pages/searchDashboards.page';
+import ServiceAccountsPage from '@pages/serviceAccounts.page';
+import AlertingPage from '@pages/alerting.page';
+import DumpPage from '@pages/dump.page';
+import AddInstancePage from '@pages/inventory/addInstance.page';
+import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AdvisorsPage from '@pages/advisors/advisors.page';
+import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
+  advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
+  addInstancePage: AddInstancePage;
+  alertStatusPage: AlertStatusPage;
   agentsPage: AgentsPage;
+  alertingPage: AlertingPage;
+  changePasswordPage: ChangePasswordPage;
   cliHelper: CliHelper;
   credentials: Credentials;
+  loginPage: LoginPage;
   dashboard: Dashboard;
+  dataSourcesPage: DataSourcesPage;
+  dumpPage: DumpPage;
   grafanaHelper: GrafanaHelper;
   haClusterHelper: HaClusterHelper;
+  helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
+  scheduledBackupsPage: ScheduledBackupsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  searchDashboardsPage: SearchDashboardsPage;
+  serviceAccountsPage: ServiceAccountsPage;
   servicesPage: ServicesPage;
   tour: TourPage;
   mocks: Mocks;
@@ -52,17 +79,25 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  serverAdminSettingsPage: ServerAdminSettingsPage;
+  statsAndLicensePage: StatsAndLicensePage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
+  testState: TestState;
 }>({
+  addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
+  advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
+  alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
+  alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
     await use(inventoryApi);
   },
+  changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 
@@ -105,13 +140,16 @@ const pmmTest = base.extend<{
 
     await use(dashboardPage);
   },
+  dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
+  dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
     await use(grafanaHelper);
   },
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
+  helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {
     const helpPage = new HelpPage(page);
 
@@ -124,6 +162,7 @@ const pmmTest = base.extend<{
     await use(k8sHelper);
   },
   leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
+  loginPage: async ({ page }, use) => await use(new LoginPage(page)),
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
 
@@ -156,8 +195,14 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
+  searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
+  serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
+  serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
+  statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
+  testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 

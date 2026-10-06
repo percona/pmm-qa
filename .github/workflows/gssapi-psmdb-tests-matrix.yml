@@ -1,8 +1,6 @@
 name: "PSMDB GSSAPI E2E Tests Matrix"
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       pmm_qa_branch:

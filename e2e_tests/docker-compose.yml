@@ -13,7 +13,6 @@ services:
   pmm-server:
     image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server
-    platform: linux/amd64
     ports:
       - "80:8080"
       - "443:8443"
@@ -26,6 +25,7 @@ services:
       - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
+      - PMM_ENABLE_NOMAD=${PMM_ENABLE_NOMAD:-0}
     volumes:
       - pmm-volume:/srv
     networks:
@@ -35,7 +35,6 @@ services:
   renderer:
     image: grafana/grafana-image-renderer:latest
     container_name: renderer
-    platform: linux/amd64
     environment:
       - GF_RENDERER_PLUGIN_IGNORE_HTTPS_ERRORS=true
       - BROWSER_FLAG=--ignore-certificate-errors
@@ -43,16 +42,48 @@ services:
       - pmm-network
       - pmm-qa
 
-  watchtower:
-    image: perconalab/watchtower:dev-latest
-    container_name: watchtower
-    platform: linux/amd64
+  webhookd:
+    image: ncarlier/webhookd
+    profiles: [webhookd]
+    container_name: webhookd
     environment:
-      - WATCHTOWER_DEBUG=1
-      - WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken
-      - WATCHTOWER_HTTP_API_UPDATE=1
+      - WHD_SCRIPTS=/var/opt/webhookd/scripts
+      - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./testdata/ia/scripts:/var/opt/webhookd/scripts
     networks:
-      - pmm-network
+      - pmm-qa
+
+  sftp-server:
+    image: atmoz/sftp
+    profiles: [sftp]
+    container_name: sftp-server
+    command: foo:password
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/22"]
+      interval: 1s
+      retries: 30
+    volumes:
+      - ./output/sftp:/home/foo/upload
+    networks:
+      - pmm-qa
+
+  pmm-server-encryption:
+    image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
+    profiles: [encryption]
+    container_name: pmm-server-encryption
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENCRYPTION_KEY_PATH=/srv/non-default.key
+    healthcheck:
+      start_period: 2m
+
+  postgres:
+    image: perconalab/percona-distribution-postgresql:15.4
+    profiles: [encryption]
+    container_name: postgres
+    command: -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
+    environment:
+      - POSTGRES_PASSWORD=pmm-^*&@agent-password
+    networks:
       - pmm-qa

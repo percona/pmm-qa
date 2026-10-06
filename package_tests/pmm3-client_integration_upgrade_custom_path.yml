@@ -55,8 +55,13 @@
       -n2 | head -n1
     register: old_release
 
+  # When pmm_version is already the newest release, starting from
+  # latest_release would make this a no-op upgrade.
   - set_fact:
-      old_version: "{{ old_release.stdout if (test_repo == 'main') else latest_release.stdout }}"
+      old_version: >-
+        {{ old_release.stdout
+           if (test_repo == 'main' or pmm_version == latest_release.stdout)
+           else latest_release.stdout }}
 
 ### install PMM Client from tarball
   - name: install pmm3-client tarball to custom path

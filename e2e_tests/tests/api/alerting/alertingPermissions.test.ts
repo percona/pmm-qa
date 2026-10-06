@@ -28,7 +28,8 @@ const alertingWriteCases: {
   },
   {
     label: 'POST rule',
-    send: (alertingApi, headers, templateName) => alertingApi.createRule(headers, templateName),
+    send: (alertingApi, headers, templateName) =>
+      alertingApi.createRule(headers, { template_name: templateName }),
   },
 ];
 // Set by the test, deleted by the afterEach hook so cleanup runs even on failure.

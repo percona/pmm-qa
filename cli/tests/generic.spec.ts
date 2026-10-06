@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { readZipFile } from '@helpers/zip-helper';
@@ -16,8 +16,19 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
+  if (/^https?:/.test(PMM_VERSION)) {
+    // A feature build can ship a server whose version label came from an earlier build, so the
+    // server is not a reference for the client's. Pin to the artifact we asked for instead.
+    const artifact = PMM_VERSION;
+    const requestedBuild = artifact.match(/pmm-client-PR-\d+-([0-9a-f]{7,40})\.tar\.gz$/)?.[1];
+    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_admin_version;
+    if (!PMM_VERSION) throw new Error('Could not read client version from "pmm-admin status --json"');
+    if (requestedBuild && !PMM_VERSION.includes(requestedBuild)) {
+      throw new Error(`Installed client reports ${PMM_VERSION}, expected the ${requestedBuild} build from ${artifact}`);
+    }
+  } else if (/pmm3-rc/.test(PMM_VERSION)) {
+    // RC clients trail v3 VERSION once an RC branches; an RC client and server come from one
+    // build, so the server is still a valid reference for them.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
@@ -596,7 +607,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
     await oldVersion.outContains(latestReleasedVersion);
-    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
+    const arch = (await cli.exec(`docker exec ${containerName} uname -m`)).stdout.trim();
+    const bucket = arch === 'aarch64' ? 'pmm-client-arm' : 'pmm-client';
+    // Compat runs install a released tarball URL; only a build-cache URL is newer than the release.
+    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('pmm-build-cache')
+      ? process.env.PMM_CLIENT_VERSION
+      : `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz`;
 
     const upgrade = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
 
@@ -616,11 +632,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
-    const upgradedVersion = (await cli.exec('sudo pmm-admin version | grep -m1 "^Version:"'))
-      .stdout.replace('Version:', '').trim();
-
-    expect(upgradedVersion, 'Could not read the expected upgrade version from the host client!').not.toEqual('');
     await newPid.outNotContains(oldPid.stdout);
-    await newVersion.outContains(upgradedVersion);
+
+    const upgradedVersion = newVersion.stdout.replace('Version:', '').trim();
+    const toParts = (version: string) => version.split('-')[0].split('.').map(Number);
+    const [upgraded, released] = [toParts(upgradedVersion), toParts(latestReleasedVersion)];
+    const firstDiff = upgraded.findIndex((part, i) => part !== released[i]);
+    const isNewer = firstDiff !== -1 && upgraded[firstDiff] > released[firstDiff];
+
+    expect(isNewer, `Upgraded version '${upgradedVersion}' is not newer than ${latestReleasedVersion}!`).toBe(true);
   });
 });

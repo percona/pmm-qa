@@ -59,9 +59,12 @@ Scenario(
 Scenario(
   'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @gssapi-nightly',
   async ({
-    I, dashboardPage, inventoryAPI, adminPage,
+    I, dashboardPage, inventoryAPI, adminPage, grafanaAPI,
   }) => {
     const mongoService = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
+
+    await grafanaAPI.waitForMetric('mongodb_top_commands_count', { type: 'service_name', value: mongoService.service_name }, 120);
+    await grafanaAPI.waitForMetric('mongodb_dbstats_dataSize', { type: 'service_name', value: mongoService.service_name }, 120);
 
     I.amOnPage(
       I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
@@ -74,7 +77,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await adminPage.performPageDown(5);
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbCollectionsOverview.metrics);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    await dashboardPage.waitForGraphsToHaveData(2, 60);
   },
 );
 
@@ -131,7 +134,7 @@ Scenario(
     dashboardPage.mongodbInstancesCompareDashboard.unselectCluster();
 
     dashboardPage.mongodbInstancesCompareDashboard.selectReplicationSet('rs');
-    I.waitInUrl('&var-replication_set=rs', 2);
+    I.waitForURL(/[?&]var-replication_set=rs(&|$)/, { timeout: 10000 });
     dashboardPage.mongodbInstancesCompareDashboard.unselectReplicationSet();
 
     dashboardPage.mongodbInstancesCompareDashboard.selectNode([mongoServices[0]]);

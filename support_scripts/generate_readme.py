@@ -26,6 +26,7 @@ E2E_TAGS_END = "<!-- E2E-TAGS-END -->"
 CLI_TAGS_START = "<!-- CLI-TAGS-START -->"
 CLI_TAGS_END = "<!-- CLI-TAGS-END -->"
 TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
+TEST_ID_PATTERN = re.compile(r"@PMM-T\d+", re.IGNORECASE)
 PLAYWRIGHT_TAG_PATTERN = re.compile(
     r"tag\s*:\s*(?:'(?P<single>@[A-Za-z0-9][A-Za-z0-9_-]*)'|\"(?P<double>@[A-Za-z0-9][A-Za-z0-9_-]*)\"|\[(?P<array>.*?)\])",
     re.DOTALL,
@@ -118,7 +119,7 @@ def build_e2e_tags() -> str:
             if line.lstrip().startswith(("import ", "export ")):
                 continue
             tags.update(TAG_PATTERN.findall(line))
-    tags = sorted(tags, key=str.lower)
+    tags = sorted((tag for tag in tags if not TEST_ID_PATTERN.fullmatch(tag)), key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find e2e tags in {E2E_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)
@@ -135,7 +136,7 @@ def build_cli_tags() -> str:
                 tags.add(match.group("double"))
             elif match.group("array"):
                 tags.update(TAG_PATTERN.findall(match.group("array")))
-    tags = sorted(tags, key=str.lower)
+    tags = sorted((tag for tag in tags if not TEST_ID_PATTERN.fullmatch(tag)), key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find CLI tags in {CLI_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)

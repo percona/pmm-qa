@@ -4,12 +4,14 @@ interface BuildUrlParameters {
   database?: string;
   schema?: string;
   environment?: string;
+  nodeName?: string;
   serviceName?: string;
   replicationSet?: string;
   refresh?: string;
   from?: string;
   to?: string;
   cluster?: string;
+  metric?: string;
 }
 
 export default class UrlHelper {
@@ -26,6 +28,9 @@ export default class UrlHelper {
           break;
         case 'environment':
           queryParams['var-environment'] = parameters[key];
+          break;
+        case 'nodeName':
+          queryParams['var-node_name'] = parameters[key];
           break;
         case 'serviceName':
           queryParams['var-service_name'] = parameters[key];
@@ -44,6 +49,9 @@ export default class UrlHelper {
           break;
         case 'cluster':
           queryParams['var-cluster'] = parameters[key];
+          break;
+        case 'metric':
+          queryParams['var-metric'] = parameters[key];
           break;
         default:
           throw new Error('Unsupported environment ' + key);

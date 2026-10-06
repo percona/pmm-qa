@@ -1,0 +1,74 @@
+# Containers ship stock archive.ubuntu.com sources, which is erratic from CI
+# runners; inherit whatever mirror the host is already using successfully.
+#
+# Requires: container_name
+- name: Detect the host's Ubuntu apt mirror
+  shell: |
+    # A mirrorlist, where present, is authoritative and ordered by priority.
+    mirror=$(grep -hoE 'https?://[^[:space:]]+' /etc/apt/apt-mirrors.txt 2>/dev/null | head -n1)
+    if [ -z "$mirror" ]; then
+      # Only the distro's own archive files: sources.list.d also holds vendor
+      # repos laid out as <host>/ubuntu (packages.microsoft.com), which are not
+      # Ubuntu mirrors and would break every container's apt if picked up.
+      mirror=$(grep -rhoE 'https?://[a-zA-Z0-9.-]+/ubuntu' \
+        /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null \
+        | grep -vE '://(archive|security)\.ubuntu\.com' | head -n1)
+    fi
+    mirror=${mirror%/}
+    # The value is spliced into a sed program below, so keep it to characters a
+    # URL needs and drop anything else rather than escaping it.
+    case $mirror in
+      http://*|https://*) ;;
+      *) mirror= ;;
+    esac
+    case $mirror in
+      *[!A-Za-z0-9:/._~-]*) mirror= ;;
+    esac
+    printf '%s' "$mirror"
+  register: container_apt_mirror_probe
+  changed_when: false
+  failed_when: false
+  when: container_apt_mirror is not defined
+
+- name: Remember the host's Ubuntu apt mirror
+  set_fact:
+    container_apt_mirror: "{{ container_apt_mirror_probe.stdout | default('') | trim }}"
+  when: container_apt_mirror is not defined
+
+- name: Stage the container apt helper
+  copy:
+    dest: /tmp/pmm-qa-container-apt.sh
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      set -eu
+
+      # Setups share this task across Debian- and RHEL-family containers.
+      [ -d /etc/apt ] || exit 0
+
+      mirror=${1:-}
+
+      # Ubuntu <= 23.10 keeps sources in /etc/apt/sources.list; 24.04+ uses
+      # deb822 in /etc/apt/sources.list.d/ubuntu.sources.
+      if [ -n "$mirror" ]; then
+        for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
+          [ -f "$f" ] || continue
+          sed -i -E \
+            -e "s#https?://[a-zA-Z0-9.-]*archive\.ubuntu\.com/ubuntu#${mirror}#g" \
+            -e "s#https?://security\.ubuntu\.com/ubuntu#${mirror}#g" \
+            "$f"
+        done
+      fi
+
+      # A mirror IP that blackholes costs a full stall per index file otherwise.
+      cat >/etc/apt/apt.conf.d/99qa-network <<'CONF'
+      Acquire::Retries "3";
+      Acquire::http::Timeout "30";
+      Acquire::https::Timeout "30";
+      CONF
+
+- name: Configure apt inside the container
+  shell: >
+    docker exec -i --user root {{ container_name | quote }}
+    sh -s {{ container_apt_mirror | quote }} < /tmp/pmm-qa-container-apt.sh
+  changed_when: true

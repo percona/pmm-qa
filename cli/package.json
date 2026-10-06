@@ -29,32 +29,32 @@
     "cli:all": "npx playwright test"
   },
   "dependencies": {
-    "@faker-js/faker": "^10.5.0",
-    "@playwright/test": "^1.62.1",
-    "@types/luxon": "^3.7.4",
-    "adm-zip": "^0.6.0",
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
+    "@types/luxon": "^3.7.6",
+    "adm-zip": "^0.6.1",
     "luxon": "^3.7.2",
     "playwright": "^1.62.1",
     "playwright-core": "^1.62.1",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.9",
     "shelljs": "^0.10.0",
-    "typescript": "~5.5.4",
-    "yaml": "^2.9.0"
+    "typescript": "~6.0.3",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.3",
     "@types/shelljs": "^0.10.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.4",
     "eslint": "^8.57.1",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-playwright": "^2.11.0",
+    "eslint-plugin-playwright": "^2.12.0",
     "glob": "^13.0.6"
   }
 }

@@ -241,21 +241,21 @@ Scenario('PMM-T1089 - Verify UI elements for PostgreSQL Instance @fb-instances',
   I.click(remoteInstancesPage.fields.addService);
   remoteInstancesPage.checkRequiredField();
   // Verify fields on the page
-  I.seeElement(remoteInstancesPage.fields.hostName, 30);
-  I.seeElement(remoteInstancesPage.fields.serviceName, 30);
-  I.seeElement(remoteInstancesPage.fields.portNumber, 30);
-  I.seeElement(remoteInstancesPage.fields.userName, 30);
-  I.seeElement(remoteInstancesPage.fields.password, 30);
-  I.seeElement(remoteInstancesPage.fields.environment, 30);
-  I.seeElement(remoteInstancesPage.fields.region, 30);
-  I.seeElement(remoteInstancesPage.fields.availabilityZone, 30);
-  I.seeElement(remoteInstancesPage.fields.replicationSet, 30);
-  I.seeElement(remoteInstancesPage.fields.cluster, 30);
-  I.seeElement(remoteInstancesPage.fields.customLabels, 30);
-  I.seeElement(remoteInstancesPage.fields.skipConnectionCheck, 30);
-  I.seeElement(remoteInstancesPage.fields.dontTrackingRadio, 30);
-  I.seeElement(remoteInstancesPage.fields.pgStatStatementsRadio, 30);
-  I.seeElement(remoteInstancesPage.fields.pgStatMonitorRadio, 30);
+  I.seeElement(remoteInstancesPage.fields.hostName);
+  I.seeElement(remoteInstancesPage.fields.serviceName);
+  I.seeElement(remoteInstancesPage.fields.portNumber);
+  I.seeElement(remoteInstancesPage.fields.userName);
+  I.seeElement(remoteInstancesPage.fields.password);
+  I.seeElement(remoteInstancesPage.fields.environment);
+  I.seeElement(remoteInstancesPage.fields.region);
+  I.seeElement(remoteInstancesPage.fields.availabilityZone);
+  I.seeElement(remoteInstancesPage.fields.replicationSet);
+  I.seeElement(remoteInstancesPage.fields.cluster);
+  I.seeElement(remoteInstancesPage.fields.customLabels);
+  I.seeElement(remoteInstancesPage.fields.skipConnectionCheck);
+  I.seeElement(remoteInstancesPage.fields.dontTrackingRadio);
+  I.seeElement(remoteInstancesPage.fields.pgStatStatementsRadio);
+  I.seeElement(remoteInstancesPage.fields.pgStatMonitorRadio);
 });
 
 Data(remotePostgreSQL).Scenario(

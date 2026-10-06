@@ -415,7 +415,9 @@ Scenario(
 
     const count = await queryAnalyticsPage.data.getRowCount();
 
-    assert.ok(parseInt(count, 10) === 5, `Expected only 5 Queries to show up for ${applicationName} based on the load script but found ${count}`);
+    // The script's own `SET application_name` is attributed to the name in effect before it
+    // ran, so only the four statements after it carry PMMT1063 (pg_stat_monitor 2.4.0, d25da64).
+    assert.ok(parseInt(count, 10) === 4, `Expected only 4 Queries to show up for ${applicationName} based on the load script but found ${count}`);
   },
 );
 

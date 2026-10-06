@@ -39,7 +39,18 @@ sleep 10
 # Install the PG server from selected distribution
 if [[ $distribution == "PGDG" ]];
 then
-      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      for attempt in 1 2 3; do
+        if wget --timeout=30 --tries=2 -O /tmp/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+          && grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/pgdg.asc; then
+          break
+        fi
+        if [ "$attempt" = 3 ]; then
+          echo "Failed to download the PGDG signing key after 3 attempts" >&2
+          exit 1
+        fi
+        sleep 15
+      done
+      apt-key add /tmp/pgdg.asc
       sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
       apt update
       apt -y install postgresql-${pgsql_version} postgresql-server-dev-${pgsql_version} postgresql-contrib-${pgsql_version}
@@ -85,6 +96,13 @@ echo "CREATE USER pmm WITH PASSWORD 'pmm';" >> /home/postgres/init.sql
 echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
 echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
 echo "ALTER SYSTEM SET max_locks_per_transaction = 1024;" >> /home/postgres/init.sql
+
+# The pg_stat_user_tables custom query only emits rows while a user table exists;
+# the load loop below only creates transient tables, so keep one permanent table
+# (analyzed, so analyze_count is populated) to make pg_stat_user_tables_* stable.
+echo "CREATE TABLE IF NOT EXISTS pmm_qa_stat_user_tables_seed (id serial PRIMARY KEY, note text);" >> /home/postgres/init.sql
+echo "INSERT INTO pmm_qa_stat_user_tables_seed (note) VALUES ('pmm-qa seed');" >> /home/postgres/init.sql
+echo "ANALYZE pmm_qa_stat_user_tables_seed;" >> /home/postgres/init.sql
 
 # Start server, run init.sql and Create extension PGSM
 service postgresql start

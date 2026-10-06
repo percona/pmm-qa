@@ -1,0 +1,57 @@
+import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
+
+export default class MysqlPerformanceSchemaDetails implements DashboardInterface {
+  url = 'graph/d/mysql-performance-schema/mysql-performance-schema-details';
+  memoryCurrentUsedPanel = 'Performance Schema Memory Usage (Current Bytes)';
+  memoryMetrics: GrafanaPanel[] = [
+    { name: 'Performance Schema Memory Usage (Current Bytes)', type: 'timeSeries' },
+    { name: 'Performance Schema Memory Allocation Rate (Bytes)', type: 'timeSeries' },
+    { name: 'Performance Schema Memory Free Rate (Bytes)', type: 'timeSeries' },
+  ];
+  metrics: GrafanaPanel[] = [
+    { name: 'Performance Schema File IO (Events)', type: 'timeSeries' },
+    { name: 'Performance Schema File IO (Load)', type: 'timeSeries' },
+    { name: 'Performance Schema File IO (Bytes)', type: 'timeSeries' },
+    { name: 'Performance Schema Status Variables (Events)', type: 'timeSeries' },
+    { name: 'Performance Schema Waits (Events)', type: 'timeSeries' },
+    { name: 'Performance Schema Waits (Load)', type: 'timeSeries' },
+    { name: 'Index Access Operations (Load)', type: 'timeSeries' },
+    { name: 'Table Access Operations (Load)', type: 'timeSeries' },
+    { name: 'Performance Schema SQL & External Locks (Events)', type: 'timeSeries' },
+    { name: 'Performance Schema SQL and External Locks (Seconds)', type: 'timeSeries' },
+    { name: 'MySQL Uptime', type: 'stat' },
+    { name: 'Version', type: 'text' },
+    { name: 'Current QPS', type: 'stat' },
+    { name: 'File Handlers Used', type: 'stat' },
+    { name: 'Table Open Cache Miss Ratio', type: 'stat' },
+    { name: 'Table Open Cache Size', type: 'stat' },
+    { name: 'Table Definition Cache Size', type: 'stat' },
+    { name: 'Service', type: 'text' },
+    { name: 'MySQL Connections', type: 'timeSeries' },
+    { name: 'MySQL Client Thread Activity', type: 'timeSeries' },
+    { name: 'MySQL Handlers', type: 'timeSeries' },
+    { name: 'Top Command Counters', type: 'timeSeries' },
+    { name: 'Process States', type: 'timeSeries' },
+    { name: 'MySQL Network Traffic', type: 'timeSeries' },
+    { name: 'System Uptime', type: 'stat' },
+    { name: 'Load Average', type: 'stat' },
+    { name: 'RAM', type: 'stat' },
+    { name: 'Memory Available', type: 'stat' },
+    { name: 'Virtual Memory', type: 'stat' },
+    { name: 'Disk Space', type: 'stat' },
+    { name: 'Min Space Available', type: 'stat' },
+    { name: 'Node', type: 'text' },
+    { name: 'CPU Usage', type: 'timeSeries' },
+    { name: 'CPU Saturation and Max Core Usage', type: 'timeSeries' },
+    { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
+    { name: 'Network Traffic', type: 'timeSeries' },
+    ...this.memoryMetrics,
+  ];
+  // rate(...) > 0 panels: empty under idle load.
+  noDataMetrics: string[] = [
+    'Performance Schema Memory Allocation Rate (Bytes)',
+    'Performance Schema Memory Free Rate (Bytes)',
+  ];
+  metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
+}

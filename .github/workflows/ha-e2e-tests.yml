@@ -146,13 +146,13 @@ jobs:
       - name: Setup PMM-Client against remote PMM HA Server
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 10
+          timeout_minutes: 20
           retry_wait_seconds: '10'
           max_attempts: 2
           retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
-            sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
+            sudo timeout -k 30 19m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
               --client_version "${PMM_CLIENT_VERSION}" \
               --admin_password "${ADMIN_PASSWORD}" \
@@ -160,25 +160,41 @@ jobs:
 
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ env.WIZARD_ARGS != '' }}
-        uses: nick-fields/retry@v3
+        timeout-minutes: 35
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -p /tmp/backup_data || true
+          chmod 777 /tmp/backup_data || true
+          # shellcheck disable=SC2086
+          # WIZARD_ARGS holds several --database flags and has to split into
+          # separate arguments.
+          timeout -k 30 34m ./pmm-framework/pmm-framework \
+            --parallel \
+            --setup-retries 1 \
+            --pmm-server-ip "${SERVER_IP}" \
+            --pmm-server-password "${ADMIN_PASSWORD}" \
+            --client-version "${PMM_CLIENT_VERSION}" \
+            ${WIZARD_ARGS}
+
+      - name: Collect pmm-framework setup logs
+        id: framework_logs
+        if: ${{ failure() || cancelled() }}
+        continue-on-error: true
+        env:
+          ARTIFACT_LABEL: ${{ env.TAGS_FOR_TESTS }}
+        run: |
+          script=pmm-qa/.github/scripts/collect-framework-logs.sh
+          # Older pmm-qa refs checked out by callers predate the script.
+          [[ -f $script ]] || { echo "$script is not on this pmm-qa ref"; exit 0; }
+          bash "$script" framework-logs ADMIN_PASSWORD LAUNCHABLE_TOKEN
+
+      - name: Upload pmm-framework setup logs
+        if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
-          timeout_minutes: 20
-          retry_wait_seconds: '10'
-          max_attempts: 2
-          retry_on: 'any'
-          command: |
-            cd pmm-qa/qa-integration/pmm_qa
-            mkdir -m 777 -p /tmp/backup_data || true
-            timeout -k 30 19m ./pmm-framework/pmm-framework \
-              --parallel \
-              --pmm-server-ip "${SERVER_IP}" \
-              --pmm-server-password "${ADMIN_PASSWORD}" \
-              --client-version "${PMM_CLIENT_VERSION}" \
-              ${WIZARD_ARGS}
-          on_retry_command: |
-            docker rm -f $(docker ps -a -q) || true
-            docker volume rm -f $(docker volume ls -q) || true
-            docker network rm -f $(docker network ls -q) || true
+          name: ${{ steps.framework_logs.outputs.artifact_name }}
+          path: framework-logs
 
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/

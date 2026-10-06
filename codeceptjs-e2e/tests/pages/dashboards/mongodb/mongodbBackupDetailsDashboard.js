@@ -25,11 +25,13 @@ class MongodbBackupDetailsDashboard {
     const I = actor();
 
     I.waitForVisible(this.elements.backUpConfiguredValue, 15);
-    const value = await I.grabTextFrom(this.elements.backUpConfiguredValue);
+    await I.asyncWaitFor(async () => {
+      I.scrollTo(this.elements.backUpConfiguredValue);
+      I.click(this.elements.refresh);
+      const actualValue = await I.grabTextFrom(this.elements.backUpConfiguredValue);
 
-    if (value !== expectedValue) {
-      throw new Error(`Expected Value for panel Backup configured on MongoDB PMM Details dashboard does not equal expected value. Expected: "${expectedValue}". Actual: "${value}".`);
-    }
+      return actualValue === expectedValue;
+    }, 60, `Backup configured panel never reached "${expectedValue}"`);
   }
 
   async verifyPitrEnabledValue(expectedValue) {
@@ -64,6 +66,20 @@ class MongodbBackupDetailsDashboard {
 
       return actualValue !== 'N/A' && actualValue !== '';
     }, 120, 'Last Successful Backup panel still has no value');
+  }
+
+  async waitForGraphPanelData(panelTitle) {
+    const I = actor();
+    const panel = locate(`//section[contains(@data-testid, "${panelTitle}")]`);
+    const noDataText = '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]';
+
+    I.waitForVisible(panel, 15);
+    await I.asyncWaitFor(async () => {
+      I.scrollTo(panel);
+      I.click(this.elements.refresh);
+
+      return await I.grabNumberOfVisibleElements(panel.find(noDataText)) === 0;
+    }, 120, `"${panelTitle}" panel still shows No data`);
   }
 }
 

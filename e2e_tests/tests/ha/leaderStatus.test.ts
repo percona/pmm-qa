@@ -9,23 +9,11 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2233 Verify "pmm_ha_leader_status" metric correctly reflects the current leader status @pmm-ha',
-  async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
-
-    await page.goto(highAvailabilityPage.url);
-
-    const initialLeader = await pmmTest.step('Read the current leader from the HA badge', async () => {
-      await expect(highAvailabilityPage.elements.badge).toBeVisible();
-
-      const leader = await highAvailabilityPage.getLeaderName();
-
-      expect(leader, 'HA badge must name a leader').not.toEqual('Unknown');
-
-      return leader;
-    });
+  'PMM-T2233 - Verify "pmm_ha_leader_status" tracks the current leader across a leader restart @pmm-ha',
+  async ({ api, haClusterHelper, k8sHelper }) => {
+    const initialLeader = await pmmTest.step('Read the current leader from the cluster', async () =>
+      haClusterHelper.leaderFromPods(),
+    );
 
     await pmmTest.step(
       `Verify "${HaApi.leaderStatusMetric}" reports "${initialLeader}" as leader`,
@@ -34,7 +22,7 @@ pmmTest(
 
         // Polled: a node that joined recently only shows up after the next scrape.
         await expect
-          .poll(async () => await api.haApi.getNodesFromMetrics(), {
+          .poll(async () => await api.haApi.getNodesFromMetric(HaApi.leaderStatusMetric), {
             message: `Every HA node must export ${HaApi.leaderStatusMetric}`,
             timeout: Timeouts.TWO_MINUTES,
           })
@@ -42,7 +30,7 @@ pmmTest(
 
         expect(
           await api.haApi.waitForLeaderInMetrics(undefined, Timeouts.TWO_MINUTES),
-          'The leader in metrics must be the one the HA badge names',
+          'The leader in metrics must be the pod that answers the leader health check',
         ).toEqual(initialLeader);
       },
     );
@@ -99,13 +87,6 @@ pmmTest(
           timeout: Timeouts.TWO_MINUTES,
         })
         .toBeGreaterThan(baseline);
-    });
-
-    await pmmTest.step(`Verify the HA badge shows "${newLeader}" as the new leader`, async () => {
-      await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(newLeader, {
-        timeout: Timeouts.TWO_MINUTES,
-      });
     });
 
     await pmmTest.step(

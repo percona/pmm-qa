@@ -9,6 +9,7 @@ e2e_tests/playwright/.auth/
 e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env
+e2e_tests/testdata/ia/scripts/alert.txt
 .playwright-mcp/
 cli/node_modules/
 e2e_tests/dist/
@@ -18,6 +19,7 @@ cli/playwright-report/*
 cli/test-report/*
 
 .idea
+.claudine
 .vscode
 .DS_Store
 # Logs
@@ -150,33 +152,7 @@ dist
 /k8s/lib/bats-support/
 
 # AI tools
-.claude/*
-!.claude/agents/
-!.claude/agents/**
-!.claude/skills/
-!.claude/skills/**
-!.claude/hooks/
-!.claude/hooks/**
-!.claude/scripts/
-!.claude/scripts/**
-!.claude/integrations/
-!.claude/integrations/**
-!.claude/settings.json
-!.claude/skill-lessons/
-!.claude/skill-lessons/**
-.claude/scripts/node_modules/
-.claude/scripts/.sessions/
+.claude/
 .cursor
 .cursorrules
 
-# Terraform (Linode ephemeral test runner) -- module + lock file are
-# committed; only per-run/generated state and secrets are ignored.
-terraform/linode-runner/runs/*
-!terraform/linode-runner/runs/.gitkeep
-terraform/linode-runner/.plugin-cache/
-terraform/linode-runner/.terraform/
-terraform/linode-runner/*.tfstate
-terraform/linode-runner/*.tfstate.backup
-terraform/linode-runner/id_ed25519
-terraform/linode-runner/id_ed25519.pub
-terraform/linode-runner/*.pem

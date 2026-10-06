@@ -12,6 +12,9 @@ bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_ps_8_0.sh
 ### Call Postgres Docker Setup Script
 bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_postgres_13.sh
 
+### Assert PMM-T1087's precondition: no `postgres` database on postgresnodb
+bash -x ${repo_root}/testdata/docker-db-setup-scripts/verify_no_default_db.sh || exit 1
+
 ### SSL instance setup along with slowlog
 ##bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
 

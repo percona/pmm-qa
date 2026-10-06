@@ -46,6 +46,10 @@ cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.help
 constructor — change it there, or pass one in. Nothing skips itself: an unreachable
 namespace fails the test with kubectl's own error.
 
+PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
+It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
+start it by name from `e2e_tests/`: `docker compose up -d --no-deps webhookd`.
+
 ## Running Tests
 
 Run commands from `e2e_tests/`.
@@ -89,24 +93,45 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@annotations`
 - `@dashboards`
+- `@disconnect`
 - `@docker-configuration`
 - `@downloads`
+- `@dump`
+- `@fb-alerting`
+- `@fb-encryption`
+- `@fb-instances`
+- `@fb-settings`
+- `@grafana-pr`
+- `@gssapi-nightly`
+- `@ia`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
 - `@menu`
 - `@new-navigation`
 - `@nightly`
+- `@nomad`
 - `@pmm-ha`
+- `@pmm-helm-mid-upgrade`
+- `@pmm-helm-post-upgrade`
+- `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@post-server-upgrade`
+- `@post-upgrade`
+- `@pre-upgrade`
+- `@qan`
 - `@rta`
+- `@service-account`
 - `@settings`
 - `@standalone`
+- `@user-password`
 
 <!-- E2E-TAGS-END -->
 

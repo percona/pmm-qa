@@ -79,19 +79,22 @@ failure the log directory is kept for inspection; on a fully successful run it
 is removed.
 
 Each setup runs in its own process group, so interrupting the framework also
-terminates the `ansible-playbook` processes it started.
+terminates the `ansible-playbook` processes it started. An interrupt dumps the
+buffered log of every setup still running and keeps the log directory — under a
+`timeout` wrapper that buffer is the only record of where a setup got stuck.
 
 Setups that cannot run concurrently — two of the same database type, or any two
 of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
 ports — are detected during preflight. The run is not rejected: it falls back
 to sequential execution with a warning, so every requested setup still runs.
 
-To rerun the representative four-database setup and print its wall-clock time
-to milliseconds:
-
-```bash
-qa-integration/pmm_qa/pmm-framework/run_parallel_timing.sh
-```
+Two pairs cannot share a host at all, and those preflight refuses instead:
+two PSMDB setups (both compose stacks pin the container names `rs101`..`rs203`
+and host port 27027, replica-set and sharded included) and EXTERNAL together
+with VALKEY (`redis_container` and the Valkey primary both take host port
+6379). Each holds its names and ports for
+as long as it is up, so sequential execution is no remedy — provision them on
+separate machines.
 
 `--database` values use this grammar:
 
@@ -112,10 +115,13 @@ and `sentinel`/`sentinels` for Valkey.
 
 Configuration precedence is:
 
-1. Environment variable
-2. Global `--client-version` (for `CLIENT_VERSION`)
+1. Global `--client-version` flag (for `CLIENT_VERSION`)
+2. Environment variable
 3. Per-database option
 4. Registered default
+
+The `--client-version` flag comes first so an explicit override beats an
+ambient `CLIENT_VERSION` in the environment (e.g. one exported by CI).
 
 Each registration in `lib/config.sh` pins the version used when a spec omits
 one with an explicit `DEFAULT_VERSION=` entry. It is not a user-settable
@@ -127,7 +133,9 @@ the whole run and is readable by other users on the host via `ps`. On shared
 runners, export `ADMIN_PASSWORD` instead; it takes precedence over the flag and
 is not exposed in the command line.
 
-`latest-tarball` is normalized to the current PMM Client build-cache URL.
+`latest-tarball` is normalized to the current PMM Client build-cache URL for the
+host architecture — `PR-BUILDS/pmm-client` on x86_64, `PR-BUILDS/pmm-client-arm`
+on arm64.
 PSMDB patch lookup uses `curl`; it does not require Python or `requests`.
 
 ## Side-by-side validation
