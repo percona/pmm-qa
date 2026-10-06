@@ -45057,7 +45057,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T2004 fills the Data retention field, which percona/pmm#5792 makes read-only in HA by design; the test now asserts it is disabled in HA (reproduced on CHAOS HA, fix 3/3 green).",
+        "link": "https://github.com/percona/pmm-qa/pull/1554",
+        "by": "Investigator routine",
+        "at": "2026-10-06T04:08:48Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -45078,13 +45089,6 @@
         "at": "2026-10-06T03:39:38Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-06T03:39:38Z",
-        "suites": [
-          "Nightly"
         ]
       },
       {
