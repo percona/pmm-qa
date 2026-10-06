@@ -36,6 +36,8 @@ import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
+import AddInstancePage from '@pages/inventory/addInstance.page';
+import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
@@ -45,6 +47,7 @@ import TestState from '@helpers/upgradeState.helper';
 const pmmTest = base.extend<{
   advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
+  addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
@@ -63,6 +66,7 @@ const pmmTest = base.extend<{
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
+  scheduledBackupsPage: ScheduledBackupsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   searchDashboardsPage: SearchDashboardsPage;
@@ -83,6 +87,7 @@ const pmmTest = base.extend<{
   downloadsPage: DownloadsPage;
   testState: TestState;
 }>({
+  addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
@@ -190,6 +195,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
