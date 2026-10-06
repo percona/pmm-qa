@@ -65,12 +65,9 @@ on:
       admin_password:
         description: 'PMM Server admin password'
         default: 'pmm3admin!'
-      client_image_tag:
-        description: 'Prebuilt image tag. Use a YYYY-MM-DD tag to roll back.
-          Ignored with build_images.'
-        default: 'latest'
       build_images:
-        description: 'Build the client images from this ref first and test those.'
+        description: 'Rebuild and republish the client images (:latest) from this
+          ref before testing.'
         type: boolean
         default: false
 
@@ -91,8 +88,6 @@ env:
   INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
   METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
   ADMIN_PASSWORD: ${{ inputs.admin_password || 'pmm3admin!' }}
-  # build_images publishes this run's own images under a tag that :latest never sees.
-  CLIENT_IMAGE_TAG: ${{ inputs.build_images && format('run-{0}', github.run_id) || inputs.client_image_tag || 'latest' }}
   TARBALL_LINK: ${{ inputs.tarball }}
 
 jobs:
@@ -106,8 +101,6 @@ jobs:
     outputs:
       server_image: ${{ steps.server.outputs.image }}
       pmm_version: ${{ steps.version.outputs.version }}
-      # The images job's inputs cannot read env, so it gets the tag from here.
-      client_image_tag: ${{ env.CLIENT_IMAGE_TAG }}
     steps:
       # skopeo's docker:// transport expands a short name to docker.io itself, and
       # the fully qualified name it prints spares podman its short-name lookup.
@@ -147,6 +140,7 @@ jobs:
           RESOLVED: ${{ steps.server.outputs.image }}
           VERSION: ${{ steps.version.outputs.version }}
           REF: ${{ github.ref_name }}@${{ github.sha }}
+          BUILD: ${{ inputs.build_images || false }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           ## PMM package tests matrix
@@ -160,7 +154,7 @@ jobs:
           | metrics_mode | \`${METRICS_MODE}\` |
           | tarball | \`${TARBALL_LINK:-none}\` |
           | pmm-qa | \`${REF}\` |
-          | client images | \`${CLIENT_IMAGE_TAG}\` |
+          | build_images | \`${BUILD}\` |
           EOF
 
   images:
@@ -173,14 +167,12 @@ jobs:
       id-token: write
       attestations: write
     uses: ./.github/workflows/build-package-test-images.yml
-    with:
-      tag: ${{ needs.prepare.outputs.client_image_tag }}
 
   test:
     name: ${{ matrix.os }} / ${{ matrix.test }}
     needs: [prepare, images]
-    # Runs whether images succeeded, failed or was skipped: an OS whose image did
-    # not build fails only its own cells, at the pull, since its tag is per run.
+    # Runs whether images succeeded, failed or was skipped. An OS whose image did
+    # not build is tested on its previous :latest.
     if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90 # same as the Jenkins job
@@ -254,7 +246,7 @@ jobs:
       - name: Start the ${{ matrix.os }} client
         id: client
         env:
-          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:latest
           OS: ${{ matrix.os }}
         run: |
           # Hardened units (valkey-server, mysqlrouter, valkey@default) need a
