@@ -227,7 +227,7 @@ jobs:
       # the cell. Both `podman run` steps below then start from a local image.
       - name: Pull the client and server images
         env:
-          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:latest
           SERVER_IMAGE: ${{ needs.prepare.outputs.server_image }}
         run: |
           for image in "$CLIENT_IMAGE" "$SERVER_IMAGE"; do
