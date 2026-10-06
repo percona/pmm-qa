@@ -1,0 +1,150 @@
+# Builds the nine systemd-capable OS images that pmm3-package-tests-matrix.yml
+# runs the package playbooks in, and publishes them to GHCR. Each image is booted
+# and checked before it is pushed, so a broken image never becomes :latest.
+#
+# amd64 only: nothing can use arm64 images until pmm-server ships an arm64 build.
+# To add it, give the matrix an `arch` axis with a `runner` per arch, push one tag
+# each, and join them with `docker buildx imagetools create`.
+name: Build package test images
+
+on:
+  schedule:
+    - cron: '17 2 * * 1' # Mondays, off the hour so we are not queued behind the crowd
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - package_tests/docker/**
+      - .github/workflows/build-package-test-images.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-package-test-images
+  cancel-in-progress: false
+
+env:
+  # pmm3-package-tests-matrix.yml pulls from the same place.
+  IMAGE_REPO: ghcr.io/percona/pmm-qa
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    # A fork cannot push to percona's registry namespace.
+    if: github.repository == 'percona/pmm-qa'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      max-parallel: 5 # more than this and GHCR starts rejecting the pushes
+      matrix:
+        # Keep this list in sync with pmm3-package-tests-matrix.yml.
+        # privileged: matches how the test matrix runs each image, so the check here
+        # reflects the real thing.
+        include:
+          - { os: ol8, base: 'oraclelinux:8', family: rpm, privileged: false }
+          - { os: ol9, base: 'oraclelinux:9', family: rpm, privileged: false }
+          - { os: ol10, base: 'oraclelinux:10', family: rpm, privileged: true }
+          - { os: debian11, base: 'debian:11', family: deb, privileged: true }
+          - { os: debian12, base: 'debian:12', family: deb, privileged: true }
+          - { os: debian13, base: 'debian:13', family: deb, privileged: true }
+          - { os: ubuntu2204, base: 'ubuntu:22.04', family: deb, privileged: true }
+          - { os: ubuntu2404, base: 'ubuntu:24.04', family: deb, privileged: true }
+          - { os: ubuntu2604, base: 'ubuntu:26.04', family: deb, privileged: true }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # sudo everywhere: rootless and root podman have separate image stores, so a
+      # rootless build would be invisible to the root-run container below.
+      # The source label links each package to this repository, so it inherits
+      # the repository's access and the test matrix can pull it with GITHUB_TOKEN.
+      - name: Build the image
+        run: |
+          sudo podman build \
+            --file "package_tests/docker/Dockerfile.${{ matrix.family }}" \
+            --build-arg "BASE_IMAGE=${{ matrix.base }}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --tag "staged:${{ matrix.os }}" \
+            package_tests/docker
+
+      - name: Boot it and check systemd comes up
+        env:
+          PRIVILEGED: ${{ matrix.privileged }}
+        run: |
+          PRIV=""
+          [ "$PRIVILEGED" = "true" ] && PRIV="--privileged"
+          # shellcheck disable=SC2086
+          sudo podman run -d --name probe --systemd=always $PRIV "staged:${{ matrix.os }}"
+
+          sudo podman exec probe bash -c '
+            for i in $(seq 1 90); do
+              state=$(systemctl is-system-running 2>/dev/null)
+              case "$state" in
+                running|degraded) echo "systemd is $state after ${i}s"; break ;;
+              esac
+              if [ "$i" -eq 90 ]; then
+                echo "systemd never came up (last state: $state)"
+                systemctl list-jobs --no-pager
+                exit 1
+              fi
+              sleep 1
+            done
+
+            for tool in ip ps git wget sudo gpg2 ansible; do
+              command -v "$tool" >/dev/null || { echo "missing: $tool"; exit 1; }
+            done
+            ansible --version | head -1'
+
+          sudo podman rm -f probe
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          # podman for the push. docker runs no container here -- it only leaves
+          # credentials in ~/.docker/config.json, which is where the attestation
+          # action looks and which rootless podman cannot write on the runner.
+          echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Publish
+        id: push
+        run: |
+          name="${IMAGE_REPO}/${{ matrix.os }}"
+          today=$(date -u +%F)
+
+          sudo podman tag "staged:${{ matrix.os }}" "${name}:latest"
+          sudo podman tag "staged:${{ matrix.os }}" "${name}:${today}"
+
+          # GHCR rate-limits concurrent pushes, so back off and try again.
+          for attempt in 1 2 3 4 5; do
+            if sudo podman push --digestfile=digest.txt "${name}:latest" \
+               && sudo podman push "${name}:${today}"; then
+              break
+            fi
+            [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
+            echo "push failed, retrying in $((attempt * 20))s"
+            sleep "$((attempt * 20))"
+          done
+
+          sudo chown "$(id -u)" digest.txt
+          digest=$(cat digest.txt)
+          echo "name=${name}"     >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "- \`${name}:latest\` \`${digest}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

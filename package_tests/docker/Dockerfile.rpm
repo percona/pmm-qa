@@ -1,0 +1,54 @@
+# Systemd-enabled test fixture for RHEL-family package testing.
+# Used for: Oracle Linux 8, 9 and 10.
+#
+# DELIBERATELY SINGLE-STAGE. The deliverable here is the OS userspace itself, so
+# there is no build artifact to discard, and copying a systemd install between
+# stages breaks package-manager state, file capabilities and unit symlinks.
+# Please do not "optimise" this into a multi-stage build.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# RHEL-family images already ship systemd as /sbin/init, so we only add the test
+# tooling that Jenkins' setup_rhel_package_tests() installs onto its agents.
+#
+# EPEL is intentionally NOT installed here. The playbook's own
+# tasks/install_epel.yml sets it up at test time, uniformly across RHEL 8/9/10,
+# which avoids the per-distro epel-release package-name differences.
+# CodeReady Builder is off by default and carries perl(IPC::Run), which Percona's
+# PostgreSQL 18 packages for el10 depend on. Without it the play dies at "install
+# Percona Platform for PostgreSQL rpm packages for RHEL" with a depsolve error.
+# Only el10 needs it; el8 and el9 resolve the dependency from their own repos.
+RUN if [ "$(rpm -E %rhel)" -ge 10 ]; then \
+      dnf -y install dnf-plugins-core \
+      && { dnf config-manager --set-enabled ol10_codeready_builder \
+           || dnf config-manager --set-enabled crb; } \
+      && dnf clean all; \
+    fi
+
+# gnupg2 is not optional: Ansible's rpm_key module shells out to `gpg2`, and the
+# playbook uses it to install the EPEL and Percona GPG keys. A base image without
+# gpg2 fails the play within the first dozen tasks.
+RUN dnf -y install \
+        ansible-core \
+        git \
+        wget \
+        iproute \
+        procps-ng \
+        sudo \
+        gnupg2 \
+ && dnf clean all \
+ && rm -rf /var/cache/dnf
+
+# A test fixture never needs a login console, and systemd-getty-generator will
+# happily instantiate a serial-console unit for a device the container does not
+# have -- which blocks multi-user.target forever. Masking these also shaves the
+# boot down to a couple of seconds.
+RUN systemctl mask \
+        getty.target \
+        getty@.service \
+        serial-getty@.service \
+        console-getty.service
+
+# systemd shuts down cleanly on SIGRTMIN+3 (see systemd.io CONTAINER_INTERFACE).
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

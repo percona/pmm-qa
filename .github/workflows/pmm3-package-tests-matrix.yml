@@ -3,15 +3,18 @@
 # its own systemd-capable client container.
 #
 # The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
-# images, published by build-test-images.yml in talhabinrizwan/pmm-package-test-poc.
+# images, built from package_tests/docker/ by build-package-test-images.yml.
 name: PMM package tests matrix
 
 on:
   pull_request:
     branches: [main]
     # 72 cells of up to 90 minutes each, so only for changes that can affect them.
+    # The images are rebuilt only once a Dockerfile change reaches main, so a pull
+    # request touching one would still be tested against the old images.
     paths:
       - 'package_tests/**'
+      - '!package_tests/docker/**'
       - 'qa-integration/pmm_qa/tasks/**'
       - '.github/workflows/pmm3-package-tests-matrix.yml'
   workflow_dispatch:
@@ -75,7 +78,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CLIENT_IMAGE_REPO: ghcr.io/talhabinrizwan/pmm-package-test-poc
+  # build-package-test-images.yml publishes to the same place.
+  CLIENT_IMAGE_REPO: ghcr.io/percona/pmm-qa
   # A pull_request run has no inputs, so each falls back to its dispatch default.
   SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
   INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
@@ -155,10 +159,13 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 90 # same as the Jenkins job
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
-        # Keep the OS list in sync with build-test-images.yml.
+        # Keep the OS list in sync with build-package-test-images.yml.
         # The continuation lines must keep this indentation: YAML only folds a >-
         # block onto one line while every line shares the same indent.
         os: >-
@@ -172,10 +179,27 @@ jobs:
           "pmm3-client_integration_upgrade_custom_path","pmm3-client_integration_upgrade_custom_port"]'
           || format('["{0}"]', inputs.test)) }}
     steps:
-      # The client images are public, so no registry login. GHCR still answers 403
-      # now and then when all 72 cells hit it at once, which would otherwise lose a
-      # whole cell on a single unlucky request. Both `podman run` steps below then
-      # start from a local image.
+      # So the pull works whether or not the packages have been made public: they
+      # are linked to this repository, so its GITHUB_TOKEN can read them.
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          # GHCR answers 403 now and then when all 72 cells hit it at once, which
+          # otherwise loses a whole cell on a single unlucky request.
+          for attempt in 1 2 3 4 5; do
+            if echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin; then
+              exit 0
+            fi
+            echo "login failed, retrying in $((attempt * 10))s"
+            sleep "$((attempt * 10))"
+          done
+          echo "could not log in to GHCR after 5 attempts"
+          exit 1
+
+      # Pulled here, with the same backoff, so that a 403 costs a retry rather than
+      # the cell. Both `podman run` steps below then start from a local image.
       - name: Pull the client and server images
         env:
           CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/${{ matrix.os }}:${{ env.CLIENT_IMAGE_TAG }}

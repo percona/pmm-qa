@@ -13,6 +13,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 | `templates/` | Jinja templates used by package test tasks. |
 | `scripts/` | Shell scripts used by package and tarball install flows. |
 | `support-files/` | Static support files used by package test tasks. |
+| `docker/` | systemd-capable OS images the GitHub Actions matrix runs the playbooks in. |
 
 ## Typical Flow
 
@@ -109,6 +110,8 @@ yamllint <path>
 ## CI Usage
 
 GitHub Actions package workflows call these playbooks through `../.github/workflows/runner-package-test.yml`.
+
+`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across nine operating systems, each in a systemd container next to its own PMM Server. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/<os>` weekly, and whenever a change to `docker/` reaches `main`, by `../.github/workflows/build-package-test-images.yml`. Roll back by running the matrix with a `YYYY-MM-DD` `client_image_tag`.
 
 ## Related Workspaces
 

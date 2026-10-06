@@ -1,0 +1,63 @@
+# Systemd-enabled test fixture for Debian-family package testing.
+# Used for: Debian 11/12/13, Ubuntu 22.04/24.04/26.04.
+#
+# DELIBERATELY SINGLE-STAGE -- see Dockerfile.rpm for the reasoning.
+#
+# Unlike the RHEL family, Debian/Ubuntu official images ship NO systemd at all
+# (their container philosophy is one-process-per-container), so it has to be
+# installed before the image can boot /sbin/init.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Needed at build time AND at test time: the real playbook's own apt-get calls
+# (pmm-client, percona-valkey-server, ...) hang forever on a needrestart or
+# tzdata debconf prompt when there is no stdin to answer them.
+ENV DEBIAN_FRONTEND=noninteractive \
+    NEEDRESTART_MODE=a \
+    TZ=Etc/UTC
+
+# Two deliberate choices here:
+#
+# 1. No --no-install-recommends. ansible pulls several python deps in as
+#    recommended packages; dropping them would fail deep inside a playbook run
+#    rather than at build time.
+#
+# 2. policy-rc.d is removed. It ships in Debian/Ubuntu images to stop package
+#    postinst scripts from starting services, and it silently prevented
+#    pmm-client and valkey-server from ever becoming active -- "enabled" but
+#    never "running", with no error reported.
+RUN apt-get update \
+ && apt-get install -y \
+        systemd \
+        systemd-sysv \
+        dbus \
+        ansible \
+        git \
+        wget \
+        iproute2 \
+        procps \
+        sudo \
+        ca-certificates \
+        gnupg2 \
+        dirmngr \
+ && rm -f /usr/sbin/policy-rc.d \
+ && rm -rf /var/lib/apt/lists/*
+
+# Some playbook tasks call bare `apt install` with no -y (e.g. the Noble
+# percona-release step), which aborts at "Do you want to continue? [Y/n]".
+# DEBIAN_FRONTEND does NOT answer that prompt -- only -y or this does.
+RUN echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/90assume-yes
+
+# A test fixture never needs a login console, and systemd-getty-generator will
+# happily instantiate a serial-console unit for a device the container does not
+# have -- which blocks multi-user.target forever. Debian 11 hangs at "starting"
+# without this; masking also shaves the boot down to a couple of seconds.
+RUN systemctl mask \
+        getty.target \
+        getty@.service \
+        serial-getty@.service \
+        console-getty.service
+
+# systemd shuts down cleanly on SIGRTMIN+3 (see systemd.io CONTAINER_INTERFACE).
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
