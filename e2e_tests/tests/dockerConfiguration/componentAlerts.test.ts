@@ -3,6 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 const configurations = [
   {
     bundleState: 'disabled',
@@ -35,7 +36,7 @@ for (const configuration of configurations) {
       async ({ api, cliHelper }) => {
         cliHelper
           .execSilent(
-            `docker run --detach --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 ${configuration.env} --publish ${configuration.port}:8443 --name ${configuration.containerName} ${dockerVersion}`,
+            `docker run --detach --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} ${configuration.env} --publish ${configuration.port}:8443 --name ${configuration.containerName} ${dockerVersion}`,
           )
           .assertSuccess();
         await api.serverApi.waitForReady();
