@@ -6,7 +6,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-Txxxx - Verify page not found is shown for an unknown PMM UI address @new-navigation',
+  'PMM-T2354 - Verify page not found is shown for an unknown PMM UI address @new-navigation',
   async ({ page, pageNotFoundPage }) => {
     for (const url of pageNotFoundPage.unknownUrls) {
       await pmmTest.step(`Verify page not found for ${url}`, async () => {
@@ -24,7 +24,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify Go to Home page button on page not found opens the Home dashboard @new-navigation',
+  'PMM-T2355 - Verify Go to Home page button on page not found opens the Home dashboard @new-navigation',
   async ({ page, pageNotFoundPage }) => {
     await page.goto(pageNotFoundPage.url);
     await pageNotFoundPage.buttons.goHome.click();
@@ -35,7 +35,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify Go back button on page not found returns to the previous page @new-navigation',
+  'PMM-T2356 - Verify Go back button on page not found returns to the previous page @new-navigation',
   async ({ helpPage, page, pageNotFoundPage }) => {
     await pmmTest.step('Open Help and navigate in-app to an unknown address', async () => {
       await page.goto(helpPage.url);
