@@ -34,11 +34,10 @@ export default class AlertingPage extends BasePage {
     rowActions: (alertName: string) =>
       this.builders.alertRow(alertName).getByRole('button', { name: 'Row Actions' }),
     ruleFilter: (filter: string) => this.grafanaIframe().getByRole('radio', { exact: true, name: filter }),
+    ruleGroupHeader: (group: string) =>
+      this.grafanaIframe().getByTestId('rule-group-header').filter({ hasText: group }),
     ruleGroupToggle: (folder: string) =>
-      this.grafanaIframe()
-        .getByTestId('rule-group-header')
-        .filter({ hasText: folder })
-        .getByTestId('data-testid group-collapse-toggle'),
+      this.builders.ruleGroupHeader(folder).getByTestId('data-testid group-collapse-toggle'),
     ruleListHeader: (header: string) =>
       this.grafanaIframe().getByTestId('header').filter({ hasText: header }),
     ruleMoreMenu: (ruleName: string) =>
@@ -54,6 +53,7 @@ export default class AlertingPage extends BasePage {
     severityCell: (alertName: string) => this.builders.alertRow(alertName).getByRole('cell').nth(5),
     stateCell: (alertName: string) =>
       this.builders.alertRow(alertName).getByRole('cell').nth(1).locator('[class*="filled"]'),
+    stateOption: (state: string) => this.page.getByRole('option', { exact: true, name: state }),
     templateColumnHeader: (header: string) =>
       this.grafanaIframe().getByRole('columnheader', { exact: true, name: header }),
     templateRow: (templateName: string) =>
@@ -110,12 +110,12 @@ export default class AlertingPage extends BasePage {
     dialog: this.grafanaIframe().getByRole('dialog'),
     groupByContainer: this.grafanaIframe().getByTestId('group-by-container'),
     labelSearch: this.grafanaIframe().getByTestId('search-query-input'),
-    learnMore: this.grafanaIframe().getByRole('link', { name: 'Learn more' }),
     modalHeader: this.grafanaIframe().getByTestId('modal-header'),
     modalWarning: this.grafanaIframe().getByTestId('alert-rule-name-warning'),
     noAlerts: this.page.getByRole('heading', { name: 'Nothing to show here yet' }),
     pageContent: this.grafanaIframe().getByRole('main'),
     ruleDetails: this.grafanaIframe().getByTestId('data-testid expanded-content'),
+    ruleGroupHeaders: this.grafanaIframe().getByTestId('rule-group-header'),
     ruleName: this.grafanaIframe().locator('[data-column="Name"]'),
     templateNames: this.grafanaIframe().locator('//tr/td[1]'),
     templatesLoader: this.grafanaIframe().getByTestId('template-select-input').getByText('Choose'),
@@ -130,6 +130,7 @@ export default class AlertingPage extends BasePage {
     ruleExpression: this.grafanaIframe().getByPlaceholder('Math operations on one or more queries'),
     ruleName: this.grafanaIframe().getByRole('textbox', { name: 'Name' }),
     severity: this.grafanaIframe().getByTestId('severity-select-input'),
+    stateSelect: this.page.getByRole('combobox', { name: 'State' }),
     template: this.grafanaIframe().getByTestId('yaml-textarea-input'),
     templateFile: this.grafanaIframe().getByTestId('modal-content').locator('input[type="file"]'),
     templateSelect: this.grafanaIframe().getByTestId('template-select-input'),
