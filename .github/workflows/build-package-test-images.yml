@@ -34,7 +34,7 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os.name }} / ${{ matrix.arch }}
+    name: ${{ matrix.os.name }}-${{ matrix.arch }}
     # A fork cannot push to percona's registry namespace.
     if: github.repository == 'percona/pmm-qa'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
