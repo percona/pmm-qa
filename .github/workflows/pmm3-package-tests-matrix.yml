@@ -67,7 +67,12 @@ on:
         default: auto
         options: [auto, push, pull]
       tarball:
-        description: 'Client tarball link or FB-code. Empty installs from packages.'
+        description: 'Client tarball link or FB-code for amd64 cells. Empty installs
+          from packages.'
+        default: ''
+      tarball_arm64:
+        description: 'Client tarball link or FB-code for arm64 cells. Empty installs
+          from packages.'
         default: ''
       admin_password:
         description: 'PMM Server admin password'
@@ -95,7 +100,8 @@ env:
   INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
   METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
   ADMIN_PASSWORD: ${{ inputs.admin_password || 'pmm3admin!' }}
-  TARBALL_LINK: ${{ inputs.tarball }}
+  TARBALL_AMD64: ${{ inputs.tarball }}
+  TARBALL_ARM64: ${{ inputs.tarball_arm64 }}
 
 jobs:
   # Resolved once so every cell tests the same pmm-server build and asserts the
@@ -172,7 +178,8 @@ jobs:
           | install_repo | \`${INSTALL_REPO}\` |
           | pmm_version | \`${VERSION}\` |
           | metrics_mode | \`${METRICS_MODE}\` |
-          | tarball | \`${TARBALL_LINK:-none}\` |
+          | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
+          | tarball (arm64) | \`${TARBALL_ARM64:-none}\` |
           | pmm-qa | \`${REF}\` |
           | arch | \`${ARCHES}\` |
           | build_images | \`${BUILD}\` |
@@ -383,8 +390,12 @@ jobs:
           # Percona Server has no el10 release build yet. Empty elsewhere,
           # which leaves the playbook on its own default.
           PS_REPOSITORY: ${{ matrix.os == 'ol10' && 'testing' || '' }}
+          ARCH: ${{ matrix.arch }}
         run: |
           set -o pipefail
+          # Chosen here rather than with && || in an expression, which would hand an
+          # arm64 cell the amd64 tarball whenever tarball_arm64 is empty.
+          if [ "$ARCH" = arm64 ]; then TARBALL_LINK="$TARBALL_ARM64"; else TARBALL_LINK="$TARBALL_AMD64"; fi
           # Same invocation as Jenkins. DEBIAN_FRONTEND and friends are baked into
           # the deb images, so apt cannot stop and wait for input.
           sudo podman exec \
