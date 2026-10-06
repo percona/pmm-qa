@@ -190,9 +190,19 @@ pmmTest.describe('PMM Tests to verify clickhouse low-memory configuration lifecy
       await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
       await verifyClickHouseProfile(cliHelper, containerName, 'low-memory');
 
+      // The first pg_stat_statements bucket lands about a minute after readyz, which the QAN page
+      // helper's fixed one-minute load window does not reliably cover.
+      await expect
+        .poll(() => countQanRows(cliHelper, containerName), {
+          intervals: [Timeouts.TEN_SECONDS],
+          message: 'Query Analytics data should be stored in ClickHouse',
+          timeout: Timeouts.FIVE_MINUTES,
+        })
+        .toBeGreaterThan(0);
+
       await grafanaHelper.authorize('admin', 'admin', baseUrl);
       await page.goto(urlHelper.buildUrlWithParameters(baseUrl + qanStoredMetrics.url, { refresh: '10s' }));
-      await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.FIVE_MINUTES);
+      await qanStoredMetrics.waitForQanStoredMetricsToHaveData();
 
       cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
       await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
@@ -200,7 +210,7 @@ pmmTest.describe('PMM Tests to verify clickhouse low-memory configuration lifecy
 
       const qanRows = countQanRows(cliHelper, containerName);
 
-      expect(qanRows, 'Query Analytics data should be stored in ClickHouse').toBeGreaterThan(0);
+      expect(qanRows, 'Query Analytics data should survive the restart').toBeGreaterThan(0);
 
       removeContainer(cliHelper, containerName);
       cliHelper.execSilent(runCommand('')).assertSuccess();
