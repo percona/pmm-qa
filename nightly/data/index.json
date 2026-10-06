@@ -45067,6 +45067,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1554",
         "by": "Investigator routine",
         "at": "2026-10-06T04:08:48Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "not reproduced",
+        "summary": "11 other HA failures (PMM-T1226, PostgreSQL dashboards BeforeSuite, T1061, T878, T2298, T300, T2039, T418, T506, T1988) are identical to the Oct 5 HA run and were not investigated this run; only T1988 is tracked (PMM-15583).",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-06T04:08:58Z"
       }
     ],
     "claims": [
