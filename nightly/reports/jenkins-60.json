@@ -2358,16 +2358,19 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-06T04:09:02Z"
+    },
+    {
+      "suites": [
+        "CLI Integration"
+      ],
+      "verdict": "not reproduced",
+      "summary": "PMM-T2227 tarball upgrade exceeded the 120s test timeout before pmm-agent connected; same failure on Oct 5 (3.8.0 lane), siblings take 19s-1.5m, so the download-heavy test sits near its budget; root cause not yet established.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-06T04:09:06Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-06T03:39:38Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-06T03:39:38Z",
