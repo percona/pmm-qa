@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ grafanaHelper, page, servicesPage }) => {
 pmmTest(
   'PMM-T2159 - Verify MongoDB RTA Agent displayed in Inventory UI @rta',
   async ({ agentsPage, api, servicesPage }) => {
-    const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+    const service = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
 
     await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
     await servicesPage.builders.monitoringStatusByServiceName(service.service_name).click();

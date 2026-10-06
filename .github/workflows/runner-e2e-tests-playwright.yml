@@ -51,6 +51,11 @@ on:
         options:
           - amd64
           - arm64
+      enable_nomad:
+        description: 'Start PMM Server with PMM_ENABLE_NOMAD=1 (for @nomad)'
+        type: boolean
+        default: false
+        required: false
 
   workflow_call:
     inputs:
@@ -85,6 +90,10 @@ on:
         type: string
         required: false
         default: amd64
+      enable_nomad:
+        type: boolean
+        required: false
+        default: false
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -113,6 +122,7 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
+      PMM_ENABLE_NOMAD: ${{ inputs.enable_nomad && '1' || '0' }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       SUBSET_FILE_NAME: 'launchable-subset.txt'
