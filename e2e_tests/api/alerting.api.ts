@@ -74,6 +74,13 @@ export default class AlertingApi {
     return (await response.json()) as Pick<AlertInstance, 'labels'>[];
   };
 
+  getProvisionedRuleUids = async (): Promise<string[]> =>
+    (await this.getRulerGroups())
+      .flatMap(({ rules }) => rules)
+      .filter(({ grafana_alert }) => grafana_alert.provenance)
+      .map(({ grafana_alert }) => grafana_alert.uid)
+      .sort();
+
   getRule = async (name: string): Promise<AlertRule | undefined> =>
     (await this.getRuleGroups()).flatMap((group) => group.rules).find((rule) => rule.name === name);
 
@@ -87,18 +94,20 @@ export default class AlertingApi {
     return ((await response.json()) as AlertRulesResponse).data.groups;
   };
 
-  listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
-
-  removeAllAlertRules = async (): Promise<void> => {
-    const rulerResponse = await this.request.get(apiEndpoints.grafana.ruler, {
+  getRulerGroups = async (): Promise<RulerRulesResponse[string]> => {
+    const response = await this.request.get(apiEndpoints.grafana.ruler, {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    expect(rulerResponse.status()).toEqual(200);
+    expect(response.status()).toEqual(200);
 
-    const groups = Object.values((await rulerResponse.json()) as RulerRulesResponse).flat();
+    return Object.values((await response.json()) as RulerRulesResponse).flat();
+  };
 
-    for (const { name, rules } of groups) {
+  listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
+
+  removeAllAlertRules = async (): Promise<void> => {
+    for (const { name, rules } of await this.getRulerGroups()) {
       // Provisioned groups, like PMM's built-in self-monitoring rules, are read-only and cannot be deleted.
       if (rules.some(({ grafana_alert }) => grafana_alert.provenance)) continue;
 

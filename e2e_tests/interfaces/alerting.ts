@@ -28,7 +28,7 @@ export interface AlertRulesResponse {
 
 export type RulerRulesResponse = Record<
   string,
-  { name: string; rules: { grafana_alert: { namespace_uid: string; provenance?: string } }[] }[]
+  { name: string; rules: { grafana_alert: { namespace_uid: string; provenance?: string; uid: string } }[] }[]
 >;
 
 export interface TemplatedAlertRule {
