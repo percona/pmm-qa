@@ -455,13 +455,23 @@ pmmTest(
 
 pmmTest(
   'PMM-T2004 - Verify Data Retention field in advanced settings @settings @nightly  @gssapi-nightly',
-  async ({ page, settingsPage }) => {
+  async ({ api, page, settingsPage }) => {
     await page.goto(settingsPage.urls.advanced);
     await settingsPage.waitForPageLoaded();
     await expect(
       settingsPage.buttons.applyAdvancedChanges,
       'Apply Changes button should be disabled when there are no changes.',
     ).toBeDisabled();
+
+    // In HA the pmm-ha chart owns retention, so the field is read-only (see PMM-14787).
+    const isHa = (await api.haApi.getStatus()) === 'Enabled';
+
+    await expect(
+      settingsPage.inputs.dataRetention,
+      `Data retention should be ${isHa ? 'disabled' : 'enabled'} when HA is ${isHa ? 'on' : 'off'}.`,
+    ).toBeEnabled({ enabled: !isHa });
+
+    if (isHa) return;
 
     await settingsPage.inputs.dataRetention.fill('1');
     await expect(
