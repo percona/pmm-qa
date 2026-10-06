@@ -13,6 +13,7 @@ import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
@@ -75,6 +76,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
+  pageNotFoundPage: PageNotFoundPage;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -179,6 +181,7 @@ const pmmTest = base.extend<{
     await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
