@@ -356,7 +356,6 @@ pmmTest(
   'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
   async ({ page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
-    const durationParameterName = 'overview.f.queryExecutionDurationMs';
     let decimalMaximum = '';
     let decimalMinimum = '';
     let rowsBeforeFilter = 0;
@@ -367,7 +366,7 @@ pmmTest(
       await rta.openFilters();
 
       const rowCount = await rta.elements.realTimeTableRow.count();
-      const durations = (await rta.elements.durationCells.allTextContents()).map(Number.parseFloat);
+      const durations = await rta.getDurations();
       const shortestDuration = Math.min(...durations);
       const longestDuration = Math.max(...durations);
 
@@ -383,15 +382,13 @@ pmmTest(
     await pmmTest.step('Verify filtered results', async () => {
       await expect
         .poll(async () => {
-          const values = await rta.elements.durationCells.allTextContents();
+          const durations = await rta.getDurations();
 
           return (
-            values.length > 0 &&
-            values.length < rowsBeforeFilter &&
-            values.every(
-              (value) =>
-                Number.parseFloat(value) >= Number(decimalMinimum) &&
-                Number.parseFloat(value) <= Number(decimalMaximum),
+            durations.length > 0 &&
+            durations.length < rowsBeforeFilter &&
+            durations.every(
+              (duration) => duration >= Number(decimalMinimum) && duration <= Number(decimalMaximum),
             )
           );
         })
@@ -399,14 +396,10 @@ pmmTest(
     });
 
     const durationParameterValue = await pmmTest.step('Verify duration filters in the URL', async () => {
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
-        .toEqual(expect.stringContaining(decimalMinimum));
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
-        .toEqual(expect.stringContaining(decimalMaximum));
+      await expect.poll(rta.getDurationFilter).toEqual(expect.stringContaining(decimalMinimum));
+      await expect.poll(rta.getDurationFilter).toEqual(expect.stringContaining(decimalMaximum));
 
-      return new URL(page.url()).searchParams.get(durationParameterName);
+      return rta.getDurationFilter();
     });
 
     await pmmTest.step('Reload and verify restored duration filters', async () => {
@@ -415,7 +408,7 @@ pmmTest(
 
       await expect(rta.inputs.minimumDuration).toHaveValue(decimalMinimum);
       await expect(rta.inputs.maximumDuration).toHaveValue(decimalMaximum);
-      expect(new URL(page.url()).searchParams.get(durationParameterName)).toBe(durationParameterValue);
+      expect(rta.getDurationFilter()).toBe(durationParameterValue);
     });
   },
 );
@@ -426,7 +419,6 @@ pmmTest(
     const { rta } = queryAnalytics;
     const olderQuery = 'rta-elapsed-filter-older';
     const newerQuery = 'rta-elapsed-filter-newer';
-    const durationParameter = () => new URL(page.url()).searchParams.get(rta.durationFilterParameter);
     let rowsBeforeFilter = 0;
     let olderElapsed = 0;
     let newerElapsed = 0;
@@ -436,16 +428,18 @@ pmmTest(
         delayMs: Timeouts.THIRTY_SECONDS,
         queryLabel: olderQuery,
       });
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- older query must lead the newer one by whole seconds
-      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await expect
+        .poll(() => rta.getElapsedTimeForQueryByText(olderQuery), { timeout: Timeouts.TWENTY_SECONDS })
+        .toBeGreaterThanOrEqual(5);
       void mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.THIRTY_SECONDS,
         queryLabel: newerQuery,
       });
 
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- let the newer query pass one second of elapsed time
-      await page.waitForTimeout(Timeouts.TWO_SECONDS);
+      await expect
+        .poll(() => rta.getElapsedTimeForQueryByText(newerQuery), { timeout: Timeouts.TEN_SECONDS })
+        .toBeGreaterThanOrEqual(2);
       await rta.buttons.pauseRealTimeAnalytics.click();
       await rta.openFilters();
 
@@ -475,12 +469,12 @@ pmmTest(
       await expect(rta.builders.rowByQueryText(olderQuery)).toBeVisible();
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeVisible();
       expect((await rta.getDurations()).every((duration) => duration >= Number(bound))).toBe(true);
-      await expect.poll(durationParameter).toBe(JSON.stringify([bound, '']));
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify([bound, '']));
     });
 
     await pmmTest.step('Verify pasted text containing letters is refused', async () => {
       await rta.inputs.minimumDuration.fill('');
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
       await page.evaluate(async (text) => await navigator.clipboard.writeText(text), '12abc');
       await rta.inputs.minimumDuration.focus();
@@ -494,9 +488,9 @@ pmmTest(
       await rta.inputs.minimumDuration.pressSequentially('-1');
 
       await expect(rta.inputs.minimumDuration).toHaveValue('1');
-      await expect.poll(durationParameter).toBe(JSON.stringify(['1', '']));
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['1', '']));
       await rta.inputs.minimumDuration.fill('');
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
     });
 
     await pmmTest.step('Verify letters typed into Max are dropped', async () => {
@@ -511,7 +505,7 @@ pmmTest(
 
       await expect(rta.inputs.maximumDuration).toHaveValue('.');
       await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
     });
 
     await pmmTest.step('Verify a value starting with a decimal point filters', async () => {
@@ -521,14 +515,14 @@ pmmTest(
       await expect(rta.builders.rowByQueryText(olderQuery)).toBeHidden();
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeHidden();
       expect((await rta.getDurations()).every((duration) => duration <= 0.5)).toBe(true);
-      await expect.poll(durationParameter).toBe(JSON.stringify(['', '.5']));
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['', '.5']));
     });
 
     await pmmTest.step('Verify a value ending with a decimal point filters', async () => {
       const bound = `${Math.floor((olderElapsed + newerElapsed) / 2)}.`;
 
       await rta.inputs.maximumDuration.fill('');
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
       await rta.inputs.minimumDuration.pressSequentially(bound);
       await rta.inputs.maximumDuration.pressSequentially('999');
 
@@ -536,7 +530,7 @@ pmmTest(
       await expect(rta.inputs.maximumDuration).toHaveValue('999');
       await expect(rta.builders.rowByQueryText(olderQuery)).toBeVisible();
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeHidden();
-      await expect.poll(durationParameter).toBe(JSON.stringify([bound, '999']));
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify([bound, '999']));
     });
 
     await pmmTest.step('Verify clearing both bounds lists every query again', async () => {
@@ -544,7 +538,7 @@ pmmTest(
       await rta.inputs.maximumDuration.fill('');
 
       await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
     });
   },
 );
@@ -554,7 +548,6 @@ pmmTest(
   async ({ mongoDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const queryLabel = 'rta-elapsed-filter-link';
-    const durationParameter = () => new URL(page.url()).searchParams.get(rta.durationFilterParameter);
 
     await pmmTest.step('Run a long query and filter by a valid Min bound', async () => {
       void mongoDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
@@ -564,7 +557,7 @@ pmmTest(
       await rta.openFilters();
       await rta.inputs.minimumDuration.fill('1');
 
-      await expect.poll(durationParameter).toBe(JSON.stringify(['1', '']));
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['1', '']));
     });
 
     await pmmTest.step('Open the link with a non-numeric Min bound', async () => {
@@ -582,7 +575,7 @@ pmmTest(
       await expect(rta.inputs.minimumDuration).toHaveValue('');
       await expect(rta.elements.noQueriesAvailable).toBeHidden();
       await expect(rta.builders.rowByQueryText(queryLabel)).toBeVisible();
-      await expect.poll(durationParameter).toBeNull();
+      await expect.poll(rta.getDurationFilter).toBeNull();
     });
   },
 );

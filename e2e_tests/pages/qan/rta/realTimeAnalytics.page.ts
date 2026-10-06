@@ -119,6 +119,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
     return count;
   };
 
+  getDurationFilter = () => new URL(this.page.url()).searchParams.get(this.durationFilterParameter);
+
   getDurations = async () => (await this.elements.durationCells.allTextContents()).map(Number.parseFloat);
 
   getElapsedTimeForQueryByRow = async (rowIndex: string) => {
