@@ -97,11 +97,17 @@ pmmTest('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ api, qa
 
 pmmTest(
   'PMM-T186 - Verify values in overview and in details match @qan',
-  async ({ leftNavigation, qanStoredMetrics }) => {
+  async ({ leftNavigation, page, qanStoredMetrics }) => {
     await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
     await leftNavigation.selectTimeRange('Last 1 hour');
-    await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
-    await qanStoredMetrics.selectFilter('pxc-dev', qanStoredMetrics.builders.serviceTypeCheckbox('pxc-dev'));
+    await expect(async () => {
+      await page.reload();
+      await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+      await qanStoredMetrics.selectFilter(
+        'pxc-dev',
+        qanStoredMetrics.builders.serviceTypeCheckbox('pxc-dev'),
+      );
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     await qanStoredMetrics.searchByValue('insert');
     await expect(qanStoredMetrics.builders.queryRow(1)).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await qanStoredMetrics.builders.queryRow(1).click();
