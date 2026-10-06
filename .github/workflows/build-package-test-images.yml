@@ -176,12 +176,7 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-        run: |
-          # podman for the push. docker runs no container here -- it only leaves
-          # credentials in ~/.docker/config.json, which is where the attestation
-          # action looks and which rootless podman cannot write on the runner.
-          echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+        run: echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
 
       - name: Publish :latest
         id: push
@@ -211,9 +206,11 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           echo "- \`${name}:latest\` \`${digest}\`" >> "$GITHUB_STEP_SUMMARY"
 
+      # Kept out of the registry, where it would land as a sha256-<digest> tag next
+      # to :latest. GitHub stores it either way: gh attestation verify
+      # oci://<image>:latest --owner percona checks it.
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ steps.push.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
