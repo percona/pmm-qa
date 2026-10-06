@@ -2,8 +2,8 @@
 # runs the package playbooks in, and publishes them to GHCR. Each image is booted
 # and checked before it is pushed, so a broken image never becomes :latest.
 #
-# The matrix also calls it on a pull request that changes the images, with a
-# pr-<number>-<commit> tag, so the change is tested before it can reach :latest.
+# The matrix also calls it when run with build_images, with a run-<id> tag, so a
+# change to the images can be tested before it reaches :latest.
 #
 # amd64 only: nothing can use arm64 images until pmm-server ships an arm64 build.
 # To add it, give the matrix an `arch` axis with a `runner` per arch, push one tag
@@ -29,7 +29,7 @@ on:
 permissions:
   contents: read
 
-# Publishing runs queue behind each other; a pull request's build has its own tag
+# Publishing runs queue behind each other; a matrix run's build has its own tag
 # and so a group of its own.
 concurrency:
   group: build-package-test-images-${{ inputs.tag || 'publish' }}

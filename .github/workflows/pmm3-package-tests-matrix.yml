@@ -11,11 +11,13 @@ on:
   pull_request:
     branches: [main]
     # 64 cells of up to 90 minutes each, so only for changes that can affect them.
+    # A pull request run never builds images, so a change to them alone has
+    # nothing new to test.
     paths:
       - 'package_tests/**'
+      - '!package_tests/docker/**'
       - 'qa-integration/pmm_qa/tasks/**'
       - '.github/workflows/pmm3-package-tests-matrix.yml'
-      - '.github/workflows/build-package-test-images.yml'
   workflow_dispatch:
     inputs:
       os:
@@ -64,8 +66,13 @@ on:
         description: 'PMM Server admin password'
         default: 'pmm3admin!'
       client_image_tag:
-        description: 'Prebuilt image tag. Use a YYYY-MM-DD tag to roll back.'
+        description: 'Prebuilt image tag. Use a YYYY-MM-DD tag to roll back.
+          Ignored with build_images.'
         default: 'latest'
+      build_images:
+        description: 'Build the client images from this ref first and test those.'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -84,7 +91,8 @@ env:
   INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
   METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
   ADMIN_PASSWORD: ${{ inputs.admin_password || 'pmm3admin!' }}
-  CLIENT_IMAGE_TAG: ${{ inputs.client_image_tag || 'latest' }}
+  # build_images publishes this run's own images under a tag that :latest never sees.
+  CLIENT_IMAGE_TAG: ${{ inputs.build_images && format('run-{0}', github.run_id) || inputs.client_image_tag || 'latest' }}
   TARBALL_LINK: ${{ inputs.tarball }}
 
 jobs:
@@ -98,36 +106,9 @@ jobs:
     outputs:
       server_image: ${{ steps.server.outputs.image }}
       pmm_version: ${{ steps.version.outputs.version }}
-      build_images: ${{ steps.images.outputs.build }}
-      client_image_tag: ${{ steps.images.outputs.tag }}
+      # The images job's inputs cannot read env, so it gets the tag from here.
+      client_image_tag: ${{ env.CLIENT_IMAGE_TAG }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: github.event_name == 'pull_request'
-        with:
-          fetch-depth: 2
-          persist-credentials: false
-
-      # A pull request that changes the images gets its own build, tagged
-      # pr-<number>-<commit>, so it is tested against what it would publish.
-      - name: Decide which client images to test
-        id: images
-        env:
-          PR: ${{ github.event.pull_request.number }}
-          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        run: |
-          # HEAD is the pull request's merge commit, whose first parent is the base.
-          if [ -n "$PR" ] && ! git diff --quiet HEAD^1 HEAD -- \
-              package_tests/docker .github/workflows/build-package-test-images.yml; then
-            if [ "$SAME_REPO" = true ]; then
-              echo "build=true" >> "$GITHUB_OUTPUT"
-              echo "tag=pr-${PR}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "::warning::A fork cannot publish images, so this run tests the current :${CLIENT_IMAGE_TAG} ones."
-          fi
-          echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "tag=${CLIENT_IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-
       # skopeo's docker:// transport expands a short name to docker.io itself, and
       # the fully qualified name it prints spares podman its short-name lookup.
       - name: Pin pmm-server to a digest
@@ -165,7 +146,6 @@ jobs:
           # unquoted and would otherwise execute a value containing $(...).
           RESOLVED: ${{ steps.server.outputs.image }}
           VERSION: ${{ steps.version.outputs.version }}
-          IMAGES: ${{ steps.images.outputs.tag }}
           REF: ${{ github.ref_name }}@${{ github.sha }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
@@ -180,13 +160,13 @@ jobs:
           | metrics_mode | \`${METRICS_MODE}\` |
           | tarball | \`${TARBALL_LINK:-none}\` |
           | pmm-qa | \`${REF}\` |
-          | client images | \`${IMAGES}\` |
+          | client images | \`${CLIENT_IMAGE_TAG}\` |
           EOF
 
   images:
     name: build images
     needs: prepare
-    if: needs.prepare.outputs.build_images == 'true'
+    if: inputs.build_images
     permissions:
       contents: read
       packages: write
@@ -200,7 +180,7 @@ jobs:
     name: ${{ matrix.os }} / ${{ matrix.test }}
     needs: [prepare, images]
     # Runs whether images succeeded, failed or was skipped: an OS whose image did
-    # not build fails only its own cells, at the pull, since its tag is per commit.
+    # not build fails only its own cells, at the pull, since its tag is per run.
     if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90 # same as the Jenkins job
