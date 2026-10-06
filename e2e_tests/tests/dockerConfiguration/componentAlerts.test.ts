@@ -9,6 +9,7 @@ const configurations = [
     bundleState: 'disabled',
     containerName: 'pmm-server-component-alerts-disabled',
     env: '-e PMM_ENABLE_COMPONENT_ALERTS=0',
+    key: 'PMM-T2334',
     name: 'set to 0',
     port: 450,
     ruleUids: [],
@@ -17,6 +18,7 @@ const configurations = [
     bundleState: 'written',
     containerName: 'pmm-server-component-alerts-default',
     env: '',
+    key: 'PMM-T2332',
     name: 'not set',
     port: 451,
     ruleUids: ['pmm-clickhouse-down', 'pmm-grafana-down', 'pmm-qan-api2-down', 'pmm-victoriametrics-down'],
@@ -32,7 +34,7 @@ for (const configuration of configurations) {
     });
 
     pmmTest(
-      `PMM-Txxxx - Verify built-in PMM Server alert rules when PMM_ENABLE_COMPONENT_ALERTS is ${configuration.name} @docker-configuration`,
+      `${configuration.key} - Verify built-in PMM Server alert rules when PMM_ENABLE_COMPONENT_ALERTS is ${configuration.name} @docker-configuration`,
       async ({ api, cliHelper }) => {
         cliHelper
           .execSilent(
