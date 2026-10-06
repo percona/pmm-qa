@@ -1,0 +1,457 @@
+# The Jenkins pmm3-package-tests-matrix job, on GitHub Actions: 8 playbooks x 9
+# operating systems = 72 cells, each on its own runner with its own PMM Server and
+# its own systemd-capable client container.
+#
+# The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
+# images, published by build-test-images.yml in talhabinrizwan/pmm-package-test-poc.
+name: PMM package tests matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: 'Operating system ("all" runs every OS)'
+        type: choice
+        default: all
+        options:
+          [all, ol8, ol9, ol10, debian11, debian12, debian13, ubuntu2204, ubuntu2404, ubuntu2604]
+      test:
+        description: 'Playbook ("all" runs every test)'
+        type: choice
+        default: all
+        options:
+          - all
+          - pmm3-client_integration
+          - pmm3-client_integration_auth_config
+          - pmm3-client_integration_auth_register
+          - pmm3-client_integration_custom_path
+          - pmm3-client_integration_custom_port
+          - pmm3-client_integration_upgrade
+          - pmm3-client_integration_upgrade_custom_path
+          - pmm3-client_integration_upgrade_custom_port
+      pmm_server_image:
+        description: 'PMM Server image (Jenkins DOCKER_VERSION)'
+        default: 'perconalab/pmm-server:3-dev-latest'
+      install_repo:
+        description: 'Client repo channel. upgrade and upgrade_custom_port install the
+          latest release and upgrade to this, so they cannot pass when it is also "release".'
+        type: choice
+        default: experimental
+        options: [experimental, testing, release]
+      pmm_version:
+        description: 'Version the playbook asserts; it must match what install_repo
+          ships. Empty reads it from pmm-submodules v3 (experimental) or the newest
+          percona/pmm-client tag (release). testing has no source: set it.'
+        default: ''
+      metrics_mode:
+        description: 'Metrics mode (Jenkins METRICS_MODE)'
+        type: choice
+        default: auto
+        options: [auto, push, pull]
+      tarball:
+        description: 'Client tarball link or FB-code. Empty installs from packages.'
+        default: ''
+      admin_password:
+        description: 'PMM Server admin password'
+        default: 'pmm3admin!'
+      client_image_tag:
+        description: 'Prebuilt image tag. Use a YYYY-MM-DD tag to roll back.'
+        default: 'latest'
+
+permissions:
+  contents: read
+
+env:
+  CLIENT_IMAGE_REPO: ghcr.io/talhabinrizwan/pmm-package-test-poc
+  SERVER_IMAGE: ${{ inputs.pmm_server_image }}
+
+jobs:
+  # Resolved once so every cell tests the same pmm-server build and asserts the
+  # same version, even when a moving tag like 3-dev-latest is rebuilt while cells
+  # are still queued.
+  prepare:
+    name: resolve inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      server_image: ${{ steps.server.outputs.image }}
+      pmm_version: ${{ steps.version.outputs.version }}
+    steps:
+      # skopeo's docker:// transport expands a short name to docker.io itself, and
+      # the fully qualified name it prints spares podman its short-name lookup.
+      - name: Pin pmm-server to a digest
+        id: server
+        run: |
+          image=$(skopeo inspect --retry-times 3 --format '{{.Name}}@{{.Digest}}' "docker://${SERVER_IMAGE}")
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the expected client version
+        id: version
+        env:
+          INSTALL_REPO: ${{ inputs.install_repo }}
+          VERSION: ${{ inputs.pmm_version }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            case "$INSTALL_REPO" in
+              experimental)
+                VERSION=$(curl -fsS --retry 3 https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION) ;;
+              release)
+                VERSION=$(skopeo list-tags --retry-times 3 docker://docker.io/percona/pmm-client \
+                  | jq -r '.Tags[]' | grep -E '^3\.[0-9]+\.[0-9]+$' | sort -V | tail -n1) ;;
+              *)
+                echo "::error::install_repo=${INSTALL_REPO} has no version to read; set pmm_version"
+                exit 1 ;;
+            esac
+          fi
+          if ! [[ "$VERSION" =~ ^3\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::'${VERSION}' is not a PMM 3 version"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Record what this run is testing
+        env:
+          # Passed as env rather than interpolated into the heredoc below, which is
+          # unquoted and would otherwise execute a value containing $(...).
+          RESOLVED: ${{ steps.server.outputs.image }}
+          REPO: ${{ inputs.install_repo }}
+          VERSION: ${{ steps.version.outputs.version }}
+          METRICS: ${{ inputs.metrics_mode }}
+          TARBALL: ${{ inputs.tarball }}
+          IMAGES: ${{ inputs.client_image_tag }}
+          REF: ${{ github.ref_name }}@${{ github.sha }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## PMM package tests matrix
+
+          | setting | value |
+          |---|---|
+          | pmm-server | \`${SERVER_IMAGE}\` |
+          | resolved | \`${RESOLVED}\` |
+          | install_repo | \`${REPO}\` |
+          | pmm_version | \`${VERSION}\` |
+          | metrics_mode | \`${METRICS}\` |
+          | tarball | \`${TARBALL:-none}\` |
+          | pmm-qa | \`${REF}\` |
+          | client images | \`${IMAGES}\` |
+          EOF
+
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.test }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 90 # same as the Jenkins job
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep the OS list in sync with build-test-images.yml.
+        # The continuation lines must keep this indentation: YAML only folds a >-
+        # block onto one line while every line shares the same indent.
+        os: >-
+          ${{ fromJSON(inputs.os == 'all'
+          && '["ol8","ol9","ol10","debian11","debian12","debian13","ubuntu2204","ubuntu2404","ubuntu2604"]'
+          || format('["{0}"]', inputs.os)) }}
+        test: >-
+          ${{ fromJSON(inputs.test == 'all'
+          && '["pmm3-client_integration","pmm3-client_integration_auth_config","pmm3-client_integration_auth_register",
+          "pmm3-client_integration_custom_path","pmm3-client_integration_custom_port","pmm3-client_integration_upgrade",
+          "pmm3-client_integration_upgrade_custom_path","pmm3-client_integration_upgrade_custom_port"]'
+          || format('["{0}"]', inputs.test)) }}
+    steps:
+      # The client images are public, so no registry login. GHCR still answers 403
+      # now and then when all 72 cells hit it at once, which would otherwise lose a
+      # whole cell on a single unlucky request. Both `podman run` steps below then
+      # start from a local image.
+      - name: Pull the client and server images
+        env:
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/${{ matrix.os }}:${{ inputs.client_image_tag }}
+          SERVER_IMAGE: ${{ needs.prepare.outputs.server_image }}
+        run: |
+          for image in "$CLIENT_IMAGE" "$SERVER_IMAGE"; do
+            for attempt in 1 2 3 4 5; do
+              sudo podman pull "$image" && break
+              if [ "$attempt" -eq 5 ]; then echo "could not pull $image"; exit 1; fi
+              echo "pull of $image failed, retrying in $((attempt * 10))s"
+              sleep "$((attempt * 10))"
+            done
+          done
+
+      # Runners come with MySQL installed, and AppArmor matches profiles by binary
+      # path -- so the host profile also confines the mysqld in our container and
+      # stops it writing its log. The playbook reads the temporary root password
+      # from that log, so without this MySQL quietly ends up with no password.
+      - name: Unload the host mysqld AppArmor profile
+        run: |
+          if [ -f /etc/apparmor.d/usr.sbin.mysqld ]; then
+            sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld && echo "unloaded"
+          else
+            echo "nothing to unload"
+          fi
+
+      - name: Start the ${{ matrix.os }} client
+        id: client
+        env:
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/${{ matrix.os }}:${{ inputs.client_image_tag }}
+          OS: ${{ matrix.os }}
+        run: |
+          # Hardened units (valkey-server, mysqlrouter, valkey@default) need a
+          # private mount namespace, and CAP_SYS_ADMIN on its own is not enough.
+          #
+          # ol8 and ol9 are deliberately left out: privileged, sudo stops working
+          # inside the container ("PAM account management error: Authentication
+          # service cannot retrieve authentication info") and the play dies at
+          # Change Postgresql Password.
+          NEEDS_PRIVILEGED="ol10 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604"
+          PRIV=""
+          case " $NEEDS_PRIVILEGED " in *" $OS "*) PRIV="--privileged" ;; esac
+
+          # Not --network host: PMM checks for a Nomad node whose address is not
+          # 127.0.0.1, so the client needs an address of its own.
+          # shellcheck disable=SC2086
+          sudo podman run -d --name client --systemd=always $PRIV "$CLIENT_IMAGE" /sbin/init
+
+          sudo podman exec client bash -c '
+            for i in $(seq 1 90); do
+              case "$(systemctl is-system-running 2>/dev/null)" in
+                running|degraded) echo "systemd up after ${i}s"; exit 0 ;;
+              esac
+              sleep 1
+            done
+            echo "systemd never came up"; systemctl list-jobs --no-pager; exit 1'
+
+          # The bridge gateway is the runner, where pmm-server publishes its ports.
+          gateway=$(sudo podman exec client ip route | awk '/^default/{print $3}')
+          [ -n "$gateway" ] || { echo "client has no default route"; exit 1; }
+          echo "pmm-server will be reachable at ${gateway}:443"
+          echo "gateway=${gateway}" >> "$GITHUB_OUTPUT"
+
+      # Nomad turns on cgroup controllers at the container's cgroup root, and
+      # cgroup v2 refuses that while any process sits directly in it. A few systemd
+      # builds leave one or two there, and Nomad then exits with "cgroups are not
+      # writable". Moving them into a child cgroup is a no-op when the root is empty.
+      - name: Free up the cgroup root for Nomad
+        run: |
+          sudo podman exec client sh -c '
+            if [ "$(wc -l < /sys/fs/cgroup/cgroup.procs)" -gt 0 ]; then
+              mkdir -p /sys/fs/cgroup/init
+              while read -r pid; do
+                echo "$pid" > /sys/fs/cgroup/init/cgroup.procs 2>/dev/null || true
+              done < /sys/fs/cgroup/cgroup.procs
+            fi
+            left=$(wc -l < /sys/fs/cgroup/cgroup.procs)
+            echo "processes left at the cgroup root: $left"
+            [ "$left" -eq 0 ] || echo "WARNING: Nomad will fail to start"' || true
+
+      # Started after the client because PMM_PUBLIC_ADDRESS has to be an address the
+      # client can reach -- 127.0.0.1 would point it back at itself. Nomad also stays
+      # switched off unless PMM_PUBLIC_ADDRESS is set (PMM-14921).
+      - name: Start PMM Server
+        env:
+          SERVER_IMAGE: ${{ needs.prepare.outputs.server_image }}
+          ADMIN_PASSWORD: ${{ inputs.admin_password }}
+          GATEWAY: ${{ steps.client.outputs.gateway }}
+        run: |
+          sudo podman run -d --name pmm-server \
+            -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
+            --volume pmm-data:/srv \
+            -e GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+            -e PMM_ENABLE_TELEMETRY=0 \
+            -e PMM_DATA_RETENTION=48h \
+            -e PMM_ENABLE_NOMAD=1 \
+            -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            -e PMM_PUBLIC_ADDRESS="$GATEWAY" \
+            "$SERVER_IMAGE"
+
+      # readyz goes green before Nomad is listening, and the playbook only retries a
+      # few times before giving up on it. 502 means Nomad is not up yet.
+      - name: Wait for PMM Server and its Nomad listener
+        env:
+          GATEWAY: ${{ steps.client.outputs.gateway }}
+        run: |
+          curl -ksf --retry 60 --retry-delay 5 --retry-all-errors \
+            https://127.0.0.1/v1/server/readyz
+
+          for _ in $(seq 1 60); do
+            code=$(curl -ks -o /dev/null -w '%{http_code}' https://127.0.0.1/nomad/v1/nodes || echo 000)
+            case "$code" in 502|504|000) sleep 5 ;; *) break ;; esac
+          done
+          if [ "${code:-502}" = "502" ]; then
+            sudo podman logs pmm-server --tail 50 || true
+            echo "Nomad never started listening"; exit 1
+          fi
+          echo "Nomad is listening (HTTP $code)"
+
+          # Check the client can actually get there; a wrong public address breaks it.
+          sudo podman exec client bash -c "timeout 5 bash -c '</dev/tcp/${GATEWAY}/4647'"
+
+      # Checked out on the runner and copied in, rather than cloned inside the
+      # container, so a run tests the commit it was dispatched from: a branch that
+      # touches a playbook is tested against its own change instead of main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pmm-qa
+          persist-credentials: false
+
+      - name: Copy pmm-qa into the client
+        run: |
+          sudo podman cp pmm-qa client:/root/pmm-qa
+          sudo podman exec client sh -c 'ls /root/pmm-qa/package_tests >/dev/null'
+
+      - name: Run ${{ matrix.test }}
+        env:
+          ADMIN_PASSWORD: ${{ inputs.admin_password }}
+          INSTALL_REPO: ${{ inputs.install_repo }}
+          METRICS_MODE: ${{ inputs.metrics_mode }}
+          PMM_VERSION: ${{ needs.prepare.outputs.pmm_version }}
+          TARBALL_LINK: ${{ inputs.tarball }}
+          SERVER_ADDR: ${{ steps.client.outputs.gateway }}:443
+          # Percona Server has no el10 release build yet. Empty elsewhere,
+          # which leaves the playbook on its own default.
+          PS_REPOSITORY: ${{ matrix.os == 'ol10' && 'testing' || '' }}
+        run: |
+          set -o pipefail
+          # Same invocation as Jenkins. DEBIAN_FRONTEND and friends are baked into
+          # the deb images, so apt cannot stop and wait for input.
+          sudo podman exec \
+            -e PMM_SERVER_IP="$SERVER_ADDR" \
+            -e PS_REPOSITORY="$PS_REPOSITORY" \
+            -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+            -e install_repo="$INSTALL_REPO" \
+            -e METRICS_MODE="$METRICS_MODE" \
+            -e PMM_VERSION="$PMM_VERSION" \
+            -e TARBALL_LINK="$TARBALL_LINK" \
+            -w /root/pmm-qa \
+            client \
+            bash -c '
+              # podman exec drops us in the cgroup root, which would undo the step
+              # above, so move into a child cgroup before starting anything.
+              mkdir -p /sys/fs/cgroup/ansible 2>/dev/null &&
+                echo $$ > /sys/fs/cgroup/ansible/cgroup.procs 2>/dev/null || true
+              exec ansible-playbook -vvv --connection=local \
+                --inventory 127.0.0.1, --limit 127.0.0.1 \
+                "package_tests/${{ matrix.test }}.yml"' 2>&1 | tee ansible.log
+
+      # The playbooks write pmm-summary.zip next to package_tests/ when a metric
+      # check fails.
+      - name: Collect diagnostics
+        if: failure()
+        run: |
+          {
+            echo "===== pmm-server ====="; sudo podman logs pmm-server --tail 200 2>&1
+            echo "===== pmm-admin status ====="; sudo podman exec client pmm-admin status 2>&1
+            echo "===== failed units ====="; sudo podman exec client systemctl --failed --no-pager 2>&1
+            echo "===== client journal ====="; sudo podman exec client journalctl --no-pager -n 300 2>&1
+          } > diagnostics.log || true
+          sudo podman cp client:/root/pmm-qa/pmm-summary.zip . 2>/dev/null || true
+          tail -80 diagnostics.log
+
+      - name: Record the result
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+        run: echo "${{ matrix.os }}|${{ matrix.test }}|${RESULT}" > "result-${{ matrix.os }}-${{ matrix.test }}.txt"
+
+      - name: Upload the result
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: result-${{ matrix.os }}-${{ matrix.test }}
+          path: result-${{ matrix.os }}-${{ matrix.test }}.txt
+          retention-days: 7
+
+      # ansible -vvv is far too big to read in the browser and is exactly what you
+      # want when something fails.
+      - name: Upload logs from a failed cell
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: logs-${{ matrix.os }}-${{ matrix.test }}
+          path: |
+            ansible.log
+            diagnostics.log
+            pmm-summary.zip
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: |
+          sudo podman rm -f client || true
+          sudo podman rm -f pmm-server || true
+
+  report:
+    name: summary
+    needs: [prepare, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        # If every cell died before reporting there is nothing to download; let the
+        # next step say so rather than failing here.
+        continue-on-error: true
+        with:
+          pattern: result-*
+          merge-multiple: true
+          path: results
+
+      - name: Render the results grid
+        run: |
+          declare -A result
+          for f in results/*.txt; do
+            [ -e "$f" ] || continue
+            IFS='|' read -r os test status < "$f"
+            result["$os/$test"]=$status
+          done
+
+          if [ ${#result[@]} -eq 0 ]; then
+            echo 'No results were produced -- no cell got as far as reporting.' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # Rows and columns come from what actually ran, so a filtered run gets a
+          # small table and there is no OS or playbook list to keep in sync here.
+          # -V keeps ol8 before ol10; the playbook names already sort correctly.
+          oses=$(printf '%s\n' "${!result[@]}" | cut -d/ -f1 | sort -uV)
+          tests=$(printf '%s\n' "${!result[@]}" | cut -d/ -f2 | sort -u)
+
+          header="| OS |"; divider="|---|"
+          for t in $tests; do
+            header+=" ${t#pmm3-client_} |"
+            divider+="---|"
+          done
+
+          passed=0; failed=0; missing=0; body=""
+          for os in $oses; do
+            row="| \`$os\` |"
+            for t in $tests; do
+              case "${result[$os/$t]:-}" in
+                success) row+=" ✅ |"; passed=$((passed + 1)) ;;
+                failure) row+=" ❌ |"; failed=$((failed + 1)) ;;
+                *)       row+=" · |";  missing=$((missing + 1)) ;;
+              esac
+            done
+            body+="$row"$'\n'
+          done
+
+          note=''
+          if [ "$missing" -gt 0 ]; then note=", ${missing} not run"; fi
+
+          {
+            echo
+            echo '### Results'
+            echo
+            echo "$header"
+            echo "$divider"
+            printf '%s' "$body"
+            echo
+            echo "**${passed} passed, ${failed} failed${note}**"
+            if [ "$failed" -gt 0 ]; then
+              echo
+              # shellcheck disable=SC2016  # backticks are markdown, not a subshell
+              echo 'Failed cells attach their logs as `logs-<os>-<test>` artifacts.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [ "$failed" -eq 0 ]
