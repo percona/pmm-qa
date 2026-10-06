@@ -1,13 +1,14 @@
 # Builds the eight systemd-capable OS images that pmm3-package-tests-matrix.yml
-# runs the package playbooks in, and publishes them to GHCR. Each image is booted
-# and checked before it is pushed, so a broken image never becomes :latest.
+# runs the package playbooks in, and publishes them to GHCR as one package,
+# package_tests, tagged by OS: package_tests:ol8, package_tests:debian13, ... Each
+# image is booted and checked before it is pushed, so a broken one never gets a tag.
 #
-# The only tag is :latest. The matrix also calls this when run with build_images,
-# which republishes :latest from the branch it runs on before testing it.
+# Those OS tags are the only tags. The matrix also calls this when run with
+# build_images, which republishes them from the branch it runs on before testing.
 #
-# :latest is multi-arch. Each OS is built natively on an amd64 and an arm64 runner
-# and pushed by digest alone; publish then joins the two digests as :latest, and
-# only once both have built, so no OS ever loses an architecture.
+# Each OS tag is multi-arch. Each OS is built natively on an amd64 and an arm64
+# runner and pushed by digest alone; publish then joins the two digests under the
+# OS tag, and only once both have built, so no OS ever loses an architecture.
 name: Build package test images
 
 on:
@@ -29,7 +30,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # pmm3-package-tests-matrix.yml pulls package_tests_<os> from the same place.
+  # pmm3-package-tests-matrix.yml pulls package_tests:<os> from the same place.
   IMAGE_REPO: ghcr.io/percona/pmm-qa
 
 jobs:
@@ -113,8 +114,8 @@ jobs:
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
 
-      # No tag here: a tag pushed per architecture would point :latest at one of
-      # them until publish ran. skopeo pushes the OCI layout byte for byte, so the
+      # No tag here: a tag pushed per architecture would point the OS tag at one
+      # of them until publish ran. skopeo pushes the OCI layout byte for byte, so the
       # digest read from it is the digest the registry stores.
       - name: Push by digest
         env:
@@ -124,7 +125,7 @@ jobs:
           # The arm64 runner image lists "associated container tools", not skopeo by name.
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
 
-          name="${IMAGE_REPO}/package_tests_${OS}"
+          name="${IMAGE_REPO}/package_tests"
           oci="${RUNNER_TEMP}/oci"
           sudo podman push "staged:${OS}" "oci:${oci}:image"
           digest=$(sudo jq -r '.manifests[0].digest' "${oci}/index.json")
@@ -147,7 +148,7 @@ jobs:
           retention-days: 1
 
   # Runs for every OS even when some builds failed, so one broken OS or
-  # architecture holds back only its own :latest.
+  # architecture holds back only its own tag.
   publish:
     name: publish ${{ matrix.os }}
     needs: build
@@ -178,14 +179,14 @@ jobs:
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
 
-      - name: Publish :latest
+      - name: Publish package_tests:${{ matrix.os }}
         id: push
         env:
           OS: ${{ matrix.os }}
         run: |
-          name="${IMAGE_REPO}/package_tests_${OS}"
+          name="${IMAGE_REPO}/package_tests"
           for arch in amd64 arm64; do
-            [ -s "digests/digest-${OS}-${arch}" ] || { echo "no ${arch} image was built, so :latest stays as it is"; exit 1; }
+            [ -s "digests/digest-${OS}-${arch}" ] || { echo "no ${arch} image was built, so :${OS} stays as it is"; exit 1; }
           done
 
           sudo podman manifest create images
@@ -194,7 +195,7 @@ jobs:
           done
 
           for attempt in 1 2 3 4 5; do
-            sudo podman manifest push --all --digestfile digest.txt images "docker://${name}:latest" && break
+            sudo podman manifest push --all --digestfile digest.txt images "docker://${name}:${OS}" && break
             [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
             echo "push failed, retrying in $((attempt * 20))s"
             sleep "$((attempt * 20))"
@@ -204,11 +205,11 @@ jobs:
           digest=$(cat digest.txt)
           echo "name=${name}"     >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          echo "- \`${name}:latest\` \`${digest}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`${name}:${OS}\` \`${digest}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # Kept out of the registry, where it would land as a sha256-<digest> tag next
-      # to :latest. GitHub stores it either way: gh attestation verify
-      # oci://<image>:latest --owner percona checks it.
+      # to the OS tags. GitHub stores it either way: gh attestation verify
+      # oci://ghcr.io/percona/pmm-qa/package_tests:<os> --owner percona checks it.
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
