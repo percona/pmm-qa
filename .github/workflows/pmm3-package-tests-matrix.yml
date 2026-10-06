@@ -1,6 +1,7 @@
-# The Jenkins pmm3-package-tests-matrix job, on GitHub Actions: 8 playbooks x 9
-# operating systems = 72 cells, each on its own runner with its own PMM Server and
-# its own systemd-capable client container.
+# The Jenkins pmm3-package-tests-matrix job, on GitHub Actions: 8 playbooks x 8
+# operating systems = 64 cells, each on its own runner with its own PMM Server and
+# its own systemd-capable client container. Debian 11 is left out: past its end of
+# life, its security archive is gone from deb.debian.org.
 #
 # The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
 # images, built from package_tests/docker/ by build-package-test-images.yml.
@@ -9,7 +10,7 @@ name: PMM package tests matrix
 on:
   pull_request:
     branches: [main]
-    # 72 cells of up to 90 minutes each, so only for changes that can affect them.
+    # 64 cells of up to 90 minutes each, so only for changes that can affect them.
     paths:
       - 'package_tests/**'
       - 'qa-integration/pmm_qa/tasks/**'
@@ -22,7 +23,7 @@ on:
         type: choice
         default: all
         options:
-          [all, ol8, ol9, ol10, debian11, debian12, debian13, ubuntu2204, ubuntu2404, ubuntu2604]
+          [all, ol8, ol9, ol10, debian12, debian13, ubuntu2204, ubuntu2404, ubuntu2604]
       test:
         description: 'Playbook ("all" runs every test)'
         type: choice
@@ -214,7 +215,7 @@ jobs:
         # block onto one line while every line shares the same indent.
         os: >-
           ${{ fromJSON((inputs.os || 'all') == 'all'
-          && '["ol8","ol9","ol10","debian11","debian12","debian13","ubuntu2204","ubuntu2404","ubuntu2604"]'
+          && '["ol8","ol9","ol10","debian12","debian13","ubuntu2204","ubuntu2404","ubuntu2604"]'
           || format('["{0}"]', inputs.os)) }}
         test: >-
           ${{ fromJSON((inputs.test || 'all') == 'all'
@@ -230,7 +231,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: |
-          # GHCR answers 403 now and then when all 72 cells hit it at once, which
+          # GHCR answers 403 now and then when all 64 cells hit it at once, which
           # otherwise loses a whole cell on a single unlucky request.
           for attempt in 1 2 3 4 5; do
             if echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin; then
@@ -283,7 +284,7 @@ jobs:
           # inside the container ("PAM account management error: Authentication
           # service cannot retrieve authentication info") and the play dies at
           # Change Postgresql Password.
-          NEEDS_PRIVILEGED="ol10 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604"
+          NEEDS_PRIVILEGED="ol10 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604"
           PRIV=""
           case " $NEEDS_PRIVILEGED " in *" $OS "*) PRIV="--privileged" ;; esac
 

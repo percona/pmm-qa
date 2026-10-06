@@ -1,5 +1,5 @@
 # Systemd-enabled test fixture for Debian-family package testing.
-# Used for: Debian 11/12/13, Ubuntu 22.04/24.04/26.04.
+# Used for: Debian 12/13, Ubuntu 22.04/24.04/26.04.
 #
 # DELIBERATELY SINGLE-STAGE -- see Dockerfile.rpm for the reasoning.
 #
@@ -50,8 +50,8 @@ RUN echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/90assume-yes
 
 # A test fixture never needs a login console, and systemd-getty-generator will
 # happily instantiate a serial-console unit for a device the container does not
-# have -- which blocks multi-user.target forever. Debian 11 hangs at "starting"
-# without this; masking also shaves the boot down to a couple of seconds.
+# have -- which blocks multi-user.target forever. Masking also shaves the boot
+# down to a couple of seconds.
 RUN systemctl mask \
         getty.target \
         getty@.service \

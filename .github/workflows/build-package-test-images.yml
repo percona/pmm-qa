@@ -1,4 +1,4 @@
-# Builds the nine systemd-capable OS images that pmm3-package-tests-matrix.yml
+# Builds the eight systemd-capable OS images that pmm3-package-tests-matrix.yml
 # runs the package playbooks in, and publishes them to GHCR. Each image is booted
 # and checked before it is pushed, so a broken image never becomes :latest.
 #
@@ -62,7 +62,6 @@ jobs:
           - { os: ol8, base: 'oraclelinux:8', family: rpm, privileged: false }
           - { os: ol9, base: 'oraclelinux:9', family: rpm, privileged: false }
           - { os: ol10, base: 'oraclelinux:10', family: rpm, privileged: true }
-          - { os: debian11, base: 'debian:11', family: deb, privileged: true }
           - { os: debian12, base: 'debian:12', family: deb, privileged: true }
           - { os: debian13, base: 'debian:13', family: deb, privileged: true }
           - { os: ubuntu2204, base: 'ubuntu:22.04', family: deb, privileged: true }
