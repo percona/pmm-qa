@@ -475,10 +475,12 @@ pmmTest(
       await expect(rta.builders.rowByQueryText(olderQuery)).toBeVisible();
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeVisible();
       expect((await rta.getDurations()).every((duration) => duration >= Number(bound))).toBe(true);
+      await expect.poll(durationParameter).toBe(JSON.stringify([bound, '']));
     });
 
     await pmmTest.step('Verify pasted text containing letters is refused', async () => {
       await rta.inputs.minimumDuration.fill('');
+      await expect.poll(durationParameter).toBeNull();
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
       await page.evaluate(async (text) => await navigator.clipboard.writeText(text), '12abc');
       await rta.inputs.minimumDuration.focus();
@@ -492,7 +494,9 @@ pmmTest(
       await rta.inputs.minimumDuration.pressSequentially('-1');
 
       await expect(rta.inputs.minimumDuration).toHaveValue('1');
+      await expect.poll(durationParameter).toBe(JSON.stringify(['1', '']));
       await rta.inputs.minimumDuration.fill('');
+      await expect.poll(durationParameter).toBeNull();
     });
 
     await pmmTest.step('Verify letters typed into Max are dropped', async () => {
@@ -517,12 +521,14 @@ pmmTest(
       await expect(rta.builders.rowByQueryText(olderQuery)).toBeHidden();
       await expect(rta.builders.rowByQueryText(newerQuery)).toBeHidden();
       expect((await rta.getDurations()).every((duration) => duration <= 0.5)).toBe(true);
+      await expect.poll(durationParameter).toBe(JSON.stringify(['', '.5']));
     });
 
     await pmmTest.step('Verify a value ending with a decimal point filters', async () => {
       const bound = `${Math.floor((olderElapsed + newerElapsed) / 2)}.`;
 
       await rta.inputs.maximumDuration.fill('');
+      await expect.poll(durationParameter).toBeNull();
       await rta.inputs.minimumDuration.pressSequentially(bound);
       await rta.inputs.maximumDuration.pressSequentially('999');
 
