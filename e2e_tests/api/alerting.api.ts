@@ -102,13 +102,6 @@ export default class AlertingApi {
     return folder;
   };
 
-  getProvisionedRuleUids = async (): Promise<string[]> =>
-    (await this.getRulerGroups())
-      .flatMap(({ rules }) => rules)
-      .filter(({ grafana_alert }) => grafana_alert.provenance)
-      .map(({ grafana_alert }) => grafana_alert.uid)
-      .sort();
-
   getRule = async (name: string): Promise<AlertRule | undefined> =>
     (await this.getRuleGroups()).flatMap((group) => group.rules).find((rule) => rule.name === name);
 

@@ -60,7 +60,15 @@ for (const configuration of configurations) {
           );
 
         await expect
-          .poll(() => api.alertingApi.getProvisionedRuleUids(), { timeout: Timeouts.TWO_MINUTES })
+          .poll(
+            async () =>
+              (await api.alertingApi.getRulerGroups())
+                .flatMap(({ rules }) => rules)
+                .filter(({ grafana_alert }) => grafana_alert.provenance)
+                .map(({ grafana_alert }) => grafana_alert.uid)
+                .sort(),
+            { timeout: Timeouts.TWO_MINUTES },
+          )
           .toEqual(configuration.ruleUids);
       },
     );
