@@ -76,7 +76,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # build-package-test-images.yml publishes to the same place.
+  # build-package-test-images.yml publishes package_tests_<os> there.
   CLIENT_IMAGE_REPO: ghcr.io/percona/pmm-qa
   # A pull_request run has no inputs, so each falls back to its dispatch default.
   SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
@@ -107,7 +107,7 @@ jobs:
           persist-credentials: false
 
       # A pull request that changes the images gets its own build, tagged
-      # pr-<number>, so it is tested against what it would publish.
+      # pr-<number>-<commit>, so it is tested against what it would publish.
       - name: Decide which client images to test
         id: images
         env:
@@ -119,7 +119,7 @@ jobs:
               package_tests/docker .github/workflows/build-package-test-images.yml; then
             if [ "$SAME_REPO" = true ]; then
               echo "build=true" >> "$GITHUB_OUTPUT"
-              echo "tag=pr-${PR}" >> "$GITHUB_OUTPUT"
+              echo "tag=pr-${PR}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "::warning::A fork cannot publish images, so this run tests the current :${CLIENT_IMAGE_TAG} ones."
@@ -198,10 +198,9 @@ jobs:
   test:
     name: ${{ matrix.os }} / ${{ matrix.test }}
     needs: [prepare, images]
-    # images is skipped whenever the run tests the published images.
-    if: >-
-      !cancelled() && needs.prepare.result == 'success'
-      && (needs.images.result == 'success' || needs.images.result == 'skipped')
+    # Runs whether images succeeded, failed or was skipped: an OS whose image did
+    # not build fails only its own cells, at the pull, since its tag is per commit.
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90 # same as the Jenkins job
     permissions:
@@ -247,7 +246,7 @@ jobs:
       # the cell. Both `podman run` steps below then start from a local image.
       - name: Pull the client and server images
         env:
-          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
           SERVER_IMAGE: ${{ needs.prepare.outputs.server_image }}
         run: |
           for image in "$CLIENT_IMAGE" "$SERVER_IMAGE"; do
@@ -274,7 +273,7 @@ jobs:
       - name: Start the ${{ matrix.os }} client
         id: client
         env:
-          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
+          CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests_${{ matrix.os }}:${{ needs.prepare.outputs.client_image_tag }}
           OS: ${{ matrix.os }}
         run: |
           # Hardened units (valkey-server, mysqlrouter, valkey@default) need a
