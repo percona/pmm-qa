@@ -45077,6 +45077,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-06T04:08:58Z"
+      },
+      {
+        "suites": [
+          "Nightly Compatibility"
+        ],
+        "verdict": "not reproduced",
+        "summary": "PMM-T2030 QAN filter click timed out (element resolved, not actionable) on client 3.9.1 only; it passed in every other lane both nights; timing-shaped, not reproduced, nightly cannot be re-run.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-06T04:09:02Z"
       }
     ],
     "claims": [
@@ -45099,13 +45109,6 @@
         "at": "2026-10-06T03:39:38Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-06T03:39:38Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
