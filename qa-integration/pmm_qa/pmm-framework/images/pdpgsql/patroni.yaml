@@ -1,6 +1,6 @@
 scope: patroni_cls
 namespace: /var/lib/pgsql/config/
-name: @NODE@
+name: "@NODE@"
 
 restapi:
   listen: 0.0.0.0:8008
@@ -52,7 +52,7 @@ bootstrap:
 postgresql:
   listen: 0.0.0.0:5432
   connect_address: "@NODE@:5432"
-  data_dir: @DATA@
+  data_dir: "@DATA@"
   bin_dir: /usr/lib/postgresql/@VERSION@/bin
   pgpass: /tmp/pgpass
 
@@ -62,7 +62,7 @@ postgresql:
       password: replPasswd
     superuser:
       username: postgres
-      password: @SUPERUSER_PASSWORD@
+      password: "@SUPERUSER_PASSWORD@"
 
   create_replica_methods:
     - pgbackrest
