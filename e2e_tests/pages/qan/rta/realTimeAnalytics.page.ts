@@ -8,6 +8,7 @@ const realTimeTableTestId = 'realtime-overview-table';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
+  readonly durationFilterParameter = 'overview.f.queryExecutionDurationMs';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
@@ -117,6 +118,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
     return count;
   };
+
+  getDurations = async () => (await this.elements.durationCells.allTextContents()).map(Number.parseFloat);
 
   getElapsedTimeForQueryByRow = async (rowIndex: string) => {
     await this.builders.elapsedTimeForRow(rowIndex).waitFor({ state: 'visible' });
