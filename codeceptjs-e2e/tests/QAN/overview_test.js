@@ -58,6 +58,8 @@ Scenario(
     await queryAnalyticsPage.data.hideTooltip();
     assert.notEqual(tooltipQueryId, tooltipPlanId, 'Plan Id should not be equal to Query Id');
     queryAnalyticsPage.filters.resetAllFilters();
+    queryAnalyticsPage.filters.selectContainFilter('pdpgsql_pmm');
+    queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.searchByValue('SELECT * FROM pg_stat_database');
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.selectRow(1);

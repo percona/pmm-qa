@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# check_image -- start a prebaked image and check it works, as the build
+# workflow does before publishing one.
+#
+#   ./check_image pdpgsql=17
+
+set -euo pipefail
+
+[[ $# -eq 1 && $1 == *=* ]] || { echo 'Usage: check_image ENGINE=VERSION' >&2; exit 2; }
+engine=${1%%=*}
+version=${1#*=}
+image=pmm-qa/$engine:$version
+
+trap 'docker rm -fv probe >/dev/null 2>&1 || true' EXIT
+
+case $engine in
+  pdpgsql)
+    # systemd starts PostgreSQL with pg_stat_monitor preloaded.
+    docker run -d --name probe --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw "$image"
+    for i in $(seq 1 60); do
+      docker exec -u postgres probe pg_isready -q 2>/dev/null && break
+      if [ "$i" -eq 60 ]; then
+        docker exec probe journalctl -u "postgresql@$version-main" --no-pager | tail -30
+        exit 1
+      fi
+      sleep 1
+    done
+    docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
+    docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
+    ;;
+  ssl-pdpgsql)
+    # The image ships no certificates; make a set as setup_ssl_pdpgsql does.
+    docker run -d --name probe "$image"
+    docker exec probe sh -ceu "cd /artifacts && bash create_certs.sh >/dev/null 2>&1
+      cp -a certificates/. /var/lib/postgresql/$version/main/
+      chown -R postgres:postgres /var/lib/postgresql/$version/main
+      chmod -R 0700 /var/lib/postgresql/$version/main
+      service postgresql start"
+    docker exec -e PGPASSWORD=pmm probe psql -v ON_ERROR_STOP=1 'host=127.0.0.1 user=pmm dbname=postgres sslmode=require' \
+      -c 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()' -c 'SELECT count(*) FROM pg_stat_statements'
+    ;;
+  pgsql)
+    docker run -d --name probe "$image"
+    docker exec probe service postgresql start
+    docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM pg_stat_statements'
+    ;;
+  valkey)
+    docker run --rm "$image" sh -c 'valkey-server --version && valkey-cli --version'
+    ;;
+  external)
+    docker run --rm --entrypoint sh "$image" -c 'redis_exporter --version && process-exporter --version'
+    ;;
+  haproxy)
+    docker run --rm --entrypoint haproxy "$image" -vv | grep prometheus-exporter
+    ;;
+  kerberos)
+    docker run --rm --entrypoint sh "$image" -c 'command -v krb5kdc && command -v kadmin.local && command -v kdb5_util'
+    ;;
+  psmdb)
+    # mongod needs the mongod.conf compose mounts, so check the tools run.
+    docker run --rm "$image" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'
+    ;;
+  pxc-proxysql)
+    # The full cluster: three nodes synced and ProxySQL seeing all of them.
+    docker run -d --init --name probe "$image"
+    docker exec --user root probe pmm_pxc start
+    docker exec probe sysbench --version
+    ;;
+  ps | mysql)
+    docker run -d --name probe -e MYSQL_ROOT_PASSWORD=probe "$image"
+    for i in $(seq 1 90); do
+      if docker exec -e MYSQL_PWD=probe probe mysql -uroot -h127.0.0.1 -e 'SELECT VERSION()'; then
+        break
+      fi
+      if [ "$i" -eq 90 ]; then
+        docker logs probe
+        exit 1
+      fi
+      sleep 1
+    done
+    docker exec probe sysbench --version
+    if [ "$engine" = ps ]; then
+      docker exec --user root probe xtrabackup --version
+    fi
+    ;;
+  *)
+    echo "No check for '$engine'." >&2
+    exit 2
+    ;;
+esac

@@ -171,8 +171,8 @@ export default class StoredMetricsPage extends BasePage {
     expect(await this.getTotalQueryCount()).toEqual(expectedQueryCount);
   };
 
-  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
-    await this.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
+  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await this.waitUntilQanStoredMetricsLoaded(timeout);
 
     const noDataLocator = this.elements.noData;
     const timeoutInSeconds = timeout / Timeouts.ONE_SECOND;
