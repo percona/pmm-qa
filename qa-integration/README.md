@@ -89,7 +89,7 @@ The setups below are the QA integration environments registered in [`pmm_qa/pmm-
 | Setup key       | Purpose                                                          | Versions                                    |
 | --------------- | ---------------------------------------------------------------- | ------------------------------------------- |
 | `SSL_MYSQL`     | TLS/SSL MySQL setup.                                             | `5.7`, `8.0`, `8.4`, `9.7`                  |
-| `SSL_PDPGSQL`   | TLS/SSL PostgreSQL or Percona Distribution for PostgreSQL setup. | `14`, `15`, `16`, `17`                      |
+| `SSL_PDPGSQL`   | TLS/SSL PostgreSQL or Percona Distribution for PostgreSQL setup. | `14`, `15`, `16`, `17`, `18`                |
 | `SSL_PSMDB`     | TLS/SSL PSMDB setup.                                             | `6.0`, `7.0`, `8.0`, `8.3`                  |
 
 <!-- DB-VARIANTS-END -->

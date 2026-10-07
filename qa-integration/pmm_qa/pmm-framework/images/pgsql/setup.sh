@@ -9,6 +9,7 @@ setup_pgsql() {
   setup_type=$(resolve_value PGSQL SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
   client=$(resolved_client_version PGSQL DB_CONFIG)
+  # shellcheck disable=SC2034  # lib/pmm_client.sh reads encrypted
   encrypted=$(resolved_encrypted PGSQL "$client")
   case $setup_type in
     '' | replication) ;;

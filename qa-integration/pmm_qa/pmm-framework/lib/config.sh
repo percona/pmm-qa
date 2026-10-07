@@ -87,7 +87,7 @@ list_databases() {
 register_database PSMDB \
   '6.0 7.0 8.0 8.3' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO' \
-  'DEFAULT_VERSION=8.3' \
+  'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
   'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true'
 
@@ -95,7 +95,7 @@ register_database PSMDB \
 register_database SSL_PSMDB \
   "${DB_VERSIONS[PSMDB]}" \
   'CLIENT_VERSION MINIO' \
-  'DEFAULT_VERSION=8.3' \
+  'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=latest-tarball' 'MINIO=false'
 
 register_database MYSQL \
@@ -133,7 +133,7 @@ register_database PDPGSQL \
   'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database SSL_PDPGSQL \
-  '14 15 16 17' \
+  '14 15 16 17 18' \
   'CLIENT_VERSION' \
   'DEFAULT_VERSION=17' \
   'CLIENT_VERSION=latest-tarball'

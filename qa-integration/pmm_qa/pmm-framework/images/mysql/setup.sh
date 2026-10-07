@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # each_node and the mysql_* helpers read these arrays by name; shellcheck sees one file at a time.
 #
 # images/mysql/setup.sh -- PS, MYSQL and SSL_MYSQL, on the prebaked ps and mysql images.
 
@@ -378,7 +379,6 @@ mysql_check_myrocks() {
 
 # The container, volume, ports and bucket the backup tests expect.
 mysql_start_minio() {
-  local bucket
   docker rm -fv minio >/dev/null 2>&1 || true
   docker volume rm -f minio_backups >/dev/null 2>&1 || true
   must docker run --detach --name minio --network pmm-qa --volume minio_backups:/backups \

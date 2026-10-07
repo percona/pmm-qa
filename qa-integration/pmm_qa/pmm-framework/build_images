@@ -9,6 +9,7 @@
 set -euo pipefail
 
 FRAMEWORK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck disable=SC2034  # read by the sourced lib/images.sh
 QA_INTEGRATION_ROOT=$(cd "$FRAMEWORK_DIR/../.." && pwd)
 
 # shellcheck source=lib/common.sh

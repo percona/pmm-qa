@@ -150,6 +150,7 @@ ensure_image() {
   local engine=$1 tag=$2 published output local_copy=false
   shift 2
   (($# > 0)) || set -- "$tag"
+  [[ $tag != 5.7 || $(uname -m) == x86_64 ]] || die "$engine 5.7 has no arm64 build; use 8.0 or newer."
   if docker image inspect "pmm-qa/$engine:$tag" >/dev/null 2>&1; then
     local_copy=true
     [[ ${PREBAKED_PULL:-} == always ]] || return 0

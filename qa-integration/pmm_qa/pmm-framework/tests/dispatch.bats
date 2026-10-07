@@ -400,7 +400,7 @@ EOF
   parse_database_spec 'psmdb,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false'
   dispatch_setup
 
-  grep -q '^tag pmm-qa/psmdb:8.3-ol9 replica_member/local$' "$DOCKER_CALLS"
+  grep -q '^tag pmm-qa/psmdb:8.0-ol9 replica_member/local$' "$DOCKER_CALLS"
   ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
   grep -Fq '{ _id: 2, host: "rs103:27017", arbiterOnly: true }' "$DOCKER_CALLS"
   grep -Fq '{ _id: 2, host: "rs203:27017", arbiterOnly: true }' "$DOCKER_CALLS"
@@ -443,7 +443,7 @@ EOF
   dispatch_setup
 
   ! grep -q 'replica_member/local' "$DOCKER_CALLS" || false
-  grep -q '^    image: pmm-qa/psmdb:8.3-ol9$' "$BATS_TEST_TMPDIR/override.yml"
+  grep -q '^    image: pmm-qa/psmdb:8.0-ol9$' "$BATS_TEST_TMPDIR/override.yml"
   ! grep -q 'minio createbucket' "$DOCKER_CALLS" || false
   # shellcheck disable=SC2016
   grep -Fq 'PMM_AGENT_SERVER_PASSWORD: "${ADMIN_PASSWORD}"' "$BATS_TEST_TMPDIR/override.yml"

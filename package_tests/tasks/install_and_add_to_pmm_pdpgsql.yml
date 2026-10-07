@@ -44,7 +44,6 @@
   command: "percona-release setup -y ppg-{{ pg_version }}"
 
 - name: Run install_ppg.yml
-  # Merged from Percona-QA/ppg-testing@beaf390's per-version files (upstream deleted tasks/install_ppgXX.yml in c716c38)
   include_tasks: "{{ playbook_dir }}/tasks/install_ppg.yml"
   vars:
     pg_version_to_install: "{{ pg_version }}"

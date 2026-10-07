@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # set here for images/ to read; shellcheck sees one file at a time.
 #
 # lib/run_helpers.sh -- run steps and docker commands for the setups: must,
 # step, retry, each_node, and the container and network helpers.

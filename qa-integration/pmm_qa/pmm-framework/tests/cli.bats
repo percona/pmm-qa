@@ -262,7 +262,7 @@ stub_docker_ps() {
   [[ $status -eq 0 && $output != *'docker was called'* ]]
   [[ $output == "$(printf '%s\n' "$output" | sort)" ]]
   grep -qx $'PS\t8.4\t5.7 8.0 8.4 9.7' <<<"$output"
-  grep -qx $'PSMDB\t8.3\t6.0 7.0 8.0 8.3' <<<"$output"
+  grep -qx $'PSMDB\t8.0\t6.0 7.0 8.0 8.3' <<<"$output"
   grep -qx $'HAPROXY\t-\t-' <<<"$output"
   [[ $(wc -l <<<"$output") -eq ${#DB_OPTIONS[@]} && $output != *latest* ]]
 }

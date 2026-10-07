@@ -256,6 +256,7 @@ psmdb_shard_set() {
 
 psmdb_sharded() {
   local node
+  # shellcheck disable=SC2034  # each_node reads leaders by name
   local -a nodes=(rs101 rs102 rs103 rs201 rs202 rs203 rscfg01 rscfg02 rscfg03) leaders=(rs101 rs201 rscfg01)
   local -a clients=("${nodes[@]}" mongos)
   export COMPOSE_PROJECT_NAME=psmdb_sharded

@@ -36,7 +36,7 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
-| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) that provisions PMM Clients and monitored DBs on prebaked images on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [lib/config.sh](qa-integration/pmm_qa/pmm-framework/lib/config.sh) |
+| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) that provisions PMM Clients and monitored DBs on prebaked images on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [lib/config.sh](qa-integration/pmm_qa/pmm-framework/lib/config.sh) · [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md) |
 | [psmdb_pbm_auth_tests/](psmdb_pbm_auth_tests/) | Bats suites for PSMDB backup/restore through PMM and each authentication method, run by `PMM_PSMDB_PBM_FULL.yml` after pmm-framework sets up PSMDB | [README.md](psmdb_pbm_auth_tests/README.md) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
@@ -84,7 +84,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (32 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -95,6 +95,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
+- `build-prebaked-images.yml` — builds the pmm-framework database images and publishes them to GHCR from `main` (nightly, or on a push touching `images/**`); PRs only build and check. A Dockerfile change reaches CI only after it merges. See [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md).
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
 To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github/workflows/](.github/workflows/).
