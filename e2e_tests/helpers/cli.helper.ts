@@ -108,7 +108,8 @@ export default class CliHelper {
   };
 
   /**
-   * Stops and removes a docker container, ignoring one that does not exist.
+   * Stops and removes a docker container, ignoring one that does not exist. Any other removal
+   * failure is reported here, since the name would stay taken for the next `docker run`.
    * Stopping first lets PMM Server's PostgreSQL remove its postmaster.pid, which a container
    * recreated on the same volume would otherwise trip over.
    *
@@ -116,6 +117,9 @@ export default class CliHelper {
    */
   removeContainer = (containerName: string) => {
     this.execSilent(`docker stop ${containerName} || true`);
-    this.execSilent(`docker rm -f ${containerName} || true`);
+
+    const removal = this.execSilent(`docker rm -f ${containerName}`);
+
+    if (!removal.stderr.includes('No such container')) removal.assertSuccess();
   };
 }

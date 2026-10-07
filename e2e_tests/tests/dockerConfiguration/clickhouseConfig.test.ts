@@ -125,7 +125,9 @@ pmmTest.describe('PMM Tests to verify invalid clickhouse configuration', () => {
           )
           .assertSuccess();
 
-        const exitCode = cliHelper.execSilent(`timeout 120 docker wait ${containerName}`).assertSuccess();
+        const exitCode = cliHelper
+          .execSilent(`timeout ${Timeouts.TWO_MINUTES / Timeouts.ONE_SECOND} docker wait ${containerName}`)
+          .assertSuccess();
 
         expect(exitCode.stdout.trim(), 'PMM Server container should exit with an error').toEqual('1');
         expect(
