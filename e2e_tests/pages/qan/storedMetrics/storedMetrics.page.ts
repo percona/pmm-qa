@@ -156,6 +156,42 @@ export default class StoredMetricsPage extends BasePage {
       return parseFloat(value) * (magnitudes[value.slice(-1)] ?? 1) * (timeUnits[unit] ?? 1);
     });
 
+  getPlanId = async () => {
+    await this.elements.planInfoIcon.hover();
+    await expect(this.elements.planTooltip).toHaveText(/:\s*\S+/, { timeout: Timeouts.THIRTY_SECONDS });
+
+    return ((await this.elements.planTooltip.textContent()) ?? '').split(':')[1].trim();
+  };
+
+  getQpsTooltipValue = async () =>
+    (await this.elements.qpsTooltip.textContent())?.split(':')[1]?.trim().split(' ')[0];
+
+  getQueryId = async (rowNumber: number) => {
+    await this.hoverQueryInfo(rowNumber);
+    await expect(this.elements.queryTooltipId).toHaveText(/:\s*\S+/);
+
+    return ((await this.elements.queryTooltipId.textContent()) ?? '').split(':')[1].trim();
+  };
+
+  getQueryText = async (rowNumber: number) => {
+    await expect(this.builders.queryRowQueryText(rowNumber)).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+
+    return ((await this.builders.queryRowQueryText(rowNumber).textContent()) ?? '').replace(/ /g, '');
+  };
+
+  getQueryTooltipText = async () =>
+    ((await this.elements.queryTooltipText.textContent()) ?? '').replace(/ |\n/g, '');
+
+  getQueryValue = async (rowNumber: number, columnNumber: number) => {
+    await expect(this.builders.queryValue(rowNumber, columnNumber)).not.toBeEmpty({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+
+    return (await this.builders.queryValue(rowNumber, columnNumber).textContent()) ?? '';
+  };
+
   getTotalQueryCount = async () => {
     const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
 
@@ -164,6 +200,21 @@ export default class StoredMetricsPage extends BasePage {
     const match = countString.match(/of (\d+) items/);
 
     return match ? parseInt(match[1]) : null;
+  };
+
+  hideTooltip = async () => {
+    await this.inputs.addColumn.hover();
+    await expect(this.elements.metricTooltip).toBeHidden({ timeout: Timeouts.FIVE_SECONDS });
+  };
+
+  hoverQueryInfo = async (rowNumber: number) => {
+    await this.builders.queryInfoIcon(rowNumber).hover();
+    await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openPlanTab = async () => {
+    await this.builders.tab('Plan').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
   };
 
   refreshIfNoQueries = async () => {
@@ -187,9 +238,52 @@ export default class StoredMetricsPage extends BasePage {
     await this.inputs.filterBy.fill('');
   };
 
+  selectFilterContaining = async (text: string) => {
+    await this.selectFilter(text, this.builders.filterCheckboxContaining(text));
+    await this.waitForLoad();
+  };
+
   selectRefreshInterval = async (interval: string) => {
     await this.buttons.refreshInterval.click();
     await this.builders.refreshIntervalOption(interval).click();
+  };
+
+  selectRow = async (rowNumber: number) => {
+    await this.builders.queryRow(rowNumber).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForLoad();
+    await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+  };
+
+  sortColumn = async (columnNumber: number, direction: 'asc' | 'desc') => {
+    await this.builders
+      .sortControl(columnNumber)
+      .dispatchEvent('click', undefined, { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.builders.sortingValue(columnNumber)).toContainClass(`sort-by ${direction}`, {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+  };
+
+  verifyColumnSorted = async (columnNumber: number, direction: 'asc' | 'desc') => {
+    await expect(async () => {
+      const values = await this.getColumnValues(columnNumber);
+
+      expect(values, `Column ${columnNumber} should show values`).not.toHaveLength(0);
+      expect(
+        values.filter((value) => !Number.isFinite(value)),
+        `Column ${columnNumber} values should all be numeric`,
+      ).toHaveLength(0);
+      expect(values, `Column ${columnNumber} values should follow the "${direction}" sort`).toEqual(
+        [...values].sort((a, b) => (direction === 'asc' ? b - a : a - b)),
+      );
+    }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  verifyLoadSparklineTooltip = async (rowNumber: number, text: string) => {
+    await expect(async () => {
+      await this.inputs.addColumn.hover();
+      await this.builders.loadSparkline(rowNumber).hover();
+      await expect(this.elements.sparklineTooltip).toContainText(text, { timeout: Timeouts.FIVE_SECONDS });
+    }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
   };
 
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
@@ -211,6 +305,15 @@ export default class StoredMetricsPage extends BasePage {
     }
   };
 
+  verifyPlanShown = async () => {
+    await expect(this.elements.noClassicExplain).toBeHidden();
+    await expect(this.elements.noJsonExplain).toBeHidden();
+    await expect(this.elements.explainError).toBeHidden();
+    await expect(this.elements.emptyPlan).toBeHidden();
+    await expect(this.elements.planText).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
+    await expect(this.elements.planText).not.toBeEmpty();
+  };
+
   verifyQanStoredMetricsHaveData = async () => {
     await this.waitUntilQanStoredMetricsLoaded();
     await expect(this.elements.noData).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
@@ -219,6 +322,10 @@ export default class StoredMetricsPage extends BasePage {
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
     expect(await this.getTotalQueryCount()).toEqual(expectedQueryCount);
+  };
+
+  waitForLoad = async () => {
+    await expect(this.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   };
 
   waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
