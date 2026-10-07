@@ -171,22 +171,8 @@ export default class StoredMetricsPage extends BasePage {
     expect(await this.getTotalQueryCount()).toEqual(expectedQueryCount);
   };
 
-  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
-    await this.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
-
-    const noDataLocator = this.elements.noData;
-    const timeoutInSeconds = timeout / Timeouts.ONE_SECOND;
-
-    for (let i = 0; i < timeoutInSeconds; i++) {
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Replace with a better approach
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-
-      if (!(await noDataLocator.isVisible())) return;
-    }
-
-    await expect(noDataLocator).not.toBeVisible({
-      timeout: Timeouts.ONE_SECOND,
-    });
+  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await this.waitUntilQanStoredMetricsLoaded(timeout);
   };
 
   waitUntilQanStoredMetricsLoaded = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
