@@ -7,6 +7,27 @@
 #                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
 #
 
+# enabled_db carries the version docker/database-versions sets (ps-8.4); the
+# installed server has to be that series, or the test would cover another one.
+- name: Read the installed Percona Server version
+  command: /usr/sbin/mysqld --version
+  register: mysqld_version
+  changed_when: false
+  failed_when: false
+
+- name: Verify Percona Server is the version docker/database-versions sets
+  vars:
+    ps_version: "{{ enabled_db | select('match', '^ps-') | first | regex_replace('^ps-', '') }}"
+  assert:
+    that:
+      - mysqld_version.rc == 0
+      - "'Percona Server' in mysqld_version.stdout"
+      - "('Ver ' ~ ps_version ~ '.') in mysqld_version.stdout"
+    fail_msg: >-
+      docker/database-versions sets Percona Server {{ ps_version }} for this OS, but mysqld reports
+      "{{ mysqld_version.stdout or mysqld_version.msg | default('nothing') }}". Rebuild the image (build_images).
+    success_msg: "Percona Server {{ ps_version }}: {{ mysqld_version.stdout }}"
+
 - name: set password for mysql
   set_fact:
     mysql_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="

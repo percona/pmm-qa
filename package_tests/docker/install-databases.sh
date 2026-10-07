@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Installs the databases database-versions lists for this OS into a package_tests
-# image, each from Percona's repository at the version and channel given there,
-# and records them in /etc/package-tests-databases. Each database has an
-# install_<name> function below.
+# image, each from Percona's repository at the version and channel given there.
+# Each database has an install_<name> function below.
 #
 # With --list it installs nothing and prints them as <database>-<version>, the
 # form the playbooks' enabled_db uses.
@@ -112,8 +111,6 @@ while read -r database version repository; do
   # stdin is the list being read; a package manager must not consume it.
   "install_${database}" "$version" "$repository" < /dev/null
 done <<< "$databases"
-
-echo "$databases" > /etc/package-tests-databases
 
 if $deb; then
   apt-get purge -y percona-release

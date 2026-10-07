@@ -1,7 +1,7 @@
 # Databases that install-databases.sh bakes into each package_tests:<os> image,
 # all from Percona's repositories. This is also what the playbooks expect: each
 # line becomes <database>-<version> in their enabled_db (ps-8.4), and a test
-# fails if that database is missing.
+# fails if that database is missing or at another version.
 #
 # database    ps (Percona Server for MySQL). Each database needs an install_<name>
 #             function in install-databases.sh.
