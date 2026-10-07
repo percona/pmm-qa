@@ -49850,6 +49850,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1565",
         "by": "Investigator routine",
         "at": "2026-10-07T10:05:18Z"
+      },
+      {
+        "suites": [
+          "Nightly Compatibility"
+        ],
+        "verdict": "not reproduced",
+        "summary": "Compat client 3.9.1: the GitHub runner hosting the MyRocks, Patroni and PS 8.4 setup shut down at 08:53, so PMM-T2079, T2053, T13 and T1790 then ran against disconnected agents; runner loss, not a test or product defect.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-07T10:05:23Z"
       }
     ],
     "claims": [
