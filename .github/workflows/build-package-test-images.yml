@@ -137,7 +137,6 @@ jobs:
           done
 
           echo "$digest" > "digest-${OS}-${ARCH}"
-          echo "- \`${name}@${digest}\` (${ARCH})" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -156,8 +155,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -178,7 +175,6 @@ jobs:
         run: echo "$GHCR_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USER" --password-stdin
 
       - name: Publish package_tests:${{ matrix.os }}
-        id: push
         env:
           OS: ${{ matrix.os }}
         run: |
@@ -193,11 +189,8 @@ jobs:
           done
 
           for attempt in 1 2 3 4 5; do
-            sudo podman manifest push --all --digestfile digest.txt images "docker://${name}:${OS}" && break
+            sudo podman manifest push --all images "docker://${name}:${OS}" && break
             [ "$attempt" -lt 5 ] || { echo "push failed after 5 attempts"; exit 1; }
             echo "push failed, retrying in $((attempt * 20))s"
             sleep "$((attempt * 20))"
           done
-
-          sudo chown "$(id -u)" digest.txt
-          digest=$(cat digest.txt)
