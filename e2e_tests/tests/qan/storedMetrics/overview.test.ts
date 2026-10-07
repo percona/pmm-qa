@@ -227,6 +227,10 @@ pmmTest(
         const values = await qanStoredMetrics.getColumnValues(columnNumber);
 
         expect(values, `Column ${columnNumber} should show values`).not.toHaveLength(0);
+        expect(
+          values.filter((value) => !Number.isFinite(value)),
+          `Column ${columnNumber} values should all be numeric`,
+        ).toHaveLength(0);
         expect(values, `Column ${columnNumber} values should follow the "${direction}" sort`).toEqual(
           [...values].sort((a, b) => (direction === 'asc' ? b - a : a - b)),
         );
@@ -238,11 +242,20 @@ pmmTest(
 pmmTest(
   'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Count Value @qan',
   async ({ qanStoredMetrics }) => {
+    await expect(qanStoredMetrics.builders.queryValue(3, 2)).not.toBeEmpty({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+
     const [queryCount] = ((await qanStoredMetrics.builders.queryValue(3, 2).textContent()) ?? '').split(' ');
 
     await qanStoredMetrics.builders.queryValue(3, 2).hover();
     await expect(qanStoredMetrics.elements.metricTooltip).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
-    await expect(qanStoredMetrics.elements.qpsTooltip).toContainText(queryCount);
+    await expect
+      .poll(
+        async () =>
+          (await qanStoredMetrics.elements.qpsTooltip.textContent())?.split(':')[1]?.trim().split(' ')[0],
+      )
+      .toBe(queryCount);
   },
 );
 
