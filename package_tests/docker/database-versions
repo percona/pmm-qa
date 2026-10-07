@@ -3,9 +3,11 @@
 # line becomes <database>-<version> in their enabled_db (ps-8.4), and a test
 # fails if that database is missing or at another version.
 #
-# database    ps (Percona Server for MySQL). Each database needs an install_<name>
-#             function in install-databases.sh.
-# version     the series to install, at its newest release: 8.0 or 8.4 for ps
+# database    ps (Percona Server for MySQL) or pg (Percona Distribution for
+#             PostgreSQL). Each needs an install_<name> function in
+#             install-databases.sh.
+# version     the series to install, at its newest release: 8.0 or 8.4 for ps,
+#             14 to 18 for pg
 # repository  the percona-release channel: release, testing or experimental
 #
 # An OS gets only the databases listed for it, but every OS in
@@ -20,3 +22,12 @@ debian13      ps        8.4      release
 ubuntu2204    ps        8.4      release
 ubuntu2404    ps        8.4      release
 ubuntu2604    ps        8.4      release
+
+ol8           pg        18       release
+ol9           pg        18       release
+ol10          pg        18       release
+debian12      pg        18       release
+debian13      pg        18       release
+ubuntu2204    pg        18       release
+ubuntu2404    pg        18       release
+ubuntu2604    pg        18       release

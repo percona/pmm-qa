@@ -15,9 +15,9 @@ FROM ${BASE_IMAGE}
 # tasks/install_epel.yml sets it up at test time, uniformly across RHEL 8/9/10,
 # which avoids the per-distro epel-release package-name differences.
 # CodeReady Builder is off by default and carries perl(IPC::Run), which Percona's
-# PostgreSQL 18 packages for el10 depend on. Without it the play dies at "install
-# Percona Platform for PostgreSQL rpm packages for RHEL" with a depsolve error.
-# Only el10 needs it; el8 and el9 resolve the dependency from their own repos.
+# PostgreSQL 18 packages for el10 depend on. Without it install-databases.sh dies
+# installing them with a depsolve error. It enables the el8 and el9 repository
+# itself, as the playbooks did.
 RUN if [ "$(rpm -E %rhel)" -ge 10 ]; then \
       dnf -y install dnf-plugins-core \
       && { dnf config-manager --set-enabled ol10_codeready_builder \

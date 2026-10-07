@@ -187,9 +187,9 @@
       pgsql_service_name: "pgsql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
       pgsql_socket_service_name: "pgsql_socket_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
-  - name: Install and start Percona Server PostgreSQL
+  - name: Start PostgreSQL and add it to PMM
     when: '"pg-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_pdpgsql.yml
+    include_tasks: ./tasks/add_postgresql_to_pmm.yml
     vars:
       pg_to_test: "{{ enabled_db | select('match', '^pg-*') | join('') }}"
 

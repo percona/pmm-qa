@@ -1,4 +1,6 @@
-# This task installs and starts PostgreSQL on CentOS and Debian/Ubuntu
+# Starts the preinstalled Percona Distribution for PostgreSQL and adds it to PMM.
+# The playbook does not install it: package_tests/docker/install-databases.sh
+# bakes it into the client images, at the version docker/database-versions sets.
 #
 # Task adjustments are handled by parent playbook vars:
 #             var "port_flag"      :  to access agent with custom port
@@ -9,45 +11,28 @@
 #    pgsql_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="
     pgsql_password: "temp_password"
 
-- name: Install Perl (IPC::RUN) on RedHat linux 8
-  shell: |
-    dnf config-manager --set-enabled ol8_codeready_builder
-    dnf install perl-IPC-Run -y
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "8"
-  ignore_errors: yes
-
-- name: Install Perl (IPC::RUN) on RedHat linux 9
-  shell: |
-    dnf config-manager --set-enabled ol9_codeready_builder
-    dnf install perl-IPC-Run -y
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "9"
-  ignore_errors: yes
-
-- name: Install Perl (IPC::RUN) on Rocky linux 8
-  shell: |
-    sudo dnf install dnf-plugins-core
-    sudo dnf module enable llvm-toolset
-    sudo dnf config-manager --set-enabled powertools
-  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "8"
-  ignore_errors: yes
-
-- name: Install Perl (IPC::RUN) on Rocky linux 9
-  shell: |
-    dnf install dnf-plugins-core
-    dnf module enable llvm-toolset
-    dnf config-manager --set-enabled crb
-    dnf install perl-IPC-Run -y
-  when: ansible_distribution == "Rocky" and ansible_distribution_major_version | int >= 9
-  ignore_errors: yes
-
-- name: Enable postgresql repository
-  command: "percona-release setup -y ppg-{{ pg_version }}"
-
-- name: Run install_ppg.yml
-  # Vendored from Percona-QA/ppg-testing@beaf390 (upstream deleted tasks/install_ppgXX.yml in c716c38)
-  include_tasks: "{{ playbook_dir }}/../qa-integration/pmm_qa/tasks/install_ppg{{ pg_version }}.yml"
+# pg_to_test carries the version docker/database-versions sets (pg-18); the
+# installed packages have to be that version, or the test would cover another one.
+- name: Read the installed Percona Distribution for PostgreSQL version
+  command: "{{ pg_version_query[ansible_os_family] }}"
   vars:
-    pg_version_to_install: "{{ pg_version }}"
+    pg_version_query:
+      Debian: "dpkg-query -W -f=${Version} percona-postgresql-{{ pg_version }}"
+      RedHat: "rpm -q --qf %{VERSION} percona-postgresql{{ pg_version }}-server"
+  register: pg_package_version
+  changed_when: false
+  failed_when: false
+
+- name: Verify Percona Distribution for PostgreSQL is the version docker/database-versions sets
+  assert:
+    that:
+      - pg_package_version.rc == 0
+      - (pg_version ~ '.') in pg_package_version.stdout
+    fail_msg: >-
+      docker/database-versions sets Percona Distribution for PostgreSQL {{ pg_version }} for this OS, but the
+      package query reports "{{ pg_package_version.stdout or pg_package_version.stderr | default('nothing') }}".
+      Rebuild the image (build_images).
+    success_msg: "Percona Distribution for PostgreSQL {{ pg_version }}: {{ pg_package_version.stdout }}"
 
 - name: Initialize Postgres RHEL
   command: /usr/pgsql-{{ pg_version }}/bin/postgresql-{{ pg_version }}-setup initdb
