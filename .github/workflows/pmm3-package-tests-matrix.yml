@@ -25,7 +25,6 @@ on:
     paths:
       - 'package_tests/**'
       - '!package_tests/docker/**'
-      - 'qa-integration/pmm_qa/tasks/**'
       - '.github/workflows/pmm3-package-tests-matrix.yml'
   workflow_dispatch:
     inputs:
