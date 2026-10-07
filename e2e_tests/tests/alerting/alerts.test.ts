@@ -210,6 +210,7 @@ pmmTest(
   async ({ alertingPage, api, page }) => {
     await api.alertingApi.removeAllAlertRules();
     await page.goto(alertingPage.url);
+    await alertingPage.filterByState('Firing');
     await expect(alertingPage.elements.noAlerts).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
   },
 );
@@ -245,5 +246,6 @@ pmmTest('PMM-T564 - Verify fired alert severity colors @ia', async ({ alertingPa
 pmmTest('PMM-T1467 - Verify empty Fired alerts list @fb-alerting', async ({ alertingPage, api, page }) => {
   await api.alertingApi.removeAllAlertRules();
   await page.goto(alertingPage.url);
+  await alertingPage.filterByState('Firing');
   await expect(alertingPage.elements.noAlerts).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
 });
