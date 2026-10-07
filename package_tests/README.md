@@ -13,7 +13,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 | `templates/` | Jinja templates used by package test tasks. |
 | `scripts/` | Shell scripts used by package and tarball install flows. |
 | `support-files/` | Static support files used by package test tasks. |
-| `docker/` | systemd-capable OS images the GitHub Actions matrix runs the playbooks in. |
+| `docker/` | systemd-capable OS images the GitHub Actions matrix runs the playbooks in, with Percona Server preinstalled at the version `docker/percona-server-versions` sets per OS. |
 
 ## Typical Flow
 
@@ -25,6 +25,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 - Install Ansible and make sure `ansible-playbook` is available.
 - Make sure the target host is reachable through your Ansible inventory.
 - Make sure the target PMM Server is available.
+- Install Percona Server for MySQL on the target if the run should cover MySQL: the playbooks start it and add it to PMM, and skip MySQL where it is not installed. `docker/install-percona-server.sh` installs it the way the CI images get it.
 - Set environment variables required by the selected playbook.
 
 Create or export variables before running a playbook:
@@ -39,7 +40,6 @@ Create or export variables before running a playbook:
 | `METRICS_MODE` | `auto` | Metrics mode used by `pmm-admin config`. |
 | `TARBALL_LINK` | unset | PMM Client tarball URL for tarball scenarios. |
 | `OLD_TARBALL_LINK` | unset | Previous tarball URL for tarball upgrade scenarios. |
-| `PS_REPOSITORY` | `release` | Percona Server repository channel. |
 | `PSMDB_REPOSITORY` | `release` | PSMDB repository channel. |
 
 ## Running Tests

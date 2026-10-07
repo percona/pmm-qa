@@ -1,0 +1,65 @@
+# Starts the preinstalled Percona Server and adds it to PMM. The playbook does not
+# install it: package_tests/docker/install-percona-server.sh bakes it into the
+# client images, at the version docker/percona-server-versions sets for the OS.
+#
+# Task adjustments are handled by parent playbook vars:
+#             var "port_flag"      :  to access agent with custom port
+#                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
+#
+
+- name: set password for mysql
+  set_fact:
+    mysql_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="
+
+- name: start mysql service
+  service: name=mysql state=started
+
+- name: start mysql service with service command
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+  command: service mysql start
+
+- name: start mysql service with systemctl command
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 7
+  command: systemctl start mysql
+
+- name: set root password on centos
+  when: ansible_os_family == "RedHat"
+  shell: |
+    init_pass=$(grep "temporary password" /var/log/mysqld.log | awk '{print $NF}' | tail -1)
+    mysql --connect-expired-password -uroot --password="$init_pass" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_password }}';"
+    cp ./templates/my_57.j2 /root/.my.cnf
+
+- name: copy .my.cnf with credentials on centos
+  when: ansible_os_family == "RedHat"
+  template: src=./templates/my_57.j2
+    dest=/root/.my.cnf
+    mode=0640 owner=root group=root
+
+- name: add mysql instance for monitoring
+  when: ansible_os_family == "RedHat"
+  command: >-
+    pmm-admin add mysql {{ port_flag if port_flag is defined else '' }}
+    --password={{ mysql_password }} --service-name={{ mysql_service_name }} --query-source=perfschema 
+    {{ '' if agent_password is not defined or '/agent_id/' in agent_password else '--agent-password=%s' | format(agent_password) }}
+
+- name: add mysql instance for monitoring via socket
+  when: ansible_os_family != "RedHat"
+  command: >-
+    pmm-admin add mysql {{ port_flag if port_flag is defined else '' }}
+    --socket=/var/run/mysqld/mysqld.sock --service-name={{ mysql_service_name }} --query-source=perfschema
+    {{ '' if agent_password is not defined or '/agent_id/' in agent_password else '--agent-password=%s' | format(agent_password) }}
+
+- name: "Validate pmm-admin list output contains 'MySQL'"
+  include_tasks: ./verify_pmm-admin_list_contains.yml
+  vars:
+    expected: "MySQL"
+
+- name: "Wait for 'mysqld_exporter' is Running"
+  include_tasks: ./wait_exporter_is_running.yml
+  vars:
+    process_name: "mysqld_exporter"
+
+- name: "Wait for 'mysql_perfschema_agent' is Running"
+  include_tasks: ./wait_exporter_is_running.yml
+  vars:
+    process_name: "mysql_perfschema_agent"

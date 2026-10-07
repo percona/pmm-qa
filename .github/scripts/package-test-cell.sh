@@ -13,7 +13,7 @@
 #   CLIENT_IMAGE SERVER_IMAGE    pulled beforehand
 #   OS ARCH TEST                 the matrix cell
 #   ATTEMPTS                     attempts in total, 1 meaning no retry
-#   ADMIN_PASSWORD INSTALL_REPO METRICS_MODE PMM_VERSION PS_REPOSITORY
+#   ADMIN_PASSWORD INSTALL_REPO METRICS_MODE PMM_VERSION
 #   TARBALL_AMD64 TARBALL_ARM64
 #
 # Writes attempts.txt with the number of attempts used and, for each failed
@@ -53,6 +53,11 @@ start_client() {
       sleep 1
     done
     echo "systemd never came up"; systemctl list-jobs --no-pager; exit 1' || return 1
+
+  # The playbooks test Percona Server only where it is installed, so an image
+  # built before it was baked in would pass every cell without testing MySQL.
+  sudo podman exec client test -x /usr/sbin/mysqld ||
+    { echo "${CLIENT_IMAGE} has no Percona Server; rebuild it (build_images)"; return 1; }
 
   # The bridge gateway is the runner, where pmm-server publishes its ports.
   gateway=$(sudo podman exec client ip route | awk '/^default/{print $3}')
@@ -128,7 +133,6 @@ run_playbook() {
   # shellcheck disable=SC2016 # expanded by the shell inside the container
   timeout 85m sudo podman exec \
     -e PMM_SERVER_IP="${gateway}:443" \
-    -e PS_REPOSITORY="$PS_REPOSITORY" \
     -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
     -e install_repo="$INSTALL_REPO" \
     -e METRICS_MODE="$METRICS_MODE" \

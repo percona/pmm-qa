@@ -58,6 +58,11 @@ RUN systemctl mask \
         serial-getty@.service \
         console-getty.service
 
+# Percona Server for MySQL, at the version percona-server-versions sets for this
+# OS. Last, so changing a version rebuilds only this layer.
+COPY percona-server-versions install-percona-server.sh /tmp/percona-server/
+RUN bash /tmp/percona-server/install-percona-server.sh && rm -rf /tmp/percona-server
+
 # systemd shuts down cleanly on SIGRTMIN+3 (see systemd.io CONTAINER_INTERFACE).
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

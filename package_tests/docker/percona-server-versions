@@ -1,0 +1,18 @@
+# Percona Server for MySQL that install-percona-server.sh bakes into each
+# package_tests:<os> image. The playbooks test whatever version they find there.
+#
+# version     8.0 or 8.4, the newest release of that series
+# repository  the percona-release channel: release, testing or experimental
+#
+# Every OS in build-package-test-images.yml needs a line; a build for one without
+# fails.
+#
+# os          version  repository
+ol8           8.4      release
+ol9           8.4      release
+ol10          8.4      testing    # no el10 build in release yet
+debian12      8.4      release
+debian13      8.4      release
+ubuntu2204    8.4      release
+ubuntu2404    8.4      release
+ubuntu2604    8.4      release
