@@ -279,12 +279,17 @@ Scenario(
 
 Scenario(
   'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @gssapi-nightly @exporters',
-  async ({ I, pmmInventoryPage, inventoryAPI }) => {
-    I.amOnPage(pmmInventoryPage.url);
-    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
+  async ({
+    I, pmmInventoryPage, inventoryAPI, serverApi,
+  }) => {
+    // HA keeps PMM's own database outside the server, so there is no pmm-server-postgresql service.
+    if (!await serverApi.isHaEnabled()) {
+      I.amOnPage(pmmInventoryPage.url);
+      const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
 
-    await pmmInventoryPage.openAgents(service_id);
-    await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.POSTGRESQL_EXPORTER, 'process_exec_path=/usr/local/percona/pmm/exporters/postgres_exporter');
+      await pmmInventoryPage.openAgents(service_id);
+      await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.POSTGRESQL_EXPORTER, 'process_exec_path=/usr/local/percona/pmm/exporters/postgres_exporter');
+    }
 
     const actAg = await inventoryAPI.apiGetAgents();
     const arr = [];

@@ -5,6 +5,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
@@ -54,6 +55,7 @@ const pmmTest = base.extend<{
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
+  clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
   credentials: Credentials;
   loginPage: LoginPage;
@@ -102,6 +104,7 @@ const pmmTest = base.extend<{
     await use(inventoryApi);
   },
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
+  clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 

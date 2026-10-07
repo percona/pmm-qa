@@ -11,13 +11,18 @@ pmmTest.beforeEach(async ({ grafanaHelper, page, searchDashboardsPage }) => {
 
 pmmTest(
   'PMM-T1091 - Verify PMM Dashboards folders are correct @nightly  @dashboards',
-  async ({ searchDashboardsPage }) => {
+  async ({ api, searchDashboardsPage }) => {
+    // Folders holding PMM's built-in alert rules, see PMM-14956.
+    const alertRuleFolders = (await api.haApi.isEnabled())
+      ? ['PMM High Availability', 'PMM Server']
+      : ['PMM Server'];
+
     await expect
       .poll(async () => (await searchDashboardsPage.elements.rows.allTextContents()).sort(), {
         message: 'The dashboards page must list exactly the folders PMM ships',
         timeout: Timeouts.TEN_SECONDS,
       })
-      .toEqual([...FOLDER_DASHBOARDS.map((folder) => folder.name), 'MySQL'].sort());
+      .toEqual([...FOLDER_DASHBOARDS.map((folder) => folder.name), 'MySQL', ...alertRuleFolders].sort());
   },
 );
 
