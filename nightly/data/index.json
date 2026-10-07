@@ -47443,7 +47443,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T1091 failed on all 10 Nightly E2E lanes: percona/pmm#5730 (PMM-14956) adds the 'PMM Server' alert-rule folder ('PMM High Availability' too in HA), which Grafana lists on the dashboards page; the test now expects them (reproduced on CHAOS, fix 3/3 green).",
+        "link": "https://github.com/percona/pmm-qa/pull/1568",
+        "by": "Investigator routine",
+        "at": "2026-10-07T03:46:57Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -47457,20 +47469,6 @@
         "at": "2026-10-07T03:28:32Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T03:28:32Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T03:28:32Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
