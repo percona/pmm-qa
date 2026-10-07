@@ -201,14 +201,3 @@ jobs:
 
           sudo chown "$(id -u)" digest.txt
           digest=$(cat digest.txt)
-          echo "name=${name}"     >> "$GITHUB_OUTPUT"
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-
-      # Kept out of the registry, where it would land as a sha256-<digest> tag next
-      # to the OS tags. GitHub stores it either way: gh attestation verify
-      # oci://ghcr.io/percona/pmm-qa/package_tests:<os> --owner percona checks it.
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ steps.push.outputs.name }}
-          subject-digest: ${{ steps.push.outputs.digest }}
