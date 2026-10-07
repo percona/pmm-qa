@@ -49840,6 +49840,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1568",
         "by": "Investigator routine",
         "at": "2026-10-07T10:05:14Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T1061 on HA opens a pg_stat_database_conflicts row from PMM's own HA PostgreSQL (pgstatements, no plans) instead of the pgsm service; fix keeps the pdpgsql filter.",
+        "link": "https://github.com/percona/pmm-qa/pull/1565",
+        "by": "Investigator routine",
+        "at": "2026-10-07T10:05:18Z"
       }
     ],
     "claims": [
