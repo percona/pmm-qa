@@ -106,4 +106,16 @@ export default class CliHelper {
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
   };
+
+  /**
+   * Stops and removes a docker container, ignoring one that does not exist.
+   * Stopping first lets PMM Server's PostgreSQL remove its postmaster.pid, which a container
+   * recreated on the same volume would otherwise trip over.
+   *
+   * @param   containerName   name of the container to remove
+   */
+  removeContainer = (containerName: string) => {
+    this.execSilent(`docker stop ${containerName} || true`);
+    this.execSilent(`docker rm -f ${containerName} || true`);
+  };
 }
