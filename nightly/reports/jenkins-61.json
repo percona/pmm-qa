@@ -2370,15 +2370,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1565",
       "by": "Investigator routine",
       "at": "2026-10-07T03:47:16Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-07T03:28:32Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "CLI compat: PSMDB Replica 7.x (3.8.1) setup died on a Docker Hub 502 pulling oraclelinux:9 (external, transient); PXC 8.0 (3.9.0) PMM-T2222 timeout=4 grep found nothing in pmm-agent.log on one lane only; not investigated further, other jobs in the matrix were cancelled by fail-fast.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-07T03:47:20Z"
     }
-  ]
+  ],
+  "claims": []
 }
