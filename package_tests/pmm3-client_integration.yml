@@ -80,7 +80,6 @@
   - set_fact:
       mysql_service_name: "mysql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
       mysql_socket_service_name: "mysql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
-#      mysql_service_name: "mysql_{{ rnd }}_{{ instance_ip }}"
 
   - name: Start Percona Server and add it to PMM
     when: '"ps-" in enabled_db | join("")'
