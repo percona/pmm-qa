@@ -2328,7 +2328,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly",
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T1091 expected no 'PMM Server' dashboards folder, which PMM now creates for its built-in alert rules (percona/pmm#5730); main fixed by #1568 after these runs started.",
+      "link": "https://github.com/percona/pmm-qa/pull/1568",
+      "by": "Investigator routine",
+      "at": "2026-10-07T10:05:14Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2349,20 +2361,6 @@
       "at": "2026-10-07T09:59:42Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-07T09:59:42Z",
-      "suites": [
-        "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-07T09:59:42Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
