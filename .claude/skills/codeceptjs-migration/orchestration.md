@@ -10,7 +10,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 - Launch each subagent and wait on its completion notification; no long sleeps polling terminal output.
 - Only the parent spawns review gates. A worker that spawns a subagent and waits on it deadlocks: the runner returns its evidence and stops, the parent spawns the reviewer.
-- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `node provisioning/setup.ts --teardown` ran there. Then stop and hand the user the exact command; never reword it to get past the classifier.
+- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `local-pmm.sh down` runs there. Then stop and hand the user the exact command; never reword it to get past the classifier.
 - Each subagent appends its row to the timeline before returning. `.claude/hooks/migration-phase-observe.sh` fires at subagent launch, not completion, so treat it as a reminder; batch `skill-gardener` capture passes to the end of the migration while any subagent is live. Do not rely on the `PostToolUse`/`Skill` hook, which fires as soon as an inline skill loads.
 
 **Gates**
@@ -29,7 +29,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Never edit `e2e_tests/.env`. Pass `PMM_UI_URL` (default `https://127.0.0.1/`) and `ADMIN_PASSWORD` (default `admin`, non-default for UI-login tests, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them.
 - Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
-- Once provisioning starts, any terminal path before the runner is invoked runs `node provisioning/setup.ts --teardown` from the parent. The runner owns cleanup on every path it reaches.
+- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/local-pmm.sh down` from the parent. The runner owns cleanup on every path it reaches.
 - Record the tracker `in-progress` commit SHA in the handoff as the active-row marker.
 - Restore control's worktree to clean after publication (`branch-workflow.md` Tracker completion and cleanup).
 
@@ -46,7 +46,7 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
    Not `--search 'migrate in:title'`, which matches unrelated titles containing the word. Also run `ListAgents`: another session sharing this worktree will stage or revert files under you, so agree paths with it or stop.
 
-3. Node.js older than 22.18, Docker unavailable, or a fixed local resource already present: `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (never created by `provisioning/`; it means a foreign `qa-integration` environment). Treat any match as foreign unless this run created it; never adopt, replace or tear one down.
+3. Node.js older than 22.18, Docker unavailable, or a fixed local resource already present: `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (never created by `local-pmm.sh`; it means a foreign client setup). Treat any match as foreign unless this run created it; never adopt, replace or tear one down.
 
 Then merge `origin/main` into control (`branch-workflow.md` Control branch preflight). If the merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow: confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, merge again. Never `--allow-unrelated-histories`.
 
@@ -90,18 +90,18 @@ When the parent designates a dry run, skip only: tracker status writes, step 5b 
 
 Before launching the writer. The parent confirms the bucket: the tracker's `Setup` is a planned default that is regularly wrong, so derive the real service set from what the source's `Before`/`BeforeSuite` hooks, `Data(...)` rows and shell commands name, correct the tracker row if it differs, and cross-check against the destination Playwright job's `setup_services`, never the retiring CodeceptJS job's (a union grep over-provisions).
 
-Start `provisioning/setup.ts` in the background with the confirmed setup, launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
+Start `bash .claude/scripts/local-pmm.sh up <framework args>` in the background (under WSL on Windows) with the confirmed setup, launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 
 ## 3. Wait for the environment and verify it
 
-After `MIGRATION_READY`, wait for the step 2a provision; never start a second one. The command runs from control's worktree with the tracker's `--database` grammar and no `-h`/`--help` values; no database arguments means server-only:
+After `MIGRATION_READY`, wait for the step 2a provision; never start a second one. The command runs from control's worktree with the tracker's `--database` grammar; no database arguments means server-only:
 
 ```bash
-node provisioning/setup.ts
-node provisioning/setup.ts --database ps=8.4 --database psmdb
+bash .claude/scripts/local-pmm.sh up
+bash .claude/scripts/local-pmm.sh up --database ps=8.4 --database psmdb
 ```
 
-`--db client` does not exist; `node provisioning/setup.ts --help` is the authority. A source with `setupClient: true` (host `pmm-admin`/`pmm-agent`) needs the CI client install, Linux-only, under WSL2 or in CI, and the timeline records which:
+`pmm-framework --help` and `--list-databases` are the authority for arguments. `local-pmm.sh` sets `PREBAKED_REGISTRY=` so no database image is pulled: an image already in Docker is reused, a missing one is built locally (90-160 s extra). To warm the cache before a row, `qa-integration/pmm_qa/pmm-framework/build_images ps=8.4 pdpgsql=17`. Never set `PREBAKED_PULL=always`. A Nomad test needs `PMM_ENABLE_NOMAD=1` in the environment and `--nomad` in the arguments. A source with `setupClient: true` (host `pmm-admin`/`pmm-agent`) needs the CI client install, Linux-only, under WSL2 or in CI, and the timeline records which:
 
 ```bash
 sudo bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password <p> --use_metrics_mode no
@@ -111,17 +111,15 @@ That script registers the node as `PMM_AGENT_SETUP_NODE_NAME=client_container_$(
 
 Inside `wsl -d <distro> -- bash -lc '<string>'` nothing `$`-shaped in that string can be trusted: a variable assigned and read there returns empty, `$?` returns `0` after a command that failed, and `${PIPESTATUS[0]}` returns empty, though `$(...)` does run in WSL. Capture the status outside instead (`out=$(wsl ...); rc=$?`, verified by `exit 7` giving `7`), or redirect to a log and count its markers.
 
-A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial whose URL matches neither `help` nor `home-dashboard`, so the login page objects time out. CI avoids it with `ADMIN_PASSWORD: 'admin-password'` in every runner workflow. `provisioning/setup.ts --admin-password` is not the fix (agent registrations then fail with "Invalid username or password"). Provision with the default, change it with `PUT /graph/api/user/password` `{oldPassword,newPassword,confirmNew}`, verify once with `/v1/users/me`, and hand the new value to every later phase. This is an environment precondition, not a migration defect.
-
-`PMM_DEBUG=1` is the provisioner default; override with `--server-env PMM_DEBUG=0` only when a test needs quieter logs.
+A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial and the login page objects time out. `local-pmm.sh` starts the server with `ADMIN_PASSWORD` (default `admin-password`, as in CI) and passes it to pmm-framework; verify once with `/v1/users/me` and hand the same value to every later phase.
 
 Verify:
 
 ```bash
-PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only   # path relative to e2e_tests/, not the repo root
+PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin-password}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only   # path relative to e2e_tests/, not the repo root
 ```
 
-Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and `provisioning-artifacts/` path on the timeline, and stop.
+Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and the framework log directory it printed on the timeline, and stop.
 
 ## Phase timeline
 

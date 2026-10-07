@@ -1,6 +1,6 @@
 ---
 name: codeceptjs-migration
-description: Migrate one CodeceptJS test to native Playwright, provision its PMM environment locally with provisioning/, verify and execute it, open a PR, and mark the tracker done.
+description: Migrate one CodeceptJS test to native Playwright, provision its PMM environment locally with pmm-framework on local Docker images, verify and execute it, open a PR, and mark the tracker done.
 ---
 
 # CodeceptJS to Playwright Migration
@@ -99,7 +99,7 @@ When a human reviewer names a concrete end state, ship it in this PR; do not off
 
 ## Local provisioning rule
 
-One local Docker environment per migration through `provisioning/setup.ts` (`orchestration.md` steps 2a and 3), started in the background once the bucket is confirmed, reused through both reviews and execution, torn down through the same entry point. No Linode or `qa-integration` provisioners.
+One local Docker environment per migration through `.claude/scripts/local-pmm.sh` (`orchestration.md` steps 2a and 3): pmm-server from `e2e_tests/docker-compose.yml`, databases from `qa-integration/pmm_qa/pmm-framework`. It never pulls a database image: it reuses the `pmm-qa/<engine>:<tag>` image already in Docker and builds a missing one from `images/<engine>/Dockerfile`. Started in the background once the bucket is confirmed, reused through both reviews and execution, torn down with `local-pmm.sh down`. No Linode or chaos provisioners.
 
 ## Editing this skill
 

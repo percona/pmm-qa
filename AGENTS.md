@@ -84,7 +84,7 @@ flowchart LR
 
 `pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
 
-For local Docker runs, including CodeceptJS-to-Playwright migration verification, use [provisioning/setup.ts](provisioning/setup.ts). It owns the local PMM Server lifecycle and accepts the existing `--database` grammar without Ansible or systemd.
+For local Docker runs, including CodeceptJS-to-Playwright migration verification, use [.claude/scripts/local-pmm.sh](.claude/scripts/local-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on local images (built when missing, never pulled).
 
 ## CI / Pipelines
 
@@ -267,8 +267,8 @@ Agents working here capture reusable lessons with the `skill-gardener` skill; le
 | `WORKERS` | `1` | Playwright parallel workers |
 | `HEADLESS` | `true` | Browser visibility (`false` for headed) |
 | `PMM_DEBUG` | `1` in local provisioning | Enable verbose PMM Server logging; override with `--server-env PMM_DEBUG=0` |
-| `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose and `provisioning/`) |
-| `CLIENT_VERSION` | `latest-tarball` in `provisioning/` | PMM Client version or tarball URL for local provisioning |
+| `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose) |
+| `CLIENT_VERSION` | framework default | PMM Client version or tarball URL for pmm-framework |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |
 
 ## Shell and tooling notes (Windows / Git Bash)
@@ -300,7 +300,7 @@ Agents in this repository run under Git Bash on Windows. These bite whatever you
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
 - [e2e_tests/fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) — shared test fixtures
 - [e2e_tests/docker-compose.yml](e2e_tests/docker-compose.yml) — local PMM Server environment
-- [provisioning/setup.ts](provisioning/setup.ts) — Docker-native local PMM Server, database, and client provisioning
+- [.claude/scripts/local-pmm.sh](.claude/scripts/local-pmm.sh) — local PMM Server plus pmm-framework databases on local images
 - [k8s/helm-test.bats](k8s/helm-test.bats) — Helm chart test suite
 - [.github/workflows/runner-e2e-tests-playwright.yml](.github/workflows/runner-e2e-tests-playwright.yml) — reusable Playwright CI runner
 - [.agents/README.md](.agents/README.md) — LLM workflow prompts and MCP config

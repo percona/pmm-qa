@@ -28,7 +28,7 @@ A bare or `sudo` `pmm-admin` command from a `setupClient=true` source keeps its 
 
 ## CodeceptSyntax
 
-For a legacy remote-instance test, derive the database container's DNS name, internal port, username and password from the `provisioning/` engine and topology the test selects; both containers sit on the `pmm-qa` network. Never copy the legacy gateway (`192.168.0.1`), host-published port or credentials, and never guess a container name. If the provisioner creates only a loopback account, create a network-accessible test account through the database container in setup and remove it in teardown.
+For a legacy remote-instance test, derive the database container's DNS name, internal port, username and password from the pmm-framework setup (`images/<engine>/setup.sh`) and topology the test selects; both containers sit on the `pmm-qa` network. Never copy the legacy gateway (`192.168.0.1`), host-published port or credentials, and never guess a container name. If the provisioner creates only a loopback account, create a network-accessible test account through the database container in setup and remove it in teardown.
 
 | CodeceptJS | Playwright |
 | --- | --- |

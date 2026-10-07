@@ -210,7 +210,7 @@ The body is this template and nothing more, 25 lines and 1,500 characters at mos
 Migrates `<source path>` to `<target path>`.
 
 **Scenarios:** PMM-Txxxx, PMM-Tyyyy (N rows) - tags `@a @b` preserved.
-**Setup:** `<setup_services>`; local Docker via provisioning/.
+**Setup:** `<setup_services>`; local Docker via pmm-framework (`.claude/scripts/local-pmm.sh`).
 **Coverage:** <one line: which job/tag selects them now, e.g. "appended @x to nightly Playwright matrix; FB job `settings` added">.
 **Retired:** `<source>_test.js` -> `_migrated.js`; <job deleted, if any>.
 **Deviations:** <one line per deliberate change from the source, or "none">.

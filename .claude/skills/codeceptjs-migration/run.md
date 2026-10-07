@@ -4,7 +4,7 @@ What each worker phase does and what it returns. The parent's steps 1, 2a and 3,
 
 Every phase edits control's worktree and commits nothing there; only the parent commits on control, and only the tracker. Publication (step 7) moves the work to a branch cut from `origin/main` in an isolated worktree.
 
-Environment contract: reuse the prepared local PMM, never recreate or clean it, pass the parent's `PMM_UI_URL` and `ADMIN_PASSWORD` to every command, never edit `e2e_tests/.env`. Never send a request with a wrong password: Grafana blocks `admin` after 5 failed logins in a rolling 5-minute window, for basic auth and the UI form alike, and every retry re-arms it. Read the password state from `/srv/logs/grafana.log` in the pmm-server container or `provisioning-artifacts/`. `/v1/server/readyz` is unauthenticated and proves nothing about credentials; the oracle is one call to `/v1/users/me` (200 correct, 401 wrong).
+Environment contract: reuse the prepared local PMM, never recreate or clean it, pass the parent's `PMM_UI_URL` and `ADMIN_PASSWORD` to every command, never edit `e2e_tests/.env`. Never send a request with a wrong password: Grafana blocks `admin` after 5 failed logins in a rolling 5-minute window, for basic auth and the UI form alike, and every retry re-arms it. Read the password state from `/srv/logs/grafana.log` in the pmm-server container. `/v1/server/readyz` is unauthenticated and proves nothing about credentials; the oracle is one call to `/v1/users/me` (200 correct, 401 wrong).
 
 Search contract: the Grep tool, an explicit path scope, an explicit `output_mode`.
 
@@ -128,6 +128,6 @@ Do not merge the publish branch into control. `done` means the PR was opened.
 
 ## 8. Cleanup
 
-Run `node provisioning/setup.ts --teardown` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
+Run `bash .claude/scripts/local-pmm.sh down` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
 
 On a terminal path before publication, control's worktree still holds the uncommitted work: say so in the handoff and do not discard it. Teardown is classifier-blocked inside a subagent: when refused, report it and leave the environment for the parent.
