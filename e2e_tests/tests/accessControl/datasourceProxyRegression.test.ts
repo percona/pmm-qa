@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { dataSourceRoutes, editor, viewer } from '@testdata/datasourceProxy';
+import { dataSourceRoutes, editor, ruleGroup, viewer } from '@testdata/datasourceProxy';
 import { accessControlScenarios, dashboardTimeRange, qanUrl } from './accessControl.constants';
 
 const exploreEndpoints = [
@@ -82,29 +82,7 @@ pmmTest(
     await pmmTest.step('An alert rule on the Metrics data source fires', async () => {
       const name = 'pmm-15379-fire';
       const response = await page.request.post(`${apiEndpoints.grafana.ruler}/${folderUid}`, {
-        data: {
-          interval: '30s',
-          name,
-          rules: [
-            {
-              for: '0s',
-              grafana_alert: {
-                condition: 'A',
-                data: [
-                  {
-                    datasourceUid: uid,
-                    model: { expr: 'up{service_name=~".+"}', instant: true, refId: 'A' },
-                    refId: 'A',
-                    relativeTimeRange: { from: 600, to: 0 },
-                  },
-                ],
-                exec_err_state: 'Error',
-                no_data_state: 'NoData',
-                title: name,
-              },
-            },
-          ],
-        },
+        data: ruleGroup(name, uid, 'up{service_name=~".+"}'),
         headers: GrafanaHelper.getAuthHeader(),
       });
 

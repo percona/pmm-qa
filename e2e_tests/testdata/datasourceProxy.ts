@@ -37,3 +37,27 @@ export const dataSourceRoutes = (id: number, uid: string) => ({
 });
 
 export const admin: ProxyUser = { password: process.env.ADMIN_PASSWORD || 'admin', username: 'admin' };
+
+export const ruleGroup = (name: string, datasourceUid: string, expr: string) => ({
+  interval: '30s',
+  name,
+  rules: [
+    {
+      for: '0s',
+      grafana_alert: {
+        condition: 'A',
+        data: [
+          {
+            datasourceUid,
+            model: { expr, instant: true, refId: 'A' },
+            refId: 'A',
+            relativeTimeRange: { from: 600, to: 0 },
+          },
+        ],
+        exec_err_state: 'Error',
+        no_data_state: 'NoData',
+        title: name,
+      },
+    },
+  ],
+});

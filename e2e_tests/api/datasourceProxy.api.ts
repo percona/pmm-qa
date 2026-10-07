@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { GrafanaDatasource } from '@interfaces/grafana';
 
@@ -48,8 +49,8 @@ export default class DatasourceProxyApi {
     const auth = user ? ['-u', `${user.username}:${user.password}`] : [];
     const stdout = execFileSync(
       'curl',
-      ['-sk', '--path-as-is', ...auth, '-w', '\n%{http_code}', `${baseUrl}${path}`],
-      { encoding: 'utf8' },
+      ['-sk', '--max-time', '30', '--path-as-is', ...auth, '-w', '\n%{http_code}', `${baseUrl}${path}`],
+      { encoding: 'utf8', timeout: Timeouts.ONE_MINUTE },
     );
     const lines = stdout.split('\n');
 

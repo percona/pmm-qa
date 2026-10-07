@@ -4,36 +4,13 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { ProxyUserIds } from '@helpers/accessControl.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { admin, editor, fullAccessRoleTitle, noAccessRole } from '@testdata/datasourceProxy';
+import { admin, editor, fullAccessRoleTitle, noAccessRole, ruleGroup } from '@testdata/datasourceProxy';
 
 pmmTest.describe.configure({ mode: 'default' });
 
 let ids: ProxyUserIds;
 let folderUid: string;
 let metricsUid: string;
-const ruleGroup = (name: string, datasourceUid: string) => ({
-  interval: '1m',
-  name,
-  rules: [
-    {
-      for: '1m',
-      grafana_alert: {
-        condition: 'A',
-        data: [
-          {
-            datasourceUid,
-            model: { expr: 'up', instant: true, refId: 'A' },
-            refId: 'A',
-            relativeTimeRange: { from: 600, to: 0 },
-          },
-        ],
-        exec_err_state: 'OK',
-        no_data_state: 'OK',
-        title: name,
-      },
-    },
-  ],
-});
 
 pmmTest.beforeEach(async ({ accessControlHelper, api, grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -56,7 +33,7 @@ pmmTest(
 
       await pmmTest.step(`Create group "${name}"`, async () => {
         const response = await page.request.post(`${apiEndpoints.grafana.ruler}/${folderUid}`, {
-          data: ruleGroup(name, metricsUid),
+          data: ruleGroup(name, metricsUid, 'up'),
           headers: GrafanaHelper.getAuthHeader(),
         });
 
@@ -65,14 +42,14 @@ pmmTest(
 
       await pmmTest.step(`Change the interval of "${name}" in the group editor`, async () => {
         await alertingPage.openRuleGroupEditor(folderUid, name);
-        await alertingPage.builders.evaluationIntervalOption('30s').click();
+        await alertingPage.builders.evaluationIntervalOption('10s').click();
         await alertingPage.buttons.save.click();
 
         await expect(async () => {
           const response = await page.request.get(groupPath, { headers: GrafanaHelper.getAuthHeader() });
 
           expect(response.status()).toEqual(202);
-          expect((await response.json()).interval).toEqual('30s');
+          expect((await response.json()).interval).toEqual('10s');
         }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
       });
 

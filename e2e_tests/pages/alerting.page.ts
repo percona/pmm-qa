@@ -217,6 +217,7 @@ export default class AlertingPage extends BasePage {
     await this.page.goto(
       `graph/alerting/grafana/namespaces/${folderUid}/groups/${encodeURIComponent(group)}/edit`,
     );
+    await expect(this.buttons.save).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
   runQueries = async (): Promise<number> => {
