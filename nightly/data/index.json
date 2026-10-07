@@ -47454,6 +47454,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1568",
         "by": "Investigator routine",
         "at": "2026-10-07T03:46:57Z"
+      },
+      {
+        "suites": [
+          "Other"
+        ],
+        "verdict": "test fix",
+        "summary": "Docker upgrade 3.8.0->3.10.0 grafana-log check caught 'can't read alerting provisioning files', which percona/pmm#5730 documents as expected when Grafana starts before pmm-managed creates the directory; the check now ignores that exact line (reproduced on CHAOS).",
+        "link": "https://github.com/percona/pmm-qa/pull/1568",
+        "by": "Investigator routine",
+        "at": "2026-10-07T03:47:08Z"
       }
     ],
     "claims": [
@@ -47469,13 +47479,6 @@
         "at": "2026-10-07T03:28:32Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T03:28:32Z",
-        "suites": [
-          "Other"
         ]
       },
       {
