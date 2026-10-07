@@ -1,7 +1,7 @@
 # Encapsulates "enabled_db" variable initialization
 
 # Percona Server comes with the test environment rather than the playbook
-# (docker/percona-server-versions sets its version per OS), so it is listed
+# (docker/database-versions sets its version per OS), so it is listed
 # whenever it is installed, as ps-<series>.
 - name: Find the installed Percona Server
   command: /usr/sbin/mysqld --version

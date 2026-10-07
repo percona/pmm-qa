@@ -2,8 +2,8 @@
 # runs the package playbooks in, and publishes them to GHCR as one package,
 # package_tests, tagged by OS: package_tests:ol8, package_tests:debian13, ... Each
 # image is booted and checked before it is pushed, so a broken one never gets a tag.
-# Percona Server comes preinstalled, at the version package_tests/docker/
-# percona-server-versions sets for the OS.
+# The databases package_tests/docker/database-versions lists for each OS come
+# preinstalled.
 #
 # Those OS tags are the only tags. The matrix also calls this when run with
 # build_images, which republishes them from the branch it runs on before testing.
@@ -49,7 +49,7 @@ jobs:
       matrix:
         arch: [amd64, arm64]
         # Keep this list in sync with publish below, pmm3-package-tests-matrix.yml
-        # and package_tests/docker/percona-server-versions.
+        # and package_tests/docker/database-versions.
         # privileged: matches how the test matrix runs each image, so the check here
         # reflects the real thing.
         os:
@@ -66,7 +66,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # The Debian packages' postinst runs mysqld to initialize its data directory,
+      # Percona Server's Debian postinst runs mysqld to initialize its data directory,
       # and the runner's own MySQL AppArmor profile, matched by binary path, would
       # confine it too. The boot check below then starts it unconfined, as the
       # test matrix does.
@@ -114,7 +114,7 @@ jobs:
               sleep 1
             done
 
-            for tool in ip ps git wget sudo gpg2 ansible mysqld; do
+            for tool in ip ps git wget sudo gpg2 ansible; do
               command -v "$tool" >/dev/null || { echo "missing: $tool"; exit 1; }
             done
             ansible --version | head -1'

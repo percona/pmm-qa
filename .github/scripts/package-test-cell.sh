@@ -54,10 +54,11 @@ start_client() {
     done
     echo "systemd never came up"; systemctl list-jobs --no-pager; exit 1' || return 1
 
-  # The playbooks test Percona Server only where it is installed, so an image
-  # built before it was baked in would pass every cell without testing MySQL.
-  sudo podman exec client test -x /usr/sbin/mysqld ||
-    { echo "${CLIENT_IMAGE} has no Percona Server; rebuild it (build_images)"; return 1; }
+  # The playbooks test a database only where it is installed, so an image built
+  # before the databases were baked in would pass every cell without them.
+  echo "databases in the image:"
+  sudo podman exec client cat /etc/package-tests-databases ||
+    { echo "${CLIENT_IMAGE} has no databases; rebuild it (build_images)"; return 1; }
 
   # The bridge gateway is the runner, where pmm-server publishes its ports.
   gateway=$(sudo podman exec client ip route | awk '/^default/{print $3}')

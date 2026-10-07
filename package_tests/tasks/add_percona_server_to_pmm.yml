@@ -1,6 +1,6 @@
 # Starts the preinstalled Percona Server and adds it to PMM. The playbook does not
-# install it: package_tests/docker/install-percona-server.sh bakes it into the
-# client images, at the version docker/percona-server-versions sets for the OS.
+# install it: package_tests/docker/install-databases.sh bakes it into the client
+# images, at the version docker/database-versions sets for the OS.
 #
 # Task adjustments are handled by parent playbook vars:
 #             var "port_flag"      :  to access agent with custom port
