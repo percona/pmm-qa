@@ -4,7 +4,7 @@
 # fails if that database is missing or at another version.
 #
 # database    ps (Percona Server for MySQL) or pg (Percona Distribution for
-#             PostgreSQL). Each needs an install_<name> function in
+#             PostgreSQL). Each needs an install_<name>.sh beside
 #             install-databases.sh.
 # version     the series to install, at its newest release: 8.0 or 8.4 for ps,
 #             14 to 18 for pg

@@ -51,7 +51,7 @@ RUN systemctl mask \
 
 # The databases database-versions lists for this OS, from Percona's repositories.
 # Last, so changing a version rebuilds only this layer.
-COPY database-versions install-databases.sh /tmp/databases/
+COPY database-versions install-databases.sh install_*.sh /tmp/databases/
 RUN bash /tmp/databases/install-databases.sh && rm -rf /tmp/databases
 
 # systemd shuts down cleanly on SIGRTMIN+3 (see systemd.io CONTAINER_INTERFACE).
