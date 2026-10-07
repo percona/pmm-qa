@@ -47464,6 +47464,17 @@
         "link": "https://github.com/percona/pmm-qa/pull/1568",
         "by": "Investigator routine",
         "at": "2026-10-07T03:47:08Z"
+      },
+      {
+        "suites": [
+          "E2E Tests",
+          "UI"
+        ],
+        "verdict": "test fix",
+        "summary": "39 alerting tests fail deleting rule groups PMM now provisions (percona/pmm#5730, 'request affects resources created via provisioning API'); already fixed by open #1555 / #1566. Jenkins @ia lane likely the same cause but unreadable here (Jenkins MCP not authorized).",
+        "link": "https://github.com/percona/pmm-qa/pull/1555",
+        "by": "Investigator routine",
+        "at": "2026-10-07T03:47:12Z"
       }
     ],
     "claims": [
@@ -47472,20 +47483,6 @@
         "at": "2026-10-07T03:28:32Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T03:28:32Z",
-        "suites": [
-          "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T03:28:32Z",
-        "suites": [
-          "UI"
         ]
       }
     ]
