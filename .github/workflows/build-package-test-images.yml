@@ -12,8 +12,6 @@
 name: Build package test images
 
 on:
-  schedule:
-    - cron: '17 2 * * 1' # Mondays, off the hour so we are not queued behind the crowd
   workflow_dispatch:
   push:
     branches: [main]
@@ -200,12 +198,6 @@ jobs:
             echo "push failed, retrying in $((attempt * 20))s"
             sleep "$((attempt * 20))"
           done
-
-          sudo chown "$(id -u)" digest.txt
-          digest=$(cat digest.txt)
-          echo "name=${name}"     >> "$GITHUB_OUTPUT"
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          echo "- \`${name}:${OS}\` \`${digest}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # Kept out of the registry, where it would land as a sha256-<digest> tag next
       # to the OS tags. GitHub stores it either way: gh attestation verify
