@@ -7,6 +7,13 @@
 #
 # The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
 # images, built from package_tests/docker/ by build-package-test-images.yml.
+#
+# Other workflows can call it (workflow_call) with the same inputs. The calling
+# job has to grant contents: read and packages: write, which the images job asks
+# for. A cell that fails on every attempt fails the run, so the calling job's
+# result is the matrix's. Called from another repository, it tests
+# percona/pmm-qa at pmm_qa_ref, so pass the ref that uses: names; build_images
+# does nothing there, as only percona/pmm-qa can publish the images.
 name: PMM package tests matrix
 
 on:
@@ -89,15 +96,68 @@ on:
           from this ref before testing.'
         type: boolean
         default: false
+  # The workflow_dispatch inputs again, with their defaults. There are no choice
+  # lists here: os, arch, test, install_repo and metrics_mode take the values of
+  # the options above.
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: all
+      arch:
+        type: string
+        default: amd64
+      test:
+        type: string
+        default: all
+      pmm_server_image:
+        type: string
+        default: 'perconalab/pmm-server:3-dev-latest'
+      install_repo:
+        type: string
+        default: experimental
+      pmm_version:
+        type: string
+        default: ''
+      metrics_mode:
+        type: string
+        default: auto
+      tarball:
+        type: string
+        default: ''
+      tarball_arm64:
+        type: string
+        default: ''
+      admin_password:
+        type: string
+        default: 'pmm3admin!'
+      attempts:
+        type: number
+        default: 2
+      build_images:
+        type: boolean
+        default: false
+      pmm_qa_ref:
+        description: 'pmm-qa branch, tag or commit to test. Empty means the
+          caller''s own commit when it is in pmm-qa, and main when it is not.'
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
-# A new push to a pull request supersedes its running matrix; dispatched runs
-# each get their own group and are never cancelled.
+# A new push to a pull request supersedes the matrix it started; nothing else is
+# cancelled. A called run sees its caller's github context, pull_request
+# event included, so it is told apart by workflow_ref, and grouped by the caller's
+# run and its inputs, since a caller may call it more than once.
 concurrency:
-  group: pmm3-package-tests-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  group: >-
+    pmm3-package-tests-${{ startsWith(github.workflow_ref, format('{0}/.github/workflows/pmm3-package-tests-matrix.yml@', github.repository))
+    && github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number)
+    || format('{0}-{1}-{2}-{3}-{4}-{5}', github.run_id, inputs.os, inputs.arch, inputs.test, inputs.install_repo, inputs.pmm_server_image) }}
+  cancel-in-progress: >-
+    ${{ startsWith(github.workflow_ref, format('{0}/.github/workflows/pmm3-package-tests-matrix.yml@', github.repository))
+    && github.event_name == 'pull_request' }}
 
 env:
   # build-package-test-images.yml publishes package_tests:<os> there.
@@ -110,6 +170,10 @@ env:
   TARBALL_AMD64: ${{ inputs.tarball }}
   TARBALL_ARM64: ${{ inputs.tarball_arm64 }}
   ATTEMPTS: ${{ inputs.attempts || '2' }}
+  # A caller in another repository makes github.repository its own. An empty ref
+  # leaves checkout on the commit the run is for.
+  PMM_QA_REPO: ${{ endsWith(github.repository, '/pmm-qa') && github.repository || 'percona/pmm-qa' }}
+  PMM_QA_REF: ${{ inputs.pmm_qa_ref || (!endsWith(github.repository, '/pmm-qa') && 'main' || '') }}
 
 jobs:
   # Resolved once so every cell tests the same pmm-server build and asserts the
@@ -122,7 +186,20 @@ jobs:
     outputs:
       server_image: ${{ steps.server.outputs.image }}
       pmm_version: ${{ steps.version.outputs.version }}
+      pmm_qa_sha: ${{ steps.qa.outputs.sha }}
     steps:
+      # A branch such as main could move on before the last cell checks it out.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.PMM_QA_REPO }}
+          ref: ${{ env.PMM_QA_REF }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Pin pmm-qa to a commit
+        id: qa
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       # skopeo's docker:// transport expands a short name to docker.io itself, and
       # the fully qualified name it prints spares podman its short-name lookup.
       - name: Pin pmm-server to a digest
@@ -172,7 +249,8 @@ jobs:
           # unquoted and would otherwise execute a value containing $(...).
           RESOLVED: ${{ steps.server.outputs.image }}
           VERSION: ${{ steps.version.outputs.version }}
-          REF: ${{ github.ref_name }}@${{ github.sha }}
+          REF: ${{ env.PMM_QA_REF || github.ref_name }}
+          QA_SHA: ${{ steps.qa.outputs.sha }}
           BUILD: ${{ inputs.build_images || false }}
           ARCHES: ${{ inputs.arch || 'amd64' }}
         run: |
@@ -188,7 +266,7 @@ jobs:
           | metrics_mode | \`${METRICS_MODE}\` |
           | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
           | tarball (arm64) | \`${TARBALL_ARM64:-none}\` |
-          | pmm-qa | \`${REF}\` |
+          | pmm-qa | \`${PMM_QA_REPO}@${REF}\` (\`${QA_SHA}\`) |
           | arch | \`${ARCHES}\` |
           | build_images | \`${BUILD}\` |
           EOF
@@ -236,7 +314,8 @@ jobs:
           || format('["{0}"]', inputs.test)) }}
     steps:
       # So the pull works whether or not the packages have been made public: they
-      # are linked to this repository, so its GITHUB_TOKEN can read them.
+      # are linked to this repository, so its GITHUB_TOKEN can read them. A caller
+      # in another repository brings its own token and needs them public.
       - name: Log in to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -283,10 +362,12 @@ jobs:
           fi
 
       # Checked out on the runner and copied in, rather than cloned inside the
-      # container, so a run tests its own commit -- the pull request's merge commit,
-      # or the branch it was dispatched from -- instead of main.
+      # container, so a run tests the commit prepare pinned: a pull request's merge
+      # commit, the dispatched branch, the caller's commit or pmm_qa_ref.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: ${{ env.PMM_QA_REPO }}
+          ref: ${{ needs.prepare.outputs.pmm_qa_sha }}
           path: pmm-qa
           persist-credentials: false
 
