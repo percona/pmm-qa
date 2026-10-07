@@ -164,9 +164,12 @@ collect_diagnostics() {
   tail -80 "diagnostics-$1.log"
 }
 
+# --ignore: without it, podman removes neither container when one was never
+# created -- an attempt that failed before PMM Server started -- and still exits
+# 0, so the next attempt finds the old client in its way.
 teardown() {
-  sudo podman rm -f client pmm-server >/dev/null 2>&1
-  sudo podman volume rm -f pmm-data >/dev/null 2>&1
+  sudo podman rm -f --ignore client pmm-server >/dev/null
+  sudo podman volume rm -f pmm-data >/dev/null
   return 0
 }
 

@@ -426,7 +426,7 @@ jobs:
       - name: Tear down
         if: always()
         run: |
-          sudo podman rm -f client pmm-server || true
+          sudo podman rm -f --ignore client pmm-server || true
           sudo podman volume rm -f pmm-data || true
 
   report:
