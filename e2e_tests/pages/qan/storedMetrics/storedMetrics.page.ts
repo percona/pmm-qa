@@ -149,6 +149,9 @@ export default class StoredMetricsPage extends BasePage {
 
   getColumnValues = async (columnNumber: number) =>
     (await this.builders.columnValues(columnNumber).allTextContents()).map((text) => {
+      // The API omits a zero metric and the panel renders it as N/A.
+      if (text.trim() === 'N/A') return 0;
+
       const [value, unit = ''] = text.replace('<', '').trim().split(' ');
       const magnitudes: Record<string, number> = { b: 1e9, k: 1e3, m: 1e6 };
       const timeUnits: Record<string, number> = { min: 60, ms: 1e-3, s: 1, µs: 1e-6 };
