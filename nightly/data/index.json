@@ -47475,6 +47475,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1555",
         "by": "Investigator routine",
         "at": "2026-10-07T03:47:12Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "test fix",
+        "summary": "HA PMM-T1061 (No plan found) repeats the Oct 5/6 HA failure; fixed by open #1565.",
+        "link": "https://github.com/percona/pmm-qa/pull/1565",
+        "by": "Investigator routine",
+        "at": "2026-10-07T03:47:16Z"
       }
     ],
     "claims": [
