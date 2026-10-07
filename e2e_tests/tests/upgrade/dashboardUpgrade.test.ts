@@ -51,6 +51,11 @@ pmmTest.describe('PMM upgrade tests for dashboards', () => {
       'logger=unifiedstorage-migrator',
       'logger=storage.unified.migrat',
     ];
+    // Grafana can start before pmm-managed creates the alert rule directory; it logs this and
+    // reads the rules on the restart pmm-managed then does, see PMM-14956.
+    const expectedErrors = [
+      `can't read alerting provisioning files from directory" path=/usr/share/grafana/conf/provisioning/alerting error="open /usr/share/grafana/conf/provisioning/alerting: no such file or directory"`,
+    ];
     // /srv outlives the image swap, so grafana.log still holds the old server's lines, down to
     // the provisioning walk `docker stop` cancels. Keep what the running container logged, plus
     // any line without a timestamp, so a log-format change cannot silence this check.
@@ -74,7 +79,8 @@ pmmTest.describe('PMM upgrade tests for dashboards', () => {
 
         return Number.isNaN(loggedAt) || loggedAt >= upgradedAt;
       })
-      .filter((line) => meaningfulErrorSignatures.some((signature) => line.includes(signature)));
+      .filter((line) => meaningfulErrorSignatures.some((signature) => line.includes(signature)))
+      .filter((line) => !expectedErrors.some((expected) => line.includes(expected)));
 
     expect(
       meaningfulErrors,
