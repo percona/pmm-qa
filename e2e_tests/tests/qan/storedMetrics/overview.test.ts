@@ -47,6 +47,8 @@ pmmTest(
       timeout: Timeouts.THIRTY_SECONDS,
     });
 
+    await expect(qanStoredMetrics.elements.queryTooltipId).toHaveText(/:\s*\S+/);
+
     const queryId = (await qanStoredMetrics.elements.queryTooltipId.textContent())?.split(':')[1].trim();
 
     await qanStoredMetrics.inputs.addColumn.hover();
@@ -68,6 +70,8 @@ pmmTest(
 
     await qanStoredMetrics.elements.planInfoIcon.hover();
     await expect(qanStoredMetrics.elements.planTooltip).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+
+    await expect(qanStoredMetrics.elements.planTooltip).toHaveText(/:\s*\S+/);
 
     const planId = (await qanStoredMetrics.elements.planTooltip.textContent())?.split(':')[1].trim();
 
@@ -372,6 +376,8 @@ pmmTest(
       timeout: Timeouts.THIRTY_SECONDS,
     });
 
+    await expect(qanStoredMetrics.elements.queryTooltipId).toHaveText(/:\s*\S+/);
+
     const queryId = ((await qanStoredMetrics.elements.queryTooltipId.textContent()) ?? '')
       .split(':')[1]
       .trim();
@@ -385,6 +391,9 @@ pmmTest(
       qanStoredMetrics.builders.queryValue(1, 2),
       `The search by Query Id ${queryId} should return the query it was taken from`,
     ).toHaveText(queryCount);
+    await qanStoredMetrics.inputs.addColumn.hover();
+    await qanStoredMetrics.builders.queryInfoIcon(1).hover();
+    await expect(qanStoredMetrics.elements.queryTooltipId).toContainText(queryId);
   },
 );
 
