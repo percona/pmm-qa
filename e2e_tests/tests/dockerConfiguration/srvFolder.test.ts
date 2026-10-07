@@ -42,7 +42,7 @@ for (const configuration of srvConfigurations) {
       async ({ api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
         cliHelper.execSilent(configuration.command);
         console.log(cliHelper.execSilent('docker logs pmm-server-srv').stdout);
-        await api.serverApi.waitForReady();
+        await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
 
         const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
