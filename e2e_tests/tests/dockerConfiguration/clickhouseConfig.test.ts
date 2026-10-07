@@ -170,7 +170,7 @@ for (const configuration of configurations) {
 pmmTest.describe('PMM Tests to verify clickhouse low-memory configuration lifecycle', () => {
   const containerName = 'pmm-server-low-memory-clickhouse-lifecycle';
   const volumeName = 'pmm-server-low-memory-clickhouse-srv';
-  const port = 450;
+  const port = 452;
   const baseUrl = `https://127.0.0.1:${port}/`;
   const runCommand = (env: string) =>
     `docker run --detach --network="pmm-qa" ${env} -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_ENABLE_TELEMETRY=0 --publish ${port}:8443 --volume ${volumeName}:/srv --name ${containerName} ${dockerVersion}`;
@@ -257,7 +257,7 @@ pmmTest.describe('PMM Tests to verify invalid clickhouse configuration', () => {
 
 pmmTest.describe('PMM Tests to verify deprecated clickhouse configuration switch script', () => {
   const containerName = 'pmm-server-switch-script-clickhouse-config';
-  const port = 451;
+  const port = 453;
 
   pmmTest.use({ baseURL: `https://127.0.0.1:${port}/` });
 
