@@ -49870,16 +49870,19 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-07T10:05:27Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "not reproduced",
+        "summary": "The CLI Integration jobs show cancelled, not failed: the Nightly Test Suite run was cancelled at 08:53 with no failed test in them.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-07T10:05:32Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-07T09:59:42Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-10-07T09:59:42Z",
