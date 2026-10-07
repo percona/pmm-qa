@@ -383,9 +383,6 @@ jobs:
           ARCH: ${{ matrix.arch }}
           TEST: ${{ matrix.test }}
           PMM_VERSION: ${{ needs.prepare.outputs.pmm_version }}
-          # Percona Server has no el10 release build yet. Empty elsewhere,
-          # which leaves the playbook on its own default.
-          PS_REPOSITORY: ${{ matrix.os == 'ol10' && 'testing' || '' }}
         run: bash pmm-qa/.github/scripts/package-test-cell.sh
 
       - name: Record the result

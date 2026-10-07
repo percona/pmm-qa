@@ -105,19 +105,10 @@
 ### start PS
   - set_fact:
       mysql_service_name: "mysql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
-#      mysql_service_name: "mysql_{{ rnd }}_{{ instance_ip }}"
 
-  - name: Install and start Percona Server 5.7
-    when: '"ps-5.7" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_57.yml
-
-  - name: Install and start Percona Server 8.0
-    when: '"ps-8.0" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_80.yml
-
-  - name: Install and start Percona Server 8.4
-    when: '"ps-8.4" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_84.yml
+  - name: Start Percona Server and add it to PMM
+    when: '"ps-" in enabled_db | join("")'
+    include_tasks: ./tasks/add_percona_server_to_pmm.yml
 
   - name: Verify if Metric Endpoint with Auth works for Mysqld Exporter
     when: '"ps-" in enabled_db | join("")'
