@@ -81,7 +81,7 @@ pmmTest('PMM-T126 - Verify user is able to Reset All filters @qan', async ({ qan
   await expect(qanStoredMetrics.buttons.resetAll).toBeDisabled();
   await expect
     .poll(() => qanStoredMetrics.getQueryCount(), {
-      message: "Query count wasn't expected to change",
+      message: 'Query count was expected to return to at least its value before filtering',
       timeout: Timeouts.TWO_MINUTES,
     })
     .toBeGreaterThanOrEqual(countBefore);
