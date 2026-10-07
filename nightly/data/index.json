@@ -52229,6 +52229,18 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "test fix",
+        "summary": "Prebaked PS/MySQL images had no apt for the AMI runner's client upgrade; images fixed and republished, ami 3.9.1 passes (pmm3-upgrade-ami-test-runner #1285)",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15255",
+        "by": "kiranvuyurru",
+        "at": "2026-10-07T20:29:20Z"
+      }
+    ],
+    "claims": []
   }
 ]
