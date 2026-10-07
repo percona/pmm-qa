@@ -20,8 +20,10 @@ export default class DatasourceProxyApi {
 
   static countResults = (body: string): number => {
     const { data } = JSON.parse(body) as { data?: unknown[] | { result?: unknown[] } };
+    const results = Array.isArray(data) ? data : data?.result;
+    if (!Array.isArray(results)) throw new Error(`No data or data.result in: ${body}`);
 
-    return (Array.isArray(data) ? data : (data?.result ?? [])).length;
+    return results.length;
   };
 
   createDataSource = async (name: string, url: string): Promise<GrafanaDatasource> => {

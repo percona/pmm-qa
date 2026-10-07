@@ -48,12 +48,14 @@ pmmTest(
     try {
       await accessControlHelper.assignRole(ids.viewer, noAccessRole.title);
 
-      await pmmTest.step('Admin gets every series by UID', async () => {
-        const { body, status } = await proxyApi.get(`${routes.proxyByUid}${queryUp}`, admin);
+      for (const route of [routes.proxyByUid, copyRoute]) {
+        await pmmTest.step(`Admin gets every series through ${route}`, async () => {
+          const { body, status } = await proxyApi.get(`${route}${queryUp}`, admin);
 
-        expect(status).toEqual(200);
-        expect(DatasourceProxyApi.countResults(body)).toBeGreaterThan(0);
-      });
+          expect(status).toEqual(200);
+          expect(DatasourceProxyApi.countResults(body)).toBeGreaterThan(0);
+        });
+      }
 
       for (const route of [
         routes.proxyById,
