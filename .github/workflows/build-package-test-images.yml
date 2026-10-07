@@ -199,6 +199,11 @@ jobs:
             sleep "$((attempt * 20))"
           done
 
+          sudo chown "$(id -u)" digest.txt
+          digest=$(cat digest.txt)
+          echo "name=${name}"     >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
       # Kept out of the registry, where it would land as a sha256-<digest> tag next
       # to the OS tags. GitHub stores it either way: gh attestation verify
       # oci://ghcr.io/percona/pmm-qa/package_tests:<os> --owner percona checks it.
