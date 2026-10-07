@@ -53,4 +53,7 @@ RUN set -eux; \
     xtrabackup --version; \
     sysbench --version
 
+# The AMI upgrade runner calls `apt install -y pmm-client`; apt is this image's installer.
+RUN ln -s "$(command -v dnf || command -v microdnf)" /usr/local/bin/apt
+
 USER mysql
