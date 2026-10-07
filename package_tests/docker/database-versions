@@ -28,6 +28,6 @@ ol9           pg        18       release
 ol10          pg        18       release
 debian12      pg        18       release
 debian13      pg        18       release
-ubuntu2204    pg        17       release
-ubuntu2404    pg        17       release
+ubuntu2204    pg        18       release
+ubuntu2404    pg        18       release
 ubuntu2604    pg        18       release
