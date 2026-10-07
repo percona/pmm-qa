@@ -437,6 +437,8 @@ jobs:
           echo "${{ matrix.os }}-${{ matrix.arch }}|${{ matrix.test }}|${RESULT}" \
             > "result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt"
 
+      # overwrite: a re-run of a failed cell replaces its first attempt's result,
+      # which upload-artifact otherwise refuses to do, failing the re-run.
       - name: Upload the result
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -444,6 +446,7 @@ jobs:
           name: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}
           path: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt
           retention-days: 7
+          overwrite: true
 
       # ansible -vvv is far too big to read in the browser and is exactly what you
       # want when something fails.
@@ -458,6 +461,7 @@ jobs:
             pmm-summary.zip
           retention-days: 14
           if-no-files-found: warn
+          overwrite: true
 
       - name: Tear down
         if: always()
