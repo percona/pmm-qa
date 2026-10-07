@@ -4,6 +4,9 @@
 # and records them in /etc/package-tests-databases. Each database has an
 # install_<name> function below.
 #
+# With --list it installs nothing and prints them as <database>-<version>, the
+# form the playbooks' enabled_db uses.
+#
 # Percona's repositories are removed again afterwards, so the playbooks start
 # from the same repository state as before.
 set -euo pipefail
@@ -16,6 +19,14 @@ case "$ID" in
 esac
 
 databases=$(awk -v os="$os" '$1 == os { print $2, $3, $4 }' "$(dirname "$0")/database-versions")
+
+# An OS with no lines prints nothing: a host the images do not cover has no
+# databases to expect.
+if [ "${1:-}" = --list ]; then
+  [ -z "$databases" ] || awk '{ print $1 "-" $2 }' <<< "$databases"
+  exit 0
+fi
+
 if [ -z "$databases" ]; then
   echo "database-versions lists no databases for ${os}" >&2
   exit 1

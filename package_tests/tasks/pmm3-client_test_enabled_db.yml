@@ -1,21 +1,18 @@
 # Encapsulates "enabled_db" variable initialization
 
-# Percona Server comes with the test environment rather than the playbook
-# (docker/database-versions sets its version per OS), so it is listed
-# whenever it is installed, as ps-<series>.
-- name: Find the installed Percona Server
-  command: /usr/sbin/mysqld --version
-  register: mysqld_version
+# docker/database-versions is the source of truth for the databases the test
+# environment provides. Each line for this OS becomes <database>-<version>, such
+# as ps-8.4, and the playbook then expects that database to be installed.
+- name: Read the databases docker/database-versions lists for this OS
+  command: bash {{ playbook_dir }}/docker/install-databases.sh --list
+  register: database_versions
   changed_when: false
-  failed_when: false
 
 - name: Set Databases list
   set_fact:
-    enabled_db: "{{ db_list|select|list }}"
+    enabled_db: "{{ (database_versions.stdout_lines + db_list) | select | list }}"
   vars:
     db_list:
-## Percona Server for MySQL
-      - "{{ ('ps-' ~ (mysqld_version.stdout | regex_search('\\d+\\.\\d+'))) if mysqld_version.rc == 0 else '' }}"
 # Debian
 ## Percona Server for MongoDB
       - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 11) | ternary('psmdb-70','') }}"

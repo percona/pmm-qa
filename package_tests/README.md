@@ -25,7 +25,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 - Install Ansible and make sure `ansible-playbook` is available.
 - Make sure the target host is reachable through your Ansible inventory.
 - Make sure the target PMM Server is available.
-- Install Percona Server for MySQL on the target if the run should cover MySQL: the playbooks start it and add it to PMM, and skip MySQL where it is not installed. `docker/install-databases.sh` installs what `docker/database-versions` lists for the OS, the way the CI images get it.
+- Install the databases `docker/database-versions` lists for the target's OS: the playbooks expect them, start them and add them to PMM, and fail where one is missing. `docker/install-databases.sh` installs them the way the CI images get them; an OS the file does not list expects none.
 - Set environment variables required by the selected playbook.
 
 Create or export variables before running a playbook:
