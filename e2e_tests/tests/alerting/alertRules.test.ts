@@ -6,7 +6,7 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-const noRulesFound = "You haven't created any rules yet";
+const builtInRuleGroup = 'PMM Managed';
 const testRule = {
   group: '10s',
   interval: '10s',
@@ -55,18 +55,12 @@ pmmTest.afterAll(async ({ browser }) => {
 });
 
 pmmTest(
-  'PMM-T1384 - Verify empty alert rules list @fb-alerting @grafana-pr',
+  'PMM-T1384 - Verify alert rules list shows only built-in PMM rules @fb-alerting @grafana-pr',
   async ({ alertingPage, page }) => {
     await page.goto(alertingPage.urls.alertRules);
     await expect(alertingPage.buttons.newAlertRule).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await expect(alertingPage.elements.pageContent).toContainText(noRulesFound, {
-      timeout: Timeouts.TEN_SECONDS,
-    });
-    await expect(alertingPage.elements.learnMore).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
-    await expect(alertingPage.elements.learnMore).toHaveAttribute(
-      'href',
-      'https://grafana.com/docs/grafana/latest/alerting/set-up/provision-alerting-resources/',
-    );
+    await expect(alertingPage.elements.ruleGroupHeaders).toHaveCount(1, { timeout: Timeouts.TEN_SECONDS });
+    await expect(alertingPage.builders.ruleGroupHeader(builtInRuleGroup)).toContainText('Provisioned');
   },
 );
 
@@ -103,7 +97,7 @@ pmmTest(
   async ({ alertingPage, grafanaHelper, page }) => {
     await grafanaHelper.authorize(viewer.username, viewer.password);
     await page.goto(alertingPage.urls.alertRules);
-    await expect(alertingPage.elements.pageContent).toContainText(noRulesFound, {
+    await expect(alertingPage.builders.ruleGroupHeader(builtInRuleGroup)).toBeVisible({
       timeout: Timeouts.ONE_MINUTE,
     });
     await expect(alertingPage.buttons.newAlertRule).toBeHidden();
@@ -259,9 +253,6 @@ pmmTest(
       timeout: Timeouts.THIRTY_SECONDS,
     });
     await expect(alertingPage.builders.ruleGroupToggle('OS')).toBeHidden();
-    await expect(alertingPage.elements.pageContent).toContainText(noRulesFound, {
-      timeout: Timeouts.ONE_MINUTE,
-    });
   },
 );
 
