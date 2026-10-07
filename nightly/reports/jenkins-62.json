@@ -2359,6 +2359,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-07T10:05:23Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "PMM-T2227 tarball upgrade hit its 120s test timeout on CLI Generic 3.7.1 and 3.8.0 before the node registered (passing shards take ~25s; it passed in all 4 shards at 00:23); stall inside the test's own install/download, no VM repro run.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-07T10:05:27Z"
     }
   ],
   "claims": [
@@ -2367,13 +2377,6 @@
       "at": "2026-10-07T09:59:42Z",
       "suites": [
         "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-07T09:59:42Z",
-      "suites": [
-        "CLI Integration Compatibility"
       ]
     },
     {
