@@ -77,6 +77,11 @@ pmmTest(
 
     await pmmTest.step('Open the Plan tab of the pg_stat_database query', async () => {
       await qanStoredMetrics.buttons.resetAll.click();
+      await qanStoredMetrics.selectFilter(
+        'pdpgsql_pmm',
+        qanStoredMetrics.builders.filterCheckboxContaining('pdpgsql_pmm'),
+      );
+      await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
       await qanStoredMetrics.searchByValue('SELECT * FROM pg_stat_database');
       await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
       await qanStoredMetrics.builders.queryRow(1).click({ timeout: Timeouts.ONE_MINUTE });
