@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wait for the local PMM environment created by provisioning/setup.ts, then run one
+# Wait for the local PMM environment created by .claude/scripts/local-pmm.sh, then run one
 # Playwright test file or an anchored grep-filtered subset. This script does not
 # create or tear down that environment.
 # Usage:
@@ -126,7 +126,7 @@ wait_readyz() {
 
 if ! readyz_once; then
   wait_readyz || {
-    echo "ERROR: could not reach the local PMM environment at ${PMM_UI_URL}. Provision it first with node provisioning/setup.ts." >&2
+    echo "ERROR: could not reach the local PMM environment at ${PMM_UI_URL}. Provision it first with bash .claude/scripts/local-pmm.sh up." >&2
     exit 2
   }
 fi
