@@ -66,13 +66,7 @@ pmmTest.skip(
     );
     await dashboard.waitForDashboardToLoad();
 
-    await pmmTest.step(`Apply the ${timeZone} time zone`, async () => {
-      await leftNavigation.elements.timePickerOpenButton.click();
-      await leftNavigation.elements.changeTimeSettingsButton.click();
-      await leftNavigation.inputs.timeZonePicker.fill(timeZone);
-      await leftNavigation.builders.timeZoneOption(timeZone).click();
-      await leftNavigation.elements.timePickerOpenButton.click();
-    });
+    await leftNavigation.selectTimeZone(timeZone);
 
     await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
       await leftNavigation.selectMenuItem('inventory');
