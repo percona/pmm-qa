@@ -1,5 +1,5 @@
+import { execFileSync } from 'node:child_process';
 import { APIRequestContext, APIResponse, expect } from '@playwright/test';
-import shell from 'shelljs';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { GrafanaDatasource } from '@interfaces/grafana';
@@ -18,21 +18,9 @@ export default class DatasourceProxyApi {
   constructor(private request: APIRequestContext) {}
 
   static countResults = (body: string): number => {
-    let data: unknown;
+    const { data } = JSON.parse(body) as { data?: unknown[] | { result?: unknown[] } };
 
-    try {
-      ({ data } = JSON.parse(body) as { data?: unknown });
-    } catch {
-      data = undefined;
-    }
-
-    if (Array.isArray(data)) return data.length;
-
-    const { result } = (data ?? {}) as { result?: unknown[] };
-
-    if (Array.isArray(result)) return result.length;
-
-    return body.split('\n').filter((line) => line.trim()).length;
+    return (Array.isArray(data) ? data : (data?.result ?? [])).length;
   };
 
   createDataSource = async (name: string, url: string): Promise<GrafanaDatasource> => {
@@ -57,10 +45,12 @@ export default class DatasourceProxyApi {
 
   getRaw = (path: string, user?: ProxyUser): ProxyResponse => {
     const baseUrl = (process.env.PMM_UI_URL || 'http://localhost/').replace(/\/$/, '');
-    const auth = user ? `-u '${user.username}:${user.password}'` : '';
-    const { stdout } = shell.exec(`curl -sk --path-as-is ${auth} -w '\\n%{http_code}' '${baseUrl}${path}'`, {
-      silent: true,
-    });
+    const auth = user ? ['-u', `${user.username}:${user.password}`] : [];
+    const stdout = execFileSync(
+      'curl',
+      ['-sk', '--path-as-is', ...auth, '-w', '\n%{http_code}', `${baseUrl}${path}`],
+      { encoding: 'utf8' },
+    );
     const lines = stdout.split('\n');
 
     return { body: lines.slice(0, -1).join('\n'), status: Number(lines.at(-1)) };

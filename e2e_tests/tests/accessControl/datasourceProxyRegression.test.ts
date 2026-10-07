@@ -3,10 +3,9 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { DASHBOARDS } from '@testdata/dashboards.registry';
 import { dataSourceRoutes, editor, viewer } from '@testdata/datasourceProxy';
+import { accessControlScenarios, dashboardTimeRange, qanUrl } from './accessControl.constants';
 
-const sweptFolders = ['Insight', 'MySQL', 'MongoDB', 'PostgreSQL', 'OS', 'Query Analytics'];
 const exploreEndpoints = [
   'api/v1/label/__name__/values',
   'api/v1/labels',
@@ -30,9 +29,16 @@ pmmTest.afterEach(async ({ accessControlHelper, api }) => {
 
 pmmTest(
   'PMM-T2350 - Verify dashboards, variables, Explore, QAN and alert rules keep working for every database type @LBAC',
-  async ({ accessControlHelper, api, dashboard, grafanaHelper, page }) => {
-    pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
-
+  async ({
+    accessControlHelper,
+    api,
+    dashboard,
+    grafanaHelper,
+    leftNavigation,
+    page,
+    qanStoredMetrics,
+    urlHelper,
+  }) => {
     const { id, uid } = await accessControlHelper.getMetricsDataSource();
     const routes = dataSourceRoutes(id, uid);
     const failed: string[] = [];
@@ -49,10 +55,15 @@ pmmTest(
 
     await grafanaHelper.signInAs(viewer.username, viewer.password);
 
-    for (const entry of DASHBOARDS.filter((d) => sweptFolders.includes(d.folder))) {
-      await pmmTest.step(`Viewer opens ${entry.url}`, async () => {
-        await page.goto(`pmm-ui/${entry.url}?from=now-1h&to=now`);
-        await dashboard.loadAllPanels();
+    await pmmTest.step('Viewer sees data in QAN', async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(qanUrl, { from: dashboardTimeRange }));
+      await qanStoredMetrics.verifyQanStoredMetricsHaveData();
+    });
+
+    for (const { allowedPanels, serviceType } of accessControlScenarios) {
+      await pmmTest.step(`Viewer sees data on the ${serviceType} overview`, async () => {
+        await leftNavigation.selectMenuItem(serviceType);
+        await dashboard.verifyPanelValues(allowedPanels);
       });
     }
 
