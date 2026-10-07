@@ -34,7 +34,8 @@ Assertions auto-wait and retry; manual predicates do not.
 - `toBeHidden()` when absence is meant; `not.toBeVisible()` only when the distinction matters.
 - Every non-locator assertion carries a message: `expect(value, 'why this must hold').toBe(...)`. Bare `expect` is correct for API status, CLI stdout and parsed files.
 - `waitForTimeout` is an ESLint error. `locator.waitFor({ state })` only as a genuine precondition, never in place of an assertion.
-- New helpers and POM methods return values and do not assert; the existing POM `verify*` methods are reused, not extended. A POM method waits only for what its own action needs.
+- Helpers return values and do not assert; a POM method asserts only as a `verify*` named step (`SKILL.md` A test body reads as named steps), and existing `verify*` methods are reused, not extended. A POM method waits only for what its own action needs.
+- `dispatchEvent('click')` only where a real `click()` is shown live to fail on the element's geometry (a zero-size anchor, arrows drawn as pseudo-elements), with the effect asserted separately and the reason in the handoff; `click({ force: true })` only as the port of a source `forceClick`.
 
 ## Prefer the modern API
 

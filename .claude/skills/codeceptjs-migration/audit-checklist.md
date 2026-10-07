@@ -10,6 +10,8 @@ The reviewer works this twice: before execution and after. Clear the Shape block
 - [ ] No name with one consumer anywhere in the diff (method, `const`, interface, type alias, row field, helper file), counted across files. Pre-existing methods exposed for reuse, and POM or component methods that group a page's actions, are not findings; `e2e_tests/eslint.config.mjs` whitelists single-caller assertion helpers by name.
 - [ ] A dashboard source produced a `DashboardInterface` page object registered on `Dashboards`, panels listed there as an inline `metrics` literal, no field outside the interface; the test iterates through the fixture, never `new <X>Dashboard()`.
 - [ ] One test per `Data(...)` row, distinguishable by title; a bare `Scenario` whose loop lives in a page-object method is one test with a `for` loop. Row titles end in the one distinguishing value, no JSON.
+- [ ] Test bodies read as named steps: no run of raw Playwright calls that a POM method should name (`SKILL.md` A test body reads as named steps).
+- [ ] Every value read from the page or a pipeline is proven present (non-empty, finite) and compared exactly, never by substring or a count another row can share.
 - [ ] Zero comments in `*.test.ts`; no added comment outside tests narrates a decision.
 - [ ] Nothing inert was ported (`SKILL.md` Port behaviour, simplify shape); each removal is recorded and outcome-neutral.
 - [ ] Every scenario passed the worth-porting gate with evidence (`SKILL.md` Before migrating).
