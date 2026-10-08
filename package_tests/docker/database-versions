@@ -46,6 +46,6 @@ ol9             valkey    9.1      release
 ol10            valkey    9.1      release
 debian12        valkey    9.1      release
 debian13        valkey    9.1      release
-ubuntu2204      valkey    9.1      release
+ubuntu2204      valkey    8.0      release
 ubuntu2404      valkey    9.1      release
 ubuntu2604      valkey    9.1      release
