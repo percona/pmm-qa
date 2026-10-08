@@ -3,31 +3,40 @@
 # line becomes <database>-<version> in their enabled_db (ps-8.4), and a test
 # fails if that database is missing or at another version.
 #
-# database    ps (Percona Server for MySQL) or pg (Percona Distribution for
-#             PostgreSQL). Each needs an install_<name>.sh beside
-#             install-databases.sh.
+# os          the image's OS, or <os>-<arch> (debian12-amd64) for one architecture
+# database    ps (Percona Server for MySQL), pg (Percona Distribution for
+#             PostgreSQL) or psmdb (Percona Server for MongoDB). Each needs an
+#             install_<name>.sh beside install-databases.sh.
 # version     the series to install, at its newest release: 8.0 or 8.4 for ps,
-#             14 to 18 for pg
+#             14 to 18 for pg, 6.0 to 8.0 for psmdb
 # repository  the percona-release channel: release, testing or experimental
 #
 # An OS gets only the databases listed for it, but every OS in
 # build-package-test-images.yml needs at least one line.
 #
-# os          database  version  repository
-ol8           ps        8.4      release
-ol9           ps        8.4      release
-ol10          ps        8.4      testing    # no el10 build in release yet
-debian12      ps        8.4      release
-debian13      ps        8.4      release
-ubuntu2204    ps        8.4      release
-ubuntu2404    ps        8.4      release
-ubuntu2604    ps        8.4      release
+# os            database  version  repository
+ol8             ps        8.4      release
+ol9             ps        8.4      release
+ol10            ps        8.4      testing   # no el10 build in release yet
+debian12        ps        8.4      release
+debian13        ps        8.4      release
+ubuntu2204      ps        8.4      release
+ubuntu2404      ps        8.4      release
+ubuntu2604      ps        8.4      release
 
-ol8           pg        18       release
-ol9           pg        18       release
-ol10          pg        18       release
-debian12      pg        18       release
-debian13      pg        18       release
-ubuntu2204    pg        18       release
-ubuntu2404    pg        18       release
-ubuntu2604    pg        18       release
+ol8             pg        18       release
+ol9             pg        18       release
+ol10            pg        18       release
+debian12        pg        18       release
+debian13        pg        18       release
+ubuntu2204      pg        18       release
+ubuntu2404      pg        18       release
+ubuntu2604      pg        18       release
+
+ol8             psmdb     8.0      release
+ol9             psmdb     8.0      release
+ol10            psmdb     8.0      release
+debian12-amd64        psmdb     8.0      release
+debian13        psmdb     8.0      release
+ubuntu2204      psmdb     8.0      release
+ubuntu2404      psmdb     8.0      release

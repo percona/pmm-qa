@@ -17,8 +17,13 @@ case "$ID" in
   ubuntu) os="ubuntu${VERSION_ID//./}" ;;
   *) os="${ID}${VERSION_ID%%.*}" ;;
 esac
+case "$(uname -m)" in
+  aarch64) arch=arm64 ;;
+  *) arch=amd64 ;;
+esac
 
-databases=$(awk -v os="$os" '$1 == os { print $2, $3, $4 }' "$(dirname "$0")/database-versions")
+# A line for <os>-<arch> applies to that architecture only.
+databases=$(awk -v os="$os" -v osarch="${os}-${arch}" '$1 == os || $1 == osarch { print $2, $3, $4 }' "$(dirname "$0")/database-versions")
 
 # An OS with no lines prints nothing: a host the images do not cover has no
 # databases to expect.

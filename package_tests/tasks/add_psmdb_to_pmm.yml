@@ -1,0 +1,77 @@
+# Sets up the preinstalled Percona Server for MongoDB as a replica set and adds
+# it to PMM. The playbook does not install it: package_tests/docker/install-databases.sh
+# bakes it into the client images, at the version docker/database-versions sets.
+#
+# Task adjustments are handled by parent playbook vars:
+#             var "port_flag"      :  to access agent with custom port
+#                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
+#
+- set_fact:
+    psmdb_version: "{{ psmdb_to_test.split('-')[1] }}"
+
+# psmdb_to_test carries the version docker/database-versions sets (psmdb-8.0);
+# the installed server has to be that series, or the test would cover another one.
+- name: Read the installed Percona Server for MongoDB version
+  command: "{{ psmdb_version_query[ansible_os_family] }}"
+  vars:
+    psmdb_version_query:
+      Debian: "dpkg-query -W -f=${Version} percona-server-mongodb-server"
+      RedHat: "rpm -q --qf %{VERSION} percona-server-mongodb-server"
+  register: psmdb_package_version
+  changed_when: false
+  failed_when: false
+
+- name: Verify Percona Server for MongoDB is the version docker/database-versions sets
+  assert:
+    that:
+      - psmdb_package_version.rc == 0
+      - (psmdb_version ~ '.') in psmdb_package_version.stdout
+    fail_msg: >-
+      docker/database-versions sets Percona Server for MongoDB {{ psmdb_version }} for this OS, but the
+      package query reports "{{ psmdb_package_version.stdout or psmdb_package_version.stderr | default('nothing') }}".
+      Rebuild the image (build_images).
+    success_msg: "Percona Server for MongoDB {{ psmdb_version }}: {{ psmdb_package_version.stdout }}"
+
+# The setup half of install_setup_psmdb.yml from Percona-QA/psmdb-testing.
+- name: stop mongod service
+  service: name=mongod state=stopped
+
+- name: add replica set name into mongod config
+  replace:
+    path: /etc/mongod.conf
+    regexp: '^#replication:'
+    replace: 'replication:\n  replSetName: "rs1"'
+
+- name: start mongod service
+  service: name=mongod state=started
+
+- name: check mongod ready status
+  shell: mongo --eval="printjson(db.serverStatus().ok)"
+  register: mongodbready
+  until: mongodbready.stdout | int == 1
+  retries: 20
+  delay: 1
+
+- name: initiate mongod replica set
+  command: mongo --eval 'rs.initiate()'
+
+- name: add mongodb metrics to monitoring with agent_pass
+  command: >-
+    pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --service-name={{ mongo_service_name }}
+    {{ '' if vars['agent_password'] is not defined or '/agent_id/' in vars['agent_password'] else '--agent-password=%s' | format(vars['agent_password']) }}
+
+- name: add mongodb metrics to monitoring using socket
+  command: >-
+    pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --socket=/tmp/mongodb-27017.sock
+    --service-name={{ mongo_socket_service_name }}
+    {{ '' if vars['agent_password'] is not defined or '/agent_id/' in vars['agent_password'] else '--agent-password=%s' | format(vars['agent_password']) }}
+
+- name: "Validate pmm-admin list output contains 'MongoDB'"
+  include_tasks: ./verify_pmm-admin_list_contains.yml
+  vars:
+    expected: "MongoDB"
+
+- name: "Wait for 'mongodb_exporter' is Running"
+  include_tasks: ./wait_exporter_is_running.yml
+  vars:
+    process_name: "mongodb_exporter"
