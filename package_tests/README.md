@@ -40,7 +40,6 @@ Create or export variables before running a playbook:
 | `METRICS_MODE` | `auto` | Metrics mode used by `pmm-admin config`. |
 | `TARBALL_LINK` | unset | PMM Client tarball URL for tarball scenarios. |
 | `OLD_TARBALL_LINK` | unset | Previous tarball URL for tarball upgrade scenarios. |
-| `PSMDB_REPOSITORY` | `release` | PSMDB repository channel. |
 
 ## Running Tests
 

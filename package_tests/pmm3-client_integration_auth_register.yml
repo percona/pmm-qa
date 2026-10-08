@@ -123,9 +123,9 @@
       mongo_socket_service_name: "mongodb_socket_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 #      mongo_service_name: "mongodb_{{ rnd }}_{{ instance_ip }}"
 
-  - name: Install and start Percona Server MongoDB
+  - name: Set up Percona Server for MongoDB and add it to PMM
     when: '"psmdb-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_psmdb.yml
+    include_tasks: ./tasks/add_psmdb_to_pmm.yml
     vars:
       psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
