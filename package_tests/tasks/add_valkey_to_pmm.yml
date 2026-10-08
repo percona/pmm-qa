@@ -12,7 +12,8 @@
   vars:
     valkey_version_query:
       Debian: "dpkg-query -W -f=${Version} percona-valkey-server"
-      RedHat: "rpm -q --qf %{VERSION} valkey"
+      # dnf install valkey brings percona-valkey, which only provides valkey.
+      RedHat: "rpm -q --qf %{VERSION} --whatprovides valkey"
   register: valkey_package_version
   changed_when: false
   failed_when: false
@@ -28,19 +29,14 @@
       Rebuild the image (build_images).
     success_msg: "Valkey {{ valkey_version }}: {{ valkey_package_version.stdout }}"
 
-- name: Start valkey@default service
-  shell: systemctl start valkey@default
+# percona-valkey runs as valkey@default; Valkey 8 from the plain valkey
+# repository (install_valkey.sh) as valkey.
+- name: Start valkey service
+  shell: systemctl start {{ 'valkey' if valkey_version == '8' else 'valkey@default' }}
   become: yes
   register: valkey_start
   ignore_errors: yes
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int != 9
-
-- name: Start valkey@default service
-  shell: systemctl start valkey
-  become: yes
-  register: valkey_start
-  ignore_errors: yes
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
+  when: ansible_os_family == "RedHat"
 
 - name: Set password for valkey
   shell: valkey-cli CONFIG SET requirepass '{{ valkey_password }}'
