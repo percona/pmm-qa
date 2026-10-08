@@ -1,0 +1,62 @@
+# Starts the preinstalled Valkey and adds it to PMM. The playbook does not install
+# it: package_tests/docker/install-databases.sh bakes it into the client images,
+# at the version docker/database-versions sets.
+- set_fact:
+    valkey_version: "{{ valkey_to_test.split('-')[1] }}"
+    valkey_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="
+
+# valkey_to_test carries the version docker/database-versions sets (valkey-9.1);
+# the installed server has to be that version, or the test would cover another one.
+- name: Read the installed Valkey version
+  command: "{{ valkey_version_query[ansible_os_family] }}"
+  vars:
+    valkey_version_query:
+      Debian: "dpkg-query -W -f=${Version} percona-valkey-server"
+      RedHat: "rpm -q --qf %{VERSION} valkey"
+  register: valkey_package_version
+  changed_when: false
+  failed_when: false
+
+- name: Verify Valkey is the version docker/database-versions sets
+  assert:
+    that:
+      - valkey_package_version.rc == 0
+      - (valkey_version ~ '.') in valkey_package_version.stdout
+    fail_msg: >-
+      docker/database-versions sets Valkey {{ valkey_version }} for this OS, but the package query reports
+      "{{ valkey_package_version.stdout or valkey_package_version.stderr | default('nothing') }}".
+      Rebuild the image (build_images).
+    success_msg: "Valkey {{ valkey_version }}: {{ valkey_package_version.stdout }}"
+
+- name: Start valkey@default service
+  shell: systemctl start valkey@default
+  become: yes
+  register: valkey_start
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int != 9
+
+- name: Start valkey@default service
+  shell: systemctl start valkey
+  become: yes
+  register: valkey_start
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
+
+- name: Set password for valkey
+  shell: valkey-cli CONFIG SET requirepass '{{ valkey_password }}'
+  become: yes
+
+- name: Add valkey instance for monitoring
+  command: >-
+    pmm-admin add valkey {{ port_flag if port_flag is defined else '' }} --username=default --password="{{ valkey_password }}" --service-name={{ valkey_service_name }}
+    {{ '' if agent_password is not defined or '/agent_id/' in agent_password else '--agent-password=%s' | format(agent_password) }}
+
+- name: "Validate pmm-admin list output contains 'Valkey'"
+  include_tasks: ./verify_pmm-admin_list_contains.yml
+  vars:
+    expected: "Valkey"
+
+- name: "Wait for 'valkey_exporter' is Running"
+  include_tasks: ./wait_exporter_is_running.yml
+  vars:
+    process_name: "valkey_exporter"

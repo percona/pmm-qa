@@ -5,10 +5,10 @@
 #
 # os          the image's OS, or <os>-<arch> (debian12-amd64) for one architecture
 # database    ps (Percona Server for MySQL), pg (Percona Distribution for
-#             PostgreSQL) or psmdb (Percona Server for MongoDB). Each needs an
-#             install_<name>.sh beside install-databases.sh.
+#             PostgreSQL), psmdb (Percona Server for MongoDB) or valkey. Each
+#             needs an install_<name>.sh beside install-databases.sh.
 # version     the series to install, at its newest release: 8.0 or 8.4 for ps,
-#             14 to 18 for pg, 6.0 to 8.0 for psmdb
+#             14 to 18 for pg, 6.0 to 8.0 for psmdb, 8 or 9.1 for valkey
 # repository  the percona-release channel: release, testing or experimental
 #
 # An OS gets only the databases listed for it, but every OS in
@@ -40,3 +40,12 @@ debian12-amd64        psmdb     8.0      release
 debian13        psmdb     8.0      release
 ubuntu2204      psmdb     8.0      release
 ubuntu2404      psmdb     8.0      release
+
+ol8             valkey    9.1      release
+ol9             valkey    8        experimental   # the plain valkey repository, as the playbooks had it
+ol10            valkey    9.1      release
+debian12        valkey    9.1      release
+debian13        valkey    9.1      release
+ubuntu2204      valkey    9.1      release
+ubuntu2404      valkey    9.1      release
+ubuntu2604      valkey    9.1      release
