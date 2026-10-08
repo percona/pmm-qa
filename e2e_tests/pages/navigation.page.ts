@@ -286,6 +286,14 @@ export default class LeftNavigation extends BasePage {
     });
   };
 
+  selectTimeZone = async (timeZone: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click();
+    await this.elements.changeTimeSettingsButton.click();
+    await this.inputs.timeZonePicker.fill(timeZone);
+    await this.builders.timeZoneOption(timeZone).click();
+    await this.elements.timePickerOpenButton.click();
+  };
+
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
   verifyAllMenuItems = async (): Promise<void> => {

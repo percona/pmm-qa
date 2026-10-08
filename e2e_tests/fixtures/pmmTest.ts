@@ -4,6 +4,8 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import AccessControlHelper from '@helpers/accessControl.helper';
+import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
@@ -45,6 +47,7 @@ import AdvisorsPage from '@pages/advisors/advisors.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
+  accessControlHelper: AccessControlHelper;
   advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
@@ -52,6 +55,7 @@ const pmmTest = base.extend<{
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
+  clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
   credentials: Credentials;
   loginPage: LoginPage;
@@ -87,6 +91,8 @@ const pmmTest = base.extend<{
   downloadsPage: DownloadsPage;
   testState: TestState;
 }>({
+  accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
+    await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
@@ -98,6 +104,7 @@ const pmmTest = base.extend<{
     await use(inventoryApi);
   },
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
+  clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 
