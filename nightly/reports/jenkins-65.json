@@ -2355,6 +2355,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1575",
       "by": "Investigator routine",
       "at": "2026-10-08T00:54:02Z"
+    },
+    {
+      "suites": [
+        "Nightly"
+      ],
+      "verdict": "not a bug",
+      "summary": "Ami lane: orchestrator #65 was a manual run with AMI_ID=prebaked-images (a branch name) instead of latest; pmm3-ami-staging-start #3617 failed with InvalidAMIID.Malformed. Input error, re-run with AMI_ID=latest.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:54:06Z"
     }
   ],
   "claims": [
