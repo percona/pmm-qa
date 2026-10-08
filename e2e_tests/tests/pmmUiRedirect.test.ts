@@ -21,7 +21,7 @@ const redirectTarget = (response: APIResponse) => {
 };
 
 pmmTest(
-  'PMM-T2369 - Verify top-level Grafana URLs redirect to PMM UI on the server while API, render and auth pages stay on /graph @new-navigation',
+  'PMM-T2369 - Verify top-level Grafana URLs redirect to PMM UI on the server while API, render, auth pages and share links stay on /graph @new-navigation',
   async ({ request }) => {
     await pmmTest.step(
       'dashboard deep link opened as a document redirects with its query intact',
@@ -73,6 +73,34 @@ pmmTest(
       expect(health.status()).toEqual(200);
       expect(health.headers()['content-type']).toContain('application/json');
     });
+
+    await pmmTest.step(
+      'share links stay on /graph while the share list pages open in the shell',
+      async () => {
+        const shareLinks = [
+          'graph/public-dashboards/pmm-t2369',
+          'graph/dashboard/snapshot/pmm-t2369',
+          'graph/dashboard-solo/snapshot/pmm-t2369?panelId=1',
+        ];
+
+        for (const path of shareLinks) {
+          const response = await request.get(path, fetchAs('document'));
+
+          expect(response.status(), path).toEqual(200);
+        }
+
+        // Grafana itself sends the unmerged-slash form to login; nginx must still leave it on /graph.
+        const obfuscated = await request.get('graph/dashboard//snapshot/pmm-t2369', fetchAs('document'));
+
+        expect(redirectTarget(obfuscated)).not.toContain('/pmm-ui/');
+
+        for (const path of ['graph/dashboard/snapshots', 'graph/dashboard/public']) {
+          const response = await request.get(path, fetchAs('document'));
+
+          expect(redirectTarget(response), path).toEqual(`/pmm-ui/${path}`);
+        }
+      },
+    );
   },
 );
 
