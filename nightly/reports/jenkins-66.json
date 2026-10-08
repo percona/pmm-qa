@@ -2352,15 +2352,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-08T04:30:05Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-08T04:26:20Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "pmm3-ha-rosa #294 failed in Provision OpenShift Cluster: the new ROSA cluster's API host api.pmm-ha-rosa-294.izrd.p3.openshiftapps.com never resolved (6 min of 'no such host'), so no HA test ran. pmm3-ha-tests failed 4 nights running (#110-#113), after #106-#109 passed; #65's cause was a different ROSA step. Needs a human with ROSA access; no Jira found.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-08T04:30:10Z"
     }
-  ]
+  ],
+  "claims": []
 }
