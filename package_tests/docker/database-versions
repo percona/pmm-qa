@@ -42,7 +42,7 @@ ubuntu2204      psmdb     8.0      release
 ubuntu2404      psmdb     8.0      release
 
 ol8             valkey    9.1      release
-ol9             valkey    8        experimental   # the plain valkey repository, as the playbooks had it
+ol9             valkey    9.1      release
 ol10            valkey    9.1      release
 debian12        valkey    9.1      release
 debian13        valkey    9.1      release
