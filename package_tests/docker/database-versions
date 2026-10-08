@@ -36,7 +36,7 @@ ubuntu2604      pg        18       release
 ol8             psmdb     8.0      release
 ol9             psmdb     8.0      release
 ol10            psmdb     8.0      release
-debian12        psmdb     8.0      release
+debian12-amd64        psmdb     8.0      release
 debian13        psmdb     8.0      release
 ubuntu2204      psmdb     7.0      release
 ubuntu2404      psmdb     7.0      release
