@@ -4,7 +4,6 @@ import { expect } from '@playwright/test';
 
 export default class PortalRemoval extends BasePage {
   advancedSettingsUrl = '/pmm-ui/settings/advanced-settings';
-  advisorsUrl = '/advisors';
   removedUrls = ['/entitlements', '/tickets', '/settings/percona-platform'];
   settingsUrl = '/pmm-ui/settings';
   builders = {};
@@ -13,10 +12,6 @@ export default class PortalRemoval extends BasePage {
     getFromBrowser: this.page.getByRole('button', { name: 'Get from browser' }),
   };
   elements = {
-    advisorsText: this.grafanaIframe().getByText('Want more Advisors?'),
-    connectToPlatform: this.grafanaIframe().getByRole('button', {
-      name: 'Connect to Percona Platform',
-    }),
     pageNotFound: this.page.getByText(/page not found|404/i),
     perconaPlatformTab: this.page.getByRole('tab', { name: /Percona Platform/i }),
   };

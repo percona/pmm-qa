@@ -3,8 +3,7 @@ import pmmTest from '../../fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-export type SettingsFieldLabel =
-  'advanced' | 'advanced-advisors' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
+export type SettingsFieldLabel = 'advanced' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
 
 export default class SettingsPage extends BasePage {
   url = '/pmm-ui/settings';
@@ -35,7 +34,6 @@ export default class SettingsPage extends BasePage {
     telemetrySummaries: this.page.getByTestId('telemetry-summaries-link'),
     toggles: {
       accessControl: { locator: this.page.getByTestId('switch-input-access-control') },
-      advisors: { locator: this.page.getByTestId('switch-input-stt') },
       azureDiscover: {
         input: this.page.getByTestId('switch-input-azure-discover').getByRole('switch'),
         locator: this.page.getByTestId('switch-input-azure-discover'),
@@ -55,7 +53,6 @@ export default class SettingsPage extends BasePage {
   };
   elements = {
     advancedLabel: this.page.getByTestId('advanced-label'),
-    advisorsLabel: this.page.getByTestId('advanced-advisors'),
     alertingInfoIcon: this.page.getByTestId('advanced-alerting').getByTestId('info-icon'),
     checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
     errorAlert: this.page.getByTestId('data-testid Alert error'),
@@ -73,14 +70,11 @@ export default class SettingsPage extends BasePage {
   };
   inputs = {
     dataRetention: this.page.getByTestId('retention-number-input'),
-    frequentAdvisorInterval: this.page.getByTestId('frequentInterval-number-input'),
     high: this.page.getByTestId('hr-number-input'),
     low: this.page.getByTestId('lr-number-input'),
     medium: this.page.getByTestId('mr-number-input'),
     publicAddress: this.page.getByTestId('publicAddress-text-input'),
-    rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
     sshKey: this.page.getByTestId('text-input-ssh-key'),
-    standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
   };
   messages = {
     popUp: this.page.getByRole('status').or(this.page.getByRole('alert')),
