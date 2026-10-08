@@ -54573,62 +54573,30 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "CLI Integration",
+          "CLI Integration Compatibility",
+          "E2E Tests",
+          "Integrations",
+          "Other",
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "not reproduced",
+        "summary": "External outage: azure.archive.ubuntu.com (GitHub runners' Ubuntu mirror) returned 502 / connection timeouts 20:38-22:29Z, so apt failed inside DB containers in pmm-framework setup. That failed setup shards (e2e test shards then refused to run) and CLI/upgrade jobs. Mirror healthy again at 00:55Z. Nightly can't be re-run (servers gone); the next nightly is the check.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-08T00:53:57Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-08T00:48:42Z",
         "suites": [
-          "CLI Integration"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "Nightly Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
-        "suites": [
-          "Other"
         ]
       }
     ]
