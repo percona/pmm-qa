@@ -4,7 +4,7 @@ import { GrafanaPanel } from '../../interfaces/grafanaPanel';
 export const dashboardTimeRange = 'now-1h';
 export const qanUrl = 'graph/d/pmm-qan/pmm-query-analytics';
 
-const mysqlAllowedPanels: GrafanaPanel[] = [
+export const mysqlAllowedPanels: GrafanaPanel[] = [
   { name: 'Total Current QPS', type: 'stat' },
   { name: 'Max MySQL Uptime', type: 'stat' },
 ];
@@ -16,7 +16,7 @@ const mongoAllowedPanels: GrafanaPanel[] = [
   { name: 'Operations', type: 'stat' },
   { name: 'Docs Accessed', type: 'stat' },
 ];
-const mysqlDisallowedPanels = mysqlAllowedPanels.map(({ name }) => name);
+export const mysqlDisallowedPanels = mysqlAllowedPanels.map(({ name }) => name);
 const postgresDisallowedPanels = postgresAllowedPanels.map(({ name }) => name);
 const mongoDisallowedPanels = mongoAllowedPanels.map(({ name }) => name);
 

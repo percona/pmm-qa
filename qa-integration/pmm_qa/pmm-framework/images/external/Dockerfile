@@ -19,4 +19,7 @@ RUN set -eux; \
     redis_exporter --version; \
     process-exporter --version
 
+# The AMI upgrade runner calls `apt install -y pmm-client`; apt is this image's installer.
+RUN ln -s "$(command -v dnf || command -v microdnf)" /usr/local/bin/apt
+
 ENTRYPOINT ["sleep", "infinity"]

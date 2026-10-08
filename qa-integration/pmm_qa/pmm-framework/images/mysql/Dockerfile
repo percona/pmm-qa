@@ -71,9 +71,13 @@ RUN set -eux; \
         -o /tmp/epel-release.rpm; \
     rpm -Uvh /tmp/epel-release.rpm; \
     rm /tmp/epel-release.rpm; \
-    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl tar; \
+    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl procps-ng tar; \
     "$PKG_MGR" clean all; \
     sysbench --version; \
     tar --version
+
+# The AMI upgrade runner calls `apt install -y pmm-client` and `ps aux` (hence
+# procps-ng); apt is this image's installer.
+RUN ln -s "$(command -v dnf || command -v microdnf)" /usr/local/bin/apt
 
 USER mysql
