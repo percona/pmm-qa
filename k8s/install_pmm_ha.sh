@@ -418,8 +418,7 @@ if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ]; then
 fi
 
 # Charts that ship examples/values-openshift.yaml (pmm-ha since PMM-15426, the
-# dependencies since PMM-14746) pin uids restricted-v2 refuses unless it is applied;
-# only older charts get the SCC grants below.
+# dependencies since PMM-14746) pin uids restricted-v2 refuses unless it is applied.
 OPENSHIFT_DEPS_VALUES=()
 OPENSHIFT_PMM_VALUES=()
 if [ "$PLATFORM" = "openshift" ]; then
@@ -439,7 +438,9 @@ if [ "$PLATFORM" = "openshift" ]; then
     log "OpenShift overlays: deps '${OPENSHIFT_DEPS_VALUES[*]:-none}', pmm-ha '${OPENSHIFT_PMM_VALUES[*]:-none}'"
 fi
 
-if [ "$PLATFORM" = "openshift" ] && [ "${#OPENSHIFT_PMM_VALUES[@]}" -eq 0 ] && [ "${#OPENSHIFT_DEPS_VALUES[@]}" -eq 0 ]; then
+# The grants below serve the pmm-ha chart's pods only - the dependencies chart never
+# needed them - and are skipped next to its overlay, which anyuid would override.
+if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ] && [ "${#OPENSHIFT_PMM_VALUES[@]}" -eq 0 ]; then
     # What `oc adm policy add-scc-to-group` does, in plain RBAC - no oc binary
     # needed. ClusterRoleBindings, not RoleBindings: an SCC is a cluster-scoped
     # resource, so a namespaced binding grants nothing.
