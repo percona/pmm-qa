@@ -149,7 +149,6 @@ export default class StoredMetricsPage extends BasePage {
 
   getColumnValues = async (columnNumber: number) =>
     (await this.builders.columnValues(columnNumber).allTextContents()).map((text) => {
-      // The API omits a zero metric and the panel renders it as N/A.
       if (text.trim() === 'N/A') return 0;
 
       const [value, unit = ''] = text.replace('<', '').trim().split(' ');
