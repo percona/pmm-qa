@@ -24,14 +24,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
     pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | awk '$2 ~ /^pdpgsql_pmm/ {print $2; exit}'`)
       .stdout.trim();
     serviceId = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | awk '$2 ~ /^pdpgsql_pmm/ {print $4; exit}'`)
       .stdout.trim();
     socketServiceId = cliHelper
       .execSilent(
@@ -204,6 +200,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         hostssl      all             all             ::1/128         scram-sha-256
         hostssl      all             all             0.0.0.0/0       scram-sha-256
         hostssl      all             all             ::/0            scram-sha-256
+        local        all             postgres                        trust
+        local        all             all                             md5
       `;
 
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
@@ -219,10 +217,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.FIVE_MINUTES);
     },
   );
