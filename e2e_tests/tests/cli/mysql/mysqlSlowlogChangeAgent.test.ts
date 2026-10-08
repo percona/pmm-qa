@@ -402,7 +402,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1010 - Verify Change agent tls @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
+      // PS setup overwrites /etc/mysql/my.cnf, dropping its !includedir of mysql.conf.d, so append to my.cnf itself.
+      const confPath = `/etc/mysql/my.cnf`;
 
       cliHelper.createTlsCertificates(containerName);
 
@@ -412,8 +413,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
+        `docker exec ${containerName} chown mysql:mysql /certs/${containerName}.crt`,
+        `docker exec ${containerName} chown mysql:mysql /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
@@ -422,7 +423,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `ssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
+        `\n[mysqld]\nssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
