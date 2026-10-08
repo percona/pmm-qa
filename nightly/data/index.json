@@ -54610,16 +54610,18 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-08T00:54:06Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-08T00:48:42Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "pmm3-ha-rosa #293: helm install of pmm-ha-dependencies fails 'failed pre-install: timed out waiting for the condition' (also #290, #292; 4 of last 7 ROSA builds). No OpenShift available to reproduce; needs a human with ROSA access. No Jira yet.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-08T00:54:10Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
