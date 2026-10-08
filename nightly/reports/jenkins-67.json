@@ -2328,7 +2328,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Package AMD"
+      ],
+      "verdict": "not reproduced",
+      "summary": "repo.percona.com served pmm3-client experimental binary-amd64 Packages.gz files that did not match the 20:15 UTC Release index (1166/1167 vs 1165 bytes, 'Mirror sync in progress?') between 20:37 and 20:42 UTC, so apt failed on every Debian/Ubuntu branch; the repo is consistent now and apt update on noble and bookworm passes on a fresh VM, while arm64 and RPM lanes were green: an external repo publish race, not pmm-qa or PMM.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-08T23:30:29Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2342,13 +2353,6 @@
       "at": "2026-10-08T23:19:55Z",
       "suites": [
         "Other"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-08T23:19:55Z",
-      "suites": [
-        "Package AMD"
       ]
     }
   ]
