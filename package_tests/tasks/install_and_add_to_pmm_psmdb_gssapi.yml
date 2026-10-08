@@ -14,10 +14,12 @@
     dest: /tmp
     mode: 0777
 
+# psmdb_to_test is psmdb-80 from the gssapi enabled_db, or psmdb-8.0 from
+# docker/database-versions in the upgrade playbook; percona-release wants psmdb-80.
 - name: enable psmdb repo
   include_tasks: ./enable_repo.yml
   vars:
-    package: "{{ psmdb_to_test }}"
+    package: "psmdb-{{ psmdb_to_test.split('-')[1] | replace('.', '') }}"
     repository: "release"
 
 - name: Run install_setup_psmdb.yml
