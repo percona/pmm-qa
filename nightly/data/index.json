@@ -54589,6 +54589,17 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-08T00:53:57Z"
+      },
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T156 (newly migrated) reads N/A Load cells as NaN on the ps-replication-psmdb-sharded shard; failed in helm and all compat runs.",
+        "link": "https://github.com/percona/pmm-qa/pull/1575",
+        "by": "Investigator routine",
+        "at": "2026-10-08T00:54:02Z"
       }
     ],
     "claims": [
