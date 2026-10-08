@@ -68,63 +68,34 @@ PMM_AGENT_SETUP_NODE_NAME=$(printf '%s' "$PMM_AGENT_SETUP_NODE_NAME" | tr -c 'A-
 export PMM_AGENT_SETUP_NODE_NAME
 mv -v /artifacts/* .
 
-install_pmm_client_from_repo() {
-    local component=$1 attempt
-    percona-release enable-only pmm3-client "$component"
-    for attempt in 1 2 3 4 5; do
-        apt-get update
-        apt-get -y install pmm-client && return 0
-        echo "pmm-client install failed (attempt $attempt/5); retrying in 90s..." >&2
-        sleep 90
-    done
-    return 1
-}
-
-die_on_install_failure() {
+# Runs under sudo, so it keeps its own cache: a root-owned /tmp/pmm-client-cache
+# would lock out pmm-framework, which runs unprivileged.
+install_pmm_client_deb() {
+    local component=$1 version=${2:-} deb
+    deb=$(bash "$(dirname "$0")/pmm-framework/lib/fetch_pmm_client_deb.sh" \
+        "$component" "$(lsb_release -sc)" /tmp/pmm-client-host-cache 900 "$version") &&
+        apt-get install -y "$deb" && return 0
     echo "pmm-client could not be installed; aborting client setup" >&2
     exit 1
 }
 
-if [[ "$client_version" == "3-dev-latest" ]]; then
-    install_pmm_client_from_repo experimental || die_on_install_failure
-fi
+case "$client_version" in
+    3-dev-latest)
+        percona-release enable-only pmm3-client experimental
+        install_pmm_client_deb experimental ;;
+    pmm3-rc)
+        percona-release enable-only pmm3-client testing
+        install_pmm_client_deb testing ;;
+    pmm3-latest)
+        install_pmm_client_deb main
+        percona-release enable-only pmm3-client experimental ;;
+    3.*.*)
+        install_pmm_client_deb main "$client_version" ;;
+esac
 
-if [[ "$client_version" == "pmm3-rc" ]]; then
-    install_pmm_client_from_repo testing || die_on_install_failure
-fi
+lib="$(dirname "${BASH_SOURCE[0]}")/pmm-framework/lib"
+client_version=$(bash -c 'source "$1/common.sh" && normalize_client_version "$2"' _ "$lib" "$client_version")
 
-if [[ "$client_version" == "pmm3-latest" ]]; then
-    install_pmm_client_from_repo release || die_on_install_failure
-    apt-get -y update
-    percona-release enable-only pmm3-client experimental
-fi
-
-if [[ "$client_version" == "latest-tarball" ]]; then
-    # arm64 builds are published under their own bucket prefix.
-    bucket=pmm-client
-    case "$(dpkg --print-architecture)" in
-      arm64) bucket=pmm-client-arm ;;
-    esac
-    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz"
-fi
-
-## Only supported for debian based systems for now
-if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  build_number=7
-  minor_version=${client_version#3.}
-  minor_version=${minor_version%%.*}
-  if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
-    build_number=8
-  elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
-    build_number=1
-  fi
-  deb_file="pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_$(dpkg --print-architecture).deb"
-  wget --continue --timeout=60 --waitretry=15 --progress=dot:giga \
-    -O "${deb_file}" "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/${deb_file}"
-  dpkg -i "${deb_file}"
-fi
-
-## Default Binary path
 path="/usr/local/percona/pmm";
 ## As export PATH is not working link the paths
 ln -sf ${path}/bin/pmm-admin /usr/local/bin/pmm-admin
@@ -132,8 +103,11 @@ ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
     if [[ "$install_client" == "yes" ]]; then
-       wget -O pmm-client.tar.gz --progress=dot:giga \
-         --timeout=60 --waitretry=15 "${client_version}"
+       # Fetch into pmm-framework's cache as the calling user, so a later
+       # pmm-framework run reuses this download instead of repeating it.
+       tarball=$(${SUDO_USER:+sudo -H -u "$SUDO_USER"} bash -c \
+         'source "$1/common.sh" && source "$1/run_helpers.sh" && source "$1/pmm_client.sh" && fetch_client_tarball "$2"' _ "$lib" "$client_version") || exit 1
+       cp "$tarball" pmm-client.tar.gz
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
@@ -144,42 +118,43 @@ if [[ "$client_version" == http* ]]; then
     rm -rf /usr/local/bin/pmm-client
     mv -f pmm-client /usr/local/bin
     pushd /usr/local/bin/pmm-client || exit 1
-    ## only setting up all binaries in default path /usr/local/percona/pmm
     bash -x ./install_tarball ${upgrade}
     pwd
     popd || exit 1
     pmm-admin --version
 fi
 
-## Check if we are upgrading or attempting fresh install.
+# The CLI tests start by expecting a Running agent, which comes a few seconds after Connected.
+wait_pmm_agent_connected() {
+    local status
+    for _ in $(seq 1 60); do
+        status=$(pmm-admin status 2>/dev/null)
+        grep -Eq 'Connected[[:space:]]*:[[:space:]]*true' <<<"$status" && grep -q Running <<<"$status" && return 0
+        sleep 1
+    done
+    echo "pmm-agent had no Running agent within 60s" >&2
+}
+
 if [[ -z "$upgrade" ]]; then
-    retry_pmm_agent_setup() {
-        local n=3
-        local i
-        for i in $(seq 1 $n); do
-            if [[ "$use_metrics_mode" == "yes" ]]; then
-                echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
-            else
-                echo "setup pmm-agent (attempt $i/$n)"
-                pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
-            fi
-            echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
-            sleep 30
-        done
-        return 1
-    }
-    retry_pmm_agent_setup
+    metrics_flag=""
+    if [[ "$use_metrics_mode" == "yes" ]]; then
+        metrics_flag="--metrics-mode=${metrics_mode}"
+    fi
+    for i in 1 2 3; do
+        echo "setup pmm-agent (attempt $i/3)"
+        pmm-agent setup --force --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG $metrics_flag --server-username=admin --server-password=${admin_password} && break
+        [[ $i == 3 ]] || { echo "pmm-agent setup failed (attempt $i/3); retrying in 30s..."; sleep 30; }
+    done
     sleep 10
     pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
-    sleep 10
+    wait_pmm_agent_connected
 else
-   pid=`ps -ef | grep pmm-agent | grep -v grep | awk -F ' ' '{print $2}'`
+   pid=$(pgrep -x pmm-agent)
    if [[ ! -z "$pid" ]]; then
        kill -9 $pid
        echo "Killing and restarting pmm agent...."
        pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >> pmm-agent.log 2>&1 &
-       sleep 10
+       wait_pmm_agent_connected
    fi
 fi
 echo "pmm-admin version"

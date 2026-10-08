@@ -3,16 +3,13 @@
 
 load helpers/test_helper
 
-# preflight_database_setups() calls out to resolve_pmm_server, require_command
-# and the ansible warm-up; stub them so these tests exercise only the
+# preflight_database_setups() calls out to resolve_pmm_server and
+# require_command; stub them so these tests exercise only the
 # parallel/sequential conflict decision.
 setup() {
   reset_framework_state
   resolve_pmm_server() { :; }
   require_command() { :; }
-  configure_ansible_python() { :; }
-  ensure_ansible_collections() { :; }
-  prepull_base_images() { :; }
   WARNINGS=''
   log_warn() { WARNINGS+="$*"$'\n'; }
 }
@@ -29,6 +26,16 @@ preflight_run() {
   DATABASE_SPECS=("$@")
   PARALLEL=true
   run preflight_database_setups
+}
+
+@test "PS with MySQL, or two PS setups, fall back to sequential" {
+  DATABASE_SPECS=(ps mysql)
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'PS and MYSQL setups (both publish host ports from 3306)'* ]]
+  [[ $(parallel_decision mysql ps) == false ]]
+  [[ $(parallel_decision 'ps,SETUP_TYPE=replication' 'ps,SETUP_TYPE=gr') == false ]]
 }
 
 @test "PSMDB and SSL PSMDB run in parallel" {
@@ -81,6 +88,16 @@ preflight_run() {
   done
 }
 
+@test "PDPGSQL patroni and PGSQL replication cannot share a host" {
+  preflight_run 'pdpgsql,SETUP_TYPE=patroni' 'pgsql,SETUP_TYPE=replication'
+  [[ $status -eq 1 ]]
+  [[ $output == *'both publish host port 6432'* ]]
+}
+
+@test "single-node PDPGSQL and PGSQL replication run in parallel" {
+  [[ $(parallel_decision pdpgsql 'pgsql,SETUP_TYPE=replication') == true ]]
+}
+
 @test "EXTERNAL and VALKEY each parallelize with other setups" {
   [[ $(parallel_decision external haproxy pdpgsql) == true ]]
   [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]
@@ -95,18 +112,26 @@ preflight_run() {
   [[ $(parallel_decision pxc pdpgsql haproxy) == true ]]
 }
 
-@test "the pre-pull runs only when the fan-out will" {
-  CALLED=0
-  prepull_base_images() { CALLED=$((CALLED + 1)); }
 
-  DATABASE_SPECS=(ps)
-  PARALLEL=false
-  preflight_database_setups
-  [ "$CALLED" -eq 0 ]
-
-  DATABASE_SPECS=(ps psmdb)
-  PARALLEL=true
-  preflight_database_setups
-  [ "$CALLED" -eq 1 ]
+@test "a bare failing command fails a sequential setup, as it does in parallel" {
+  # A fresh shell set up like the entrypoint: bats' own `run` already ignores
+  # errexit for everything it calls.
+  run bash -c '
+    set -euo pipefail
+    shopt -s inherit_errexit
+    BATS_TEST_FILENAME=$1/tests/preflight.bats
+    source "$1/tests/helpers/test_helper.bash"
+    resolve_pmm_server() { :; }
+    require_command() { :; }
+    setup_haproxy() {
+      false
+      echo "ran past the failure"
+    }
+    DATABASE_SPECS=(haproxy)
+    PARALLEL=false
+    SETUP_RETRIES=0
+    run_database_setups' _ "$FRAMEWORK_DIR"
+  [[ $status -ne 0 ]]
+  [[ $output != *'ran past the failure'* ]]
+  [[ $output == *'haproxy failed after 1 attempt(s)'* ]]
 }
-
