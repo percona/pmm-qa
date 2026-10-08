@@ -2339,6 +2339,19 @@
       "link": "https://github.com/percona/pmm-qa/pull/1575",
       "by": "Investigator routine",
       "at": "2026-10-08T04:29:52Z"
+    },
+    {
+      "suites": [
+        "CLI Integration",
+        "CLI Integration Compatibility",
+        "Other",
+        "Nightly Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "Second night in a row: GitHub runners' Ubuntu mirror azure.archive.ubuntu.com (40.119.46.219) gave 'Connection timed out' on apt installs inside DB containers ~00:57-02:20Z. That hung or failed pmm-framework setup: CLI jobs cancelled at the job timeout, PS 8.0 3.8.0 failed, both Docker-way upgrades failed, and the compat 3.9.1 e2e setup shard (haproxy, pdpgsql 17) failed so no tests ran. Mirror answers fine now (1 MB in 0.2 s). No VM run: a CHAOS VM cannot reproduce the runner-to-Azure path. Recurring, so a fallback mirror in pmm-framework is worth a human decision.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-08T04:30:05Z"
     }
   ],
   "claims": [
@@ -2346,28 +2359,7 @@
       "by": "Investigator routine",
       "at": "2026-10-08T04:26:20Z",
       "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-08T04:26:20Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-08T04:26:20Z",
-      "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-08T04:26:20Z",
-      "suites": [
-        "Other"
       ]
     }
   ]
