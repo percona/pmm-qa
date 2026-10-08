@@ -17,13 +17,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2371 - Verify vmagent scrapes the kubelet, cAdvisor, node exporter and API server of the PMM HA cluster @pmm-ha',
   async ({ api, k8sHelper }) => {
-    const nodes = k8sHelper
-      .execSilent('get nodes --output=jsonpath={.items[*].metadata.name}')
-      .assertSuccess()
-      .stdout.trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .sort();
+    const nodes = k8sHelper.getNodeNames().sort();
 
     expect(nodes.length, 'kubectl must list at least one node').toBeGreaterThan(0);
 
