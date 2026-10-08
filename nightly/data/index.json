@@ -56954,7 +56954,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T156 failed again on the ps-replication-psmdb-sharded shard in all 9 e2e runs that ran tests (docker, docker arm64, ami, helm, ha, compat 3.7.1/3.8.0/3.8.1/3.9.0); same N/A-as-NaN cause, fix PR #1575 still open, not merged.",
+        "link": "https://github.com/percona/pmm-qa/pull/1575",
+        "by": "Investigator routine",
+        "at": "2026-10-08T04:29:52Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -56975,20 +56987,6 @@
         "at": "2026-10-08T04:26:20Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T04:26:20Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-08T04:26:20Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
