@@ -133,6 +133,20 @@ export default class AlertingApi {
 
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
 
+  listThresholds = async (target: string): Promise<{ is_overridden: boolean; rule_id: string }[]> => {
+    const response = await this.request.get(apiEndpoints.alerting.thresholds, {
+      headers: GrafanaHelper.getAuthHeader(),
+      params: { target },
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (
+      ((await response.json()) as { thresholds?: { is_overridden: boolean; rule_id: string }[] })
+        .thresholds ?? []
+    );
+  };
+
   removeAllAlertRules = async (): Promise<void> => {
     for (const { name, rules } of await this.getRulerGroups()) {
       // Provisioned groups, like PMM's built-in self-monitoring rules, are read-only and cannot be deleted.
