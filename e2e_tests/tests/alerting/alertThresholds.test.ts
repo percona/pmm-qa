@@ -119,9 +119,7 @@ pmmTest(
       ).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
-      await expect(
-        alertingPage.builders.templateRowsBySource('Built-in').filter({ hasText: 'Dynamic' }),
-      ).toHaveCount(1);
+      await expect(alertingPage.elements.templatesTable.getByText('Dynamic', { exact: true })).toHaveCount(1);
     });
 
     await pmmTest.step('Create a rule from the template with the default of 80', async () => {
@@ -235,7 +233,10 @@ pmmTest(
       await expect(
         alertingPage.elements.dialog.getByRole('button', { name: 'Copy to clipboard' }),
       ).toBeVisible();
-      await alertingPage.elements.dialog.getByRole('button', { exact: true, name: 'Close' }).click();
+      await alertingPage.elements.dialog
+        .getByRole('button', { name: 'Close' })
+        .filter({ hasText: 'Close' })
+        .click();
     });
 
     await pmmTest.step('A compound condition is accepted', async () => {
@@ -284,7 +285,8 @@ pmmTest(
       await alertThresholdsPage.buttons.cancel.click();
     });
 
-    await createRule(api, ruleName, 80);
+    const ruleId = await createRule(api, ruleName, 80);
+
     await page.reload();
 
     await pmmTest.step('An out-of-range value is refused and the edit is kept', async () => {
@@ -321,9 +323,11 @@ pmmTest(
       await nodesPage.openAlertThresholds(pmmServerNode);
       await expect(alertThresholdsPage.builders.overrideInput(ruleName)).toHaveValue('80');
       // API: the field shows the effective value either way, so only the API tells a cleared override apart.
+      // Overrides of rules deleted by earlier tests linger until the sweep, so look at this rule only.
       expect(
-        (await api.alertingApi.listThresholds(pmmServerNode)).filter(({ is_overridden }) => is_overridden),
-      ).toEqual([]);
+        (await api.alertingApi.listThresholds(pmmServerNode)).find(({ rule_id }) => rule_id === ruleId)
+          ?.is_overridden,
+      ).toBe(false);
     });
   },
 );

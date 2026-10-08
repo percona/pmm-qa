@@ -39,7 +39,7 @@ export default class AlertingApi {
   createRule = async (headers: Headers, data: CreateRuleBody) =>
     this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
-  createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
+  createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<string> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
       filters: rule.serviceName
         ? [{ label: 'service_name', regexp: rule.serviceName, type: 'FILTER_TYPE_MATCH' }]
@@ -55,6 +55,8 @@ export default class AlertingApi {
     });
 
     expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { rule_id: string }).rule_id;
   };
 
   createTemplate = async (headers: Headers, yamlBody: AlertTemplateBody) =>

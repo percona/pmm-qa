@@ -8,7 +8,8 @@ export default class AlertThresholdsPage extends BasePage {
       this.builders.row(ruleTitle).getByRole('button', { name: 'Reset to default' }),
     row: (ruleTitle: string) =>
       this.elements.modal.getByRole('row').filter({ has: this.page.getByRole('cell', { name: ruleTitle }) }),
-    snackbar: (text: string | RegExp) => this.page.locator('#notistack-snackbar').filter({ hasText: text }),
+    // An open MUI modal marks the snackbar's container aria-hidden, which getByRole skips.
+    snackbar: (text: string | RegExp) => this.page.locator('[role="alert"]').filter({ hasText: text }),
   };
   buttons = {
     cancel: this.page.locator('.MuiModal-root').getByRole('button', { name: 'Cancel' }),
