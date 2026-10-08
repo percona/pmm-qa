@@ -417,6 +417,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chown mysql:mysql /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chmod 644 /certs/ca-certs.pem`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -440,7 +441,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-slowlog-agent ${mysqldSlowlogAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.FIVE_MINUTES);
     },
   );
