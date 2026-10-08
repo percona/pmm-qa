@@ -2328,5 +2328,63 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "CLI Integration"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "E2E Tests"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "Integrations"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "Nightly"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-08T00:48:42Z",
+      "suites": [
+        "Other"
+      ]
+    }
+  ]
 }
