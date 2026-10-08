@@ -2,27 +2,45 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import DatasourceProxyApi from '@api/datasourceProxy.api';
 import { ProxyUserIds } from '@helpers/accessControl.helper';
+import apiEndpoints from '@helpers/apiEndpoints';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import {
   admin,
   canaryMetric,
   dataSourceRoutes,
   deleteCanary,
+  editor,
   exportUp,
   fullAccessRoleTitle,
   internalPaths,
   metricsDataSourceUrl,
   noAccessRole,
   queryUp,
+  ruleGroup,
   viewer,
 } from '@testdata/datasourceProxy';
-import { mysqlAllowedPanels, mysqlDisallowedPanels } from './accessControl.constants';
+import {
+  accessControlScenarios,
+  dashboardTimeRange,
+  mysqlAllowedPanels,
+  mysqlDisallowedPanels,
+  qanUrl,
+} from './accessControl.constants';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-const mysqlOverviewUrl = 'pmm-ui/graph/d/mysql-instance-overview/mysql-instances-overview?from=now-1h&to=now';
+const exploreEndpoints = [
+  'api/v1/label/__name__/values',
+  'api/v1/labels',
+  'api/v1/metadata',
+  'api/v1/series?match%5B%5D=up',
+  'api/v1/query_exemplars?query=up',
+  'api/v1/rules',
+];
 let ids: ProxyUserIds;
 let routes: ReturnType<typeof dataSourceRoutes>;
+let metricsUid: string;
 
 pmmTest.beforeEach(async ({ accessControlHelper, grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -30,6 +48,7 @@ pmmTest.beforeEach(async ({ accessControlHelper, grafanaHelper }) => {
 
   const { id, uid } = await accessControlHelper.getMetricsDataSource();
 
+  metricsUid = uid;
   routes = dataSourceRoutes(id, uid);
 });
 
@@ -40,7 +59,7 @@ pmmTest.afterEach(async ({ accessControlHelper }) => {
 
 pmmTest(
   'PMM-T2345 - Verify a Viewer with no access to any service gets no metrics through any address of the Metrics data source @LBAC',
-  async ({ accessControlHelper, api, dashboard, grafanaHelper, page }) => {
+  async ({ accessControlHelper, api, dashboard, grafanaHelper, page, urlHelper }) => {
     const proxyApi = api.datasourceProxyApi;
     const copy = await proxyApi.createDataSource(`Metrics copy ${Date.now()}`, metricsDataSourceUrl);
     const copyRoute = `/graph/api/datasources/proxy/${copy.id}/`;
@@ -83,7 +102,11 @@ pmmTest(
 
       await pmmTest.step('Viewer sees no data on the MySQL dashboard', async () => {
         await grafanaHelper.signInAs(viewer.username, viewer.password);
-        await page.goto(mysqlOverviewUrl);
+        await page.goto(
+          urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
+            from: dashboardTimeRange,
+          }),
+        );
         await dashboard.verifyPanelsShowNoRealDataMarkers(mysqlDisallowedPanels);
       });
     } finally {
@@ -94,7 +117,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T2346 - Verify a Viewer with full access still gets every metric through each address of the Metrics data source @LBAC',
-  async ({ accessControlHelper, api, dashboard, grafanaHelper, page }) => {
+  async ({ accessControlHelper, api, dashboard, grafanaHelper, page, urlHelper }) => {
     const proxyApi = api.datasourceProxyApi;
 
     const expectSameAsAdmin = async (routeList: string[]) => {
@@ -123,7 +146,11 @@ pmmTest(
 
     await pmmTest.step('Viewer sees data on the MySQL dashboard', async () => {
       await grafanaHelper.signInAs(viewer.username, viewer.password);
-      await page.goto(mysqlOverviewUrl);
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
+          from: dashboardTimeRange,
+        }),
+      );
       await dashboard.verifyPanelValues(mysqlAllowedPanels);
     });
 
@@ -305,6 +332,87 @@ pmmTest(
 
     await pmmTest.step('An anonymous caller is asked to log in', async () => {
       expect(proxyApi.getRaw('/prometheus/api/v1/query?query=up&x=/../../../../ping').status).toEqual(401);
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2350 - Verify dashboards, variables, Explore, QAN and alert rules keep working for every database type @LBAC',
+  async ({
+    accessControlHelper,
+    api,
+    dashboard,
+    grafanaHelper,
+    leftNavigation,
+    page,
+    qanStoredMetrics,
+    urlHelper,
+  }) => {
+    const failed: string[] = [];
+
+    await accessControlHelper.setAccessControl(false);
+
+    const refusalsBefore = accessControlHelper.countRefusals();
+
+    page.on('response', (response) => {
+      if (/\/api\/(ds\/query|datasources\/)/.test(response.url()) && response.status() >= 400) {
+        failed.push(`${response.status()} ${response.url()}`);
+      }
+    });
+
+    await grafanaHelper.signInAs(viewer.username, viewer.password);
+
+    await pmmTest.step('Viewer sees data in QAN', async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(qanUrl, { from: dashboardTimeRange }));
+      await qanStoredMetrics.verifyQanStoredMetricsHaveData();
+    });
+
+    for (const { allowedPanels, serviceType } of accessControlScenarios) {
+      await pmmTest.step(`Viewer sees data on the ${serviceType} overview`, async () => {
+        await leftNavigation.selectMenuItem(serviceType);
+        await dashboard.verifyPanelValues(allowedPanels);
+      });
+    }
+
+    await pmmTest.step('No data source request failed', async () => {
+      expect(failed).toEqual([]);
+    });
+
+    await pmmTest.step('Explore requests succeed for an Editor', async () => {
+      for (const endpoint of exploreEndpoints) {
+        const { status } = await api.datasourceProxyApi.get(`${routes.resourcesByUid}${endpoint}`, editor);
+
+        expect(status, endpoint).toEqual(200);
+      }
+    });
+
+    await pmmTest.step('An alert rule on the Metrics data source fires', async () => {
+      const folderUid = await api.grafanaApi.createFolder(`pmm-15379-${Date.now()}`);
+
+      try {
+        const name = 'pmm-15379-fire';
+        const response = await page.request.post(`${apiEndpoints.grafana.ruler}/${folderUid}`, {
+          data: ruleGroup(name, metricsUid, 'up{service_name=~".+"}'),
+          headers: GrafanaHelper.getAuthHeader(),
+        });
+
+        expect(response.status(), await response.text()).toEqual(202);
+        await expect
+          .poll(
+            async () =>
+              (await api.alertingApi.getRuleGroups())
+                .find((group) => group.name === name)
+                ?.rules.find((rule) => rule.name === name)?.state,
+            { intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES },
+          )
+          .toEqual('firing');
+      } finally {
+        await api.grafanaApi.deleteFolder(folderUid);
+      }
+    });
+
+    await pmmTest.step('The proxy refused no request', async () => {
+      expect(accessControlHelper.countRefusals()).toEqual(refusalsBefore);
     });
   },
 );
