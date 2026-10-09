@@ -13,17 +13,7 @@ pmmTest('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ api, qa
   await expect(qanStoredMetrics.elements.queryRows.visible()).toHaveCount(26, {
     timeout: Timeouts.THIRTY_SECONDS,
   });
-  await expect
-    .poll(
-      async () =>
-        Math.ceil(
-          ((await qanStoredMetrics.getTotalQueryCount()) ?? 0) /
-            Number(await qanStoredMetrics.buttons.lastPage.getAttribute('title')) /
-            25,
-        ) * 25,
-      { message: 'Pages do not match with total count' },
-    )
-    .toBe(25);
+  await qanStoredMetrics.verifyPagesAndCount(25);
 
   for (const filter of [
     'Environment',
