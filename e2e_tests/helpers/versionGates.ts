@@ -13,4 +13,6 @@ export const minPmmVersion: Record<string, string> = {
   'PMM-T2354': '3.10.0',
   'PMM-T2355': '3.10.0',
   'PMM-T2356': '3.10.0',
+  'PMM-T2369': '3.10.0',
+  'PMM-T2370': '3.10.0',
 };

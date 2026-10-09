@@ -192,8 +192,6 @@ export default class GrafanaHelper {
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
     await this.page.context().clearCookies();
-    await this.page.goto('', { waitUntil: 'domcontentloaded' }).catch(() => {
-      /* PMM may redirect mid-load; we don't care about the cancel */
-    });
+    await this.page.goto('about:blank');
   };
 }
