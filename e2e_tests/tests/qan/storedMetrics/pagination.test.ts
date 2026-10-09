@@ -35,7 +35,7 @@ pmmTest('PMM-T128 - Verify qanPagination works correctly @qan', async ({ qanStor
 });
 
 pmmTest(
-  'PMM-T193 - Verify user is able to change per page elements display and qanPagination is updated according to this value, PMM-T256 - Verify that switching view from 25 to 50/100 pages works correctly @qan',
+  'PMM-T193 + PMM-T256 - Verify per-page selection updates pagination and switching from 25 to 50/100 works @qan',
   async ({ qanStoredMetrics }) => {
     const countOfItems = await qanStoredMetrics.getQueryCount();
 
