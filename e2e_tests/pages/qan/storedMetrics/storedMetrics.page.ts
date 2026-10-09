@@ -346,15 +346,18 @@ export default class StoredMetricsPage extends BasePage {
   verifyPagesAndCount = async (itemsPerPage: number) => {
     await expect
       .poll(
-        async () =>
-          Math.ceil(
-            ((await this.getTotalQueryCount()) ?? 0) /
-              Number(await this.buttons.lastPage.getAttribute('title')) /
-              25,
-          ) * 25,
-        { message: 'Pages do not match with total count', timeout: Timeouts.THIRTY_SECONDS },
+        async () => {
+          const totalCount = (await this.getTotalQueryCount()) ?? 0;
+          const lastPage = Number(await this.buttons.lastPage.getAttribute('title'));
+
+          return totalCount > 0 && lastPage === Math.ceil(totalCount / itemsPerPage);
+        },
+        {
+          message: `Last page does not match total count at ${itemsPerPage} per page`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
       )
-      .toBe(itemsPerPage);
+      .toBe(true);
   };
 
   verifyPaginationRange = async (range: string) => {

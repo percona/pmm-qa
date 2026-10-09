@@ -23,7 +23,7 @@ pmmTest('PMM-T128 - Verify qanPagination works correctly @qan', async ({ qanStor
     await qanStoredMetrics.buttons.previousPage.click();
     await qanStoredMetrics.verifyActivePage(1, '1-25');
   }
-  if (countOfItems > 125) {
+  if (countOfItems > 175) {
     await expect(qanStoredMetrics.buttons.previousPage).toHaveAttribute('aria-disabled', 'true');
     await qanStoredMetrics.builders.paginationItem('Next 5 Pages').click();
     await qanStoredMetrics.verifyActivePage(6, '126-150');
@@ -53,13 +53,16 @@ pmmTest(
       await qanStoredMetrics.verifyPagesAndCount(50);
       await qanStoredMetrics.verifyPaginationRange('1-50');
       await qanStoredMetrics.selectResultsPerPage('100 / page');
+      await expect(qanStoredMetrics.elements.queryRows.visible()).toHaveCount(
+        Math.min(countOfItems, 100) + 1,
+        {
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
+      );
+      await qanStoredMetrics.verifyPagesAndCount(100);
+      await qanStoredMetrics.verifyPaginationRange(`1-${Math.min(countOfItems, 100)}`);
     }
     if (countOfItems > 125) {
-      await expect(qanStoredMetrics.elements.queryRows.visible()).toHaveCount(101, {
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
-      await qanStoredMetrics.verifyPagesAndCount(100);
-      await qanStoredMetrics.verifyPaginationRange('1-100');
       await qanStoredMetrics.selectResultsPerPage('25 / page');
       await expect(qanStoredMetrics.elements.queryRows.visible()).toHaveCount(26, {
         timeout: Timeouts.THIRTY_SECONDS,
