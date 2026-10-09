@@ -29,19 +29,12 @@ QA_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 if [ "$ARCH" = arm64 ]; then TARBALL_LINK="$TARBALL_ARM64"; else TARBALL_LINK="$TARBALL_AMD64"; fi
 
 start_client() {
-  # Hardened units (valkey-server, mysqlrouter, valkey@default) need a private
-  # mount namespace, and CAP_SYS_ADMIN on its own is not enough. Keep this list
-  # in sync with privileged: in build-package-test-images.yml.
-  #
-  # ol8 and ol9 are deliberately left out: privileged, sudo stops working inside
-  # the container ("PAM account management error: Authentication service cannot
-  # retrieve authentication info") and the play dies at Change Postgresql Password.
+  # Hardened units (valkey, mysqlrouter) need a private mount namespace.
+  # ol8/ol9 excluded: --privileged breaks sudo (PAM) there.
   local needs_privileged="ol10 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604" priv=""
   case " $needs_privileged " in *" $OS "*) priv="--privileged" ;; esac
 
-  # Not --network host: PMM checks for a Nomad node whose address is not
-  # 127.0.0.1, so the client needs an address of its own.
-  # shellcheck disable=SC2086
+  # The client needs its own address: PMM rejects a Nomad node at 127.0.0.1.
   sudo podman run -d --name client --systemd=always $priv "$CLIENT_IMAGE" /sbin/init || return 1
 
   # shellcheck disable=SC2016 # expanded by the shell inside the container
@@ -54,7 +47,6 @@ start_client() {
     done
     echo "systemd never came up"; systemctl list-jobs --no-pager; exit 1' || return 1
 
-  # The bridge gateway is the runner, where pmm-server publishes its ports.
   gateway=$(sudo podman exec client ip route | awk '/^default/{print $3}')
   [ -n "$gateway" ] || { echo "client has no default route"; return 1; }
   echo "pmm-server will be reachable at ${gateway}:443"
@@ -78,9 +70,6 @@ free_cgroup_root() {
     [ "$left" -eq 0 ] || echo "WARNING: Nomad will fail to start"' || true
 }
 
-# Started after the client because PMM_PUBLIC_ADDRESS has to be an address the
-# client can reach -- 127.0.0.1 would point it back at itself. Nomad also stays
-# switched off unless PMM_PUBLIC_ADDRESS is set (PMM-14921).
 start_server() {
   sudo podman run -d --name pmm-server \
     -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
@@ -94,8 +83,6 @@ start_server() {
     "$SERVER_IMAGE"
 }
 
-# readyz goes green before Nomad is listening, and the playbook only retries a
-# few times before giving up on it. 502 means Nomad is not up yet.
 wait_for_server() {
   curl -ksf --retry 60 --retry-delay 5 --retry-all-errors \
     https://127.0.0.1/v1/server/readyz || return 1
@@ -111,7 +98,6 @@ wait_for_server() {
   fi
   echo "Nomad is listening (HTTP $code)"
 
-  # Check the client can actually get there; a wrong public address breaks it.
   sudo podman exec client bash -c "timeout 5 bash -c '</dev/tcp/${gateway}/4647'"
 }
 
@@ -120,10 +106,6 @@ copy_pmm_qa() {
     sudo podman exec client sh -c 'ls /root/pmm-qa/package_tests >/dev/null'
 }
 
-# Same invocation as Jenkins. DEBIAN_FRONTEND and friends are baked into the deb
-# images, so apt cannot stop and wait for input. 85 minutes keeps an attempt
-# inside the 90 the Jenkins job allowed. Inside bash -c, $1 is the playbook; out
-# here it is the attempt number.
 run_playbook() {
   # shellcheck disable=SC2016 # expanded by the shell inside the container
   timeout 85m sudo podman exec \
@@ -145,8 +127,6 @@ run_playbook() {
         "package_tests/$1.yml"' bash "$TEST" 2>&1 | tee "ansible-$1.log"
 }
 
-# The playbooks write pmm-summary.zip next to package_tests/ when a metric check
-# fails.
 collect_diagnostics() {
   {
     echo "===== pmm-server ====="; sudo podman logs pmm-server --tail 200 2>&1

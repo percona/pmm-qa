@@ -15,11 +15,6 @@ name: Build package test images
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - package_tests/docker/**
-      - .github/workflows/build-package-test-images.yml
   workflow_call:
 
 permissions:

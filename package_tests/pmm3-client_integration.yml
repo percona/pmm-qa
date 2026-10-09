@@ -91,7 +91,6 @@
   - set_fact:
       mongo_service_name: "mongodb_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
       mongo_socket_service_name: "mongodb_socket_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
-#      mongo_service_name: "mongodb_{{ rnd }}_{{ instance_ip }}"
 
   - name: Set up Percona Server for MongoDB and add it to PMM
     when: '"psmdb-" in enabled_db | join("")'
@@ -142,7 +141,7 @@
     vars:
       valkey_to_test: "{{ enabled_db | select('match', '^valkey-*') | join('') }}"
 
-  - name: Verify if Metric Endpoint with Auth works for Mysqld Exporter
+  - name: Verify if Metric Endpoint with Auth works for Valkey Exporter
     when: '"valkey-" in enabled_db | join("")'
     include_tasks: ./tasks/verify_pmm3_service_metric.yml
     loop:

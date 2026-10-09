@@ -17,15 +17,6 @@
 name: PMM package tests matrix
 
 on:
-  pull_request:
-    branches: [main]
-    # 64 cells of up to 90 minutes each, so only for changes that can affect them.
-    # A pull request run never builds images, so a change to them alone has
-    # nothing new to test.
-    paths:
-      - 'package_tests/**'
-      - '!package_tests/docker/**'
-      - '.github/workflows/pmm3-package-tests-matrix.yml'
   workflow_dispatch:
     inputs:
       os:
@@ -161,7 +152,6 @@ concurrency:
 env:
   # build-package-test-images.yml publishes package_tests:<os> there.
   CLIENT_IMAGE_REPO: ghcr.io/percona/pmm-qa
-  # A pull_request run has no inputs, so each falls back to its dispatch default.
   SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
   INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
   METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
@@ -175,9 +165,6 @@ env:
   PMM_QA_REF: ${{ inputs.pmm_qa_ref || (!endsWith(github.repository, '/pmm-qa') && 'main' || '') }}
 
 jobs:
-  # Resolved once so every cell tests the same pmm-server build and asserts the
-  # same version, even when a moving tag like 3-dev-latest is rebuilt while cells
-  # are still queued.
   prepare:
     name: resolve inputs
     runs-on: ubuntu-latest
@@ -199,8 +186,6 @@ jobs:
         id: qa
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      # skopeo's docker:// transport expands a short name to docker.io itself, and
-      # the fully qualified name it prints spares podman its short-name lookup.
       - name: Pin pmm-server to a digest
         id: server
         env:
@@ -244,8 +229,6 @@ jobs:
 
       - name: Record what this run is testing
         env:
-          # Passed as env rather than interpolated into the heredoc below, which is
-          # unquoted and would otherwise execute a value containing $(...).
           RESOLVED: ${{ steps.server.outputs.image }}
           VERSION: ${{ steps.version.outputs.version }}
           REF: ${{ env.PMM_QA_REF || github.ref_name }}
@@ -348,10 +331,7 @@ jobs:
             done
           done
 
-      # Runners come with MySQL installed, and AppArmor matches profiles by binary
-      # path -- so the host profile also confines the mysqld in our container and
-      # stops it writing its log. The playbook reads the temporary root password
-      # from that log, so without this MySQL quietly ends up with no password.
+      # The host mysqld AppArmor profile also confines the container's mysqld, so it can't log its temp root password.
       - name: Unload the host mysqld AppArmor profile
         run: |
           if [ -f /etc/apparmor.d/usr.sbin.mysqld ]; then
@@ -360,9 +340,6 @@ jobs:
             echo "nothing to unload"
           fi
 
-      # Checked out on the runner and copied in, rather than cloned inside the
-      # container, so a run tests the commit prepare pinned: a pull request's merge
-      # commit, the dispatched branch, the caller's commit or pmm_qa_ref.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ env.PMM_QA_REPO }}
@@ -404,8 +381,6 @@ jobs:
           retention-days: 7
           overwrite: true
 
-      # ansible -vvv is far too big to read in the browser and is exactly what you
-      # want when something fails. Uploaded whenever an attempt failed, including
       # one a retry then cleared, so a flaky playbook leaves a trace.
       - name: Upload logs from failed attempts
         if: always()
