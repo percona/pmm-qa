@@ -37,6 +37,12 @@ export default class StoredMetricsPage extends BasePage {
         .locator('xpath=../..'),
     filterLabelsInGroup: (groupName: string) =>
       this.builders.filterCheckboxesInGroup(groupName).locator('.checkbox-container__label-text'),
+    filterLink: (filterName: string, groupName: string) =>
+      this.builders
+        .filterCheckboxInGroup(filterName, groupName)
+        .getByRole('link', { name: 'Open dashboard' }),
+    filterPercentage: (filterName: string, groupName: string) =>
+      this.builders.filterCheckboxInGroup(filterName, groupName).getByText(/%$/),
     filterShowAll: (groupName: string) => this.builders.filterGroup(groupName).getByText('Show all'),
     loadSparkline: (rowNumber: number) => this.builders.queryRow(rowNumber).locator('.td canvas'),
     mainMetricOption: (metricName: string) =>
@@ -93,6 +99,7 @@ export default class StoredMetricsPage extends BasePage {
     ),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
+    filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
     filterLabels: this.grafanaIframe().locator('.checkbox-container__label-text'),
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
     iframe: this.page.locator('iframe').first(),
@@ -100,6 +107,7 @@ export default class StoredMetricsPage extends BasePage {
     metricTooltip: this.grafanaIframe().locator('.ant-tooltip-content'),
     noClassicExplain: this.grafanaIframe().locator('pre').filter({ hasText: 'No classic explain found' }),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
+    noDataMessage: this.grafanaIframe().getByTestId('table-no-data').getByRole('heading', { level: 1 }),
     noJsonExplain: this.grafanaIframe().locator('pre').filter({ hasText: 'No JSON explain found' }),
     overviewColumnTooltip: this.grafanaIframe().locator('.overview-column-tooltip'),
     pageProgressBar: this.page.getByRole('progressbar'),
@@ -149,6 +157,8 @@ export default class StoredMetricsPage extends BasePage {
 
   getColumnValues = async (columnNumber: number) =>
     (await this.builders.columnValues(columnNumber).allTextContents()).map((text) => {
+      if (text.trim() === 'N/A') return 0;
+
       const [value, unit = ''] = text.replace('<', '').trim().split(' ');
       const magnitudes: Record<string, number> = { b: 1e9, k: 1e3, m: 1e6 };
       const timeUnits: Record<string, number> = { min: 60, ms: 1e-3, s: 1, µs: 1e-6 };
@@ -165,6 +175,16 @@ export default class StoredMetricsPage extends BasePage {
 
   getQpsTooltipValue = async () =>
     (await this.elements.qpsTooltip.textContent())?.split(':')[1]?.trim().split(' ')[0];
+
+  getQueryCount = async () => {
+    await expect(this.builders.queryRow(1)).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+
+    const count = await this.getTotalQueryCount();
+
+    if (count === null) throw new Error('Count of queries is not displayed!');
+
+    return count;
+  };
 
   getQueryId = async (rowNumber: number) => {
     await this.hoverQueryInfo(rowNumber);
