@@ -8,8 +8,8 @@ let sortedHostNames: string[];
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
+  const service1 = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
+  const service2 = await api.inventoryApi.getServiceDetailsByRegex('^rs102_');
 
   sortedHostNames = [service1.service_name, service2.service_name].sort();
 
@@ -27,7 +27,7 @@ pmmTest(
     await pmmTest.step('Simulate long running queries', async () => {
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-1',
+        queryLabel: 'rta-overview-1',
       });
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the query to run for some time
@@ -35,15 +35,17 @@ pmmTest(
 
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,
-        queryLabel: 'rta-2',
+        queryLabel: 'rta-overview-2',
       });
     });
 
     await pmmTest.step('PMM-T2174 Filter by query text and verify 2 queries are visible', async () => {
-      await queryAnalytics.rta.filterQueriesByText('rta');
+      // The filter is a case-insensitive substring match, and the base64 $clusterTime signature of a
+      // running hello command can contain 'rta' ("z6YIJqRtajW..."); '-' is outside the base64 alphabet.
+      await queryAnalytics.rta.filterQueriesByText('rta-overview-');
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-2')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-1')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-overview-2')).toBeVisible();
     });
 
     await pmmTest.step('Pause RTA', async () => {
@@ -51,8 +53,8 @@ pmmTest(
     });
 
     await pmmTest.step('PMM-T2173 Verify elapsed time for queries is descending by default', async () => {
-      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-1');
-      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-2');
+      const elapedTimeForQuery1 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-1');
+      const elapedTimeForQuery2 = await queryAnalytics.rta.getElapsedTimeForQueryByText('rta-overview-2');
 
       expect(elapedTimeForQuery1).toBeGreaterThan(0);
       expect(elapedTimeForQuery2).toBeGreaterThan(0);
@@ -185,20 +187,20 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
   });
 
-  await pmmTest.step('Filter by Host substring and verify only matching rows remain', async () => {
+  await pmmTest.step('Filter by Host and verify only matching rows remain', async () => {
     const rs101HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs101')) as string;
     const rs102HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs102')) as string;
-    const [rs101HostSubstring] = rs101HostName.split('_');
-    const [rs102HostSubstring] = rs102HostName.split('_');
 
-    expect(rs101HostSubstring).not.toBe(rs101HostName);
-    expect(rs102HostSubstring).not.toBe(rs102HostName);
-    await queryAnalytics.rta.openFilters();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
+    // The Host column uses a fuzzy filter, so a shared substring such as the
+    // rsXXX prefix also matches the other host (rs102 is a subsequence of
+    // rs101_23853 via the trailing port). Filter on the full host name, which
+    // fuzzy-matches only its own rows.
+    await queryAnalytics.rta.openFiltersIfHidden();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
-    await queryAnalytics.rta.openFilters();
-    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
+    await queryAnalytics.rta.openFiltersIfHidden();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostName);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
   });
@@ -271,30 +273,32 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
 
-    expect(headers).toEqual(
-      expect.arrayContaining([
-        'operation_id',
-        'elapsed_exec_time_sec',
-        'db_instance_address',
-        'client_address',
-        'database_name',
-        'service',
-        'user_name',
-        'collection',
-        'operation',
-        'plan_summary',
-        'client_app_name',
-        'operation_start_time',
-        'data_capture_time',
-        'raw_query',
-        'service_id',
-        'query_text',
-      ]),
-    );
+    // client_app_name is dropped when empty (proto3 omits empty scalars), so
+    // it is not required. service_id, query_text and the injected
+    // future_export_field are unlisted API fields the dynamic export appends.
+    const requiredHeaders = [
+      'operation_id',
+      'elapsed_exec_time_sec',
+      'db_instance_address',
+      'client_address',
+      'database_name',
+      'service',
+      'user_name',
+      'collection',
+      'operation',
+      'plan_summary',
+      'operation_start_time',
+      'data_capture_time',
+      'raw_query',
+      'service_id',
+      'query_text',
+      dynamicHeader,
+    ];
+
+    expect(headers).toEqual(expect.arrayContaining(requiredHeaders));
     expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
-    expect(headers).toContain(dynamicHeader);
-    expect(csvContent).toContain(dynamicValue);
     expect(headers).not.toContain('query_execution_duration');
+    expect(csvContent).toContain(dynamicValue);
   });
 
   await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);
@@ -352,7 +356,6 @@ pmmTest(
   'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
   async ({ page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
-    const durationParameterName = 'overview.f.queryExecutionDurationMs';
     let decimalMaximum = '';
     let decimalMinimum = '';
     let rowsBeforeFilter = 0;
@@ -363,7 +366,7 @@ pmmTest(
       await rta.openFilters();
 
       const rowCount = await rta.elements.realTimeTableRow.count();
-      const durations = (await rta.elements.durationCells.allTextContents()).map(Number.parseFloat);
+      const durations = await rta.getDurations();
       const shortestDuration = Math.min(...durations);
       const longestDuration = Math.max(...durations);
 
@@ -379,15 +382,13 @@ pmmTest(
     await pmmTest.step('Verify filtered results', async () => {
       await expect
         .poll(async () => {
-          const values = await rta.elements.durationCells.allTextContents();
+          const durations = await rta.getDurations();
 
           return (
-            values.length > 0 &&
-            values.length < rowsBeforeFilter &&
-            values.every(
-              (value) =>
-                Number.parseFloat(value) >= Number(decimalMinimum) &&
-                Number.parseFloat(value) <= Number(decimalMaximum),
+            durations.length > 0 &&
+            durations.length < rowsBeforeFilter &&
+            durations.every(
+              (duration) => duration >= Number(decimalMinimum) && duration <= Number(decimalMaximum),
             )
           );
         })
@@ -395,14 +396,10 @@ pmmTest(
     });
 
     const durationParameterValue = await pmmTest.step('Verify duration filters in the URL', async () => {
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
-        .toEqual(expect.stringContaining(decimalMinimum));
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
-        .toEqual(expect.stringContaining(decimalMaximum));
+      await expect.poll(rta.getDurationFilter).toEqual(expect.stringContaining(decimalMinimum));
+      await expect.poll(rta.getDurationFilter).toEqual(expect.stringContaining(decimalMaximum));
 
-      return new URL(page.url()).searchParams.get(durationParameterName);
+      return rta.getDurationFilter();
     });
 
     await pmmTest.step('Reload and verify restored duration filters', async () => {
@@ -411,7 +408,174 @@ pmmTest(
 
       await expect(rta.inputs.minimumDuration).toHaveValue(decimalMinimum);
       await expect(rta.inputs.maximumDuration).toHaveValue(decimalMaximum);
-      expect(new URL(page.url()).searchParams.get(durationParameterName)).toBe(durationParameterValue);
+      expect(rta.getDurationFilter()).toBe(durationParameterValue);
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2357 Verify RTA elapsed-time Min and Max filters accept only numbers and decimal values @rta',
+  async ({ mongoDbHelper, page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const olderQuery = 'rta-elapsed-filter-older';
+    const newerQuery = 'rta-elapsed-filter-newer';
+    let rowsBeforeFilter = 0;
+    let olderElapsed = 0;
+    let newerElapsed = 0;
+
+    await pmmTest.step('Run two long queries and pause RTA', async () => {
+      void mongoDbHelper.simulateLongRunningQuery({
+        delayMs: Timeouts.THIRTY_SECONDS,
+        queryLabel: olderQuery,
+      });
+      await expect
+        .poll(() => rta.getElapsedTimeForQueryByText(olderQuery), { timeout: Timeouts.TWENTY_SECONDS })
+        .toBeGreaterThanOrEqual(5);
+      void mongoDbHelper.simulateLongRunningQuery({
+        delayMs: Timeouts.THIRTY_SECONDS,
+        queryLabel: newerQuery,
+      });
+
+      await expect(rta.builders.rowByQueryText(newerQuery)).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+      await expect
+        .poll(() => rta.getElapsedTimeForQueryByText(newerQuery), { timeout: Timeouts.TEN_SECONDS })
+        .toBeGreaterThanOrEqual(2);
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.openFilters();
+
+      rowsBeforeFilter = await rta.elements.realTimeTableRow.count();
+      olderElapsed = await rta.getElapsedTimeForQueryByText(olderQuery);
+      newerElapsed = await rta.getElapsedTimeForQueryByText(newerQuery);
+
+      expect(olderElapsed - newerElapsed).toBeGreaterThan(2);
+      expect(newerElapsed).toBeGreaterThan(1);
+      await expect(rta.inputs.minimumDuration).toHaveValue('');
+      await expect(rta.inputs.maximumDuration).toHaveValue('');
+    });
+
+    await pmmTest.step('Verify letters typed into Min are dropped', async () => {
+      await rta.inputs.minimumDuration.pressSequentially('abc');
+
+      await expect(rta.inputs.minimumDuration).toHaveValue('');
+      await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
+    });
+
+    await pmmTest.step('Verify a unit typed after a number is dropped and the number filters', async () => {
+      const bound = String(Math.floor(newerElapsed));
+
+      await rta.inputs.minimumDuration.pressSequentially(`${bound}s`);
+
+      await expect(rta.inputs.minimumDuration).toHaveValue(bound);
+      await expect(rta.builders.rowByQueryText(olderQuery)).toBeVisible();
+      await expect(rta.builders.rowByQueryText(newerQuery)).toBeVisible();
+      expect((await rta.getDurations()).every((duration) => duration >= Number(bound))).toBe(true);
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify([bound, '']));
+    });
+
+    await pmmTest.step('Verify pasted text containing letters is refused', async () => {
+      await rta.inputs.minimumDuration.fill('');
+      await expect.poll(rta.getDurationFilter).toBeNull();
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await page.evaluate(async (text) => await navigator.clipboard.writeText(text), '12abc');
+      await rta.inputs.minimumDuration.focus();
+      await page.keyboard.press('ControlOrMeta+V');
+
+      await expect(rta.inputs.minimumDuration).toHaveValue('');
+      await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
+    });
+
+    await pmmTest.step('Verify a minus sign is dropped', async () => {
+      await rta.inputs.minimumDuration.pressSequentially('-1');
+
+      await expect(rta.inputs.minimumDuration).toHaveValue('1');
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['1', '']));
+      await rta.inputs.minimumDuration.fill('');
+      await expect.poll(rta.getDurationFilter).toBeNull();
+    });
+
+    await pmmTest.step('Verify letters typed into Max are dropped', async () => {
+      await rta.inputs.maximumDuration.pressSequentially('xyz');
+
+      await expect(rta.inputs.maximumDuration).toHaveValue('');
+      await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
+    });
+
+    await pmmTest.step('Verify a lone decimal point is kept but filters nothing', async () => {
+      await rta.inputs.maximumDuration.pressSequentially('.');
+
+      await expect(rta.inputs.maximumDuration).toHaveValue('.');
+      await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
+      await expect.poll(rta.getDurationFilter).toBeNull();
+    });
+
+    await pmmTest.step('Verify a value starting with a decimal point filters', async () => {
+      await rta.inputs.maximumDuration.pressSequentially('5');
+
+      await expect(rta.inputs.maximumDuration).toHaveValue('.5');
+      await expect(rta.builders.rowByQueryText(olderQuery)).toBeHidden();
+      await expect(rta.builders.rowByQueryText(newerQuery)).toBeHidden();
+      expect((await rta.getDurations()).every((duration) => duration <= 0.5)).toBe(true);
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['', '.5']));
+    });
+
+    await pmmTest.step('Verify a value ending with a decimal point filters', async () => {
+      const bound = `${Math.floor((olderElapsed + newerElapsed) / 2)}.`;
+
+      await rta.inputs.maximumDuration.fill('');
+      await expect.poll(rta.getDurationFilter).toBeNull();
+      await rta.inputs.minimumDuration.pressSequentially(bound);
+      await rta.inputs.maximumDuration.pressSequentially('999');
+
+      await expect(rta.inputs.minimumDuration).toHaveValue(bound);
+      await expect(rta.inputs.maximumDuration).toHaveValue('999');
+      await expect(rta.builders.rowByQueryText(olderQuery)).toBeVisible();
+      await expect(rta.builders.rowByQueryText(newerQuery)).toBeHidden();
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify([bound, '999']));
+    });
+
+    await pmmTest.step('Verify clearing both bounds lists every query again', async () => {
+      await rta.inputs.minimumDuration.fill('');
+      await rta.inputs.maximumDuration.fill('');
+
+      await expect(rta.elements.realTimeTableRow).toHaveCount(rowsBeforeFilter);
+      await expect.poll(rta.getDurationFilter).toBeNull();
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2358 Verify RTA clears a non-numeric elapsed-time bound opened from a link @rta',
+  async ({ mongoDbHelper, page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const queryLabel = 'rta-elapsed-filter-link';
+
+    await pmmTest.step('Run a long query and filter by a valid Min bound', async () => {
+      void mongoDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
+
+      await expect(rta.builders.rowByQueryText(queryLabel)).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.openFilters();
+      await rta.inputs.minimumDuration.fill('1');
+
+      await expect.poll(rta.getDurationFilter).toBe(JSON.stringify(['1', '']));
+    });
+
+    await pmmTest.step('Open the link with a non-numeric Min bound', async () => {
+      const link = new URL(page.url());
+
+      link.searchParams.set(rta.durationFilterParameter, JSON.stringify(['999abc', '']));
+      await page.goto(link.toString());
+      await rta.elements.realTimeTable.waitFor({ state: 'visible' });
+      await expect(rta.builders.rowByQueryText(queryLabel)).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.openFiltersIfHidden();
+    });
+
+    await pmmTest.step('Verify the bound is cleared and the table is not filtered', async () => {
+      await expect(rta.inputs.minimumDuration).toHaveValue('');
+      await expect(rta.elements.noQueriesAvailable).toBeHidden();
+      await expect(rta.builders.rowByQueryText(queryLabel)).toBeVisible();
+      await expect.poll(rta.getDurationFilter).toBeNull();
     });
   },
 );

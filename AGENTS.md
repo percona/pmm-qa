@@ -36,13 +36,13 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
-| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
+| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) that provisions PMM Clients and monitored DBs on prebaked images on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [lib/config.sh](qa-integration/pmm_qa/pmm-framework/lib/config.sh) · [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md) |
+| [psmdb_pbm_auth_tests/](psmdb_pbm_auth_tests/) | Bats suites for PSMDB backup/restore through PMM and each authentication method, run by `PMM_PSMDB_PBM_FULL.yml` after pmm-framework sets up PSMDB | [README.md](psmdb_pbm_auth_tests/README.md) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
-| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
+| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), and the lint dispatcher | [agent_status.py](support_scripts/agent_status.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
-| [.claude/](.claude/) | Claude Code cloud agents (Test Runner, Investigator, FB Reporter, Router), their skills, and hooks | [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md) · [agents/](.claude/agents/) · [skills/](.claude/skills/) |
-| [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
+| Claude Code agents & skills | Test Runner, Investigator, FB Reporter, `qa-code-review`, the `@pmm-ai` Slack listener and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
 ## Cross-Suite Architecture
@@ -60,8 +60,6 @@ flowchart LR
 
     subgraph Setup["qa-integration"]
         framework["pmm-framework (bash)"]
-        ansible["Ansible playbooks"]
-        framework --> ansible
     end
 
     subgraph Suites["Test suites"]
@@ -86,7 +84,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (32 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -97,6 +95,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
+- `build-prebaked-images.yml` — builds the pmm-framework database images and publishes them to GHCR from `main` (nightly, or on a push touching `images/**`); PRs only build and check. A Dockerfile change reaches CI only after it merges. See [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md).
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
 To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github/workflows/](.github/workflows/).
@@ -109,7 +108,7 @@ Full Release-Candidate testing is **not** driven from this repo, and no longer h
 
 ## Linting
 
-One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the `PreToolUse` hook [.claude/hooks/pre-commit-lint-gate.sh](.claude/hooks/pre-commit-lint-gate.sh) runs it over the staged files before an agent's `git commit`. Both dispatch through [.claude/hooks/lint-changed.sh](.claude/hooks/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [.claude/hooks/lib/install-linters.sh](.claude/hooks/lib/install-linters.sh) — the same installers `session-start.sh` runs eagerly.
+One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the pmm-ai `PreToolUse` commit gate (`plugins/pmm-qa/hooks/pre-commit-lint-gate.sh` in percona/pmm-ai) runs it over the staged files before an agent's `git commit`. Both dispatch through [support_scripts/lint/lint-changed.sh](support_scripts/lint/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [support_scripts/lint/install-linters.sh](support_scripts/lint/install-linters.sh) — the same installers the pmm-ai `SessionStart` hook runs eagerly.
 
 | File kind | Command | Config |
 | ----------- | --------- | -------- |
@@ -230,7 +229,7 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
-The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to the current ISO week's shared `skill-gardener/<YYYY>-W<WW>` branch (`date -u +%G-W%V`) — cut from `main`, created only if this week's does not exist yet, and given no PR by the session (a week whose PR already merged and took its branch has the rest of its captures routed to the next week's branch, since recreating the merged name would strand them). Reviewing entries, editing a target, and opening a PR happen only in the scheduled weekly Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md), Sundays), never inside a user session: it applies the worthwhile lessons and deletes their entries on that same branch, then opens the single PR against `main`, whose review is the gate in front of every target edit. No lesson branch to publish means no PR; a branch a failed run stranded without a PR is picked up by the next. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly. The session hooks are not the only capture source: [`review-feedback-gardener`](.claude/agents/review-feedback-gardener.md) sweeps a window of pull request comments on a daily Routine, keeps the ones a person wrote — a login not ending in `[bot]`, the reviewing skill's own threads carved out by their severity marker — and hands what generalizes to the same Capture mode, so reviewer feedback reaches the reviewing skill through the one weekly PR rather than dying in the thread. It names no repository, skill or schedule of its own: it carries its own filter and takes the rest from its caller.
+Agents working here capture reusable lessons with the `skill-gardener` skill; lessons, targets and the weekly Publish PR all live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa/skills/skill-gardener`).
 
 ### Do
 

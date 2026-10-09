@@ -1,13 +1,13 @@
 import BasePage from '../base.page';
 import { Timeouts } from '@helpers/timeouts';
+import InventoryPagination from '@components/inventoryPagination.component';
 
 export default class ServicesPage extends BasePage {
   readonly url = 'graph/inventory/services';
+  readonly pagination = new InventoryPagination(this.grafanaIframe());
   builders = {
     monitoringByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
-    rowsPerPageOption: (rowsPerPage: string) =>
-      this.grafanaIframe().getByRole('option', { exact: true, name: rowsPerPage }),
     statusByServiceName: (serviceName: string) =>
       this.grafanaIframe()
         .getByRole('row', { name: serviceName })
@@ -15,12 +15,13 @@ export default class ServicesPage extends BasePage {
   };
   buttons = {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
+    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
   };
-  elements = {
-    rowsPerPageDropdown: this.grafanaIframe().getByTestId('pagination').locator('div[class*="-singleValue"]'),
-  };
+  elements = {};
   inputs = {};
-  messages = {};
+  messages = {
+    deleteConfirmation: this.grafanaIframe().getByTestId('delete-services-description'),
+  };
 
   waitForServiceMonitoring = async (
     serviceName: string,

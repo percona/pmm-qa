@@ -4,6 +4,8 @@ import { expect } from '@playwright/test';
 
 export default class AgentsPage extends BasePage {
   builders = {
+    agentTypeCell: (agentType: string) =>
+      this.grafanaIframe().getByRole('cell', { exact: true, name: agentType }),
     hideRowDetails: (agentId: string) =>
       this.grafanaIframe().locator(
         `//td[@title="${agentId}"]//ancestor::tr//button[@data-testid="hide-row-details"]`,
@@ -17,8 +19,11 @@ export default class AgentsPage extends BasePage {
         `//td[@title="${agentId}"]//ancestor::tr//button[@data-testid="show-row-details"]`,
       ),
   };
-  buttons = {};
+  buttons = {
+    backToNodes: this.grafanaIframe().getByRole('link', { name: 'Go back to nodes' }),
+  };
   elements = {
+    agentTypes: this.grafanaIframe().getByTestId('table-tbody-tr').locator('xpath=td[3]'),
     rowDetails: this.grafanaIframe().locator('//span[@data-testid="details-row-content"]'),
     rtaAgentStatus: this.grafanaIframe().locator(
       '//td[@title="rta-mongodb-agent"]//parent::tr//td[position()="2"]',

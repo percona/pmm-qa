@@ -1,9 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
+  test.use({ pmmClientContainer: 'pmm-client-1' });
+
   let iptablesCleanup: number | undefined;
   let adminVersion: number;
 
@@ -22,14 +24,15 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
     await cli.exec(startCommand);
     await expect(async () => {
       const status = await cli.exec('docker exec pmm-client-1 pmm-admin status');
-      await status.assertSuccess();
+      // A disconnected agent still exits 0 and prints "Connected : false".
+      expect(status.stdout).toMatch(/Connected\s+:\s+true/);
     }, { message: `"${startCommand}" failed to start.\nLogs:${(await cli.exec('docker logs pmm-server-1')).stdout}` }).toPass({
       timeout: 60_000,
       intervals: [2_000],
     });
-    await cli.exec('docker exec pmm-client-1 pmm-admin add mysql --username=pmm --password=pmm-pass --service-name=ps-8.0 --query-source=perfschema --host=ps-1 --port=3306 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
-    await cli.exec('docker exec pmm-client-1 pmm-admin add postgresql --query-source=pgstatements --username=pmm --password=pmm-pass --service-name=pdpgsql-1 --host=pdpgsql-1 --port=5432 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
-    await cli.exec('docker exec pmm-client-1 pmm-admin add mongodb --username=pmm --password=pmm-pass --service-name=mongodb-7.0  --host=psmdb-1 --port=27017 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
+    await (await cli.exec('docker exec pmm-client-1 pmm-admin add mysql --username=pmm --password=pmm-pass --service-name=ps-8.0 --query-source=perfschema --host=ps-1 --port=3306 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true')).assertSuccess();
+    await (await cli.exec('docker exec pmm-client-1 pmm-admin add postgresql --query-source=pgstatements --username=pmm --password=pmm-pass --service-name=pdpgsql-1 --host=pdpgsql-1 --port=5432 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true')).assertSuccess();
+    await (await cli.exec('docker exec pmm-client-1 pmm-admin add mongodb --username=pmm --password=pmm-pass --service-name=mongodb-7.0  --host=psmdb-1 --port=27017 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true')).assertSuccess();
     adminVersion = await getPmmAdminMinorVersion('pmm-client-1');
   });
 
@@ -37,19 +40,23 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pmm-client-docker-tests.bats#L6
    */
   test('run pmm-admin list on pmm-client docker container', async ({}) => {
+    // The compose stack starts a second PMM Server beside the job's own; on a
+    // busy runner its agents can take over two minutes to leave UNKNOWN.
+    test.setTimeout(300_000);
     await expect(async () => {
-      const output = JSON.parse((await cli.exec('docker exec pmm-client-1 pmm-admin list --json')).stdout);
+      const raw = (await cli.exec('docker exec pmm-client-1 pmm-admin list --json')).stdout;
+      const output = JSON.parse(raw);
       const mysqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'ps-8.0');
       const postgresqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'pdpgsql-1');
       const mongodbServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'mongodb-7.0');
       const unknownAgentStatus = output.agent.some((agent: { status: string }) => agent.status.toLowerCase().includes('unknown'));
 
-      expect(mysqlServicePresent).toBeTruthy();
-      expect(postgresqlServicePresent).toBeTruthy();
-      expect(mongodbServicePresent).toBeTruthy();
-      expect(unknownAgentStatus).toBeFalsy();
+      expect(mysqlServicePresent, `ps-8.0 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(postgresqlServicePresent, `pdpgsql-1 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(mongodbServicePresent, `mongodb-7.0 missing from pmm-admin list:\n${raw}`).toBeTruthy();
+      expect(unknownAgentStatus, `An agent is still UNKNOWN:\n${raw}`).toBeFalsy();
     }).toPass({
-      timeout: 120_000,
+      timeout: 240_000,
       intervals: [2_000],
     });
   });

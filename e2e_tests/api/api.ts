@@ -5,24 +5,30 @@ import GrafanaApi from '@api/grafana.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
 import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
+import DatasourceProxyApi from '@api/datasourceProxy.api';
 import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 import AnnotationApi from '@api/annotation.api';
+import RemoteInstanceApi from '@api/remoteInstance.api';
 import HaApi from '@api/ha.api';
 import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
+import DumpApi from '@api/dump.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
   readonly alertingApi: AlertingApi;
   readonly annotationApi: AnnotationApi;
   readonly backupsApi: BackupsApi;
+  readonly datasourceProxyApi: DatasourceProxyApi;
+  readonly dumpApi: DumpApi;
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
   readonly managementApi: ManagementApi;
   readonly prometheusApi: PrometheusApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
+  readonly remoteInstanceApi: RemoteInstanceApi;
   readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
 
@@ -31,14 +37,17 @@ export default class Api {
     this.alertingApi = new AlertingApi(request);
     this.annotationApi = new AnnotationApi(request);
     this.backupsApi = new BackupsApi(request);
+    this.datasourceProxyApi = new DatasourceProxyApi(request);
+    this.dumpApi = new DumpApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);
     this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
-    this.settingsApi = new SettingsApi(request);
+    this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);
+    this.settingsApi = new SettingsApi(request);
     this.managementApi = new ManagementApi(request);
   }
 }

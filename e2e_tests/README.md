@@ -46,6 +46,10 @@ cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.help
 constructor — change it there, or pass one in. Nothing skips itself: an unreachable
 namespace fails the test with kubectl's own error.
 
+PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
+It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
+start it by name from `e2e_tests/`: `docker compose up -d --no-deps webhookd`.
+
 ## Running Tests
 
 Run commands from `e2e_tests/`.
@@ -93,13 +97,18 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@annotations`
 - `@azure-integration`
 - `@dashboards`
+- `@disconnect`
 - `@docker-configuration`
 - `@downloads`
+- `@dump`
 - `@external-integration`
+- `@fb-alerting`
+- `@fb-encryption`
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ia`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
@@ -109,6 +118,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@new-navigation`
 - `@nightly`
 - `@node-exporter-integration`
+- `@nomad`
 - `@pgsm-pmm-integration`
 - `@pgss-pmm-integration`
 - `@pmm-ha`
@@ -119,13 +129,18 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-server`
+- `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@post-server-upgrade`
+- `@post-upgrade`
+- `@pre-upgrade`
 - `@proxysql-integration`
 - `@ps-integration`
 - `@ps-slowlog-integration`
 - `@psmdb-mongolog-integration`
 - `@psmdb-profiler-integration`
+- `@qan`
 - `@rds-integration`
 - `@rta`
 - `@rta-mongodb-integration`

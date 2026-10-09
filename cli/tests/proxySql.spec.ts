@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as zipHelper from '@helpers/zip-helper';
 import { getPmmAdminMinorVersion } from '@root/helpers/pmm-admin';
@@ -12,6 +12,9 @@ let adminVersion: number;
 const connectionTimeoutServiceName = 'proxysql_connection_timeout_service';
 
 test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
+  // containerName is discovered in beforeAll, so it is read when each test starts.
+  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pxc_proxysql_pmm | awk \'{print $NF}\'');
     await result.outContains('pxc_proxysql_pmm', 'PROXYSQL docker container should exist. please run pmm-framework with --database pxc');

@@ -83,6 +83,22 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
+    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+
+    expect(
+      response.status(),
+      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    const body = await response.json();
+
+    return body.data.activeTargets.find(
+      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
+    );
+  };
+
   getDataSourceByName = async (name = 'Metrics') => {
     const dataSources = await this.request.get(apiEndpoints.grafana.datasources, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -96,6 +112,22 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
+  getFolderUid = async (title: string): Promise<string> => {
+    const response = await this.request.get(apiEndpoints.grafana.folders, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    const uid = ((await response.json()) as { title: string; uid: string }[]).find(
+      (folder) => folder.title === title,
+    )?.uid;
+
+    expect(uid, `Folder "${title}" must exist`).toBeDefined();
+
+    return uid as string;
+  };
+
   getMetric = async (metricName: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
@@ -103,10 +135,7 @@ export default class GrafanaApi {
       from: 'now-1m',
       queries: [
         {
-          datasource: {
-            type: 'prometheus',
-            uid: datasource.uid,
-          },
+          datasource: { type: 'prometheus', uid: datasource.uid },
           datasourceId: datasource.uid,
           expr: metricName,
           intervalMs: 1_000,

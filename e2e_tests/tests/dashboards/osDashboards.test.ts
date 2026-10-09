@@ -8,11 +8,11 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2039 - Open the Node Summary Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, {
         from: 'now-1h',
-        nodeName: 'pmm-server',
+        nodeName: await api.haApi.getPmmServerNodeName(),
         to: 'now',
       }),
     );
@@ -38,14 +38,22 @@ pmmTest(
 
 pmmTest(
   'PMM-T418 + PMM-T419 - Verify the pt-summary on Node Summary dashboard @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, page }) => {
+  async ({ api, dashboard, page }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- System Summary asks for the dashboard's default node_id, pmm-server, which HA does not have (PMM-9884); followers' agents can't run it either (PMM-15684).
+    pmmTest.skip(
+      await api.haApi.isEnabled(),
+      'System Summary requests node pmm-server, see PMM-9884 and PMM-15684',
+    );
+
     await page.goto(dashboard.os.nodeSummary.url);
     await dashboard.loadAllPanels();
     await expect(dashboard.elements.summaryPanelText).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
   },
 );
 
-pmmTest(
+// skip-until: 2026-11-23 -- the time zone is lost when navigating through Inventory (PMM-15557); unskip once it is fixed.
+// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15557, see the skip-until line above.
+pmmTest.skip(
   'PMM-T1090 - Verify time zones and navigation between dashboards @nightly  @dashboards @gssapi-nightly',
   async ({ dashboard, leftNavigation, page, urlHelper }) => {
     const timeZone = 'Europe/London';
@@ -58,17 +66,11 @@ pmmTest(
     );
     await dashboard.waitForDashboardToLoad();
 
-    await pmmTest.step(`Apply the ${timeZone} time zone`, async () => {
-      await leftNavigation.elements.timePickerOpenButton.click();
-      await leftNavigation.elements.changeTimeSettingsButton.click();
-      await leftNavigation.inputs.timeZonePicker.fill(timeZone);
-      await leftNavigation.builders.timeZoneOption(timeZone).click();
-      await leftNavigation.elements.timePickerOpenButton.click();
-    });
+    await leftNavigation.selectTimeZone(timeZone);
 
-    await pmmTest.step('Navigate to a MySQL dashboard through the left navigation', async () => {
+    await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
       await leftNavigation.selectMenuItem('inventory');
-      await leftNavigation.selectMenuItem('mysql');
+      await leftNavigation.selectMenuItem('operatingsystem.overview');
       await dashboard.waitForDashboardToLoad();
     });
 

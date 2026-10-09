@@ -92,17 +92,13 @@ module.exports = {
 
   async removeAllAlertRules() {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
-    const resp = await I.sendGetRequest('graph/api/prometheus/grafana/api/v1/rules', headers);
-    const rules = resp.data.data.groups;
+    const resp = await I.sendGetRequest('graph/api/ruler/grafana/api/v1/rules', headers);
 
-    const allRules =
-      rules &&
-      rules.map((r) => {
-        const { name } = r;
-        const folderId = r.folderUid || r.rules[0].grafana_alert.namespace_uid;
-
-        return { name, folderId };
-      });
+    const allRules = Object.values(resp.data || {})
+      .flat()
+      // Provisioned groups, like PMM's built-in self-monitoring rules, are read-only and cannot be deleted.
+      .filter((group) => !group.rules.some((r) => r.grafana_alert.provenance))
+      .map(({ name, rules }) => ({ name, folderId: rules[0].grafana_alert.namespace_uid }));
 
     for (const rule of allRules) {
       await this.removeAlertRule(rule.folderId, rule.name);

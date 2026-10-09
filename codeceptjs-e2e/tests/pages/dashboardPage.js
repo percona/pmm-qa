@@ -1,6 +1,7 @@
 /* eslint-disable import/no-useless-path-segments */
 const { I, adminPage } = inject();
 const assert = require('assert');
+const { tryTo } = require('codeceptjs/effects');
 const { DashboardPanelMenu } = require('./dashboards/components/DashboardPanelMenu');
 const PmmHealthDashboard = require('./dashboards/experimental/pmmHealthDashboard');
 const HomeDashboard = require('./dashboards/homeDashboard');
@@ -1199,7 +1200,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocator(metrics[i]));
       await this.waitForPanelToMount(this.graphsLocator(metrics[i]));
-      I.scrollTo(this.graphsLocator(metrics[i]));
+      await tryTo(() => I.scrollTo(this.graphsLocator(metrics[i])));
     }
   },
 
@@ -1210,7 +1211,7 @@ module.exports = {
       I.pressKey('PageDown');
       await this.scrollBackToPanel(this.graphsLocatorPartialMatch(metrics[i]));
       await this.waitForPanelToMount(this.graphsLocatorPartialMatch(metrics[i]));
-      I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+      await tryTo(() => I.scrollTo(this.graphsLocatorPartialMatch(metrics[i])));
     }
   },
 

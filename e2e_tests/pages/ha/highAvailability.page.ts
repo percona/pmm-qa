@@ -30,12 +30,6 @@ export default class HighAvailabilityPage extends BasePage {
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
   };
 
-  getLeaderName = async (): Promise<string> => {
-    await this.expandHaNavItem();
-
-    return (await this.elements.leaderNodeName.innerText()).trim();
-  };
-
   /**
    * Needed after a failover: the page was talking to the pod that was killed, so
    * its sidebar can be left holding a failed query instead of retrying.

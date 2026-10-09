@@ -9,13 +9,13 @@ on:
         required: false
         type: string
       pxc_version:
-        description: 'PXC version, example: 8.0.33-25 or VERSIONS URL'
+        description: 'PXC major (8.0, packaged), release (8.0.33-25, its TESTING tarball) or VERSIONS URL (its PXC80_VER tarball)'
         default: 'https://github.com/Percona-QA/package-testing/blob/master/VERSIONS'
         required: true
         type: string
       pxc_glibc:
-        description: 'PXC glibc version, example: 2.35'
-        default: '2.35'
+        description: 'PXC tarball glibc suffix; the PXC image is UBI9, glibc 2.34'
+        default: '2.34'
         required: true
         type: string
       pmm_server_image:
@@ -25,7 +25,7 @@ on:
         type: string
       pmm_client_version:
         description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         required: false
         type: string
 
@@ -53,36 +53,23 @@ jobs:
     timeout-minutes: 40
     env:
       ADMIN_PASSWORD: 'admin'
-      PXC_VERSION: ${{ inputs.pxc_version || '8.0' }}
-      PXC_GLIBC: ${{ inputs.pxc_glibc || '2.35' }}
+      PXC_INPUT: ${{ inputs.pxc_version || '8.0' }}
+      PXC_GLIBC: ${{ inputs.pxc_glibc || '2.34' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
     steps:
-      - name: PXC_VERSION ENV Setup
+      - name: Pick the PXC version and tarball
         run: |
-          if [[ "${PXC_VERSION}" != http* ]]; then
-            PXC_VERSION_PATH="pxc-$PXC_VERSION"
-            PXC_VERSION_TRIMED="${PXC_VERSION%-*}"
-          else
-            wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/VERSIONS
-            PXC_VERSION="$(grep 'PXC80_VER' VERSIONS | cut -d = -f 2)"
-            PXC_VERSION_PATH="pxc-$PXC_VERSION.1"
-            PXC_VERSION_TRIMED="${PXC_VERSION%-*}"
+          release=$PXC_INPUT
+          if [[ $release == http* ]]; then
+            release=$(curl -fsSL https://raw.githubusercontent.com/Percona-QA/package-testing/master/VERSIONS | sed -n 's/^PXC80_VER="\(.*\)"/\1/p')
+            [[ -n $release ]] || { echo "PXC80_VER not found in VERSIONS"; exit 1; }
           fi
-          {
-            echo "PXC_VERSION=${PXC_VERSION}"  | sed 's/"//g'
-            echo "PXC_VERSION_TAR=${PXC_VERSION}.1"  | sed 's/"//g'
-            echo "PXC_VERSION_PATH=${PXC_VERSION_PATH}"
-            echo "PXC_VERSION_TRIMED=${PXC_VERSION_TRIMED}"
-          } >> "$GITHUB_ENV"
-
-      - name: Concatenate values to environment file
-        run: |
-          echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/${PXC_VERSION_PATH}/Percona-XtraDB-Cluster_${PXC_VERSION_TAR}_Linux.x86_64.glibc${PXC_GLIBC}.tar.gz" >> "$GITHUB_ENV"
-
-      - name: Install Ansible and update the node
-        run: sudo apt-get update -y && sudo apt-get install ansible -y
+          echo "PXC_MAJOR=$(cut -d. -f1-2 <<<"$release")" >> "$GITHUB_ENV"
+          if [[ $release == *.*.* ]]; then
+            echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/pxc-$release.1/Percona-XtraDB-Cluster_$release.1_Linux.x86_64.glibc$PXC_GLIBC.tar.gz" >> "$GITHUB_ENV"
+          fi
 
       - name: Run the PMM Server container
         run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
@@ -101,11 +88,8 @@ jobs:
         run: |
           mkdir -p /tmp/backup_data
           chmod 777 /tmp/backup_data
-          if [[ "${PXC_VERSION}" != http* ]]; then
-            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database "PXC=${PXC_VERSION}"
-          else
-            ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database "PXC,TARBALL=${PXC_TARBALL_PATH}"
-          fi
+          ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} \
+            --database "PXC=${PXC_MAJOR}${PXC_TARBALL_PATH:+,TARBALL=$PXC_TARBALL_PATH}"
 
       - name: Install npx dependencies
         working-directory: codeceptjs-e2e

@@ -3,6 +3,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AddRdsParameters, AddRdsResponse } from '@interfaces/inventory';
+import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
 
 export interface AddInstance {
   rds?: AddInstanceRDS;
@@ -108,15 +109,15 @@ export default class ManagementApi {
     return (await response.json()) as AddRdsResponse;
   };
 
-  addService = async (addInstance: AddInstance) => {
-    const res = await this.request.post(apiEndpoints.management.services, {
-      data: addInstance,
+  addService = async (service: object): Promise<AddServiceResponse> => {
+    const response = await this.request.post(apiEndpoints.management.services, {
+      data: service,
       headers: GrafanaHelper.getAuthHeader(),
-      ignoreHTTPSErrors: true,
-      timeout: Timeouts.THIRTY_SECONDS,
     });
 
-    return await res.json();
+    expect(response.status(), `Adding service failed: ${await response.text()}`).toEqual(200);
+
+    return (await response.json()) as AddServiceResponse;
   };
 
   discoverRDS = async (
