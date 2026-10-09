@@ -34,7 +34,7 @@ export default class QueryAnalyticsPage extends BasePage {
   };
   inputs = {};
   messages = {
-    copySuccess: this.grafanaIframe().getByRole('status').or(this.grafanaIframe().getByRole('alert')),
+    copySuccess: this.grafanaIframe().getByText('Successfully copied Query Analytics link to clipboard'),
   };
 
   copyLink = async () => {

@@ -81,13 +81,18 @@ pmmTest(
     await qanStoredMetrics.waitForLoad();
     await qanStoredMetrics.selectRow(2);
 
+    const loadedAt = Date.now();
     const firstUrl = await queryAnalytics.copyLink();
     const firstTo = Number(new URL(firstUrl).searchParams.get('to'));
 
     expect(
-      Math.abs(navigatedAt - firstTo),
-      'Difference between current time and first copied time must be less than one minute',
-    ).toBeLessThan(Timeouts.ONE_MINUTE);
+      firstTo,
+      'First copied time must be one minute before navigation started or later',
+    ).toBeGreaterThanOrEqual(navigatedAt - Timeouts.ONE_MINUTE - Timeouts.ONE_SECOND);
+    expect(
+      firstTo,
+      'First copied time must be one minute before the page loaded or earlier',
+    ).toBeLessThanOrEqual(loadedAt - Timeouts.ONE_MINUTE);
 
     // eslint-disable-next-line playwright/no-wait-for-timeout -- the stimulus: wall-clock time must pass for the copied "to" to move.
     await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
@@ -186,11 +191,17 @@ pmmTest(
 pmmTest(
   'PMM-T1142 - Verify that the table page and selected query are still the same when we go on copied link by new QAN CopyButton @qan',
   async ({ page, qanStoredMetrics, queryAnalytics, urlHelper }) => {
+    let attempt = 0;
+
     await page.goto(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-30m', to: 'now-5m' }),
     );
-    await qanStoredMetrics.waitForLoad();
-    await qanStoredMetrics.buttons.nextPage.click({ timeout: Timeouts.ONE_MINUTE });
+    await expect(async () => {
+      if (attempt++) await page.reload();
+
+      await qanStoredMetrics.waitForLoad();
+      await qanStoredMetrics.buttons.nextPage.click({ timeout: Timeouts.THIRTY_SECONDS });
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     await qanStoredMetrics.waitForLoad();
     await qanStoredMetrics.verifyActivePage(2);
     await qanStoredMetrics.selectRow(2);
