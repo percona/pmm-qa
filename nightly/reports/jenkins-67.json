@@ -2338,6 +2338,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-08T23:30:29Z"
+    },
+    {
+      "suites": [
+        "Other"
+      ],
+      "verdict": "test fix",
+      "summary": "MongoDB Sharded Cluster Summary @post-upgrade failed because verifyAllPanelsHaveData reported only its last pass, and with 5s auto-refresh panels such as Top Hottest Collections alternate between data and empty results; reproduced on a CHAOS VM under load, fixed by counting a panel as missing only when every pass shows it empty.",
+      "link": "https://github.com/percona/pmm-qa/pull/1583",
+      "by": "Investigator routine",
+      "at": "2026-10-09T00:37:56Z"
     }
   ],
   "claims": [
@@ -2346,13 +2356,6 @@
       "at": "2026-10-08T23:19:55Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-08T23:19:55Z",
-      "suites": [
-        "Other"
       ]
     }
   ]
