@@ -10,7 +10,7 @@ export default class ServicesPage extends BasePage {
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
     statusByServiceName: (serviceName: string) =>
       this.grafanaIframe()
-        .getByRole('row', { name: serviceName })
+        .locator(`//td[@title="${serviceName}"]//parent::tr`)
         .getByTitle(/^STATUS_/),
   };
   buttons = {

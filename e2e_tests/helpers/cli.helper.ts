@@ -107,7 +107,7 @@ export default class CliHelper {
     // Get the last item in the split result
     const serviceId: string =
       adminList
-        .find((item: string | string[]) => item.includes(options.serviceName))
+        .find((item: string) => item.trim().split(/\s+/).includes(options.serviceName))
         ?.trim()
         .split(' ')
         .pop() ?? '';
