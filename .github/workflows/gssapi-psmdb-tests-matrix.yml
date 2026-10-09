@@ -282,5 +282,5 @@ jobs:
       install_repo: ${{ inputs.repository || 'release'}}
       pmm_version: ${{ inputs.expected_version || '3-dev-latest' }}
       metrics_mode: "auto"
-      tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
 
