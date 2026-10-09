@@ -61716,16 +61716,18 @@
         "link": "https://github.com/percona/pmm-qa/pull/1572",
         "by": "Investigator routine",
         "at": "2026-10-09T03:45:38Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-09T03:21:16Z",
         "suites": [
           "Nightly Compatibility"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "client 3.7.1 lane: pmm3-aws-staging-start #27023 missed its 100 s readyz budget on a slow EC2 host (image pull 2m01s vs 35s on siblings, Grafana first-start migrations 73 s); 24 sibling starts that night and the previous 30 builds passed.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-09T03:45:43Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
