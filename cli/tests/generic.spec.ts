@@ -603,14 +603,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const startVersion = compatVersion ?? (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
-    let installArgs = `-v ${startVersion}`;
 
     if (compatVersion) {
       await cli.exec(`docker cp ${await cachedTarball(process.env.PMM_CLIENT_VERSION!)} ${containerName}:/pmm-client.tar.gz`);
-      installArgs = '-f /pmm-client.tar.gz';
     }
 
-    const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh ${installArgs}`);
+    const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh ${compatVersion ? '-f /pmm-client.tar.gz' : `-v ${startVersion}`}`);
 
     await install.assertSuccess();
     const setup = await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
