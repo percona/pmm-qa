@@ -88,9 +88,9 @@ When the parent designates a dry run, skip only: tracker status writes, step 5b 
 
 ## 2a. Start provisioning in the background
 
-Before launching the writer. The parent confirms the bucket: the tracker's `Setup` is a planned default that is regularly wrong, so derive the real service set from what the source's `Before`/`BeforeSuite` hooks, `Data(...)` rows and shell commands name, correct the tracker row if it differs, and cross-check against the destination Playwright job's `setup_services`, never the retiring CodeceptJS job's (a union grep over-provisions).
+Before launching the writer. The parent confirms the bucket: the tracker's `Setup` is a planned default that is regularly wrong, so derive the real service set from what the source's `Before`/`BeforeSuite` hooks, `Data(...)` rows and shell commands name, add the databases every test in a target file the migration will modify needs (the services it filters on, `docker exec`s into or registers), correct the tracker row if it differs, and cross-check against the destination Playwright job's `setup_services`, never the retiring CodeceptJS job's (a union grep over-provisions).
 
-Start `bash .claude/scripts/local-pmm.sh up <framework args>` in the background (under WSL on Windows) with the confirmed setup, launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
+Start `bash .claude/scripts/local-pmm.sh up <framework args>` in the background with the confirmed setup, under WSL and never Git Bash (it rewrites container paths); first `wsl -d Ubuntu -- docker version --format '{{.Server.Version}}'` must print a version, else wait and retry, and every retry starts with `local-pmm.sh down` from WSL. Then launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 
 ## 3. Wait for the environment and verify it
 
@@ -118,6 +118,8 @@ Verify:
 ```bash
 PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin-password}" bash .claude/scripts/run-migration-single-test.sh '<target-test-file>' --prepare-only   # path relative to e2e_tests/, not the repo root
 ```
+
+`--prepare-only` proves only the server. Then prove the agents and data: in every provisioned container `pmm-admin status` shows `Connected : true` and `pmm-admin list` shows every agent `Running`. For a QAN row, poll `POST /v1/qan/metrics:getReport` (`group_by: queryid`, the test's time range) until `total_rows` exceeds the source's largest item-count branch, and record the count on the timeline. A poll whose own command fails stops with that error; it never reads as "no data yet".
 
 Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and the framework log directory it printed on the timeline, and stop.
 

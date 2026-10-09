@@ -26,6 +26,8 @@ git merge origin/main
 git status --short        # must be empty before the migration starts
 ```
 
+Resolve a conflict on its markers, file by file. `git checkout --theirs`/`--ours` replaces the whole file and drops the other side's auto-merged hunks. Before committing the merge, `git check-ignore -q .claude/skills/codeceptjs-migration/tracker.md` must exit 1.
+
 ## Starting the migration
 
 Mark the row on control in a tracker-only commit; it identifies the active row:
@@ -245,7 +247,7 @@ A job still running is linked as it is; do not wait for CI before marking `done`
 gh api repos/percona/pmm-qa/actions/jobs/<job id>/logs | grep -c '✓.*<target file>'
 ```
 
-Every migrated title needs a linked job that ran it. When no job the push started selects a title (a tag only the Jenkins-dispatched nightly picks, such as `@qan` or `@nightly`), dispatch the Playwright runner on the publish branch with that tag and the setup the tests need, and link its job; a local run is not a substitute:
+Every migrated title needs a linked job that ran it. When no job the push started selects a title (a tag only the Jenkins-dispatched nightly picks, such as `@qan` or `@nightly`), dispatch the Playwright runner on the publish branch and link its job; a local run is not a substitute. List what the flag selects (`npx playwright test --list --grep '<flag>'`) and set `setup_services` to the union of databases every listed test needs, the same union step 2a provisions. When one runner cannot cover that union, narrow the flag to the migrated titles plus every test in a modified target file (ids with a trailing space, `'PMM-T128 |PMM-T193 '`) and prove the list equals that set:
 
 ```bash
 gh workflow run runner-e2e-tests-playwright.yml --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR" -f pmm_test_flag='<tag>' -f setup_services='<--database ...>' -f pmm_server_version='perconalab/pmm-server:3-dev-latest' -f pmm_client_version='latest-tarball'
@@ -257,7 +259,7 @@ A later push cancels the jobs of the run it supersedes: after every push, re-tak
 
 On control's own checkout, after the PR exists:
 
-1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
+1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
 2. Restore control's worktree:
 
 ```bash

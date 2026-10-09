@@ -23,7 +23,7 @@ Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`or
 1. All active behaviour from the source is represented in Playwright.
 2. The initial independent review passes.
 3. Migration-related locators are verified through MCP.
-4. The migrated test passes; the whole target file passes when an existing file was modified.
+4. The migrated test passes; the whole target file passes when an existing file was modified. Both pass locally before anything is pushed.
 5. Every migrated scenario is selected by some Playwright job, committed on the PR branch.
 6. The final independent review passes.
 7. A PR targeting `main` is open and the tracker row is `done`.

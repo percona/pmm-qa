@@ -90,7 +90,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 
 ## Final post-run review
 
-- [ ] Required executions or already-covered regression passed against the final code; runtime and locator fixes did not change behaviour and still satisfy the Shape and Practices blocks.
+- [ ] Required executions or already-covered regression passed against the final code, every test in a modified target file included (a red one is a blocker, whatever lines it is on); runtime and locator fixes did not change behaviour and still satisfy the Shape and Practices blocks.
 - [ ] No source dependency omitted; no target registration missing.
 - [ ] Every original tag remains. Existing CodeceptJS jobs and greps unchanged, except a job the retirement emptied, deleted in this PR.
 - [ ] Every surface the source ran on enumerated per workflow file and cross-repository consumer (`branch-workflow.md` Workflow coverage table), `fb-e2e-suite.yml` named explicitly. Where an `@fb-*` CodeceptJS grep selected a scenario, a Playwright job mirroring the retiring source's `setup_services` was added there.

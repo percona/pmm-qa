@@ -63,6 +63,8 @@ The runner, against the prepared environment with the same credential pair:
 
 Run in declaration order unless the source proves the scenarios independent. A test that reads state by index needs that state reset before a run on a reused environment; a file whose `beforeEach` restores its own precondition needs no external reset. If a reset is classifier-refused, stop and ask the parent.
 
+Every test in the run must pass. A red one is a failure to route, never evidence for a gate to judge, whatever lines it is on; a missing database is fixed by re-provisioning.
+
 Failure routing:
 
 - locator failure: reviewer;
