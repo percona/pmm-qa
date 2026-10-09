@@ -584,6 +584,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
+    // Two ~180 MB tarballs (downloads.percona.com, then the pmm-build-cache S3 bucket); CI has seen ~120 KB/s.
+    test.setTimeout(1_200_000);
     const containerName = 'tarball_client';
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
