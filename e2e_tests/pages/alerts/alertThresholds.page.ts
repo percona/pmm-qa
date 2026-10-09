@@ -25,8 +25,4 @@ export default class AlertThresholdsPage extends BasePage {
     empty: this.elements.modal.getByText('No alert rules support threshold overrides for this node.'),
     updated: this.builders.snackbar('Alert thresholds updated'),
   };
-
-  setOverride = async (ruleTitle: string, value: string): Promise<void> => {
-    await this.builders.overrideInput(ruleTitle).fill(value);
-  };
 }

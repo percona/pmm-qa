@@ -1,5 +1,5 @@
-import type Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
+import { overridableTemplate } from '@helpers/alertTemplate.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
@@ -12,7 +12,6 @@ const memoryTemplate = 'test_node_memory_multi';
 const pmmServerNode = 'pmm-server';
 const otherNode = `dt-node-${Date.now()}`;
 const folderTitle = 'PMM-14912 dynamic thresholds';
-const group = 'dt-group';
 const editor = { password: 'Editor-pw-12345', username: `dt-editor-${Date.now()}` };
 const viewer = { password: 'Viewer-pw-12345', username: `dt-viewer-${Date.now()}` };
 const templateNames = [
@@ -26,57 +25,36 @@ const templateNames = [
 let folderUid: string;
 let otherNodeId: string;
 const userIds: number[] = [];
-
-interface TemplateOptions {
-  boolParam?: boolean;
-  expression?: string;
-  singleExpression?: boolean;
-}
-
-const memoryQuery =
-  '100 * (1 - avg by (node_name) (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))';
-const overridableTemplate = (
-  name: string,
-  { boolParam = false, expression = '$A > [[ .threshold ]]', singleExpression = false }: TemplateOptions = {},
-) => `templates:
-  - name: ${name}
-    version: 1
-    summary: ${name}
-${
-  singleExpression
-    ? `    expr: |-
-      ${memoryQuery} > [[ .threshold ]]`
-    : `    queries:
-      - ref_id: A
-        expr: |-
-          ${memoryQuery}
-    expressions:
-      - ref_id: C
-        type: math
-        expression: "${expression}"
-    condition: C`
-}
-    params:
-      - name: threshold
-        summary: Memory used percentage
-${
-  boolParam
-    ? `        type: bool
-        value: true`
-    : `        unit: "%"
-        type: float
-        range: [0, 100]
-        value: 90`
-}
-        overridable: true
-    for: 1m
-    severity: warning
-    annotations:
-      summary: Node memory usage high ({{ $labels.node_name }})
-      description: '{{ $labels.node_name }} memory usage is above [[ .threshold ]]%.'
-`;
+const rejected = [
+  {
+    message: 'in expression C must be the whole right-hand side of a comparison',
+    name: 'test_dt_bad1',
+    options: { expression: '$A > [[ .threshold ]] * 2' },
+    shape: 'a scaled threshold',
+  },
+  {
+    message: 'in expression C must be the whole right-hand side of a comparison',
+    name: 'test_dt_bad2',
+    options: { expression: '[[ .threshold ]] < $A' },
+    shape: 'the threshold on the left-hand side',
+  },
+  {
+    message: "overridable parameter 'threshold' requires the queries and expressions template form",
+    name: 'test_dt_bad3',
+    options: { singleExpression: true },
+    shape: 'a single expr',
+  },
+  {
+    message: 'an overridable parameter must be of type float, got bool',
+    name: 'test_dt_bad4',
+    options: { boolParam: true },
+    shape: 'a bool parameter',
+  },
+];
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+  folderUid = '';
+  otherNodeId = '';
   await grafanaHelper.authorize();
   await api.alertingApi.removeAllAlertRules();
 
@@ -88,24 +66,14 @@ pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
 
 pmmTest.afterEach(async ({ api, grafanaHelper }) => {
   await api.alertingApi.removeAllAlertRules();
-  await api.grafanaApi.deleteFolder(folderUid);
-  await api.inventoryApi.deleteNode(otherNodeId, true);
+
+  if (folderUid) await api.grafanaApi.deleteFolder(folderUid);
+  if (otherNodeId) await api.inventoryApi.deleteNode(otherNodeId, true);
 
   for (const name of templateNames) await api.alertingApi.deleteTemplate(GrafanaHelper.getAuthHeader(), name);
 
   for (const id of userIds.splice(0)) await grafanaHelper.deleteUser(id);
 });
-
-const createRule = async (api: Api, name: string, threshold: number, templateName = cpuTemplate) =>
-  api.alertingApi.createRuleFromTemplate({
-    folderUid,
-    group,
-    interval: '10s',
-    name,
-    pendingPeriod: '10s',
-    templateName,
-    threshold,
-  });
 
 pmmTest(
   'PMM-T2364 - Verify a node threshold override makes the alert fire only for that node, and clearing it restores the default @fb-alerting',
@@ -114,16 +82,19 @@ pmmTest(
 
     await pmmTest.step('Only Node high CPU load is a Dynamic built-in template', async () => {
       await page.goto(alertingPage.urls.templates);
-      await expect(
-        alertingPage.builders.templateRow(cpuTemplateSummary).getByText('Dynamic', { exact: true }),
-      ).toBeVisible({
+      await expect(alertingPage.builders.dynamicBadge(cpuTemplateSummary)).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
-      await expect(alertingPage.elements.templatesTable.getByText('Dynamic', { exact: true })).toHaveCount(1);
+      await expect(alertingPage.elements.dynamicBadges).toHaveCount(1);
     });
 
     await pmmTest.step('Create a rule from the template with the default of 80', async () => {
-      await createRule(api, ruleName, 80);
+      await api.alertingApi.createFastRuleFromTemplate({
+        folderUid,
+        name: ruleName,
+        templateName: cpuTemplate,
+        threshold: 80,
+      });
     });
 
     await pmmTest.step('The window lists the rule with its default for pmm-server', async () => {
@@ -136,7 +107,7 @@ pmmTest(
     });
 
     await pmmTest.step('Set an override of 1 on pmm-server', async () => {
-      await alertThresholdsPage.setOverride(ruleName, '1');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('1');
       await alertThresholdsPage.buttons.submit.click();
       await expect(alertThresholdsPage.messages.updated).toBeVisible();
       await expect(alertThresholdsPage.elements.modal).toBeHidden();
@@ -192,51 +163,21 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2365 - Verify only valid overridable templates are accepted and shown as Dynamic @fb-alerting',
+  'PMM-T2365 - Verify valid overridable templates are accepted and shown as Dynamic @fb-alerting',
   async ({ alertingPage, page }) => {
-    const rejected = [
-      {
-        message: 'in expression C must be the whole right-hand side of a comparison',
-        name: 'test_dt_bad1',
-        options: { expression: '$A > [[ .threshold ]] * 2' },
-      },
-      {
-        message: 'in expression C must be the whole right-hand side of a comparison',
-        name: 'test_dt_bad2',
-        options: { expression: '[[ .threshold ]] < $A' },
-      },
-      {
-        message: "overridable parameter 'threshold' requires the queries and expressions template form",
-        name: 'test_dt_bad3',
-        options: { singleExpression: true },
-      },
-      {
-        message: 'an overridable parameter must be of type float, got bool',
-        name: 'test_dt_bad4',
-        options: { boolParam: true },
-      },
-    ];
-
     await page.goto(alertingPage.urls.templates);
 
     await pmmTest.step('A valid overridable template is added and shown as Dynamic', async () => {
       await alertingPage.createTemplate(overridableTemplate(memoryTemplate));
       await expect(alertingPage.messages.popUp).toContainText('Alert rule template successfully added');
-      await expect(
-        alertingPage.builders.templateRow(memoryTemplate).getByText('Dynamic', { exact: true }),
-      ).toBeVisible();
+      await expect(alertingPage.builders.dynamicBadge(memoryTemplate)).toBeVisible();
     });
 
     await pmmTest.step('View shows the template text with the overridable parameter', async () => {
-      await alertingPage.builders.templateRow(memoryTemplate).getByRole('button', { name: 'View' }).click();
-      await expect(alertingPage.elements.dialog.getByRole('textbox')).toHaveValue(/overridable: true/);
-      await expect(
-        alertingPage.elements.dialog.getByRole('button', { name: 'Copy to clipboard' }),
-      ).toBeVisible();
-      await alertingPage.elements.dialog
-        .getByRole('button', { name: 'Close' })
-        .filter({ hasText: 'Close' })
-        .click();
+      await alertingPage.builders.viewTemplate(memoryTemplate).click();
+      await expect(alertingPage.elements.templateText).toHaveValue(/overridable: true/);
+      await expect(alertingPage.buttons.copyToClipboard).toBeVisible();
+      await alertingPage.buttons.closeDialog.click();
     });
 
     await pmmTest.step('A compound condition is accepted', async () => {
@@ -244,32 +185,37 @@ pmmTest(
         overridableTemplate('test_dt_ok2', { expression: '($A < [[ .threshold ]]) || $A == 0' }),
       );
       await expect(alertingPage.messages.popUp).toContainText('Alert rule template successfully added');
-      await expect(
-        alertingPage.builders.templateRow('test_dt_ok2').getByText('Dynamic', { exact: true }),
-      ).toBeVisible();
+      await expect(alertingPage.builders.dynamicBadge('test_dt_ok2')).toBeVisible();
     });
 
-    for (const { message, name, options } of rejected) {
-      await pmmTest.step(`${name} is refused`, async () => {
-        await alertingPage.createTemplate(overridableTemplate(name, options));
-        await expect(alertingPage.messages.popUp.filter({ hasText: message })).toContainText(
-          'Failed to parse rule template',
-        );
-        await alertingPage.buttons.cancelTemplate.click();
-      });
-    }
-
-    await pmmTest.step('Only the valid templates were added', async () => {
+    await pmmTest.step('Both templates are kept after a reload', async () => {
       await page.reload();
       await expect(alertingPage.builders.templateRow(memoryTemplate)).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
       await expect(alertingPage.builders.templateRow('test_dt_ok2')).toBeVisible();
-
-      for (const { name } of rejected) await expect(alertingPage.builders.templateRow(name)).toHaveCount(0);
     });
   },
 );
+
+for (const { message, name, options, shape } of rejected) {
+  pmmTest(
+    `PMM-T2365 - Verify an overridable template with ${shape} is refused @fb-alerting`,
+    async ({ alertingPage, page }) => {
+      await page.goto(alertingPage.urls.templates);
+      await alertingPage.createTemplate(overridableTemplate(name, options));
+      await expect(alertingPage.builders.alertMessage(message)).toContainText(
+        'Failed to parse rule template',
+      );
+      await alertingPage.buttons.cancelTemplate.click();
+      await page.reload();
+      await expect(alertingPage.builders.templateRow(cpuTemplateSummary)).toBeVisible({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await expect(alertingPage.builders.templateRow(name)).toHaveCount(0);
+    },
+  );
+}
 
 pmmTest(
   'PMM-T2366 - Verify the Override alert thresholds window rejects invalid values and discards cancelled edits @fb-alerting',
@@ -285,13 +231,18 @@ pmmTest(
       await alertThresholdsPage.buttons.cancel.click();
     });
 
-    const ruleId = await createRule(api, ruleName, 80);
+    const ruleId = await api.alertingApi.createFastRuleFromTemplate({
+      folderUid,
+      name: ruleName,
+      templateName: cpuTemplate,
+      threshold: 80,
+    });
 
     await page.reload();
 
     await pmmTest.step('An out-of-range value is refused and the edit is kept', async () => {
       await nodesPage.openAlertThresholds(pmmServerNode);
-      await alertThresholdsPage.setOverride(ruleName, '150');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('150');
       await alertThresholdsPage.buttons.submit.click();
       await expect(
         alertThresholdsPage.builders.snackbar("Threshold for 'threshold' must be at most 100."),
@@ -304,7 +255,7 @@ pmmTest(
     });
 
     await pmmTest.step('Cancel discards the edit', async () => {
-      await alertThresholdsPage.setOverride(ruleName, '95');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('95');
       await alertThresholdsPage.buttons.cancel.click();
       await expect(alertThresholdsPage.elements.modal).toBeHidden();
       await expect(alertThresholdsPage.messages.updated).toBeHidden();
@@ -313,11 +264,11 @@ pmmTest(
     });
 
     await pmmTest.step('Typing the default back clears the override', async () => {
-      await alertThresholdsPage.setOverride(ruleName, '95');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('95');
       await alertThresholdsPage.buttons.submit.click();
       await expect(alertThresholdsPage.messages.updated).toBeVisible();
       await nodesPage.openAlertThresholds(pmmServerNode);
-      await alertThresholdsPage.setOverride(ruleName, '80');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('80');
       await alertThresholdsPage.buttons.submit.click();
       await expect(alertThresholdsPage.elements.modal).toBeHidden();
       await nodesPage.openAlertThresholds(pmmServerNode);
@@ -334,11 +285,15 @@ pmmTest(
 
 pmmTest(
   'PMM-T2367 - Verify users without the Admin role cannot open the threshold overrides @fb-alerting',
-  async ({ alertThresholdsPage, api, grafanaHelper, nodesPage, page }) => {
+  async ({ alertThresholdsPage, api, grafanaHelper, leftNavigation, nodesPage, page }) => {
     const ruleName = 'dt-cpu-80';
-    const inventoryMenu = page.getByTestId('navitem-inventory');
 
-    await createRule(api, ruleName, 80);
+    await api.alertingApi.createFastRuleFromTemplate({
+      folderUid,
+      name: ruleName,
+      templateName: cpuTemplate,
+      threshold: 80,
+    });
     userIds.push(await grafanaHelper.createUser(viewer.username, viewer.password));
 
     const editorId = await grafanaHelper.createUser(editor.username, editor.password);
@@ -349,7 +304,7 @@ pmmTest(
     await pmmTest.step('Admin sets an override of 95 on pmm-server', async () => {
       await page.goto(nodesPage.url);
       await nodesPage.openAlertThresholds(pmmServerNode);
-      await alertThresholdsPage.setOverride(ruleName, '95');
+      await alertThresholdsPage.builders.overrideInput(ruleName).fill('95');
       await alertThresholdsPage.buttons.submit.click();
       await expect(alertThresholdsPage.messages.updated).toBeVisible();
     });
@@ -358,8 +313,8 @@ pmmTest(
       await pmmTest.step(`${user.username} has no Inventory and no node actions`, async () => {
         await grafanaHelper.authorize(user.username, user.password);
         await page.goto('');
-        await expect(page.getByTestId('navitem-home-page')).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-        await expect(inventoryMenu).toBeHidden();
+        await expect(leftNavigation.elements.homeMenuItem).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+        await expect(leftNavigation.elements.inventoryMenuItem).toBeHidden();
         await page.goto(nodesPage.url);
         await expect(nodesPage.elements.unauthorized).toContainText('Insufficient access permissions.', {
           timeout: Timeouts.THIRTY_SECONDS,
@@ -388,9 +343,21 @@ pmmTest(
 
     await api.alertingApi.uploadTemplate(overridableTemplate(memoryTemplate));
 
-    for (const { name, template, threshold } of rules) await createRule(api, name, threshold, template);
+    for (const { name, template, threshold } of rules) {
+      await api.alertingApi.createFastRuleFromTemplate({
+        folderUid,
+        name,
+        templateName: template,
+        threshold,
+      });
+    }
 
-    await createRule(api, 'dt-static', 20, 'pmm_node_low_free_memory');
+    await api.alertingApi.createFastRuleFromTemplate({
+      folderUid,
+      name: 'dt-static',
+      templateName: 'pmm_node_low_free_memory',
+      threshold: 20,
+    });
 
     await pmmTest.step('Every overridable rule is listed with its own default and unit', async () => {
       await page.goto(nodesPage.url);
@@ -407,7 +374,7 @@ pmmTest(
     });
 
     await pmmTest.step('An override on one row leaves the others on their defaults', async () => {
-      await alertThresholdsPage.setOverride('dt-cpu-70', '95');
+      await alertThresholdsPage.builders.overrideInput('dt-cpu-70').fill('95');
       await alertThresholdsPage.buttons.submit.click();
       await expect(alertThresholdsPage.messages.updated).toBeVisible();
       await nodesPage.openAlertThresholds(pmmServerNode);

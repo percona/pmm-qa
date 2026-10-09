@@ -36,6 +36,15 @@ export interface CreateRuleBody {
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
+  // Evaluates every 10s, so a firing alert shows up within a test's timeout.
+  createFastRuleFromTemplate = async ({
+    group = 'fast-rules',
+    ...rule
+  }: Omit<TemplatedAlertRule, 'group' | 'interval' | 'pendingPeriod'> & {
+    group?: string;
+  }): Promise<string> =>
+    this.createRuleFromTemplate({ ...rule, group, interval: '10s', pendingPeriod: '10s' });
+
   createRule = async (headers: Headers, data: CreateRuleBody) =>
     this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
