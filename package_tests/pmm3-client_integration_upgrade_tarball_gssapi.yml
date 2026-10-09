@@ -32,12 +32,7 @@
       instance_ip: "{{ instance_ip.stdout }}"
 
   - name: Set Integrations list
-    include_tasks: ./tasks/pmm3-client_test_enabled_db_arm.yml
-    when: ansible_architecture == "aarch64"
-
-  - name: Set Integrations list
     include_tasks: ./tasks/pmm3-client_test_enabled_db.yml
-    when: ansible_architecture != "aarch64"
 
   - name: include tasks for test env setup
     include_tasks: ./tasks/pmm3_client_test_prepare.yml

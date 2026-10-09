@@ -27,12 +27,7 @@
       instance_ip: "{{ instance_ip.stdout }}"
 
   - name: Set Integrations list
-    include_tasks: ./tasks/pmm3-client_test_enabled_db_arm.yml
-    when: ansible_architecture == "aarch64"
-
-  - name: Set Integrations list
     include_tasks: ./tasks/pmm3-client_test_enabled_db.yml
-    when: ansible_architecture != "aarch64"
 
   - name: Setup environment
     include_tasks: ./tasks/pmm3_client_test_prepare.yml
@@ -139,9 +134,9 @@
   - set_fact:
       valkey_service_name: "valkey_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
-  - name: Install and start Valkey
+  - name: Start Valkey and add it to PMM
     when: '"valkey-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_valkey.yml
+    include_tasks: ./tasks/add_valkey_to_pmm.yml
     vars:
       valkey_to_test: "{{ enabled_db | select('match', '^valkey-*') | join('') }}"
 
