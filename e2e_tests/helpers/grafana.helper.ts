@@ -192,7 +192,6 @@ export default class GrafanaHelper {
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
     await this.page.context().clearCookies();
-    // Not the PMM home page: it keeps running after goto resolves, cancels the next navigation and drops the next user's session.
     await this.page.goto('about:blank');
   };
 }
