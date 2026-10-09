@@ -2328,7 +2328,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Other"
+      ],
+      "verdict": "product bug",
+      "summary": "PMM-T2357: on busy sharded-PSMDB services (>25 RTA rows) the RTA elapsed-time Min field, table filter and URL desync, so a cleared bound stays in the URL; reproduced 3/3 on fresh 3-dev-latest, passes on single-RS setups.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15708",
+      "by": "Investigator routine",
+      "at": "2026-10-09T03:45:34Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -2342,13 +2353,6 @@
       "at": "2026-10-09T03:21:16Z",
       "suites": [
         "Nightly Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-09T03:21:16Z",
-      "suites": [
-        "Other"
       ]
     }
   ]
