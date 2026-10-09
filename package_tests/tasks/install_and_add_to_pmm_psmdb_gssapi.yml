@@ -25,12 +25,13 @@
 - name: Run install_setup_psmdb.yml
   include_tasks: /tmp/install_setup_psmdb.yml
 
-- name: Install Kerberos
+- name: Install Kerberos and podman
   dnf:
     name:
       - krb5-workstation
       - krb5-server
       - krb5-pkinit
+      - podman
     state: present
   when: ansible_os_family == "RedHat"
 
@@ -52,9 +53,11 @@
     mode: '0644'
     backup: yes
 
+# Fully qualified: podman resolves a short name only through its search
+# registries, and with no TTY to prompt on it refuses one that is ambiguous.
 - name: Setup ldap-server
   shell: |
-    docker run -d \
+    podman run -d \
       --name ldap-server \
       --hostname ldap-server \
       -e LDAP_ADMIN_USERNAME=admin \
@@ -64,7 +67,7 @@
       -p 1389:1389 \
       -p 1636:1636 \
       -v openldap-data:/bitnami/openldap \
-      bitnamilegacy/openldap
+      docker.io/bitnamilegacy/openldap
   retries: "{{ retries | default(3, true) }}"
 
 - name: Generate certificates for tests
