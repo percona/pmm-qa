@@ -1,74 +1,60 @@
 import pmmTest from '@fixtures/pmmTest';
-import { APIResponse, expect } from '@playwright/test';
-import { pmmUrl } from '../playwright.config';
+import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-const deepLink =
-  'graph/d/node-cpu/cpu-utilization-details?from=now-6h&to=now-1h&viewPanel=panel-22&var-node_name=a%20b';
-const fetchAs = (dest: string | undefined) => ({
-  headers: dest ? { 'Sec-Fetch-Dest': dest } : ({} as Record<string, string>),
-  maxRedirects: 0,
-});
-
-const redirectTarget = (response: APIResponse) => {
-  const location = response.headers().location;
-
-  if (!location) return '';
-
-  const url = new URL(location, pmmUrl);
-
-  return url.pathname + url.search;
-};
+const deepLinkParameters = { from: 'now-6h', nodeName: 'a b', to: 'now-1h', viewPanel: 'panel-2' };
 
 pmmTest(
   'PMM-T2369 - Verify top-level Grafana URLs redirect to PMM UI on the server while API, render, auth pages and share links stay on /graph @new-navigation',
-  async ({ request }) => {
+  async ({ api, dashboard, loginPage, urlHelper }) => {
+    const deepLink = urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, deepLinkParameters);
+
     await pmmTest.step(
       'dashboard deep link opened as a document redirects with its query intact',
       async () => {
-        const response = await request.get(deepLink, fetchAs('document'));
+        const response = await api.serverApi.getWithoutRedirect(deepLink, 'document');
 
         expect(response.status()).toEqual(302);
-        expect(redirectTarget(response)).toEqual(`/pmm-ui/${deepLink}`);
+        expect(response.headers().location).toEqual(`/pmm-ui/${deepLink}`);
       },
     );
 
     await pmmTest.step('root and the Grafana home go straight to the shell', async () => {
       for (const path of ['', 'graph/']) {
-        const response = await request.get(path, fetchAs('document'));
+        const response = await api.serverApi.getWithoutRedirect(path, 'document');
 
-        expect(redirectTarget(response), `/${path}`).toEqual('/pmm-ui/graph/');
+        expect(response.headers().location, `/${path}`).toEqual('/pmm-ui/graph/');
       }
     });
 
     await pmmTest.step('iframe loads and clients without Sec-Fetch-Dest reach Grafana', async () => {
-      for (const dest of ['iframe', undefined]) {
-        const response = await request.get(deepLink, fetchAs(dest));
+      for (const dest of ['iframe', undefined] as const) {
+        const response = await api.serverApi.getWithoutRedirect(deepLink, dest);
 
-        expect(redirectTarget(response), `Sec-Fetch-Dest: ${dest}`).not.toContain('/pmm-ui/');
+        expect(response.headers().location ?? '', `Sec-Fetch-Dest: ${dest}`).not.toContain('/pmm-ui/');
       }
     });
 
     await pmmTest.step('API, renderer and auth pages stay on /graph', async () => {
       const exempt = [
         'graph/api/health',
-        'graph/login',
+        loginPage.url,
         'graph/signup',
         'graph/verify',
         'graph/invite/pmm-t2369',
         'graph/user/password/send-reset-email',
         'graph/user/password/reset?code=pmm-t2369',
         'graph/%6Cogin',
-        'graph/d/node-cpu/cpu-utilization-details?render=1',
+        `${dashboard.os.nodeSummary.url}?render=1`,
       ];
 
       for (const path of exempt) {
-        const response = await request.get(path, fetchAs('document'));
+        const response = await api.serverApi.getWithoutRedirect(path, 'document');
 
-        expect(redirectTarget(response), path).not.toContain('/pmm-ui/');
+        expect(response.headers().location ?? '', path).not.toContain('/pmm-ui/');
       }
 
-      const health = await request.get('graph/api/health', fetchAs('document'));
+      const health = await api.serverApi.getWithoutRedirect('graph/api/health', 'document');
 
       expect(health.status()).toEqual(200);
       expect(health.headers()['content-type']).toContain('application/json');
@@ -84,20 +70,23 @@ pmmTest(
         ];
 
         for (const path of shareLinks) {
-          const response = await request.get(path, fetchAs('document'));
+          const response = await api.serverApi.getWithoutRedirect(path, 'document');
 
           expect(response.status(), path).toEqual(200);
         }
 
         // Grafana itself sends the unmerged-slash form to login; nginx must still leave it on /graph.
-        const obfuscated = await request.get('graph/dashboard//snapshot/pmm-t2369', fetchAs('document'));
+        const obfuscated = await api.serverApi.getWithoutRedirect(
+          'graph/dashboard//snapshot/pmm-t2369',
+          'document',
+        );
 
-        expect(redirectTarget(obfuscated)).not.toContain('/pmm-ui/');
+        expect(obfuscated.headers().location ?? '').not.toContain('/pmm-ui/');
 
         for (const path of ['graph/dashboard/snapshots', 'graph/dashboard/public']) {
-          const response = await request.get(path, fetchAs('document'));
+          const response = await api.serverApi.getWithoutRedirect(path, 'document');
 
-          expect(redirectTarget(response), path).toEqual(`/pmm-ui/${path}`);
+          expect(response.headers().location, path).toEqual(`/pmm-ui/${path}`);
         }
       },
     );
@@ -106,23 +95,25 @@ pmmTest(
 
 pmmTest(
   'PMM-T2370 - Verify a logged-out dashboard deep link returns to the same dashboard after login @new-navigation',
-  async ({ loginPage, page }) => {
+  async ({ dashboard, loginPage, page, urlHelper }) => {
+    const deepLink = urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, deepLinkParameters);
+
     await pmmTest.step('open a dashboard deep link while logged out', async () => {
       await page.goto(deepLink);
-      await page.waitForURL(/\/graph\/login/, { timeout: Timeouts.ONE_MINUTE });
+      await page.waitForURL(new RegExp(loginPage.url), { timeout: Timeouts.ONE_MINUTE });
     });
 
     await pmmTest.step('log in and land on the requested dashboard', async () => {
-      await loginPage.inputs.username.fill('admin');
-      await loginPage.inputs.password.fill(process.env.ADMIN_PASSWORD || 'admin');
-      await loginPage.buttons.login.click();
-      await page.waitForURL(/\/pmm-ui\/graph\/d\/node-cpu\//, { timeout: Timeouts.ONE_MINUTE });
+      await loginPage.login(
+        process.env.ADMIN_PASSWORD || 'admin',
+        new RegExp(`/pmm-ui/${dashboard.os.nodeSummary.url}`),
+      );
 
       const landed = new URL(page.url()).searchParams;
 
-      expect(landed.get('from')).toEqual('now-6h');
-      expect(landed.get('to')).toEqual('now-1h');
-      expect(landed.get('viewPanel')).toEqual('panel-22');
+      expect(landed.get('from')).toEqual(deepLinkParameters.from);
+      expect(landed.get('to')).toEqual(deepLinkParameters.to);
+      expect(landed.get('viewPanel')).toEqual(deepLinkParameters.viewPanel);
     });
   },
 );
