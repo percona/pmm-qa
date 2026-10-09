@@ -95,6 +95,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@alerting`
 - `@annotations`
 - `@dashboards`
+- `@disconnect`
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
@@ -111,6 +112,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@menu`
 - `@new-navigation`
 - `@nightly`
+- `@nomad`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
@@ -118,8 +120,13 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@post-server-upgrade`
+- `@post-upgrade`
+- `@pre-upgrade`
+- `@qan`
 - `@rta`
 - `@service-account`
 - `@settings`

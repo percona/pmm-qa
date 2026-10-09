@@ -36,13 +36,13 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
-| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
+| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) that provisions PMM Clients and monitored DBs on prebaked images on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [lib/config.sh](qa-integration/pmm_qa/pmm-framework/lib/config.sh) · [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md) |
+| [psmdb_pbm_auth_tests/](psmdb_pbm_auth_tests/) | Bats suites for PSMDB backup/restore through PMM and each authentication method, run by `PMM_PSMDB_PBM_FULL.yml` after pmm-framework sets up PSMDB | [README.md](psmdb_pbm_auth_tests/README.md) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
-| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), the lint dispatcher, and the automation relay the agents call | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) · [pmm-ai-relay/](support_scripts/pmm-ai-relay/README.md) |
+| [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), and the lint dispatcher | [agent_status.py](support_scripts/agent_status.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
-| Claude Code agents & skills | Test Runner, Investigator, FB Reporter, Router, `qa-code-review` and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
-| [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
+| Claude Code agents & skills | Test Runner, Investigator, FB Reporter, `qa-code-review`, the `@pmm-ai` Slack listener and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
 ## Cross-Suite Architecture
@@ -60,8 +60,6 @@ flowchart LR
 
     subgraph Setup["qa-integration"]
         framework["pmm-framework (bash)"]
-        ansible["Ansible playbooks"]
-        framework --> ansible
     end
 
     subgraph Suites["Test suites"]
@@ -86,7 +84,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (32 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -97,6 +95,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
+- `build-prebaked-images.yml` — builds the pmm-framework database images and publishes them to GHCR from `main` (nightly, or on a push touching `images/**`); PRs only build and check. A Dockerfile change reaches CI only after it merges. See [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md).
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
 To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github/workflows/](.github/workflows/).

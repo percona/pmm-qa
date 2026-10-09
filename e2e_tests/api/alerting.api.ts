@@ -6,8 +6,10 @@ import {
   AlertRule,
   AlertRulesResponse,
   AlertSeverity,
+  RulerRulesResponse,
   TemplatedAlertRule,
 } from '@interfaces/alerting';
+import { GrafanaFolder } from '@interfaces/grafana';
 
 type Headers = Record<string, string>;
 
@@ -15,11 +17,27 @@ export interface AlertTemplateBody {
   yaml: string;
 }
 
+export interface CreateRuleBody {
+  for?: string;
+  interval?: string;
+  severity?: string;
+  template_name: string;
+  name?: string;
+  params?: { name: string; type: string; float: number }[];
+  group?: string;
+  folder_uid?: string;
+  filters?: {
+    label: string;
+    regexp: string;
+    type: 'FILTER_TYPE_MATCH' | 'FILTER_TYPE_MISMATCH';
+  }[];
+}
+
 export default class AlertingApi {
   constructor(private request: APIRequestContext) {}
 
-  createRule = async (headers: Headers, body: Record<string, unknown>) =>
-    this.request.post(apiEndpoints.alerting.rules, { data: body, headers });
+  createRule = async (headers: Headers, data: CreateRuleBody) =>
+    this.request.post(apiEndpoints.alerting.rules, { data, headers });
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<void> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
@@ -73,6 +91,17 @@ export default class AlertingApi {
     return (await response.json()) as Pick<AlertInstance, 'labels'>[];
   };
 
+  getFolderByName = async (folderName: string, headers?: Headers): Promise<GrafanaFolder> => {
+    const folders = await this.listFolders(headers);
+    const folder = folders.find((folder) => folder.title === folderName);
+
+    if (!folder) {
+      throw new Error(`Folder with name: ${folderName} not found`);
+    }
+
+    return folder;
+  };
+
   getRule = async (name: string): Promise<AlertRule | undefined> =>
     (await this.getRuleGroups()).flatMap((group) => group.rules).find((rule) => rule.name === name);
 
@@ -86,10 +115,30 @@ export default class AlertingApi {
     return ((await response.json()) as AlertRulesResponse).data.groups;
   };
 
+  getRulerGroups = async (): Promise<RulerRulesResponse[string]> => {
+    const response = await this.request.get(apiEndpoints.grafana.ruler, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return Object.values((await response.json()) as RulerRulesResponse).flat();
+  };
+
+  listFolders = async (headers?: Headers): Promise<GrafanaFolder[]> => {
+    const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
+
+    return await (await this.request.get(apiEndpoints.alerting.folders, { headers: authHeaders })).json();
+  };
+
   listTemplates = async (headers: Headers) => this.request.get(apiEndpoints.alerting.templates, { headers });
 
   removeAllAlertRules = async (): Promise<void> => {
-    for (const { folderUid, name } of await this.getRuleGroups()) {
+    for (const { name, rules } of await this.getRulerGroups()) {
+      // Provisioned groups, like PMM's built-in self-monitoring rules, are read-only and cannot be deleted.
+      if (rules.some(({ grafana_alert }) => grafana_alert.provenance)) continue;
+
+      const folderUid = rules[0].grafana_alert.namespace_uid;
       const response = await this.request.delete(`${apiEndpoints.grafana.ruler}/${folderUid}/${name}`, {
         headers: GrafanaHelper.getAuthHeader(),
         params: { subtype: 'cortex' },
