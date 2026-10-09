@@ -59342,16 +59342,18 @@
         "link": "https://github.com/percona/pmm-qa/pull/1583",
         "by": "Investigator routine",
         "at": "2026-10-09T00:37:56Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-08T23:19:55Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
+        ],
+        "verdict": "test fix",
+        "summary": "Compatibility CLI 3.8.1 Generic PMM-T2227 (tarball upgrade) ran 14.7m against a 120s test timeout because the two ~180 MB client tarball downloads were slow; already covered by the open PR that raises its timeout to 20 min.",
+        "link": "https://github.com/percona/pmm-qa/pull/1572",
+        "by": "Investigator routine",
+        "at": "2026-10-09T00:38:00Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
