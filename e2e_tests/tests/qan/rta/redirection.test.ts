@@ -2,8 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
