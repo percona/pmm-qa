@@ -2358,15 +2358,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1572",
       "by": "Investigator routine",
       "at": "2026-10-09T00:38:00Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "kiranvuyurru",
-      "at": "2026-10-09T02:53:33Z",
       "suites": [
         "Package AMD"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "Between about 20:37 and 20:45 UTC, repo.percona.com (15.204.182.114) served pmm3-client experimental binary-amd64 Packages.gz files that did not match the 20:15 UTC Release index for bookworm, trixie, jammy, noble and resolute, so apt failed every Debian/Ubuntu stage in all 8 jobs while the RPM stages passed; #474's noble stage fetched cleanly at 20:47 and passed, and the repo is consistent now, so this was an external repo publish race.",
+      "link": "",
+      "by": "kiranvuyurru",
+      "at": "2026-10-09T02:57:59Z"
     }
-  ]
+  ],
+  "claims": []
 }
