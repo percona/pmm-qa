@@ -24,7 +24,7 @@ upgrade_client() {
   log=$(mktemp)
   {
     if [ -n "${CLIENT_TARBALL_UPGRADE:-}" ]; then
-      docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
+      docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v apt-get >/dev/null && apt-get install -y wget || $(command -v dnf || command -v microdnf) install -y wget)'
       docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
       docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz &&
         d=$(ls -1td pmm-client*/ | head -n1) &&
@@ -34,7 +34,7 @@ upgrade_client() {
     else
       echo "Upgrading using packages to repository: $repository"
       docker exec "$c" percona-release enable-only pmm3-client "$repository"
-      docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+      docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || $(command -v dnf || command -v microdnf) install -y pmm-client'
     fi
     # The pmm-client package ships a pmm-agent.service, but the QA DB
     # containers already run pmm-agent as a standalone (nohup) process that

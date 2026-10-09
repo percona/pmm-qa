@@ -340,11 +340,14 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panelText = await this.grafanaIframe()
-        .getByRole('region', { exact: true, name: panelName })
-        .innerText();
+      const panel = this.grafanaIframe().getByRole('region', { exact: true, name: panelName });
 
-      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+      await expect
+        .poll(async () => hasKnownNoDataMarker(await panel.innerText()), {
+          message: `Panel ${panelName} should show a no-data marker`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        })
+        .toBeTruthy();
     }
   };
 
