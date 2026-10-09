@@ -1,37 +1,67 @@
-# This task installs and starts Percona Server MongoDB with gssapi on Oracle Linux
+# Sets up the preinstalled Percona Server for MongoDB with Kerberos (GSSAPI)
+# authentication and LDAP authorization on Oracle Linux, and adds it to PMM. The
+# playbook does not install it: package_tests/docker/install-databases.sh bakes it
+# into the client images, at the version docker/database-versions sets.
 #
 # Task adjustments are handled by parent playbook vars:
 #             var "port_flag"      :  to access agent with custom port
 #                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
 #
+- set_fact:
+    psmdb_version: "{{ psmdb_to_test.split('-')[1] }}"
 
-- debug:
-    msg: "PSMDB to test is: {{ psmdb_to_test }}"
-
-- name: Download install_setup_psmdb.yml
-  get_url:
-    url: https://raw.githubusercontent.com/Percona-QA/psmdb-testing/main/pbm/tasks/install_setup_psmdb.yml
-    dest: /tmp
-    mode: 0777
-
-# psmdb_to_test is psmdb-80 from the gssapi enabled_db, or psmdb-8.0 from
-# docker/database-versions in the upgrade playbook; percona-release wants psmdb-80.
-- name: enable psmdb repo
-  include_tasks: ./enable_repo.yml
+# psmdb_to_test carries the version docker/database-versions sets (psmdb-8.0);
+# the installed server has to be that series, or the test would cover another one.
+- name: Read the installed Percona Server for MongoDB version
+  command: "{{ psmdb_version_query[ansible_os_family] }}"
   vars:
-    package: "psmdb-{{ psmdb_to_test.split('-')[1] | replace('.', '') }}"
-    repository: "release"
+    psmdb_version_query:
+      Debian: "dpkg-query -W -f=${Version} percona-server-mongodb-server"
+      RedHat: "rpm -q --qf %{VERSION} percona-server-mongodb-server"
+  register: psmdb_package_version
+  changed_when: false
+  failed_when: false
 
-- name: Run install_setup_psmdb.yml
-  include_tasks: /tmp/install_setup_psmdb.yml
+- name: Verify Percona Server for MongoDB is the version docker/database-versions sets
+  assert:
+    that:
+      - psmdb_package_version.rc == 0
+      - (psmdb_version ~ '.') in psmdb_package_version.stdout
+    fail_msg: >-
+      docker/database-versions sets Percona Server for MongoDB {{ psmdb_version }} for this OS, but the
+      package query reports "{{ psmdb_package_version.stdout or psmdb_package_version.stderr | default('nothing') }}".
+      Rebuild the image (build_images).
+    success_msg: "Percona Server for MongoDB {{ psmdb_version }}: {{ psmdb_package_version.stdout }}"
 
-- name: Install Kerberos and podman
+# The setup half of install_setup_psmdb.yml from Percona-QA/psmdb-testing.
+- name: stop mongod service
+  service: name=mongod state=stopped
+
+- name: add replica set name into mongod config
+  replace:
+    path: /etc/mongod.conf
+    regexp: '^#replication:'
+    replace: 'replication:\n  replSetName: "rs1"'
+
+- name: start mongod service
+  service: name=mongod state=started
+
+- name: check mongod ready status
+  shell: mongo --eval="printjson(db.serverStatus().ok)"
+  register: mongodbready
+  until: mongodbready.stdout | int == 1
+  retries: 20
+  delay: 1
+
+- name: initiate mongod replica set
+  command: mongo --eval 'rs.initiate()'
+
+- name: Install Kerberos
   dnf:
     name:
       - krb5-workstation
       - krb5-server
       - krb5-pkinit
-      - podman
     state: present
   when: ansible_os_family == "RedHat"
 
@@ -53,22 +83,19 @@
     mode: '0644'
     backup: yes
 
-# Fully qualified: podman resolves a short name only through its search
-# registries, and with no TTY to prompt on it refuses one that is ambiguous.
-- name: Setup ldap-server
-  shell: |
-    podman run -d \
-      --name ldap-server \
-      --hostname ldap-server \
-      -e LDAP_ADMIN_USERNAME=admin \
-      -e LDAP_ADMIN_PASSWORD=adminpassword \
-      -e LDAP_USERS="pmm-test" \
-      -e LDAP_PASSWORDS="password1" \
-      -p 1389:1389 \
-      -p 1636:1636 \
-      -v openldap-data:/bitnami/openldap \
-      docker.io/bitnamilegacy/openldap
-  retries: "{{ retries | default(3, true) }}"
+# mongod.conf.j2 authorizes against the directory at 127.0.0.1:1389 and will
+# not start without it. The client cannot run that container itself, so the
+# environment provides it, as it does the databases: the matrix cell starts
+# docker.io/bitnamilegacy/openldap in the client's network namespace, with the
+# pmm-test user (password1) in the readers group setup_psmdb.js maps a role to.
+- name: Wait for the LDAP server mongod authorizes against
+  wait_for:
+    host: 127.0.0.1
+    port: 1389
+    timeout: 120
+    msg: >-
+      Nothing listens on 127.0.0.1:1389. Start an LDAP server there with the pmm-test user
+      (password1) in the readers group; .github/scripts/package-test-cell.sh shows how.
 
 - name: Generate certificates for tests
   shell: |
