@@ -23,7 +23,7 @@ Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`or
 1. All active behaviour from the source is represented in Playwright.
 2. The initial independent review passes.
 3. Migration-related locators are verified through MCP.
-4. The migrated test passes; the whole target file passes when an existing file was modified. Both pass locally before anything is pushed.
+4. The migrated test passes; the whole target file passes when an existing file was modified. Both pass locally before anything is pushed. A change that alters no executed statement (a title, a commit message, a comment) needs lint, the convention script and a `--list --grep` check that every selecting job still matches, not a local run.
 5. Every migrated scenario is selected by some Playwright job, committed on the PR branch.
 6. The final independent review passes.
 7. A PR targeting `main` is open and the tracker row is `done`.
@@ -75,7 +75,7 @@ Run `bash .claude/scripts/check-migration-conventions.sh <every changed file>` b
 
 ## Title, tags, ids
 
-Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Copy the title's words as is, interior spacing included, in the repo form `PMM-Txxxx - <description> <tags>`: no `@` on the id (tags keep theirs) and ` - ` after it. Trim leading and trailing whitespace, which `playwright/valid-title` rejects. An id repeated within one title keeps one occurrence. A tag that no workflow, Jenkins job or cross-repository consumer selects is dropped, with that evidence in the commit body. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality. An id-less source scenario gets the existing Zephyr case whose steps match, else a new one through the `zephyr` skill (status Automated), before the PR opens; never invent one. If Zephyr is unreachable from the session, ask the user; ship the title id-less only on their explicit decision, named on the PR body's Deviations line.
+Tags live in the title and CI selects with `--grep`; `fixtures/pmmTest.ts` reads `PMM-T\d+` from the title for the version gate. Write the title in the repo form `PMM-Txxxx - <description> <tags>`: no `@` on the id (tags keep theirs) and ` - ` after it. A source title holding several ids merges them into one prefix, `PMM-Txxxx + PMM-Tyyyy - <description> <tags>`, with one short description of what the test checks, never the source's sentences joined. Trim leading and trailing whitespace, which `playwright/valid-title` rejects. An id repeated within one title keeps one occurrence. A tag that no workflow, Jenkins job or cross-repository consumer selects is dropped, with that evidence in the commit body. Gates prove completeness (scenario count, rows per scenario, ids, tag sets, each row's distinguishing value), never string equality. An id-less source scenario gets the existing Zephyr case whose steps match, else a new one through the `zephyr` skill (status Automated), before the PR opens; never invent one. If Zephyr is unreachable from the session, ask the user; ship the title id-less only on their explicit decision, named on the PR body's Deviations line.
 
 ## Waits and retries
 
