@@ -256,8 +256,36 @@ jobs:
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=9'
       test_name: 'PSMDB Replica 8.x'
 
+  # The nightly passes the repository and tag its other suites use: dev-latest
+  # or "release candidate", and 3-dev-latest or 3.9.1-rc. The package matrix
+  # takes a percona-release channel and a version, and reads the version itself
+  # for experimental and release when it is empty.
+  package_test_inputs:
+    name: Package Test inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      install_repo: ${{ steps.map.outputs.install_repo }}
+      pmm_version: ${{ steps.map.outputs.pmm_version }}
+    steps:
+      - id: map
+        env:
+          REPOSITORY: ${{ inputs.repository || 'release' }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          case "$REPOSITORY" in
+            dev-latest) repo=experimental ;;
+            'release candidate') repo=testing ;;
+            *) repo=$REPOSITORY ;;
+          esac
+          version=${EXPECTED_VERSION%%-*}
+          [[ "$version" =~ ^3\.[0-9]+\.[0-9]+$ ]] || version=''
+          echo "install_repo=${repo}" >> "$GITHUB_OUTPUT"
+          echo "pmm_version=${version}" >> "$GITHUB_OUTPUT"
+
   mongo_package_tests_integration_ol8:
     name: Package Test - OL 8
+    needs: package_test_inputs
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
     secrets: inherit
     with:
@@ -265,13 +293,14 @@ jobs:
       arch: 'amd64'
       test: 'pmm3-client_integration_tarball_gssapi'
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      install_repo: ${{ inputs.repository || 'release'}}
-      pmm_version: ${{ inputs.expected_version || '3-dev-latest' }}
+      install_repo: ${{ needs.package_test_inputs.outputs.install_repo }}
+      pmm_version: ${{ needs.package_test_inputs.outputs.pmm_version }}
       metrics_mode: "auto"
       tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
 
   mongo_package_tests_integration_ol9:
     name: Package Test - OL 9
+    needs: package_test_inputs
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
     secrets: inherit
     with:
@@ -279,8 +308,7 @@ jobs:
       arch: 'amd64'
       test: 'pmm3-client_integration_tarball_gssapi'
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      install_repo: ${{ inputs.repository || 'release'}}
-      pmm_version: ${{ inputs.expected_version || '3-dev-latest' }}
+      install_repo: ${{ needs.package_test_inputs.outputs.install_repo }}
+      pmm_version: ${{ needs.package_test_inputs.outputs.pmm_version }}
       metrics_mode: "auto"
-      tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
-
+      tarball: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
