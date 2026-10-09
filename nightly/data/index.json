@@ -61706,16 +61706,19 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15708",
         "by": "Investigator routine",
         "at": "2026-10-09T03:45:34Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "test fix",
+        "summary": "PMM-T2227 tarball upgrade hit the default 120 s test timeout while downloading/installing the released client tarball; covered by open PR #1572 (raises it to 20 min).",
+        "link": "https://github.com/percona/pmm-qa/pull/1572",
+        "by": "Investigator routine",
+        "at": "2026-10-09T03:45:38Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-09T03:21:16Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-10-09T03:21:16Z",
