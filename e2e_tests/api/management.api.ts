@@ -2,7 +2,6 @@ import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { AddRdsParameters, AddRdsResponse } from '@interfaces/inventory';
 import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
 
 export interface AddInstance {
