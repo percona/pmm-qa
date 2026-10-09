@@ -391,7 +391,7 @@ EOF
   [[ $(grep -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
   # shellcheck disable=SC2016 # a literal $external
-  grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
   grep -q '^exec rs101 mgodatagen -f /etc/datagen/replicaset.json' "$DOCKER_CALLS"
 }
 
@@ -408,9 +408,46 @@ EOF
   ! grep -Fq '$external' "$DOCKER_CALLS" || false
   grep -q '^exec rs103 systemctl stop pbm-agent$' "$DOCKER_CALLS"
   grep -q '^exec rs203 systemctl stop pbm-agent$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+}
+
+@test "PSMDB pss with QUERY_SOURCE=mongolog logs mongod to a file and registers every member with mongolog" {
+  local config=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog/mongod.conf
+  stub_prebaked_docker
+  eval "stub_$(declare -f docker)"
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    if [[ $* == 'compose -f docker-compose-rs.yaml up -d' ]]; then
+      printf 'MONGOD_RS_CONFIG_DIR=%s\n' "$MONGOD_RS_CONFIG_DIR" >>"$DOCKER_CALLS"
+    fi
+    stub_docker "$@"
+  }
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=MongoLog,STORAGE_ENGINE=inMemory'
+  dispatch_setup
+
+  grep -qx "MONGOD_RS_CONFIG_DIR=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog" "$DOCKER_CALLS"
+  grep -qx '  engine: inMemory' "$config"
+  grep -qx '  destination: file' "$config"
+  grep -qx '  path: /var/log/mongo/mongod.log' "$config"
+  ! grep -q syslog "$config" || false
+  [[ $(grep -Ec '^exec rs10[123] pmm-admin add mongodb --enable-all-collectors --query-source=mongolog ' "$DOCKER_CALLS") -eq 3 ]]
+}
+
+@test "PSMDB QUERY_SOURCE=mongolog is refused for the sharded cluster, and unknown sources everywhere" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *"PSMDB QUERY_SOURCE=mongolog needs SETUP_TYPE pss or psa, not 'sharding'."* ]]
+
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=slowlog'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *"Unsupported PSMDB QUERY_SOURCE 'slowlog'."* ]]
+  [[ ! -s $DOCKER_CALLS ]]
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
@@ -426,8 +463,8 @@ EOF
     grep -Fq "rs.initiate({ _id: \"$name\", members: [{ _id: 0, host: \"${name}01:27017\", priority: 2 }" "$DOCKER_CALLS"
   done
   grep -Fq 'sh.addShard("rs2/rs201:27017,rs202:27017,rs203:27017")' "$DOCKER_CALLS"
-  grep -Eq '^exec rscfg02 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rscfg02_[0-9]+ --environment=mongo-sharded-dev --cluster=sharded --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg02 --port=27017$' "$DOCKER_CALLS"
-  grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rscfg02 pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass rscfg02_[0-9]+ --environment=mongo-sharded-dev --cluster=sharded --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg02 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --query-source=profiler --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
   [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
   [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]

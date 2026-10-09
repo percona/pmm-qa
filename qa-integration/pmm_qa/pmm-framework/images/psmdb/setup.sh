@@ -10,8 +10,10 @@
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
+# QUERY_SOURCE=mongolog is replica-set only: the sharded compose file pins its
+# mongod config directories.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio tarball='' suffix
+  local version ol client setup_type profile gssapi minio query_source tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -20,11 +22,22 @@ setup_psmdb() {
   profile=$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)
   gssapi=$(resolve_value PSMDB GSSAPI DB_CONFIG)
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
+  query_source=$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)
+  query_source=${query_source,,}
   suffix=$RANDOM
 
   case $setup_type in
     pss | psa | shards | sharding) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
+  esac
+  case $query_source in
+    profiler | none) ;;
+    mongolog)
+      if [[ $setup_type != ps? ]]; then
+        die "PSMDB QUERY_SOURCE=mongolog needs SETUP_TYPE pss or psa, not '$setup_type'."
+      fi
+      ;;
+    *) die "Unsupported PSMDB QUERY_SOURCE '$query_source'." ;;
   esac
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
@@ -158,11 +171,26 @@ psmdb_register() {
   # and needs --config-file when none is running.
   must docker exec "$node" systemctl restart pmm-agent
   wait_pmm_agent "$node"
-  pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
+  pmm_register "$node" pmm-admin add mongodb --enable-all-collectors "--query-source=$query_source" \
+    --agent-password=mypass "$service" "$@"
+}
+
+# mongolog tails the file getCmdLineOpts reports as systemLog.path, and the
+# shipped configs log to syslog. The directory is bind-mounted for as long as
+# the replica set runs, so it is rewritten in place, never removed.
+# Usage: psmdb_mongolog_config BASE_DIR  (prints the directory holding the copy)
+psmdb_mongolog_config() {
+  local dir=${TMPDIR:-/tmp}/pmm-framework-psmdb-mongolog
+  must mkdir -p "$dir"
+  sed 's#^  destination: syslog$#  destination: file\n  path: /var/log/mongo/mongod.log\n  logAppend: true#' \
+    "$1/mongod.conf" >"$dir/mongod.conf" || die "Copying $1/mongod.conf failed."
+  grep -q '^  path: /var/log/mongo/mongod.log$' "$dir/mongod.conf" ||
+    die "$1/mongod.conf has no 'destination: syslog' line to point at a file."
+  printf '%s' "$dir"
 }
 
 psmdb_replica_set() {
-  local arbiter='' external=false node
+  local arbiter='' external=false node config_dir=./conf/mongod-rs
   local -a nodes=(rs101 rs102 rs103) credentials=(--username=pmm --password=pmmpass)
   local name_part=''
   if [[ $profile == extra ]]; then
@@ -178,8 +206,12 @@ psmdb_replica_set() {
   fi
   export COMPOSE_PROJECT_NAME=psmdb_pss COMPOSE_PROFILES=$profile
   if [[ $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY] ]]; then
-    export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-inmemory
+    config_dir=./conf/mongod-rs-inmemory
   fi
+  if [[ $query_source == mongolog ]]; then
+    config_dir=$(psmdb_mongolog_config "$config_dir")
+  fi
+  export MONGOD_RS_CONFIG_DIR=$config_dir
 
   step 'Prepare image pmm-qa/kerberos:latest' ensure_image kerberos latest
   must docker tag pmm-qa/kerberos:latest kerberos/local
