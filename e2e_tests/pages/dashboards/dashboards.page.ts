@@ -284,12 +284,14 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
-    let missingMetrics: string[] = [];
+    let missingMetrics: string[] | undefined;
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
       const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
+      const unexpected = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
-      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
+      // Auto-refresh can blank a panel for one pass, so only a panel empty on every pass counts.
+      missingMetrics = missingMetrics?.filter((metric) => unexpected.includes(metric)) ?? unexpected;
 
       if (missingMetrics.length == 0) break;
 
