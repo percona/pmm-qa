@@ -3,8 +3,7 @@ import { expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
