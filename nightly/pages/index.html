@@ -254,7 +254,7 @@ const pill = res => `<span class="pill ${cls(res)}">${esc(label(res))}</span>`;
 // A build with failures is red, paler with fewer: its share of failed jobs sets the strength, full at a third.
 const heat = r => { const t = tally(detailsOf(r)); return t.fail ? ` s-heat" style="--heat:${Math.round((.3 + .7 * Math.min(1, 3 * t.fail / t.total)) * 100)}%` : ` ${cls(r.status)}`; };
 const runPill = r => `<span class="pill${heat(r)}">${esc(label(r.status))}</span>`;
-const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade AMD', 'Upgrade AMI', 'Nightly', 'Nightly Compatibility', 'UI',
+const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade', 'Upgrade AMI', 'Nightly', 'Nightly Compatibility', 'UI',
   'HA, OpenShift & GSSAPI', 'E2E Tests', 'CLI Integration', 'CLI Integration Compatibility', 'Integrations', 'Other'];
 const orderOf = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
 const srcIcons = jobs => `<span class="src">${[...new Set(jobs.map(j => j.source).filter(Boolean))].map(s => icon[s] || '').join('')}</span>`;
