@@ -6,8 +6,12 @@ pmmTest.describe('PMM upgrade tests for dashboards', () => {
   const dashboardName = 'upgrade-dashboard';
   const panelName = customDashboard.panels[0].title;
 
-  pmmTest.beforeEach(async ({ grafanaHelper }) => {
+  pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
     await grafanaHelper.authorize();
+
+    const { id } = await (await page.request.get('graph/api/user')).json();
+
+    await page.addInitScript((key) => localStorage.setItem(key, 'false'), `pmm-ui.first-login.user-${id}`);
   });
 
   pmmTest(
