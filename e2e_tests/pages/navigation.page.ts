@@ -165,6 +165,7 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
     changeTimeSettingsButton: this.grafanaIframe().getByTestId(
       'data-testid Time zone picker Change time settings button',
     ),
@@ -182,6 +183,8 @@ export default class LeftNavigation extends BasePage {
     tourPopover: this.page.locator('.reactour__popover'),
   };
   inputs = {
+    timeRangeFrom: this.grafanaIframe().getByTestId('data-testid Time Range from field'),
+    timeRangeTo: this.grafanaIframe().getByTestId('data-testid Time Range to field'),
     timeZonePicker: this.grafanaIframe().getByRole('combobox', { name: 'Time zone picker' }),
   };
   messages = {};
@@ -294,6 +297,14 @@ export default class LeftNavigation extends BasePage {
     await this.elements.timePickerOpenButton.click();
   };
 
+  setAbsoluteTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeFrom.fill(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeTo.fill(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
   verifyAllMenuItems = async (): Promise<void> => {
@@ -316,6 +327,14 @@ export default class LeftNavigation extends BasePage {
         expect(`${url.pathname}${url.hash}`).not.toMatch(/\/(?:404|error|not-found)(?:\/|$)/i);
       });
     }
+  };
+
+  verifySelectedTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeFrom).toHaveValue(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeTo).toHaveValue(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
   };
 
   /** The PMM shell at `url`: sidebar up, and the home dashboard rendering in it. */

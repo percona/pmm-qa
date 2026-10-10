@@ -20,7 +20,7 @@ export default class QueryAnalyticsPage extends BasePage {
   tabNames = TabNames;
   builders = {};
   buttons = {
-    copyButton: this.page.getByTestId('qan-header-actions-copy-button'),
+    copyButton: this.grafanaIframe().getByTestId('copy-link-button'),
     realTimeTab: this.page.getByTestId('qan-header-tabs-real-time-tab'),
     startSessionButton: this.page.getByTestId('start-realtime-session'),
     storedMetricsTab: this.page.getByTestId('qan-header-tabs-historical-tab'),
@@ -33,7 +33,16 @@ export default class QueryAnalyticsPage extends BasePage {
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
   };
   inputs = {};
-  messages = {};
+  messages = {
+    copySuccess: this.grafanaIframe().getByText('Successfully copied Query Analytics link to clipboard'),
+  };
+
+  copyLink = async () => {
+    await this.buttons.copyButton.click({ timeout: Timeouts.ONE_MINUTE });
+    await this.messages.copySuccess.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+
+    return await this.page.evaluate(() => navigator.clipboard.readText());
+  };
 
   noSpinner = async () => {
     await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
