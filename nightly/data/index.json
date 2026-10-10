@@ -64060,20 +64060,24 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Other"
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T2357 (@rta, 3.10.0-rc→3-dev docker upgrade; flaky in 11 other upgrade jobs): cleared RTA elapsed-time Min stays in URL on busy services, already tracked as PMM-15708; no new ticket",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15708",
+        "by": "Investigator routine",
+        "at": "2026-10-10T04:38:47Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-10T04:13:30Z",
         "suites": [
           "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-10T04:13:30Z",
-        "suites": [
-          "Other"
         ]
       }
     ]
