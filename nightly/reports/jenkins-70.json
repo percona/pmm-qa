@@ -2338,15 +2338,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15708",
       "by": "Investigator routine",
       "at": "2026-10-10T04:38:47Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-10T04:13:30Z",
       "suites": [
         "Nightly"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "HA PMM-T554/T2146: pg-db pod roll during setup made pmm-managed drop agent status writes (57P03/conn refused) yet ack them, leaving vmagent STOPPING/service Failed; reproduced on CHAOS VM",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15716",
+      "by": "Investigator routine",
+      "at": "2026-10-10T04:38:52Z"
     }
-  ]
+  ],
+  "claims": []
 }
