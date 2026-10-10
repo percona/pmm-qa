@@ -54,7 +54,6 @@ jq -n \
     if   startswith("pkg amd64 / ") then "Package AMD"
     elif startswith("pkg arm64 / ") then "Package ARM"
     elif startswith("upgrade / ami ") then "Upgrade AMI"
-    elif startswith("upgrade / ") then "Upgrade AMD"
     elif . == "nightly / gssapi" or . == "ha" or . == "openshift" then "HA, OpenShift & GSSAPI"
     elif startswith("nightly / ") then "Nightly"
     elif startswith("compat / ") then "Nightly Compatibility"
