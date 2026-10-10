@@ -64,7 +64,7 @@ jq -n \
     if   startswith("E2E Tests Matrix") then "E2E Tests"
     elif startswith("Compatibility CLI") then "CLI Integration Compatibility"
     elif startswith("CLI integration") then "CLI Integration"
-    elif startswith("PMM Upgrade") then "Upgrade AMD"
+    elif startswith("PMM Upgrade") then "Upgrade"
     elif test("^(GSSAPI Tests Matrix|pmm3-helm|PMM_PSMDB_PBM_FULL|PMM_PROXYSQL|PMM_PDPGSQL)") then "Integrations"
     else "Other" end;
   def leaf: (index(" / ")) as $cut | if $cut then .[$cut + 3:] else . end;
