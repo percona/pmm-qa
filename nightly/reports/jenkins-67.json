@@ -305,8 +305,8 @@
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / prepare",
+      "group": "Upgrade",
+      "name": "prepare",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525412986",
       "duration_s": 2
@@ -2113,120 +2113,120 @@
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468857",
       "duration_s": 1730
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468877",
       "duration_s": 2423
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468944",
       "duration_s": 1837
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469025",
       "duration_s": 2098
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469058",
       "duration_s": 1990
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469059",
       "duration_s": 2146
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469077",
       "duration_s": 3298
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
       "result": "failure",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469107",
       "duration_s": 2282
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469118",
       "duration_s": 2055
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469211",
       "duration_s": 1971
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469251",
       "duration_s": 1809
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469255",
       "duration_s": 1739
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469338",
       "duration_s": 1981
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469432",
       "duration_s": 2355
     },
     {
       "source": "github",
-      "group": "Other",
-      "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+      "group": "Upgrade",
+      "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
       "result": "success",
       "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469512",
       "duration_s": 1859
@@ -2341,7 +2341,7 @@
     },
     {
       "suites": [
-        "Other"
+        "Upgrade"
       ],
       "verdict": "test fix",
       "summary": "MongoDB Sharded Cluster Summary @post-upgrade failed because verifyAllPanelsHaveData reported only its last pass, and with 5s auto-refresh panels such as Top Hottest Collections alternate between data and empty results; reproduced on a CHAOS VM under load, fixed by counting a panel as missing only when every pass shows it empty.",

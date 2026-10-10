@@ -35434,8 +35434,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964366746",
         "duration_s": 2
@@ -37362,120 +37362,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964441646",
         "duration_s": 1192
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.9.1-rc, perconalab/pmm-server:3-dev-... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964441717",
         "duration_s": 1041
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964441760",
         "duration_s": 770
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964441851",
         "duration_s": 1184
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964441882",
         "duration_s": 1636
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442032",
         "duration_s": 1210
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442053",
         "duration_s": 1226
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442054",
         "duration_s": 1442
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442067",
         "duration_s": 1191
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442088",
         "duration_s": 1518
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442104",
         "duration_s": 736
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442106",
         "duration_s": 1636
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442235",
         "duration_s": 720
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442286",
         "duration_s": 1247
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37045026876/job/110964442779",
         "duration_s": 476
@@ -38078,8 +38078,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282596122",
         "duration_s": 4
@@ -40014,120 +40014,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618701",
         "duration_s": 2178
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618706",
         "duration_s": 2432
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618732",
         "duration_s": 3172
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618733",
         "duration_s": 3382
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618737",
         "duration_s": 1727
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618750",
         "duration_s": 2364
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618767",
         "duration_s": 2547
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618774",
         "duration_s": 2329
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618778",
         "duration_s": 2297
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.9.1-rc, perconalab/pmm-server:3-dev-... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618794",
         "duration_s": 1697
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618845",
         "duration_s": 2421
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618853",
         "duration_s": 2816
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618882",
         "duration_s": 2190
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618885",
         "duration_s": 2115
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37150274640/job/111282618929",
         "duration_s": 2433
@@ -40650,8 +40650,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568214961",
         "duration_s": 4
@@ -42474,120 +42474,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244019",
         "duration_s": 2651
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244027",
         "duration_s": 3303
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244045",
         "duration_s": 4038
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244087",
         "duration_s": 2402
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244090",
         "duration_s": 4141
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244095",
         "duration_s": 2122
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244097",
         "duration_s": 2035
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244112",
         "duration_s": 3187
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244114",
         "duration_s": 2102
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244115",
         "duration_s": 2067
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244170",
         "duration_s": 2605
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244179",
         "duration_s": 2400
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244185",
         "duration_s": 2217
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244195",
         "duration_s": 2134
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.9.1-rc, perconalab/pmm-server:3-dev-... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37247491190/job/111568244201",
         "duration_s": 2165
@@ -43002,8 +43002,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112045843604",
         "duration_s": 4
@@ -44882,120 +44882,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046546970",
         "duration_s": 3509
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547065",
         "duration_s": 2347
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547294",
         "duration_s": 252
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547297",
         "duration_s": 2525
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547341",
         "duration_s": 2067
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547353",
         "duration_s": 1670
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547410",
         "duration_s": 2270
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547446",
         "duration_s": 2241
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547521",
         "duration_s": 2351
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547589",
         "duration_s": 2057
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.9.1-rc, perconalab/pmm-server:3-dev-... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547597",
         "duration_s": 2267
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547603",
         "duration_s": 2090
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547774",
         "duration_s": 2093
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547791",
         "duration_s": 2034
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37393860068/job/112046547877",
         "duration_s": 2149
@@ -45102,7 +45102,7 @@
         "suites": [
           "CLI Integration Compatibility",
           "E2E Tests",
-          "Other"
+          "Upgrade"
         ],
         "verdict": "not reproduced",
         "summary": "GitHub-hosted runners received a shutdown signal around 01:38-01:40 UTC and four jobs were cancelled mid-setup; not a pmm-qa or PMM defect.",
@@ -45436,8 +45436,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568584287",
         "duration_s": 3
@@ -47244,120 +47244,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626766",
         "duration_s": 2300
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626774",
         "duration_s": 3005
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626783",
         "duration_s": 2346
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.9.1-rc, perconalab/pmm-server:3-dev-... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626809",
         "duration_s": 3348
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626810",
         "duration_s": 4270
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626911",
         "duration_s": 2244
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626922",
         "duration_s": 2099
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626928",
         "duration_s": 2863
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626936",
         "duration_s": 2163
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626958",
         "duration_s": 2705
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568626973",
         "duration_s": 3402
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568627025",
         "duration_s": 2079
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568627066",
         "duration_s": 2418
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568627078",
         "duration_s": 3251
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37551711387/job/112568627154",
         "duration_s": 2304
@@ -47457,7 +47457,7 @@
       },
       {
         "suites": [
-          "Other"
+          "Upgrade"
         ],
         "verdict": "test fix",
         "summary": "Docker upgrade 3.8.0->3.10.0 grafana-log check caught 'can't read alerting provisioning files', which percona/pmm#5730 documents as expected when Grafana starts before pmm-managed creates the directory; the check now ignores that exact line (reproduced on CHAOS).",
@@ -47854,8 +47854,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112660941903",
         "duration_s": 2
@@ -49662,120 +49662,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972056",
         "duration_s": 1686
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972103",
         "duration_s": 2114
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972172",
         "duration_s": 2117
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972183",
         "duration_s": 2129
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972220",
         "duration_s": 2046
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972237",
         "duration_s": 2088
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972239",
         "duration_s": 2202
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972289",
         "duration_s": 2415
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972326",
         "duration_s": 2394
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972398",
         "duration_s": 2261
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972428",
         "duration_s": 1833
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972451",
         "duration_s": 2155
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3.10.0-rc, 3.1... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972458",
         "duration_s": 2191
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972555",
         "duration_s": 2213
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3.10.0-rc, 3.10.0,... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37581143110/job/112661972577",
         "duration_s": 2075
@@ -50182,8 +50182,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112899781478",
         "duration_s": 5
@@ -52062,120 +52062,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464030",
         "duration_s": 2287
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464098",
         "duration_s": 2351
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464191",
         "duration_s": 2198
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464212",
         "duration_s": 1845
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464254",
         "duration_s": 1945
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464347",
         "duration_s": 3253
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464381",
         "duration_s": 2053
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464603",
         "duration_s": 1659
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464635",
         "duration_s": 2471
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464643",
         "duration_s": 2190
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464667",
         "duration_s": 1665
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464828",
         "duration_s": 2477
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464866",
         "duration_s": 1787
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900464956",
         "duration_s": 1779
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37652498455/job/112900465244",
         "duration_s": 1627
@@ -52614,8 +52614,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005060259",
         "duration_s": 3
@@ -54422,120 +54422,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005164286",
         "duration_s": 3423
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005164692",
         "duration_s": 2997
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005164780",
         "duration_s": 3045
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005164967",
         "duration_s": 1005
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005164968",
         "duration_s": 2449
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165005",
         "duration_s": 2098
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165103",
         "duration_s": 2603
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165107",
         "duration_s": 2152
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165204",
         "duration_s": 2476
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165348",
         "duration_s": 2322
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165816",
         "duration_s": 3039
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005165936",
         "duration_s": 2682
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "cancelled",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005166043",
         "duration_s": 5700
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005166195",
         "duration_s": 2148
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37683395278/job/113005166532",
         "duration_s": 2713
@@ -54580,7 +54580,7 @@
           "CLI Integration Compatibility",
           "E2E Tests",
           "Integrations",
-          "Other",
+          "Upgrade",
           "Nightly",
           "Nightly Compatibility"
         ],
@@ -54931,8 +54931,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092593489",
         "duration_s": 5
@@ -56755,120 +56755,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631178",
         "duration_s": 2188
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631189",
         "duration_s": 2117
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631216",
         "duration_s": 2796
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631218",
         "duration_s": 3731
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631285",
         "duration_s": 3357
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631299",
         "duration_s": 2302
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631326",
         "duration_s": 3548
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631334",
         "duration_s": 2266
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631356",
         "duration_s": 2119
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631364",
         "duration_s": 2957
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631404",
         "duration_s": 2739
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631429",
         "duration_s": 2011
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631472",
         "duration_s": 2101
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631514",
         "duration_s": 2108
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37709710027/job/113092631541",
         "duration_s": 1906
@@ -56970,7 +56970,7 @@
         "suites": [
           "CLI Integration",
           "CLI Integration Compatibility",
-          "Other",
+          "Upgrade",
           "Nightly Compatibility"
         ],
         "verdict": "not reproduced",
@@ -57299,8 +57299,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525412986",
         "duration_s": 2
@@ -59107,120 +59107,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468857",
         "duration_s": 1730
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468877",
         "duration_s": 2423
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525468944",
         "duration_s": 1837
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469025",
         "duration_s": 2098
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469058",
         "duration_s": 1990
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469059",
         "duration_s": 2146
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469077",
         "duration_s": 3298
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469107",
         "duration_s": 2282
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469118",
         "duration_s": 2055
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469211",
         "duration_s": 1971
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469251",
         "duration_s": 1809
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469255",
         "duration_s": 1739
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469338",
         "duration_s": 1981
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469432",
         "duration_s": 2355
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37839501221/job/113525469512",
         "duration_s": 1859
@@ -59335,7 +59335,7 @@
       },
       {
         "suites": [
-          "Other"
+          "Upgrade"
         ],
         "verdict": "test fix",
         "summary": "MongoDB Sharded Cluster Summary @post-upgrade failed because verifyAllPanelsHaveData reported only its last pass, and with 5s auto-refresh panels such as Top Hottest Collections alternate between data and empty results; reproduced on a CHAOS VM under load, fixed by counting a panel as missing only when every pass shows it empty.",
@@ -59609,8 +59609,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608211175",
         "duration_s": 3
@@ -61489,120 +61489,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264137",
         "duration_s": 1783
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264150",
         "duration_s": 3092
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264158",
         "duration_s": 2360
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264187",
         "duration_s": 3117
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264212",
         "duration_s": 3292
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264214",
         "duration_s": 2652
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264223",
         "duration_s": 1724
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264464",
         "duration_s": 1773
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264479",
         "duration_s": 2924
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264487",
         "duration_s": 2803
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264530",
         "duration_s": 3057
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264626",
         "duration_s": 1958
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264632",
         "duration_s": 2822
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264725",
         "duration_s": 1891
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/37864566423/job/113608264734",
         "duration_s": 2479
@@ -61699,7 +61699,7 @@
     "investigations": [
       {
         "suites": [
-          "Other"
+          "Upgrade"
         ],
         "verdict": "product bug",
         "summary": "PMM-T2357: on busy sharded-PSMDB services (>25 RTA rows) the RTA elapsed-time Min field, table filter and URL desync, so a cleared bound stays in the URL; reproduced 3/3 on fresh 3-dev-latest, passes on single-RS setups.",
@@ -61949,8 +61949,8 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / prepare",
+        "group": "Upgrade",
+        "name": "prepare",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096645673",
         "duration_s": 2
@@ -63845,120 +63845,120 @@
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671900",
         "duration_s": 1953
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671919",
         "duration_s": 2406
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671931",
         "duration_s": 2448
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671945",
         "duration_s": 2803
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671953",
         "duration_s": 2426
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / UI way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, 3.10... / ui upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "ui upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671955",
         "duration_s": 1891
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (pmm3-rc, perconalab/pmm-server:3.10.0-rc, perconalab/pmm-server:3-dev... / docker upgrade from version 3.10.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.10.0 to version: 3.10.0",
         "result": "failure",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671970",
         "duration_s": 3038
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.5.0, percona/pmm-server:3.5.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.5.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.5.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671984",
         "duration_s": 2537
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.1, percona/pmm-server:3.8.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096671985",
         "duration_s": 3160
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.0, percona/pmm-server:3.9.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672017",
         "duration_s": 2809
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.6.0, percona/pmm-server:3.6.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.6.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.6.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672022",
         "duration_s": 3143
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.8.0, percona/pmm-server:3.8.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.8.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.8.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672033",
         "duration_s": 2636
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.9.1, percona/pmm-server:3.9.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.9.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.9.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672066",
         "duration_s": 2290
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.1, percona/pmm-server:3.7.1, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.1 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.1 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672114",
         "duration_s": 2654
       },
       {
         "source": "github",
-        "group": "Other",
-        "name": "PMM Upgrade / Docker way upgrade for PMM (3.7.0, percona/pmm-server:3.7.0, perconalab/pmm-server:3-dev-latest, ... / docker upgrade from version 3.7.0 to version: 3.10.0",
+        "group": "Upgrade",
+        "name": "docker upgrade from version 3.7.0 to version: 3.10.0",
         "result": "success",
         "url": "https://github.com/percona/pmm-qa/actions/runs/38012863623/job/114096672119",
         "duration_s": 2847
@@ -64063,7 +64063,7 @@
     "investigations": [
       {
         "suites": [
-          "Other"
+          "Upgrade"
         ],
         "verdict": "product bug",
         "summary": "PMM-T2357 (@rta, 3.10.0-rc→3-dev docker upgrade; flaky in 11 other upgrade jobs): cleared RTA elapsed-time Min stays in URL on busy services, already tracked as PMM-15708; no new ticket",
