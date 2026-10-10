@@ -41,7 +41,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.0 OTHERS",
       "result": "failure",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23933/",
@@ -65,7 +65,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.0 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23925/",
@@ -73,7 +73,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.1 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23934/",
@@ -81,7 +81,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.1 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23928/",
@@ -89,7 +89,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.0 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23936/",
@@ -97,7 +97,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.0 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23931/",
@@ -113,7 +113,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.1 SSL",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23940/",
@@ -121,7 +121,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.0 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23932/",
@@ -129,7 +129,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.0 OTHERS",
       "result": "failure",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23939/",
@@ -137,7 +137,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.1 OTHERS",
       "result": "failure",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23937/",
@@ -145,7 +145,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.8.1 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23935/",
@@ -153,7 +153,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.1 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23941/",
@@ -161,7 +161,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.0 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23926/",
@@ -169,7 +169,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.0 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23938/",
@@ -177,7 +177,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.1 EXTERNAL SERVICES",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23929/",
@@ -193,7 +193,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.1 OTHERS",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23930/",
@@ -201,7 +201,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.9.1 OTHERS",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23942/",
@@ -209,7 +209,7 @@
     },
     {
       "source": "jenkins",
-      "group": "Upgrade AMD",
+      "group": "Upgrade",
       "name": "3.7.0 OTHERS",
       "result": "success",
       "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-test-runner/23927/",
