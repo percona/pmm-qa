@@ -97,7 +97,7 @@ env:
 
 jobs:
   upgrade:
-    name: "${{ inputs.upgrade_type }} upgrade from version ${{ inputs.pre_upgrade_version }} to version: ${{ inputs.upgrade_version }}"
+    name: "${{ inputs.upgrade_type }} upgrade ${{ inputs.pre_upgrade_version }} → ${{ inputs.upgrade_version }}"
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
