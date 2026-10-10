@@ -66414,15 +66414,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-10T23:29:31Z",
         "suites": [
           "Other"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T2357 (@rta, UI upgrade 3.8.0) failed 3/3: a cleared RTA elapsed-time Min bound stays in the URL (PMM-15708); skip pending in pmm-qa#1592.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15708",
+        "by": "Investigator routine",
+        "at": "2026-10-10T23:31:26Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
