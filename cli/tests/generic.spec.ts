@@ -6,6 +6,14 @@ import { readZipFile } from '@helpers/zip-helper';
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
+// pmm3-client-setup.sh caches the job's client tarball here; a cached URL is only revalidated, not downloaded again.
+const cachedTarball = async (url: string) => {
+  const fetch = await cli.exec(`bash -c 'source "$1/common.sh" && source "$1/run_helpers.sh" && source "$1/pmm_client.sh" && fetch_client_tarball "$2"' _ ../qa-integration/pmm_qa/pmm-framework/lib ${url}`);
+
+  await fetch.assertSuccess();
+
+  return fetch.stdout.trim();
+};
 
 test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
@@ -584,16 +592,23 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
-    // Two ~180 MB tarballs (downloads.percona.com, then the pmm-build-cache S3 bucket); CI has seen ~120 KB/s.
+    // Non-compat runs download a ~180 MB release tarball from downloads.percona.com; CI has seen ~120 KB/s.
     test.setTimeout(1_200_000);
     const containerName = 'tarball_client';
+    // Compat runs start from their matrix release, which is already in the runner's tarball cache.
+    const compatVersion = process.env.PMM_CLIENT_VERSION!.match(/\/pmm3\/(\d+\.\d+\.\d+)\//)?.[1];
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
-    const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
+    const startVersion = compatVersion ?? (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
-    const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
+
+    if (compatVersion) {
+      await cli.exec(`docker cp ${await cachedTarball(process.env.PMM_CLIENT_VERSION!)} ${containerName}:/pmm-client.tar.gz`);
+    }
+
+    const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh ${compatVersion ? '-f /pmm-client.tar.gz' : `-v ${startVersion}`}`);
 
     await install.assertSuccess();
     const setup = await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
@@ -608,15 +623,16 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
-    await oldVersion.outContains(latestReleasedVersion);
+    await oldVersion.outContains(startVersion);
     const arch = (await cli.exec(`docker exec ${containerName} uname -m`)).stdout.trim();
     const bucket = arch === 'aarch64' ? 'pmm-client-arm' : 'pmm-client';
     // Compat runs install a released tarball URL; only a build-cache URL is newer than the release.
     const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('pmm-build-cache')
-      ? process.env.PMM_CLIENT_VERSION
+      ? process.env.PMM_CLIENT_VERSION!
       : `https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/${bucket}/pmm-client-latest.tar.gz`;
 
-    const upgrade = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
+    await cli.exec(`docker cp ${await cachedTarball(tarballURL)} ${containerName}:/pmm-client-upgrade.tar.gz`);
+    const upgrade = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -f /pmm-client-upgrade.tar.gz -u`);
 
     await upgrade.assertSuccess();
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
@@ -638,10 +654,10 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
     const upgradedVersion = newVersion.stdout.replace('Version:', '').trim();
     const toParts = (version: string) => version.split('-')[0].split('.').map(Number);
-    const [upgraded, released] = [toParts(upgradedVersion), toParts(latestReleasedVersion)];
+    const [upgraded, released] = [toParts(upgradedVersion), toParts(startVersion)];
     const firstDiff = upgraded.findIndex((part, i) => part !== released[i]);
     const isNewer = firstDiff !== -1 && upgraded[firstDiff] > released[firstDiff];
 
-    expect(isNewer, `Upgraded version '${upgradedVersion}' is not newer than ${latestReleasedVersion}!`).toBe(true);
+    expect(isNewer, `Upgraded version '${upgradedVersion}' is not newer than ${startVersion}!`).toBe(true);
   });
 });
