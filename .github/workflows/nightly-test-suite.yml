@@ -220,4 +220,5 @@ jobs:
     uses: ./.github/workflows/upgrade-pmm.yml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-      pmm_image_tag: ${{ inputs.pmm_image_tag }}
+      # Upgrades to 3-dev-latest for a nightly testing. To the newest -rc tag on RC testing
+      nightly_tests: ${{ needs.resolve.outputs.repository == 'dev-latest' }}
