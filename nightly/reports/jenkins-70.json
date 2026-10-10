@@ -2328,5 +2328,21 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-10T04:13:30Z",
+      "suites": [
+        "Nightly"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-10T04:13:30Z",
+      "suites": [
+        "Other"
+      ]
+    }
+  ]
 }
