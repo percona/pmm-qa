@@ -64,6 +64,7 @@ jq -n \
     if   startswith("E2E Tests Matrix") then "E2E Tests"
     elif startswith("Compatibility CLI") then "CLI Integration Compatibility"
     elif startswith("CLI integration") then "CLI Integration"
+    elif startswith("PMM Upgrade") then "Upgrade AMD"
     elif test("^(GSSAPI Tests Matrix|pmm3-helm|PMM_PSMDB_PBM_FULL|PMM_PROXYSQL|PMM_PDPGSQL)") then "Integrations"
     else "Other" end;
   def leaf: (index(" / ")) as $cut | if $cut then .[$cut + 3:] else . end;
@@ -78,6 +79,7 @@ jq -n \
           name: (($p[1:] | map(select(. != "CLI" and . != "Integration"))) as $rest |
             if ($p[0] | startswith("Compatibility CLI")) then
               "\($p[0] | capture("\\((?<v>[^)]+)\\)").v // $p[0]) · \($rest | join(" / "))"
+            elif $p[0] == "PMM Upgrade" then $p[-1]
             elif ($p[0] | test("^(E2E Tests Matrix|CLI integration)")) and ($rest | length) > 0 then $rest | join(" / ")
             else .name end),
           result: ((.conclusion // .status) | norm),
