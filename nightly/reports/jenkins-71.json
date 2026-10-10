@@ -2328,5 +2328,14 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-10T23:29:31Z",
+      "suites": [
+        "Other"
+      ]
+    }
+  ]
 }
