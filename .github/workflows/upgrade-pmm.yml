@@ -51,12 +51,16 @@ jobs:
             GA_CLIENT_REPOSITORY=
           fi
           MATRIX=$(jq -Rnc --arg rc_tag "perconalab/pmm-server:$RC_VERSION" --arg rc_ver "${RC_VERSION%-rc*}" --arg dev_ver "$DEV_LATEST_VERSION" \
-            --arg ga_tag "$GA_UPGRADE_TAG" --arg ga_ver "$GA_UPGRADE_VERSION" --arg ga_repo "$GA_CLIENT_REPOSITORY" '
+            --arg ga_tag "$GA_UPGRADE_TAG" --arg ga_ver "$GA_UPGRADE_VERSION" --arg ga_repo "$GA_CLIENT_REPOSITORY" \
+            --argjson nightly "$NIGHTLY_TESTS" '
             def supports_ui_upgrade: split(".") | map(tonumber) as [$major, $minor]
               | $major < 3 or ($major == 3 and ($minor // 0) < 9);
             (if $ga_repo != "" then {client_upgrade_repository: $ga_repo} else {} end) as $client
             | [inputs | {version: ., docker_tag: ("percona/pmm-server:" + .), upgrade_tag: $ga_tag, upgrade_version: $ga_ver, pre_upgrade_version: .} + $client] as $ga
-            | {docker: ([{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest", upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] + $ga),
+            # Outside RC testing the newest -rc tag is a stale or already-GA build, so the leg would test nothing new.
+            | (if $nightly then [] else [{version: "pmm3-rc", docker_tag: $rc_tag, upgrade_tag: "perconalab/pmm-server:3-dev-latest",
+                upgrade_version: $dev_ver, pre_upgrade_version: $rc_ver}] end) as $rc
+            | {docker: ($rc + $ga),
                ui: [$ga[] | select(.version | supports_ui_upgrade)]}' <<< "$VERSIONS")
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "$MATRIX"
