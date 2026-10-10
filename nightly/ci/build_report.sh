@@ -79,7 +79,9 @@ jq -n \
           name: (($p[1:] | map(select(. != "CLI" and . != "Integration"))) as $rest |
             if ($p[0] | startswith("Compatibility CLI")) then
               "\($p[0] | capture("\\((?<v>[^)]+)\\)").v // $p[0]) · \($rest | join(" / "))"
-            elif $p[0] == "PMM Upgrade" then $p[-1]
+            elif ($p[0] | startswith("PMM Upgrade")) then
+              (($p[1] // "") | capture("^(?<type>\\S+) way upgrade for PMM \\([^,]+, [^,:]+:(?<from>[^,)]+)") // null) as $u |
+              if $u then "\($u.from) · \($u.type)" else $p[-1] end
             elif ($p[0] | test("^(E2E Tests Matrix|CLI integration)")) and ($rest | length) > 0 then $rest | join(" / ")
             else .name end),
           result: ((.conclusion // .status) | norm),
