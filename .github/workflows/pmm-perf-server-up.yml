@@ -1,0 +1,151 @@
+name: PMM perf server - up
+
+on:
+  workflow_dispatch:
+    inputs:
+      perf_run_id:
+        description: 'Batch id -- must match the client VMs of this run'
+        required: true
+      docker_image:
+        description: 'PMM Server image'
+        default: 'percona/pmm-server:3.9.1'
+      ram_gb:
+        description: 'PMM Server memory'
+        type: choice
+        options: ['8', '32']
+        default: '8'
+      cpu_class:
+        description: 'dedicated = reproducible timings; shared = cheaper, noisy'
+        type: choice
+        options: ['dedicated', 'shared']
+        default: 'dedicated'
+      expires_days:
+        description: 'Days before the reaper may delete it'
+        default: '3'
+      region:
+        default: 'us-east'
+
+permissions:
+  contents: read
+
+env:
+  LINODE_CLI_TOKEN: ${{ secrets.LINODE_TOKEN }}
+  SS_LABEL: pmm-server-perf
+  SS_PATH: performance/stackscripts/pmm_server.sh
+
+jobs:
+  up:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install linode-cli
+        run: pipx install linode-cli
+
+      - name: Upsert the StackScript
+        id: ss
+        run: |
+          set -euo pipefail
+          SS_ID=$(linode-cli stackscripts list --label "$SS_LABEL" --is_public false --json | jq -r '.[0].id // empty')
+          if [ -z "$SS_ID" ]; then
+            SS_ID=$(linode-cli stackscripts create --json --label "$SS_LABEL" \
+                      --images linode/ubuntu24.04 --is_public false \
+                      --script "$(cat "$SS_PATH")" | jq -r '.[0].id')
+          else
+            linode-cli stackscripts update "$SS_ID" --images linode/ubuntu24.04 \
+              --script "$(cat "$SS_PATH")" >/dev/null
+          fi
+          echo "id=$SS_ID" >>"$GITHUB_OUTPUT"
+
+      - name: Create the Linode
+        id: create
+        run: |
+          set -euo pipefail
+          case '${{ inputs.cpu_class }}:${{ inputs.ram_gb }}' in
+            dedicated:8)  PLAN=g6-dedicated-4  ;;   # 8GB  / 4 vCPU
+            dedicated:32) PLAN=g6-dedicated-16 ;;   # 32GB / 16 vCPU
+            shared:8)     PLAN=g6-standard-4   ;;   # 8GB  / 4 vCPU
+            shared:32)    PLAN=g6-standard-8   ;;   # 32GB / 8 vCPU
+            *) echo "unsupported ${{ inputs.cpu_class }}/${{ inputs.ram_gb }}" >&2; exit 1 ;;
+          esac
+          EXPIRES=$(( $(date +%s) + ${{ inputs.expires_days }} * 86400 ))
+          RUN='${{ inputs.perf_run_id }}'
+          echo "plan=$PLAN expires=$(date -u -d "@$EXPIRES" +%FT%TZ)"
+
+          PMM_PASSWORD="$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)"
+          echo "::add-mask::$PMM_PASSWORD"
+
+          linode-cli linodes create --json \
+            --type "$PLAN" \
+            --region '${{ inputs.region }}' \
+            --image linode/ubuntu24.04 \
+            --label "pmm-perf-server-$RUN" \
+            --stackscript_id '${{ steps.ss.outputs.id }}' \
+            --stackscript_data "$(jq -nc --arg h "pmm-perf-$RUN" --arg p "$PMM_PASSWORD" \
+                                   --arg d '${{ inputs.docker_image }}' \
+                                   '{hostname:$h, password:$p, docker:$d}')" \
+            --root_pass "$(openssl rand -base64 32)" \
+            --tags pmm-qa-perf \
+            --tags "pmm-qa-perf-run:$RUN" \
+            --tags "expires-$EXPIRES" >create.json
+
+          echo "linode_id=$(jq -r '.[0].id' create.json)" >>"$GITHUB_OUTPUT"
+          {
+            echo "PMM_IP=$(jq -r '.[0].ipv4[0]' create.json)"
+            echo "PMM_PASSWORD=$PMM_PASSWORD"
+            echo "EXPIRES=$EXPIRES"
+          } >>"$GITHUB_ENV"
+
+      - name: Lock the instance down
+        run: |
+          linode-cli firewalls create \
+            --label "pmm-perf-${{ inputs.perf_run_id }}" \
+            --rules.inbound_policy DROP --rules.outbound_policy ACCEPT \
+            --rules.inbound '[{"protocol":"TCP","ports":"443","addresses":{"ipv4":["0.0.0.0/0"]},"action":"ACCEPT","label":"pmm-https"}]' \
+            --devices.linodes '${{ steps.create.outputs.linode_id }}'
+
+      - name: Wait for PMM
+        run: |
+          set -euo pipefail
+          for _ in $(seq 60); do
+            [ "$(curl -sk -m 10 -o /dev/null -w '%{http_code}' "https://${PMM_IP}/v1/server/readyz" || true)" = 200 ] \
+              && { echo ready; exit 0; }
+            sleep 15
+          done
+          echo "PMM did not become ready in 15 minutes" >&2; exit 1
+
+      - name: Report
+        run: |
+          set -euo pipefail
+          code=$(curl -sk -m 15 -o /dev/null -w '%{http_code}' -u "admin:${PMM_PASSWORD}" \
+                   "https://${PMM_IP}/v1/server/version")
+          [ "$code" = 200 ] || { echo "login failed ($code)" >&2; exit 1; }
+          {
+            echo "### PMM perf server up"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| URL | https://${PMM_IP} |"
+            echo "| Batch | \`${{ inputs.perf_run_id }}\` |"
+            echo "| Size | ${{ inputs.ram_gb }}GB / ${{ inputs.cpu_class }} |"
+            echo "| Expires | $(date -u -d "@$EXPIRES" +%FT%TZ) |"
+            echo ""
+            echo "Password is masked in logs -- read it from the Linode console, or"
+            echo "rotate it: \`docker exec pmm-server change-admin-password <new>\`"
+            echo ""
+            echo "Point clients at it:"
+            echo "\`\`\`"
+            echo "PERF_RUN_ID=${{ inputs.perf_run_id }} ./performance/linode_stackScript_load_pmm3.sh ${PMM_IP} <client_version> <n> <mode> <dbtype>"
+            echo "\`\`\`"
+            echo "Tear the whole batch down when finished:"
+            echo "\`\`\`"
+            echo "PMM_PERF_TAG=pmm-qa-perf-run:${{ inputs.perf_run_id }} ./performance/teardown_perf_linodes.sh"
+            echo "\`\`\`"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      # The server must outlive this job -- only a half-built box gets cleaned up.
+      - name: Destroy on failure
+        if: failure() && steps.create.outputs.linode_id != ''
+        run: |
+          linode-cli linodes delete '${{ steps.create.outputs.linode_id }}' || true
+          ID=$(linode-cli firewalls list --label "pmm-perf-${{ inputs.perf_run_id }}" --json | jq -r '.[0].id // empty')
+          if [ -n "$ID" ]; then linode-cli firewalls delete "$ID" || true; fi
