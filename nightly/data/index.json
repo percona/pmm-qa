@@ -68750,15 +68750,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "travagliad",
-        "at": "2026-10-11T14:35:48Z",
         "suites": [
           "Package AMD"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "repo.percona.com served pmm3-client experimental amd64 Packages.gz not matching InRelease 11:43-11:50 UTC, so apt-get update failed on all DEB stages; repo consistent now and apt repro clean on all 5 distros",
+        "link": "",
+        "by": "travagliad",
+        "at": "2026-10-11T17:49:50Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
