@@ -142,7 +142,6 @@ export default class AlertingPage extends BasePage {
     threshold: this.grafanaIframe().locator('input[name="threshold"]'),
   };
   messages = {
-    // Grafana's page spinner is role="status" too, and showing beside a toast it breaks strict mode.
     popUp: this.grafanaIframe()
       .getByRole('status')
       .or(this.grafanaIframe().getByRole('alert'))
