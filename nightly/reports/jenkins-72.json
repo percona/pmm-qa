@@ -2320,5 +2320,14 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "travagliad",
+      "at": "2026-10-11T14:35:48Z",
+      "suites": [
+        "Package AMD"
+      ]
+    }
+  ]
 }
