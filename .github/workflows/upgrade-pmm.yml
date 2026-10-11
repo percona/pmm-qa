@@ -62,7 +62,7 @@ jobs:
           echo "$MATRIX"
 
   upgrade-docker:
-    name: Docker way upgrade for PMM
+    name: Docker (${{ matrix.version }})
     uses: ./.github/workflows/upgrade-pmm-runner.yml
     needs: prepare
     strategy:
@@ -80,7 +80,7 @@ jobs:
       client_upgrade_repository: ${{ matrix.client_upgrade_repository }}
 
   upgrade-ui:
-    name: UI way upgrade for PMM
+    name: UI (${{ matrix.version }})
     uses: ./.github/workflows/upgrade-pmm-runner.yml
     needs: prepare
     # An empty include fails the job; skip once none of the last 5 minors is below 3.9.
