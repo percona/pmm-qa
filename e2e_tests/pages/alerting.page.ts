@@ -142,7 +142,11 @@ export default class AlertingPage extends BasePage {
     threshold: this.grafanaIframe().locator('input[name="threshold"]'),
   };
   messages = {
-    popUp: this.grafanaIframe().getByRole('status').or(this.grafanaIframe().getByRole('alert')),
+    // Grafana's page spinner is role="status" too, and showing beside a toast it breaks strict mode.
+    popUp: this.grafanaIframe()
+      .getByRole('status')
+      .or(this.grafanaIframe().getByRole('alert'))
+      .and(this.grafanaIframe().locator(':not([aria-label="Loading"])')),
   };
 
   attachTemplateFile = async (path: string) => {
