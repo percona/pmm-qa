@@ -128,7 +128,7 @@ jobs:
     steps:
       - name: "Create status check"
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
@@ -140,7 +140,7 @@ jobs:
           sha: ${{ env.SHA }}
 
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -335,7 +335,7 @@ jobs:
         working-directory: ./
         run: sudo vagrant up --provider=libvirt
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ failure() }}
         with:
           name: pmm-summary-${{inputs.os}}-${{ inputs.playbook }}
@@ -343,7 +343,7 @@ jobs:
             ${{ github.workspace }}/pmm-summary.zip
 
       - name: "Create status check"
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         continue-on-error: true
         with:

@@ -130,7 +130,7 @@ jobs:
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" on pmm-qa branch ${{ inputs.pmm_qa_branch }}
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
@@ -142,7 +142,7 @@ jobs:
           sha: ${{ env.SHA }}
 
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.PMM_QA_BRANCH }}
           repository: percona/pmm-qa
@@ -250,7 +250,7 @@ jobs:
 
       - name: Upload pmm-framework setup logs
         if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: ${{ steps.framework_logs.outputs.artifact_name }}
@@ -289,7 +289,7 @@ jobs:
 
       - name: Generate and Attach the report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.REPORT_NAME }}
           path: |
@@ -298,7 +298,7 @@ jobs:
             ./pmm-qa/e2e_tests/logs
 
       - name: Create status check
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         continue-on-error: true
         with:

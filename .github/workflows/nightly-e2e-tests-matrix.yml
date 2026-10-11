@@ -142,7 +142,7 @@ jobs:
 
     steps:
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
@@ -197,7 +197,7 @@ jobs:
           echo "CLIENT_INSTALL=${v}" >> "$GITHUB_ENV"
 
       - name: Setup PMM-Client against remote PMM Server
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 20
           retry_wait_seconds: '10'
@@ -239,7 +239,7 @@ jobs:
 
       - name: Upload pmm-framework setup logs
         if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: ${{ steps.framework_logs.outputs.artifact_name }}
@@ -251,7 +251,7 @@ jobs:
 
       - name: Wait for every setup shard
         if: ${{ matrix.tags_for_tests != '' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const owner = context.repo.owner;
@@ -324,7 +324,7 @@ jobs:
           npx playwright install-deps
           npx playwright install chromium
 
-      - uses: actions/github-script@v8
+      - uses: actions/github-script@v9
         if: ${{ matrix.tags_for_tests != '' }}
         id: tags_processed
         with:
@@ -446,7 +446,7 @@ jobs:
         run: |
           launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
         with:
@@ -459,7 +459,7 @@ jobs:
             ${{ env.TESTS_DIR }}/test-results
             ${{ env.TESTS_DIR }}/logs
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
         with:
@@ -475,7 +475,7 @@ jobs:
 
       - name: Waiting for tests execution
         if: ${{ always() && steps.setup_barrier.outcome == 'success' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const owner = context.repo.owner;

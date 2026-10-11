@@ -25,15 +25,15 @@ jobs:
       # is checking -- lint-changed.sh, the installers it sources, and `npm ci`
       # all execute PR-controlled content. The default leaves GITHUB_TOKEN
       # readable in .git/config for that code, and nothing here pushes.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.9.8
           terraform_wrapper: false
