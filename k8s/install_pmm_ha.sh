@@ -357,23 +357,6 @@ fi
 log "Platform $PLATFORM, namespace $NAMESPACE, charts $CHARTS, chart source $CHART_SOURCE"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-if [ "$PLATFORM" = "openshift" ]; then
-    # What `oc adm policy add-scc-to-group` does, in plain RBAC - no oc binary
-    # needed. ClusterRoleBindings, not RoleBindings: an SCC is a cluster-scoped
-    # resource, so a namespaced binding grants nothing.
-    #
-    # anyuid covers the PMM Server pods; kube-state-metrics additionally asks for
-    # seccomp RuntimeDefault, which anyuid does not allow, and a fixed UID, which
-    # restricted-v2 does not allow - nonroot-v2 is the one SCC that permits both.
-    for scc in anyuid nonroot-v2; do
-        log "Granting $scc to service accounts in $NAMESPACE"
-        kubectl create clusterrolebinding "pmm-ha-${scc}-${NAMESPACE}" \
-            --clusterrole="system:openshift:scc:${scc}" \
-            --group="system:serviceaccounts:${NAMESPACE}" \
-            --dry-run=client -o yaml | kubectl apply -f -
-    done
-fi
-
 DEPS_CHART="percona/pmm-ha-dependencies"
 PMM_CHART="percona/pmm-ha"
 # Separate: the two charts are released on their own lineages, so one version
@@ -434,11 +417,52 @@ if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ]; then
     grep -q 'dns-default.openshift-dns' "$HAPROXY_CONFIGMAP" || fail "the HAProxy resolver patch did not apply; the chart may have changed."
 fi
 
+# Charts that ship examples/values-openshift.yaml (pmm-ha since PMM-15426, the
+# dependencies since PMM-14746) pin uids restricted-v2 refuses unless it is applied.
+OPENSHIFT_DEPS_VALUES=()
+OPENSHIFT_PMM_VALUES=()
+if [ "$PLATFORM" = "openshift" ]; then
+    if [ "$INSTALL_DEPS" = "true" ]; then
+        if [ -z "$CHART_DIR" ]; then
+            DEPS_PULL_DIR="${PATCH_DIR:-$(mktemp -d)}"
+            PATCH_DIR="$DEPS_PULL_DIR"
+            helm pull "$DEPS_CHART" --untar --untardir "$DEPS_PULL_DIR" ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
+            DEPS_CHART="$DEPS_PULL_DIR/pmm-ha-dependencies"
+            DEPS_CHART_ARGS=()
+        fi
+        [ -f "$DEPS_CHART/examples/values-openshift.yaml" ] && OPENSHIFT_DEPS_VALUES=(-f "$DEPS_CHART/examples/values-openshift.yaml")
+    fi
+    if [ "$INSTALL_PMM" = "true" ] && [ -f "$PMM_CHART/examples/values-openshift.yaml" ]; then
+        OPENSHIFT_PMM_VALUES=(-f "$PMM_CHART/examples/values-openshift.yaml")
+    fi
+    log "OpenShift overlays: deps '${OPENSHIFT_DEPS_VALUES[*]:-none}', pmm-ha '${OPENSHIFT_PMM_VALUES[*]:-none}'"
+fi
+
+# The grants below serve the pmm-ha chart's pods only - the dependencies chart never
+# needed them - and are skipped next to its overlay, which anyuid would override.
+if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ] && [ "${#OPENSHIFT_PMM_VALUES[@]}" -eq 0 ]; then
+    # What `oc adm policy add-scc-to-group` does, in plain RBAC - no oc binary
+    # needed. ClusterRoleBindings, not RoleBindings: an SCC is a cluster-scoped
+    # resource, so a namespaced binding grants nothing.
+    #
+    # anyuid covers the PMM Server pods; kube-state-metrics additionally asks for
+    # seccomp RuntimeDefault, which anyuid does not allow, and a fixed UID, which
+    # restricted-v2 does not allow - nonroot-v2 is the one SCC that permits both.
+    for scc in anyuid nonroot-v2; do
+        log "Granting $scc to service accounts in $NAMESPACE"
+        kubectl create clusterrolebinding "pmm-ha-${scc}-${NAMESPACE}" \
+            --clusterrole="system:openshift:scc:${scc}" \
+            --group="system:serviceaccounts:${NAMESPACE}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+    done
+fi
+
 if [ "$INSTALL_DEPS" = "true" ]; then
     log "Installing $DEPS_CHART as $DEPS_RELEASE"
     helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
         --namespace "$NAMESPACE" \
         --wait --timeout "$TIMEOUT" \
+        ${OPENSHIFT_DEPS_VALUES[@]+"${OPENSHIFT_DEPS_VALUES[@]}"} \
         ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
 
     for operator in "${OPERATOR_NAMES[@]}"; do
@@ -512,6 +536,7 @@ fi
 log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
 helm upgrade --install "$RELEASE" "$PMM_CHART" \
     --namespace "$NAMESPACE" \
+    ${OPENSHIFT_PMM_VALUES[@]+"${OPENSHIFT_PMM_VALUES[@]}"} \
     --set secret.create=false \
     --set secret.name=pmm-secret \
     --wait --timeout "$TIMEOUT" \

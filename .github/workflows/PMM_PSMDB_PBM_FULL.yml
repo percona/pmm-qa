@@ -32,67 +32,57 @@ on:
         type: string
 
 jobs:
-  test_replica_set:
+  test:
+    name: ${{ matrix.setup.name }} with PSMDB ${{ matrix.psmdb }}
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         psmdb: ['6.0', '7.0', '8.0']
+        setup:
+          - name: Replica set
+            database: psmdb
+            tests: pbm
+          - name: Sharded cluster
+            database: psmdb
+            options: ',SETUP_TYPE=sharding'
+            tests: pbm
+          - name: Auth
+            database: ssl_psmdb
+            tests: diffauth
     env:
+      # The tests log in to PMM Server as admin:$ADMIN_PASSWORD.
+      ADMIN_PASSWORD: password
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.pmm_qa_branch || 'main' }}
-      - name: Test RS with PSMDB ${{ matrix.psmdb }}
-        run: |
-          PSMDB_VERSION=${{ matrix.psmdb }} ./start-rs.sh
-        working-directory: ./qa-integration/pmm_psmdb-pbm_setup
 
-  test_sharded_cluster:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        psmdb: ['6.0', '7.0', '8.0']
-    env:
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ inputs.pmm_qa_branch || 'main' }}
-      - name: Test sharded with PSMDB ${{ matrix.psmdb }}
+      - name: Start PMM Server
+        working-directory: qa-integration/pmm_psmdb-pbm_setup
         run: |
-          PSMDB_VERSION=${{ matrix.psmdb }} ./start-sharded-with-pmm.sh
-        working-directory: ./qa-integration/pmm_psmdb-pbm_setup
+          docker network create qa-integration
+          docker compose -f docker-compose-pmm.yaml up -d pmm-server
 
-  test_diff_auth:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        psmdb: ['6.0', '7.0', '8.0']
-    env:
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ inputs.pmm_qa_branch || 'main' }}
-      - name: Test auth with PSMDB ${{ matrix.psmdb }}
+      - name: Set up ${{ matrix.setup.name }}
+        working-directory: qa-integration/pmm_qa/pmm-framework
+        run: ./pmm-framework --client-version "$PMM_CLIENT_VERSION" --database "${{ matrix.setup.database }}=${{ matrix.psmdb }}${{ matrix.setup.options }}"
+
+      - name: Set up bats
         run: |
-          PSMDB_VERSION=${{ matrix.psmdb }} ./test-auth.sh
-        working-directory: ./qa-integration/pmm_psmdb_diffauth_setup
-      - name: PMM Server container logs
+          set -euo pipefail
+          git clone --depth 1 https://github.com/bats-core/bats-core.git /opt/bats
+          sudo /opt/bats/install.sh /usr/local
+
+      - name: Run tests
+        run: bats -T psmdb_pbm_auth_tests/${{ matrix.setup.tests }}.bats
+
+      - name: Container logs
         if: failure()
         run: |
           docker logs pmm-server || true
-      - name: PSMDB Server container logs
-        if: failure()
-        run: |
           docker logs psmdb-server || true
+          docker logs rs101 || true

@@ -95,7 +95,7 @@ Scenario(
     const fcvVersion = await I.grabTextFrom(dashboardPage.panelValueByTitle('Feature Compatibility Version'));
     const mongodbVersion = process.env.PSMDB_VERSION || '8.0';
 
-    I.assertEqual(fcvVersion, mongodbVersion.split('.')[0], 'Feature Compatibility Version is not correct.');
+    I.assertEqual(parseFloat(fcvVersion), parseFloat(mongodbVersion), 'Feature Compatibility Version is not correct.');
   },
 );
 
@@ -111,7 +111,7 @@ Scenario('PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @d
   const fcvVersion = await I.grabTextFrom(dashboardPage.panelValueByTitle('Feature Compatibility Version'));
   const mongodbVersion = process.env.PSMDB_VERSION || '8.0';
 
-  I.assertEqual(fcvVersion, mongodbVersion.split('.')[0], 'Feature Compatibility Version is not correct.');
+  I.assertEqual(parseFloat(fcvVersion), parseFloat(mongodbVersion), 'Feature Compatibility Version is not correct.');
 });
 
 Scenario(

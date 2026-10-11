@@ -3,7 +3,7 @@
 # is a no-op once the pinned version is present, so it is safe to call from a
 # pre-commit gate on every commit.
 
-ACTIONLINT_VERSION="1.7.7"
+ACTIONLINT_VERSION="1.7.12"
 HADOLINT_VERSION="2.13.1"
 RUFF_VERSION="0.15.8"
 NPM_GROOVY_LINT_VERSION="15.2.0"
@@ -72,8 +72,8 @@ ensure_actionlint() {
   _lint_version_is actionlint "$ACTIONLINT_VERSION" && return 0
   local arch tmp sha
   case "$(uname -m)" in
-    x86_64) arch=amd64 sha=023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757 ;;
-    aarch64 | arm64) arch=arm64 sha=401942f9c24ed71e4fe71b76c7d638f66d8633575c4016efd2977ce7c28317d0 ;;
+    x86_64) arch=amd64 sha=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 ;;
+    aarch64 | arm64) arch=arm64 sha=325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6 ;;
     *) return 1 ;;
   esac
   tmp="$(mktemp -d)"

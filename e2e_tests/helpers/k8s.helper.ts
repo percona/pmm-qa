@@ -55,6 +55,13 @@ export default class K8sHelper {
   execSilent = (args: string): ExecReturn =>
     this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`);
 
+  getNodeNames = (): string[] =>
+    this.execSilent('get nodes --output=jsonpath={.items[*].metadata.name}')
+      .assertSuccess()
+      .stdout.trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
   getPodNames = (labelSelector = ''): string[] => this.getPods(labelSelector).map((pod) => pod.name);
 
   /** @param labelSelector `-l` selector; empty means every pod */

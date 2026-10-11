@@ -4,6 +4,7 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -45,6 +46,7 @@ import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
+  accessControlHelper: AccessControlHelper;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
@@ -87,6 +89,8 @@ const pmmTest = base.extend<{
   downloadsPage: DownloadsPage;
   testState: TestState;
 }>({
+  accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
+    await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
