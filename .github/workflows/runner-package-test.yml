@@ -335,7 +335,7 @@ jobs:
         working-directory: ./
         run: sudo vagrant up --provider=libvirt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ failure() }}
         with:
           name: pmm-summary-${{inputs.os}}-${{ inputs.playbook }}
