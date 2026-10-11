@@ -12,10 +12,15 @@ const sftpVolume = 'output/sftp';
 const dumpSuccess = 'DUMP_STATUS_SUCCESS';
 let dumpId = '';
 
-pmmTest.beforeAll(async ({ cliHelper }) => {
+pmmTest.beforeAll(async ({ clickHouseHelper, cliHelper }) => {
   fs.mkdirSync(sftpVolume, { recursive: true });
   fs.chmodSync(sftpVolume, 0o777);
   cliHelper.execute('docker compose -f docker-compose.yml up -d --wait sftp-server').assertSuccess();
+  // A QAN-enabled dump holds the qan folder only when ClickHouse has rows in its window, and on a fresh
+  // server the first QAN buckets land up to a minute after the services are added.
+  await expect
+    .poll(() => clickHouseHelper.countQanRows('pmm-server'), { timeout: Timeouts.TWO_MINUTES })
+    .toBeGreaterThan(0);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
