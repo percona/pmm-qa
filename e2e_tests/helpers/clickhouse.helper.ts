@@ -36,8 +36,13 @@ const lowMemoryQuerySettings: Record<string, string> = {
 export default class ClickHouseHelper {
   constructor(private readonly cliHelper: CliHelper) {}
 
-  countQanRows = (containerName: string) =>
-    Number(this.query(containerName, 'SELECT count() FROM pmm.metrics').stdout.trim());
+  countQanRows = (containerName: string, withinMinutes?: number) =>
+    Number(
+      this.query(
+        containerName,
+        `SELECT count() FROM pmm.metrics${withinMinutes ? ` WHERE period_start > now() - INTERVAL ${withinMinutes} MINUTE` : ''}`,
+      ).stdout.trim(),
+    );
 
   query = (containerName: string, query: string) =>
     this.cliHelper
