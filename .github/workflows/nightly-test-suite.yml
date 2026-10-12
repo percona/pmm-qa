@@ -23,6 +23,16 @@ on:
         required: false
         default: 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
         type: string
+      pmm_client_tarball:
+        description: 'amd64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz'
+        type: string
+      pmm_client_tarball_arm64:
+        description: 'arm64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz'
+        type: string
       pmm_qa_branch:
         description: 'PMM QA branch'
         required: false
@@ -202,6 +212,8 @@ jobs:
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       install_repo: ${{ needs.resolve.outputs.repository }}
       pmm_version: ${{ needs.resolve.outputs.pmm_version }}
+      tarball: ${{ inputs.pmm_client_tarball }}
+      tarball_arm64: ${{ inputs.pmm_client_tarball_arm64 }}
       pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
 
   qa_integration_psmdb_pbm_full:
