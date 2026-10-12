@@ -2328,14 +2328,17 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-12T02:25:29Z",
       "suites": [
         "Nightly"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "HA setup (pmm3-ha-eks #371) timed out: all 3 pg-db PostgreSQL pods never Ready on EKS in 10m. Same chart (PMM-HA-GA 2905c0a), images and pipeline were green in #368-#370; a fresh CHAOS k3s install of the same chart + 3-dev-latest had all 3 PG pods Ready in ~3.5 min and /v1/readyz 200. EKS cluster was deleted with no pod events, so likely EKS infra (volume/scheduling); watch the next HA nightly.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-12T02:43:02Z"
     }
-  ]
+  ],
+  "claims": []
 }
