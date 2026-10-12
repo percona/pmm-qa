@@ -59,7 +59,6 @@ jobs:
       client_image: ${{ steps.pick.outputs.client_image }}
       client_version: ${{ steps.pick.outputs.client_version }}
       repository: ${{ steps.pick.outputs.repository }}
-      install_repo: ${{ steps.pick.outputs.install_repo }}
       pmm_version: ${{ steps.pick.outputs.pmm_version }}
     steps:
       - id: pick
@@ -74,11 +73,9 @@ jobs:
           if [[ "$IMAGE_TAG" == *-rc* ]]; then
             repository='release candidate'
             client_version=pmm3-rc
-            install_repo=testing
           else
             repository=dev-latest
             client_version=latest-tarball
-            install_repo=experimental
           fi
           # Empty for 3-dev-latest: the package matrix then reads the version itself.
           pmm_version=${IMAGE_TAG%%-*}
@@ -88,7 +85,6 @@ jobs:
             echo "client_image=perconalab/pmm-client:${IMAGE_TAG}"
             echo "client_version=${client_version}"
             echo "repository=${repository}"
-            echo "install_repo=${install_repo}"
             echo "pmm_version=${pmm_version}"
           } >> "$GITHUB_OUTPUT"
 
@@ -194,21 +190,17 @@ jobs:
       expected_version: ${{ inputs.pmm_image_tag }}
 
   package_tests:
-    name: Package Tests (${{ matrix.arch }})
+    name: Package Tests
     needs: [plan, resolve]
-    strategy:
-      fail-fast: false
-      matrix:
-        # On a tag with no arm64 build (3.9.x RCs) only the arm64 leg fails, in its resolve inputs.
-        arch: [amd64, arm64]
     permissions:
       contents: read
       packages: write
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
     with:
-      arch: ${{ matrix.arch }}
+      # Needs a multi-arch tag: on one with no arm64 build (the 3.9.x RCs) no cell runs.
+      arch: all
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
-      install_repo: ${{ needs.resolve.outputs.install_repo }}
+      install_repo: ${{ needs.resolve.outputs.repository }}
       pmm_version: ${{ needs.resolve.outputs.pmm_version }}
       pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
 

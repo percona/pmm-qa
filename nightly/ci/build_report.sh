@@ -64,8 +64,8 @@ jq -n \
     elif startswith("Compatibility CLI") then "CLI Integration Compatibility"
     elif startswith("CLI integration") then "CLI Integration"
     elif startswith("PMM Upgrade") then "Upgrade"
-    elif startswith("Package Tests (amd64)") then "Package AMD"
-    elif startswith("Package Tests (arm64)") then "Package ARM"
+    elif test("^Package Tests / [^/]+-arm64 / ") then "Package ARM"
+    elif startswith("Package Tests") then "Package AMD"
     elif test("^(GSSAPI Tests Matrix|pmm3-helm|PMM_PSMDB_PBM_FULL|PMM_PROXYSQL|PMM_PDPGSQL)") then "Integrations"
     else "Other" end;
   def leaf: (index(" / ")) as $cut | if $cut then .[$cut + 3:] else . end;
@@ -76,7 +76,7 @@ jq -n \
       | map(select(.name | test("^(Resolve build under test|Compatibility matrix|GA pmm-client tags)") | not))
       | map((.name | split(" / ")) as $p | {
           source: "github",
-          group: ($p[0] | github_group),
+          group: (.name | github_group),
           name: (($p[1:] | map(select(. != "CLI" and . != "Integration"))) as $rest |
             if ($p[0] | startswith("Compatibility CLI")) then
               "\($p[0] | capture("\\((?<v>[^)]+)\\)").v // $p[0]) · \($rest | join(" / "))"
