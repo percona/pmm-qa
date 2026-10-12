@@ -36,15 +36,16 @@ on:
         description: 'PMM Server image (Jenkins DOCKER_VERSION)'
         default: 'perconalab/pmm-server:3-dev-latest'
       install_repo:
-        description: 'Client repo channel. upgrade and upgrade_custom_port install the
-          latest release and upgrade to this, so they cannot pass when it is also "release".'
+        description: 'Client packages: dev-latest (experimental), release candidate (testing)
+          or release. upgrade and upgrade_custom_port install the latest release and upgrade
+          to this, so they cannot pass when it is also "release".'
         type: choice
-        default: experimental
-        options: [experimental, testing, release]
+        default: dev-latest
+        options: [dev-latest, release candidate, release]
       pmm_version:
         description: 'Version the playbook asserts; it must match what install_repo
-          ships. Empty reads it from pmm-submodules v3 (experimental) or the newest
-          percona/pmm-client tag (release). testing has no source: set it.'
+          ships. Empty reads it from pmm-submodules v3 (dev-latest) or the newest
+          percona/pmm-client tag (release). release candidate has no source: set it.'
         default: ''
       metrics_mode:
         description: 'Metrics mode (Jenkins METRICS_MODE)'
@@ -92,7 +93,7 @@ on:
         default: 'perconalab/pmm-server:3-dev-latest'
       install_repo:
         type: string
-        default: experimental
+        default: dev-latest
       pmm_version:
         type: string
         default: ''
@@ -140,7 +141,7 @@ env:
   # build-package-test-images.yml publishes package_tests:<os> there.
   CLIENT_IMAGE_REPO: ghcr.io/percona/pmm-qa
   SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-  INSTALL_REPO: ${{ inputs.install_repo || 'experimental' }}
+  INSTALL_REPO: ${{ inputs.install_repo || 'dev-latest' }}
   METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
   ADMIN_PASSWORD: ${{ inputs.admin_password || 'pmm3admin!' }}
   TARBALL_AMD64: ${{ inputs.tarball }}
@@ -158,6 +159,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       server_image: ${{ steps.server.outputs.image }}
+      install_repo: ${{ steps.repo.outputs.channel }}
       pmm_version: ${{ steps.version.outputs.version }}
       pmm_qa_sha: ${{ steps.qa.outputs.sha }}
     steps:
@@ -199,6 +201,19 @@ jobs:
           echo "::error::pmm3-client_integration_tarball_gssapi runs only on os=ol8 or os=ol9"
           exit 1
 
+      - name: Map install_repo to its percona-release channel
+        id: repo
+        run: |
+          case "$INSTALL_REPO" in
+            dev-latest) channel=experimental ;;
+            'release candidate') channel=testing ;;
+            release) channel=release ;;
+            *)
+              echo "::error::install_repo must be dev-latest, release candidate or release, not '${INSTALL_REPO}'"
+              exit 1 ;;
+          esac
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+
       - name: Resolve the expected client version
         id: version
         env:
@@ -206,7 +221,7 @@ jobs:
         run: |
           if [ -z "$VERSION" ]; then
             case "$INSTALL_REPO" in
-              experimental)
+              dev-latest)
                 VERSION=$(curl -fsS --retry 3 https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION) ;;
               release)
                 VERSION=$(skopeo list-tags --retry-times 3 docker://docker.io/percona/pmm-client \
@@ -225,6 +240,7 @@ jobs:
       - name: Record what this run is testing
         env:
           RESOLVED: ${{ steps.server.outputs.image }}
+          CHANNEL: ${{ steps.repo.outputs.channel }}
           VERSION: ${{ steps.version.outputs.version }}
           REF: ${{ env.PMM_QA_REF || github.ref_name }}
           QA_SHA: ${{ steps.qa.outputs.sha }}
@@ -238,7 +254,7 @@ jobs:
           |---|---|
           | pmm-server | \`${SERVER_IMAGE}\` |
           | resolved | \`${RESOLVED}\` |
-          | install_repo | \`${INSTALL_REPO}\` |
+          | install_repo | \`${INSTALL_REPO}\` (\`${CHANNEL}\`) |
           | pmm_version | \`${VERSION}\` |
           | metrics_mode | \`${METRICS_MODE}\` |
           | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
@@ -349,6 +365,7 @@ jobs:
           OS: ${{ matrix.os }}
           ARCH: ${{ matrix.arch }}
           TEST: ${{ matrix.test }}
+          INSTALL_REPO: ${{ needs.prepare.outputs.install_repo }}
           PMM_VERSION: ${{ needs.prepare.outputs.pmm_version }}
         run: bash pmm-qa/.github/scripts/package-test-cell.sh
 

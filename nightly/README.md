@@ -15,8 +15,8 @@ these groups, which is the unit the page summarises and one Investigate button c
 
 | Group | Source | Lanes / jobs |
 |-------|--------|--------------|
-| Package AMD | Jenkins | `pkg amd64 / *` |
-| Package ARM | Jenkins | `pkg arm64 / *` |
+| Package AMD | Jenkins, GitHub | `pkg amd64 / *`, `Package Tests` amd64 cells and the matrix's own jobs |
+| Package ARM | Jenkins, GitHub | `pkg arm64 / *`, `Package Tests` arm64 cells |
 | Upgrade | GitHub | `PMM Upgrade` |
 | Upgrade AMI | Jenkins | `upgrade / ami <version>` |
 | Nightly | Jenkins | `nightly / docker`, `docker arm64`, `ami`, `helm`, `ha` |
