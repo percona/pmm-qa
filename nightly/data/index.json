@@ -73418,6 +73418,15 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-12T02:25:29Z",
+        "suites": [
+          "Nightly"
+        ]
+      }
+    ]
   }
 ]
