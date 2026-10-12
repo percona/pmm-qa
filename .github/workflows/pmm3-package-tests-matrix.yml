@@ -45,6 +45,7 @@ on:
           - pmm3-client_integration_upgrade
           - pmm3-client_integration_upgrade_custom_path
           - pmm3-client_integration_upgrade_custom_port
+          - pmm3-client_integration_tarball_gssapi
       pmm_server_image:
         description: 'PMM Server image (Jenkins DOCKER_VERSION)'
         default: 'perconalab/pmm-server:3-dev-latest'

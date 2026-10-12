@@ -8,7 +8,7 @@
 #             PostgreSQL), psmdb (Percona Server for MongoDB) or valkey. Each
 #             needs an install_<name>.sh beside install-databases.sh.
 # version     the series to install, at its newest release: 8.0 or 8.4 for ps,
-#             14 to 18 for pg, 6.0 to 8.0 for psmdb, 8 or 9.1 for valkey
+#             14 to 18 for pg, 6.0, 7.0, 8.0 or 8.3 for psmdb, 8 or 9.1 for valkey
 # repository  the percona-release channel: release, testing or experimental
 #
 # An OS gets only the databases listed for it, but every OS in
@@ -36,7 +36,7 @@ ubuntu2604      pg        18       release
 ol8             psmdb     8.0      release
 ol9             psmdb     8.0      release
 ol10            psmdb     8.0      release
-debian12-amd64        psmdb     8.0      release
+debian12-amd64  psmdb     8.0      release
 debian13        psmdb     8.0      release
 ubuntu2204      psmdb     8.0      release
 ubuntu2404      psmdb     8.0      release

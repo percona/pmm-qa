@@ -10,7 +10,7 @@
   vars:
     pmm_server_address: "{{ lookup('env', 'PMM_SERVER_IP') }}"
     pmm_server_password: "{{ lookup('env', 'ADMIN_PASSWORD') | default('admin', true) }}"
-    metrics_mode: "{{ lookup('env', 'METRICS_MODE') }}"
+    metrics_mode: "{{ lookup('env', 'METRICS_MODE') | default('auto', true) }}"
     pmm_version: "{{ lookup('env', 'PMM_VERSION') }}"
     cmd_admin_list: "pmm-admin list"
     pmm_auth_password: "pmm-pass"
@@ -55,16 +55,10 @@
   - name: check that PMM client version is correct
     include_tasks: ./tasks/verify_pmm_client_version.yml
 
-  - name: configure pmm client to connect to server in push/auto Mode
-    when: lookup('env', 'metrics_mode') == "push" or lookup('env', 'metrics_mode') == ""
+  - name: configure pmm client to connect to server
     shell: >-
-      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=auto --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
-      {{ instance_ip }} generic node_{{ instance_ip }}
-
-  - name: configure pmm client to connect to server in pull Mode
-    when: lookup('env', 'metrics_mode') == "pull"
-    shell: >-
-      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=pull --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode={{ metrics_mode }} --agent-password={{ pmm_auth_password }}
+      --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
       {{ instance_ip }} generic node_{{ instance_ip }}
 
 ### start PS

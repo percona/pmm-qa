@@ -71,7 +71,7 @@
       pmm_client_old: "pmm-client-{{ pmm_old_version_rpm.stdout }}"
 
   - name: Set PMM Client package name to install
-    when: test_repo != "main"
+    when: test_repo != "release"
     set_fact:
       pmm_client_old: "pmm-client"
 
@@ -186,7 +186,7 @@
     vars:
       valkey_to_test: "{{ enabled_db | select('match', '^valkey-*') | join('') }}"
 
-  - name: Verify if Metric Endpoint with Auth works for Mysqld Exporter
+  - name: Verify if Metric Endpoint with Auth works for Valkey Exporter
     when: '"valkey-" in enabled_db | join("")'
     include_tasks: ./tasks/verify_pmm3_service_metric.yml
     loop:

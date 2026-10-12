@@ -77,7 +77,7 @@
 
   - name: Install and start Percona Server MongoDB with GSSAPI
     when: '"psmdb-" in enabled_db | join("") and mongodb_connection_type == "gssapi"'
-    include_tasks: ./tasks/install_and_add_to_pmm_psmdb_gssapi.yml
+    include_tasks: ./tasks/add_psmdb_gssapi_to_pmm.yml
     vars:
       psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 

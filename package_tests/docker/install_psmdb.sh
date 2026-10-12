@@ -7,7 +7,7 @@ install_psmdb() {
   local version=$1 repository=$2
   case "$version" in
     6.0|7.0|8.0|8.3) ;;
-    *) echo "psmdb ${version} is not supported; use 6.0, 7.0 or 8.0" >&2; return 1 ;;
+    *) echo "psmdb ${version} is not supported; use 6.0, 7.0, 8.0 or 8.3" >&2; return 1 ;;
   esac
   percona-release enable-only "psmdb-${version/./}" "$repository"
 

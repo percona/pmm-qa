@@ -101,6 +101,20 @@ wait_for_server() {
   sudo podman exec client bash -c "timeout 5 bash -c '</dev/tcp/${gateway}/4647'"
 }
 
+# The GSSAPI playbooks' mongod authorizes against an LDAP directory at
+# 127.0.0.1:1389, and the client cannot nest a container to serve it, so this
+# one shares the client's network namespace. Its user and group are the ones
+# tasks/add_psmdb_gssapi_to_pmm.yml and support-files/setup_psmdb.js expect.
+start_ldap() {
+  case "$TEST" in *gssapi*) ;; *) return 0 ;; esac
+  sudo podman run -d --name ldap-server --network container:client \
+    -e LDAP_ADMIN_USERNAME=admin \
+    -e LDAP_ADMIN_PASSWORD=adminpassword \
+    -e LDAP_USERS=pmm-test \
+    -e LDAP_PASSWORDS=password1 \
+    docker.io/bitnamilegacy/openldap
+}
+
 copy_pmm_qa() {
   sudo podman cp "$QA_DIR" client:/root/pmm-qa &&
     sudo podman exec client sh -c 'ls /root/pmm-qa/package_tests >/dev/null'
@@ -142,6 +156,8 @@ collect_diagnostics() {
 # created -- an attempt that failed before PMM Server started -- and still exits
 # 0, so the next attempt finds the old client in its way.
 teardown() {
+  # First: podman will not remove the client while ldap-server uses its network.
+  sudo podman rm -f --ignore ldap-server >/dev/null
   sudo podman rm -f --ignore client pmm-server >/dev/null
   sudo podman volume rm -f pmm-data >/dev/null
   return 0
@@ -152,7 +168,7 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   gateway=""
 
   echo "::group::Attempt ${attempt} of ${ATTEMPTS}: start the ${OS} client and PMM Server"
-  start_client && free_cgroup_root && start_server && wait_for_server && copy_pmm_qa
+  start_client && free_cgroup_root && start_ldap && start_server && wait_for_server && copy_pmm_qa
   ready=$?
   echo "::endgroup::"
 
