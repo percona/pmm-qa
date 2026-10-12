@@ -159,6 +159,12 @@ export default class AlertingPage extends BasePage {
     popUp: this.grafanaIframe().getByRole('status').or(this.grafanaIframe().getByRole('alert')),
   };
 
+  addDynamicTemplate = async (yaml: string, templateName: string) => {
+    await this.createTemplate(yaml);
+    await expect(this.messages.popUp).toContainText('Alert rule template successfully added');
+    await expect(this.builders.dynamicBadge(templateName)).toBeVisible();
+  };
+
   attachTemplateFile = async (path: string) => {
     await this.buttons.addTemplate.click();
     await this.inputs.templateFile.setInputFiles(path);
@@ -182,6 +188,18 @@ export default class AlertingPage extends BasePage {
     await this.buttons.addTemplate.click();
     await this.inputs.template.fill(yaml);
     await this.buttons.submitTemplate.click();
+  };
+
+  deleteRule = async (folder: string, ruleName: string) => {
+    await this.page.goto(this.urls.alertRules);
+    await this.builders.ruleGroupToggle(folder).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.buttons.expandRow.first().click({ timeout: Timeouts.ONE_MINUTE });
+    await this.builders.ruleMoreMenu(ruleName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.deleteRule.click();
+    await this.buttons.confirmModal.click();
+    await expect(this.messages.popUp).toContainText('Rule successfully deleted', {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
   };
 
   deleteTemplate = async (summary: string) => {
@@ -252,5 +270,18 @@ export default class AlertingPage extends BasePage {
     await this.builders.rowActions(alertName).click();
     await this.buttons.silence.click();
     await this.buttons.saveSilence.click();
+  };
+
+  verifyTemplateRefused = async (yaml: string, message: string) => {
+    await this.createTemplate(yaml);
+    await expect(this.builders.alertMessage(message)).toContainText('Failed to parse rule template');
+    await this.buttons.cancelTemplate.click();
+  };
+
+  verifyTemplateText = async (templateName: string, text: RegExp) => {
+    await this.builders.viewTemplate(templateName).click();
+    await expect(this.elements.templateText).toHaveValue(text);
+    await expect(this.buttons.copyToClipboard).toBeVisible();
+    await this.buttons.closeDialog.click();
   };
 }

@@ -48,6 +48,13 @@ export default class NodesPage extends BasePage {
     await this.buttons.overrideAlertThresholds.click();
   };
 
+  verifyAccessDenied = async (): Promise<void> => {
+    await expect(this.elements.unauthorized).toContainText('Insufficient access permissions.', {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+    await expect(this.elements.nodeRows).toHaveCount(0);
+  };
+
   verifyHaNodeRoles = async (podNames: string[], leader: string): Promise<void> => {
     for (const podName of podNames) {
       const expectedRole = podName === leader ? 'Leader' : 'Follower';
