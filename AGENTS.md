@@ -53,7 +53,7 @@ flowchart LR
         ghaCjs["runner-e2e-tests-codeceptjs.yml"]
         ghaPw["runner-e2e-tests-playwright.yml"]
         ghaCli["runner-integration-cli-tests.yml"]
-        ghaPkg["runner-package-test.yml"]
+        ghaPkg["pmm3-package-tests-matrix.yml"]
         ghaHelm["helm-tests.yml"]
         ghaNightly["nightly-e2e-tests-matrix.yml"]
     end

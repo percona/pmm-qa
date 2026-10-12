@@ -1,19 +1,5 @@
-# The Jenkins pmm3-package-tests-matrix jobs (amd64 and arm64), on GitHub Actions:
-# 8 playbooks x 8 operating systems = 64 cells per architecture, each on its own
-# runner with its own PMM Server and its own systemd-capable client container. A
-# failed cell is retried from scratch (.github/scripts/package-test-cell.sh).
-# Debian 11 is left out: past its end of life, its security archive is gone from
-# deb.debian.org.
-#
-# The playbooks run unmodified. Everything OS-specific lives in the prebuilt client
-# images, built from package_tests/docker/ by build-package-test-images.yml.
-#
-# Other workflows can call it (workflow_call) with the same inputs. The calling
-# job has to grant contents: read and packages: write, which the images job asks
-# for. A cell that fails on every attempt fails the run, so the calling job's
-# result is the matrix's. Called from another repository, it tests
-# percona/pmm-qa at pmm_qa_ref, so pass the ref that uses: names; build_images
-# does nothing there, as only percona/pmm-qa can publish the images.
+# Called from another workflow, the calling job must grant contents: read and
+# packages: write. From another repository, pass pmm_qa_ref.
 name: PMM package tests matrix
 
 on:
@@ -205,6 +191,14 @@ jobs:
             fi
           fi
 
+      # The playbook installs Kerberos only on the RedHat family, and its client
+      # tarballs (pmm-client-dynamic-<os>) are built for ol8 and ol9.
+      - name: Check the OS supports the GSSAPI playbook
+        if: inputs.test == 'pmm3-client_integration_tarball_gssapi' && inputs.os != 'ol8' && inputs.os != 'ol9'
+        run: |
+          echo "::error::pmm3-client_integration_tarball_gssapi runs only on os=ol8 or os=ol9"
+          exit 1
+
       - name: Resolve the expected client version
         id: version
         env:
@@ -348,10 +342,6 @@ jobs:
           path: pmm-qa
           persist-credentials: false
 
-      # Starts the client and PMM Server, runs the playbook, and on a failure tears
-      # both down and tries again from scratch, up to ATTEMPTS times. The step
-      # fails only if every attempt did, so a caller waiting on the run sees the
-      # final result.
       - name: Run ${{ matrix.test }}
         env:
           CLIENT_IMAGE: ${{ env.CLIENT_IMAGE_REPO }}/package_tests:${{ matrix.os }}
@@ -382,7 +372,6 @@ jobs:
           retention-days: 7
           overwrite: true
 
-      # one a retry then cleared, so a flaky playbook leaves a trace.
       - name: Upload logs from failed attempts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -401,6 +390,7 @@ jobs:
       - name: Tear down
         if: always()
         run: |
+          sudo podman rm -f --ignore ldap-server || true
           sudo podman rm -f --ignore client pmm-server || true
           sudo podman volume rm -f pmm-data || true
 
@@ -421,6 +411,8 @@ jobs:
           path: results
 
       - name: Render the results grid
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
         run: |
           declare -A result tries
           for f in results/*.txt; do
@@ -488,4 +480,5 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          [ "$failed" -eq 0 ]
+          # A cell that died before uploading its result is in neither count.
+          [ "$failed" -eq 0 ] && [ "$TEST_RESULT" = success ]

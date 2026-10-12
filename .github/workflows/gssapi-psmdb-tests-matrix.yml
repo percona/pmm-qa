@@ -287,6 +287,9 @@ jobs:
     name: Package Test - OL 8
     needs: package_test_inputs
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
     with:
       os: 'ol8'
@@ -302,6 +305,9 @@ jobs:
     name: Package Test - OL 9
     needs: package_test_inputs
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
     with:
       os: 'ol9'
