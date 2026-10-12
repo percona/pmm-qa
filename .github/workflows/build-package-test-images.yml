@@ -1,16 +1,4 @@
-# Builds the eight systemd-capable OS images that pmm3-package-tests-matrix.yml
-# runs the package playbooks in, and publishes them to GHCR as one package,
-# package_tests, tagged by OS: package_tests:ol8, package_tests:debian13, ... Each
-# image is booted and checked before it is pushed, so a broken one never gets a tag.
-# The databases package_tests/docker/database-versions lists for each OS come
-# preinstalled.
-#
-# Those OS tags are the only tags. The matrix also calls this when run with
-# build_images, which republishes them from the branch it runs on before testing.
-#
-# Each OS tag is multi-arch. Each OS is built natively on an amd64 and an arm64
-# runner and pushed by digest alone; publish then joins the two digests under the
-# OS tag, and only once both have built, so no OS ever loses an architecture.
+# Builds the systemd client images for pmm3-package-tests-matrix.yml as ghcr.io/percona/pmm-qa/package_tests:<os>.
 name: Build package test images
 
 on:

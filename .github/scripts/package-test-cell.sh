@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
-# package-test-cell.sh
-#
-# Runs one cell of pmm3-package-tests-matrix.yml: a systemd client container and
-# a PMM Server on this runner, then one playbook inside the client. A failed
-# attempt is retried from scratch, with both containers and the server's data
-# recreated: a playbook cannot simply be run again where it failed, because its
-# first attempt has already changed the MySQL root password and registered its
-# services with PMM Server. The run is then judged on its final attempt, so
-# whatever waits on it never sees a failure that a retry went on to clear.
+# Runs one cell of pmm3-package-tests-matrix.yml, retrying a failed attempt on
+# fresh client and PMM Server containers.
 #
 # Environment (all required):
 #   CLIENT_IMAGE SERVER_IMAGE    pulled beforehand
@@ -92,10 +85,10 @@ wait_for_server() {
     code=$(curl -ks -o /dev/null -w '%{http_code}' https://127.0.0.1/nomad/v1/nodes || echo 000)
     case "$code" in 502|504|000) sleep 5 ;; *) break ;; esac
   done
-  if [ "$code" = 502 ]; then
+  case "$code" in 502|504|000)
     sudo podman logs pmm-server --tail 50 || true
-    echo "Nomad never started listening"; return 1
-  fi
+    echo "Nomad never started listening (HTTP $code)"; return 1 ;;
+  esac
   echo "Nomad is listening (HTTP $code)"
 
   sudo podman exec client bash -c "timeout 5 bash -c '</dev/tcp/${gateway}/4647'"
