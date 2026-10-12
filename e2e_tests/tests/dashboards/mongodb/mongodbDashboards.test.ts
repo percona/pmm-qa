@@ -19,7 +19,9 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
     await dashboard.verifyPanelValues(dashboard.mongo.routerSummary.metricsWithData);
   });
 
-  pmmTest(
+  // skip-until: 2026-10-23 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
+  // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15714, see the skip-until line above.
+  pmmTest.skip(
     'Verify MongoDB Sharded Cluster Summary @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];

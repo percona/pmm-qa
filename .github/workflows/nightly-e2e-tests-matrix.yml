@@ -100,7 +100,7 @@ jobs:
             tests_framework: codeceptjs
           - shard_name: ps-replication-psmdb-sharded
             setup_services: '--database ps,SETUP_TYPE=replication --database psmdb,SETUP_TYPE=sharding'
-            tags_for_tests: '@nightly'
+            tags_for_tests: '@nightly|@qan'
             tests_framework: playwright
           - shard_name: ps-myrocks-pdpgsql-patroni-external
             setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true --database pdpgsql,SETUP_TYPE=patroni --database external'

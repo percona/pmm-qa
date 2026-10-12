@@ -43,4 +43,21 @@ module.exports = {
 
     return resp.data.distribution_method;
   },
+
+  /**
+   * Whether PMM Server runs in High Availability mode
+   *
+   * @return {Promise<boolean>}
+   */
+  async isHaEnabled() {
+    const resp = await I.sendGetRequest('v1/ha/status', { Authorization: `Basic ${await I.getAuth()}` });
+
+    I.assertEqual(
+      resp.status,
+      200,
+      `Request should be OK: "${resp.status} ${resp.statusText}" ${resp.data.error ? resp.data : ''}`,
+    );
+
+    return resp.data.status === 'Enabled';
+  },
 };

@@ -5,6 +5,7 @@ import GrafanaApi from '@api/grafana.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
 import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
+import DatasourceProxyApi from '@api/datasourceProxy.api';
 import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 import AnnotationApi from '@api/annotation.api';
@@ -19,6 +20,7 @@ export default class Api {
   readonly alertingApi: AlertingApi;
   readonly annotationApi: AnnotationApi;
   readonly backupsApi: BackupsApi;
+  readonly datasourceProxyApi: DatasourceProxyApi;
   readonly dumpApi: DumpApi;
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
@@ -35,6 +37,7 @@ export default class Api {
     this.alertingApi = new AlertingApi(request);
     this.annotationApi = new AnnotationApi(request);
     this.backupsApi = new BackupsApi(request);
+    this.datasourceProxyApi = new DatasourceProxyApi(request);
     this.dumpApi = new DumpApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);

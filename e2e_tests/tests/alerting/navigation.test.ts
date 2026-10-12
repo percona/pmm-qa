@@ -102,7 +102,7 @@ pmmTest(
 
     await pmmTest.step('Open the Status tab', async () => {
       await leftNavigation.menuItemLocator('alerts.alertStatus').click({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(alertingPage.elements.noAlerts).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+      await expect(alertingPage.inputs.stateSelect).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       await expect(page).toHaveURL(new RegExp(alertingPage.url));
     });
   },

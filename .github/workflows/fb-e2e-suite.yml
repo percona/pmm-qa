@@ -452,7 +452,7 @@ jobs:
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch || 'amd64' }}
       enable_nomad: true
-      setup_services: '--database ps=8.4 --database pdpgsql --database psmdb'
+      setup_services: '--nomad --database ps=8.4 --database pdpgsql --database psmdb'
       pmm_test_flag: '@nomad'
 
   rta:

@@ -126,6 +126,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@post-server-upgrade`
 - `@post-upgrade`
 - `@pre-upgrade`
+- `@qan`
 - `@rta`
 - `@service-account`
 - `@settings`

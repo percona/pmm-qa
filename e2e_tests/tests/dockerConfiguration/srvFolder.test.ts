@@ -41,14 +41,14 @@ for (const configuration of srvConfigurations) {
       `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials ${configuration.testName} @docker-configuration`,
       async ({ api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
         cliHelper.execSilent(configuration.command);
-        console.log(cliHelper.execSilent('docker logs pmm-server-srv').stdout);
-        await api.serverApi.waitForReady();
+        console.log(cliHelper.execSilent(`docker logs ${configuration.containerName} 2>&1`).stdout);
+        await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
 
-        const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
+        // pmm-managed-init logs its configuration warnings to stderr.
+        const logs = cliHelper.execSilent(`docker logs ${configuration.containerName} 2>&1`).stdout;
 
-        expect(logs).not.toContain(
-          'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
-        );
+        expect(logs, 'PMM Server container logs should have been read').toContain("spawned: 'pmm-managed'");
+        expect(logs).not.toContain('unknown environment variable GF_SECURITY_ADMIN_PASSWORD');
 
         expect(logs).not.toContain(
           'Error: The directory named as part of the path /srv/logs/supervisord.log does not exist',

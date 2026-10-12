@@ -34,7 +34,8 @@ pmmTest.describe('PMM metrics tests for upgrade', () => {
     'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-server-upgrade',
     async ({ api }) => {
       const metricName = 'pg_stat_user_tables_analyze_count';
-      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
+      // Same trap as mysqld_exporter above: skip the remote instance named 'pgsql_pgss_pmm'.
+      const serviceName = await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_\\d');
 
       await api.grafanaApi.waitForMetric(`${metricName}{service_name="${serviceName.service_name}"}`);
     },

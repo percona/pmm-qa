@@ -97,7 +97,7 @@ env:
 
 jobs:
   upgrade:
-    name: "${{ inputs.upgrade_type }} upgrade from version ${{ inputs.pre_upgrade_version }} to version: ${{ inputs.upgrade_version }}"
+    name: "${{ inputs.upgrade_type }} upgrade ${{ inputs.pre_upgrade_version }} → ${{ inputs.upgrade_version }}"
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -276,6 +276,9 @@ jobs:
         run: |
           git fetch origin "$PMM_QA_BRANCH"
           git checkout FETCH_HEAD
+          # Pre-upgrade branches before pmm-3.9.1 have no conf/chunk-churn, so their
+          # checkout deleted the folder chunk-churn bind-mounts; re-create it to remount.
+          docker compose -p psmdb_sharded -f qa-integration/pmm_psmdb-pbm_setup/docker-compose-sharded.yaml up -d --no-deps --force-recreate chunk-churn
 
       - name: Prepare dependencies for upgrade branch
         working-directory: pmm-qa/e2e_tests

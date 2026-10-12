@@ -36,11 +36,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T2298 - Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.insight.prometheusExporterStatus.url, {
         from: 'now-5m',
-        nodeName: 'pmm-server',
+        nodeName: await api.haApi.getPmmServerNodeName(),
         to: 'now',
       }),
     );
@@ -51,11 +51,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T300 - Open the Prometheus Exporters Overview Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.insight.prometheusExportersOverview.url, {
         from: 'now-5m',
-        nodeName: 'pmm-server',
+        nodeName: await api.haApi.getPmmServerNodeName(),
         to: 'now',
       }),
     );
