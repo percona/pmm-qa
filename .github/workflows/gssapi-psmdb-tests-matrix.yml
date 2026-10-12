@@ -39,8 +39,8 @@ on:
         type: choice
         options:
           - release
-          - testing
-          - experimental
+          - release candidate
+          - dev-latest
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
