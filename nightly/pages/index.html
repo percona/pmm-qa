@@ -355,7 +355,8 @@ function runView(id) {
   const jobs = detailsOf(r);
   const t = tally(jobs);
   const inv = r.investigations || [];
-  const groups = [...new Set(jobs.map(j => j.group))].map(g => ({ g, jobs: jobs.filter(j => j.group === g) }));
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  const groups = [...new Set(jobs.map(j => j.group))].map(g => ({ g, jobs: jobs.filter(j => j.group === g).sort(byName) }));
   groups.sort((a, b) => orderOf(a.g) - orderOf(b.g) || a.g.localeCompare(b.g));
   const covered = new Set(inv.flatMap(suitesOf));
   const openGroups = groups.filter(({ jobs }) => tally(jobs).fail).length;
