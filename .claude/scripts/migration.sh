@@ -103,11 +103,16 @@ publish_branch() {
   git fetch -q origin
   git ls-remote --exit-code --heads origin "$branch" >/dev/null && base=origin/$branch
   local paths patch
-  mapfile -t paths < <(git status --porcelain | cut -c4- | grep -v '^\.claude/')
+  mapfile -t paths < <(git status --porcelain --no-renames | cut -c4- | grep -v '^\.claude/')
   ((${#paths[@]})) || die "no migration changes in control"
   patch=$(mktemp)
   git add -N -- "${paths[@]}" && git diff HEAD --binary -M --output="$patch" -- "${paths[@]}" || exit 1
-  git worktree add -q -B "$branch" "$publish" "$base" || exit 1
+  if git rev-parse -q --verify "refs/heads/$branch" >/dev/null; then
+    [[ $(git rev-parse "$branch") == $(git rev-parse "$base") ]] || die "local $branch differs from $base; reconcile it first"
+    git worktree add -q "$publish" "$branch" || exit 1
+  else
+    git worktree add -q -b "$branch" "$publish" "$base" || exit 1
+  fi
   git -C "$publish" apply --3way "$patch" || die "patch does not apply: cross-migration dependency"
   git -C "$publish" grep -qn '^<<<<<<< ' && die "conflict markers in $publish"
   (cd "$publish/e2e_tests" && npm ci --prefer-offline --no-audit --no-fund >/dev/null) || die "npm ci failed"
@@ -124,8 +129,22 @@ selection() {
   (cd "$base_tree/e2e_tests" && npm ci --prefer-offline --no-audit --no-fund >/dev/null) || die "npm ci failed in base tree"
   local out=$base_tree/sel
   mkdir -p "$out"
-  { grep -rhoE "(tags_for_tests|pmm_test_flag): *['\"][^'\"]+['\"]" "$publish"/.github/workflows/*.yml |
-      sed -E "s/^[^:]+: *['\"]//; s/['\"]$//"; printf '%s\n' '@gssapi-nightly' '@grafana-pr' "$@"; } | sort -u >"$out/exprs"
+  # Playwright jobs only: a runner-e2e-tests-playwright call, or a matrix entry with tests_framework: playwright.
+  { python - "$publish"/.github/workflows/*.yml <<'EOF'
+import sys, yaml
+for path in sys.argv[1:]:
+    for job in (yaml.safe_load(open(path, encoding='utf-8')) or {}).get('jobs', {}).values():
+        w = job.get('with') or {}
+        if 'playwright' in str(job.get('uses', '')):
+            for k in ('pmm_test_flag', 'tags_for_tests'):
+                if w.get(k) and '${{' not in str(w[k]):
+                    print(w[k])
+        matrix = (job.get('strategy') or {}).get('matrix')
+        for e in (matrix.get('include') or []) if isinstance(matrix, dict) else []:
+            if isinstance(e, dict) and e.get('tests_framework') == 'playwright' and e.get('tags_for_tests'):
+                print(e['tags_for_tests'])
+EOF
+    printf '%s\n' '@gssapi-nightly' '@grafana-pr' "$@"; } | sort -u >"$out/exprs"
   list() {
     (cd "$1/e2e_tests" && PMM_MIGRATION=1 npx playwright test --list --grep "$2" 2>/dev/null) |
       grep '›' | sed -E 's/:[0-9]+:[0-9]+ / /' | sort
@@ -147,7 +166,9 @@ selection() {
     comm -23 "$out/$i.before" "$out/$i.after" | sed 's/^/  - /'
   done <"$out/exprs"
   local wf=$publish/.github/workflows/nightly-e2e-tests-matrix.yml
-  echo "nightly shards: setup=$(grep -c 'shard_name:' "$wf") tagged=$(grep -cE "tags_for_tests: '[^']+'" "$wf") (lists in $out)"
+  echo "nightly shards: setup=$(grep -c 'shard_name:' "$wf") tagged=$(grep -cE "tags_for_tests: '[^']+'" "$wf")"
+  rm -rf "$control/.claude/migration-observations/selection" && cp -r "$out" "$control/.claude/migration-observations/selection"
+  git -C "$control" worktree remove --force "$base_tree"
 }
 
 revalidate() {
@@ -161,6 +182,7 @@ revalidate() {
   (cd e2e_tests && npx tsc --noEmit -p .) || rc=1
   python support_scripts/generate_readme.py --check || rc=1
   for f in "$@"; do
+    [[ $f == e2e_tests/* ]] || continue
     [[ -f $control/$f ]] && cmp -s "$f" "$control/$f" && echo "tested copy: $f identical to control" || echo "tested copy: $f DIFFERS from control (rerun it)"
   done
   echo "revalidate rc=$rc"
