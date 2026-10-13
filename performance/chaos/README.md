@@ -16,7 +16,7 @@ for the others (`--no-clone` creates them from scratch). Clients reach the serve
 | Lane | Command | Notes |
 | --- | --- | --- |
 | Daily scale | `chaos-perf.sh run daily-$(date +%F) --nodes 300 --per-vm 75 --duration 3h30m` | Single server, deleted after the report. |
-| Weekly HA | `chaos-ha.sh up perf-ha --nodes 5`, then `chaos-perf.sh run weekly-ha --ha perf-ha --nodes 500 --per-vm 100 --duration 3h30m` | `chaos-ha.sh down perf-ha` afterwards. |
+| Weekly HA | `chaos-ha.sh up perf-ha --nodes 5`, then `chaos-perf.sh run weekly-ha --ha perf-ha --nodes 500 --per-vm 75 --duration 3h30m` | `chaos-ha.sh down perf-ha` afterwards. |
 | Soak | `chaos-perf.sh up soak --nodes 100 --per-vm 50 --keep`; nightly `chaos-perf.sh upgrade soak` and `chaos-perf.sh report soak --since <24h ago> --lane soak` | `--keep` = CHAOS never deletes it. |
 
 `run` is detached (`setsid`): it brings the run up, holds the load for `--duration`, writes
@@ -45,8 +45,18 @@ The JSON fits `performance/ci/publish_report.sh`.
 
 ## Sizing
 
-CHAOS limits a VM to 32 vCPU / 32 GB / 200 GB, and the shared token to 20 resources (each k3s node
-counts), so keep the VM count low: pack clients per VM and confirm with `chaos-perf.sh stats`.
+CHAOS limits a VM to 32 vCPU / 32 GB / 200 GB, and the token to 20 instances (stopped VMs and each
+k3s node count), so keep the VM count low: pack clients per VM and confirm with `chaos-perf.sh stats`.
+`CHAOS_WAIT_MIN` (60 under `run`) waits for a free slot instead of failing.
+
+Measured on 2026-10-13 (PMM 3.9.1, `--pg-tables 1000` and `100`):
+
+- A client container settles at 235-310 MiB (max ~440) and 5-7% of a vCPU. A 16 vCPU / 32 GB
+  VM holds 75; memory, not CPU, is the ceiling.
+- Each node is ~8-12k series; 100 nodes ≈ 0.8M active series and 80k rows/s.
+- Steal grows with the run's own busy vCPUs: one 16 vCPU VM under stress-ng sees <1%, the same
+  server with four busy 16 vCPU client VMs beside it sees 30-60%. 100 nodes (3 VMs) ran at ~8%;
+  300 nodes (5 VMs) at 50-60%, which starved the server. Size runs by total busy vCPUs, not nodes.
 
 ## Teardown
 
