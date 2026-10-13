@@ -2,6 +2,8 @@
 
 Migration work happens and is tested in the control branch's worktree and is never committed there. The migrated code moves to a fresh branch cut from `origin/main`, is committed, reviewed and PR'd there, and reaches control later through an ordinary `merge origin/main`.
 
+The commands below are scripted in `.claude/scripts/migration.sh` (`orchestration.md` lists the subcommands); this file is what they enforce. `revalidate` reporting every file identical to control's tested copy replaces the migrated-test rerun in Revalidate step 3.
+
 ## What is committed where
 
 | Content | Branch |

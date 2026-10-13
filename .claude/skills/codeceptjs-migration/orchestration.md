@@ -4,6 +4,19 @@ The parent's half of the workflow: row selection, preflight, provisioning, gate 
 
 Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout is never switched away from, publication uses an isolated `git worktree`. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
 
+`.claude/scripts/migration.sh` does the mechanical steps; the sections below say what each one checks and what stays judgement:
+
+| Step | Command |
+| --- | --- |
+| 1 preflight checks 1-3 (plus no unpushed commits on control), `origin/main` merge, drift counts, Playwright version, next `pending` row | `migration.sh preflight` |
+| 1 `in-progress` marker, after correcting the row's Setup by hand | `migration.sh mark <row> in-progress` |
+| 3 credentials, services and QAN rows per service the source names | `migration.sh env-check <service-prefix>...` |
+| 5b publish worktree, move the work, `npm ci` | `migration.sh publish-branch <branch>` |
+| 5b and 6 selectability of every workflow expression, base vs branch, and nightly shard counts | `migration.sh selection [extra-grep]...` |
+| 7 revalidation, and whether the tested copy is unchanged | `migration.sh revalidate <file>...` |
+| 7 push, PR, runner dispatch, `Run:` line and comment | `migration.sh publish <title> <body> <flag> <setup>` |
+| 7 tracker `done` | `migration.sh mark <row> done <pr-url>` |
+
 ## Parent rules
 
 **Subagents**
@@ -92,7 +105,7 @@ When the parent designates a dry run, skip only: tracker status writes, step 5b 
 
 Before launching the writer. The parent confirms the bucket: the tracker's `Setup` is a planned default that is regularly wrong, so derive the real service set from what the source's `Before`/`BeforeSuite` hooks, `Data(...)` rows and shell commands name, add the databases every test in a target file the migration will modify needs (the services it filters on, `docker exec`s into or registers), correct the tracker row if it differs, and cross-check against the destination Playwright job's `setup_services`, never the retiring CodeceptJS job's (a union grep over-provisions).
 
-Start `bash .claude/scripts/local-pmm.sh up <framework args>` in the background with the confirmed setup, under WSL and never Git Bash (it rewrites container paths); first `wsl -d Ubuntu -- docker version --format '{{.Server.Version}}'` must print a version, else wait and retry, and every retry starts with `local-pmm.sh down` from WSL. Then launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
+Start `bash .claude/scripts/local-pmm.sh up <framework args>` in the background with the confirmed setup, under WSL and never Git Bash (it rewrites container paths); first `wsl -d Ubuntu -- docker version --format '{{.Server.Version}}'` must print a version, else wait and retry, and every retry starts with `local-pmm.sh down` from WSL. Export `DOCKER_CONFIG` pointing at a directory holding `{}` first: building a missing image otherwise fails on the Docker Desktop credential helper (`docker-credential-desktop.exe: exec format error`). Then launch the writer immediately, and record the exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 
 ## 3. Wait for the environment and verify it
 
