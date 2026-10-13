@@ -7,7 +7,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'Verify Operations Per Shard graph tooltip on MongoDB Sharded Cluster Summary @nightly',
+  "PMM-T2372 - Verify Operations Per Shard adds up reads and writes and opens the chosen shard's ReplSet Summary @nightly",
   async ({ api, dashboard, page, urlHelper }) => {
     const panelName = 'Operations Per Shard';
     const shard = 'rs2';
