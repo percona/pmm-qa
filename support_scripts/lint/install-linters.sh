@@ -26,9 +26,12 @@ _lint_verify_sha256() {
 # -v` alone let any build decide the findings, which is how CI and a local
 # session came to disagree about ruff. Returns 0 when $1 --version reports $2.
 _lint_version_is() {
-  local bin="$1" want="$2" got
+  local bin="$1" want="$2" out line got
   command -v "$bin" >/dev/null 2>&1 || return 1
-  got=$("$bin" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+  out=$("$bin" --version 2>/dev/null)
+  # npm-groovy-lint opens with a CodeNarc banner and prints its own version on a later "<bin> version X" line.
+  line=$(grep -m1 "^$bin version " <<<"$out") || line=$(head -1 <<<"$out")
+  got=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$line" | head -1)
   [ "$got" = "$want" ]
 }
 

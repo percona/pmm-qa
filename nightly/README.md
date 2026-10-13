@@ -17,7 +17,7 @@ these groups, which is the unit the page summarises and one Investigate button c
 |-------|--------|--------------|
 | Package AMD | Jenkins | `pkg amd64 / *` |
 | Package ARM | Jenkins | `pkg arm64 / *` |
-| Upgrade AMD | Jenkins | `upgrade / <version> <variant>` |
+| Upgrade | GitHub | `PMM Upgrade` |
 | Upgrade AMI | Jenkins | `upgrade / ami <version>` |
 | Nightly | Jenkins | `nightly / docker`, `docker arm64`, `ami`, `helm`, `ha` |
 | Nightly Compatibility | Jenkins | `compat / client <version>` |

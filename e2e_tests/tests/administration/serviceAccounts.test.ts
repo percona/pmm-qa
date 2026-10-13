@@ -169,7 +169,7 @@ pmmTest.describe(() => {
   );
 });
 
-// skip-until: 2026-10-13 -- pmm-admin says "check PMM Server logs" for a disabled service account (PMM-15692); decide bug vs test fix.
+// skip-until: 2026-10-20 -- pmm-admin says "check PMM Server logs" for a disabled service account (PMM-15692); decide bug vs test fix.
 // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15692, see the skip-until line above.
 pmmTest.skip(
   'PMM-T1884 - Verify disabling service account @service-account',
