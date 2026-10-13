@@ -54,11 +54,15 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelContentByExactName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
+    panelFocusedPointByName: (panelName: string) =>
+      this.builders.panelPlotByName(panelName).locator('.u-cursor-pt:not(.u-off)').first(),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    panelPlotByName: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('.u-over'),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -75,6 +79,7 @@ export default class Dashboards extends BasePage {
     annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
     collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
+    graphTooltip: this.grafanaIframe().locator('div:has(> [data-testid="data-testid viz-tooltip-wrapper"])'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
@@ -260,6 +265,36 @@ export default class Dashboards extends BasePage {
       await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
       await this.builders.panelHeaderByName(panelName).hover();
       await this.builders.panelMenuIconByName(panelName).click();
+    });
+  };
+
+  // Grafana pins a graph tooltip only on a click right at a series point (closestSeriesIdx in
+  // TooltipPlugin2): hover up the plot until uPlot draws the point, then click on the point.
+  pinGraphTooltip = async (panelName: string) => {
+    await pmmTest.step(`Pin the ${panelName} graph tooltip`, async () => {
+      const plot = this.builders.panelPlotByName(panelName);
+      const focusedPoint = this.builders.panelFocusedPointByName(panelName);
+
+      await plot.scrollIntoViewIfNeeded();
+
+      const plotBox = await plot.boundingBox();
+
+      if (!plotBox) throw new Error(`${panelName} graph is not rendered`);
+
+      for (let y = plotBox.height - 1; y > 0 && !(await focusedPoint.isVisible()); y -= 5) {
+        await plot.hover({ position: { x: plotBox.width * 0.75, y } });
+      }
+
+      const pointBox = (await focusedPoint.isVisible()) ? await focusedPoint.boundingBox() : null;
+
+      if (!pointBox) throw new Error(`${panelName} graph has no series point to pin`);
+
+      await plot.click({
+        position: {
+          x: pointBox.x + pointBox.width / 2 - plotBox.x,
+          y: pointBox.y + pointBox.height / 2 - plotBox.y,
+        },
+      });
     });
   };
 

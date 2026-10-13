@@ -11,6 +11,7 @@ interface BuildUrlParameters {
   from?: string;
   to?: string;
   cluster?: string;
+  set?: string;
   metric?: string;
   viewPanel?: string;
 }
@@ -50,6 +51,9 @@ export default class UrlHelper {
           break;
         case 'cluster':
           queryParams['var-cluster'] = parameters[key];
+          break;
+        case 'set':
+          queryParams['var-set'] = parameters[key];
           break;
         case 'metric':
           queryParams['var-metric'] = parameters[key];
