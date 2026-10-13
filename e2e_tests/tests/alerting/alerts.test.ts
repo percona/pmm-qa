@@ -37,6 +37,7 @@ pmmTest.beforeAll(async ({ browser }) => {
   await api.settingsApi.updateSettings({ enable_alerting: true });
   fs.rmSync(alertFile, { force: true });
   await api.alertingApi.removeAllAlertRules();
+  await api.alertingApi.deleteActiveSilences();
   await api.alertingApi.setEmptyReceiverIntegrations([webhook]);
   await api.alertingApi.createRuleFromTemplate({
     ...postgresqlRule,

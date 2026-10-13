@@ -97,7 +97,7 @@ env:
 
 jobs:
   upgrade:
-    name: "${{ inputs.upgrade_type }} upgrade from version ${{ inputs.pre_upgrade_version }} to version: ${{ inputs.upgrade_version }}"
+    name: "${{ inputs.upgrade_type }} upgrade ${{ inputs.pre_upgrade_version }} → ${{ inputs.upgrade_version }}"
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -138,7 +138,7 @@ jobs:
           echo "CLIENT_INSTALL_VERSION set to: $TARBALL_URL"
 
       - name: Checkout pmm-qa
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
@@ -319,7 +319,7 @@ jobs:
           docker cp pmm-server:/srv/logs srv-logs || true
           tar -zcf srv-logs.tar.gz srv-logs || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: upgrade-logs-${{ inputs.upgrade_type }}-${{ inputs.version }}
