@@ -63,6 +63,8 @@ export default class StoredMetricsPage extends BasePage {
       this.grafanaIframe()
         .getByRole('menuitemradio')
         .filter({ has: this.page.getByText(interval, { exact: true }) }),
+    resultsPerPageOption: (option: string) =>
+      this.grafanaIframe().getByRole('option', { exact: true, name: option }),
     serviceTypeCheckbox: (serviceType: string) =>
       this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`),
     serviceTypeFilter: (serviceType: string) =>
@@ -120,6 +122,9 @@ export default class StoredMetricsPage extends BasePage {
     queryTooltipId: this.grafanaIframe().getByRole('tooltip').getByRole('heading'),
     queryTooltipText: this.grafanaIframe().getByRole('tooltip').getByTestId('highlight-code'),
     removeColumnOption: this.grafanaIframe().getByText('Remove column', { exact: true }),
+    resultsPerPage: this.grafanaIframe()
+      .getByLabel('Page Size', { exact: true })
+      .locator('.ant-select-selection-item'),
     selectedMainMetric: this.grafanaIframe().getByTestId('group-by').locator('.ant-select-selection-item'),
     selectedRow: this.grafanaIframe().locator('.selected-overview-row'),
     selectedRowCell: this.grafanaIframe().locator('.selected-overview-row > div').first(),
@@ -268,6 +273,12 @@ export default class StoredMetricsPage extends BasePage {
     await this.builders.refreshIntervalOption(interval).click();
   };
 
+  selectResultsPerPage = async (option: '25 / page' | '50 / page' | '100 / page') => {
+    await this.elements.resultsPerPage.click();
+    await this.builders.resultsPerPageOption(option).click();
+    await this.waitForLoad();
+  };
+
   selectRow = async (rowNumber: number) => {
     await this.builders.queryRow(rowNumber).click({ timeout: Timeouts.ONE_MINUTE });
     await this.waitForLoad();
@@ -281,6 +292,13 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.builders.sortingValue(columnNumber)).toContainClass(`sort-by ${direction}`, {
       timeout: Timeouts.THIRTY_SECONDS,
     });
+  };
+
+  verifyActivePage = async (pageNumber: number, range: string) => {
+    await expect(this.builders.paginationItem(String(pageNumber))).toContainClass(
+      'ant-pagination-item-active',
+    );
+    await this.verifyPaginationRange(range);
   };
 
   verifyColumnSorted = async (columnNumber: number, direction: 'asc' | 'desc') => {
@@ -323,6 +341,27 @@ export default class StoredMetricsPage extends BasePage {
     for (const serviceType of disallowedServiceTypes) {
       await expect(this.builders.serviceTypeCheckbox(serviceType)).toHaveCount(0);
     }
+  };
+
+  verifyPagesAndCount = async (itemsPerPage: number) => {
+    await expect
+      .poll(
+        async () => {
+          const totalCount = (await this.getTotalQueryCount()) ?? 0;
+          const lastPage = Number(await this.buttons.lastPage.getAttribute('title'));
+
+          return totalCount > 0 && lastPage === Math.ceil(totalCount / itemsPerPage);
+        },
+        {
+          message: `Last page does not match total count at ${itemsPerPage} per page`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
+      )
+      .toBe(true);
+  };
+
+  verifyPaginationRange = async (range: string) => {
+    await expect(this.elements.totalCount).toHaveText(new RegExp(`^${range} of \\d+ items$`));
   };
 
   verifyPlanShown = async () => {

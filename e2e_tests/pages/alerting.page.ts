@@ -156,7 +156,10 @@ export default class AlertingPage extends BasePage {
     threshold: this.grafanaIframe().locator('input[name="threshold"]'),
   };
   messages = {
-    popUp: this.grafanaIframe().getByRole('status').or(this.grafanaIframe().getByRole('alert')),
+    popUp: this.grafanaIframe()
+      .getByRole('status')
+      .or(this.grafanaIframe().getByRole('alert'))
+      .and(this.grafanaIframe().locator(':not([aria-label="Loading"])')),
   };
 
   addDynamicTemplate = async (yaml: string, templateName: string) => {

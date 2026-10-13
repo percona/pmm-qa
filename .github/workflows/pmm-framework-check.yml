@@ -34,7 +34,7 @@ jobs:
       # bash -- the framework's own libs and its bats suite. The default leaves
       # GITHUB_TOKEN readable in .git/config for that code, and nothing here
       # pushes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
