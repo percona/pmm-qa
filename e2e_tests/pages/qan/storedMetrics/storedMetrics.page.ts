@@ -128,6 +128,7 @@ export default class StoredMetricsPage extends BasePage {
     selectedMainMetric: this.grafanaIframe().getByTestId('group-by').locator('.ant-select-selection-item'),
     selectedRow: this.grafanaIframe().locator('.selected-overview-row'),
     selectedRowCell: this.grafanaIframe().locator('.selected-overview-row > div').first(),
+    selectedRowQueryText: this.grafanaIframe().locator('.selected-overview-row').getByRole('cell').nth(1),
     sparklineTooltip: this.grafanaIframe().locator('div.tippy-content'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
@@ -237,6 +238,16 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openInNewTab = async (url: string) => {
+    const page = await this.page.context().newPage();
+    const storedMetrics = new StoredMetricsPage(page);
+
+    await page.goto(url);
+    await storedMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
+
+    return { page, storedMetrics };
+  };
+
   openPlanTab = async () => {
     await this.builders.tab('Plan').click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.waitForLoad();
@@ -294,11 +305,12 @@ export default class StoredMetricsPage extends BasePage {
     });
   };
 
-  verifyActivePage = async (pageNumber: number, range: string) => {
+  verifyActivePage = async (pageNumber: number, range?: string) => {
     await expect(this.builders.paginationItem(String(pageNumber))).toContainClass(
       'ant-pagination-item-active',
     );
-    await this.verifyPaginationRange(range);
+
+    if (range) await this.verifyPaginationRange(range);
   };
 
   verifyColumnSorted = async (columnNumber: number, direction: 'asc' | 'desc') => {
