@@ -92,6 +92,7 @@ export default class Dashboards extends BasePage {
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
+    rowTitles: this.grafanaIframe().locator('[data-testid^="data-testid dashboard-row-title-"]'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
