@@ -2320,14 +2320,17 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-13T03:07:08Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "openshift-helm-tests #228 test 7 (V2 chart 1.3.0 + percona/pmm-server:2 install) timed out because VictoriaMetrics went FATAL in the V2 pod on a node with OVN and PV-detach errors; image and chart unchanged since 2025, 7 prior runs green, and re-run #229 on the same params passed 8/8, so it is an environment flake.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-13T04:30:09Z"
     }
-  ]
+  ],
+  "claims": []
 }
