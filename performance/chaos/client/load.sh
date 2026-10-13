@@ -29,7 +29,7 @@ SQL
     -c pg_stat_statements.max=10000 -c max_connections=2000
   run --name mongo percona/percona-server-mongodb:7.0 --profile 2 --slowms 0 --wiredTigerCacheSizeGB 1
   run --name load-mysql -e DB_PASSWORD="$DB_PASSWORD" -v $W:/w:ro --entrypoint bash percona/percona-server:8.0 /w/mysql.sh
-  run --name load-pg -e DB_PASSWORD="$DB_PASSWORD" -v $W:/w:ro --entrypoint bash postgres:16 /w/pg.sh
+  run --name load-pg -e DB_PASSWORD="$DB_PASSWORD" -e PG_TABLES="${PG_TABLES:-100}" -v $W:/w:ro --entrypoint bash postgres:16 /w/pg.sh
   run --name load-mongo -v $W:/w:ro --entrypoint mongosh percona/percona-server-mongodb:7.0 --quiet --host mongo /w/mongo.js
 }
 
