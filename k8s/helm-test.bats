@@ -40,10 +40,20 @@ setup() {
 teardown() {
     echo "Running teardown"
     echo "-------debug info-------"
-    kubectl get pods
+    kubectl get nodes -o wide || true
+    kubectl get pods,pvc
     kubectl describe pod --selector=app.kubernetes.io/name=pmm
     kubectl get events --sort-by=lastTimestamp
-    kubectl logs --all-containers --timestamps --selector=app.kubernetes.io/name=pmm
+    # --selector alone caps each container at 10 lines
+    kubectl logs --all-containers --timestamps --tail=-1 --selector=app.kubernetes.io/name=pmm
+    # supervisord sends each service's output to /srv/logs, not to the container log
+    for pod in $(kubectl get pods --selector=app.kubernetes.io/name=pmm -o name); do
+        # per pod: with --selector, a pod that never restarted ends the call before the rest are read
+        kubectl logs --all-containers --timestamps --previous "$pod" 2>/dev/null || true
+        echo "--- ${pod} supervisorctl status ---"
+        kubectl exec "$pod" -- supervisorctl status || true
+        kubectl exec "$pod" -- sh -c 'for f in /srv/logs/*.log; do echo "--- $f ---"; tail -n 200 "$f"; done' || true
+    done
     echo "------------------------"
 
     cleanup
