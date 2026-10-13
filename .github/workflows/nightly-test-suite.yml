@@ -207,7 +207,6 @@ jobs:
       packages: write
     uses: ./.github/workflows/pmm3-package-tests-matrix.yml
     with:
-      # Needs a multi-arch tag: on one with no arm64 build (the 3.9.x RCs) no cell runs.
       arch: all
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
       install_repo: ${{ needs.resolve.outputs.repository }}
