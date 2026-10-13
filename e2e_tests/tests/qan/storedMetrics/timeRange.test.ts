@@ -10,7 +10,7 @@ pmmTest.beforeEach(async ({ context, grafanaHelper, page, qanStoredMetrics, urlH
 });
 
 pmmTest(
-  'Open the QAN Dashboard and check that changing the time range resets current page to the first @qan',
+  'PMM-T2376 - Open the QAN Dashboard and check that changing the time range resets current page to the first @qan',
   async ({ leftNavigation, page, qanStoredMetrics }) => {
     await qanStoredMetrics.builders.paginationItem('2').click({ timeout: Timeouts.ONE_MINUTE });
     await expect(page).toHaveURL(/page_number=2/);
