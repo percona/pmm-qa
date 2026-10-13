@@ -22,6 +22,23 @@ pmmTest(
       }),
     );
     await dashboard.loadAllPanels();
+
+    await pmmTest.step(
+      `Verify the ${panelName} mean is about Reads Per Shard plus Writes Per Shard`,
+      async () => {
+        // Operations counts every opcounter but command: query+getmore (reads) and insert+update+delete (writes).
+        const operations = await dashboard.getLegendCalc(panelName, shard);
+        const reads = await dashboard.getLegendCalc('Reads Per Shard', shard);
+        const writes = await dashboard.getLegendCalc('Writes Per Shard', shard);
+
+        expect(operations).toBeGreaterThan(0);
+        expect(
+          Math.abs(operations - (reads + writes)),
+          `${panelName} mean ${operations} vs Reads ${reads} + Writes ${writes}`,
+        ).toBeLessThanOrEqual(operations * 0.05);
+      },
+    );
+
     await dashboard.pinGraphTooltip(panelName);
 
     await pmmTest.step('Verify the pinned tooltip', async () => {

@@ -58,6 +58,12 @@ export default class Dashboards extends BasePage {
       this.builders.panelPlotByName(panelName).locator('.u-cursor-pt:not(.u-off)').first(),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelLegendHeaders: (panelName: string) => this.builders.panelByExactName(panelName).locator('table th'),
+    panelLegendRow: (panelName: string, seriesName: string) =>
+      this.builders
+        .panelByExactName(panelName)
+        .getByTitle(seriesName, { exact: true })
+        .locator('xpath=ancestor::tr'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -190,6 +196,27 @@ export default class Dashboards extends BasePage {
     await this.changeRow(
       this.builders.expandRowByName(rowName),
       `Expanding of row: ${rowName} was not successful`,
+    );
+  };
+
+  // Reads a legend calc such as "2.18K ops/s" as a number, scaled by its SI prefix.
+  getLegendCalc = async (panelName: string, seriesName: string, calc = 'Mean'): Promise<number> => {
+    const headers = (await this.builders.panelLegendHeaders(panelName).allTextContents()).map((text) =>
+      text.trim(),
+    );
+    const column = headers.indexOf(calc);
+
+    if (column < 0) throw new Error(`${panelName} legend has no ${calc} column: ${headers.join(', ')}`);
+
+    const text =
+      (await this.builders.panelLegendRow(panelName, seriesName).locator('td').nth(column).textContent()) ??
+      '';
+    const [, value, prefix = ''] = /([\d.]+)\s*([KMBT]?)/.exec(text) ?? [];
+
+    if (value === undefined) throw new Error(`${panelName} ${seriesName} ${calc} is not a number: "${text}"`);
+
+    return (
+      parseFloat(value) * { '': 1, B: 1e9, K: 1e3, M: 1e6, T: 1e12 }[prefix as '' | 'B' | 'K' | 'M' | 'T']
     );
   };
 
