@@ -332,7 +332,8 @@ cmd_down() { need_run "$1"
   done
   [ "$fail" = 0 ] || die "some VMs were not terminated; run down again"
   [ -f "$d/ha_run" ] && log "HA cluster $(cat "$d/ha_run") is chaos-ha.sh's: tear it down there"
-  mkdir -p "$RUNS/perf-reports"; cp "$d"/report*.json "$d"/run.log "$RUNS/perf-reports/" 2>/dev/null || true
+  mkdir -p "$RUNS/perf-reports"
+  for f in "$d"/report*.json "$d"/run.log; do [ -f "$f" ] && cp "$f" "$RUNS/perf-reports/$1-$(basename "$f")"; done
   rm -rf "$d"; log "run $1 removed"
 }
 
