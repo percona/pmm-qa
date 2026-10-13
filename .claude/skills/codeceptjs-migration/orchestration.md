@@ -35,7 +35,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 ## 1. Select and prepare
 
-Three preflight checks on control, before the `origin/main` merge and the `in-progress` commit. Stop and name the one that tripped:
+Four preflight checks on control, before the `origin/main` merge and the `in-progress` commit. Stop and name the one that tripped:
 
 1. another tracker row `in-progress`;
 2. any migration PR open. The cap is zero open before a new row starts, because every migration PR touches the nightly matrix and `e2e_tests/README.md`:
@@ -47,6 +47,8 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
    Not `--search 'migrate in:title'`, which matches unrelated titles containing the word. Also run `ListAgents`: another session sharing this worktree will stage or revert files under you, so agree paths with it or stop.
 
 3. Node.js older than 22.18, Docker unavailable, or a fixed local resource already present: `pmm-server`, `pmm-data`, the `pmm-qa` network, engine-labeled containers and volumes, or `client_container` (never created by `local-pmm.sh`; it means a foreign client setup). Treat any match as foreign unless this run created it; never adopt, replace or tear one down.
+
+4. the selected row's source has an active scenario without a `PMM-T` id and no SmartBear `zephyr_*` tool loads through `ToolSearch` (`select:mcp__SmartBear_MCP__zephyr_create_test_case`). With the tool loaded, the writer looks up the matching case or creates one (`SKILL.md` Title, tags, ids) and the new key goes into the title; without it, ask the user, or unattended skip to the next pending row whose scenarios all carry ids and report the skipped row.
 
 Then merge `origin/main` into control (`branch-workflow.md` Control branch preflight). If the merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow: confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, merge again. Never `--allow-unrelated-histories`.
 
