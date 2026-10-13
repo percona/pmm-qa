@@ -8,8 +8,10 @@
 # that shard alone: writes and TTL deletes on its primary, oplog apply on its
 # secondaries, and the secondaryPreferred scans on a secondary.
 #
-# The framework's own workload, generate_opcountersrepl_traffic.sh and the
-# chunk-churn container, still touches both shards; stop it for an idle rs1.
+# pmm-framework runs it in place of its own workload with
+# --database psmdb,SETUP_TYPE=sharding,RUN_LOAD_SHARD=rs2. Run by hand, the
+# framework's workload, generate_opcountersrepl_traffic.sh, still touches both
+# shards; so does the chunk-churn container either way.
 #
 # Usage: generate_shard_load.sh [start|stop]
 #
@@ -54,6 +56,7 @@ prepare_js=/tmp/shard_load_${SHARD}_prepare.js
 load_js=/tmp/shard_load_$SHARD.js
 log=/tmp/shard_load_$SHARD.log
 pidfile=/tmp/shard_load_$SHARD.pid
+stop_cmd="SHARD=$SHARD $(cd "$(dirname "$0")" && pwd)/${0##*/} stop"
 
 running() {
   docker exec "$MONGOS_CONTAINER" sh -c 'kill -0 "$(cat "$1" 2>/dev/null)" 2>/dev/null' sh "$pidfile"
@@ -89,7 +92,7 @@ esac
 [[ $(docker inspect -f '{{.State.Running}}' "$MONGOS_CONTAINER" 2>/dev/null) == true ]] ||
   die "Container $MONGOS_CONTAINER is not running; set up the cluster with pmm-framework --database psmdb,SETUP_TYPE=sharding."
 if running; then
-  die "Load on shard $SHARD is already running; stop it first with: $0 stop"
+  die "Load on shard $SHARD is already running; stop it first with: $stop_cmd"
 fi
 
 put_js "$prepare_js" <<'JS'
@@ -175,7 +178,7 @@ if [[ $BACKGROUND == yes ]]; then
   fi
   echo "Load is running on shard $SHARD in the background."
   echo "  tail it:  docker exec $MONGOS_CONTAINER tail -f $log"
-  echo "  stop it:  $0 stop"
+  echo "  stop it:  $stop_cmd"
 else
   docker exec "$MONGOS_CONTAINER" sh -c "$run_load" sh "$pidfile" "$MONGO_URI" "$load_js" &
   # docker exec does not pass a signal on to the process it runs.

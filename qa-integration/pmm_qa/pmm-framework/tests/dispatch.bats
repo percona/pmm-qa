@@ -432,6 +432,29 @@ EOF
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
   [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]
   grep -q '^traffic$' "$DOCKER_CALLS"
+  ! grep -q generate_shard_load "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB sharding with RUN_LOAD_SHARD runs the shard load instead of the cluster-wide workload" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329
+  bash() { printf 'bash %s SHARD=%s\n' "$*" "${SHARD-}" >>"$DOCKER_CALLS"; }
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,RUN_LOAD_SHARD=RS1'
+  dispatch_setup
+
+  grep -q '^bash ./generate_shard_load.sh SHARD=rs1$' "$DOCKER_CALLS"
+  ! grep -q generate_opcountersrepl_traffic "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB rejects RUN_LOAD_SHARD it cannot load before touching docker" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,RUN_LOAD_SHARD=rscfg'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PSMDB RUN_LOAD_SHARD 'rscfg': the sharded cluster has rs1 and rs2."* ]]
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,RUN_LOAD_SHARD=rs2'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PSMDB RUN_LOAD_SHARD needs SETUP_TYPE=sharding.'* ]]
+  [[ ! -s $DOCKER_CALLS ]]
 }
 
 @test "SSL PSMDB runs the TLS stack on the prebaked image without writing the password to disk" {

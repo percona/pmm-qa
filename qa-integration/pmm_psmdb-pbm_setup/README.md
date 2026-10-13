@@ -19,6 +19,7 @@ with PMM.
   cluster, run by the framework after setup.
 - `generate_shard_load.sh`: load on one shard of the sharded cluster only (rs2
   by default), through mongos into a database whose primary shard it pins.
-  `./generate_shard_load.sh stop` ends it.
+  The framework runs it instead of the workload above with
+  `RUN_LOAD_SHARD=rs1|rs2`; `SHARD=rs2 ./generate_shard_load.sh stop` ends it.
 
 The tests for this stack are in [`psmdb_pbm_auth_tests`](../../psmdb_pbm_auth_tests/README.md).

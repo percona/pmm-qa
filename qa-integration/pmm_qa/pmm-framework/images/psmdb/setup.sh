@@ -10,8 +10,10 @@
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
+# RUN_LOAD_SHARD=rs1|rs2 swaps the sharded cluster's workload, which spans both
+# shards, for generate_shard_load.sh on that one shard.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio tarball='' suffix
+  local version ol client setup_type profile gssapi minio run_load_shard tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -20,12 +22,21 @@ setup_psmdb() {
   profile=$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)
   gssapi=$(resolve_value PSMDB GSSAPI DB_CONFIG)
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
+  run_load_shard=$(resolve_value PSMDB RUN_LOAD_SHARD DB_CONFIG)
+  run_load_shard=${run_load_shard,,}
   suffix=$RANDOM
 
   case $setup_type in
     pss | psa | shards | sharding) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
   esac
+  case $run_load_shard in
+    '' | rs1 | rs2) ;;
+    *) die "Unsupported PSMDB RUN_LOAD_SHARD '$run_load_shard': the sharded cluster has rs1 and rs2." ;;
+  esac
+  if [[ -n $run_load_shard && $setup_type == ps? ]]; then
+    die 'PSMDB RUN_LOAD_SHARD needs SETUP_TYPE=sharding.'
+  fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -291,12 +302,20 @@ psmdb_sharded() {
 
   step 'Load data' psmdb_sharded_data
   # Chunk moves and splits come from the compose file's chunk-churn service.
-  step 'Start the workload' psmdb_traffic
+  if [[ -n $run_load_shard ]]; then
+    step "Start the workload on shard $run_load_shard" psmdb_shard_load
+  else
+    step 'Start the workload' psmdb_traffic
+  fi
   report_agent_status "${clients[@]}"
 }
 
 psmdb_traffic() {
   COMPOSE_FILE=docker-compose-sharded.yaml must bash ./generate_opcountersrepl_traffic.sh >/dev/null
+}
+
+psmdb_shard_load() {
+  SHARD=$run_load_shard must bash ./generate_shard_load.sh
 }
 
 # TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack. A throwaway compose override disables the stack's own pmm-server and kerberos
