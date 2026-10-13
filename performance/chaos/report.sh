@@ -48,18 +48,19 @@ cpu_total="sum by (node_name) (rate(node_cpu_seconds_total{$S}[2m]))"
 # name|unit|gate (how a check passes)|promql
 CHECKS=$(cat <<EOF
 nodes_reporting|count|min_ge:$(( expected * 99 / 100 ))|count(count by (node_name) (rate(node_cpu_seconds_total{node_name=~"pc-.*",mode="idle"}[2m])))
-services_up|count|min_ge:$(( expected * 99 / 100 ))|count({__name__=~"mysql_up|pg_up|mongodb_up",service_name=~"pc-.*"} == 1)
+services_up|count|min_ge:$(( expected * 99 / 100 ))|count(count by (service_name) ({__name__=~"mysql_up|pg_up|mongodb_up",service_name=~"pc-.*"} == 1))
 client_data_lag_s|s|p95_le:60|max(time() - max by (node_name) (timestamp(node_load1{node_name=~"pc-.*"})))
 server_steal_pct|pct|valid_avg_le:5|max(100 * sum by (node_name) (rate(node_cpu_seconds_total{mode="steal",$S}[2m])) / $cpu_total)
 server_cpu_busy_pct|pct|p95_le:80|max(100 - 100 * sum by (node_name) (rate(node_cpu_seconds_total{mode="idle",$S}[2m])) / $cpu_total)
 server_iowait_pct|pct|trend|max(100 * sum by (node_name) (rate(node_cpu_seconds_total{mode="iowait",$S}[2m])) / $cpu_total)
 server_mem_used_pct|pct|max_le:85|max(100 * (1 - node_memory_MemAvailable_bytes{$S} / node_memory_MemTotal_bytes{$S}))
 server_disk_free_bytes|bytes|trend|min(node_filesystem_avail_bytes{$S,mountpoint=~"/|/srv"})
-ingest_rows_per_s|rows/s|trend|sum(rate(vm_rows_inserted_total[2m]))
-active_series|count|trend|max(vm_cache_entries{type="storage/hour_metric_ids"})
-vm_slow_inserts_per_s|rows/s|trend|sum(rate(vm_slow_row_inserts_total[2m]))
-pmm_managed_rss_bytes|bytes|trend|sum(process_resident_memory_bytes{job=~"pmm-managed.*"})
-victoriametrics_rss_bytes|bytes|trend|sum(process_resident_memory_bytes{job=~"victoriametrics.*"})
+ingest_rows_per_s|rows/s|trend|sum(rate(vm_rows_inserted_total{job="victoriametrics"}[2m]))
+active_series|count|trend|max(vm_cache_entries{job="victoriametrics",type="storage/hour_metric_ids"})
+vm_slow_inserts_per_s|rows/s|trend|sum(rate(vm_slow_row_inserts_total{job="victoriametrics"}[2m]))
+pmm_managed_rss_bytes|bytes|trend|sum(process_resident_memory_bytes{job="pmm-managed"})
+victoriametrics_rss_bytes|bytes|trend|sum(process_resident_memory_bytes{job="victoriametrics"})
+qan_api2_rss_bytes|bytes|trend|sum(process_resident_memory_bytes{job="qan-api2"})
 EOF
 )
 

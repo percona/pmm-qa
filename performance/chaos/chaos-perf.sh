@@ -6,12 +6,13 @@
 #                             [--server-image IMG] [--client-image IMG] [--ref <pmm-qa branch>]
 #   chaos-perf.sh run <run_id> --duration 1h [up options]   # up, hold, report, down; detached, survives the session
 #   chaos-perf.sh report <run_id> [--since 2026-10-13T10:00:00Z] [--warmup 15m] [--window 10m]
+#   chaos-perf.sh clients <run_id>        # (re)start the client containers on the run's VMs
 #   chaos-perf.sh stats <run_id>          # docker stats and load per client VM
 #   chaos-perf.sh upgrade <run_id>        # pull the newest images, recreate server and clients in place (soak)
 #   chaos-perf.sh ssh <run_id> <vm> [cmd] # vm: srv, c01, c02, ...
 #   chaos-perf.sh down <run_id> [--force]
 #   chaos-perf.sh list
-# Needs CHAOS_TOKEN. State lives in $CHAOS_RUNS_DIR/perf-<run_id> (default /srv/chaos-runs).
+# Needs CHAOS_TOKEN. CHAOS_WAIT_MIN=N waits up to N minutes for a free slot under the token's instance limit. State lives in $CHAOS_RUNS_DIR/perf-<run_id> (default /srv/chaos-runs).
 set -euo pipefail
 umask 007
 
@@ -24,9 +25,13 @@ DB_IMAGES="percona/percona-server:8.0 postgres:16 percona/percona-server-mongodb
 
 die() { echo "chaos-perf: $*" >&2; exit 1; }
 log() { echo "[$(date -u +%FT%TZ)] $*"; }
-api() { # method path [json] [extra curl args...]
-  curl -fsS -m 60 -X "$1" -H "Authorization: Token $CHAOS_TOKEN" -H "Accept: application/json" \
-    -H "Content-Type: application/json" "$API$2" ${3:+-d "$3"} "${@:4}"
+api() { # method path [json] [extra curl args...]; CHAOS's error body (e.g. the instance limit) goes to stderr
+  local out code
+  out=$(curl -sS -m 60 -X "$1" -H "Authorization: Token $CHAOS_TOKEN" -H "Accept: application/json" \
+    -H "Content-Type: application/json" "$API$2" ${3:+-d "$3"} -w '\n%{http_code}' "${@:4}") || return $?
+  code=${out##*$'\n'}; out=${out%$'\n'*}
+  if [ "$code" -ge 400 ]; then echo "CHAOS $1 $2: HTTP $code $out" >&2; return 22; fi
+  [ -z "$out" ] || echo "$out"
 }
 pw() { openssl rand -base64 30 | tr -dc 'a-zA-Z0-9' | head -c 24; }
 run_dir() {
@@ -74,7 +79,15 @@ vm_create() { # name vcpu mem disk images...
       user_data:$ud, description:("pmm-qa perf " + $r + " for " + $o),
       tags:{Project:"pmm-qa-perf", Run:$r, Owner:$o}}')
   mkdir -p "$d/vms/$name"
-  local id; id=$(api POST / "$body" | jq -re .identifier) || die "create $name failed"
+  # The token's 20-instance limit is shared with everyone's QA VMs: wait for a slot, up to $CHAOS_WAIT_MIN.
+  local id="" err end=$(( $(date +%s) + ${CHAOS_WAIT_MIN:-0} * 60 ))
+  while :; do
+    err=$(api POST / "$body" 2>&1 >"$d/vms/$name/create.json") && id=$(jq -re .identifier "$d/vms/$name/create.json") && break
+    if [[ "$err" == *"maximum limit"* ]] && [ "$(date +%s)" -lt "$end" ]; then
+      log "CHAOS instance limit reached; waiting for a free slot for $name"; sleep 120; continue
+    fi
+    rm -rf "${d:?}/vms/$name"; die "create $name failed: $err"
+  done
   echo "$id" >"$d/vms/$name/id"; echo "$host" >"$d/vms/$name/hostname"
   log "created $name ($host, id $id, ${vcpu}c/${mem}G/${disk}G)"
 }
@@ -153,7 +166,7 @@ server_up() {
   echo "https://$(cat "$d/vms/srv/ip")" >"$d/url"
   echo "$(cat "$d/vms/srv/ip"):443" >"$d/server_address"
   echo pmm-server >"$d/server_nodes"
-  log "PMM Server ready: $(cat "$d/url") ($(on srv 'docker exec pmm-server cat /srv/grafana/PMM_VERSION 2>/dev/null || true' | head -1))"
+  log "PMM Server ready: $(cat "$d/url") ($(on srv 'docker inspect -f "{{index .Config.Labels \"org.opencontainers.image.version\"}}" pmm-server' || true))"
 }
 
 server_ha() { # chaos-ha.sh run id
@@ -169,13 +182,14 @@ clients_start() {
   local per; per=$(param per_vm)
   local total; total=$(param nodes)
   local addr; addr=$(cat "$d/server_address")
-  local i=0 vm count first=1
+  local i=0 vm count first=1 pids=() fail=0
   # shellcheck disable=SC1091
   . "$d/admin.env"
   for vm in $(clients); do
     count=$(( total - first + 1 < per ? total - first + 1 : per ))
     [ "$count" -gt 0 ] || break
-    put "$vm" "$HERE/client" /root/perf
+    on "$vm" 'rm -rf /root/perf/client; mkdir -p /root/perf'
+    put "$vm" "$HERE/client" /root/perf/
     on_stdin "$vm" 'umask 077; cat >/root/perf/run.env' <<EOF
 PMM_AGENT_SERVER_ADDRESS=$addr
 PMM_AGENT_SERVER_USERNAME=admin
@@ -185,10 +199,11 @@ PMM_AGENT_SETUP_METRICS_MODE=push
 DB_PASSWORD=$(cat "$d/db_password")
 CLIENT_IMAGE=$(param client_image)
 EOF
-    on "$vm" "bash /root/perf/client/load.sh start $vm $count" &
+    on "$vm" "bash /root/perf/client/load.sh start $vm $count" & pids+=($!)
     first=$((first + count)); i=$((i + 1))
   done
-  wait
+  for p in "${pids[@]}"; do wait "$p" || fail=1; done
+  [ "$fail" = 0 ] || die "starting clients failed on some VM"
   log "started $((first - 1)) client containers on $i VM(s)"
 }
 
@@ -259,6 +274,13 @@ cmd_up() {
   date -u +%FT%TZ >"$d/load_started"
   clients_start
   log "UP: $(cat "$d/url") (admin password in $d/admin.env)"
+}
+
+# (Re)start the client containers: after a failed up, or with more VMs added by hand.
+cmd_clients() { need_run "$1"
+  if [ -d "$d/vms/srv" ]; then for vm in $(clients); do fw_open srv "$(cat "$d/vms/$vm/ip")/32" 443; done; fi
+  [ -f "$d/load_started" ] || date -u +%FT%TZ >"$d/load_started"
+  clients_start
 }
 
 cmd_stats() { need_run "$1"
@@ -341,6 +363,7 @@ cmd__run() {
   local secs; case $dur in *h) secs=$(( ${dur%h} * 3600 )) ;; *m) secs=$(( ${dur%m} * 60 )) ;; *s) secs=${dur%s} ;; esac
   d=$(run_dir "$run_id")
   local logf="$RUNS/perf-logs/$run_id.log"
+  export CHAOS_WAIT_MIN=${CHAOS_WAIT_MIN:-60}
   run_exit() {
     local rc=$?; trap - EXIT TERM INT HUP
     if [ -f "$d/params.json" ]; then
@@ -365,7 +388,7 @@ cmd__run() {
 }
 
 case "${1:-}" in
-  up|run|_run|report|stats|upgrade|ssh|down) c=$1; shift; [ $# -ge 1 ] || die "usage: $c <run_id> ..."; "cmd_$c" "$@" ;;
+  up|run|_run|clients|report|stats|upgrade|ssh|down) c=$1; shift; [ $# -ge 1 ] || die "usage: $c <run_id> ..."; "cmd_$c" "$@" ;;
   list) cmd_list ;;
-  *) sed -n '2,15p' "$0"; exit 2 ;;
+  *) sed -n '2,16p' "$0"; exit 2 ;;
 esac

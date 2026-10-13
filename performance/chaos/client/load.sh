@@ -21,7 +21,7 @@ GRANT pg_monitor TO pmm;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 SQL
   chmod 644 init/mysql/pmm.sql init/pg/pmm.sql
-  run() { docker run -d --network perf --restart unless-stopped "$@" >/dev/null; }
+  run() { docker run -d --network perf --restart unless-stopped --log-opt max-size=20m --log-opt max-file=2 "$@" >/dev/null; }
   run --name mysql -e MYSQL_ROOT_PASSWORD="$DB_PASSWORD" -v /root/perf/init/mysql:/docker-entrypoint-initdb.d:ro \
     percona/percona-server:8.0 --max-connections=2000
   run --name postgres -e POSTGRES_PASSWORD="$DB_PASSWORD" -v /root/perf/init/pg:/docker-entrypoint-initdb.d:ro \
@@ -35,6 +35,7 @@ SQL
 
 client_run() { # name node db
   docker run -d --name "$1" --hostname "$2" --network perf --restart unless-stopped --env-file run.env \
+    --log-opt max-size=10m --log-opt max-file=2 \
     -e NODE_NAME="$2" -e DB="$3" -v "$1:/usr/local/percona/pmm/config" \
     -v /root/perf/client/entrypoint.sh:/perf-entrypoint.sh:ro --entrypoint /bin/sh \
     "$CLIENT_IMAGE" /perf-entrypoint.sh >/dev/null
