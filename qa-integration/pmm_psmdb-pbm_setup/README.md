@@ -17,5 +17,8 @@ with PMM.
   baked into the `psmdb` image, which builds with this folder as its context.
 - `generate_opcountersrepl_traffic.sh`: replication traffic for the sharded
   cluster, run by the framework after setup.
+- `generate_shard_load.sh`: load on one shard of the sharded cluster only (rs2
+  by default), through mongos into a database whose primary shard it pins.
+  `./generate_shard_load.sh stop` ends it.
 
 The tests for this stack are in [`psmdb_pbm_auth_tests`](../../psmdb_pbm_auth_tests/README.md).
