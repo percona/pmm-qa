@@ -54,7 +54,6 @@ jq -n \
     if   startswith("pkg amd64 / ") then "Package AMD"
     elif startswith("pkg arm64 / ") then "Package ARM"
     elif startswith("upgrade / ami ") then "Upgrade AMI"
-    elif startswith("upgrade / ") then "Upgrade AMD"
     elif . == "nightly / gssapi" or . == "ha" or . == "openshift" then "HA, OpenShift & GSSAPI"
     elif startswith("nightly / ") then "Nightly"
     elif startswith("compat / ") then "Nightly Compatibility"
@@ -64,6 +63,7 @@ jq -n \
     if   startswith("E2E Tests Matrix") then "E2E Tests"
     elif startswith("Compatibility CLI") then "CLI Integration Compatibility"
     elif startswith("CLI integration") then "CLI Integration"
+    elif startswith("PMM Upgrade") then "Upgrade"
     elif test("^(GSSAPI Tests Matrix|pmm3-helm|PMM_PSMDB_PBM_FULL|PMM_PROXYSQL|PMM_PDPGSQL)") then "Integrations"
     else "Other" end;
   def leaf: (index(" / ")) as $cut | if $cut then .[$cut + 3:] else . end;
@@ -78,6 +78,9 @@ jq -n \
           name: (($p[1:] | map(select(. != "CLI" and . != "Integration"))) as $rest |
             if ($p[0] | startswith("Compatibility CLI")) then
               "\($p[0] | capture("\\((?<v>[^)]+)\\)").v // $p[0]) · \($rest | join(" / "))"
+            elif ($p[0] | startswith("PMM Upgrade")) then
+              (($p[1] // "") | capture("^(?<type>\\S+) \\((?<from>[^)]+)\\)$") // null) as $u |
+              if $u then "\($u.from) · \($u.type)" else $p[-1] end
             elif ($p[0] | test("^(E2E Tests Matrix|CLI integration)")) and ($rest | length) > 0 then $rest | join(" / ")
             else .name end),
           result: ((.conclusion // .status) | norm),
