@@ -99,6 +99,7 @@ export default class StoredMetricsPage extends BasePage {
     checkedFilterLabels: this.grafanaIframe().locator(
       'div[data-testid^="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text',
     ),
+    classicExplainError: this.grafanaIframe().getByTestId('classic-explain-error'),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
@@ -311,6 +312,50 @@ export default class StoredMetricsPage extends BasePage {
     );
 
     if (range) await this.verifyPaginationRange(range);
+  };
+
+  verifyAveragePerQuery = async (timeRangeInSeconds: number) => {
+    await expect(async () => {
+      const read = async (metricName: string, columnNumber: number) => {
+        const text = (
+          (await this.builders.detailMetricValue(metricName, columnNumber).textContent()) ?? ''
+        ).trim();
+
+        expect(text, `${metricName} column ${columnNumber} should show a value`).not.toBe('');
+
+        return text;
+      };
+
+      const magnitudes: Record<string, number> = { b: 1e9, k: 1e3, m: 1e6, t: 1e12 };
+      const queryCountText = await read('Query Count', 3);
+      const queryCount =
+        parseFloat(queryCountText) * (magnitudes[queryCountText.slice(-1).toLowerCase()] ?? 1);
+      const [perQueryTime, perQueryUnit] = (await read('Query Time', 4)).split(' ');
+      const timeUnits: Record<string, number> = { ms: 1e-3, µs: 1e-6 };
+
+      const verifyRate = (metricName: string, value: string, rate: number, humanizedInputs: number) => {
+        const expected = Number(rate.toFixed(4));
+        const message = `${metricName} rate ${value} should match the calculated ${expected}`;
+
+        if (expected < 0.01) {
+          expect(value, message).toMatch(/^<0\.01/);
+        } else if (expected <= 0.0149) {
+          expect(value, message).toMatch(/^0\.01/);
+        } else {
+          expect(Math.abs(parseFloat(value) - expected), message).toBeLessThanOrEqual(
+            0.005 + expected * (1 / 0.995 ** humanizedInputs - 1),
+          );
+        }
+      };
+
+      verifyRate('Query Count', await read('Query Count', 2), queryCount / timeRangeInSeconds, 1);
+      verifyRate(
+        'Query Time',
+        await read('Query Time', 2),
+        (queryCount * parseFloat(perQueryTime) * (timeUnits[perQueryUnit] ?? 1)) / timeRangeInSeconds,
+        2,
+      );
+    }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
   };
 
   verifyColumnSorted = async (columnNumber: number, direction: 'asc' | 'desc') => {
