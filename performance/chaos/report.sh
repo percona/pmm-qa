@@ -54,7 +54,7 @@ server_steal_pct|pct|valid_avg_le:5|max(100 * sum by (node_name) (rate(node_cpu_
 server_cpu_busy_pct|pct|p95_le:80|max(100 - 100 * sum by (node_name) (rate(node_cpu_seconds_total{mode="idle",$S}[2m])) / $cpu_total)
 server_iowait_pct|pct|trend|max(100 * sum by (node_name) (rate(node_cpu_seconds_total{mode="iowait",$S}[2m])) / $cpu_total)
 server_mem_used_pct|pct|max_le:85|max(100 * (1 - node_memory_MemAvailable_bytes{$S} / node_memory_MemTotal_bytes{$S}))
-server_disk_free_bytes|bytes|trend|min(node_filesystem_avail_bytes{$S,mountpoint=~"/|/srv"})
+server_disk_free_bytes|bytes|trend|min(node_filesystem_avail_bytes{$S,mountpoint="/srv"})
 ingest_rows_per_s|rows/s|trend|sum(rate(vm_rows_inserted_total{job="victoriametrics"}[2m]))
 active_series|count|trend|max(vm_cache_entries{job="victoriametrics",type="storage/hour_metric_ids"})
 vm_slow_inserts_per_s|rows/s|trend|sum(rate(vm_slow_row_inserts_total{job="victoriametrics"}[2m]))
@@ -114,12 +114,12 @@ jq -n --arg id "$run_id-$(date -u +%Y%m%d%H%M)" --arg date "$(date -u +%FT%TZ)" 
   {run_id:$id, date:$date, scale:$scale, lane:$lane, platform:"chaos", server:{from:$ver, to:$ver},
    client_version:$cimg, status:$status, valid:$valid, deviation_threshold_pct:10,
    window:{from:$from, to:$to}, server_nodes:$srv, params:$params,
-   summary:(if $valid then "" else "INVALID (server CPU steal > 5%): " end)
-     + "\($scale) nodes, \($lane): " + ([$checks[] | select(.ok | not) | .name] | if length == 0 then "all checks ok" else "failed: " + join(", ") end),
+   summary:((if $valid then "" else "INVALID (server CPU steal > 5%): " end)
+     + "\($scale) nodes, \($lane): " + ([$checks[] | select(.ok | not) | .name] | if length == 0 then "all checks ok" else "failed: " + join(", ") end)),
    checks:$checks, snapshots:[]}' >"$out"
 
-jq -r '"\(.summary)  [\(.status), valid=\(.valid)]  \(.window.from) .. \(.window.to)  server \(.server.to)",
-  (.checks[] | [.name, (if .ok then "ok" else "FAIL" end), .gate,
+jq -r '"\(.summary)  [\(.status), valid=\(.valid)]  \(.window.from) .. \(.window.to)  server \(.server.to)"' "$out"
+jq -r '(.checks[] | [.name, (if .ok then "ok" else "FAIL" end), .gate,
     "base=\(.baseline // "-" | tostring | .[0:10])", "after=\(.after // "-" | tostring | .[0:10])",
     "avg=\(.avg // "-" | tostring | .[0:10])", "p95=\(.p95 // "-" | tostring | .[0:10])", "max=\(.max // "-" | tostring | .[0:10])"] | @tsv)' "$out" | column -t -s $'\t'
 echo "report: $out"
