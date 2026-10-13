@@ -7,7 +7,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  "PMM-T2372 - Verify Operations Per Shard adds up reads and writes and opens the chosen shard's ReplSet Summary @nightly",
+  "PMM-T2372 - Verify Operations Per Shard adds up reads and writes and opens the chosen shard's ReplSet Summary @nightly @pmm-psmdb-integration",
   async ({ api, dashboard, page, urlHelper }) => {
     const panelName = 'Operations Per Shard';
     const shard = 'rs2';
