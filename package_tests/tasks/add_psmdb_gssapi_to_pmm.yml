@@ -30,7 +30,7 @@
     fail_msg: >-
       docker/database-versions sets Percona Server for MongoDB {{ psmdb_version }} for this OS, but the
       package query reports "{{ psmdb_package_version.stdout or psmdb_package_version.stderr | default('nothing') }}".
-      Rebuild the image (build_images).
+      Rebuild the image (build-package-test-images.yml).
     success_msg: "Percona Server for MongoDB {{ psmdb_version }}: {{ psmdb_package_version.stdout }}"
 
 # The setup half of install_setup_psmdb.yml from Percona-QA/psmdb-testing.
