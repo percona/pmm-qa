@@ -3,7 +3,7 @@
 # client VMs that each run K pmm-client containers, every container its own PMM node in push mode.
 #   chaos-perf.sh up <run_id> [--nodes 300] [--per-vm 75] [--client-size 16/32] [--server-size 16/32/200]
 #                             [--ha <chaos-ha run_id>] [--keep] [--days N] [--no-clone]
-#                             [--server-image IMG] [--client-image IMG] [--ref <pmm-qa branch>]
+#                             [--server-image IMG] [--client-image IMG] [--pg-tables 100]
 #   chaos-perf.sh run <run_id> --duration 1h [up options]   # up, hold, report, down; detached, survives the session
 #   chaos-perf.sh report <run_id> [--since 2026-10-13T10:00:00Z] [--warmup 15m] [--window 10m]
 #   chaos-perf.sh clients <run_id>        # (re)start the client containers on the run's VMs
@@ -198,6 +198,7 @@ PMM_AGENT_SERVER_INSECURE_TLS=1
 PMM_AGENT_SETUP_METRICS_MODE=push
 DB_PASSWORD=$(cat "$d/db_password")
 CLIENT_IMAGE=$(param client_image)
+PG_TABLES=$(jq -r '.pg_tables // 100' "$d/params.json")
 EOF
     on "$vm" "bash /root/perf/client/load.sh start $vm $count" & pids+=($!)
     first=$((first + count)); i=$((i + 1))
@@ -209,7 +210,7 @@ EOF
 
 cmd_up() {
   local run_id=$1; shift
-  local nodes=300 per=75 csize=16/32 ssize=16/32/200 ha="" keep=0 days=1 clone=1 ref=main
+  local nodes=300 per=75 csize=16/32 ssize=16/32/200 ha="" keep=0 days=1 clone=1 ref=main pgt=100
   local simg=percona/pmm-server:3 cimg=percona/pmm-client:3
   while [ $# -gt 0 ]; do
     case $1 in
@@ -224,6 +225,7 @@ cmd_up() {
       --server-image) simg=$2; shift 2 ;;
       --client-image) cimg=$2; shift 2 ;;
       --ref) ref=$2; shift 2 ;;
+      --pg-tables) pgt=$2; shift 2 ;;
       --duration) shift 2 ;;
       *) die "unknown option $1" ;;
     esac
@@ -243,9 +245,9 @@ cmd_up() {
   local vms=$(( (nodes + per - 1) / per ))
   jq -n --argjson n "$nodes" --argjson p "$per" --argjson vms "$vms" --argjson cv "$cv" --argjson cm "$cm" \
     --argjson sv "$sv" --argjson sm "$sm" --argjson sk "$sk" --arg ha "$ha" --argjson days "$days" \
-    --arg si "$simg" --arg ci "$cimg" --arg ref "$ref" \
+    --arg si "$simg" --arg ci "$cimg" --arg ref "$ref" --argjson pgt "$pgt" \
     '{nodes:$n, per_vm:$p, client_vms:$vms, client_vcpu:$cv, client_mem:$cm, server_vcpu:$sv, server_mem:$sm,
-      server_disk:$sk, ha:$ha, days:$days, server_image:$si, client_image:$ci, ref:$ref}' >"$d/params.json"
+      server_disk:$sk, ha:$ha, days:$days, server_image:$si, client_image:$ci, ref:$ref, pg_tables:$pgt}' >"$d/params.json"
   log "perf run $run_id: $nodes nodes, $vms client VM(s) x $per, client ${cv}c/${cm}G, server $([ -n "$ha" ] && echo "HA $ha" || echo "${sv}c/${sm}G/${sk}G"), expiry $([ "$days" = 0 ] && echo never || echo "$days day(s)")"
 
   local spid=""
@@ -271,16 +273,16 @@ cmd_up() {
   [ -z "$spid" ] || wait "$spid" || die "server bring-up failed"
   # Clients reach the server only on 443.
   if [ -z "$ha" ]; then for vm in $(clients); do fw_open srv "$(cat "$d/vms/$vm/ip")/32" 443; done; fi
-  date -u +%FT%TZ >"$d/load_started"
   clients_start
+  date -u +%FT%TZ >"$d/load_started"
   log "UP: $(cat "$d/url") (admin password in $d/admin.env)"
 }
 
 # (Re)start the client containers: after a failed up, or with more VMs added by hand.
 cmd_clients() { need_run "$1"
   if [ -d "$d/vms/srv" ]; then for vm in $(clients); do fw_open srv "$(cat "$d/vms/$vm/ip")/32" 443; done; fi
-  [ -f "$d/load_started" ] || date -u +%FT%TZ >"$d/load_started"
   clients_start
+  [ -f "$d/load_started" ] || date -u +%FT%TZ >"$d/load_started"
 }
 
 cmd_stats() { need_run "$1"
@@ -362,13 +364,14 @@ cmd__run() {
   while [ $# -gt 0 ]; do case $1 in --duration) dur=$2; shift 2 ;; *) a+=("$1"); shift ;; esac; done
   local secs; case $dur in *h) secs=$(( ${dur%h} * 3600 )) ;; *m) secs=$(( ${dur%m} * 60 )) ;; *s) secs=${dur%s} ;; esac
   d=$(run_dir "$run_id")
-  local logf="$RUNS/perf-logs/$run_id.log"
+  # Global, not local: run_exit runs from the EXIT trap, after this function has returned.
+  logf="$RUNS/perf-logs/$run_id.log"; RUN_ID=$run_id
   export CHAOS_WAIT_MIN=${CHAOS_WAIT_MIN:-60}
   run_exit() {
     local rc=$?; trap - EXIT TERM INT HUP
     if [ -f "$d/params.json" ]; then
       cp "$logf" "$d/run.log" 2>/dev/null || true
-      bash "$0" down "$run_id" || log "TEARDOWN FAILED: run chaos-perf.sh down $run_id"
+      bash "$0" down "$RUN_ID" || log "TEARDOWN FAILED: run chaos-perf.sh down $RUN_ID"
     fi
     if [ "$rc" = 0 ]; then echo "RUN DONE"; else echo "RUN FAILED rc=$rc"; fi
   }

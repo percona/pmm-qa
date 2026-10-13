@@ -31,7 +31,7 @@ pmm() { # curl args... ; credentials on stdin, never argv
   printf 'user = "admin:%s"\n' "$ADMIN_PASSWORD" | curl -ksSf -m 120 --config - "$@"
 }
 range() { # promql -> [[ts, value], ...] of the max series over the run
-  pmm -G "$url/prometheus/api/v1/query_range" --data-urlencode "query=$1" \
+  pmm --retry 2 --retry-all-errors -G "$url/prometheus/api/v1/query_range" --data-urlencode "query=$1" \
     --data-urlencode "start=$start" --data-urlencode "end=$end" --data-urlencode step=60 \
     | jq -c '[.data.result[0].values[]? | [.[0], (.[1] | tonumber)]]'
 }
@@ -101,8 +101,9 @@ checks=$(jq -c --argjson b "$q_base" --argjson a "$q_after" --argjson m "$qan_mi
   '. + [{name:"qan_services_reporting", unit:"count", gate:("min_ge:" + ($m|tostring)), baseline:$b, after:$a,
          deviation_pct:null, ok:(($b // 0) >= $m and ($a // 0) >= $m)}]' <<<"$checks")
 
-steal=$(jq '[.[] | select(.name == "server_steal_pct")][0].avg // 0' <<<"$checks")
-valid=$(jq -n --argjson s "$steal" '$s <= 5')
+# No steal samples (an overloaded server can time out the query) is not a valid run either.
+steal=$(jq '[.[] | select(.name == "server_steal_pct")][0].avg' <<<"$checks")
+valid=$(jq -n --argjson s "$steal" '$s != null and $s <= 5')
 status=$(jq -r 'if all(.[]; .ok) then "pass" else "fail" end' <<<"$checks")
 run_id=$(basename "$d" | sed 's/^perf-//')
 ver=$(pmm -G "$url/v1/server/version" | jq -r '.version // "unknown"' || echo unknown)
