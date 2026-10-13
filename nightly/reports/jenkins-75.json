@@ -2320,5 +2320,14 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-13T03:07:08Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    }
+  ]
 }
