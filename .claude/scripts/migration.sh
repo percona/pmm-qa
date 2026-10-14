@@ -3,6 +3,7 @@
 #
 #   migration.sh preflight [--allow-unpushed] [--allow-open-pr <n>]   checks, main merge, drift, next pending row
 #   migration.sh mark <row> <in-progress|done> [pr-url]                 tracker status edit + commit on control
+#   migration.sh setup <source-test>                                    Playwright job and databases per source scenario
 #   migration.sh env-check <service-prefix>...                          creds, services, QAN rows per prefix (now-120m)
 #   migration.sh publish-branch <branch>                                worktree from origin/<branch> or origin/main, apply control's changes, npm ci
 #   migration.sh selection [extra-grep]...                              per-expression --list diff, base vs publish branch
@@ -21,6 +22,99 @@ pass=${ADMIN_PASSWORD:-admin-password}
 repo=percona/pmm-qa
 
 die() { echo "STOP: $*" >&2; exit 1; }
+
+# One line per test job: grep expression, setup_services, file:job[:shard], framework (playwright|codeceptjs).
+# The framework comes from the runner workflow a job calls, or a matrix entry's tests_framework.
+ci_jobs() {
+  python - "$1"/.github/workflows/*.yml <<'EOF'
+import os, sys, yaml
+for path in sys.argv[1:]:
+    for name, job in ((yaml.safe_load(open(path, encoding='utf-8')) or {}).get('jobs') or {}).items():
+        w = job.get('with') or {}
+        where = f'{os.path.basename(path)}:{name}'
+        uses = str(job.get('uses', ''))
+        for fw in ('playwright', 'codeceptjs'):
+            if f'runner-e2e-tests-{fw}' in uses:
+                for k in ('pmm_test_flag', 'tags_for_tests'):
+                    if w.get(k) and '${{' not in str(w[k]):
+                        print(f"{w[k]}\t{w.get('setup_services', '-h')}\t{where}\t{fw}")
+        matrix = (job.get('strategy') or {}).get('matrix')
+        for e in (matrix.get('include') or []) if isinstance(matrix, dict) else []:
+            if isinstance(e, dict) and e.get('tests_framework') in ('playwright', 'codeceptjs') and e.get('tags_for_tests'):
+                print(f"{e['tags_for_tests']}\t{e.get('setup_services')}\t{where}:{e.get('shard_name')}\t{e['tests_framework']}")
+EOF
+}
+
+# Local setup from CI: each source scenario's tags pick the Playwright job that runs it, and that job's
+# setup_services become the local --database list. A job with its own setup is copied whole; on the shared
+# nightly server only the shard argument for each engine the scenario names is taken (shortest variant).
+# --args prints only the list, for `local-pmm.sh up $(migration.sh setup --args <source>)`.
+setup() {
+  local only_args=''
+  [[ ${1:-} == --args ]] && { only_args=1; shift; }
+  local src=${1:-}
+  [[ -f $control/$src ]] || die "no source $src"
+  local jobs
+  jobs=$(mktemp)
+  ci_jobs "$control" >"$jobs" || exit 1
+  python - "$control/$src" "$jobs" "$control/.github/workflows/nightly-e2e-tests-matrix.yml" "$only_args" <<'EOF'
+import re, sys, yaml
+src, jobs_file, nightly_file, only_args = sys.argv[1:]
+code = '\n'.join(l for l in open(src, encoding='utf-8').read().splitlines() if not l.lstrip().startswith('//'))
+jobs = [l.rstrip('\n').split('\t') for l in open(jobs_file, encoding='utf-8') if l.strip()]
+split = lambda setup: [a.strip() for a in str(setup or '').split('--database')[1:] if a.strip()]
+nightly = yaml.safe_load(open(nightly_file, encoding='utf-8'))
+shard_args = sorted({a for j in nightly['jobs'].values()
+                     for e in ((j.get('strategy') or {}).get('matrix') or {}).get('include', []) if isinstance(e, dict)
+                     for a in split(e.get('setup_services'))}, key=len)
+engines = {  # how a source names a service -> the pmm-framework database that creates it
+    'pxc': r'pxc', 'psmdb': r'psmdb|mongo|\brs[12]0\d', 'pdpgsql': r'pdpgsql', 'pgsql': r'(?<!pd)pgsql',
+    'mysql': r'mysql_pmm|mysql-dev', 'ps': r'ps_pmm|name=ps\b|ps-dev', 'valkey': r'valkey|redis',
+    'haproxy': r'haproxy', 'external': r'external',
+}
+engine = lambda arg: re.split('[,=]', arg, maxsplit=1)[0]
+starts = [m.start() for m in re.finditer(r'Scenario(?:\.skip)?\(', code)]
+hooks = code[:starts[0]] if starts else code
+dedicated, nightly_engines, notes = [], [], []
+for i, at in enumerate(starts):
+    body = hooks + code[at:starts[i + 1] if i + 1 < len(starts) else len(code)]
+    m = re.match(r"Scenario(?:\.skip)?\(\s*(['\"`])(.+?)\1", code[at:], re.S)
+    title = m.group(2) if m else '?'
+    match = lambda fw, t: [j for j in jobs if j[3] == fw and re.search(j[0], t)]
+    hits, via = match('playwright', title), ''
+    if not hits and '@fb-' in title:
+        hits, via = match('playwright', title.replace('@fb-', '@')), ' (after retag @fb- -> @)'
+    if not hits:
+        hits, via = match('codeceptjs', title), ' (CodeceptJS job today; the Playwright side needs this tag)'
+    named = [e for e, rx in engines.items() if re.search(rx, body)]
+    notes.append(f'{title}\n  services named: {" ".join(named) or "none"}')
+    if not hits:
+        notes.append('  NO job selects it (Jenkins or no consumer): set up from the services named')
+        nightly_engines += named
+    # Several jobs selecting one scenario are variants of one environment (OS, GSSAPI): provision one,
+    # a dedicated job before the shared nightly server, the smallest setup first.
+    hits.sort(key=lambda j: (j[2].startswith('nightly-e2e-tests-matrix'), len(j[1])))
+    for expr, setup, where, _ in hits[1:]:
+        notes.append(f'  also {where} ({expr}): {setup}')
+    for expr, setup, where, _ in hits[:1]:
+        notes.append(f'  using {where} ({expr}){via}: {setup}')
+        if where.startswith('nightly-e2e-tests-matrix'):
+            nightly_engines += named
+        else:
+            dedicated += split(setup)
+local = list(dict.fromkeys(dedicated))
+for e in dict.fromkeys(nightly_engines):
+    if all(engine(a) != e for a in local):
+        local += [a for a in shard_args if engine(a) == e][:1]
+line = ' '.join(f'--database {a}' for a in local)
+if only_args:
+    print(line)
+else:
+    print('\n'.join(notes))
+    print(f'nightly shard arguments: {" | ".join(shard_args)}')
+    print(f'local: {line or "(server only)"}')
+EOF
+}
 
 preflight() {
   local allow_unpushed='' allow_pr=''
@@ -129,21 +223,7 @@ selection() {
   (cd "$base_tree/e2e_tests" && npm ci --prefer-offline --no-audit --no-fund >/dev/null) || die "npm ci failed in base tree"
   local out=$base_tree/sel
   mkdir -p "$out"
-  # Playwright jobs only: a runner-e2e-tests-playwright call, or a matrix entry with tests_framework: playwright.
-  { python - "$publish"/.github/workflows/*.yml <<'EOF'
-import sys, yaml
-for path in sys.argv[1:]:
-    for job in (yaml.safe_load(open(path, encoding='utf-8')) or {}).get('jobs', {}).values():
-        w = job.get('with') or {}
-        if 'playwright' in str(job.get('uses', '')):
-            for k in ('pmm_test_flag', 'tags_for_tests'):
-                if w.get(k) and '${{' not in str(w[k]):
-                    print(w[k])
-        matrix = (job.get('strategy') or {}).get('matrix')
-        for e in (matrix.get('include') or []) if isinstance(matrix, dict) else []:
-            if isinstance(e, dict) and e.get('tests_framework') == 'playwright' and e.get('tags_for_tests'):
-                print(e['tags_for_tests'])
-EOF
+  { ci_jobs "$publish" | awk -F'	' '$4 == "playwright" { print $1 }'
     printf '%s\n' '@gssapi-nightly' '@grafana-pr' "$@"; } | sort -u >"$out/exprs"
   list() {
     (cd "$1/e2e_tests" && PMM_MIGRATION=1 npx playwright test --list --grep "$2" 2>/dev/null) |
@@ -226,10 +306,11 @@ shift || true
 case $cmd in
   preflight) preflight "$@" ;;
   mark) mark "$@" ;;
+  setup) setup "$@" ;;
   env-check) env_check "$@" ;;
   publish-branch) publish_branch "$@" ;;
   selection) selection "$@" ;;
   revalidate) revalidate "$@" ;;
   publish) publish_pr "$@" ;;
-  *) sed -n '2,12p' "$0"; exit 2 ;;
+  *) sed -n '2,13p' "$0"; exit 2 ;;
 esac
