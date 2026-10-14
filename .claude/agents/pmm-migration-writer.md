@@ -1,6 +1,6 @@
 ---
 name: pmm-migration-writer
-description: Migrates exactly one selected CodeceptJS test to native Playwright after resolving its linked source files through the CodeceptJS include map and finding reusable target files by grep. Performs static validation and hands the migration to the independent reviewer. Does not use MCP, run live tests, open PRs, or mark the tracker done.
+description: Migrates exactly one selected CodeceptJS test to native Playwright after resolving its linked source files through the CodeceptJS include map and finding reusable target files by grep. Performs static validation and hands the migration to the independent reviewer. Runs the migrated tests once against the prepared environment before handing off. Does not use MCP, open PRs, or mark the tracker done.
 model: inherit
 readonly: false
 ---
@@ -11,7 +11,7 @@ Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (step 2 is yours
 
 Input: one tracker row, source path, optional target path, control worktree, and this migration's timeline file.
 
-Do only the selected migration, in control's worktree, and leave every change uncommitted. Provisioning runs in the background while you work: do not wait on it, start one, or use the environment. Do not use MCP, execute tests (`npx playwright test --list` is required and is not execution), publish, mark `done`, or invent behaviour, locators or setup.
+Do only the selected migration, in control's worktree, and leave every change uncommitted. Provisioning runs in the background while you work: never start, recreate or clean it. Once the code is written, run the migrated tests once against it (`run.md` step 11) and fix any migration-logic failure before returning. Do not use MCP, publish, mark `done`, or invent behaviour, locators or setup.
 
 Before returning: `bash .claude/scripts/check-migration-conventions.sh` on every changed file with its full output in the handoff, every failure fixed and every advisory answered (naming a pre-existing line is an answer); every introduced name with its cross-file call count in `namesIntroduced`; the worth-porting evidence per scenario; the per-scenario selectability result; the README regeneration when a tag is new (`run.md` step 10); your timeline row. Do not rename the source: retirement is the runner's, at step 5b.
 
@@ -55,6 +55,10 @@ staticValidation:
   changedFileEslint:
   typescriptNewFailures:
   eslintNewFailures:
+smokeRun:
+  command:
+  result:              # N passed / N failed, or 'environment not ready after 10 min'
+  failuresLeft: []     # each with its error line and why it is not migration logic (locator, environment, product)
 observations:
   timelineAppended: true | false
   phaseDurationMinutes:

@@ -215,28 +215,41 @@ publish_branch() {
 
 selection() {
   [[ -d $publish ]] || die "no publish worktree"
-  local base
+  local base out=$control/.claude/migration-observations/selection
   base=$(git -C "$publish" merge-base HEAD origin/main)
   [[ $(git -C "$publish" rev-parse --abbrev-ref '@{u}' 2>/dev/null) ]] && base=$(git -C "$publish" rev-parse '@{u}')
-  rm -rf "$base_tree"; git -C "$control" worktree prune
-  git -C "$control" worktree add -q --detach "$base_tree" "$base" || exit 1
-  (cd "$base_tree/e2e_tests" && npm ci --prefer-offline --no-audit --no-fund >/dev/null) || die "npm ci failed in base tree"
-  local out=$base_tree/sel
-  mkdir -p "$out"
-  { ci_jobs "$publish" | awk -F'	' '$4 == "playwright" { print $1 }'
+  rm -rf "$out" && mkdir -p "$out"
+  { ci_jobs "$publish" | awk -F'\t' '$4 == "playwright" { print $1 }'
     printf '%s\n' '@gssapi-nightly' '@grafana-pr' "$@"; } | sort -u >"$out/exprs"
+  # Only added test files, no workflow or config change: "before" is "after" without the added files,
+  # so the base tree and its npm ci are skipped.
+  local changes added=()
+  changes=$(git -C "$publish" diff --name-status --no-renames "$base" HEAD -- e2e_tests/tests .github/workflows e2e_tests/playwright.config.ts)
+  if [[ -n $changes ]] && ! grep -qv '^A' <<<"$changes"; then
+    mapfile -t added < <(cut -f2 <<<"$changes" | sed 's#^e2e_tests/tests/##')
+    echo "only added test files (${added[*]}): before = after without them"
+  else
+    rm -rf "$base_tree"; git -C "$control" worktree prune
+    git -C "$control" worktree add -q --detach "$base_tree" "$base" || exit 1
+    (cd "$base_tree/e2e_tests" && npm ci --prefer-offline --no-audit --no-fund >/dev/null) || die "npm ci failed in base tree"
+  fi
   list() {
     (cd "$1/e2e_tests" && PMM_MIGRATION=1 npx playwright test --list --grep "$2" 2>/dev/null) |
-      grep '›' | sed -E 's/:[0-9]+:[0-9]+ / /' | sort
+      grep '›' | sed -E 's/:[0-9]+:[0-9]+ / /' | tr "\\\\" / | sort
   }
-  local i=0 expr
+  local i=0 expr f
   while IFS= read -r expr; do
     i=$((i + 1))
-    list "$base_tree" "$expr" >"$out/$i.before" &
+    [[ ${#added[@]} -gt 0 ]] || list "$base_tree" "$expr" >"$out/$i.before" &
     list "$publish" "$expr" >"$out/$i.after" &
     (( i % 3 )) || wait
   done <"$out/exprs"
   wait
+  if ((${#added[@]})); then
+    for f in "$out"/*.after; do
+      grep -vF -f <(printf '› %s ›\n' "${added[@]}") "$f" >"${f%.after}.before"
+    done
+  fi
   i=0
   while IFS= read -r expr; do
     i=$((i + 1))
@@ -246,9 +259,9 @@ selection() {
     comm -23 "$out/$i.before" "$out/$i.after" | sed 's/^/  - /'
   done <"$out/exprs"
   local wf=$publish/.github/workflows/nightly-e2e-tests-matrix.yml
-  echo "nightly shards: setup=$(grep -c 'shard_name:' "$wf") tagged=$(grep -cE "tags_for_tests: '[^']+'" "$wf")"
-  rm -rf "$control/.claude/migration-observations/selection" && cp -r "$out" "$control/.claude/migration-observations/selection"
-  git -C "$control" worktree remove --force "$base_tree"
+  echo "nightly shards: setup=$(grep -c 'shard_name:' "$wf") tagged=$(grep -cE "tags_for_tests: '[^']+'" "$wf") (lists in $out)"
+  [[ -d $base_tree ]] && git -C "$control" worktree remove --force "$base_tree"
+  return 0
 }
 
 revalidate() {

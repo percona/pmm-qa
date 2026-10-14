@@ -108,7 +108,7 @@ Execute any shell command you write into these files before committing it, throu
 
 ## Agent responsibilities
 
-- `pmm-migration-writer`: linked-file discovery, migration, per-scenario selectability check, convention script, static validation.
+- `pmm-migration-writer`: linked-file discovery, migration, per-scenario selectability check, convention script, static validation, one run of the migrated tests.
 - `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, final review.
 - `pmm-migration-runner`: execution, failure evidence, workflow coverage, publication, PR creation, tracker completion.
 

@@ -21,7 +21,8 @@ The writer:
 7. migrates the test to native Playwright;
 8. checks destination selectability per scenario;
 9. runs `bash .claude/scripts/check-migration-conventions.sh` on every changed file, fixes every failure, and pastes the output in the handoff;
-10. runs static validation.
+10. runs static validation;
+11. runs the migrated tests once against the prepared environment.
 
 Step 8, against jobs as they exist today (coverage YAML is edited only at step 5b):
 
@@ -32,6 +33,8 @@ Step 8, against jobs as they exist today (coverage YAML is edited only at step 5
 - A single `--list --grep` over the `|`-union of every expression is valid only to prove the negative (zero matches). Once anything matches, fall back to the per-job loop. State which form was used.
 
 Step 10: if a migrated tag does not already appear under `e2e_tests`, run `python support_scripts/generate_readme.py` then `--check` from the repository root before returning; there is no npm script for it. It rewrites the `qa-integration`, `e2e_tests` and `cli` READMEs; a change outside `e2e_tests/README.md` is pre-existing drift, not this migration's.
+
+Step 11 catches what static review cannot: a wrong environment, stale expected text, leftover state. Wait for `/v1/users/me` to return 200 with the parent's password (a bounded until-loop, 10 minutes at most), then run the new or changed target file once with `--workers=1`, `PMM_MIGRATION=1` and the parent's `PMM_UI_URL`/`ADMIN_PASSWORD`. On Windows set `ComSpec` to Git bash for the process, so `cliHelper` commands quote as on the Linux runner. Fix a migration-logic failure and rerun; report a locator, environment or product failure in `smokeRun.failuresLeft` for the reviewer and the parent, without working around it. This run does not replace the runner's step 5.
 
 Leave the changes uncommitted and report the changed paths.
 
@@ -59,7 +62,8 @@ The runner, against the prepared environment with the same credential pair:
 
 - new target file with only migrated scenarios: run the complete file once;
 - appended existing file: run the migrated scenarios, then the complete file;
-- `targetMode: already-covered`: run the existing target file or matched titles as regression evidence.
+- `targetMode: already-covered`: run the existing target file or matched titles as regression evidence;
+- a migrated test selected by a job with its own `setup_services` (not the shared nightly server), provisioned with that job's setup: also run that job's whole expression once (`--grep '<pmm_test_flag>' --workers=1`), since its other tests share the server and can collide with the new one.
 
 Run in declaration order unless the source proves the scenarios independent. A test that reads state by index needs that state reset before a run on a reused environment; a file whose `beforeEach` restores its own precondition needs no external reset. If a reset is classifier-refused, stop and ask the parent.
 

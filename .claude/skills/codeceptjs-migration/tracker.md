@@ -12,7 +12,7 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
 - The `Tags` cell is a per-file union and is not what CI selects on. Before provisioning, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the cell if the union was wrong, and record the expansion on the timeline.
-- `Setup` is the planned `--database` argument set for `.claude/scripts/local-pmm.sh up` (`orchestration.md` step 3); empty means server only. The source test wins over the tracker and over broad tags such as `@settings`. `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
+- `Setup` is the planned `--database` argument set for `.claude/scripts/local-pmm.sh up` (`orchestration.md` step 3); empty means server only. `migration.sh setup <source>` derives it from the CI jobs the source's tags select and wins over this cell (`orchestration.md` step 2a). `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
   each migration still owns and tears down its local Docker environment. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
