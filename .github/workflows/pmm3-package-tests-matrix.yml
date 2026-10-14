@@ -430,57 +430,9 @@ jobs:
             exit 1
           fi
 
-          # Rows and columns come from what actually ran, so a filtered run gets a
-          # small table and there is no OS or playbook list to keep in sync here.
-          # -V keeps ol8 before ol10; the playbook names already sort correctly.
-          oses=$(printf '%s\n' "${!result[@]}" | cut -d/ -f1 | sort -uV)
-          tests=$(printf '%s\n' "${!result[@]}" | cut -d/ -f2 | sort -u)
-
-          header="| OS-arch |"; divider="|---|"
-          for t in $tests; do
-            header+=" ${t#pmm3-client_} |"
-            divider+="---|"
-          done
-
-          # A pass that took a retry is marked, so flakiness stays visible.
-          passed=0; retried=0; failed=0; missing=0; body=""
-          for os in $oses; do
-            row="| \`$os\` |"
-            for t in $tests; do
-              case "${result[$os/$t]:-}" in
-                success)
-                  passed=$((passed + 1))
-                  if [ "${tries[$os/$t]}" -gt 1 ]; then
-                    row+=" 🔁 |"; retried=$((retried + 1))
-                  else
-                    row+=" ✅ |"
-                  fi ;;
-                failure) row+=" ❌ |"; failed=$((failed + 1)) ;;
-                *)       row+=" · |";  missing=$((missing + 1)) ;;
-              esac
-            done
-            body+="$row"$'\n'
-          done
-
           retry_note=''; note=''
           if [ "$retried" -gt 0 ]; then retry_note=" (${retried} on a retry, marked 🔁)"; fi
           if [ "$missing" -gt 0 ]; then note=", ${missing} not run"; fi
-
-          {
-            echo
-            echo '### Results'
-            echo
-            echo "$header"
-            echo "$divider"
-            printf '%s' "$body"
-            echo
-            echo "**${passed} passed${retry_note}, ${failed} failed${note}**"
-            if [ "$failed" -gt 0 ] || [ "$retried" -gt 0 ]; then
-              echo
-              # shellcheck disable=SC2016  # backticks are markdown, not a subshell
-              echo 'Each failed attempt attaches its logs to a `logs-<os>-<arch>-<test>` artifact.'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
 
           # A cell that died before uploading its result is in neither count.
           [ "$failed" -eq 0 ] && [ "$TEST_RESULT" = success ]
