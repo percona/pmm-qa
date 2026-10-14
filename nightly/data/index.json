@@ -78313,16 +78313,18 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-14T13:09:52Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-14T13:06:32Z",
         "suites": [
           "Nightly"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "GitHub-hosted runner lost communication 1h into Playwright on shard ps-replication-psmdb-sharded (run 38551285404); same shard passed on 9 other nightly runs today at the same commit and other HA shards passed; nightly cannot be re-run.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-14T13:09:57Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
