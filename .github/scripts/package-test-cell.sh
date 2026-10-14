@@ -9,8 +9,8 @@
 #   ADMIN_PASSWORD INSTALL_REPO METRICS_MODE PMM_VERSION
 #   TARBALL_AMD64 TARBALL_ARM64
 #
-# Writes ansible-<n>.log, diagnostics-<n>.log and pmm-summary-<n>.zip for each
-# failed attempt n.
+# Writes attempts.txt with the number of attempts used and, for each failed
+# attempt n, ansible-<n>.log, diagnostics-<n>.log and pmm-summary-<n>.zip.
 
 set -uo pipefail
 
@@ -157,6 +157,7 @@ teardown() {
 }
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
+  echo "$attempt" > attempts.txt
   gateway=""
 
   echo "::group::Attempt ${attempt} of ${ATTEMPTS}: start the ${OS} client and PMM Server"

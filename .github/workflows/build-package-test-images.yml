@@ -3,7 +3,7 @@ name: Build package test images
 
 on:
   schedule:
-    - cron: '0 22 * * *' # daily, ahead of the 00:00 nightly, for new database and OS releases
+    - cron: '0 22 * * 0' # Sundays 22:00 UTC, ahead of Monday's 00:00 nightly, for new database and OS releases
   # By hand from a branch, to test a package_tests/docker change in the matrix before it merges.
   workflow_dispatch:
   push:

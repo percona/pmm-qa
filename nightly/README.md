@@ -15,7 +15,7 @@ these groups, which is the unit the page summarises and one Investigate button c
 
 | Group | Source | Lanes / jobs |
 |-------|--------|--------------|
-| Package AMD | GitHub | `Package Tests` amd64 cells and its `prepare` job |
+| Package AMD | GitHub | `Package Tests` amd64 cells and its `prepare` and `summary` jobs |
 | Package ARM | GitHub | `Package Tests` arm64 cells |
 | Upgrade | GitHub | `PMM Upgrade` |
 | Upgrade AMI | Jenkins | `upgrade / ami <version>` |
