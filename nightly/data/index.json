@@ -78303,15 +78303,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-14T13:06:32Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
+        ],
+        "verdict": "not reproduced",
+        "summary": "ROSA cluster cap: pmm3-ha-rosa #319 aborted with 'Maximum limit of 5 test clusters reached' because manual clusters kept for 3 days (RETENTION_DAYS=3) filled the shared pmm-ha-rosa pool; no tests ran. Free the stale clusters or reserve a nightly slot.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-14T13:09:52Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-14T13:06:32Z",
