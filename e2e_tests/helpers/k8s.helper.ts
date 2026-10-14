@@ -1,6 +1,6 @@
 import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -31,11 +31,16 @@ export default class K8sHelper {
 
   /** Through a file: {@link CliHelper} flattens a command onto one line, so a manifest cannot go on stdin. */
   apply = (manifest: object): ExecReturn => {
-    const file = join(mkdtempSync(join(tmpdir(), 'k8s-')), 'manifest.json');
+    const dir = mkdtempSync(join(tmpdir(), 'k8s-'));
+    const file = join(dir, 'manifest.json');
 
-    writeFileSync(file, JSON.stringify(manifest));
+    try {
+      writeFileSync(file, JSON.stringify(manifest));
 
-    return this.exec(`apply --filename=${file}`);
+      return this.exec(`apply --filename=${file}`);
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
   };
 
   /**

@@ -123,15 +123,7 @@ export default class GrafanaApi {
   };
 
   getFolderUid = async (title: string): Promise<string> => {
-    const response = await this.request.get(apiEndpoints.grafana.folders, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status()).toEqual(200);
-
-    const uid = ((await response.json()) as { title: string; uid: string }[]).find(
-      (folder) => folder.title === title,
-    )?.uid;
+    const uid = (await this.getFolders()).find((folder) => folder.title === title)?.uid;
 
     expect(uid, `Folder "${title}" must exist`).toBeDefined();
 

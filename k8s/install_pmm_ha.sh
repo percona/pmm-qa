@@ -593,11 +593,7 @@ BUCKET_EOF
         || fail "could not create bucket $BACKUP_S3_BUCKET in MinIO: $(kubectl logs job/"${MINIO_NAME}-bucket" -n "$NAMESPACE" 2>&1 | tail -5)"
 }
 
-# helm --wait stops at what helm applied. The operators roll their own StatefulSets
-# after it returns, and a backup started meanwhile fails on whichever pod has not
-# rolled (charts/pmm-ha/docs/pmm-backup.md, "After a helm upgrade"). Not `rollout
-# status`: vmstorage, vmselect and the PostgreSQL instances are OnDelete, which it
-# refuses outright.
+# Not `rollout status`: it refuses the OnDelete StatefulSets (vmstorage, vmselect, PostgreSQL).
 statefulsets_not_rolled() {
     local rows
 

@@ -1,12 +1,15 @@
 import K8sHelper from '@helpers/k8s.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+// Type-only: keeps this helper free of a runtime dependency on the api layer.
+import type Api from '@api/api';
 
 const backupToolsSelector = 'app.kubernetes.io/component=backup-tools';
 const backupCronJobSelector = 'app.kubernetes.io/component=backup-cronjob';
 const clickHouseSelector = 'clickhouse.altinity.com/chi';
 const vmInsertSelector = 'app.kubernetes.io/name=vminsert,!operator.victoriametrics.com/additional-service';
 const vmInsertPort = 8_480;
+const markerMetric = 'pmm_e2e_backup_marker';
 
 export interface BackupListEntry {
   components: string[];
@@ -32,15 +35,9 @@ const single = (names: string[], what: string): string => {
   return names[0];
 };
 
-/**
- * `pmm-backup.sh` as the chart ships it (charts/pmm-ha/docs/pmm-backup.md), and
- * direct access to the stores it backs up, so a restore can be judged by the data
- * rather than by the tool's own report.
- */
 export default class HaBackupHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
 
-  /** Throws on a cluster installed without `centralBackupStorage.enabled`, rather than skipping. */
   backupToolsDeployment = (): string =>
     single(
       this.k8sHelper.getNames('deployment', backupToolsSelector),
@@ -77,6 +74,14 @@ export default class HaBackupHelper {
       .assertSuccess();
   };
 
+  latestBackup = (): BackupListEntry => {
+    const latest = this.listBackups().find((backup) => backup.latest);
+
+    if (!latest) throw new Error('`pmm-backup.sh list` shows no latest backup, or its format changed');
+
+    return latest;
+  };
+
   listBackups = (): BackupListEntry[] =>
     this.k8sHelper
       .execInPod(`deployment/${this.backupToolsDeployment()}`, 'pmm-backup.sh list', { silent: true })
@@ -91,17 +96,18 @@ export default class HaBackupHelper {
         status,
       }));
 
-  /** The CronJob's jobTemplate verbatim - the documented ad-hoc backup. */
+  removeSrvFiles = (podName: string, fileNames: string[]): void => {
+    this.k8sHelper.execInPod(podName, `rm -f ${fileNames.map((fileName) => `/srv/${fileName}`).join(' ')}`, {
+      silent: true,
+    });
+  };
+
   runBackupJob = async (name: string): Promise<void> => {
     this.k8sHelper.exec(`create job ${name} --from=cronjob/${this.cronJobName()}`).assertSuccess();
     await this.waitForJob(name, Timeouts.THIRTY_MINUTES);
   };
 
-  /**
-   * The documented clone-and-swap: only `args` change, because `command` carries
-   * the tool bootstrap. No retry, no deadline and no owner, so neither a second
-   * attempt nor the CronJob's history limits touch a restore half way through.
-   */
+  /** Only `args` change: `command` carries the tool bootstrap. */
   runRestoreJob = async (name: string, backupId: string): Promise<void> => {
     const job = JSON.parse(
       this.k8sHelper
@@ -142,4 +148,88 @@ export default class HaBackupHelper {
 
   private cronJobName = (): string =>
     single(this.k8sHelper.getNames('cronjob', backupCronJobSelector), 'backup CronJob');
+}
+
+/** One marker per phase in every store a restore rewinds, so `found()` shows which phases came back. */
+export class RestoreMarkers {
+  readonly table: string;
+
+  constructor(
+    private api: Api,
+    private backupHelper: HaBackupHelper,
+    private podNames: string[],
+    private run: number,
+    private phases: string[] = ['before', 'after'],
+  ) {
+    // In PMM's own Replicated database, so the marker takes the restore path QAN data takes.
+    this.table = `pmm.pmm_e2e_backup_${run}`;
+  }
+
+  createTable = (): void => {
+    this.backupHelper.clickHouseQuery(
+      `CREATE TABLE ${this.table} (marker String) ENGINE = ReplicatedMergeTree ORDER BY marker`,
+    );
+  };
+
+  everywhere = (expected: string[]): Record<string, string[]> => ({
+    clickhouse: expected,
+    postgresql: expected,
+    ...Object.fromEntries(this.podNames.map((podName) => [`srv on ${podName}`, expected])),
+    victoriametrics: expected,
+  });
+
+  found = async (): Promise<Record<string, string[]>> => ({
+    clickhouse: this.present(
+      this.backupHelper.clickHouseQuery(`SELECT marker FROM ${this.table}`).split('\n'),
+    ),
+    postgresql: this.present((await this.api.grafanaApi.getFolders()).map((folder) => folder.title)),
+    ...Object.fromEntries(
+      this.podNames.map((podName) => [
+        `srv on ${podName}`,
+        this.present(this.backupHelper.srvFiles(podName)),
+      ]),
+    ),
+    victoriametrics: this.present(
+      (
+        await this.api.prometheusApi.instantQuery(`last_over_time(${markerMetric}{run="${this.run}"}[1h])`, {
+          nocache: '1',
+        })
+      ).map((sample) => sample.metric.marker),
+    ),
+  });
+
+  name = (phase: string): string => `pmm-e2e-${phase}-backup-${this.run}`;
+
+  remove = async (): Promise<void> => {
+    for (const folder of await this.api.grafanaApi.getFolders()) {
+      if (this.present([folder.title]).length) await this.api.grafanaApi.deleteFolder(folder.uid);
+    }
+
+    for (const podName of this.podNames) {
+      this.backupHelper.removeSrvFiles(
+        podName,
+        this.phases.map((phase) => this.name(phase)),
+      );
+    }
+
+    this.backupHelper.clickHouseQuery(`DROP TABLE IF EXISTS ${this.table} SYNC`);
+  };
+
+  write = async (phase: string): Promise<void> => {
+    await this.api.grafanaApi.createFolder(this.name(phase));
+    this.backupHelper.clickHouseQuery(`INSERT INTO ${this.table} VALUES ('${this.name(phase)}')`);
+    this.backupHelper.importMetric(
+      this.podNames[0],
+      `${markerMetric}{run="${this.run}",marker="${this.name(phase)}"} 1`,
+    );
+
+    for (const podName of this.podNames) this.backupHelper.touchSrvFile(podName, this.name(phase));
+
+    await expect
+      .poll(async () => (await this.found()).victoriametrics, { timeout: Timeouts.TWO_MINUTES })
+      .toContain(phase);
+  };
+
+  private present = (found: string[]): string[] =>
+    this.phases.filter((phase) => found.includes(this.name(phase)));
 }
