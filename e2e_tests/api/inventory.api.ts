@@ -1,6 +1,13 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import {
+  AgentStatus,
+  GetNode,
+  GetService,
+  GetServices,
+  RdsExporterAgent,
+  ServiceType,
+} from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -51,6 +58,17 @@ export default class InventoryApi {
     }
 
     return filteredServices;
+  };
+
+  getRdsExporters = async (nodeId: string): Promise<RdsExporterAgent[]> => {
+    const response = await this.request.get(apiEndpoints.inventory.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+      params: { node_id: nodeId },
+    });
+
+    expect(response.status(), `Get agents of node "${nodeId}" failed: ${await response.text()}`).toEqual(200);
+
+    return ((await response.json()) as { rds_exporter?: RdsExporterAgent[] }).rds_exporter ?? [];
   };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {

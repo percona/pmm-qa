@@ -5,6 +5,14 @@ export interface NodeAgent {
   status: string;
 }
 
+export interface RdsExporterAgent {
+  agent_id: string;
+  aws_access_key: string;
+  aws_role_arn: string;
+  node_id: string;
+  status: string;
+}
+
 export interface GetNode {
   agents?: NodeAgent[];
   node_id: string;
