@@ -1,10 +1,10 @@
 ---
-# Advanced package test:
-#   prepare Percona Repository and software
-#   install PMM client tarball with gssapi
-#   perform correct setup
-#   setup PSMDB and
-#   verify versions, metrics, exporters, etc.
+# Advanced package tarball GSSAPI test:
+#   prepare Percona Repository and software;
+#   install the latest PMM client tarball;
+#   perform correct setup;
+#   setup PSMDB with Kerberos authentication and LDAP authorization;
+#   verify versions, exporters still work, metrics, etc.
 #
 - hosts: all
   become: true
@@ -29,17 +29,12 @@
       instance_ip: "{{ instance_ip.stdout }}"
 
   - name: Set Integrations list
-    include_tasks: ./tasks/pmm3-client_test_enabled_db_gssapi.yml
-    when: ansible_architecture != "aarch64"
+    include_tasks: ./tasks/pmm3-client_test_enabled_db.yml
 
-  - name: Setup environment
+  - name: include tasks for test env setup
     include_tasks: ./tasks/pmm3_client_test_prepare.yml
 
-### Install PMM Client from tarball
-  - name: Print out URL of PMM Client tarball
-    debug:
-      var: tarball_link
-
+### install PMM Client from tarball
   - name: install pmm3-client tarball
     command: "./scripts/pmm3_client_install_tarball.sh -v {{ (tarball_link | length > 0) | ternary(tarball_link, pmm_version) }}"
 
@@ -55,6 +50,7 @@
       --server-username=admin
       --server-password={{ pmm_server_password }}
       {{ instance_ip }} generic node2_{{ instance_ip }}
+
   - name: Check if the configuration generated with paths-base is using the custom path
     include_tasks: ./tasks/verify_pmm3_client_config.yml
 
@@ -64,13 +60,13 @@
   - name: "Verify PMM client version is {{ pmm_version }}"
     include_tasks: ./tasks/verify_pmm_status_versions.yml
 
-# start PSMDB
+### start PSMDB
   - set_fact:
       mongo_service_name: "mongodb_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
-  - name: Install and start Percona Server MongoDB with GSSAPI
+  - name: Set up Percona Server for MongoDB with GSSAPI and add it to PMM
     when: '"psmdb-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_psmdb_gssapi.yml
+    include_tasks: ./tasks/add_psmdb_gssapi_to_pmm.yml
     vars:
       psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
@@ -79,8 +75,10 @@
     include_tasks: ./tasks/verify_pmm3_service_metric.yml
     loop:
       - { service_name: '{{ mongo_service_name }}', metric: 'mongodb_up.* 1' }
-# end PSMDB
+    loop_control:
+      label: "{{ item.service_name }}"
+### end PSMDB
 
-# verifications
+### verifications
   - name: Perform standard verifications set for PMM Client
     include_tasks: ./tasks/verifications_set_for_pmm3_client.yml
