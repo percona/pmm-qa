@@ -95,7 +95,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
-- `build-package-test-images.yml` — builds the `package_tests` client images and publishes them to GHCR (weekly, on a push to `main` touching `package_tests/docker/**`, or by hand from any branch).
+- `build-package-test-images.yml` — builds the `package_tests` client images and publishes them to GHCR (daily, on a push to `main` touching `package_tests/docker/**`, or by hand from any branch).
 - `build-prebaked-images.yml` — builds the pmm-framework database images and publishes them to GHCR from `main` (nightly, or on a push touching `images/**`); PRs only build and check. A Dockerfile change reaches CI only after it merges. See [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md).
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
