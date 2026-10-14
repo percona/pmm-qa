@@ -1,8 +1,15 @@
 import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
-import { homedir } from 'node:os';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
+import {
+  KubernetesJobResource,
+  KubernetesJobState,
+  KubernetesPod,
+  KubernetesPodResource,
+  KubernetesResourceList,
+} from '@interfaces/kubernetes';
 
 interface ExecInPodOptions {
   container?: string;
@@ -21,6 +28,15 @@ export default class K8sHelper {
   constructor(namespace = 'pmm') {
     this.namespace = namespace;
   }
+
+  /** Through a file: {@link CliHelper} flattens a command onto one line, so a manifest cannot go on stdin. */
+  apply = (manifest: object): ExecReturn => {
+    const file = join(mkdtempSync(join(tmpdir(), 'k8s-')), 'manifest.json');
+
+    writeFileSync(file, JSON.stringify(manifest));
+
+    return this.exec(`apply --filename=${file}`);
+  };
 
   /**
    * Fails with kubectl's own error rather than skipping - a skipped cluster test
@@ -55,6 +71,25 @@ export default class K8sHelper {
   execSilent = (args: string): ExecReturn =>
     this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`);
 
+  getJobState = (name: string): KubernetesJobState => {
+    const job = JSON.parse(
+      this.execSilent(`get job ${name} --output=json`).assertSuccess().stdout,
+    ) as KubernetesJobResource;
+    const finished = job.status?.conditions?.find(
+      (condition) => condition.status === 'True' && ['Complete', 'Failed'].includes(condition.type),
+    );
+
+    return (finished?.type as KubernetesJobState | undefined) ?? 'Running';
+  };
+
+  /** @param kind any kubectl resource kind, e.g. `deployment` or `cronjob` */
+  getNames = (kind: string, labelSelector: string): string[] =>
+    this.execSilent(`get ${kind} --selector=${labelSelector} --output=jsonpath={.items[*].metadata.name}`)
+      .assertSuccess()
+      .stdout.trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
   getNodeNames = (): string[] =>
     this.execSilent('get nodes --output=jsonpath={.items[*].metadata.name}')
       .assertSuccess()
@@ -76,6 +111,12 @@ export default class K8sHelper {
       ready: item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
     }));
   };
+
+  getSecretValue = (name: string, key: string): string =>
+    Buffer.from(
+      this.execSilent(`get secret ${name} --output=jsonpath={.data.${key}}`).assertSuccess().stdout.trim(),
+      'base64',
+    ).toString();
 
   /** @param labelSelector `-l` selector; empty means every StatefulSet */
   getStatefulSetNames = (labelSelector = ''): string[] => {

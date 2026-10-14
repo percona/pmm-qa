@@ -20,6 +20,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
+import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
@@ -63,6 +64,7 @@ const pmmTest = base.extend<{
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
   grafanaHelper: GrafanaHelper;
+  haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
@@ -155,6 +157,7 @@ const pmmTest = base.extend<{
 
     await use(grafanaHelper);
   },
+  haBackupHelper: async ({ k8sHelper }, use) => await use(new HaBackupHelper(k8sHelper)),
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {

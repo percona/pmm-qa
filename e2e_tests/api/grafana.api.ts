@@ -112,6 +112,16 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
+  getFolders = async (): Promise<{ title: string; uid: string }[]> => {
+    const response = await this.request.get(apiEndpoints.grafana.folders, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()) as { title: string; uid: string }[];
+  };
+
   getFolderUid = async (title: string): Promise<string> => {
     const response = await this.request.get(apiEndpoints.grafana.folders, {
       headers: GrafanaHelper.getAuthHeader(),
