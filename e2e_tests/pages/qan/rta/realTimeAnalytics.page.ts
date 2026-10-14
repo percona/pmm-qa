@@ -95,7 +95,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await pmmTest.step(`Filter queries by text: ${queryText}`, async () => {
       await this.builders.rowByIndex('1').waitFor({ state: 'visible' });
       await this.elements.noQueriesAvailable.waitFor({ state: 'hidden' });
-      await this.openFilters();
+      await this.openFiltersIfHidden();
       await this.inputs.filterByQueryText.fill(queryText);
 
       await expect(this.builders.queryByRowIndex('1')).toContainText(queryText);
@@ -170,10 +170,15 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.filters.click();
   };
 
+  // The live table re-renders every refresh and can drop a Show/Hide filters click, so re-check and retry.
   openFiltersIfHidden = async () => {
-    if (!(await this.inputs.filterByQueryText.isVisible())) {
-      await this.openFilters();
-    }
+    await expect(async () => {
+      if (!(await this.inputs.filterByQueryText.isVisible())) {
+        await this.openFilters();
+      }
+
+      await expect(this.inputs.filterByQueryText).toBeVisible({ timeout: Timeouts.TWO_SECONDS });
+    }).toPass({ timeout: Timeouts.TEN_SECONDS });
   };
 
   selectClusterService = async () => {

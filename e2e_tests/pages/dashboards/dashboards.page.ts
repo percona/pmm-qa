@@ -284,17 +284,20 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
-    let missingMetrics: string[] = [];
+    let missingMetrics: string[];
 
-    for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
+    for (let i = 0; ; i += Timeouts.THIRTY_SECONDS) {
       const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
 
       missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
-      if (missingMetrics.length == 0) break;
+      if (missingMetrics.length == 0 || i >= timeout) break;
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+      // A panel that rendered "No data" does not re-query on its own.
+      await this.page.reload();
+      await this.loadAllPanels();
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);

@@ -2,12 +2,25 @@ import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { expect } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 
 pmmTest.describe.configure({ mode: 'default' });
 
 const disconnectUrl = 'http://127.0.0.1:8180/';
 const compose = 'docker compose -f docker-compose-disconnect.yml';
+
+const queryValue = async (request: APIRequestContext, query: string, time?: number) => {
+  const response = await request
+    .get(new URL(apiEndpoints.prometheus.query, disconnectUrl).href, {
+      headers: GrafanaHelper.getAuthHeader('admin', 'admin'),
+      params: time ? { query, time: String(time) } : { query },
+    })
+    .catch(() => undefined);
+
+  return response?.ok()
+    ? Number((await response.json().catch(() => ({}))).data?.result?.[0]?.value[1] ?? 0)
+    : 0;
+};
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const { password, username } = credentials.perconaServer;
@@ -47,6 +60,12 @@ for (const { outage, restore, title } of [
     const overviewUrl = `${disconnectUrl}${dashboard.mysql.mysqlInstanceOverview.url}`;
 
     await pmmTest.step('Verify the Services panel has data before the outage', async () => {
+      await expect
+        .poll(() => queryValue(request, 'mysql_up{service_name="ps8"}'), {
+          message: 'ps8 must be up and scraped before the outage',
+          timeout: Timeouts.TWO_MINUTES,
+        })
+        .toBe(1);
       await expect(async () => {
         await page.goto(urlHelper.buildUrlWithParameters(overviewUrl, { from: 'now-2m', to: 'now' }));
         await dashboard.loadAllPanels();
@@ -68,21 +87,8 @@ for (const { outage, restore, title } of [
       restoredAt = Math.floor(Date.now() / 1_000);
       await expect
         .poll(
-          async () => {
-            const response = await request
-              .get(new URL(apiEndpoints.prometheus.query, disconnectUrl).href, {
-                headers: GrafanaHelper.getAuthHeader('admin', 'admin'),
-                params: {
-                  query: 'sum(count_over_time(mysql_up{service_name="ps8"}[30s]))',
-                  time: String(restoredAt - 60),
-                },
-              })
-              .catch(() => undefined);
-
-            return response?.ok()
-              ? Number((await response.json().catch(() => ({}))).data?.result?.[0]?.value[1] ?? 0)
-              : 0;
-          },
+          () =>
+            queryValue(request, 'sum(count_over_time(mysql_up{service_name="ps8"}[30s]))', restoredAt - 60),
           {
             message: 'ps8 samples buffered during the outage must reach PMM Server',
             timeout: Timeouts.TWO_MINUTES,

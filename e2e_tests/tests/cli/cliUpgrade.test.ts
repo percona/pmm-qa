@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM cli tests for upgrade', () => {
@@ -20,21 +21,24 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         .stdout.split('\n')
         .filter((item: string) => item && !nonClientContainers.includes(item));
 
-      for (const container of containers) {
-        const pmmAdminStatus: string = cliHelper.execSilent(
-          `docker exec ${container} pmm-admin status`,
-        ).stdout;
-        const pmmAdminList: string = cliHelper.execSilent(`docker exec ${container} pmm-admin list`).stdout;
+      // Agents of a service added moments earlier (e.g. by customPassword) report Unknown until they first connect.
+      await expect(() => {
+        for (const container of containers) {
+          const pmmAdminStatus: string = cliHelper.execSilent(
+            `docker exec ${container} pmm-admin status`,
+          ).stdout;
+          const pmmAdminList: string = cliHelper.execSilent(`docker exec ${container} pmm-admin list`).stdout;
 
-        expect(
-          pmmAdminStatus,
-          `Agent status contains wrong status in ${container} container. Error in: ${pmmAdminStatus}`,
-        ).not.toMatch(/Waiting|Done|Unknown|Initialization Error|Stopping/);
-        expect(
-          pmmAdminList,
-          `Agent list contains wrong status in ${container} container. Error in: ${pmmAdminList}`,
-        ).not.toMatch(/Waiting|Done|Unknown|Initialization Error|Stopping/);
-      }
+          expect(
+            pmmAdminStatus,
+            `Agent status contains wrong status in ${container} container. Error in: ${pmmAdminStatus}`,
+          ).not.toMatch(/Waiting|Done|Unknown|Initialization Error|Stopping/);
+          expect(
+            pmmAdminList,
+            `Agent list contains wrong status in ${container} container. Error in: ${pmmAdminList}`,
+          ).not.toMatch(/Waiting|Done|Unknown|Initialization Error|Stopping/);
+        }
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.ONE_MINUTE });
     },
   );
 

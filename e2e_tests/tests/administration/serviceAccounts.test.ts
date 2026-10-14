@@ -126,13 +126,21 @@ pmmTest.describe(() => {
       await pmmTest.step('Nodes Overview still reports data after a PMM Server restart', async () => {
         cliHelper.execute('sudo docker restart pmm-server').assertSuccess();
         await api.serverApi.waitForReady(Timeouts.ONE_MINUTE);
-        await page.goto(dashboard.os.nodesOverview.url);
-        await dashboard.loadAllPanels();
+        // A panel that rendered "No data" while the server was still starting never re-queries on its own.
         await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data after the restart',
-            timeout: Timeouts.FIVE_MINUTES,
-          })
+          .poll(
+            async () => {
+              await page.goto(dashboard.os.nodesOverview.url);
+              await dashboard.loadAllPanels();
+
+              return dashboard.elements.noDataPanelName.count();
+            },
+            {
+              intervals: [Timeouts.TEN_SECONDS],
+              message: 'Nodes Overview should show at most 19 panels without data after the restart',
+              timeout: Timeouts.FIVE_MINUTES,
+            },
+          )
           .toBeLessThanOrEqual(19);
       });
 
