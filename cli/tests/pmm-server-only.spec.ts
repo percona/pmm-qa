@@ -118,6 +118,7 @@ test.describe(
      * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats#L53
      */
     test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy', async ({}) => {
+      test.setTimeout(300_000);
       const containerName = 'PMM-T526';
       const httpPort = 84;
       await cli.exec(
@@ -133,12 +134,13 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
+      // The image's healthcheck grace is 90s plus 3 failed 4s probes (PMM-15361).
+      await test.step(`Waiting for ${containerName} to be unhealthy(150 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 45_000 });
+        }).toPass({ intervals: [2_000], timeout: 150_000 });
       });
     });
 
