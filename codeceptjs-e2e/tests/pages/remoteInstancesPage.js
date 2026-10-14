@@ -681,7 +681,6 @@ module.exports = {
         args.page.locator(this.fields.addService).click(),
       ]);
     });
-    // Grafana hands over to the PMM UI's own inventory page, outside its iframe
     I.switchTo();
     I.waitInUrl(pmmInventoryPage.servicesTab.url, 30);
   },

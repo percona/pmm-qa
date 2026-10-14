@@ -6,7 +6,6 @@ const servicesTab = require('./servicesTab');
 const NodesTab = require('./nodesTab');
 const { tableDataRows } = require('../../helper/locatorHelper');
 
-// Services and nodes columns: expand, select, status, name, ...; agents columns: expand, select, status, type, ID
 const rowByName = (name) => `${tableDataRows}[td[4]/div/span[text()="${name}"]]`;
 const agentRow = (agentType) => `${tableDataRows}[td[4][text()="${agentType}"]]`;
 const expandButton = '//button[@aria-label="Expand"]';
@@ -16,7 +15,6 @@ module.exports = {
   url: '/pmm-ui/inventory',
   fields: {
     serviceRow: (serviceName) => rowByName(serviceName),
-    // The same button collapses the row again
     showServiceDetails: (serviceName) => `${rowByName(serviceName)}${expandButton}`,
     hideServiceDetails: (serviceName) => `${rowByName(serviceName)}${expandButton}`,
     showNodeDetails: (nodeName) => `${rowByName(nodeName)}${expandButton}`,
@@ -26,7 +24,7 @@ module.exports = {
     agentsLinkNew: '//*[@data-testid="agents-status-chip"]//a',
     detailsLabelByText: (label) => locate('$service-details').find('.MuiChip-label').withText(label),
     agentDetailsLabelByText: (label) => locate('$agent-details').find('.MuiChip-label').withText(label),
-    agentsLink: locate('[role="tablist"] a').withText('Agents').withAttr({ 'aria-label': 'Tab Agents' }),
+    deleteModal: '$inventory-delete-modal',
     deleteButton: '[data-testid="delete-services-button"], [data-testid="delete-nodes-button"], [data-testid="delete-agents-button"]',
     externalExporter: locate('td').withText('External exporter'),
     editButton: '//*[@role="menuitem"][normalize-space()="Edit"]',
@@ -101,7 +99,6 @@ module.exports = {
 
   async verifyNodeAgentHasRDSExporter(serviceName) {
     await this.changeRowsPerPage(100);
-    // The node name column of the services table
     const nodeLink = await I.grabAttributeFrom(`${tableDataRows}/td[5]//a[contains(text(), "${serviceName}")]`, 'href');
 
     I.amOnPage(nodeLink);
@@ -166,12 +163,9 @@ module.exports = {
     I.waitForVisible(rowByName(serviceName), 20);
   },
 
-  getServicesId(serviceName) {
-    return rowByName(serviceName);
-  },
-
   async getCountOfAgents(serviceId) {
-    const countOfAgents = await I.grabNumberOfVisibleElements(serviceId);
+    const { data } = await inventoryAPI.apiGetAgents();
+    const countOfAgents = Object.values(data).flat().filter((agent) => agent.service_id === serviceId).length;
 
     assert.equal(countOfAgents, 0, 'The agents should be removed!');
   },
@@ -181,17 +175,6 @@ module.exports = {
 
     I.waitForVisible(agentLocator, 30);
     I.click(agentLocator);
-  },
-
-  async getAgentServiceID(agentType) {
-    const serviceIdLabel = this.fields.agentDetailsLabelByText('service_id=');
-
-    I.waitForVisible(this.fields.showAgentDetails(agentType), 30);
-    I.click(this.fields.showAgentDetails(agentType));
-    I.waitForVisible(serviceIdLabel, 30);
-    const serviceIdTag = await I.grabTextFrom(serviceIdLabel);
-
-    return serviceIdTag.split('=')[1];
   },
 
   async getAgentID(agentType) {
@@ -234,6 +217,7 @@ module.exports = {
     I.waitForVisible(this.fields.forceModeCheckbox, 10);
     I.click(this.fields.forceModeCheckbox);
     I.click(this.fields.proceedButton);
+    I.waitForInvisible(this.fields.deleteModal, 30);
   },
 
   async getCountOfItems() {
@@ -298,7 +282,6 @@ module.exports = {
     I.click(this.fields.saveButton);
     I.waitForVisible(this.fields.savePopupMessage, 10);
     I.click(this.fields.saveConfirmButton);
-    // Saving goes back to the services list
     I.waitForVisible(this.fields.tableRow, 30);
   },
 
@@ -309,7 +292,6 @@ module.exports = {
     I.click(this.fields.editButton);
     I.waitForElement(this.fields.editText, 30);
     I.seeElement(this.fields.editText);
-    // The form shows up once the service and its credentials are loaded
     I.waitForVisible(this.fields.editForm, 30);
   },
 

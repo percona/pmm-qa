@@ -8,7 +8,6 @@ class NodesTab {
       nodesRow: tableDataRows,
       nodesMonitoringValue: locate(`${tableDataRows}//*[@data-testid="monitoring-status-link"]`),
       backToNodes: '$agents-go-back',
-      // Columns of the agents table: expand, select, status, agent type, agent ID
       agentType: `${tableDataRows}/td[4]`,
     };
   }

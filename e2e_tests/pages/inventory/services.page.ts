@@ -1,5 +1,6 @@
 import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
+import { tableDataRows } from '@helpers/tableLocators';
 
 export default class ServicesPage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
@@ -17,10 +18,7 @@ export default class ServicesPage extends BasePage {
     delete: this.page.getByTestId('delete-services-button'),
   };
   elements = {
-    // Material React Table renders a detail panel row after every service row, and skeleton rows while loading
-    serviceRows: this.page.locator(
-      'tbody tr:not(.Mui-TableBodyCell-DetailPanel):not(:has(.MuiSkeleton-root))',
-    ),
+    serviceRows: this.page.locator(tableDataRows),
   };
   inputs = {};
   messages = {

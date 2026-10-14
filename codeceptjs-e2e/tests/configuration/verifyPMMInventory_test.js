@@ -89,22 +89,24 @@ Scenario.skip(
 
 Scenario(
   'PMM-T339 - Verify MySQL service is removed on PMM Inventory page @inventory',
-  async ({ I, addInstanceAPI, pmmInventoryPage }) => {
+  async ({
+    I, addInstanceAPI, inventoryAPI, pmmInventoryPage,
+  }) => {
     const serviceType = 'MySQL';
     const serviceName = 'ServiceToDelete';
 
     await addInstanceAPI.apiAddInstance(serviceType, serviceName);
-    I.amOnPage(pmmInventoryPage.url);
-    const serviceId = pmmInventoryPage.getServicesId(serviceName);
+    const { service_id: serviceId } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, serviceName);
 
+    I.amOnPage(pmmInventoryPage.url);
     pmmInventoryPage.selectService(serviceName);
     I.click(pmmInventoryPage.fields.deleteButton);
     I.click(pmmInventoryPage.fields.proceedButton);
+    I.waitForInvisible(pmmInventoryPage.fields.deleteModal, 30);
     pmmInventoryPage.serviceExists(serviceName, false);
     pmmInventoryPage.selectService(serviceName);
     pmmInventoryPage.deleteWithForceOpt();
     pmmInventoryPage.serviceExists(serviceName, true);
-    I.click(pmmInventoryPage.fields.agentsLink);
     await pmmInventoryPage.getCountOfAgents(serviceId);
     I.click(pmmInventoryPage.fields.nodesLink);
     pmmInventoryPage.checkNodeExists(serviceName);
@@ -113,21 +115,22 @@ Scenario(
 
 Scenario(
   'PMM-T340 - Verify node with agents, services can be removed on PMM Inventory page @inventory',
-  async ({ I, addInstanceAPI, pmmInventoryPage }) => {
+  async ({
+    I, addInstanceAPI, inventoryAPI, pmmInventoryPage,
+  }) => {
     const serviceType = 'MySQL';
     const serviceName = 'NodeToDelete';
 
     await addInstanceAPI.apiAddInstance(serviceType, serviceName);
-    I.amOnPage(pmmInventoryPage.url);
-    const serviceId = pmmInventoryPage.getServicesId(serviceName);
+    const { service_id: serviceId } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, serviceName);
 
+    I.amOnPage(pmmInventoryPage.url);
     I.waitForVisible(pmmInventoryPage.fields.nodesLink, 30);
     I.click(pmmInventoryPage.fields.nodesLink);
     pmmInventoryPage.selectService(serviceName);
     pmmInventoryPage.deleteWithForceOpt();
     I.click(pmmInventoryPage.fields.pmmServicesSelector);
     pmmInventoryPage.serviceExists(serviceName, true);
-    I.click(pmmInventoryPage.fields.agentsLink);
     await pmmInventoryPage.getCountOfAgents(serviceId);
   },
 );
@@ -184,32 +187,34 @@ Scenario(
 
 Scenario(
   'PMM-T343 - Verify agent can be removed on PMM Inventory page @inventory',
-  async ({ I, pmmInventoryPage, addInstanceAPI }) => {
+  async ({
+    I, pmmInventoryPage, addInstanceAPI, inventoryAPI,
+  }) => {
     const agentType = 'MySQL exporter';
     const serviceType = 'MySQL';
     const serviceName = 'AgentToDelete';
 
     await addInstanceAPI.apiAddInstance(serviceType, serviceName);
+    const { service_id: serviceId } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, serviceName);
+
     I.amOnPage(pmmInventoryPage.url);
     I.waitForVisible(pmmInventoryPage.fields.nodesLink, 20);
     I.click(pmmInventoryPage.fields.nodesLink);
     const countOfNodesBefore = await pmmInventoryPage.getNodeCount();
 
-    I.waitForVisible(pmmInventoryPage.fields.agentsLink, 20);
-    I.click(pmmInventoryPage.fields.agentsLink);
-    const serviceId = await pmmInventoryPage.getAgentServiceID(agentType);
+    pmmInventoryPage.openAgents(serviceId);
     const agentId = await pmmInventoryPage.getAgentID(agentType);
 
     pmmInventoryPage.selectAgent(agentType);
     I.click(pmmInventoryPage.fields.deleteButton);
     I.click(pmmInventoryPage.fields.proceedButton);
     pmmInventoryPage.existsByid(agentId, true);
-    I.click(pmmInventoryPage.fields.nodesLink);
+    I.amOnPage(pmmInventoryPage.nodesTab.url);
     const countOfNodesAfter = await pmmInventoryPage.getNodeCount();
 
     pmmInventoryPage.verifyNodesCount(countOfNodesBefore, countOfNodesAfter);
-    I.click(pmmInventoryPage.fields.pmmServicesSelector);
-    pmmInventoryPage.existsByid(serviceId, false);
+    I.amOnPage(pmmInventoryPage.servicesTab.url);
+    pmmInventoryPage.serviceExists(serviceName, false);
   },
 );
 
@@ -219,9 +224,8 @@ Scenario.skip(
     const agentID = 'pmm-server';
     const agentType = 'PMM Agent';
 
-    I.amOnPage(pmmInventoryPage.url);
-    I.waitForVisible(pmmInventoryPage.fields.agentsLink, 20);
-    I.click(pmmInventoryPage.fields.agentsLink);
+    I.amOnPage(`${pmmInventoryPage.nodesTab.url}/pmm-server/agents`);
+    I.waitForVisible(pmmInventoryPage.fields.tableRow, 30);
     const countBefore = await pmmInventoryPage.getCountOfItems();
 
     pmmInventoryPage.selectAgentByID(agentID);

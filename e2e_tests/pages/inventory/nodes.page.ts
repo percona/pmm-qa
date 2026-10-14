@@ -2,6 +2,7 @@ import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { tableDataRows } from '@helpers/tableLocators';
 import { expect } from '@playwright/test';
 
 export default class NodesPage extends BasePage {
@@ -11,7 +12,6 @@ export default class NodesPage extends BasePage {
   builders = {
     monitoringLinkByIndex: (index: number) =>
       this.elements.nodeRows.nth(index).getByTestId('monitoring-status-link'),
-    // The HA role chip sits next to the node name
     nodeRoleLabel: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('ha-role-chip'),
     nodeRow: (nodeName: string) =>
       this.elements.nodeRows.filter({ has: this.page.getByText(nodeName, { exact: true }) }),
@@ -26,12 +26,10 @@ export default class NodesPage extends BasePage {
     overrideAlertThresholds: this.page.getByRole('menuitem', { name: 'Override alert thresholds' }),
   };
   elements = {
-    // Details of a node, a service or an agent, whichever inventory page is open
     detailsContent: this.page.locator(
       '[data-testid="node-details"], [data-testid="service-details"], [data-testid="agent-details"]',
     ),
-    // Material React Table renders a detail panel row after every node row, and skeleton rows while loading
-    nodeRows: this.page.locator('tbody tr:not(.Mui-TableBodyCell-DetailPanel):not(:has(.MuiSkeleton-root))'),
+    nodeRows: this.page.locator(tableDataRows),
     runningAgents: this.page.getByTestId('agents-status-chip').getByRole('link'),
     unauthorized: this.page.getByTestId('unauthorized'),
   };

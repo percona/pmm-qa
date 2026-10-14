@@ -2,7 +2,6 @@ const { I } = inject();
 const paginationPart = require('./paginationFragment');
 const { tableDataRows } = require('../../helper/locatorHelper');
 
-// Columns: expand, select, status, service name, node name, monitoring, address, port
 const getServiceRowLocator = (serviceName) => `${tableDataRows}[td[4]/div/span[text()="${serviceName}"]]`;
 
 /**

@@ -1,7 +1,6 @@
 const { I } = inject();
 const { tableDataRows } = require('../../helper/locatorHelper');
 
-// Columns: expand, select, status, agent type, agent ID
 const getAgentRowLocator = (agentName) => `${tableDataRows}[td[4][text()="${agentName}"]]`;
 
 /**
