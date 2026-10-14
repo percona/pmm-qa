@@ -176,8 +176,8 @@ Scenario(
     I.amOnPage(pmmInventoryPage.url);
     I.waitForVisible(pmmInventoryPage.fields.nodesLink, 30);
     I.click(pmmInventoryPage.fields.nodesLink);
-    pmmInventoryPage.selectService(node);
-    pmmInventoryPage.deleteWithForceOpt();
+    I.waitForVisible(pmmInventoryPage.fields.rowCheckbox(node), 30);
+    I.seeElementsDisabled(pmmInventoryPage.fields.rowCheckbox(node));
     pmmInventoryPage.checkNodeExists(node);
   },
 );
@@ -626,7 +626,8 @@ Scenario('PMM-T2024 - Verify services list does not refresh to first page @inven
   });
 
   pmmInventoryPage.open();
-  I.click(pmmInventoryPage.pagination.elements.pageNumberButton('2'));
+  I.waitForVisible(pmmInventoryPage.pagination.elements.nextPageButton, 30);
+  I.click(pmmInventoryPage.pagination.elements.nextPageButton);
   const startServices = await I.grabTextFromAll(pmmInventoryPage.fields.serviceNames);
 
   I.wait(15);

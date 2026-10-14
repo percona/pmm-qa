@@ -2,23 +2,28 @@ import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
 
 export default class ServicesPage extends BasePage {
-  readonly url = 'graph/inventory/services';
-  readonly pagination = new InventoryPagination(this.grafanaIframe());
+  readonly url = 'pmm-ui/inventory/services';
+  readonly pagination = new InventoryPagination(this.page);
   builders = {
     monitoringStatusByServiceName: (serviceName: string) =>
-      this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
+      this.builders.serviceRow(serviceName).getByTestId('monitoring-status-link'),
+    serviceRow: (serviceName: string) =>
+      this.elements.serviceRows.filter({ has: this.page.getByText(serviceName, { exact: true }) }),
     statusByServiceName: (serviceName: string) =>
-      this.grafanaIframe()
-        .getByRole('row', { name: serviceName })
-        .getByTitle(/^STATUS_/),
+      this.builders.serviceRow(serviceName).getByTestId('status-chip'),
   };
   buttons = {
-    addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
-    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
+    addService: this.page.getByTestId('add-service-button'),
+    delete: this.page.getByTestId('delete-services-button'),
   };
-  elements = {};
+  elements = {
+    // Material React Table renders a detail panel row after every service row, and skeleton rows while loading
+    serviceRows: this.page.locator(
+      'tbody tr:not(.Mui-TableBodyCell-DetailPanel):not(:has(.MuiSkeleton-root))',
+    ),
+  };
   inputs = {};
   messages = {
-    deleteConfirmation: this.grafanaIframe().getByTestId('delete-services-description'),
+    deleteConfirmation: this.page.getByTestId('inventory-delete-modal-message'),
   };
 }

@@ -1,7 +1,6 @@
 import BasePage from '@pages/base.page';
 import { expect } from '@playwright/test';
 
-// The modal is rendered by the PMM shell, outside the Grafana iframe that opens it.
 export default class AlertThresholdsPage extends BasePage {
   builders = {
     overrideInput: (ruleTitle: string) => this.builders.row(ruleTitle).getByRole('spinbutton'),
