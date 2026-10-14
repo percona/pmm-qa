@@ -23,6 +23,16 @@ on:
         required: false
         default: 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
         type: string
+      pmm_client_tarball_amd64:
+        description: 'amd64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz'
+        type: string
+      pmm_client_tarball_arm64:
+        description: 'arm64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz'
+        type: string
       pmm_qa_branch:
         description: 'PMM QA branch'
         required: false
@@ -120,6 +130,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   cli_integration_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: CLI integration (pmm-cli-integration-tests)
     needs: [plan, resolve]
     uses: ./.github/workflows/integration-cli-tests.yml
@@ -149,6 +160,7 @@ jobs:
       pmm_client_version: ${{ matrix.tarball }}
 
   e2e_tests_matrix:
+    if: ${{ !inputs.skip_compatibility }}
     name: E2E Tests Matrix (CodeceptJS)
     needs: [plan, resolve]
     uses: ./.github/workflows/e2e-tests-matrix.yml
@@ -160,6 +172,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
 
   helm_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: pmm3-helm
     needs: [plan, resolve]
     uses: ./.github/workflows/helm-tests.yml
@@ -184,7 +197,24 @@ jobs:
       repository: ${{ needs.resolve.outputs.repository }}
       expected_version: ${{ inputs.pmm_image_tag }}
 
+  package_tests:
+    name: Package Tests
+    needs: [plan, resolve]
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/pmm3-package-tests-matrix.yml
+    with:
+      arch: all
+      pmm_server_image: ${{ needs.resolve.outputs.server_image }}
+      install_repo: ${{ needs.resolve.outputs.repository }}
+      pmm_version: ${{ inputs.pmm_image_tag }}
+      tarball: ${{ inputs.pmm_client_tarball_amd64 }}
+      tarball_arm64: ${{ inputs.pmm_client_tarball_arm64 }}
+      pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
+
   qa_integration_psmdb_pbm_full:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PSMDB_PBM_FULL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
@@ -194,6 +224,7 @@ jobs:
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
 
   qa_integration_proxysql:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PROXYSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PROXYSQL.yaml
@@ -205,6 +236,7 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   qa_integration_pdpgsql:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PDPGSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PDPGSQL.yaml
@@ -215,6 +247,7 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   upgrade_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM Upgrade
     needs: [plan, resolve]
     uses: ./.github/workflows/upgrade-pmm.yml

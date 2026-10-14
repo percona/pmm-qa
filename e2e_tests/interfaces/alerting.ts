@@ -10,6 +10,7 @@ export enum AlertSeverity {
 }
 
 export interface AlertInstance {
+  annotations?: Record<string, string>;
   labels: Record<string, string>;
   state: string;
 }
