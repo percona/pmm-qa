@@ -99,11 +99,13 @@ module.exports = {
 
   async verifyNodeAgentHasRDSExporter(serviceName) {
     await this.changeRowsPerPage(100);
-    const nodeLink = await I.grabAttributeFrom(`${tableDataRows}/td[5]//a[contains(text(), "${serviceName}")]`, 'href');
+    const nodeLink = `${rowByName(serviceName)}/td[5]//a`;
+    const nodeUrl = await I.grabAttributeFrom(nodeLink, 'href');
+    const nodeName = await I.grabTextFrom(nodeLink);
 
-    I.amOnPage(nodeLink);
-    I.waitForVisible(this.fields.showNodeDetails(serviceName), 30);
-    I.click(this.fields.showNodeDetails(serviceName));
+    I.amOnPage(nodeUrl);
+    I.waitForVisible(this.fields.showNodeDetails(nodeName), 30);
+    I.click(this.fields.showNodeDetails(nodeName));
     I.click(this.fields.agentsLinkNew);
     I.waitNumberOfVisibleElements(agentRow('RDS exporter'), 1, 30);
   },
