@@ -4,6 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 
 const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
+const workloadRows = 'div[role="row"][class*="tr-"]:not(.tr-0)';
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
@@ -79,6 +80,8 @@ export default class StoredMetricsPage extends BasePage {
         .nth(columnNumber - 1),
     sortingValue: (columnNumber: number) => this.builders.sortControl(columnNumber).locator('span'),
     tab: (tabName: string) => this.grafanaIframe().getByRole('tab', { name: tabName }),
+    workloadRowsWithoutText: (text: string) =>
+      this.grafanaIframe().locator(workloadRows).filter({ hasNotText: text }),
   };
   buttons = {
     closeDetails: this.grafanaIframe().getByRole('button', { name: 'Close' }),
@@ -109,7 +112,7 @@ export default class StoredMetricsPage extends BasePage {
     filterLabels: this.grafanaIframe().locator('.checkbox-container__label-text'),
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
     firstWorkloadRow: this.grafanaIframe()
-      .locator('div[role="row"][class*="tr-"]:not(.tr-0)')
+      .locator(workloadRows)
       .filter({ hasNot: this.page.getByRole('cell', { name: /^explain\b/i }) })
       .first(),
     iframe: this.page.locator('iframe').first(),
@@ -293,6 +296,18 @@ export default class StoredMetricsPage extends BasePage {
   removeColumn = async (columnName: string) => {
     await this.builders.columnHeader(columnName).click();
     await this.elements.removeColumnOption.click({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  searchByQueryText = async (value: string) => {
+    await this.searchByValue(value);
+    await this.builders
+      .queryRowQueryText(1)
+      .filter({ hasText: value })
+      .waitFor({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders
+      .workloadRowsWithoutText(value)
+      .first()
+      .waitFor({ state: 'detached', timeout: Timeouts.THIRTY_SECONDS });
   };
 
   searchByValue = async (value: string) => {

@@ -221,7 +221,7 @@ pmmTest(
       await qanStoredMetrics.selectFilter('ps-dev', psDev);
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     await qanStoredMetrics.waitForLoad();
-    await qanStoredMetrics.searchByValue('SELECT');
+    await qanStoredMetrics.searchByQueryText('SELECT');
     await qanStoredMetrics.waitForLoad();
     await qanStoredMetrics.selectFirstWorkloadRow();
     await qanStoredMetrics.verifyNoExplainErrors();
@@ -232,7 +232,7 @@ pmmTest(
       'mongodb',
       qanStoredMetrics.builders.filterCheckboxInGroup('mongodb', 'Service Type'),
     );
-    await qanStoredMetrics.searchByValue('UPDATE');
+    await qanStoredMetrics.searchByQueryText('UPDATE');
     await qanStoredMetrics.selectRow(1);
     await qanStoredMetrics.verifyNoExplainErrors();
   },
@@ -249,7 +249,7 @@ pmmTest(
         qanStoredMetrics.builders.filterCheckboxInGroup('mongodb', 'Service Type'),
       );
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
-    await qanStoredMetrics.searchByValue('UPDATE');
+    await qanStoredMetrics.searchByQueryText('UPDATE');
     await qanStoredMetrics.selectRow(1);
     await qanStoredMetrics.verifyNoExplainErrors();
   },
