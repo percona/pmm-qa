@@ -78101,6 +78101,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1606",
         "by": "Investigator routine",
         "at": "2026-10-14T02:40:31Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "product bug",
+        "summary": "ha: PMM-T554/PMM-T2146 failed, HA pg-db service pmm-pmm-ha-pg-db-instance1-k2wk-0 shown Failed. Same tests, shard and symptom as the already-filed PMM-15716 (agent status lost while pg-db restarts).",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15716",
+        "by": "Investigator routine",
+        "at": "2026-10-14T02:40:35Z"
       }
     ],
     "claims": [
