@@ -73,6 +73,9 @@ engines = {  # how a source names a service -> the pmm-framework database that c
     'haproxy': r'haproxy', 'external': r'external',
 }
 engine = lambda arg: re.split('[,=]', arg, maxsplit=1)[0]
+# A PS/MySQL environment or cluster label pins the topology: ps-dev/ps-single-dev-cluster is SETUP_TYPE unset, ps-gr-dev is gr.
+topology = lambda arg: (re.search(r'SETUP_TYPE=(\w+)', arg) or [None, ''])[1]
+labels = {e: {t or '' for t in re.findall(rf'\b{e}-(?:(gr|replication)-)?(?:single-)?dev\b', code)} for e in ('ps', 'mysql')}
 starts = [m.start() for m in re.finditer(r'Scenario(?:\.skip)?\(', code)]
 hooks = code[:starts[0]] if starts else code
 dedicated, nightly_engines, notes = [], [], []
@@ -105,7 +108,9 @@ for i, at in enumerate(starts):
 local = list(dict.fromkeys(dedicated))
 for e in dict.fromkeys(nightly_engines):
     if all(engine(a) != e for a in local):
-        local += [a for a in shard_args if engine(a) == e][:1]
+        args = [a for a in shard_args if engine(a) == e]
+        pinned = [next(a for a in args if topology(a) == t) for t in sorted(labels.get(e, ())) if any(topology(a) == t for a in args)]
+        local += pinned or args[:1]
 line = ' '.join(f'--database {a}' for a in local)
 if only_args:
     print(line)

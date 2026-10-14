@@ -138,6 +138,8 @@ PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" ADMIN_PASSWORD="${ADMIN_PASSWORD:
 
 `--prepare-only` proves only the server. Then prove the agents and data: in every provisioned container `pmm-admin status` shows `Connected : true` and `pmm-admin list` shows every agent `Running`. For a QAN row, poll `POST /v1/qan/metrics:getReport` (`group_by: queryid`, the test's time range) until `total_rows` exceeds the source's largest item-count branch, and record the count on the timeline. A poll whose own command fails stops with that error; it never reads as "no data yet".
 
+When the writer returns `targetMode: appended` on a file whose other tests need databases not yet provisioned (the services they filter on or `docker exec` into), add them to the running environment with `local-pmm.sh up --database ...` before spawning the runner: the runner's whole-file run needs them, and pmm-framework picks free host ports, so a second PS topology joins cleanly. The tracker `Setup` and the CI dispatch carry the union.
+
 Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and the framework log directory it printed on the timeline, and stop.
 
 ## Phase timeline
