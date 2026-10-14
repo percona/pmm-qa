@@ -53,7 +53,7 @@ flowchart LR
         ghaCjs["runner-e2e-tests-codeceptjs.yml"]
         ghaPw["runner-e2e-tests-playwright.yml"]
         ghaCli["runner-integration-cli-tests.yml"]
-        ghaPkg["runner-package-test.yml"]
+        ghaPkg["pmm3-package-tests-matrix.yml"]
         ghaHelm["helm-tests.yml"]
         ghaNightly["nightly-e2e-tests-matrix.yml"]
     end
@@ -95,6 +95,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `nightly-test-suite.yml` — every GitHub Actions suite in one dispatch, for a release candidate or for the dev build (see [External orchestration](#external-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
+- `build-package-test-images.yml` — builds the `package_tests` client images and publishes them to GHCR (daily, on a push to `main` touching `package_tests/docker/**`, or by hand from any branch).
 - `build-prebaked-images.yml` — builds the pmm-framework database images and publishes them to GHCR from `main` (nightly, or on a push touching `images/**`); PRs only build and check. A Dockerfile change reaches CI only after it merges. See [ARCHITECTURE.md](qa-integration/pmm_qa/pmm-framework/ARCHITECTURE.md).
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
 
@@ -102,7 +103,7 @@ To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github
 
 ### External orchestration
 
-No workflow in this repo is on a cron: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
+No test suite in this repo is on a cron, only the image builds above: `nightly-test-suite.yml` carries every suite that used to schedule itself, and the Jenkins nightly orchestrator (`pmm/v3/pmm3-nightly-orchestrator.groovy`, daily at 00:00) dispatches it against the dev build. A release candidate takes the same workflow with its `pmm_image_tag` set to the candidate's tag, e.g. `3.9.1-rc`.
 
 Full Release-Candidate testing is **not** driven from this repo, and no longer has a pipeline of its own: [`pmm3-release-candidate.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-release-candidate.groovy) triggers the same nightly orchestrator, passing the candidate's server image, its AMI and its client tarballs. The orchestrator reads the `-rc` in the image tag and switches the package lanes to the `testing` repository and the candidate's own tarballs; every other lane is the one the nightly runs. `pmm3-rc-testing.groovy` was removed once it had nothing the orchestrator lacked.
 
