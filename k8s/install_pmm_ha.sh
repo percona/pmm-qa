@@ -109,7 +109,7 @@ usage() {
         --deps-release NAME     pmm-ha-dependencies release name (default: pmm-operators)
         --chart-branch BRANCH   install the pmm-ha chart from this percona-helm-charts
                                 branch, cloned into a temp dir (default: latest, which
-                                is the published chart)
+                                is the published chart); OWNER:BRANCH clones OWNER's fork
         --chart-dir DIR         install from a percona-helm-charts checkout you already
                                 have, instead of cloning or using the published repo
         --chart-version VER     published pmm-ha chart version (default: latest)
@@ -270,6 +270,11 @@ fi
 if [ "$CHART_BRANCH" != "latest" ]; then
     [ -z "$CHART_DIR" ] || fail "--chart-branch and --chart-dir both name a chart source; pass one."
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --chart-branch '$CHART_BRANCH'."
+fi
+# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
+if [[ "$CHART_BRANCH" == *:* ]]; then
+    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
+    CHART_BRANCH="${CHART_BRANCH#*:}"
 fi
 if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
