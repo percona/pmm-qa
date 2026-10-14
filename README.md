@@ -12,7 +12,7 @@ This repository is organized into several workspaces, each focusing on a specifi
 | [`cli/`](./cli/README.md)                       | Automated tests for the CLI tool.                                           |
 | [`codeceptjs-e2e/`](./codeceptjs-e2e/README.md) | UI automation for legacy and existing PMM features.                         |
 | [`package_tests/`](./package_tests/README.md)   | Validation of PMM Client package installation, configuration, and upgrades. |
-| [`qa-integration/`](./qa-integration/README.md) | Environment setup                                                           |
+| [`qa-integration/`](./qa-integration/README.md) | Environment setup for PMM Server and monitored databases.                   |
 
 ## Getting Started
 
