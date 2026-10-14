@@ -2320,27 +2320,25 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly",
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "docker arm64 + client 3.9.1: the 'databases only' shard's wait step died on one GitHub API 500 (github-script retries: 0), removing Patroni/MyRocks; PMM-T394, PMM-T2053, PMM-T2079 then found empty panels. Fix adds retries: 3.",
+      "link": "https://github.com/percona/pmm-qa/pull/1606",
+      "by": "Investigator routine",
+      "at": "2026-10-14T02:40:31Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-14T02:36:16Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-14T02:36:16Z",
-      "suites": [
-        "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-14T02:36:16Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
