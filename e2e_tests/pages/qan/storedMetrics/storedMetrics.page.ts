@@ -99,6 +99,7 @@ export default class StoredMetricsPage extends BasePage {
     checkedFilterLabels: this.grafanaIframe().locator(
       'div[data-testid^="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text',
     ),
+    classicExplainError: this.grafanaIframe().getByTestId('classic-explain-error'),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
@@ -128,6 +129,7 @@ export default class StoredMetricsPage extends BasePage {
     selectedMainMetric: this.grafanaIframe().getByTestId('group-by').locator('.ant-select-selection-item'),
     selectedRow: this.grafanaIframe().locator('.selected-overview-row'),
     selectedRowCell: this.grafanaIframe().locator('.selected-overview-row > div').first(),
+    selectedRowQueryText: this.grafanaIframe().locator('.selected-overview-row').getByRole('cell').nth(1),
     sparklineTooltip: this.grafanaIframe().locator('div.tippy-content'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
@@ -237,6 +239,16 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openInNewTab = async (url: string) => {
+    const page = await this.page.context().newPage();
+    const storedMetrics = new StoredMetricsPage(page);
+
+    await page.goto(url);
+    await storedMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
+
+    return { page, storedMetrics };
+  };
+
   openPlanTab = async () => {
     await this.builders.tab('Plan').click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.waitForLoad();
@@ -294,11 +306,56 @@ export default class StoredMetricsPage extends BasePage {
     });
   };
 
-  verifyActivePage = async (pageNumber: number, range: string) => {
+  verifyActivePage = async (pageNumber: number, range?: string) => {
     await expect(this.builders.paginationItem(String(pageNumber))).toContainClass(
       'ant-pagination-item-active',
     );
-    await this.verifyPaginationRange(range);
+
+    if (range) await this.verifyPaginationRange(range);
+  };
+
+  verifyAveragePerQuery = async (timeRangeInSeconds: number) => {
+    await expect(async () => {
+      const read = async (metricName: string, columnNumber: number) => {
+        const text = (
+          (await this.builders.detailMetricValue(metricName, columnNumber).textContent()) ?? ''
+        ).trim();
+
+        expect(text, `${metricName} column ${columnNumber} should show a value`).not.toBe('');
+
+        return text;
+      };
+
+      const magnitudes: Record<string, number> = { b: 1e9, k: 1e3, m: 1e6, t: 1e12 };
+      const queryCountText = await read('Query Count', 3);
+      const queryCount =
+        parseFloat(queryCountText) * (magnitudes[queryCountText.slice(-1).toLowerCase()] ?? 1);
+      const [perQueryTime, perQueryUnit] = (await read('Query Time', 4)).split(' ');
+      const timeUnits: Record<string, number> = { ms: 1e-3, µs: 1e-6 };
+
+      const verifyRate = (metricName: string, value: string, rate: number, humanizedInputs: number) => {
+        const expected = Number(rate.toFixed(4));
+        const message = `${metricName} rate ${value} should match the calculated ${expected}`;
+
+        if (expected < 0.01) {
+          expect(value, message).toMatch(/^<0\.01/);
+        } else if (expected <= 0.0149) {
+          expect(value, message).toMatch(/^0\.01/);
+        } else {
+          expect(Math.abs(parseFloat(value) - expected), message).toBeLessThanOrEqual(
+            0.005 + expected * (1 / 0.995 ** humanizedInputs - 1),
+          );
+        }
+      };
+
+      verifyRate('Query Count', await read('Query Count', 2), queryCount / timeRangeInSeconds, 1);
+      verifyRate(
+        'Query Time',
+        await read('Query Time', 2),
+        (queryCount * parseFloat(perQueryTime) * (timeUnits[perQueryUnit] ?? 1)) / timeRangeInSeconds,
+        2,
+      );
+    }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
   };
 
   verifyColumnSorted = async (columnNumber: number, direction: 'asc' | 'desc') => {

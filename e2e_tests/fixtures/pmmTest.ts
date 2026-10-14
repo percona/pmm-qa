@@ -44,6 +44,7 @@ import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
 import AdvisorsPage from '@pages/advisors/advisors.page';
 import TestState from '@helpers/upgradeState.helper';
 
@@ -53,6 +54,7 @@ const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
+  alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -100,6 +102,7 @@ const pmmTest = base.extend<{
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
+  alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
