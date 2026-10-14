@@ -373,12 +373,9 @@ jobs:
           | setting | value |
           |---|---|
           | pmm-server | \`${SERVER_IMAGE}\` |
-          | resolved | \`${RESOLVED}\` |
           | install_repo | \`${INSTALL_REPO}\` (\`${CHANNEL}\`) |
           | pmm_version | \`${VERSION}\` |
-          | metrics_mode | \`${METRICS_MODE}\` |
           | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
           | tarball (arm64) | \`${TARBALL_ARM64:-none}\` |
-          | pmm-qa | \`${PMM_QA_REPO}@${REF}\` (\`${QA_SHA}\`) |
           | arch | \`${ARCHES}\` |
           EOF
