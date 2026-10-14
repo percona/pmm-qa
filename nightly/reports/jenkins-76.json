@@ -2341,15 +2341,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15716",
       "by": "Investigator routine",
       "at": "2026-10-14T02:40:35Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-14T02:36:16Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "openshift: openshift-cluster-create #300 got curl exit 35 (TLS connect) fetching openshift-client 4.19.9 from mirror.openshift.com. #301 downloaded the same file 5 s later and succeeded, and the URL returns 200 now. A transient blip on the mirror, no fix needed.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-14T02:40:39Z"
     }
-  ]
+  ],
+  "claims": []
 }
