@@ -253,6 +253,7 @@ jobs:
         if: ${{ matrix.tags_for_tests != '' }}
         uses: actions/github-script@v9
         with:
+          retries: 3
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -477,6 +478,7 @@ jobs:
         if: ${{ always() && steps.setup_barrier.outcome == 'success' }}
         uses: actions/github-script@v9
         with:
+          retries: 3
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
