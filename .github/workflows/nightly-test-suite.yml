@@ -214,6 +214,7 @@ jobs:
       pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
 
   qa_integration_psmdb_pbm_full:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PSMDB_PBM_FULL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
@@ -223,6 +224,7 @@ jobs:
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
 
   qa_integration_proxysql:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PROXYSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PROXYSQL.yaml
@@ -234,6 +236,7 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   qa_integration_pdpgsql:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PDPGSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PDPGSQL.yaml
