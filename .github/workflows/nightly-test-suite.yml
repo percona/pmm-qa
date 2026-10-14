@@ -130,6 +130,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   cli_integration_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: CLI integration (pmm-cli-integration-tests)
     needs: [plan, resolve]
     uses: ./.github/workflows/integration-cli-tests.yml
@@ -159,6 +160,7 @@ jobs:
       pmm_client_version: ${{ matrix.tarball }}
 
   e2e_tests_matrix:
+    if: ${{ !inputs.skip_compatibility }}
     name: E2E Tests Matrix (CodeceptJS)
     needs: [plan, resolve]
     uses: ./.github/workflows/e2e-tests-matrix.yml
@@ -170,6 +172,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
 
   helm_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: pmm3-helm
     needs: [plan, resolve]
     uses: ./.github/workflows/helm-tests.yml
@@ -241,6 +244,7 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   upgrade_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: PMM Upgrade
     needs: [plan, resolve]
     uses: ./.github/workflows/upgrade-pmm.yml
