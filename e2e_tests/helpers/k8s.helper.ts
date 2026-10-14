@@ -1,5 +1,6 @@
 import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
+import { Timeouts } from '@helpers/timeouts';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +11,10 @@ import {
   KubernetesPodResource,
   KubernetesResourceList,
 } from '@interfaces/kubernetes';
+
+// A `kubectl exec` into a pod being deleted can stall for good, and the call is
+// synchronous: it would block the whole worker, Playwright's own timeouts included.
+const kubectlTimeout = Timeouts.TWO_MINUTES;
 
 interface ExecInPodOptions {
   container?: string;
@@ -63,7 +68,7 @@ export default class K8sHelper {
 
   /** @param args everything that follows `kubectl --namespace <namespace>` */
   exec = (args: string): ExecReturn =>
-    this.cliHelper.execute(`kubectl --namespace ${this.namespace} ${args}`);
+    this.cliHelper.execute(`kubectl --namespace ${this.namespace} ${args}`, kubectlTimeout);
 
   execInPod = (podName: string, command: string, options: ExecInPodOptions = {}): ExecReturn => {
     const container = options.container ? `--container=${options.container} ` : '';
@@ -74,7 +79,7 @@ export default class K8sHelper {
 
   /** {@link exec} without logging - for reads whose output would flood the report. */
   execSilent = (args: string): ExecReturn =>
-    this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`);
+    this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`, kubectlTimeout);
 
   getJobState = (name: string): KubernetesJobState => {
     const job = JSON.parse(
