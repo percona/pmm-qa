@@ -31,7 +31,7 @@
     fail_msg: >-
       docker/database-versions sets Percona Distribution for PostgreSQL {{ pg_version }} for this OS, but the
       package query reports "{{ pg_package_version.stdout or pg_package_version.stderr | default('nothing') }}".
-      Rebuild the image (build_images).
+      Rebuild the image (build-package-test-images.yml).
     success_msg: "Percona Distribution for PostgreSQL {{ pg_version }}: {{ pg_package_version.stdout }}"
 
 - name: Initialize Postgres RHEL

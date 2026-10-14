@@ -1,5 +1,5 @@
 # Called from another workflow, the calling job must grant contents: read and
-# packages: write. From another repository, pass pmm_qa_ref.
+# packages: read. From another repository, pass pmm_qa_ref.
 name: PMM package tests matrix
 
 on:
@@ -43,9 +43,10 @@ on:
         default: dev-latest
         options: [dev-latest, release candidate, release]
       pmm_version:
-        description: 'Version the playbook asserts; it must match what install_repo
-          ships. Empty reads it from pmm-submodules v3 (dev-latest) or the newest
-          percona/pmm-client tag (release). release candidate has no source: set it.'
+        description: 'Version the playbook asserts, or a pmm-server tag that names it
+          (3.9.1-rc); it must match what install_repo ships. Empty, or a tag naming no
+          version (3-dev-latest), reads it from pmm-submodules v3 (dev-latest) or the
+          newest percona/pmm-client tag (release). release candidate has no source: set it.'
         default: ''
       metrics_mode:
         description: 'Metrics mode (Jenkins METRICS_MODE)'
@@ -69,11 +70,6 @@ on:
         type: choice
         default: '2'
         options: ['1', '2', '3']
-      build_images:
-        description: 'Rebuild and republish the client images (package_tests:<os>)
-          from this ref before testing.'
-        type: boolean
-        default: false
   # The workflow_dispatch inputs again, with their defaults. There are no choice
   # lists here: os, arch, test, install_repo and metrics_mode take the values of
   # the options above.
@@ -112,9 +108,6 @@ on:
       attempts:
         type: number
         default: 2
-      build_images:
-        type: boolean
-        default: false
       pmm_qa_ref:
         description: 'pmm-qa branch, tag or commit to test. Empty means the
           caller''s own commit when it is in pmm-qa, and main when it is not.'
@@ -154,7 +147,7 @@ env:
 
 jobs:
   prepare:
-    name: resolve inputs
+    name: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -219,6 +212,12 @@ jobs:
         env:
           VERSION: ${{ inputs.pmm_version }}
         run: |
+          # A pmm-server tag works too: 3.9.1-rc asserts 3.9.1, and 3-dev-latest,
+          # naming no version, counts as empty.
+          case "$VERSION" in
+            3.*) VERSION=${VERSION%%-*} ;;
+            *[!0-9.]*) VERSION='' ;;
+          esac
           if [ -z "$VERSION" ]; then
             case "$INSTALL_REPO" in
               dev-latest)
@@ -237,48 +236,9 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Record what this run is testing
-        env:
-          RESOLVED: ${{ steps.server.outputs.image }}
-          CHANNEL: ${{ steps.repo.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
-          REF: ${{ env.PMM_QA_REF || github.ref_name }}
-          QA_SHA: ${{ steps.qa.outputs.sha }}
-          BUILD: ${{ inputs.build_images || false }}
-          ARCHES: ${{ inputs.arch || 'amd64' }}
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
-          ## PMM package tests matrix
-
-          | setting | value |
-          |---|---|
-          | pmm-server | \`${SERVER_IMAGE}\` |
-          | resolved | \`${RESOLVED}\` |
-          | install_repo | \`${INSTALL_REPO}\` (\`${CHANNEL}\`) |
-          | pmm_version | \`${VERSION}\` |
-          | metrics_mode | \`${METRICS_MODE}\` |
-          | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
-          | tarball (arm64) | \`${TARBALL_ARM64:-none}\` |
-          | pmm-qa | \`${PMM_QA_REPO}@${REF}\` (\`${QA_SHA}\`) |
-          | arch | \`${ARCHES}\` |
-          | build_images | \`${BUILD}\` |
-          EOF
-
-  images:
-    name: build images
-    needs: prepare
-    if: inputs.build_images
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/build-package-test-images.yml
-
   test:
     name: ${{ matrix.os }}-${{ matrix.arch }} / ${{ matrix.test }}
-    needs: [prepare, images]
-    # Runs whether images succeeded, failed or was skipped. An OS whose image did
-    # not build is tested on its previous image.
-    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    needs: prepare
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     # Up to three attempts, each held to the Jenkins job's 90 minutes.
     timeout-minutes: 300
@@ -369,28 +329,8 @@ jobs:
           PMM_VERSION: ${{ needs.prepare.outputs.pmm_version }}
         run: bash pmm-qa/.github/scripts/package-test-cell.sh
 
-      - name: Record the result
-        if: always()
-        env:
-          RESULT: ${{ job.status }}
-        run: |
-          attempts=$(cat attempts.txt 2>/dev/null || echo 1)
-          echo "${{ matrix.os }}-${{ matrix.arch }}|${{ matrix.test }}|${RESULT}|${attempts}" \
-            > "result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt"
-
-      # overwrite: a re-run of a failed cell replaces its first attempt's result,
-      # which upload-artifact otherwise refuses to do, failing the re-run.
-      - name: Upload the result
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}
-          path: result-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}.txt
-          retention-days: 7
-          overwrite: true
-
       - name: Upload logs from failed attempts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: logs-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.test }}
@@ -398,7 +338,7 @@ jobs:
             ansible-*.log
             diagnostics-*.log
             pmm-summary-*.zip
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: ignore
           overwrite: true
 
@@ -418,84 +358,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        # If every cell died before reporting there is nothing to download; let the
-        # next step say so rather than failing here.
-        continue-on-error: true
-        with:
-          pattern: result-*
-          merge-multiple: true
-          path: results
-
-      - name: Render the results grid
+      - name: Record what this run tested
         env:
-          TEST_RESULT: ${{ needs.test.result }}
+          RESOLVED: ${{ needs.prepare.outputs.server_image }}
+          CHANNEL: ${{ needs.prepare.outputs.install_repo }}
+          VERSION: ${{ needs.prepare.outputs.pmm_version }}
+          REF: ${{ env.PMM_QA_REF || github.ref_name }}
+          QA_SHA: ${{ needs.prepare.outputs.pmm_qa_sha }}
+          ARCHES: ${{ inputs.arch || 'amd64' }}
         run: |
-          declare -A result tries
-          for f in results/*.txt; do
-            [ -e "$f" ] || continue
-            IFS='|' read -r os test status attempts < "$f"
-            result["$os/$test"]=$status
-            tries["$os/$test"]=${attempts:-1}
-          done
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## PMM package tests matrix
 
-          if [ ${#result[@]} -eq 0 ]; then
-            echo 'No results were produced -- no cell got as far as reporting.' \
-              | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-          # Rows and columns come from what actually ran, so a filtered run gets a
-          # small table and there is no OS or playbook list to keep in sync here.
-          # -V keeps ol8 before ol10; the playbook names already sort correctly.
-          oses=$(printf '%s\n' "${!result[@]}" | cut -d/ -f1 | sort -uV)
-          tests=$(printf '%s\n' "${!result[@]}" | cut -d/ -f2 | sort -u)
-
-          header="| OS-arch |"; divider="|---|"
-          for t in $tests; do
-            header+=" ${t#pmm3-client_} |"
-            divider+="---|"
-          done
-
-          # A pass that took a retry is marked, so flakiness stays visible.
-          passed=0; retried=0; failed=0; missing=0; body=""
-          for os in $oses; do
-            row="| \`$os\` |"
-            for t in $tests; do
-              case "${result[$os/$t]:-}" in
-                success)
-                  passed=$((passed + 1))
-                  if [ "${tries[$os/$t]}" -gt 1 ]; then
-                    row+=" 🔁 |"; retried=$((retried + 1))
-                  else
-                    row+=" ✅ |"
-                  fi ;;
-                failure) row+=" ❌ |"; failed=$((failed + 1)) ;;
-                *)       row+=" · |";  missing=$((missing + 1)) ;;
-              esac
-            done
-            body+="$row"$'\n'
-          done
-
-          retry_note=''; note=''
-          if [ "$retried" -gt 0 ]; then retry_note=" (${retried} on a retry, marked 🔁)"; fi
-          if [ "$missing" -gt 0 ]; then note=", ${missing} not run"; fi
-
-          {
-            echo
-            echo '### Results'
-            echo
-            echo "$header"
-            echo "$divider"
-            printf '%s' "$body"
-            echo
-            echo "**${passed} passed${retry_note}, ${failed} failed${note}**"
-            if [ "$failed" -gt 0 ] || [ "$retried" -gt 0 ]; then
-              echo
-              # shellcheck disable=SC2016  # backticks are markdown, not a subshell
-              echo 'Each failed attempt attaches its logs to a `logs-<os>-<arch>-<test>` artifact.'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # A cell that died before uploading its result is in neither count.
-          [ "$failed" -eq 0 ] && [ "$TEST_RESULT" = success ]
+          | setting | value |
+          |---|---|
+          | pmm-server | \`${SERVER_IMAGE}\` |
+          | install_repo | \`${INSTALL_REPO}\` (\`${CHANNEL}\`) |
+          | pmm_version | \`${VERSION}\` |
+          | tarball (amd64) | \`${TARBALL_AMD64:-none}\` |
+          | tarball (arm64) | \`${TARBALL_ARM64:-none}\` |
+          | arch | \`${ARCHES}\` |
+          EOF

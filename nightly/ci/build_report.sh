@@ -51,9 +51,7 @@ jq -n \
     then ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) else null end;
   # Report groups: the unit the page summarises and the Investigate button covers.
   def jenkins_group:
-    if   startswith("pkg amd64 / ") then "Package AMD"
-    elif startswith("pkg arm64 / ") then "Package ARM"
-    elif startswith("upgrade / ami ") then "Upgrade AMI"
+    if   startswith("upgrade / ami ") then "Upgrade AMI"
     elif . == "nightly / gssapi" or . == "ha" or . == "openshift" then "HA, OpenShift & GSSAPI"
     elif startswith("nightly / ") then "Nightly"
     elif startswith("compat / ") then "Nightly Compatibility"

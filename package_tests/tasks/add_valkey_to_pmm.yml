@@ -26,7 +26,7 @@
     fail_msg: >-
       docker/database-versions sets Valkey {{ valkey_version }} for this OS, but the package query reports
       "{{ valkey_package_version.stdout or valkey_package_version.stderr | default('nothing') }}".
-      Rebuild the image (build_images).
+      Rebuild the image (build-package-test-images.yml).
     success_msg: "Valkey {{ valkey_version }}: {{ valkey_package_version.stdout }}"
 
 # percona-valkey runs as valkey@default; Valkey 8 from the plain valkey
