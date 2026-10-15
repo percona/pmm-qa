@@ -295,7 +295,6 @@ export default class Dashboards extends BasePage {
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
-      // A panel that rendered "No data" does not re-query on its own.
       await this.page.reload();
       await this.loadAllPanels();
     }
@@ -460,6 +459,28 @@ export default class Dashboards extends BasePage {
       await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
       await expectPanel(this.elements.loadingText).toHaveCount(0);
     });
+  };
+
+  waitForNoDataPanelsAtMost = async (
+    url: string,
+    maxNoDataPanels: number,
+    timeout = Timeouts.FIVE_MINUTES,
+  ) => {
+    await expect
+      .poll(
+        async () => {
+          await this.page.goto(url);
+          await this.loadAllPanels();
+
+          return this.elements.noDataPanelName.count();
+        },
+        {
+          intervals: [Timeouts.TEN_SECONDS],
+          message: `${url} should show at most ${maxNoDataPanels} panels without data`,
+          timeout,
+        },
+      )
+      .toBeLessThanOrEqual(maxNoDataPanels);
   };
 
   private changeRow = async (locator: Locator, error: string) => {

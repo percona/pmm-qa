@@ -170,7 +170,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.filters.click();
   };
 
-  // The live table re-renders every refresh and can drop a Show/Hide filters click, so re-check and retry.
   openFiltersIfHidden = async () => {
     await expect(async () => {
       if (!(await this.inputs.filterByQueryText.isVisible())) {

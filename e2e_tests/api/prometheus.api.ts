@@ -78,10 +78,6 @@ export default class PrometheusApi {
     return samples.length > 0 ? Number(samples[0].value[1]) : undefined;
   };
 
-  /**
-   * First sample of `query` from PMM's own `/prometheus` route on `baseUrl`, or 0 when the server is down
-   * or nothing matched. For polling a single-node server that may be offline; on HA use `instantQueryValue`.
-   */
   queryValueOrZero = async (
     baseUrl: string,
     query: string,
@@ -100,6 +96,20 @@ export default class PrometheusApi {
     return response?.ok()
       ? Number((await response.json().catch(() => ({}))).data?.result?.[0]?.value[1] ?? 0)
       : 0;
+  };
+
+  waitForQueryValue = async (
+    baseUrl: string,
+    query: string,
+    {
+      message,
+      timeout = Timeouts.TWO_MINUTES,
+      ...options
+    }: { headers?: Record<string, string>; message: string; time?: number; timeout?: Timeouts },
+  ) => {
+    await expect
+      .poll(() => this.queryValueOrZero(baseUrl, query, options), { message, timeout })
+      .toBeGreaterThan(0);
   };
 
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
