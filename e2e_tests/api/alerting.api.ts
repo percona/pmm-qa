@@ -6,6 +6,7 @@ import {
   AlertRule,
   AlertRulesResponse,
   AlertSeverity,
+  ProvisionedAlertRule,
   RulerRulesResponse,
   TemplatedAlertRule,
 } from '@interfaces/alerting';
@@ -111,6 +112,16 @@ export default class AlertingApi {
     }
 
     return folder;
+  };
+
+  getProvisionedRule = async (uid: string): Promise<ProvisionedAlertRule> => {
+    const response = await this.request.get(`${apiEndpoints.grafana.provisioningAlertRules}/${uid}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()) as ProvisionedAlertRule;
   };
 
   getRule = async (name: string): Promise<AlertRule | undefined> =>
