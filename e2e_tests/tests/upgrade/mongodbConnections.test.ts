@@ -16,7 +16,7 @@ const connectionsByService = async (
     ]),
   );
 // Steady state drifts by a few connections per node; a leak keeps growing past this.
-const allowedConnections = (before: number) => before + Math.max(10, Math.ceil(before * 0.2));
+const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
 
 pmmTest.describe('MongoDB connections after upgrade', () => {
   pmmTest('Save MongoDB connections before upgrade @pre-upgrade', async ({ api, testState }) => {
@@ -37,6 +37,15 @@ pmmTest.describe('MongoDB connections after upgrade', () => {
 
       await expect(async () => {
         const after = await connectionsByService(api.prometheusApi, currentConnections);
+
+        console.log(Object.entries(before));
+        console.log(after);
+        console.log(
+          Object.entries(before).map(
+            ([service, count]) => `${service}: ${count} -> ${after[service]}  (${allowedConnections(count)})`,
+          ),
+        );
+
         const increased = Object.entries(before)
           .filter(([service, count]) => (after[service] ?? 0) > allowedConnections(count))
           .map(([service, count]) => `${service}: ${count} -> ${after[service]}`);
