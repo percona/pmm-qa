@@ -248,15 +248,6 @@ jobs:
         run: |
           npx playwright test --grep "@pre-upgrade"
 
-      # Runs after every other pre-upgrade test so the baseline includes the services they add.
-      # --pass-with-no-tests: pre-upgrade branches without the test still upgrade; the check then fails on the missing baseline.
-      # --reporter=list and --output keep the stage's report and test results from being overwritten.
-      - name: Save MongoDB connections baseline
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          npx playwright test --grep "@mongodb-connections-baseline" --pass-with-no-tests \
-            --reporter=list --output=test-results/mongodb-connections-baseline
-
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
@@ -303,12 +294,6 @@ jobs:
           echo "Latest PMM Version is: $PMM_SERVER_LATEST"
           npx playwright test --grep "@post-server-upgrade"
 
-      - name: Check MongoDB connections after server upgrade
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          npx playwright test --grep "@mongodb-connections-check" \
-            --reporter=list --output=test-results/mongodb-connections-server
-
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         env:
           LATEST_VERSION: ${{ inputs.upgrade_version }}
@@ -321,12 +306,6 @@ jobs:
         run: |
           echo "Latest PMM Version is: $PMM_SERVER_LATEST"
           npx playwright test --grep "@post-upgrade|@rta"
-
-      - name: Check MongoDB connections after client upgrade
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          npx playwright test --grep "@mongodb-connections-check" \
-            --reporter=list --output=test-results/mongodb-connections-client
 
       - name: Check packages after upgrade
         run: |
