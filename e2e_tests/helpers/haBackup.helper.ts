@@ -61,6 +61,9 @@ export default class HaBackupHelper {
     return result.stdout.trim();
   };
 
+  cronJobName = (): string =>
+    single(this.k8sHelper.getNames('cronjob', backupCronJobSelector), 'backup CronJob');
+
   /** Bypasses vmauth and the PMM scrape path, so the samples come from nothing under test. */
   importMetric = (podName: string, sample: string): void => {
     const service = single(this.k8sHelper.getNames('service', vmInsertSelector), 'vminsert Service');
@@ -145,9 +148,6 @@ export default class HaBackupHelper {
       `Job "${name}" failed:\n${this.k8sHelper.execSilent(`logs job/${name} --tail=80`).stdout}`,
     ).toEqual('Complete');
   };
-
-  private cronJobName = (): string =>
-    single(this.k8sHelper.getNames('cronjob', backupCronJobSelector), 'backup CronJob');
 }
 
 /** One marker per phase in every store a restore rewinds, so `found()` shows which phases came back. */
@@ -200,6 +200,8 @@ export class RestoreMarkers {
 
   name = (phase: string): string => `pmm-e2e-${phase}-backup-${this.run}`;
 
+  present = (found: string[]): string[] => this.phases.filter((phase) => found.includes(this.name(phase)));
+
   remove = async (): Promise<void> => {
     for (const folder of await this.api.grafanaApi.getFolders()) {
       if (this.present([folder.title]).length) await this.api.grafanaApi.deleteFolder(folder.uid);
@@ -229,7 +231,4 @@ export class RestoreMarkers {
       .poll(async () => (await this.found()).victoriametrics, { timeout: Timeouts.TWO_MINUTES })
       .toContain(phase);
   };
-
-  private present = (found: string[]): string[] =>
-    this.phases.filter((phase) => found.includes(this.name(phase)));
 }
