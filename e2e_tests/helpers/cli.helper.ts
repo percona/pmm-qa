@@ -1,5 +1,7 @@
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 interface getMetrics {
   serviceName: string;
@@ -129,5 +131,23 @@ export default class CliHelper {
     const removal = this.execSilent(`docker rm -f ${containerName}`);
 
     if (!removal.stderr.includes('No such container')) removal.assertSuccess();
+  };
+
+  verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
+    const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
+
+    expect(containers, 'No pmm-client containers to check').not.toHaveLength(0);
+
+    await expect(() => {
+      for (const container of containers) {
+        for (const command of ['status', 'list']) {
+          const output = this.execSilent(`docker exec ${container} pmm-admin ${command}`).stdout;
+
+          expect(output, `pmm-admin ${command} in ${container} has a bad agent status`).not.toMatch(
+            badStatus,
+          );
+        }
+      }
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 }

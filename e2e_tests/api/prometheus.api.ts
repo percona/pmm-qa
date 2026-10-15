@@ -81,6 +81,40 @@ export default class PrometheusApi {
     return samples.length > 0 ? Number(samples[0].value[1]) : undefined;
   };
 
+  queryValueOrZero = async (
+    baseUrl: string,
+    query: string,
+    {
+      headers = GrafanaHelper.getAuthHeader(),
+      time,
+    }: { headers?: Record<string, string>; time?: number } = {},
+  ): Promise<number> => {
+    const response = await this.request
+      .get(new URL(apiEndpoints.prometheus.query, baseUrl).href, {
+        headers,
+        params: time ? { query, time: String(time) } : { query },
+      })
+      .catch(() => undefined);
+
+    return response?.ok()
+      ? Number((await response.json().catch(() => ({}))).data?.result?.[0]?.value[1] ?? 0)
+      : 0;
+  };
+
+  waitForQueryValue = async (
+    baseUrl: string,
+    query: string,
+    {
+      message,
+      timeout = Timeouts.TWO_MINUTES,
+      ...options
+    }: { headers?: Record<string, string>; message: string; time?: number; timeout?: Timeouts },
+  ) => {
+    await expect
+      .poll(() => this.queryValueOrZero(baseUrl, query, options), { message, timeout })
+      .toBeGreaterThan(0);
+  };
+
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
   waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
     let serverTime = 0;
