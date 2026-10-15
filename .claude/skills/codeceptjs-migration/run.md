@@ -123,7 +123,7 @@ Subject stability, `kind: branch` only: measure HEAD before any review work and 
 
 ## 7. Publish
 
-Only after `FINAL_REVIEW_PASS`, the runner:
+Only after `FINAL_REVIEW_PASS`, the runner (the parent, in an unattended run, per `orchestration.md` Parent rules):
 
 1. revalidates the publish worktree (`branch-workflow.md` Revalidate, every time; the migration scripts are control-only and invoked by absolute path);
 2. pushes, opens the PR against `main`, and attaches the exact Actions job (`branch-workflow.md` Push and open the PR, Attach CI execution);
