@@ -3264,22 +3264,20 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-15T03:25:11Z",
       "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-15T03:25:11Z",
-      "suites": [
+        "CLI Integration",
         "CLI Integration Compatibility"
-      ]
-    },
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T526 waits only 45s for 'unhealthy', but PMM-15361 raised the server HEALTHCHECK start period to 90s; fix raises the wait.",
+      "link": "https://github.com/percona/pmm-qa/pull/1614",
+      "by": "Investigator routine",
+      "at": "2026-10-15T03:56:52Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-15T03:25:11Z",
