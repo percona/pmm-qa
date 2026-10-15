@@ -155,9 +155,7 @@ pmmTest.describe(() => {
   );
 });
 
-// skip-until: 2026-10-20 -- pmm-admin says "check PMM Server logs" for a disabled service account (PMM-15692); decide bug vs test fix.
-// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15692, see the skip-until line above.
-pmmTest.skip(
+pmmTest(
   'PMM-T1884 - Verify disabling service account @service-account',
   async ({ cliHelper, page, serviceAccountsPage }) => {
     const expectedDisabledMessage =
@@ -180,7 +178,8 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(containerListCommand).code, {
         message: `"${containerListCommand}" should exit with an error while the service account is disabled`,
-        timeout: Timeouts.TEN_SECONDS,
+        // pmm-managed caches a token's auth result for up to a minute.
+        timeout: Timeouts.TWO_MINUTES,
       })
       .not.toBe(0);
 
@@ -205,7 +204,7 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(hostListCommand).code, {
         message: `"${hostListCommand}" should exit with 0 once the service account is enabled again`,
-        timeout: Timeouts.TEN_SECONDS,
+        timeout: Timeouts.ONE_MINUTE,
       })
       .toBe(0);
 
