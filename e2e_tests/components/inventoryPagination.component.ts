@@ -56,6 +56,7 @@ export default class InventoryPagination {
 
     await this.selectRowsPerPage('100');
     await expect(this.rowsPerPageDropdown).toHaveText('100', { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.itemsInterval, 'Every row should fit on one page of 100').toHaveText(/^1-(\d+) of \1$/);
   };
 
   verifyPaginationFunctionality = async () => {
