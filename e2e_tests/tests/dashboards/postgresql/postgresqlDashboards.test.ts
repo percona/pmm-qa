@@ -67,7 +67,7 @@ pmmTest(
   async ({ api, dashboard, page, urlHelper }) => {
     const services = [
       await api.inventoryApi.getServiceDetailsByPartialName('pdpgsql_'),
-      await api.inventoryApi.getServiceDetailsByPartialName('pgsql_'),
+      await api.inventoryApi.getServiceDetailsByRegex('^pgsql_'),
     ];
 
     if (!(await api.haApi.isEnabled())) {
@@ -119,7 +119,7 @@ pmmTest(
         to: 'now',
       }),
     );
-    await dashboard.verifyMetricsPresent(overviewExtended.metrics, undefined, true);
+    await dashboard.verifyMetricsPresent(overviewExtended.metrics);
     await dashboard.verifyAllPanelsHaveData(overviewExtended.noDataMetrics);
   },
 );
@@ -130,7 +130,7 @@ pmmTest(
     const replication = dashboard.postgresql.postgresqlReplicationOverview;
 
     await page.goto(urlHelper.buildUrlWithParameters(replication.url, { from: 'now-1h', to: 'now' }));
-    await dashboard.verifyMetricsPresent(replication.metrics, undefined, true);
+    await dashboard.verifyMetricsPresent(replication.metrics);
     await dashboard.verifyAllPanelsHaveData(replication.noDataMetrics);
   },
 );
