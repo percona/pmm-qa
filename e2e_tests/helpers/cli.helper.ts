@@ -128,6 +128,8 @@ export default class CliHelper {
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
 
+    expect(containers, 'No pmm-client containers to check').not.toHaveLength(0);
+
     await expect(() => {
       for (const container of containers) {
         for (const command of ['status', 'list']) {

@@ -285,13 +285,14 @@ export default class Dashboards extends BasePage {
 
     const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
     let missingMetrics: string[];
+    const deadline = Date.now() + timeout;
 
-    for (let i = 0; ; i += Timeouts.THIRTY_SECONDS) {
+    for (;;) {
       const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
 
       missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
-      if (missingMetrics.length == 0 || i >= timeout) break;
+      if (missingMetrics.length == 0 || Date.now() >= deadline) break;
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
