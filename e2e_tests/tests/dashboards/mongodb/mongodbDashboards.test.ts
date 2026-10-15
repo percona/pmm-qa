@@ -1,26 +1,5 @@
-import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
-import PrometheusApi from '@api/prometheus.api';
 import { GetService } from '@interfaces/inventory';
-import { Timeouts } from '@helpers/timeouts';
-
-// Router and ReplSet Summary stat panels query at a fixed 5m step, so a series shows
-// "No data" until it has a sample before the last 5-minute boundary.
-const waitForFiveMinuteStep = async (prometheusApi: PrometheusApi, selector: string) => {
-  await expect
-    .poll(
-      () =>
-        prometheusApi.instantQueryValue(
-          `min(count_over_time(${selector}[1m] offset ${Math.floor(Date.now() / 1_000) % 300}s))`,
-        ),
-      {
-        intervals: [Timeouts.THIRTY_SECONDS],
-        message: `${selector} has no sample before the last 5-minute boundary`,
-        timeout: Timeouts.TEN_MINUTES,
-      },
-    )
-    .toBeGreaterThan(0);
-};
 
 pmmTest.describe('PMM tests for mongodb dashboards', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -30,7 +9,9 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   pmmTest(
     'PMM-T1932 - Verify MongoDB Router Summary @pmm-psmdb-sharding-integration @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
-      await waitForFiveMinuteStep(api.prometheusApi, 'mongodb_ss_uptime{node_name=~"mongos.*"}');
+      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary(
+        'mongodb_ss_uptime{node_name=~"mongos.*"}',
+      );
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
           from: 'now-1h',
@@ -78,7 +59,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       const services: GetService[] =
         await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+');
 
-      await waitForFiveMinuteStep(api.prometheusApi, 'mongodb_mongod_replset_my_state');
+      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary('mongodb_mongod_replset_my_state');
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
           cluster: 'sharded',
