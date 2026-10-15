@@ -314,7 +314,6 @@ publish_pr() {
   [[ -n ${job:-} ]] || die "no job found for the dispatched run"
   sed -i -E "s#^\*\*Run:\*\*.*#**Run:** $job#" "$body"
   gh pr edit "$pr" --repo "$repo" --body-file "$body" >/dev/null
-  gh pr comment "$pr" --repo "$repo" --body "GitHub Actions: $job" >/dev/null
   echo "PR https://github.com/$repo/pull/$pr"
   echo "job $job"
 }

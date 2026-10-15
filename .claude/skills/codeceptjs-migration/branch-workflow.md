@@ -241,7 +241,7 @@ gh workflow run <workflow.yml> --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branc
 RUN_ID=$(gh run list --repo percona/pmm-qa --workflow <workflow.yml> --branch "$BR" --event workflow_dispatch --limit 1 --json databaseId -q '.[0].databaseId')
 ```
 
-4. Put `$JOB_URL` on the body's `Run:` line and post it: `gh pr comment "$PR_NUM" --body "GitHub Actions: $JOB_URL (<job name>)"`.
+4. Put `$JOB_URL` on the body's `Run:` line. The body is the only place for it: no PR comment repeating the link.
 
 A job still running is linked as it is; do not wait for CI before marking `done`. A cancelled job, one whose expression selects none of the migrated titles, or one that ran none of them is not a link: an empty Launchable subset skips setup and tests and still ends green. Once the job finishes, count its passing lines for the target file before relying on it:
 
@@ -255,7 +255,7 @@ Every migrated title needs a linked job that ran it. When no job the push starte
 gh workflow run runner-e2e-tests-playwright.yml --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR" -f pmm_test_flag='<tag>' -f setup_services='<--database ...>' -f pmm_server_version='perconalab/pmm-server:3-dev-latest' -f pmm_client_version='latest-tarball'
 ```
 
-A later push cancels the jobs of the run it supersedes: after every push, re-take each linked job from the new head's run and update the `Run:` line. When no `e2e-tests-matrix.yml` job the push started runs the migrated titles, re-dispatch the runner above on the new head after every push, review fixes included, then update the `Run:` line and post the job link.
+A later push cancels the jobs of the run it supersedes: after every push, re-take each linked job from the new head's run and update the `Run:` line. When no `e2e-tests-matrix.yml` job the push started runs the migrated titles, re-dispatch the runner above on the new head after every push, review fixes included, then update the `Run:` line.
 
 ## Tracker completion and cleanup
 

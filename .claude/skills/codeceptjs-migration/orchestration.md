@@ -15,7 +15,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 | 5b publish worktree, move the work, `npm ci` | `migration.sh publish-branch <branch>` |
 | 5b and 6 selectability of every workflow expression, base vs branch, and nightly shard counts | `migration.sh selection [extra-grep]...` |
 | 7 revalidation, and whether the tested copy is unchanged | `migration.sh revalidate <file>...` |
-| 7 push, PR, runner dispatch, `Run:` line and comment | `migration.sh publish <title> <body> <flag> <setup>` |
+| 7 push, PR, runner dispatch, `Run:` line | `migration.sh publish <title> <body> <flag> <setup>` |
 | 7 tracker `done` | `migration.sh mark <row> done <pr-url>` |
 
 ## Parent rules
