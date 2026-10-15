@@ -273,5 +273,6 @@ git -C <control-worktree> status --short        # must be empty
 
 3. Do not merge the publish branch into control; the next `main` merge delivers it.
 4. Once the PR exists and `git rev-list --count HEAD ^origin/<branch>` prints 0, `git worktree remove ../pmm-qa-publish`. Review comments are fixed with `git switch <branch>` in control's own checkout, never in a new worktree; if `git status --short` is not empty first, stop and hand the uncommitted changes to the user for review, never stash, discard or carry them. If Windows reports `Permission denied`, retry later.
+5. Last, with control pushed and `git status --short` empty, `git switch <publish-branch>` in control's checkout so the app's PR panel shows the PR. The next run switches back to control before anything else.
 
 If the PR opened but the tracker update failed, report publication as incomplete.

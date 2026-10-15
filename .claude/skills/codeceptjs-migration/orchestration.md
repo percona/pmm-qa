@@ -2,7 +2,7 @@
 
 The parent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Workers read `run.md`, not this file.
 
-Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout is never switched away from, publication uses an isolated `git worktree`. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
+Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one local Docker PMM environment from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout stays on control for the whole row, publication uses an isolated `git worktree`; only after cleanup is it switched to the publish branch so the app's PR panel shows the PR (`branch-workflow.md` Tracker completion and cleanup). The skill and scripts exist only on control, so a run starts with `git switch CodeceptJS-migration` on a clean tree. Run `.claude/scripts/*.sh` under Git Bash or WSL, keep them LF-only, and `bash -n` them after editing.
 
 `.claude/scripts/migration.sh` does the mechanical steps; the sections below say what each one checks and what stays judgement:
 
@@ -27,6 +27,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Only the parent spawns review gates. A worker that spawns a subagent and waits on it deadlocks: the runner returns its evidence and stops, the parent spawns the reviewer.
 - Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `local-pmm.sh down` runs there. Then stop and hand the user the exact command; never reword it to get past the classifier.
 - Unattended, the parent runs step 7's `migration.sh publish` itself after `FINAL_REVIEW_PASS`; the runner returns once the publish branch is committed. Never re-run a command a subagent was refused: stop and report it.
+- Link every migration PR to the session. Attended, call `mcp__ccd_pr__bind_pr` (load it through `ToolSearch`); a scheduled session refuses it, and the cleanup switch to the publish branch links it instead. The report puts the PR URL first either way.
 - Each subagent appends its row to the timeline before returning. `.claude/hooks/migration-phase-observe.sh` fires at subagent launch, not completion, so treat it as a reminder; batch `skill-gardener` capture passes to the end of the migration while any subagent is live. Do not rely on the `PostToolUse`/`Skill` hook, which fires as soon as an inline skill loads.
 
 **Gates**
