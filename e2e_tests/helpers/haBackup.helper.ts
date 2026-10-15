@@ -77,6 +77,10 @@ export default class HaBackupHelper {
       .assertSuccess();
   };
 
+  /** Every pod's, retries included; empty when the Job does not exist. */
+  jobLogs = (name: string): string =>
+    this.k8sHelper.execSilent(`logs --selector=job-name=${name} --all-containers --prefix --tail=-1`).stdout;
+
   latestBackup = (): BackupListEntry => {
     const latest = this.listBackups().find((backup) => backup.latest);
 

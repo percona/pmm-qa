@@ -17,7 +17,14 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await haClusterHelper.ensureServing(api.haApi);
 });
 
-pmmTest.afterEach(async ({ api, haClusterHelper, k8sHelper }) => {
+pmmTest.afterEach(async ({ api, haBackupHelper, haClusterHelper, k8sHelper }, testInfo) => {
+  // The Jobs take their pods' logs with them when deleted.
+  for (const job of [backupJob, restoreJob]) {
+    const logs = haBackupHelper.jobLogs(job);
+
+    if (logs) await testInfo.attach(`${job}.log`, { body: logs, contentType: 'text/plain' });
+  }
+
   k8sHelper.exec(`delete job ${backupJob} ${restoreJob} --ignore-not-found`);
   await haClusterHelper.ensureServing(api.haApi);
   await markers?.remove();
