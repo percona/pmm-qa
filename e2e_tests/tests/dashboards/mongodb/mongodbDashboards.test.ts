@@ -7,7 +7,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   });
 
   pmmTest(
-    'Verify MongoDB Router Summary @pmm-psmdb-sharding-integration @post-upgrade',
+    'PMM-T1932 - Verify MongoDB Router Summary @pmm-psmdb-sharding-integration @post-upgrade',
     async ({ dashboard, page, urlHelper }) => {
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
@@ -25,7 +25,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   // skip-until: 2026-10-23 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
   // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15714, see the skip-until line above.
   pmmTest.skip(
-    'Verify MongoDB Sharded Cluster Summary @pmm-psmdb-sharding-integration @post-upgrade',
+    'PMM-T2012 - Verify MongoDB Sharded Cluster Summary @pmm-psmdb-sharding-integration @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
@@ -51,7 +51,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   );
 
   pmmTest(
-    'Verify MongoDB ReplSet Summary @pmm-psmdb-sharding-integration @post-upgrade',
+    'PMM-T2385 - Verify MongoDB ReplSet Summary @pmm-psmdb-sharding-integration @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const services: GetService[] =
         await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+');
