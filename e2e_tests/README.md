@@ -108,6 +108,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
 - `@inventory`

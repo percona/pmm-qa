@@ -406,11 +406,14 @@ wait_for_pods_ready() {
     retry kubectl wait --for=condition=ready pod -l "$selector" -n "$NAMESPACE" --timeout="$TIMEOUT"
 }
 
-# Copies a secret from --pmm-secret-from; fails only on a different copy already here.
+# Copies a secret from --pmm-secret-from, returning 1 if the source has none. A source that
+# cannot be read fails rather than passing for a missing one, which would get fresh keys.
 copy_source_secret() {
     local name="$1" source
 
-    source="$(kubectl get secret "$name" -n "$PMM_SECRET_FROM" -o json 2>/dev/null)" || return 1
+    source="$(kubectl get secret "$name" -n "$PMM_SECRET_FROM" --ignore-not-found -o json)" \
+        || fail "could not read $name from namespace $PMM_SECRET_FROM."
+    [ -n "$source" ] || return 1
 
     if kubectl get secret "$name" -n "$NAMESPACE" >/dev/null 2>&1; then
         [ "$(kubectl get secret "$name" -n "$NAMESPACE" -o json | jq -S -c '.data')" = "$(echo "$source" | jq -S -c '.data')" ] \
