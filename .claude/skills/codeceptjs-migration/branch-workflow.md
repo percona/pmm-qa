@@ -255,7 +255,7 @@ Every migrated title needs a linked job that ran it. When no job the push starte
 gh workflow run runner-e2e-tests-playwright.yml --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR" -f pmm_test_flag='<tag>' -f setup_services='<--database ...>' -f pmm_server_version='perconalab/pmm-server:3-dev-latest' -f pmm_client_version='latest-tarball'
 ```
 
-A later push cancels the jobs of the run it supersedes: after every push, re-take each linked job from the new head's run and update the `Run:` line. When the push changes nothing the tests check (a message, a comment) and the new job ran none of them, keep the earlier job that did.
+A later push cancels the jobs of the run it supersedes: after every push, re-take each linked job from the new head's run and update the `Run:` line. When no `e2e-tests-matrix.yml` job the push started runs the migrated titles, re-dispatch the runner above on the new head after every push, review fixes included, then update the `Run:` line and post the job link.
 
 ## Tracker completion and cleanup
 
