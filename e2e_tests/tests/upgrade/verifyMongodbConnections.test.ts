@@ -11,7 +11,9 @@ const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
 // so the baseline and the check see the services every other upgrade test adds.
 pmmTest.describe('MongoDB connections after upgrade', () => {
   pmmTest('Save MongoDB connections before upgrade @pre-upgrade', async ({ api, testState }) => {
-    const before = await api.prometheusApi.maxByService(`max_over_time(${currentConnections}[5m])`);
+    const before = await api.prometheusApi.getHighestValuePerService(
+      `max_over_time(${currentConnections}[5m])`,
+    );
 
     expect(
       Object.keys(before).length,
@@ -27,7 +29,7 @@ pmmTest.describe('MongoDB connections after upgrade', () => {
       const before = JSON.parse(testState.get(stateKey)) as Record<string, number>;
 
       await expect(async () => {
-        const after = await api.prometheusApi.maxByService(currentConnections);
+        const after = await api.prometheusApi.getHighestValuePerService(currentConnections);
 
         console.log(Object.entries(before));
         console.log(after);

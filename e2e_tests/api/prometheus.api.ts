@@ -45,6 +45,15 @@ export default class PrometheusApi {
     return metrics.uid;
   };
 
+  /** The highest value of `query` per service, keyed by `service_name`. */
+  getHighestValuePerService = async (query: string): Promise<Record<string, number>> =>
+    Object.fromEntries(
+      (await this.instantQuery(`max by (service_name) (${query})`)).map((sample) => [
+        sample.metric.service_name,
+        Number(sample.value[1]),
+      ]),
+    );
+
   /** @param query PromQL expression, e.g. `sum(pmm_ha_leader_status)` */
   instantQuery = async (query: string): Promise<PrometheusSample[]> => {
     const datasourceUid = await this.getDatasourceUid();
@@ -77,15 +86,6 @@ export default class PrometheusApi {
 
     return samples.length > 0 ? Number(samples[0].value[1]) : undefined;
   };
-
-  /** The highest value of `query` per service, keyed by `service_name`. */
-  maxByService = async (query: string): Promise<Record<string, number>> =>
-    Object.fromEntries(
-      (await this.instantQuery(`max by (service_name) (${query})`)).map((sample) => [
-        sample.metric.service_name,
-        Number(sample.value[1]),
-      ]),
-    );
 
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
   waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
