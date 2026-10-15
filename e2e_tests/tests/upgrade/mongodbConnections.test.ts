@@ -19,19 +19,25 @@ const connectionsByService = async (
 const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
 
 pmmTest.describe('MongoDB connections after upgrade', () => {
-  pmmTest('Save MongoDB connections before upgrade @pre-upgrade', async ({ api, testState }) => {
-    const before = await connectionsByService(api.prometheusApi, `max_over_time(${currentConnections}[5m])`);
+  pmmTest(
+    'Save MongoDB connections before upgrade @mongodb-connections-baseline',
+    async ({ api, testState }) => {
+      const before = await connectionsByService(
+        api.prometheusApi,
+        `max_over_time(${currentConnections}[5m])`,
+      );
 
-    expect(
-      Object.keys(before).length,
-      'MongoDB connections must be reported before the upgrade',
-    ).toBeGreaterThan(0);
+      expect(
+        Object.keys(before).length,
+        'MongoDB connections must be reported before the upgrade',
+      ).toBeGreaterThan(0);
 
-    testState.save({ [stateKey]: JSON.stringify(before) });
-  });
+      testState.save({ [stateKey]: JSON.stringify(before) });
+    },
+  );
 
   pmmTest(
-    'Verify MongoDB connections do not increase after upgrade @post-server-upgrade @post-upgrade',
+    'Verify MongoDB connections do not increase after upgrade @mongodb-connections-check',
     async ({ api, testState }) => {
       const before = JSON.parse(testState.get(stateKey)) as Record<string, number>;
 
