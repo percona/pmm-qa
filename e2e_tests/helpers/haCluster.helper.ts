@@ -3,6 +3,8 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
+import type Api from '@api/api';
+import { AgentStatus } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
 import { expect } from '@playwright/test';
@@ -181,6 +183,26 @@ export default class HaClusterHelper {
   };
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
+
+  /** @param since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns */
+  servicesRunningAndReporting = async (api: Api, since: number): Promise<string[]> => {
+    const running = (await api.inventoryApi.getServices()).services
+      .filter((service) => {
+        const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
+
+        return agents.length > 0 && agents.every((agent) => agent.status === AgentStatus.running);
+      })
+      .map((service) => service.service_name);
+    const reporting = (
+      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""}))', {
+        nocache: '1',
+      })
+    )
+      .filter((sample) => Number(sample.value[1]) > since)
+      .map((sample) => sample.metric.service_name);
+
+    return running.filter((serviceName) => reporting.includes(serviceName)).sort();
+  };
 
   /** Looked up by label, not hardcoded: the name is the Helm release name. */
   statefulSetName = (): string => {

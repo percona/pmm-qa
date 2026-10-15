@@ -22,7 +22,7 @@ these groups, which is the unit the page summarises and one Investigate button c
 | Nightly | Jenkins | `nightly / docker`, `docker arm64`, `ami`, `helm`, `ha` |
 | Nightly Compatibility | Jenkins | `compat / client <version>` |
 | UI | Jenkins | `ui / <tag>` |
-| HA, OpenShift & GSSAPI | Jenkins | `ha`, `openshift`, `nightly / gssapi` |
+| HA, OpenShift & GSSAPI | Jenkins | `ha`, `ha backup-restore`, `openshift`, `nightly / gssapi` |
 | E2E Tests | GitHub | `E2E Tests Matrix` |
 | CLI Integration | GitHub | `CLI integration` |
 | CLI Integration Compatibility | GitHub | `Compatibility CLI (<version>)` |

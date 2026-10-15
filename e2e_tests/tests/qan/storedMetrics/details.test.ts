@@ -128,3 +128,129 @@ pmmTest.describe(() => {
     },
   );
 });
+
+pmmTest(
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan',
+  async ({ api, qanStoredMetrics, urlHelper }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters('ps_', {
+      cluster: 'ps-single-dev-cluster',
+    });
+
+    for (const query of [
+      'SELECT s.first_name',
+      'INSERT INTO classes',
+      'DELETE FROM students',
+      'CREATE TABLE classes',
+    ]) {
+      await qanStoredMetrics.openQueryDetails(
+        urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
+          from: 'now-6h',
+          search: query,
+          serviceName: service_name,
+          to: 'now',
+        }),
+      );
+      await qanStoredMetrics.openExamplesTab();
+      await expect(qanStoredMetrics.elements.noExamples).toBeHidden();
+
+      if (!query.includes('CREATE')) await qanStoredMetrics.verifyExplain();
+    }
+  },
+);
+
+pmmTest(
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PDPGSQL @qan',
+  async ({ api, qanStoredMetrics, urlHelper }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('^pdpgsql_pmm_(?!.*patroni).*$');
+
+    for (const query of [
+      'SELECT s.first_name',
+      'INSERT INTO classes',
+      'DELETE FROM',
+      'CREATE TABLE classes ',
+    ]) {
+      await qanStoredMetrics.openQueryDetails(
+        urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
+          from: 'now-6h',
+          search: query,
+          serviceName: service_name,
+          to: 'now',
+        }),
+      );
+      await qanStoredMetrics.openExamplesTab();
+      await expect(qanStoredMetrics.elements.noExamples).toBeHidden();
+
+      if (!query.includes('CREATE')) await qanStoredMetrics.verifyTables();
+      if (query.includes('SELECT')) await qanStoredMetrics.verifyPlan();
+    }
+  },
+);
+
+pmmTest(
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PSMDB @qan @gssapi-nightly',
+  async ({ api, qanStoredMetrics, urlHelper }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      process.env.JOB_NAME?.includes('gssapi') ? 'rs101_gssapi' : 'rs101',
+      { cluster: 'replicaset' },
+    );
+
+    for (const query of ['db.students', 'db.runCommand', 'db.test']) {
+      await qanStoredMetrics.openQueryDetails(
+        urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
+          from: 'now-6h',
+          search: query,
+          serviceName: service_name,
+          to: 'now',
+        }),
+      );
+      await qanStoredMetrics.openExamplesTab();
+      await expect(qanStoredMetrics.elements.noExamples).toBeHidden();
+      await qanStoredMetrics.verifyExplain(query.includes('runCommand'));
+    }
+  },
+);
+
+pmmTest(
+  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @qan',
+  async ({ page, qanStoredMetrics, urlHelper }) => {
+    const psDev = qanStoredMetrics.builders.filterCheckboxInGroup('ps-dev', 'Environment');
+
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-1h', to: 'now' }));
+      await qanStoredMetrics.waitForLoad();
+      await qanStoredMetrics.selectFilter('ps-dev', psDev);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await qanStoredMetrics.waitForLoad();
+    await qanStoredMetrics.searchByQueryText('SELECT');
+    await qanStoredMetrics.waitForLoad();
+    await qanStoredMetrics.selectFirstWorkloadRow();
+    await qanStoredMetrics.verifyNoExplainErrors();
+    await qanStoredMetrics.selectFilter('ps-dev', psDev);
+    await qanStoredMetrics.waitForLoad();
+    await qanStoredMetrics.searchByValue('');
+    await qanStoredMetrics.selectFilter(
+      'mongodb',
+      qanStoredMetrics.builders.filterCheckboxInGroup('mongodb', 'Service Type'),
+    );
+    await qanStoredMetrics.searchByQueryText('UPDATE');
+    await qanStoredMetrics.selectRow(1);
+    await qanStoredMetrics.verifyNoExplainErrors();
+  },
+);
+
+pmmTest(
+  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @gssapi-nightly',
+  async ({ page, qanStoredMetrics, urlHelper }) => {
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-1h', to: 'now' }));
+      await qanStoredMetrics.waitForLoad();
+      await qanStoredMetrics.selectFilter(
+        'mongodb',
+        qanStoredMetrics.builders.filterCheckboxInGroup('mongodb', 'Service Type'),
+      );
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await qanStoredMetrics.searchByQueryText('UPDATE');
+    await qanStoredMetrics.selectRow(1);
+    await qanStoredMetrics.verifyNoExplainErrors();
+  },
+);
