@@ -59,7 +59,9 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       const services: GetService[] =
         await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+');
 
-      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary('mongodb_mongod_replset_my_state');
+      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary(
+        'mongodb_mongod_replset_my_state{cluster="sharded"}',
+      );
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
           cluster: 'sharded',
