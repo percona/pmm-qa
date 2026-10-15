@@ -81614,16 +81614,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-12069",
         "by": "Investigator routine",
         "at": "2026-10-15T03:56:57Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-15T03:25:11Z",
         "suites": [
           "Nightly Compatibility"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "aws-staging-start #27244 readyz timed out (>112s vs 100s) on a slow t3.xlarge (image pull 2.5x slower); siblings 39-56s, same image on a CHAOS VM 58-61s idle, 81-86s loaded.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-15T03:57:01Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
