@@ -1,20 +1,9 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import PrometheusApi from '@api/prometheus.api';
 import { Timeouts } from '@helpers/timeouts';
 
 const stateKey = 'MONGODB_CONNECTIONS';
 const currentConnections = 'mongodb_connections{state="current"}';
-const connectionsByService = async (
-  prometheusApi: PrometheusApi,
-  query: string,
-): Promise<Record<string, number>> =>
-  Object.fromEntries(
-    (await prometheusApi.instantQuery(`max by (service_name) (${query})`)).map((sample) => [
-      sample.metric.service_name,
-      Number(sample.value[1]),
-    ]),
-  );
 // Steady state drifts by a few connections per node; a leak keeps growing past this.
 const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
 
@@ -22,7 +11,7 @@ const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
 // so the baseline and the check see the services every other upgrade test adds.
 pmmTest.describe('MongoDB connections after upgrade', () => {
   pmmTest('Save MongoDB connections before upgrade @pre-upgrade', async ({ api, testState }) => {
-    const before = await connectionsByService(api.prometheusApi, `max_over_time(${currentConnections}[5m])`);
+    const before = await api.prometheusApi.maxByService(`max_over_time(${currentConnections}[5m])`);
 
     expect(
       Object.keys(before).length,
@@ -38,7 +27,7 @@ pmmTest.describe('MongoDB connections after upgrade', () => {
       const before = JSON.parse(testState.get(stateKey)) as Record<string, number>;
 
       await expect(async () => {
-        const after = await connectionsByService(api.prometheusApi, currentConnections);
+        const after = await api.prometheusApi.maxByService(currentConnections);
 
         console.log(Object.entries(before));
         console.log(after);
