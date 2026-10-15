@@ -17,7 +17,6 @@ on:
         required: false
         options:
           - 'docker-compose.yml'
-          - 'docker-compose-nomad.yml'
         type: choice
       pmm_client_image:
         description: 'pmm3-client docker image'
