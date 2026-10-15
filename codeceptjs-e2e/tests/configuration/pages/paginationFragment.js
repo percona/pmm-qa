@@ -1,4 +1,4 @@
-const { tableDataRows } = require('../../helper/locatorHelper');
+const { tableLoadedRows } = require('../../helper/locatorHelper');
 
 const { I } = inject();
 
@@ -34,7 +34,7 @@ module.exports = {
     const option = `${optionToSelect}`;
 
     I.assertContain(['25', '50', '100'], option, 'Specified option is not the one available options to select in dropdown');
-    I.waitForVisible(tableDataRows, 30);
+    I.waitForVisible(tableLoadedRows, 30);
 
     if (!await I.grabNumberOfVisibleElements(this.elements.rowsPerPageDropdown)) {
       await I.say('All rows fit on one page, there is no \'Rows per page\' to change');

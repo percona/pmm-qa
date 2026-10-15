@@ -1,6 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { tableDataRows } from '@helpers/tableLocators';
+import { tableLoadedRows } from '@helpers/tableLocators';
 
 type RowsPerPage = '25' | '50' | '100';
 
@@ -48,7 +48,9 @@ export default class InventoryPagination {
 
   // Tables of up to 10 rows have no pagination, so they already show every row
   showAllRows = async () => {
-    await expect(this.page.locator(tableDataRows).first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.page.locator(tableLoadedRows).first()).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
 
     if (!(await this.rowsPerPageDropdown.isVisible())) return;
 
