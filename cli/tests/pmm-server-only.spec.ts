@@ -117,7 +117,7 @@ test.describe(
     /**
      * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats#L53
      */
-    test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy', async ({}) => {
+    test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container stays healthy', async ({}) => {
       test.setTimeout(300_000);
       const containerName = 'PMM-T526';
       const httpPort = 84;
@@ -134,12 +134,20 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      // The image's healthcheck grace is 90s plus 3 failed 4s probes (PMM-15361).
-      await test.step(`Waiting for ${containerName} to be unhealthy(150 sec)`, async () => {
+      // Without vmalert an unparsable base config is logged and skipped, not fatal (PMM-15182).
+      await test.step(`Waiting for ${containerName} to log the broken base config`, async () => {
         await expect(async () => {
           await (
-            await cli.exec(`docker ps | grep ${containerName}`)
-          ).outContains('unhealthy');
+            await cli.exec(`docker exec ${containerName} grep -c 'Failed to parse base VictoriaMetrics config' /srv/logs/pmm-managed.log`)
+          ).assertSuccess();
+        }).toPass({ intervals: [2_000], timeout: 120_000 });
+      });
+
+      await test.step(`Waiting for ${containerName} to be healthy(150 sec)`, async () => {
+        await expect(async () => {
+          const status = (await cli.exec(`docker inspect -f '{{.State.Health.Status}}' ${containerName}`)).stdout.trim();
+
+          expect(status).toEqual('healthy');
         }).toPass({ intervals: [2_000], timeout: 150_000 });
       });
     });
