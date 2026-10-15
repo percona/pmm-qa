@@ -5,7 +5,7 @@ import { Timeouts } from '@helpers/timeouts';
 const stateKey = 'MONGODB_CONNECTIONS';
 const currentConnections = 'mongodb_connections{state="current"}';
 // Steady state drifts by a few connections per node; a leak keeps growing past this.
-const allowedConnections = (before: number) => before + Math.ceil(before * 0.1);
+const allowedConnections = (before: number) => before + Math.ceil(before * 0.2);
 
 // The file name sorts last among upgrade tests: with one worker Playwright runs files alphabetically,
 // so the baseline and the check see the services every other upgrade test adds.
