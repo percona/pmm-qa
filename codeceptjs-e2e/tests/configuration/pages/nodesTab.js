@@ -3,7 +3,7 @@ const { tableDataRows } = require('../../helper/locatorHelper');
 
 class NodesTab {
   constructor() {
-    this.url = '/pmm-ui/inventory/nodes';
+    this.url = 'pmm-ui/inventory/nodes';
     this.elements = {
       nodesRow: tableDataRows,
       nodesMonitoringValue: locate(`${tableDataRows}//*[@data-testid="monitoring-status-link"]`),

@@ -8,7 +8,7 @@ const getServiceRowLocator = (serviceName) => `${tableDataRows}[td[4]/div/span[t
  * All elements and methods for the PMM Inventory / Services Page
  */
 module.exports = {
-  url: '/pmm-ui/inventory/services',
+  url: 'pmm-ui/inventory/services',
   fields: {
     serviceRow: (serviceName) => getServiceRowLocator(serviceName),
     serviceCellMonitoring: (serviceName) => `${getServiceRowLocator(serviceName)}//*[@data-testid="monitoring-status-link"]`,

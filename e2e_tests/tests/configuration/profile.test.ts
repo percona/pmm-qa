@@ -55,10 +55,7 @@ pmmTest(
     await pmmTest.step('Verify every inventory service is still monitored', async () => {
       await page.goto(servicesPage.url);
       await expect(servicesPage.buttons.addService).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await servicesPage.pagination.selectRowsPerPage('100');
-      await expect(servicesPage.pagination.rowsPerPageDropdown).toHaveText('100', {
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
+      await servicesPage.pagination.showAllRows();
 
       const { services } = await api.inventoryApi.getServices();
 

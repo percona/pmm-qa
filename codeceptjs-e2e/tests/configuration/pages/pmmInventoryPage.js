@@ -12,7 +12,7 @@ const expandButton = '//button[@aria-label="Expand"]';
 const selectRowCheckbox = '//input[@aria-label="Toggle select row"]';
 
 module.exports = {
-  url: '/pmm-ui/inventory',
+  url: 'pmm-ui/inventory',
   fields: {
     serviceRow: (serviceName) => rowByName(serviceName),
     showServiceDetails: (serviceName) => `${rowByName(serviceName)}${expandButton}`,
