@@ -81604,16 +81604,19 @@
         "link": "https://github.com/percona/pmm-qa/pull/1614",
         "by": "Investigator routine",
         "at": "2026-10-15T03:56:52Z"
+      },
+      {
+        "suites": [
+          "E2E Tests"
+        ],
+        "verdict": "product bug",
+        "summary": "Explain fails with Error 1064: for a digest with no events_statements_history row, the perfschema agent uses the space-normalised digest text ('COUNT ( * )') as example and explain query; reproduced on 3-dev-latest.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+        "by": "Investigator routine",
+        "at": "2026-10-15T03:56:57Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-15T03:25:11Z",
-        "suites": [
-          "E2E Tests"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-10-15T03:25:11Z",
