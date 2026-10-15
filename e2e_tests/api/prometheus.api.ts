@@ -45,14 +45,17 @@ export default class PrometheusApi {
     return metrics.uid;
   };
 
-  /** @param query PromQL expression, e.g. `sum(pmm_ha_leader_status)` */
-  instantQuery = async (query: string): Promise<PrometheusSample[]> => {
+  /**
+   * @param query   PromQL expression, e.g. `sum(pmm_ha_leader_status)`
+   * @param params  extra query parameters, e.g. VictoriaMetrics' `nocache: '1'`
+   */
+  instantQuery = async (query: string, params: Record<string, string> = {}): Promise<PrometheusSample[]> => {
     const datasourceUid = await this.getDatasourceUid();
     const response = await this.request.get(
       `${apiEndpoints.prometheus.datasourceProxy}/${datasourceUid}/api/v1/query`,
       {
         headers: GrafanaHelper.getAuthHeader(),
-        params: { query },
+        params: { ...params, query },
       },
     );
 

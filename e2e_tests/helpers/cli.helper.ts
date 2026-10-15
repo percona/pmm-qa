@@ -25,10 +25,14 @@ export default class CliHelper {
    * Provides no logs to skip huge outputs.
    *
    * @param       command   sh command to execute
+   * @param       timeout   ms after which the command is killed and returns a non-zero code
    * @return      {@link ExecReturnClass} instance
    */
-  execSilent = (command: string): ExecReturn => {
-    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  execSilent = (command: string, timeout?: number): ExecReturn => {
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), {
+      silent: true,
+      timeout,
+    });
 
     return new ExecReturn(command, code, stdout, stderr);
   };
@@ -38,12 +42,16 @@ export default class CliHelper {
    * returns handy {@link ExecReturn} object.
    *
    * @param       command   sh command to execute
+   * @param       timeout   ms after which the command is killed and returns a non-zero code
    * @return      {@link ExecReturnClass} instance
    */
-  execute = (command: string): ExecReturn => {
+  execute = (command: string, timeout?: number): ExecReturn => {
     console.log(`exec: "${command}"`);
 
-    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), {
+      silent: false,
+      timeout,
+    });
 
     if (stdout.length > 0) console.log(`Out: "${stdout}"`);
     if (stderr.length > 0) console.log(`Error: "${stderr}"`);
