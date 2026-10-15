@@ -52,7 +52,7 @@ jq -n \
   # Report groups: the unit the page summarises and the Investigate button covers.
   def jenkins_group:
     if   startswith("upgrade / ami ") then "Upgrade AMI"
-    elif . == "nightly / gssapi" or . == "ha" or . == "openshift" then "HA, OpenShift & GSSAPI"
+    elif . == "nightly / gssapi" or . == "ha" or . == "ha backup-restore" or . == "openshift" then "HA, OpenShift & GSSAPI"
     elif startswith("nightly / ") then "Nightly"
     elif startswith("compat / ") then "Nightly Compatibility"
     elif startswith("ui / ") then "UI"
