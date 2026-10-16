@@ -75,12 +75,14 @@ pmmTest(
     await pmmTest.step(
       `Verify "${leader}" was restarted by the liveness probe for a replica fault`,
       async () => {
-        const messages = k8sHelper.getEventMessages(leader);
+        await expect(() => {
+          const messages = k8sHelper.getEventMessages(leader);
 
-        expect(messages.some((message) => message.includes('replica fault, restarting'))).toBeTruthy();
-        expect(
-          messages.some((message) => message.includes('failed liveness probe, will be restarted')),
-        ).toBeTruthy();
+          expect(messages.some((message) => message.includes('replica fault, restarting'))).toBeTruthy();
+          expect(
+            messages.some((message) => message.includes('failed liveness probe, will be restarted')),
+          ).toBeTruthy();
+        }).toPass({ intervals: [Timeouts.TWO_SECONDS], timeout: Timeouts.THIRTY_SECONDS });
       },
     );
 
