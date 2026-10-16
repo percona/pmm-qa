@@ -79,6 +79,7 @@ export default class SettingsPage extends BasePage {
     tabContent: this.page.getByTestId('settings-tab-content'),
     telemetryLabel: this.page.getByTestId('advanced-telemetry'),
     telemetrySummariesContent: this.page.getByTestId('telemetry-summaries-dialog'),
+    unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
     dataRetention: this.page.getByTestId('retention-number-input'),
