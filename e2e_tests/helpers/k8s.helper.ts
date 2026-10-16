@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  KubernetesEventResource,
   KubernetesJobResource,
   KubernetesJobState,
   KubernetesPod,
@@ -81,6 +82,15 @@ export default class K8sHelper {
   execSilent = (args: string): ExecReturn =>
     this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`, kubectlTimeout);
 
+  getEventMessages = (objectName: string): string[] =>
+    (
+      JSON.parse(
+        this.execSilent(
+          `get events --field-selector=involvedObject.name=${objectName} --output=json`,
+        ).assertSuccess().stdout,
+      ) as KubernetesResourceList<KubernetesEventResource>
+    ).items.map((event) => event.message ?? '');
+
   getJobState = (name: string): KubernetesJobState => {
     const job = JSON.parse(
       this.execSilent(`get job ${name} --output=json`).assertSuccess().stdout,
@@ -119,6 +129,7 @@ export default class K8sHelper {
       images: (item.spec?.containers ?? []).map((container) => container.image),
       name: item.metadata.name,
       ready: item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
+      restarts: (item.status?.containerStatuses ?? []).reduce((sum, status) => sum + status.restartCount, 0),
     }));
   };
 
