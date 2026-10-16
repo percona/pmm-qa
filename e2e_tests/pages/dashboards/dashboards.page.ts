@@ -48,10 +48,14 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
       ),
+    noDataMarkerInPanel: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelCanvasByExactName: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('canvas'),
     panelContentByExactName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
@@ -341,6 +345,22 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPanelHasDataAfterRefresh = async (panelName: string, timeout: Timeouts) => {
+    await expect(this.builders.panelByExactName(panelName)).toBeVisible({
+      timeout: Timeouts.FIFTEEN_SECONDS,
+    });
+    await expect(async () => {
+      await this.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
+      await this.elements.refreshButton.click();
+      await expect(this.builders.noDataMarkerInPanel(panelName)).toHaveCount(0, {
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+      await expect(this.builders.panelCanvasByExactName(panelName)).not.toHaveCount(0, {
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+    }).toPass({ timeout });
+  };
+
   verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
     await this.loadAllPanels();
 
@@ -354,6 +374,17 @@ export default class Dashboards extends BasePage {
         })
         .toBeTruthy();
     }
+  };
+
+  verifyPanelTextAfterRefresh = async (panelName: string, expected: string | RegExp, timeout: Timeouts) => {
+    const panelContent = this.builders.panelContentByExactName(panelName);
+
+    await expect(panelContent).toBeVisible({ timeout: Timeouts.FIFTEEN_SECONDS });
+    await expect(async () => {
+      await panelContent.scrollIntoViewIfNeeded();
+      await this.elements.refreshButton.click();
+      await expect(panelContent).toHaveText(expected, { timeout: Timeouts.FIVE_SECONDS });
+    }).toPass({ timeout });
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
