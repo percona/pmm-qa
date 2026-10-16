@@ -2,7 +2,6 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-const psContainerCommand = "docker ps --format '{{.Names}}' | grep ps_pmm | head -1";
 let serviceId = '';
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
@@ -22,7 +21,10 @@ pmmTest(
     const serviceName = `ha-ext-mysql-${Date.now()}`;
     // Needs the pmm-framework `--database ps` client on the runner: its pmm-agent sits outside the
     // cluster and reaches PMM through HAProxy, the write path PMM-14678 broke.
-    const psContainer = cliHelper.execute(psContainerCommand).assertSuccess().stdout.trim();
+    const psContainer = cliHelper
+      .execute("docker ps --format '{{.Names}}' | grep ps_pmm | head -1")
+      .assertSuccess()
+      .stdout.trim();
 
     expect(
       psContainer,
