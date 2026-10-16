@@ -338,10 +338,11 @@ export default class Dashboards extends BasePage {
 
       if (!pointBox) throw new Error(`${panelName} graph has no series point to pin`);
 
+      // A point at zero is centred on the plot's bottom edge, where the x axis would take the click.
       await plot.click({
         position: {
           x: pointBox.x + pointBox.width / 2 - plotBox.x,
-          y: pointBox.y + pointBox.height / 2 - plotBox.y,
+          y: Math.min(pointBox.y + pointBox.height / 2 - plotBox.y, plotBox.height - 1),
         },
       });
     });
