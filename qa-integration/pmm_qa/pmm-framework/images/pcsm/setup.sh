@@ -7,8 +7,8 @@
 # the rest STANDBY. Each PCSM keeps its default localhost:2242 listener, which
 # also serves /start and /finalize unauthenticated, so PMM Client runs beside
 # it and PMM scrapes it in push mode. The URIs are in each pcsm-N's
-# environment, so a test restarts a stopped instance with
-# `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
+# environment, so a test that stops an instance with `pkill -x pcsm` restarts
+# it with `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 setup_pcsm() {
   local version source_version target_version nodes_count instances client tarball='' node i
   local -a src_nodes=() tgt_nodes=() pcsm_nodes=()

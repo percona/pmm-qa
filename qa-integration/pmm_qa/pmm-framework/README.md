@@ -115,7 +115,8 @@ qa-integration/pmm_qa/pmm-framework/pmm-framework \
 
 PCSM's HTTP port has no authentication and also serves `/start` and
 `/finalize`, so it stays on `localhost` and PMM Client runs in each `pcsm-N`.
-A test that stops PCSM for a failover starts it again with
+A failover test stops an instance with `docker exec pcsm-N pkill -x pcsm`,
+which leaves its PMM Client reporting it down, and starts it again with
 `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 
 Versions, options and their defaults are registered in
