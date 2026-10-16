@@ -84944,28 +84944,6 @@
         "at": "2026-10-16T09:18:26Z"
       }
     ],
-    "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-16T03:18:51Z",
-        "suites": [
-          "CLI Integration Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-16T03:18:51Z",
-        "suites": [
-          "Nightly Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-16T03:18:51Z",
-        "suites": [
-          "UI"
-        ]
-      }
-    ]
+    "claims": []
   }
 ]
