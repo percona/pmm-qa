@@ -19,8 +19,6 @@ pmmTest(
   'PMM-T2397 - Verify a MySQL service added with pmm-admin from an external client is Up and its dashboard shows data on PMM HA @pmm-ha',
   async ({ api, cliHelper, credentials, dashboard, page, qanStoredMetrics, servicesPage, urlHelper }) => {
     const serviceName = `ha-ext-mysql-${Date.now()}`;
-    // Needs the pmm-framework `--database ps` client on the runner: its pmm-agent sits outside the
-    // cluster and reaches PMM through HAProxy, the write path PMM-14678 broke.
     const psContainer = cliHelper
       .execute("docker ps --format '{{.Names}}' | grep ps_pmm | head -1")
       .assertSuccess()
