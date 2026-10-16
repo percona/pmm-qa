@@ -88268,6 +88268,14 @@
         "at": "2026-10-16T16:45:11Z"
       }
     ],
-    "claims": []
+    "claims": [
+      {
+        "by": "travagliad",
+        "at": "2026-10-16T17:30:48Z",
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ]
+      }
+    ]
   }
 ]
