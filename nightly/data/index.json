@@ -88286,16 +88286,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15762",
         "by": "travagliad",
         "at": "2026-10-16T17:56:16Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "travagliad",
-        "at": "2026-10-16T17:30:48Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "ha backup-restore PMM-T2371: up{job=kube-apiserver} stayed 0 for ~6 min (15:38-15:44Z, all 3 attempts) while kubelet/cAdvisor/node-exporter were up; a re-run on the same 3.10.0-rc image (backup-restore #14) passed 25/25 and live probes on two fresh ROSA clusters showed the apiserver target up throughout. Unconfirmed lead: the ROSA apiserver /metrics is 13-15 MB with spikes to 17.9 MB on some backends, above the 16 MiB vmagent -promscrape.maxScrapeSize the chart leaves at default.",
+        "link": "",
+        "by": "travagliad",
+        "at": "2026-10-16T21:09:09Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
