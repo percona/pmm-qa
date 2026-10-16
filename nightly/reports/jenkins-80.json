@@ -1,0 +1,196 @@
+{
+  "run_id": "jenkins-80",
+  "date": "2026-10-16T16:41:10Z",
+  "image_tag": "3.10.0-rc",
+  "client_version": "pmm3-rc",
+  "run_url": "https://pmm.cd.percona.com/job/pmm3-nightly-orchestrator/80/",
+  "status": "fail",
+  "summary": "21/23 jobs passed",
+  "jobs": [
+    {
+      "source": "jenkins",
+      "group": "UI",
+      "name": "@ia",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11660/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Upgrade AMI",
+      "name": "ami 3.9.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1365/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Upgrade AMI",
+      "name": "ami 3.7.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1361/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "UI",
+      "name": "@gcp",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11662/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Upgrade AMI",
+      "name": "ami 3.8.0",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1362/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Upgrade AMI",
+      "name": "ami 3.9.0",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1364/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Upgrade AMI",
+      "name": "ami 3.8.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1363/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "HA, OpenShift & GSSAPI",
+      "name": "nightly / gssapi",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gssapi/548/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "UI",
+      "name": "@instances",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11661/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Other",
+      "name": "github nightly-test-suite",
+      "result": "failure",
+      "url": "https://github.com/percona/pmm-qa/actions/runs/38914935561",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly Compatibility",
+      "name": "client 3.8.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1140/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly",
+      "name": "ami",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1135/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly Compatibility",
+      "name": "client 3.9.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1142/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly Compatibility",
+      "name": "client 3.7.1",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1138/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly",
+      "name": "docker arm64",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1134/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly Compatibility",
+      "name": "client 3.8.0",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1139/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly Compatibility",
+      "name": "client 3.9.0",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1141/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly",
+      "name": "docker",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1133/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "HA, OpenShift & GSSAPI",
+      "name": "ha",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ha-tests/137/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly",
+      "name": "helm",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1136/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "Nightly",
+      "name": "ha",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1137/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "HA, OpenShift & GSSAPI",
+      "name": "openshift",
+      "result": "success",
+      "url": "https://pmm.cd.percona.com/job/openshift-helm-tests/234/",
+      "duration_s": null
+    },
+    {
+      "source": "jenkins",
+      "group": "HA, OpenShift & GSSAPI",
+      "name": "ha backup-restore",
+      "result": "failure",
+      "url": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/13/",
+      "duration_s": null
+    }
+  ],
+  "investigations": []
+}
