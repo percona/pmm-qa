@@ -74,7 +74,6 @@ export default class SettingsApi {
     return (await response.json()) as SettingsResponse;
   };
 
-  /** The raw response, for asserting on a refused update. */
   putSettings = async (data: Record<string, unknown>): Promise<APIResponse> =>
     await this.request.put(apiEndpoints.server.settings, {
       data,

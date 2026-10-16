@@ -2,6 +2,7 @@ import BasePage from '../base.page';
 import pmmTest from '../../fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
+import { Response } from '@playwright/test';
 
 export type SettingsFieldLabel =
   'advanced' | 'advanced-advisors' | 'advanced-telemetry' | 'metrics-resolution' | 'public-address';
@@ -94,7 +95,7 @@ export default class SettingsPage extends BasePage {
     popUp: this.page.getByRole('status').or(this.page.getByRole('alert')),
   };
 
-  applyAdvancedChanges = async (): Promise<void> => {
+  applyAdvancedChanges = async (): Promise<Response> => {
     const saved = this.page.waitForResponse(
       (response) =>
         response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
@@ -102,7 +103,8 @@ export default class SettingsPage extends BasePage {
     );
 
     await this.buttons.applyAdvancedChanges.click();
-    await saved;
+
+    return await saved;
   };
 
   enableToggleAndApplyChanges = async (toggleName: keyof typeof this.buttons.toggles): Promise<void> =>

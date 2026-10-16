@@ -2,23 +2,10 @@ import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import { HaStatusResponse } from '@interfaces/ha';
-import { expect, Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 const secondsInDay = 86_400;
 let original: { data_retention: string; telemetry_enabled?: boolean };
-
-const applyAndWaitForSave = async (page: Page, applyButton: Locator) => {
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
-      { timeout: Timeouts.THIRTY_SECONDS },
-    ),
-    applyButton.click(),
-  ]);
-
-  return response;
-};
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
@@ -86,7 +73,7 @@ pmmTest(
     await pmmTest.step('Turn Telemetry off and apply', async () => {
       await telemetry.locator.click();
 
-      const response = await applyAndWaitForSave(page, settingsPage.buttons.applyAdvancedChanges);
+      const response = await settingsPage.applyAdvancedChanges();
 
       expect(response.status()).toEqual(200);
       await expect(settingsPage.messages.popUp).toContainText('Settings updated', {
@@ -110,7 +97,7 @@ pmmTest(
     await pmmTest.step('Turn Telemetry back on and apply', async () => {
       await telemetry.locator.click();
 
-      const response = await applyAndWaitForSave(page, settingsPage.buttons.applyAdvancedChanges);
+      const response = await settingsPage.applyAdvancedChanges();
 
       expect(response.status()).toEqual(200);
       await expect(settingsPage.messages.popUp).toContainText('Settings updated', {
