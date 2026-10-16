@@ -4,9 +4,8 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import K8sHelper from '@helpers/k8s.helper';
-import PrometheusApi from '@api/prometheus.api';
 import { Timeouts } from '@helpers/timeouts';
-import { AlertInstance, AlertRule } from '@interfaces/alerting';
+import { AlertInstance } from '@interfaces/alerting';
 
 const diskRule = {
   folder: 'PMM High Availability',
@@ -41,56 +40,6 @@ spec:
       volumeMounts: [{ name: data, mountPath: ${otherVolume.dir} }]
   volumes: [{ name: data, persistentVolumeClaim: { claimName: ${otherVolume.claim} } }]
 `;
-
-interface VolumeUsage {
-  availableMb: number;
-  sizeMb: number;
-  usedMb: number;
-}
-
-const volumeUsage = (k8s: K8sHelper, pod: string, container: string, dir: string): VolumeUsage => {
-  const [, sizeMb, usedMb, availableMb] = k8s
-    .execInPod(pod, `df -Pm ${dir}`, { container, silent: true })
-    .assertSuccess()
-    .getStdOutLines()[1]
-    .trim()
-    .split(/\s+/)
-    .map(Number);
-
-  return { availableMb, sizeMb, usedMb };
-};
-
-// kubelet's formula, which the rule uses; df's own Capacity column divides by used + available instead.
-const percentFull = ({ availableMb, sizeMb }: VolumeUsage): number => 100 * (1 - availableMb / sizeMb);
-
-const fillVolume = (k8s: K8sHelper, pod: string, container: string, dir: string): VolumeUsage => {
-  const before = volumeUsage(k8s, pod, container, dir);
-  const fillMb = Math.floor((before.sizeMb * fillPercent) / 100 - before.usedMb);
-
-  k8s
-    .execInPod(pod, `dd if=/dev/zero of=${dir}/${fillFile} bs=1M count=${fillMb}`, { container })
-    .assertSuccess();
-
-  return volumeUsage(k8s, pod, container, dir);
-};
-
-const kubeletPercentFull = async (
-  prometheusApi: PrometheusApi,
-  namespace: string,
-  claim: string,
-): Promise<number | undefined> => {
-  const selector = `job="kubelet",namespace="${namespace}",persistentvolumeclaim="${claim}"`;
-
-  return prometheusApi.instantQueryValue(
-    `max(100 * (1 - kubelet_volume_stats_available_bytes{${selector}} / kubelet_volume_stats_capacity_bytes{${selector}}))`,
-  );
-};
-
-const alertsFor = (rule: AlertRule | undefined, label: string, value: string): AlertInstance[] =>
-  (rule?.alerts ?? []).filter((alert) => alert.labels[label] === value);
-// A resolved instance stays listed as "Normal" (or "Normal (MissingSeries)") rather than disappearing.
-const activeAlertsFor = (rule: AlertRule | undefined, label: string, value: string): AlertInstance[] =>
-  alertsFor(rule, label, value).filter(({ state }) => !state.startsWith('Normal'));
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
@@ -146,13 +95,20 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
 
       const namespace = k8sHelper.namespace;
       const clientPod = k8sHelper.getPodNames(clientPodSelector).sort()[0];
+
+      expect(clientPod, `No pod matches "${clientPodSelector}"`).toBeTruthy();
+
       const clientClaim = `pmm-agent-${clientPod}`;
       const otherK8s = new K8sHelper(otherNamespace);
 
       await pmmTest.step(`Verify "${clientClaim}" is below 80% and has no disk space alert`, async () => {
-        expect(percentFull(volumeUsage(k8sHelper, clientPod, client.container, client.dir))).toBeLessThan(80);
+        expect(k8sHelper.getVolumeUsage(clientPod, client.dir, client.container).percentFull).toBeLessThan(
+          80,
+        );
         expect(
-          activeAlertsFor(await api.alertingApi.getRule(diskRule.name), 'persistentvolumeclaim', clientClaim),
+          await api.alertingApi.getRuleAlerts(diskRule.name, 'persistentvolumeclaim', clientClaim, {
+            activeOnly: true,
+          }),
         ).toEqual([]);
       });
 
@@ -165,23 +121,24 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
         otherK8s.exec(`wait --for=condition=Ready pod/${otherVolume.pod} --timeout=5m`).assertSuccess();
 
         expect(
-          percentFull(fillVolume(otherK8s, otherVolume.pod, otherVolume.container, otherVolume.dir)),
+          otherK8s.fillVolume(otherVolume.pod, otherVolume.dir, fillPercent, fillFile, otherVolume.container)
+            .percentFull,
         ).toBeGreaterThan(80);
       });
 
       const clientUsage = await pmmTest.step(`Fill "${clientClaim}" to ${fillPercent}%`, async () => {
-        const usage = fillVolume(k8sHelper, clientPod, client.container, client.dir);
+        const usage = k8sHelper.fillVolume(clientPod, client.dir, fillPercent, fillFile, client.container);
 
-        expect(percentFull(usage)).toBeGreaterThan(80);
+        expect(usage.percentFull).toBeGreaterThan(80);
 
         return usage;
       });
 
       await pmmTest.step('Verify PMM sees both volumes over 80%', async () => {
         await expect(async () => {
-          expect(await kubeletPercentFull(api.prometheusApi, namespace, clientClaim)).toBeGreaterThan(80);
+          expect(await api.prometheusApi.volumePercentFull(namespace, clientClaim)).toBeGreaterThan(80);
           expect(
-            await kubeletPercentFull(api.prometheusApi, otherNamespace, otherVolume.claim),
+            await api.prometheusApi.volumePercentFull(otherNamespace, otherVolume.claim),
           ).toBeGreaterThan(80);
         }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       });
@@ -191,8 +148,8 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
 
         // 10m pending period, plus a kubelet stats refresh and a rule evaluation.
         await expect(async () => {
-          const alerts = alertsFor(
-            await api.alertingApi.getRule(diskRule.name),
+          const alerts = await api.alertingApi.getRuleAlerts(
+            diskRule.name,
             'persistentvolumeclaim',
             clientClaim,
           );
@@ -211,15 +168,13 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
         expect(alert.labels.namespace).toEqual(namespace);
         expect(summary).toContain(`Volume '${clientClaim}' in PMM HA namespace '${namespace}'`);
         expect(
-          Math.abs(reported - percentFull(clientUsage)),
-          `"${summary}" against df's ${percentFull(clientUsage).toFixed(1)}%`,
+          Math.abs(reported - clientUsage.percentFull),
+          `"${summary}" against df's ${clientUsage.percentFull.toFixed(1)}%`,
         ).toBeLessThanOrEqual(1);
       });
 
       await pmmTest.step(`Verify no disk space alert names namespace "${otherNamespace}"`, async () => {
-        expect(alertsFor(await api.alertingApi.getRule(diskRule.name), 'namespace', otherNamespace)).toEqual(
-          [],
-        );
+        expect(await api.alertingApi.getRuleAlerts(diskRule.name, 'namespace', otherNamespace)).toEqual([]);
       });
 
       await pmmTest.step(`Free "${clientClaim}" and verify its alert clears`, async () => {
@@ -229,11 +184,9 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
 
         await expect(async () => {
           expect(
-            activeAlertsFor(
-              await api.alertingApi.getRule(diskRule.name),
-              'persistentvolumeclaim',
-              clientClaim,
-            ),
+            await api.alertingApi.getRuleAlerts(diskRule.name, 'persistentvolumeclaim', clientClaim, {
+              activeOnly: true,
+            }),
           ).toEqual([]);
         }).toPass({ intervals: [Timeouts.THIRTY_SECONDS], timeout: Timeouts.TEN_MINUTES });
       });

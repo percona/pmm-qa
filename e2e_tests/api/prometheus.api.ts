@@ -78,6 +78,15 @@ export default class PrometheusApi {
     return samples.length > 0 ? Number(samples[0].value[1]) : undefined;
   };
 
+  /** How full a PVC is according to kubelet, as a percentage. */
+  volumePercentFull = async (namespace: string, claim: string): Promise<number | undefined> => {
+    const selector = `job="kubelet",namespace="${namespace}",persistentvolumeclaim="${claim}"`;
+
+    return this.instantQueryValue(
+      `max(100 * (1 - kubelet_volume_stats_available_bytes{${selector}} / kubelet_volume_stats_capacity_bytes{${selector}}))`,
+    );
+  };
+
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
   waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
     let serverTime = 0;
