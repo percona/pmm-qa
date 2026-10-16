@@ -31,6 +31,7 @@ const apiEndpoints = {
     dsQuery: '/graph/api/ds/query',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    provisioningAlertRules: '/graph/api/v1/provisioning/alert-rules',
     receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
     ruler: '/graph/api/ruler/grafana/api/v1/rules',
   },
