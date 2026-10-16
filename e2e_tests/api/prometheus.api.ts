@@ -115,6 +115,26 @@ export default class PrometheusApi {
       .toBeGreaterThan(0);
   };
 
+  /**
+   * Panels pinned to a 5m step show "No data" for a series until it has a sample
+   * before the last 5-minute boundary, e.g. MongoDB Router Summary Uptime.
+   */
+  waitForSampleBeforeFiveMinuteBoundary = async (selector: string) => {
+    await expect
+      .poll(
+        () =>
+          this.instantQueryValue(
+            `min(count_over_time(${selector}[1m] offset ${Math.floor(Date.now() / 1_000) % 300}s))`,
+          ),
+        {
+          intervals: [Timeouts.THIRTY_SECONDS],
+          message: `${selector} has no sample before the last 5-minute boundary`,
+          timeout: Timeouts.TEN_MINUTES,
+        },
+      )
+      .toBeGreaterThan(0);
+  };
+
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
   waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
     let serverTime = 0;
