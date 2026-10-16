@@ -88266,6 +88266,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-16T16:45:11Z"
+      },
+      {
+        "suites": [
+          "E2E Tests"
+        ],
+        "verdict": "product bug",
+        "summary": "@ssl-mysql PMM-T1403 (maxQueryLength \"\" row): the perfschema QAN agent sometimes stores MySQL's normalised digest text (SELECT COUNT ( * ) …) as example and explain fingerprint, so EXPLAIN fails with Error 1064; not truncation, same defect failed the -1 row on 2026-10-15.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+        "by": "travagliad",
+        "at": "2026-10-16T17:36:18Z"
       }
     ],
     "claims": [
@@ -88274,13 +88284,6 @@
         "at": "2026-10-16T17:32:56Z",
         "suites": [
           "CLI Integration"
-        ]
-      },
-      {
-        "by": "travagliad",
-        "at": "2026-10-16T17:33:02Z",
-        "suites": [
-          "E2E Tests"
         ]
       },
       {
