@@ -45,12 +45,13 @@ pmmTest(
   async ({ alertingPage, alertStatusPage, alertThresholdsPage, api, nodesPage, page }) => {
     const ruleName = 'dt-cpu-80';
 
-    await pmmTest.step('Only Node high CPU load is a Dynamic built-in template', async () => {
+    await pmmTest.step('Only CPU load and QAN slow queries are Dynamic templates', async () => {
       await page.goto(alertingPage.urls.templates);
       await expect(alertingPage.builders.dynamicBadge('Node high CPU load')).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
-      await expect(alertingPage.elements.dynamicBadges).toHaveCount(1);
+      await expect(alertingPage.builders.dynamicBadge('QAN slow queries')).toBeVisible();
+      await expect(alertingPage.elements.dynamicBadges).toHaveCount(2);
     });
 
     await pmmTest.step('Create a rule from the template with the default of 80', async () => {
