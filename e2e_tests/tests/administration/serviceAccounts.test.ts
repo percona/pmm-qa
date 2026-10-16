@@ -113,27 +113,13 @@ pmmTest.describe(() => {
       });
 
       await pmmTest.step('Nodes Overview reports data for the re-registered node', async () => {
-        await page.goto(nodesUrl);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data',
-            timeout: Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(nodesUrl, 19, Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE);
       });
 
       await pmmTest.step('Nodes Overview still reports data after a PMM Server restart', async () => {
         cliHelper.execute('sudo docker restart pmm-server').assertSuccess();
         await api.serverApi.waitForReady(Timeouts.ONE_MINUTE);
-        await page.goto(dashboard.os.nodesOverview.url);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data after the restart',
-            timeout: Timeouts.FIVE_MINUTES,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(dashboard.os.nodesOverview.url, 19);
       });
 
       const mysqlCredentials = `-h 127.0.0.1 --port 3306 -u${credentials.perconaServer.username} -p${credentials.perconaServer.password}`;
