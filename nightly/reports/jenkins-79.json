@@ -3272,7 +3272,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "UI"
+      ],
+      "verdict": "product bug",
+      "summary": "pmm-agent stops restarting an exporter after its second restart (PMM-15717); in @instances the Azure MySQL exporter crashed three times because port 42020 was briefly held by an outgoing connection (PMM-11935, the agent's port check only tests 127.0.0.1), so it stayed down and azure_memory_percent_average never appeared for PMM-T743.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15717",
+      "by": "yurkovychv",
+      "at": "2026-10-16T08:35:39Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -3321,13 +3332,6 @@
       "at": "2026-10-16T08:10:01Z",
       "suites": [
         "Package ARM"
-      ]
-    },
-    {
-      "by": "yurkovychv",
-      "at": "2026-10-16T08:09:35Z",
-      "suites": [
-        "UI"
       ]
     }
   ]
