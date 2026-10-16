@@ -87,6 +87,7 @@ export default class Dashboards extends BasePage {
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
+    slowQueriesCount: this.builders.panelContentByExactName('Slow queries').getByText(/^\d+$/),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
@@ -450,6 +451,15 @@ export default class Dashboards extends BasePage {
     expect
       .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
       .toHaveLength(0);
+  };
+
+  verifySlowQueriesPanel = async (timeFrame: string) => {
+    await this.waitForDashboardToLoad();
+    await this.elements.refreshButton.click();
+    await expect(this.builders.panelContentByExactName('Slow queries')).toContainText(
+      `the last ${timeFrame}`,
+    );
+    await expect(this.elements.slowQueriesCount).toHaveText(/^[1-9]\d*$/);
   };
 
   waitForDashboardToLoad = async () => {
