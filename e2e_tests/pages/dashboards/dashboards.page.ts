@@ -88,6 +88,7 @@ export default class Dashboards extends BasePage {
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     slowQueriesCount: this.builders.panelContentByExactName('Slow queries').getByText(/^\d+$/),
+    summaryFingerprint: this.grafanaIframe().getByTestId('pt-summary-fingerprint'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
