@@ -16,7 +16,7 @@ pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
         cluster: 'sharded',
-        from: 'now-15m',
+        from: 'now-10m',
         set: shard,
         to: 'now',
       }),
