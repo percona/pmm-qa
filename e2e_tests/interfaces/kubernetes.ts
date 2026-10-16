@@ -6,6 +6,14 @@ export interface KubernetesPod {
   restarts: number;
 }
 
+export interface VolumeUsage {
+  availableMb: number;
+  /** kubelet's formula, the one PMM alerts on; df's own Capacity column divides by used + available instead. */
+  percentFull: number;
+  sizeMb: number;
+  usedMb: number;
+}
+
 export interface KubernetesResourceList<T> {
   items: T[];
 }
