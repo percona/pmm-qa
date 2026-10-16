@@ -3302,6 +3302,16 @@
       "link": "",
       "by": "yurkovychv",
       "at": "2026-10-16T09:02:01Z"
+    },
+    {
+      "suites": [
+        "Package ARM"
+      ],
+      "verdict": "test fix",
+      "summary": "pmm3-client_integration_custom_path starts pmm-agent in the background and runs pmm-admin status ~0.19 s later without waiting, so on ubuntu2404-arm64 the agent had not yet opened 127.0.0.1:7777 in either attempt (connection refused) though it came up connected seconds later; reproduced on main by slowing the agent's start, fixed by waiting for the port after every background start.",
+      "link": "https://github.com/percona/pmm-qa/pull/1625",
+      "by": "yurkovychv",
+      "at": "2026-10-16T09:18:26Z"
     }
   ],
   "claims": [
@@ -3331,13 +3341,6 @@
       "at": "2026-10-16T03:18:51Z",
       "suites": [
         "UI"
-      ]
-    },
-    {
-      "by": "yurkovychv",
-      "at": "2026-10-16T08:10:01Z",
-      "suites": [
-        "Package ARM"
       ]
     }
   ]
