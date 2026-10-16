@@ -13,6 +13,11 @@ export default class SettingsPage extends BasePage {
     metrics: '/pmm-ui/settings/metrics-resolution',
     ssh: '/pmm-ui/settings/ssh-key',
   };
+  haDataRetentionErrorMessage =
+    'Data retention cannot be changed at runtime when high availability is enabled. ' +
+    "Set it with the pmm-ha chart's dataRetentionDays value (rendered as PMM_DATA_RETENTION) and apply it with helm upgrade.";
+  haDataRetentionHelperText =
+    "Fixed by your high availability deployment. Change it with the chart's dataRetentionDays value and run helm upgrade.";
   haQanErrorMessage = "Enabling QAN on PMM's own database is not supported in HA mode.";
   tabs = {
     advanced: this.page.getByTestId('settings-tab-advanced'),
@@ -50,7 +55,10 @@ export default class SettingsPage extends BasePage {
         locator: this.page.getByTestId('switch-input-alerting'),
       },
       qanForPmmServer: { locator: this.page.getByTestId('switch-input-enable-internal-pg-qan') },
-      telemetry: { locator: this.page.getByTestId('switch-input-telemetry') },
+      telemetry: {
+        input: this.page.getByTestId('switch-input-telemetry').getByRole('switch'),
+        locator: this.page.getByTestId('switch-input-telemetry'),
+      },
     },
   };
   elements = {
@@ -58,6 +66,7 @@ export default class SettingsPage extends BasePage {
     advisorsLabel: this.page.getByTestId('advanced-advisors'),
     alertingInfoIcon: this.page.getByTestId('advanced-alerting').getByTestId('info-icon'),
     checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
+    dataRetentionHelperText: this.page.getByTestId('retention-field-error-message'),
     errorAlert: this.page.getByTestId('data-testid Alert error'),
     infoTooltip: this.page.getByTestId('info-tooltip'),
     infoTooltipLink: this.page.getByTestId('info-tooltip').getByRole('link'),

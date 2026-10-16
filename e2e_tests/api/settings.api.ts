@@ -1,4 +1,4 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 
@@ -10,6 +10,8 @@ interface SettingsResponse {
     default_role_id?: number | string;
     enable_access_control: boolean;
     pmm_public_address: string;
+    // Omitted from the JSON when false.
+    telemetry_enabled?: boolean;
     telemetry_summaries: string[];
   };
 }
@@ -71,6 +73,13 @@ export default class SettingsApi {
 
     return (await response.json()) as SettingsResponse;
   };
+
+  /** The raw response, for asserting on a refused update. */
+  putSettings = async (data: Record<string, unknown>): Promise<APIResponse> =>
+    await this.request.put(apiEndpoints.server.settings, {
+      data,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
   restoreSettingsDefaults = async (): Promise<void> => {
     const body: Record<string, unknown> = {
