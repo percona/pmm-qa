@@ -13,6 +13,7 @@ const apiEndpoints = {
   backups: {
     artifacts: '/v1/backups/artifacts',
     locations: '/v1/backups/locations',
+    removeScheduled: '/v1/backups',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
