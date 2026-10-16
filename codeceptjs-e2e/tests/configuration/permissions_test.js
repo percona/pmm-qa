@@ -42,133 +42,41 @@ BeforeSuite(async ({ I }) => {
   await I.setRole(editorId, 'Editor');
 });
 
-Scenario.skip(
-  'PMM-T358 Verify Failed checks panel at Home page for the viewer role (STT is enabled) @stt @grafana-pr',
-  async ({ I, homePage, settingsAPI }) => {
-    await settingsAPI.apiEnableSTT();
-    await I.Authorize(users.viewer.username, users.viewer.password);
-    I.amOnPage(homePage.url);
-    I.waitForVisible(homePage.fields.checksPanelSelector, 30);
-    I.waitForVisible(homePage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', homePage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T360 Verify Failed checks panel at Home page for the admin role (STT is enabled) @stt @grafana-pr',
-  async ({ I, homePage, settingsAPI }) => {
-    await settingsAPI.apiEnableSTT();
-    await I.Authorize(users.admin.username, users.admin.password);
-    I.amOnPage(homePage.url);
-    I.waitForVisible(homePage.fields.checksPanelSelector, 30);
-    I.dontSeeElement(homePage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T358 Verify Database Failed checks page for the viewer role (STT is enabled) [critical] @stt @grafana-pr',
-  async ({ I, databaseChecksPage, settingsAPI }) => {
-    await settingsAPI.apiEnableSTT();
-    await I.Authorize(users.viewer.username, users.viewer.password);
-    I.amOnPage(databaseChecksPage.url);
-    I.waitForVisible(databaseChecksPage.fields.dbCheckPanelSelector, 30);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T360 Verify Database Failed checks page for the admin role (STT is enabled) [critical] @stt @grafana-pr',
-  async ({ I, databaseChecksPage, settingsAPI }) => {
-    await settingsAPI.apiEnableSTT();
-    await I.Authorize(users.admin.username, users.admin.password);
-    I.amOnPage(databaseChecksPage.url);
-    I.waitForVisible(databaseChecksPage.fields.dbCheckPanelSelector, 30);
-    I.dontSeeElement(databaseChecksPage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T358 Verify Failed checks panel at Home page for the viewer role (STT is disabled) @stt @grafana-pr',
-  async ({ I, homePage, settingsAPI }) => {
-    await settingsAPI.apiDisableSTT();
-    await I.Authorize(users.viewer.username, users.viewer.password);
-    I.amOnPage(homePage.url);
-    I.waitForVisible(homePage.fields.checksPanelSelector, 30);
-    I.waitForVisible(homePage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', homePage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T360 Verify Failed checks panel at Home page for the admin role (STT is disabled) @stt @grafana-pr',
-  async ({ I, homePage, settingsAPI }) => {
-    await settingsAPI.apiDisableSTT();
-    await I.Authorize(users.admin.username, users.admin.password);
-    I.amOnPage(homePage.url);
-    I.waitForVisible(homePage.fields.checksPanelSelector, 30);
-    I.dontSeeElement(homePage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T358 Verify Database Failed checks page for the viewer role (STT is disabled) [critical] @stt @grafana-pr',
-  async ({ I, databaseChecksPage, settingsAPI }) => {
-    await settingsAPI.apiDisableSTT();
-    await I.Authorize(users.viewer.username, users.viewer.password);
-    I.amOnPage(databaseChecksPage.url);
-    I.waitForVisible(databaseChecksPage.fields.dbCheckPanelSelector, 30);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
-  },
-);
-
-Scenario.skip(
-  'PMM-T360 Verify Database Failed checks page for the admin role (STT is disabled) [critical] @stt @grafana-pr',
-  async ({ I, databaseChecksPage, settingsAPI }) => {
-    await settingsAPI.apiDisableSTT();
-    await I.Authorize(users.admin.username, users.admin.password);
-    I.amOnPage(databaseChecksPage.url);
-    I.waitForVisible(databaseChecksPage.fields.dbCheckPanelSelector, 30);
-    I.dontSeeElement(databaseChecksPage.fields.noAccessRightsSelector);
-  },
-);
-
 Scenario(
   'PMM-T682 Verify backup locations access for user with viewer role [critical] @backup @grafana-pr',
   async ({
-    I, databaseChecksPage, settingsAPI, locationsPage,
+    I, homePage, settingsAPI, locationsPage,
   }) => {
     await settingsAPI.changeSettings({ backup: true });
     await I.Authorize(users.viewer.username, users.viewer.password);
 
     I.amOnPage(locationsPage.url);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
+    I.waitForVisible(homePage.fields.noAccessRightsSelector, 30);
+    I.see('Insufficient access permissions.', homePage.fields.noAccessRightsSelector);
   },
 );
 
 Data(viewerRole).Scenario(
   'PMM-T824 - Verify viewer users do not see Inventory, Settings, Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
-  async ({ I, current, databaseChecksPage }) => {
+  async ({ I, current, homePage }) => {
     const { username, password, dashboard } = current;
 
     await I.Authorize(username, password);
     I.amOnPage(dashboard);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
+    I.waitForVisible(homePage.fields.noAccessRightsSelector, 30);
+    I.see('Insufficient access permissions.', homePage.fields.noAccessRightsSelector);
   },
 );
 
 Data(editorRole).Scenario(
   'PMM-T824 - Verify editor users do not see Inventory, Settings, Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
-  async ({ I, current, databaseChecksPage }) => {
+  async ({ I, current, homePage }) => {
     const { username, password, dashboard } = current;
 
     await I.Authorize(username, password);
     I.amOnPage(dashboard);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
+    I.waitForVisible(homePage.fields.noAccessRightsSelector, 30);
+    I.see('Insufficient access permissions.', homePage.fields.noAccessRightsSelector);
   },
 );
 
@@ -182,7 +90,6 @@ Data(ptSummaryRoleCheck).Scenario(
 
     await I.Authorize(username, password);
     I.amOnPage(homePage.url);
-    I.waitForVisible(homePage.fields.checksPanelSelector, 30);
     I.waitForVisible(dashboardPage.graphsLocator('Monitored Nodes'), 30);
     I.waitForVisible(dashboardPage.graphsLocator('Monitored DB Services'), 30);
 
@@ -254,33 +161,5 @@ Scenario(
     await I.Authorize(users.viewer.username, users.viewer.password);
     I.amOnPage(ruleTemplatesPage.url);
     I.waitForText('Insufficient access permissions.', 10, ruleTemplatesPage.elements.unathorizedMessage);
-  },
-);
-
-Scenario.skip(
-  'PMM-T2009 - Verify that editor user can see failed advisors data on home dashboard @permissions-nightly  @gssapi-nightly',
-  async ({ I, dashboardPage }) => {
-    await I.Authorize(users.editor.username, users.editor.password);
-
-    await I.asyncWaitFor(async () => {
-      I.amOnPage(I.buildUrlWithParams(dashboardPage.homeDashboard.url, { refresh: '5s' }));
-      I.waitForVisible(dashboardPage.homeDashboard.panels.failedAdvisors, 30);
-
-      return await I.grabNumberOfVisibleElements(
-        dashboardPage.homeDashboard.panelData.failedAdvisors.criticalFailedAdvisors,
-      );
-    }, 600);
-
-    const criticalAdvisors = await I.grabTextFrom(dashboardPage.homeDashboard.panelData.failedAdvisors.criticalFailedAdvisors);
-    const errorAdvisors = await I.grabTextFrom(dashboardPage.homeDashboard.panelData.failedAdvisors.errorFailedAdvisors);
-    const warningAdvisors = await I.grabTextFrom(dashboardPage.homeDashboard.panelData.failedAdvisors.warningFailedAdvisors);
-    const noticeAdvisors = await I.grabTextFrom(dashboardPage.homeDashboard.panelData.failedAdvisors.noticeFailedAdvisors);
-
-    I.assertTrue(!Number.isNaN(criticalAdvisors), `Expect critical advisors value to be a number, but value was ${criticalAdvisors}`);
-    I.assertTrue(!Number.isNaN(errorAdvisors), `Expect error advisors value to be a number, but value was ${errorAdvisors}`);
-    I.assertTrue(!Number.isNaN(warningAdvisors), `Expect warning advisors value to be a number, but value was ${warningAdvisors}`);
-    I.assertTrue(!Number.isNaN(noticeAdvisors), `Expect notice advisors value to be a number, but value was ${noticeAdvisors}`);
-
-    await I.dontSee(dashboardPage.homeDashboard.panelData.failedAdvisors.insufficientPrivilege);
   },
 );

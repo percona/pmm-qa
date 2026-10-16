@@ -120,14 +120,6 @@ export default class LeftNavigation extends BasePage {
       temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
-    perconaadvisors: {
-      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
-      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
-      locator: this.page.getByTestId('navitem-advisors'),
-      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
-      query: { locator: this.page.getByTestId('navitem-advisors-query') },
-      security: { locator: this.page.getByTestId('navitem-advisors-security') },
-    },
     postgresql: {
       ha: {
         patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
