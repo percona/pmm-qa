@@ -3272,5 +3272,35 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-16T03:18:51Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-16T03:18:51Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-16T03:18:51Z",
+      "suites": [
+        "Package ARM"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-16T03:18:51Z",
+      "suites": [
+        "UI"
+      ]
+    }
+  ]
 }
