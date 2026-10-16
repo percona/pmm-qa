@@ -3,8 +3,6 @@ import { expect } from '@playwright/test';
 
 const pmmHaChart = 'pmm-ha';
 
-// Not tagged @pmm-ha: it needs a cluster installed under a release name without
-// "pmm-ha", and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
   'PMM-T2395 - Verify PMM HA installed under a release name without "pmm-ha" elects a leader and opens the UI @pmm-helm-release-name',
   async ({
