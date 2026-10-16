@@ -7,19 +7,35 @@ const {
 
 Feature('PMM Permission restrictions').retry(1);
 
-const viewerRole = new DataTable(['username', 'password', 'dashboard']);
+// Grafana PRs (@grafana-pr) test the Grafana pages only: they run against a released PMM UI
+const viewerGrafanaPages = new DataTable(['username', 'password', 'dashboard']);
 
-viewerRole.add([users.viewer.username, users.viewer.password, remoteInstancesPage.url]);
-viewerRole.add([users.viewer.username, users.viewer.password, pmmSettingsPage.url]);
-viewerRole.add([users.viewer.username, users.viewer.password, 'graph/inventory/nodes?orgId=1']);
-viewerRole.add([users.viewer.username, users.viewer.password, 'graph/inventory/services?orgId=1']);
+viewerGrafanaPages.add([users.viewer.username, users.viewer.password, remoteInstancesPage.url]);
 
-const editorRole = new DataTable(['username', 'password', 'dashboard']);
+const viewerPmmPages = new DataTable(['username', 'password', 'dashboard']);
 
-editorRole.add([users.editor.username, users.editor.password, remoteInstancesPage.url]);
-editorRole.add([users.editor.username, users.editor.password, pmmSettingsPage.url]);
-editorRole.add([users.editor.username, users.editor.password, 'graph/inventory/nodes?orgId=1']);
-editorRole.add([users.editor.username, users.editor.password, 'graph/inventory/services?orgId=1']);
+viewerPmmPages.add([users.viewer.username, users.viewer.password, pmmSettingsPage.url]);
+viewerPmmPages.add([users.viewer.username, users.viewer.password, '/pmm-ui/inventory/nodes']);
+viewerPmmPages.add([users.viewer.username, users.viewer.password, '/pmm-ui/inventory/services']);
+
+const editorGrafanaPages = new DataTable(['username', 'password', 'dashboard']);
+
+editorGrafanaPages.add([users.editor.username, users.editor.password, remoteInstancesPage.url]);
+
+const editorPmmPages = new DataTable(['username', 'password', 'dashboard']);
+
+editorPmmPages.add([users.editor.username, users.editor.password, pmmSettingsPage.url]);
+editorPmmPages.add([users.editor.username, users.editor.password, '/pmm-ui/inventory/nodes']);
+editorPmmPages.add([users.editor.username, users.editor.password, '/pmm-ui/inventory/services']);
+
+const verifyNoAccess = async ({ I, current, databaseChecksPage }) => {
+  const { username, password, dashboard } = current;
+
+  await I.Authorize(username, password);
+  I.amOnPage(dashboard);
+  I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
+  I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
+};
 
 const ptSummaryRoleCheck = new DataTable(['username', 'password', 'dashboard']);
 
@@ -148,28 +164,24 @@ Scenario(
   },
 );
 
-Data(viewerRole).Scenario(
-  'PMM-T824 - Verify viewer users do not see Inventory, Settings, Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
-  async ({ I, current, databaseChecksPage }) => {
-    const { username, password, dashboard } = current;
-
-    await I.Authorize(username, password);
-    I.amOnPage(dashboard);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
-  },
+Data(viewerGrafanaPages).Scenario(
+  'PMM-T824 - Verify viewer users do not see Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
+  verifyNoAccess,
 );
 
-Data(editorRole).Scenario(
-  'PMM-T824 - Verify editor users do not see Inventory, Settings, Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
-  async ({ I, current, databaseChecksPage }) => {
-    const { username, password, dashboard } = current;
+Data(viewerPmmPages).Scenario(
+  'PMM-T824 - Verify viewer users do not see Inventory, Settings Page @permissions-nightly  @gssapi-nightly',
+  verifyNoAccess,
+);
 
-    await I.Authorize(username, password);
-    I.amOnPage(dashboard);
-    I.waitForVisible(databaseChecksPage.fields.noAccessRightsSelector, 30);
-    I.see('Insufficient access permissions.', databaseChecksPage.fields.noAccessRightsSelector);
-  },
+Data(editorGrafanaPages).Scenario(
+  'PMM-T824 - Verify editor users do not see Remote Instances Page @permissions-nightly  @gssapi-nightly @grafana-pr',
+  verifyNoAccess,
+);
+
+Data(editorPmmPages).Scenario(
+  'PMM-T824 - Verify editor users do not see Inventory, Settings Page @permissions-nightly  @gssapi-nightly',
+  verifyNoAccess,
 );
 
 Data(ptSummaryRoleCheck).Scenario(

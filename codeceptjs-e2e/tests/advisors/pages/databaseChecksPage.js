@@ -214,10 +214,7 @@ module.exports = {
     I.see(serviceName);
 
     I.amOnPage(pmmInventoryPage.url);
-    I.waitForVisible(pmmInventoryPage.fields.inventoryTableColumn, 30);
-    I.scrollPageToBottom();
-
-    I.seeElement(locate('$table-row').find('td').withText(serviceName));
+    pmmInventoryPage.verifyRemoteServiceIsDisplayed(serviceName);
   },
   async verifyAdvisorCheckExistence(advisorName) {
     I.waitForVisible(this.elements.allChecksTableRows, 30);

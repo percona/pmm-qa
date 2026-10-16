@@ -681,6 +681,8 @@ module.exports = {
         args.page.locator(this.fields.addService).click(),
       ]);
     });
+    I.switchTo();
+    I.waitInUrl(pmmInventoryPage.servicesTab.url, 30);
   },
 
   openAddAzure() {
