@@ -202,6 +202,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-16T16:44:55Z"
+    },
+    {
+      "suites": [
+        "Other"
+      ],
+      "verdict": "not reproduced",
+      "summary": "CodeceptJS @ssl-mysql: PMM-T1403/T1404/T1426/T1431 (maxQueryLength empty variant) timed out because the QAN Explain tab kept showing 'Error 1064 (42000): You have an error in your SQL', the only failure of 15; 14 others passed. From run logs only, no VM reproduction.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-16T16:45:05Z"
     }
   ],
   "claims": [
