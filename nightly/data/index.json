@@ -84912,6 +84912,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15717",
         "by": "yurkovychv",
         "at": "2026-10-16T08:35:39Z"
+      },
+      {
+        "suites": [
+          "CLI Integration Compatibility"
+        ],
+        "verdict": "not reproduced",
+        "summary": "npm ci in the Install playwright step died after 17s with a one-off ECONNRESET from registry.npmjs.org before PMM was set up; 37 in-window npm ci runs on the same lockfile succeeded, all 306 lockfile tarballs are served, and a full replay on a CHAOS VM passed npm ci 3/3 and all 4 @valkey tests with client 3.8.1.",
+        "link": "",
+        "by": "yurkovychv",
+        "at": "2026-10-16T08:41:39Z"
       }
     ],
     "claims": [
@@ -84941,13 +84951,6 @@
         "at": "2026-10-16T03:18:51Z",
         "suites": [
           "UI"
-        ]
-      },
-      {
-        "by": "yurkovychv",
-        "at": "2026-10-16T08:09:45Z",
-        "suites": [
-          "CLI Integration Compatibility"
         ]
       },
       {
