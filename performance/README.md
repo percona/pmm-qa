@@ -44,7 +44,12 @@ PERF_RUN_ID=myrun-01 ./prepare_ansible_client_inventory.sh   # selects that batc
 
 `upgrade_client.yml` copies `upgrade_all_v3.sh` to each host and runs it as a
 monitored async job, upgrading the PMM client in every `*client_container*`
-Docker container and failing if the upgrade does not complete.
+Docker container (`UPGRADE_PARALLEL` at a time, default 4) and failing if the
+upgrade does not complete. A container counts as upgraded only once its running
+pmm-agent reports the new version and is connected to PMM Server; a stopped
+`*client_container*` is reported as not upgraded. Each host's log, with a
+per-container result and an `upgrade summary:` line, is printed whether it
+passed or failed. `ANSIBLE_FORKS` defaults to 25.
 
 **Host-key precondition:** the inventory is freshly-provisioned VMs with no
 `known_hosts` entries, and `start_upgrade_v3.sh` keeps `ANSIBLE_HOST_KEY_CHECKING`

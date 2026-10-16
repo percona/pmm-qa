@@ -8,6 +8,10 @@ if [ "$#" -ne 2 ]; then
 fi
 
 export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-True}"
+# Ansible's default of 5 forks staggers the start across a large batch.
+export ANSIBLE_FORKS="${ANSIBLE_FORKS:-25}"
+# Containers upgraded at once on each host.
+export upgrade_parallel="${UPGRADE_PARALLEL:-4}"
 export version="$1"
 export install_repo="$2"
 INVENTORY="inventory_client_container2"

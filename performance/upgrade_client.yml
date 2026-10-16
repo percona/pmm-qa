@@ -7,6 +7,7 @@
   vars:
     repo: "{{ lookup('env', 'install_repo') | default('testing', true) }}"
     version: "{{ lookup('env', 'version') | default('3.7.0', true) }}"
+    parallel: "{{ lookup('env', 'upgrade_parallel') | default('4', true) }}"
 
   tasks:
     - name: Copy upgrade script
@@ -23,11 +24,13 @@
     - name: Start PMM client upgrade (async)
       ansible.builtin.shell: >
         bash /tmp/upgrade_all_v3.sh --repo {{ repo | quote }} --version {{ version | quote }}
-        >> /tmp/update.log 2>&1
+        --parallel {{ parallel | quote }} >> /tmp/update.log 2>&1
       async: 7200
       poll: 0
       register: upgrade_result
 
+    # Don't fail here: a failed host must still reach the log tasks below, or the
+    # reason it was not upgraded is never shown.
     - name: Wait for PMM client upgrade to finish
       ansible.builtin.async_status:
         jid: "{{ upgrade_result.ansible_job_id }}"
@@ -35,8 +38,22 @@
       until: job_result.finished
       retries: 240
       delay: 30
-      failed_when: job_result.finished and (job_result.rc | default(0)) != 0
+      failed_when: false
 
-    - name: Show final status
+    - name: Read upgrade log
+      ansible.builtin.slurp:
+        src: /tmp/update.log
+      register: update_log
+      failed_when: false
+
+    - name: Show upgrade log
       ansible.builtin.debug:
-        var: job_result
+        msg: "{{ (update_log.content | default('') | b64decode).splitlines() }}"
+
+    - name: Fail if the upgrade did not complete on every container
+      ansible.builtin.assert:
+        that:
+          - job_result.finished | default(false)
+          - (job_result.rc | default(1)) == 0
+        fail_msg: "PMM client upgrade failed or timed out on {{ inventory_hostname }}; see the log above"
+        quiet: true
