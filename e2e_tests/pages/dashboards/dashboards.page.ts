@@ -54,6 +54,8 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelCanvasByExactName: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('canvas'),
     panelContentByExactName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
@@ -351,6 +353,9 @@ export default class Dashboards extends BasePage {
       await this.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
       await this.elements.refreshButton.click();
       await expect(this.builders.noDataMarkerInPanel(panelName)).toHaveCount(0, {
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+      await expect(this.builders.panelCanvasByExactName(panelName)).not.toHaveCount(0, {
         timeout: Timeouts.FIVE_SECONDS,
       });
     }).toPass({ timeout });
