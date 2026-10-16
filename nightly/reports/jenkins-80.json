@@ -212,15 +212,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-16T16:45:05Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-16T16:41:13Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "ha backup-restore: PMM-T2371 failed on 'min(up{job=kube-apiserver})' = 0 after the in-place restore on OpenShift with perconalab/pmm-server:3.10.0-rc; the same test passed on OpenShift in pmm3-ha-tests #137 (no restore) and in backup-restore #11 (3-dev-latest). The cluster was already deleted and no OpenShift reproduction was run.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-16T16:45:11Z"
     }
-  ]
+  ],
+  "claims": []
 }
