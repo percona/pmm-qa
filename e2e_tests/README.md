@@ -49,8 +49,8 @@ chart's backups on, which [`k8s/install_pmm_ha.sh`](../k8s/install_pmm_ha.sh) `-
 sets up; without them it fails on the missing backup-tools Deployment. It is kept out of
 `@pmm-ha` because a restore takes the cluster down for about ten minutes.
 `@pmm-helm-release-name` needs PMM HA installed under a release name without `pmm-ha`
-(`install_pmm_ha.sh --release pmm-prod`), and fails on any other. It is kept out of `@pmm-ha`,
-whose `--grep` would match it by substring and run it on the default `pmm-ha` release.
+(`install_pmm_ha.sh --release pmm-prod`), and fails on any other. Its tag must not contain
+`@pmm-ha`: `--grep "@pmm-ha"` matches by substring and would run it on the default `pmm-ha` release.
 
 PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
 It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
