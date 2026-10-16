@@ -192,20 +192,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Other"
+      ],
+      "verdict": "not reproduced",
+      "summary": "CLI Generic: pmm-admin --version and summary --version tests expect the server's version (3.10.0-v3-29d0075b2) but the pmm3-rc client prints 3.10.0; the server image perconalab/pmm-server:3.10.0-rc reports a v3-<sha> dev-style version. From run logs only, no VM reproduction.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-16T16:44:55Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-16T16:41:13Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-16T16:41:13Z",
-      "suites": [
-        "Other"
       ]
     }
   ]
