@@ -101,6 +101,15 @@ export default class PrometheusApi {
       : 0;
   };
 
+  /** How full a PVC is according to kubelet, as a percentage. */
+  volumePercentFull = async (namespace: string, claim: string): Promise<number | undefined> => {
+    const selector = `job="kubelet",namespace="${namespace}",persistentvolumeclaim="${claim}"`;
+
+    return this.instantQueryValue(
+      `max(100 * (1 - kubelet_volume_stats_available_bytes{${selector}} / kubelet_volume_stats_capacity_bytes{${selector}}))`,
+    );
+  };
+
   waitForQueryValue = async (
     baseUrl: string,
     query: string,
@@ -112,6 +121,26 @@ export default class PrometheusApi {
   ) => {
     await expect
       .poll(() => this.queryValueOrZero(baseUrl, query, options), { message, timeout })
+      .toBeGreaterThan(0);
+  };
+
+  /**
+   * Panels pinned to a 5m step show "No data" for a series until it has a sample
+   * before the last 5-minute boundary, e.g. MongoDB Router Summary Uptime.
+   */
+  waitForSampleBeforeFiveMinuteBoundary = async (selector: string) => {
+    await expect
+      .poll(
+        () =>
+          this.instantQueryValue(
+            `min(count_over_time(${selector}[1m] offset ${Math.floor(Date.now() / 1_000) % 300}s))`,
+          ),
+        {
+          intervals: [Timeouts.THIRTY_SECONDS],
+          message: `${selector} has no sample before the last 5-minute boundary`,
+          timeout: Timeouts.TEN_MINUTES,
+        },
+      )
       .toBeGreaterThan(0);
   };
 
