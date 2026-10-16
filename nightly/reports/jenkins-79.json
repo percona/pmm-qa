@@ -3292,6 +3292,16 @@
       "link": "",
       "by": "yurkovychv",
       "at": "2026-10-16T08:41:39Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "not reproduced",
+      "summary": "The GitHub-hosted runner running the databases-only shard extra-pxc-pdpgsql-haproxy lost communication around 01:42, so pdpgsql_pmm_17_1_3311 stopped sending metrics and PMM-T2048 found the instant-query \"Autovacuum\" table empty; it passes with client 3.8.0 when the service is healthy and fails the same way when the container is paused.",
+      "link": "",
+      "by": "yurkovychv",
+      "at": "2026-10-16T09:02:01Z"
     }
   ],
   "claims": [
@@ -3321,13 +3331,6 @@
       "at": "2026-10-16T03:18:51Z",
       "suites": [
         "UI"
-      ]
-    },
-    {
-      "by": "yurkovychv",
-      "at": "2026-10-16T08:09:56Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
