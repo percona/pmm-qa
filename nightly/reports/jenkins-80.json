@@ -3323,6 +3323,13 @@
   "claims": [
     {
       "by": "travagliad",
+      "at": "2026-10-16T17:32:56Z",
+      "suites": [
+        "CLI Integration"
+      ]
+    },
+    {
+      "by": "travagliad",
       "at": "2026-10-16T17:30:48Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
