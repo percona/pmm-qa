@@ -1,6 +1,7 @@
 export interface SettingsResponse {
   settings: {
     advisor_enabled: boolean;
+    alerting_enabled: boolean;
     azurediscover_enabled: boolean;
     backup_management_enabled: boolean;
     data_retention: string;

@@ -4,6 +4,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { SettingsResponse } from '@interfaces/settings';
 import { expect } from '@playwright/test';
+import { isDeepStrictEqual } from 'node:util';
 
 pmmTest.describe.configure({ mode: 'default' });
 
@@ -30,7 +31,9 @@ pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   const grafanaHelper = new GrafanaHelper(page);
 
-  for (const userId of createdUserIds.splice(0)) await grafanaHelper.deleteUser(userId);
+  for (const userId of createdUserIds.splice(0)) {
+    expect.soft((await grafanaHelper.deleteUser(userId)).status(), `Delete user ${userId}`).toEqual(200);
+  }
 
   await page.close();
 });
@@ -119,8 +122,22 @@ for (const role of ['viewer', 'editor'] as const) {
 }
 
 pmmTest.describe(() => {
+  let before: SettingsResponse['settings'];
+
+  pmmTest.beforeEach(async ({ api }) => {
+    ({ settings: before } = await api.settingsApi.getSettings());
+  });
+
   pmmTest.afterEach(async ({ api }) => {
-    await api.settingsApi.restoreSettingsDefaults();
+    const { settings: after } = await api.settingsApi.getSettings();
+
+    if (isDeepStrictEqual(after, before)) return;
+
+    await api.settingsApi.changeSettings({
+      enable_advisor: before.advisor_enabled,
+      enable_alerting: before.alerting_enabled,
+      enable_telemetry: before.telemetry_enabled ?? false,
+    });
   });
 
   for (const role of ['viewer', 'editor'] as const) {
