@@ -72,6 +72,7 @@ flowchart TB
 | `kerberos/` | — (Dockerfile only) | `pmm-qa/kerberos`, the KDC both PSMDB compose stacks run |
 | `pgsql/` | `PGSQL` | `pmm-qa/pgsql`; replication runs the official `postgres` image |
 | `haproxy/`, `external/`, `valkey/` | `HAPROXY`, `EXTERNAL`, `VALKEY` | one image each |
+| `pcsm/` | `PCSM` | `pmm-qa/pcsm`, the official PCSM image with PMM Client installed at run time; its source and target replica sets run `pmm-qa/psmdb` and reuse `images/psmdb/setup.sh`'s `psmdb_*` helpers |
 
 Source order matters only because `lib/config.sh` runs `register_database`
 calls at source time, and they validate themselves with `lib/common.sh`'s
@@ -262,8 +263,9 @@ Say you are adding `FOODB`:
    ```
 
 2. **Add `images/foodb/`** with its `Dockerfile` and `setup.sh`, and source the
-   `setup.sh` from `pmm-framework` and `tests/helpers/test_helper.bash`. Build
-   `setup_foodb` from the `lib/run_helpers.sh` and `lib/pmm_client.sh` helpers.
+   `setup.sh` from `pmm-framework`; `tests/helpers/test_helper.bash` sources
+   the same list. Build `setup_foodb` from the `lib/run_helpers.sh` and
+   `lib/pmm_client.sh` helpers.
 3. **Add `build_foodb_image`** to `lib/images.sh` (`build_image foodb:TAG foodb
    --build-arg ...`). The Dockerfile's `ARG`s take no defaults, and the builder
    passes every one of them; `tests/dispatch.bats` checks. Add the image to

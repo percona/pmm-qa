@@ -98,6 +98,15 @@ preflight_run() {
   [[ $(parallel_decision pdpgsql 'pgsql,SETUP_TYPE=replication') == true ]]
 }
 
+@test "PCSM runs in parallel with PSMDB, and two PCSM setups fall back to sequential" {
+  [[ $(parallel_decision 'psmdb,SETUP_TYPE=pss' pcsm) == true ]]
+  DATABASE_SPECS=(pcsm 'pcsm,INSTANCES=1')
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'two PCSM setups cannot run in parallel'* ]]
+}
+
 @test "EXTERNAL and VALKEY each parallelize with other setups" {
   [[ $(parallel_decision external haproxy pdpgsql) == true ]]
   [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]

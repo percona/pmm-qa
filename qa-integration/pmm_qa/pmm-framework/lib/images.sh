@@ -86,6 +86,11 @@ build_valkey_image() {
   build_image "valkey:$1" valkey --build-arg "VALKEY_VERSION=$1"
 }
 
+build_pcsm_image() {
+  has_image PCSM "$1"
+  build_image "pcsm:$1" pcsm --build-arg "PCSM_VERSION=$1"
+}
+
 # <redis_exporter version>-<process-exporter version>
 readonly EXTERNAL_TAG=1.58.0-0.7.10
 
@@ -115,7 +120,7 @@ build_pgsql_image() {
 image_tags() {
   local type version
   case $1 in
-    ps | mysql | pgsql | pdpgsql | valkey) type=${1^^} ;;
+    ps | mysql | pgsql | pdpgsql | valkey | pcsm) type=${1^^} ;;
     pxc-proxysql) type=PXC ;;
     ssl-pdpgsql) type=SSL_PDPGSQL ;;
     psmdb)

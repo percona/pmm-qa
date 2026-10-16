@@ -98,8 +98,25 @@ Names and option keys are case-insensitive. Supported setup keys are:
 
 - `PS`, `MYSQL`, `SSL_MYSQL`, `PXC`
 - `PGSQL`, `PDPGSQL`, `SSL_PDPGSQL`
-- `PSMDB`, `SSL_PSMDB`
+- `PSMDB`, `SSL_PSMDB`, `PCSM`
 - `HAPROXY`, `EXTERNAL`, `VALKEY`
+
+`PCSM` syncs PSMDB replica set `rs-src` (containers `pcsm-src-N`) to `rs-tgt`
+(`pcsm-tgt-N`) with an HA group of Percona ClusterSync for MongoDB instances
+(`pcsm-N`), registered as external services with `--metrics-mode=push`.
+`SOURCE_VERSION` and `TARGET_VERSION` pick the PSMDB versions (6.0, 7.0 or 8.0;
+the target no older than the source), `NODES_COUNT` the members per replica
+set and `INSTANCES` the PCSM processes, each 1 to 3:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database pcsm,SOURCE_VERSION=7.0,TARGET_VERSION=8.0,NODES_COUNT=3
+```
+
+PCSM's HTTP port has no authentication and also serves `/start` and
+`/finalize`, so it stays on `localhost` and PMM Client runs in each `pcsm-N`.
+A test that stops PCSM for a failover starts it again with
+`docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `pmm-framework --list-databases` prints each
