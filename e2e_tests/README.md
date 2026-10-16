@@ -123,8 +123,8 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
-- `@pmm-helm-release-name`
 - `@pmm-helm-pre-upgrade`
+- `@pmm-helm-release-name`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
