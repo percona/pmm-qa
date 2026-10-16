@@ -113,27 +113,13 @@ pmmTest.describe(() => {
       });
 
       await pmmTest.step('Nodes Overview reports data for the re-registered node', async () => {
-        await page.goto(nodesUrl);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data',
-            timeout: Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(nodesUrl, 19, Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE);
       });
 
       await pmmTest.step('Nodes Overview still reports data after a PMM Server restart', async () => {
         cliHelper.execute('sudo docker restart pmm-server').assertSuccess();
         await api.serverApi.waitForReady(Timeouts.ONE_MINUTE);
-        await page.goto(dashboard.os.nodesOverview.url);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data after the restart',
-            timeout: Timeouts.FIVE_MINUTES,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(dashboard.os.nodesOverview.url, 19);
       });
 
       const mysqlCredentials = `-h 127.0.0.1 --port 3306 -u${credentials.perconaServer.username} -p${credentials.perconaServer.password}`;
@@ -169,9 +155,7 @@ pmmTest.describe(() => {
   );
 });
 
-// skip-until: 2026-10-13 -- pmm-admin says "check PMM Server logs" for a disabled service account (PMM-15692); decide bug vs test fix.
-// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15692, see the skip-until line above.
-pmmTest.skip(
+pmmTest(
   'PMM-T1884 - Verify disabling service account @service-account',
   async ({ cliHelper, page, serviceAccountsPage }) => {
     const expectedDisabledMessage =
@@ -194,7 +178,8 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(containerListCommand).code, {
         message: `"${containerListCommand}" should exit with an error while the service account is disabled`,
-        timeout: Timeouts.TEN_SECONDS,
+        // pmm-managed caches a token's auth result for up to a minute.
+        timeout: Timeouts.TWO_MINUTES,
       })
       .not.toBe(0);
 
@@ -219,7 +204,7 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(hostListCommand).code, {
         message: `"${hostListCommand}" should exit with 0 once the service account is enabled again`,
-        timeout: Timeouts.TEN_SECONDS,
+        timeout: Timeouts.ONE_MINUTE,
       })
       .toBe(0);
 

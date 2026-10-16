@@ -6,6 +6,17 @@ import apiEndpoints from '@helpers/apiEndpoints';
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
 
+  addGenericNode = async (nodeName: string, address = '127.0.0.1'): Promise<string> => {
+    const response = await this.request.post(apiEndpoints.inventory.nodes, {
+      data: { generic: { address, node_name: nodeName } },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { generic: { node_id: string } }).generic.node_id;
+  };
+
   deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
     const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
       headers: GrafanaHelper.getAuthHeader(),

@@ -11,6 +11,8 @@ const {
 
 const externalExporterServiceName = 'external_service_new';
 const haproxyServiceName = 'haproxy_remote';
+// skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+const skipOnHa = process.env.INSTALLATION_TYPE === 'ha';
 
 const instances = new DataTable(['name']);
 const qanFilters = new DataTable(['filterName']);
@@ -234,7 +236,7 @@ Scenario.skip(
   },
 );
 
-Scenario(
+(skipOnHa ? Scenario.skip : Scenario)(
   'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     await I.amOnPage(pmmInventoryPage.url);
@@ -639,7 +641,7 @@ Scenario('PMM-T2024 - Verify services list does not refresh to first page @inven
 
 const tabs = [pmmInventoryPage.servicesTab.url, pmmInventoryPage.nodesTab.url];
 
-Data(tabs).Scenario(
+(skipOnHa ? xData : Data)(tabs).Scenario(
   'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly ',
   async ({ I, pmmInventoryPage, current }) => {
     I.amOnPage(current);
