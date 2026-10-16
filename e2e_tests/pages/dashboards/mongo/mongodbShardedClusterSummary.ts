@@ -51,4 +51,6 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
   noDataMetrics = (serviceNames: string[]): string[] => [
     ...serviceNames.map((name): string => `Oplog GB/Hour - ${name}`),
   ];
+
+  replSetSummaryLinkName = (shardName: string) => `MongoDB ReplSet Summary - ${shardName}`;
 }

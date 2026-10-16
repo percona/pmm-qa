@@ -48,6 +48,9 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
       ),
+    graphTooltipButton: (buttonName: string) =>
+      this.elements.graphTooltip.getByRole('button', { name: buttonName }),
+    graphTooltipLink: (linkName: string) => this.elements.graphTooltip.getByRole('link', { name: linkName }),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
@@ -288,6 +291,24 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  // The data link opens a new tab, but this page object drives `page`, so the tab's URL is reopened there.
+  openGraphTooltipLink = async (linkName: string, expectedUrl: RegExp) => {
+    await pmmTest.step(`Open ${linkName} from the graph tooltip`, async () => {
+      const popupPromise = this.page.waitForEvent('popup');
+
+      await this.builders.graphTooltipLink(linkName).click();
+
+      const popup = await popupPromise;
+
+      await expect(popup).toHaveURL(expectedUrl, { timeout: Timeouts.THIRTY_SECONDS });
+
+      const url = popup.url();
+
+      await popup.close();
+      await this.page.goto(url);
+    });
+  };
+
   openPanelMenu = async (panelName: string) => {
     await pmmTest.step(`Open ${panelName} panel menu`, async () => {
       await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
@@ -364,6 +385,34 @@ export default class Dashboards extends BasePage {
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
+  };
+
+  verifyLegendCalcIsSum = async (
+    panelName: string,
+    addendPanelNames: string[],
+    seriesName: string,
+    tolerance = 0.05,
+    calc = 'Mean',
+  ) => {
+    await pmmTest.step(
+      `Verify the ${panelName} ${calc} of ${seriesName} is about ${addendPanelNames.join(' plus ')}`,
+      async () => {
+        const total = await this.getLegendCalc(panelName, seriesName, calc);
+        const addends: number[] = [];
+
+        for (const addendPanelName of addendPanelNames) {
+          addends.push(await this.getLegendCalc(addendPanelName, seriesName, calc));
+        }
+
+        const sum = addends.reduce((accumulator, addend) => accumulator + addend, 0);
+
+        expect(total, `${panelName} ${calc} of ${seriesName}`).toBeGreaterThan(0);
+        expect(
+          Math.abs(total - sum),
+          `${panelName} ${calc} ${total} vs ${addendPanelNames.map((name, i) => `${name} ${addends[i]}`).join(' + ')}`,
+        ).toBeLessThanOrEqual(total * tolerance);
+      },
+    );
   };
 
   verifyMetricsPresent = async (
@@ -470,6 +519,23 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPinnedGraphTooltip = async (expectedTexts: (RegExp | string)[], linkNames: string[] = []) => {
+    await pmmTest.step('Verify the pinned graph tooltip', async () => {
+      await expect(this.elements.graphTooltip).toBeVisible();
+
+      for (const text of expectedTexts) {
+        await expect(this.elements.graphTooltip).toContainText(text);
+      }
+
+      for (const linkName of linkNames) {
+        await expect(this.builders.graphTooltipLink(linkName)).toBeVisible();
+      }
+
+      await expect(this.builders.graphTooltipButton('Add annotation')).toBeVisible();
+      await expect(this.builders.graphTooltipButton('Close')).toBeVisible();
+    });
+  };
+
   verifyRowMetricsPresent = async (
     rowName: string,
     expectedMetrics: GrafanaPanel[],
@@ -513,6 +579,17 @@ export default class Dashboards extends BasePage {
     expect
       .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
       .toHaveLength(0);
+  };
+
+  // Rows mount one by one after the dashboard loads.
+  verifyRowTitles = async (titlePattern: RegExp, expectedTitles: string[]) => {
+    await expect
+      .poll(
+        async () =>
+          (await this.elements.rowTitles.filter({ hasText: titlePattern }).allTextContents()).sort(),
+        { timeout: Timeouts.THIRTY_SECONDS },
+      )
+      .toEqual([...expectedTitles].sort());
   };
 
   waitForDashboardToLoad = async () => {

@@ -3,7 +3,9 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 
 export default class MongodbReplSetSummary implements DashboardInterface {
   url = 'graph/d/mongodb-replicaset-summary/mongodb-replset-summary';
+  name = 'MongoDB ReplSet Summary';
   noDataMetrics: string[] = [];
+  serviceRowPattern = /^Overview - /;
 
   metrics = (services: string[], nodes: string[]): MetricsRow[] => [
     { metrics: [{ name: 'Members', type: 'polyStat' }], rowName: 'Current Topology' },
@@ -30,7 +32,7 @@ export default class MongodbReplSetSummary implements DashboardInterface {
         { name: 'Uptime', type: 'stat' },
         { name: 'Version', type: 'stat' },
       ],
-      rowName: `Overview - ${serviceName}`,
+      rowName: this.serviceRowName(serviceName),
     })),
     {
       metrics: [
@@ -134,4 +136,8 @@ export default class MongodbReplSetSummary implements DashboardInterface {
 
     return noDataMetrics ? noDataMetrics : [];
   };
+
+  replSetUrlPattern = (replSetName: string) => new RegExp(`${this.url}\\?.*var-rs_nm=${replSetName}`);
+
+  serviceRowName = (serviceName: string) => `Overview - ${serviceName}`;
 }

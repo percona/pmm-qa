@@ -51,6 +51,18 @@ export default class InventoryApi {
     return service;
   };
 
+  getAllServicesByReplicationSet = async (cluster: string, replicationSet: string): Promise<GetService[]> => {
+    const services = (await this.getServices()).services.filter(
+      (service: GetService) => service.cluster === cluster && service.replication_set === replicationSet,
+    );
+
+    if (services.length === 0) {
+      throw new Error(`No service of cluster ${cluster} in replication set ${replicationSet} is present`);
+    }
+
+    return services;
+  };
+
   getAllServicesDetailsByPartialName = async (partialServiceName: string): Promise<GetService[]> => {
     const services = await this.getServices();
     const filteredServices = services.services.filter((service: GetService) =>
