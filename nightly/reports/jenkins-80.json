@@ -3328,16 +3328,19 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-12069",
       "by": "travagliad",
       "at": "2026-10-16T17:36:18Z"
+    },
+    {
+      "suites": [
+        "CLI Integration"
+      ],
+      "verdict": "product bug",
+      "summary": "The 3.10.0 RC server build reused pmm-managed, qan-api2 and vmproxy RPMs a v3 dev build had put in the shared S3 cache (cache key omits the embedded version), so perconalab/pmm-server:3.10.0-rc reports 3.10.0-v3-29d0075b2 while the RC client reports 3.10.0; reproduced on a CHAOS VM.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15762",
+      "by": "travagliad",
+      "at": "2026-10-16T17:56:16Z"
     }
   ],
   "claims": [
-    {
-      "by": "travagliad",
-      "at": "2026-10-16T17:32:56Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
     {
       "by": "travagliad",
       "at": "2026-10-16T17:30:48Z",
