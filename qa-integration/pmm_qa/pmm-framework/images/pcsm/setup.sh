@@ -4,40 +4,64 @@
 
 # PCSM syncs replica set rs-src (pcsm-src-N) to rs-tgt (pcsm-tgt-N), both on
 # the psmdb image, as one HA group of INSTANCES processes (pcsm-N): one ACTIVE,
-# the rest STANDBY. Each PCSM keeps its default localhost:2242 listener, which
-# also serves /start and /finalize unauthenticated, so PMM Client runs beside
-# it and PMM scrapes it in push mode. The URIs are in each pcsm-N's
-# environment, so a test that stops an instance with `pkill -x pcsm` restarts
-# it with `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
+# the rest STANDBY. SOURCE=psmdb syncs the PSMDB setup's replica set rs
+# (rs101-rs103) instead of rs-src. Each PCSM keeps its default localhost:2242
+# listener, which also serves /start and /finalize unauthenticated, so PMM
+# Client runs beside it and PMM scrapes it in push mode. The URIs are in each
+# pcsm-N's environment, so a test that stops an instance with `pkill -x pcsm`
+# restarts it with `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 setup_pcsm() {
-  local version source_version target_version nodes_count instances client tarball='' node i
-  local -a src_nodes=() tgt_nodes=() pcsm_nodes=()
+  local version sync_source source_version target_version nodes_count instances client tarball='' node i
+  local source_set=rs-src source_uri=$PSMDB_ROOT_URI
+  local -a src_nodes=() tgt_nodes=() pcsm_nodes=() own_src_nodes=()
   version=$(resolved_version PCSM_VERSION PCSM "$DB_VERSION")
+  sync_source=$(resolve_value PCSM SOURCE DB_CONFIG)
+  sync_source=${sync_source,,}
   source_version=$(resolve_value PCSM SOURCE_VERSION DB_CONFIG)
   target_version=$(resolve_value PCSM TARGET_VERSION DB_CONFIG)
   nodes_count=$(resolve_value PCSM NODES_COUNT DB_CONFIG)
   instances=$(resolve_value PCSM INSTANCES DB_CONFIG)
   client=$(resolved_client_version PCSM DB_CONFIG)
 
-  pcsm_supported SOURCE_VERSION "$source_version"
+  case $sync_source in
+    '' | psmdb) ;;
+    *) die "Unsupported PCSM SOURCE '$sync_source': leave it empty for rs-src, or use psmdb." ;;
+  esac
+  if [[ $sync_source == psmdb && ( -v 'DB_CONFIG[SOURCE_VERSION]' || -n ${SOURCE_VERSION:-} ) ]]; then
+    die "PCSM SOURCE_VERSION does not apply to SOURCE=psmdb, which syncs the PSMDB setup's version."
+  fi
   pcsm_supported TARGET_VERSION "$target_version"
+  [[ $nodes_count == [1-3] ]] || die "Unsupported PCSM NODES_COUNT '$nodes_count': use 1 to 3."
+  [[ $instances == [1-3] ]] || die "Unsupported PCSM INSTANCES '$instances': use 1 to 3."
+  if [[ $sync_source == psmdb ]]; then
+    source_set=rs
+    source_uri=$PCSM_PSMDB_URI
+    src_nodes=(rs101 rs102 rs103)
+    source_version=$(pcsm_psmdb_version)
+    pcsm_supported 'source version' "$source_version"
+  else
+    pcsm_supported SOURCE_VERSION "$source_version"
+    for ((i = 1; i <= nodes_count; i++)); do
+      own_src_nodes+=("pcsm-src-$i")
+    done
+    src_nodes=("${own_src_nodes[@]}")
+  fi
   if ((${target_version%%.*} < ${source_version%%.*})); then
     die "PCSM cannot sync PSMDB $source_version to an older $target_version."
   fi
-  [[ $nodes_count == [1-3] ]] || die "Unsupported PCSM NODES_COUNT '$nodes_count': use 1 to 3."
-  [[ $instances == [1-3] ]] || die "Unsupported PCSM INSTANCES '$instances': use 1 to 3."
   for ((i = 1; i <= nodes_count; i++)); do
-    src_nodes+=("pcsm-src-$i")
     tgt_nodes+=("pcsm-tgt-$i")
   done
   for ((i = 1; i <= instances; i++)); do
     pcsm_nodes+=("pcsm-$i")
   done
-  local -a mongo_nodes=("${src_nodes[@]}" "${tgt_nodes[@]}")
+  local -a mongo_nodes=("${own_src_nodes[@]}" "${tgt_nodes[@]}")
   local -a all_nodes=("${mongo_nodes[@]}" "${pcsm_nodes[@]}")
 
-  step "Prepare image pmm-qa/psmdb:$source_version-ol9" ensure_image psmdb "$source_version-ol9"
-  if [[ $target_version != "$source_version" ]]; then
+  if [[ $sync_source != psmdb ]]; then
+    step "Prepare image pmm-qa/psmdb:$source_version-ol9" ensure_image psmdb "$source_version-ol9"
+  fi
+  if [[ $sync_source == psmdb || $target_version != "$source_version" ]]; then
     step "Prepare image pmm-qa/psmdb:$target_version-ol9" ensure_image psmdb "$target_version-ol9"
   fi
   step "Prepare image pmm-qa/pcsm:$version" ensure_image pcsm "$version"
@@ -46,7 +70,11 @@ setup_pcsm() {
   # Every name a larger topology could have left behind.
   fresh_containers pcsm-src-{1..3} pcsm-tgt-{1..3} pcsm-{1..3}
   ensure_pmm_network
-  step 'Start the source replica set rs-src' pcsm_replset rs-src "$source_version" "${src_nodes[@]}"
+  if [[ $sync_source == psmdb ]]; then
+    log_info "Syncing the PSMDB setup's replica set rs (PSMDB $source_version) to rs-tgt"
+  else
+    step 'Start the source replica set rs-src' pcsm_replset rs-src "$source_version" "${src_nodes[@]}"
+  fi
   step 'Start the target replica set rs-tgt' pcsm_replset rs-tgt "$target_version" "${tgt_nodes[@]}"
   step 'Create the PCSM users' pcsm_users
   step 'Load data into the source' pcsm_load
@@ -70,14 +98,28 @@ setup_pcsm() {
 }
 
 readonly PCSM_PASSWORD=pcsmpass
+# setup_psmdb's replica set rs, through whichever member is primary.
+readonly PCSM_PSMDB_URI='mongodb://root:root@127.0.0.1:27017/admin?replicaSet=rs'
 
 # PCSM 1.0 syncs these PSMDB majors; the psmdb image's 8.3 is not one of them.
-# Usage: pcsm_supported OPTION VERSION
+# Usage: pcsm_supported WHAT VERSION
 pcsm_supported() {
   case $2 in
     6.0 | 7.0 | 8.0) ;;
     *) die "Unsupported PCSM $1 '$2': PCSM syncs PSMDB 6.0, 7.0 and 8.0." ;;
   esac
+}
+
+# Stdout: the major of the PSMDB setup's replica set, from rs101 (8.0.32-14 -> 8.0)
+pcsm_psmdb_version() {
+  local probe set version
+  probe=$(psmdb_js rs101 "$PSMDB_ROOT_URI" 'db.hello().setName + " " + db.version()' 2>/dev/null) ||
+    die 'PCSM SOURCE=psmdb needs a running --database psmdb replica set (SETUP_TYPE=pss or psa).'
+  set=${probe%% *}
+  [[ $set == rs ]] || die "PCSM SOURCE=psmdb syncs replica set rs, but rs101 is in '$set'."
+  version=${probe#* }
+  version=${version%%-*}
+  printf '%s' "${version%.*}"
 }
 
 # Start mongod on MEMBERS and initiate replica set NAME with the root and pmm
@@ -96,10 +138,11 @@ pcsm_replset() {
   psmdb_replset "$name" '' false "${members[@]}"
 }
 
-# The source and target roles of PCSM's authentication docs.
+# The source and target roles of PCSM's authentication docs. A PSMDB source
+# may hold the user from an earlier run.
 pcsm_users() {
-  psmdb_js "${src_nodes[0]}" "$PSMDB_ROOT_URI" \
-    "db.getSiblingDB(\"admin\").createUser({ user: \"pcsm_source\", pwd: \"$PCSM_PASSWORD\", roles: [\"backup\", \"clusterMonitor\", \"readAnyDatabase\"] })" \
+  psmdb_js "${src_nodes[0]}" "$source_uri" \
+    "const admin = db.getSiblingDB(\"admin\"); admin.getUser(\"pcsm_source\") || admin.createUser({ user: \"pcsm_source\", pwd: \"$PCSM_PASSWORD\", roles: [\"backup\", \"clusterMonitor\", \"readAnyDatabase\"] })" \
     >/dev/null || die 'Creating the PCSM source user failed.'
   psmdb_js "${tgt_nodes[0]}" "$PSMDB_ROOT_URI" \
     "db.getSiblingDB(\"admin\").createUser({ user: \"pcsm_target\", pwd: \"$PCSM_PASSWORD\", roles: [\"restore\", \"clusterMonitor\", \"clusterManager\", \"readWriteAnyDatabase\"] })" \
@@ -108,7 +151,7 @@ pcsm_users() {
 
 # About 100 MB, so the dashboard's copy panels have a clone to chart.
 pcsm_load() {
-  psmdb_js "${src_nodes[0]}" "$PSMDB_ROOT_URI" 'const orders = db.getSiblingDB("pcsm_qa").orders;
+  psmdb_js "${src_nodes[0]}" "$source_uri" 'const orders = db.getSiblingDB("pcsm_qa").orders;
     for (let i = 0; i < 200; i++) orders.insertMany(Array.from({ length: 1000 }, (_, j) => ({ i, j, pad: "x".repeat(500) })));' \
     >/dev/null || die 'Loading the source data failed.'
 }
@@ -123,7 +166,7 @@ pcsm_uri() {
 
 pcsm_start() {
   must docker run --detach --name "$1" --hostname "$1" --label pmm-qa.engine=pcsm --network pmm-qa \
-    --env "PCSM_SOURCE_URI=$(pcsm_uri pcsm_source rs-src "${src_nodes[@]}")" \
+    --env "PCSM_SOURCE_URI=$(pcsm_uri pcsm_source "$source_set" "${src_nodes[@]}")" \
     --env "PCSM_TARGET_URI=$(pcsm_uri pcsm_target rs-tgt "${tgt_nodes[@]}")" \
     --env PCSM_GROUP_NAME=pcsm-sync-1 "pmm-qa/pcsm:$version" >/dev/null
   must docker exec --detach "$1" sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'
@@ -170,6 +213,6 @@ pcsm_sync() {
 }
 
 pcsm_workload() {
-  must docker exec --detach "${src_nodes[0]}" mongo --quiet "$PSMDB_ROOT_URI" --eval \
+  must docker exec --detach "${src_nodes[0]}" mongo --quiet "$source_uri" --eval \
     'const orders = db.getSiblingDB("pcsm_qa").orders; while (true) { orders.insertOne({ ts: new Date(), pad: "x".repeat(500) }); sleep(100); }'
 }

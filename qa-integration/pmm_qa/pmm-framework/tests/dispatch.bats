@@ -40,6 +40,10 @@ stub_prebaked_docker() {
       *replication_group_members*) printf '3\n' ;;
       *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
       *'cluster info'*) printf 'cluster_state:ok\n' ;;
+      *'db.hello().setName + " " + db.version()'*)
+        [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
+        printf '%s\n' "${PSMDB_SOURCE_PROBE-rs 8.0.32-14}"
+        ;;
       'exec pcsm-1 curl -fsS http://127.0.0.1:2242/metrics')
         printf '%s\n' '# TYPE percona_clustersync_mongodb_ha_active gauge' 'percona_clustersync_mongodb_ha_active 1'
         ;;
@@ -643,6 +647,45 @@ EOF
   run dispatch_setup
   [[ $status -ne 0 && $output == *"Unsupported PCSM NODES_COUNT '0': use 1 to 3."* ]]
   [[ ! -s $DOCKER_CALLS ]]
+}
+
+@test "PCSM with SOURCE=psmdb migrates the PSMDB replica set and registers only the target and PCSM" {
+  local root_uri='mongodb://root:root@127.0.0.1:27017/admin?replicaSet=rs'
+  stub_prebaked_docker
+  parse_database_spec 'pcsm,SOURCE=psmdb'
+  dispatch_setup
+
+  ! grep -q '^run --detach --name pcsm-src-' "$DOCKER_CALLS" || false
+  grep -q -- '^run --detach --name pcsm-tgt-1 .* pmm-qa/psmdb:8.0-ol9 mongod --replSet rs-tgt ' "$DOCKER_CALLS"
+  grep -Fq "exec -i rs101 mongo --quiet $root_uri --eval const admin = db.getSiblingDB(\"admin\"); admin.getUser(\"pcsm_source\") || admin.createUser({ user: \"pcsm_source\"" "$DOCKER_CALLS"
+  grep -Fq "exec -i rs101 mongo --quiet $root_uri --eval const orders = db.getSiblingDB(\"pcsm_qa\").orders;" "$DOCKER_CALLS"
+  grep -Fq -- '--env PCSM_SOURCE_URI=mongodb://pcsm_source:pcsmpass@rs101:27017,rs102:27017,rs103:27017/?replicaSet=rs ' "$DOCKER_CALLS"
+  ! grep -q '^exec rs10[1-3] pmm-admin add' "$DOCKER_CALLS" || false
+  ! grep -q -- '--cluster=rs-src' "$DOCKER_CALLS" || false
+  grep -q -- '^exec pcsm-tgt-1 pmm-admin add mongodb .* --cluster=rs-tgt --replication-set=rs-tgt pcsm-tgt-1$' "$DOCKER_CALLS"
+  grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
+  grep -Fq "exec --detach rs101 mongo --quiet $root_uri --eval const orders = db.getSiblingDB(\"pcsm_qa\").orders; while (true)" "$DOCKER_CALLS"
+}
+
+@test "PCSM with SOURCE=psmdb refuses a source it cannot sync before starting a container" {
+  stub_prebaked_docker
+  parse_database_spec 'pcsm,SOURCE=psmdb'
+  PSMDB_SOURCE_PROBE=none run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM SOURCE=psmdb needs a running --database psmdb replica set (SETUP_TYPE=pss or psa).'* ]]
+  PSMDB_SOURCE_PROBE='rs1 8.0.32-14' run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM SOURCE=psmdb syncs replica set rs, but rs101 is in 'rs1'."* ]]
+  PSMDB_SOURCE_PROBE='rs 8.3.1-1' run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM source version '8.3': PCSM syncs PSMDB 6.0, 7.0 and 8.0."* ]]
+  parse_database_spec 'pcsm,SOURCE=psmdb,TARGET_VERSION=7.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM cannot sync PSMDB 8.0 to an older 7.0.'* ]]
+  parse_database_spec 'pcsm,SOURCE=psmdb,SOURCE_VERSION=7.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM SOURCE_VERSION does not apply to SOURCE=psmdb, which syncs the PSMDB setup's version."* ]]
+  parse_database_spec 'pcsm,SOURCE=atlas'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM SOURCE 'atlas': leave it empty for rs-src, or use psmdb."* ]]
+  ! grep -q '^run ' "$DOCKER_CALLS" || false
 }
 
 @test "HAProxy runs on the prebaked image and registers as haproxy_setup.yml did" {

@@ -145,6 +145,10 @@ WARNING: Running setups sequentially: two PS setups cannot run in parallel.
 
 CI passes `--parallel` unconditionally, so refusing would fail valid jobs.
 
+One pair depends on order: `PCSM` with `SOURCE=psmdb` syncs the replica set
+of a `PSMDB` setup, so it runs after the `PSMDB` setup it is listed after, not
+beside it. Listed before one, or after a sharded one, it is refused.
+
 Three pairs cannot share a **host** at all, because each holds the same
 container name or host port for as long as it is up:
 

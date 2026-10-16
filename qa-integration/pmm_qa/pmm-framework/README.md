@@ -113,6 +113,16 @@ qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database pcsm,SOURCE_VERSION=7.0,TARGET_VERSION=8.0,NODES_COUNT=3
 ```
 
+`SOURCE=psmdb` migrates a PSMDB setup's replica set `rs` (`rs101`–`rs103`, cluster
+`replicaset` in PMM) instead of starting `rs-src`. It adds the same ~100 MB
+`pcsm_qa` database to it and keeps writing there. List the PSMDB setup first;
+the two then run one after the other, even with `--parallel`:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb
+```
+
 PCSM's HTTP port has no authentication and also serves `/start` and
 `/finalize`, so it stays on `localhost` and PMM Client runs in each `pcsm-N`.
 A failover test stops an instance with `docker exec pcsm-N pkill -x pcsm`,
