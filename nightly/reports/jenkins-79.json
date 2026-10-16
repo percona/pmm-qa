@@ -3311,6 +3311,13 @@
     },
     {
       "by": "yurkovychv",
+      "at": "2026-10-16T08:09:56Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    },
+    {
+      "by": "yurkovychv",
       "at": "2026-10-16T08:09:35Z",
       "suites": [
         "UI"
