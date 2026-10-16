@@ -28,12 +28,7 @@
       instance_ip: "{{ instance_ip.stdout }}"
 
   - name: Set Integrations list
-    include_tasks: ./tasks/pmm3-client_test_enabled_db_arm.yml
-    when: ansible_architecture == "aarch64"
-
-  - name: Set Integrations list
     include_tasks: ./tasks/pmm3-client_test_enabled_db.yml
-    when: ansible_architecture != "aarch64"
 
   - set_fact:
       rnd: "{{ 1000 | random }}"
@@ -76,7 +71,7 @@
       pmm_client_old: "pmm-client-{{ pmm_old_version_rpm.stdout }}"
 
   - name: Set PMM Client package name to install
-    when: test_repo != "main"
+    when: test_repo != "release"
     set_fact:
       pmm_client_old: "pmm-client"
 
@@ -121,19 +116,10 @@
 ### start PS
   - set_fact:
       mysql_service_name: "mysql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
-#      mysql_service_name: "mysql_{{ rnd }}_{{ instance_ip }}"
 
-  - name: Install and start Percona Server 5.7
-    when: '"ps-5.7" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_57.yml
-
-  - name: Install and start Percona Server 8.0
-    when: '"ps-8.0" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_80.yml
-
-  - name: Install and start Percona Server 8.4
-    when: '"ps-8.4" in enabled_db'
-    include_tasks: ./tasks/install_and_add_to_pmm_ps_84.yml
+  - name: Start Percona Server and add it to PMM
+    when: '"ps-" in enabled_db | join("")'
+    include_tasks: ./tasks/add_percona_server_to_pmm.yml
 
   - name: Verify if Metric Endpoint with Auth works for Mysqld Exporter
     when: '"ps-" in enabled_db | join("")'
@@ -148,9 +134,9 @@
       mongo_socket_service_name: "mongodb_socket_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 #      mongo_service_name: "mongodb_{{ rnd }}_{{ instance_ip }}"
 
-  - name: Install and start Percona Server MongoDB
+  - name: Set up Percona Server for MongoDB and add it to PMM
     when: '"psmdb-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_psmdb.yml
+    include_tasks: ./tasks/add_psmdb_to_pmm.yml
     vars:
       psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
@@ -167,9 +153,9 @@
       pgsql_service_name: "pgsql_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
       pgsql_socket_service_name: "pgsql_socket_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
-  - name: Install and start Percona Server PostgreSQL
+  - name: Start PostgreSQL and add it to PMM
     when: '"pg-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_pdpgsql.yml
+    include_tasks: ./tasks/add_postgresql_to_pmm.yml
     vars:
       pg_to_test: "{{ enabled_db | select('match', '^pg-*') | join('') }}"
 
@@ -194,13 +180,13 @@
   - set_fact:
       valkey_service_name: "valkey_{{ instance_ip }}_{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
-  - name: Install and start Valkey
+  - name: Start Valkey and add it to PMM
     when: '"valkey-" in enabled_db | join("")'
-    include_tasks: ./tasks/install_and_add_to_pmm_valkey.yml
+    include_tasks: ./tasks/add_valkey_to_pmm.yml
     vars:
       valkey_to_test: "{{ enabled_db | select('match', '^valkey-*') | join('') }}"
 
-  - name: Verify if Metric Endpoint with Auth works for Mysqld Exporter
+  - name: Verify if Metric Endpoint with Auth works for Valkey Exporter
     when: '"valkey-" in enabled_db | join("")'
     include_tasks: ./tasks/verify_pmm3_service_metric.yml
     loop:

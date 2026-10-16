@@ -28,6 +28,8 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByTestId('create-from-template-button'),
     deleteTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('delete-template-button'),
+    dynamicBadge: (templateName: string) =>
+      this.builders.templateRow(templateName).getByText('Dynamic', { exact: true }),
     editTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('edit-template-button'),
     evaluationIntervalOption: (interval: string) =>
@@ -67,14 +69,24 @@ export default class AlertingPage extends BasePage {
       this.grafanaIframe()
         .getByRole('row')
         .filter({ has: this.page.getByTitle(source, { exact: true }) }),
+    viewTemplate: (templateName: string) =>
+      this.builders.templateRow(templateName).getByRole('button', { name: 'View' }),
   };
   buttons = {
     addTemplate: this.grafanaIframe().getByTestId('alert-rule-template-add-modal-button'),
     cancelModal: this.grafanaIframe().getByRole('dialog').getByRole('button', { name: 'Cancel' }),
     cancelTemplate: this.grafanaIframe().getByTestId('alert-rule-template-cancel-button'),
+    // The dialog's header X is also named Close, so match the footer button by its text.
+    closeDialog: this.grafanaIframe()
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Close' })
+      .filter({ hasText: 'Close' }),
     closeModal: this.grafanaIframe().getByTestId('modal-close-button'),
     confirmDelete: this.grafanaIframe().getByTestId('confirm-delete-modal-button'),
     confirmModal: this.grafanaIframe().getByTestId('data-testid Confirm Modal Danger Button'),
+    copyToClipboard: this.grafanaIframe()
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Copy to clipboard' }),
     createEvaluationGroup: this.grafanaIframe().getByTestId(
       'data-testid alert-rule new-evaluation-group-create-button',
     ),
@@ -112,6 +124,7 @@ export default class AlertingPage extends BasePage {
     dataSourcePicker: this.grafanaIframe().getByTestId('data-testid Data source picker select container'),
     deleteModalMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     dialog: this.grafanaIframe().getByRole('dialog'),
+    dynamicBadges: this.grafanaIframe().getByTestId('table-tbody').getByText('Dynamic', { exact: true }),
     groupByContainer: this.grafanaIframe().getByTestId('group-by-container'),
     labelSearch: this.grafanaIframe().getByTestId('search-query-input'),
     modalHeader: this.grafanaIframe().getByTestId('modal-header'),
@@ -125,6 +138,7 @@ export default class AlertingPage extends BasePage {
     templateNames: this.grafanaIframe().locator('//tr/td[1]'),
     templatesLoader: this.grafanaIframe().getByTestId('template-select-input').getByText('Choose'),
     templatesTable: this.grafanaIframe().getByTestId('table-tbody'),
+    templateText: this.grafanaIframe().getByRole('dialog').getByRole('textbox'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
   };
   inputs = {
@@ -146,6 +160,12 @@ export default class AlertingPage extends BasePage {
       .getByRole('status')
       .or(this.grafanaIframe().getByRole('alert'))
       .and(this.grafanaIframe().locator(':not([aria-label="Loading"])')),
+  };
+
+  addDynamicTemplate = async (yaml: string, templateName: string) => {
+    await this.createTemplate(yaml);
+    await expect(this.messages.popUp).toContainText('Alert rule template successfully added');
+    await expect(this.builders.dynamicBadge(templateName)).toBeVisible();
   };
 
   attachTemplateFile = async (path: string) => {
@@ -171,6 +191,18 @@ export default class AlertingPage extends BasePage {
     await this.buttons.addTemplate.click();
     await this.inputs.template.fill(yaml);
     await this.buttons.submitTemplate.click();
+  };
+
+  deleteRule = async (folder: string, ruleName: string) => {
+    await this.page.goto(this.urls.alertRules);
+    await this.builders.ruleGroupToggle(folder).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.buttons.expandRow.first().click({ timeout: Timeouts.ONE_MINUTE });
+    await this.builders.ruleMoreMenu(ruleName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.deleteRule.click();
+    await this.buttons.confirmModal.click();
+    await expect(this.messages.popUp).toContainText('Rule successfully deleted', {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
   };
 
   deleteTemplate = async (summary: string) => {
@@ -241,5 +273,18 @@ export default class AlertingPage extends BasePage {
     await this.builders.rowActions(alertName).click();
     await this.buttons.silence.click();
     await this.buttons.saveSilence.click();
+  };
+
+  verifyTemplateRefused = async (yaml: string, message: string) => {
+    await this.createTemplate(yaml);
+    await expect(this.builders.alertMessage(message)).toContainText('Failed to parse rule template');
+    await this.buttons.cancelTemplate.click();
+  };
+
+  verifyTemplateText = async (templateName: string, text: RegExp) => {
+    await this.builders.viewTemplate(templateName).click();
+    await expect(this.elements.templateText).toHaveValue(text);
+    await expect(this.buttons.copyToClipboard).toBeVisible();
+    await this.buttons.closeDialog.click();
   };
 }

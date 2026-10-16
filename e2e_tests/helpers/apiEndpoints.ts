@@ -8,10 +8,12 @@ const apiEndpoints = {
     listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
+    thresholds: '/v1/alerting/thresholds',
   },
   backups: {
     artifacts: '/v1/backups/artifacts',
     locations: '/v1/backups/locations',
+    removeScheduled: '/v1/backups',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
@@ -30,6 +32,7 @@ const apiEndpoints = {
     dsQuery: '/graph/api/ds/query',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    provisioningAlertRules: '/graph/api/v1/provisioning/alert-rules',
     receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
     ruler: '/graph/api/ruler/grafana/api/v1/rules',
   },
@@ -38,6 +41,7 @@ const apiEndpoints = {
     status: '/v1/ha/status',
   },
   inventory: {
+    nodes: '/v1/inventory/nodes',
     services: '/v1/inventory/services',
   },
   management: {

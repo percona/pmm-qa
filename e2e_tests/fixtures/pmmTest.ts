@@ -20,6 +20,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
+import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
@@ -43,6 +44,7 @@ import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
@@ -50,6 +52,7 @@ const pmmTest = base.extend<{
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
+  alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -61,6 +64,7 @@ const pmmTest = base.extend<{
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
   grafanaHelper: GrafanaHelper;
+  haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
@@ -95,6 +99,7 @@ const pmmTest = base.extend<{
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
+  alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -152,6 +157,7 @@ const pmmTest = base.extend<{
 
     await use(grafanaHelper);
   },
+  haBackupHelper: async ({ k8sHelper }, use) => await use(new HaBackupHelper(k8sHelper)),
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {

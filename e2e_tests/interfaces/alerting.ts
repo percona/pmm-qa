@@ -10,6 +10,7 @@ export enum AlertSeverity {
 }
 
 export interface AlertInstance {
+  annotations?: Record<string, string>;
   labels: Record<string, string>;
   state: string;
 }
@@ -24,6 +25,16 @@ export interface AlertRulesResponse {
   data: {
     groups: { folderUid: string; name: string; rules: AlertRule[] }[];
   };
+}
+
+export interface ProvisionedAlertRule {
+  data: { model: { expression?: string }; refId: string }[];
+  folderUID: string;
+  for: string;
+  labels?: Record<string, string>;
+  provenance?: string;
+  ruleGroup: string;
+  title: string;
 }
 
 export type RulerRulesResponse = Record<
