@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
+import { HaStatusResponse } from '@interfaces/ha';
 import { expect, Locator, Page } from '@playwright/test';
 
 const secondsInDay = 86_400;
@@ -135,7 +136,7 @@ pmmTest(
         page.goto(settingsPage.urls.advanced),
       ]);
 
-      expect(await haStatus.json()).toEqual({ status: 'Enabled' });
+      expect(((await haStatus.json()) as HaStatusResponse).status).toEqual('Enabled');
       await settingsPage.waitForPageLoaded();
     });
 
@@ -145,7 +146,7 @@ pmmTest(
     });
 
     await pmmTest.step('Verify the helper text points at the chart', async () => {
-      await expect(settingsPage.elements.dataRetentionHelperText).toHaveText(
+      await expect(settingsPage.inputs.dataRetention).toHaveAccessibleDescription(
         settingsPage.haDataRetentionHelperText,
       );
     });

@@ -66,7 +66,6 @@ export default class SettingsPage extends BasePage {
     advisorsLabel: this.page.getByTestId('advanced-advisors'),
     alertingInfoIcon: this.page.getByTestId('advanced-alerting').getByTestId('info-icon'),
     checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
-    dataRetentionHelperText: this.page.getByTestId('retention-field-error-message'),
     errorAlert: this.page.getByTestId('data-testid Alert error'),
     infoTooltip: this.page.getByTestId('info-tooltip'),
     infoTooltipLink: this.page.getByTestId('info-tooltip').getByRole('link'),
