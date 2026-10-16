@@ -207,15 +207,15 @@ Tests use class-based page objects in `e2e_tests/pages/`:
 
 ### Test titles and Zephyr keys
 
-Every test title starts with the real key of the Zephyr case it automates, so its result traces back to that case.
-This applies to Playwright and CodeceptJS alike.
+Every test title starts with the real key of the Zephyr case it automates, in the same format for Playwright and CodeceptJS.
+CodeceptJS reports each result to that case; Playwright has no Zephyr reporter yet, so there the key is for traceability only.
 
 | Test covers | Title |
 | --- | --- |
 | One case | `PMM-T2087 - Verify description @tag` |
 | Several cases | `PMM-T948 + PMM-T947 - Verify A, Verify B @tag` |
 
-- The reporter splits the title on ` - ` and then on ` + ` ([reporter_helper.js](codeceptjs-e2e/tests/helper/reporter_helper.js)), so keep both separators exactly.
+- The CodeceptJS reporter splits the title on ` - ` and then on ` + ` ([reporter_helper.js](codeceptjs-e2e/tests/helper/reporter_helper.js)), so keep both separators exactly.
 - Use the key of the case being automated. A test with no case gets one created in Zephyr first; a key is never invented.
 - When an existing test already covers a case's steps, add the key to that test's title with ` + ` instead of writing a second test.
 
