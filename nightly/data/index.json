@@ -91590,15 +91590,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-17T11:05:41Z",
         "suites": [
           "Nightly"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "HA nightly shard ps-gr-pxc-valkey failed only PMM-T1226 (process_exec_path empty for a node_exporter); it passed on HA the night before and a fresh HA cluster on 3.10.0-rc shows the path set on all 9 server node_exporters, so the empty agent could not be identified.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-17T11:22:34Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
