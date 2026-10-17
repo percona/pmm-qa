@@ -91590,6 +91590,15 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-17T11:05:41Z",
+        "suites": [
+          "Nightly"
+        ]
+      }
+    ]
   }
 ]
