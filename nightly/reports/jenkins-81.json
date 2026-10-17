@@ -3298,15 +3298,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-17T11:22:34Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "travagliad",
-      "at": "2026-10-17T13:09:43Z",
       "suites": [
         "Nightly"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "On HA, a pg-db sidecar pmm-agent's first exporter status reports hit PostgreSQL while it was restarting; pmm-managed acked them without saving and nothing resends, so a node_exporter kept an empty process_exec_path and PMM-T1226 failed (the only failure in job 1147).",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15716",
+      "by": "travagliad",
+      "at": "2026-10-17T13:39:21Z"
     }
-  ]
+  ],
+  "claims": []
 }
