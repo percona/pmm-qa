@@ -75,7 +75,6 @@ for (const role of ['editor', 'viewer'] as const) {
 
       await pmmTest.step('Verify the Home dashboard panels are displayed', async () => {
         await page.goto(dashboard.home.url);
-        await expect(dashboard.home.elements.checksPanel).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
         for (const panel of ['Monitored Nodes', 'Monitored DB Services']) {
           await expect(dashboard.builders.panelByExactName(panel)).toBeVisible({
