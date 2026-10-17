@@ -118,6 +118,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@nomad`
 - `@pbm-nightly`
+- `@permissions-nightly`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
