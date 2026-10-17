@@ -11,6 +11,7 @@ import {
   KubernetesPod,
   KubernetesPodResource,
   KubernetesResourceList,
+  KubernetesStatefulSetResource,
   VolumeUsage,
 } from '@interfaces/kubernetes';
 
@@ -157,6 +158,11 @@ export default class K8sHelper {
       this.execSilent(`get secret ${name} --output=jsonpath={.data.${key}}`).assertSuccess().stdout.trim(),
       'base64',
     ).toString();
+
+  getStatefulSet = (name: string): KubernetesStatefulSetResource =>
+    JSON.parse(
+      this.execSilent(`get statefulset ${name} --output=json`).assertSuccess().stdout,
+    ) as KubernetesStatefulSetResource;
 
   /** @param labelSelector `-l` selector; empty means every StatefulSet */
   getStatefulSetNames = (labelSelector = ''): string[] => {

@@ -145,6 +145,18 @@ export default class HaClusterHelper {
     return Object.fromEntries(variables);
   };
 
+  /** Read from the StatefulSet spec, so it is there even while the pods crash-loop. */
+  haPeers = (statefulSet: string = this.statefulSetName()): string[] => {
+    const { containers } = this.k8sHelper.getStatefulSet(statefulSet).spec.template.spec;
+    const peers = containers
+      .flatMap((container) => container.env ?? [])
+      .find((variable) => variable.name === 'PMM_HA_PEERS')?.value;
+
+    if (!peers) throw new Error(`StatefulSet "${statefulSet}" sets no PMM_HA_PEERS`);
+
+    return peers.split(',');
+  };
+
   /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
   haStatusFromPod = (podName: string): string => {
     const { stdout } = this.k8sHelper.execInPod(
