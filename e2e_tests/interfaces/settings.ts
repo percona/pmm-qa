@@ -8,7 +8,6 @@ export interface SettingsResponse {
     default_role_id?: number | string;
     enable_access_control: boolean;
     pmm_public_address: string;
-    // Omitted from the JSON when false.
     telemetry_enabled?: boolean;
     telemetry_summaries: string[];
     updates_enabled: boolean;
