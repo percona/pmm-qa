@@ -5,3 +5,6 @@
 # Seven findings carry an inline `# shellcheck disable=SC2016` with the reason
 # next to them: five are `bash -c '...'` polls where the inner shell must do the
 # expanding, two are a sed that substitutes a literal on purpose.
+self-hosted-runner:
+  labels:
+    - ubuntu-22-systemd
