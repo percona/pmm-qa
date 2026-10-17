@@ -88299,5 +88299,3297 @@
       }
     ],
     "claims": []
+  },
+  {
+    "run_id": "jenkins-81",
+    "date": "2026-10-17T11:05:38Z",
+    "image_tag": "3.10.0-rc",
+    "client_version": "pmm3-rc",
+    "run_url": "https://pmm.cd.percona.com/job/pmm3-nightly-orchestrator/81/",
+    "status": "fail",
+    "summary": "409/410 jobs passed",
+    "jobs": [
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@ia",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11675/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.8.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1368/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@gcp",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11677/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.9.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1369/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.8.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1367/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "nightly / gssapi",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gssapi/549/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.7.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1366/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Upgrade AMI",
+        "name": "ami 3.9.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1370/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "UI",
+        "name": "@instances",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11676/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "openshift",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/openshift-helm-tests/235/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "ha",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ha-tests/138/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.8.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1149/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "docker arm64",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1144/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.9.0",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1151/",
+        "duration_s": null
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "pmm3-helm / helm-tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346751295",
+        "duration_s": 775
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PROXYSQL / PMM_PXC_TEST",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346751849",
+        "duration_s": 634
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "prepare",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752080",
+        "duration_s": 3
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Auth with PSMDB 6.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752189",
+        "duration_s": 160
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Replica set with PSMDB 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752196",
+        "duration_s": 213
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Sharded cluster with PSMDB 7.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752206",
+        "duration_s": 304
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Replica set with PSMDB 6.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752221",
+        "duration_s": 261
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Replica set with PSMDB 7.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752222",
+        "duration_s": 263
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Sharded cluster with PSMDB 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752226",
+        "duration_s": 305
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Sharded cluster with PSMDB 6.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752228",
+        "duration_s": 363
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Auth with PSMDB 7.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752234",
+        "duration_s": 157
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PDPGSQL / PMM_PDPGSQL_TEST",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752244",
+        "duration_s": 377
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "PMM_PSMDB_PBM_FULL / Auth with PSMDB 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752253",
+        "duration_s": 236
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 PSMDB E2E tests / e2e tests: @bm-mongo",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346752926",
+        "duration_s": 1954
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 PSMDB E2E tests / e2e tests: @pmm-psmdb-replica-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753034",
+        "duration_s": 439
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 PSMDB E2E tests / e2e tests: @mongodb-exporter",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753055",
+        "duration_s": 2425
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 CLI / Integration / PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753556",
+        "duration_s": 303
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 CLI / Integration / PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753558",
+        "duration_s": 300
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 CLI / Integration / PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753585",
+        "duration_s": 341
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 CLI / Integration / PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753588",
+        "duration_s": 289
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 PSMDB E2E tests / e2e tests: @rta",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753595",
+        "duration_s": 479
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 PSMDB E2E tests / e2e tests: @bm-mongo",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753602",
+        "duration_s": 2087
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 PSMDB E2E tests / e2e tests: @rta",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753608",
+        "duration_s": 425
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753627",
+        "duration_s": 283
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 PSMDB E2E tests / e2e tests: @mongodb-exporter",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753648",
+        "duration_s": 2387
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753655",
+        "duration_s": 337
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753660",
+        "duration_s": 481
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753683",
+        "duration_s": 319
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753694",
+        "duration_s": 332
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 PSMDB E2E tests / e2e tests: @pmm-psmdb-replica-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753698",
+        "duration_s": 419
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL8 CLI / Integration / PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753700",
+        "duration_s": 324
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753716",
+        "duration_s": 290
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / OL9 CLI / Integration / PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753726",
+        "duration_s": 322
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753751",
+        "duration_s": 368
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753774",
+        "duration_s": 346
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753786",
+        "duration_s": 338
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753793",
+        "duration_s": 281
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753794",
+        "duration_s": 287
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753796",
+        "duration_s": 349
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753800",
+        "duration_s": 218
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753803",
+        "duration_s": 556
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753811",
+        "duration_s": 294
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753818",
+        "duration_s": 370
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753823",
+        "duration_s": 239
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753852",
+        "duration_s": 267
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753860",
+        "duration_s": 392
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753872",
+        "duration_s": 343
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753874",
+        "duration_s": 330
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753876",
+        "duration_s": 239
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753881",
+        "duration_s": 372
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753891",
+        "duration_s": 213
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753893",
+        "duration_s": 232
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753896",
+        "duration_s": 265
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753904",
+        "duration_s": 305
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753916",
+        "duration_s": 336
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753922",
+        "duration_s": 327
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753925",
+        "duration_s": 368
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753928",
+        "duration_s": 228
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753933",
+        "duration_s": 375
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753935",
+        "duration_s": 270
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753966",
+        "duration_s": 294
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753981",
+        "duration_s": 145
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753985",
+        "duration_s": 255
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346753994",
+        "duration_s": 269
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754000",
+        "duration_s": 168
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754010",
+        "duration_s": 285
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754012",
+        "duration_s": 212
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754025",
+        "duration_s": 294
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754029",
+        "duration_s": 230
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754030",
+        "duration_s": 274
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration",
+        "name": "PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754043",
+        "duration_s": 331
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754049",
+        "duration_s": 213
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754050",
+        "duration_s": 295
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754055",
+        "duration_s": 254
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754077",
+        "duration_s": 266
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754088",
+        "duration_s": 234
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754092",
+        "duration_s": 319
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754093",
+        "duration_s": 323
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754102",
+        "duration_s": 230
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754136",
+        "duration_s": 304
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754151",
+        "duration_s": 176
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754155",
+        "duration_s": 298
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754164",
+        "duration_s": 187
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754168",
+        "duration_s": 183
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754193",
+        "duration_s": 359
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754197",
+        "duration_s": 234
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754204",
+        "duration_s": 199
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754219",
+        "duration_s": 268
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754228",
+        "duration_s": 260
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754229",
+        "duration_s": 210
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754233",
+        "duration_s": 287
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754242",
+        "duration_s": 203
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.1 · Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754246",
+        "duration_s": 282
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754269",
+        "duration_s": 190
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754271",
+        "duration_s": 265
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754272",
+        "duration_s": 281
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754275",
+        "duration_s": 230
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754282",
+        "duration_s": 232
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754289",
+        "duration_s": 175
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754308",
+        "duration_s": 245
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754318",
+        "duration_s": 274
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754325",
+        "duration_s": 174
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754362",
+        "duration_s": 234
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754386",
+        "duration_s": 277
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754390",
+        "duration_s": 192
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754397",
+        "duration_s": 216
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754404",
+        "duration_s": 263
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754405",
+        "duration_s": 276
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754408",
+        "duration_s": 253
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754425",
+        "duration_s": 155
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754426",
+        "duration_s": 169
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754454",
+        "duration_s": 300
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754455",
+        "duration_s": 232
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754461",
+        "duration_s": 224
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754465",
+        "duration_s": 347
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "prepare",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754470",
+        "duration_s": 6
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.7.1 · pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754489",
+        "duration_s": 348
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754495",
+        "duration_s": 235
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754525",
+        "duration_s": 267
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754528",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754540",
+        "duration_s": 205
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754542",
+        "duration_s": 218
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754543",
+        "duration_s": 286
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754570",
+        "duration_s": 245
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754585",
+        "duration_s": 260
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754603",
+        "duration_s": 222
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754615",
+        "duration_s": 345
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754618",
+        "duration_s": 297
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754627",
+        "duration_s": 297
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754634",
+        "duration_s": 283
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754644",
+        "duration_s": 137
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754651",
+        "duration_s": 279
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754657",
+        "duration_s": 242
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754665",
+        "duration_s": 382
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754668",
+        "duration_s": 230
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754676",
+        "duration_s": 316
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754682",
+        "duration_s": 206
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754704",
+        "duration_s": 260
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754706",
+        "duration_s": 243
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754719",
+        "duration_s": 172
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754765",
+        "duration_s": 164
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754769",
+        "duration_s": 223
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754840",
+        "duration_s": 281
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754842",
+        "duration_s": 321
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754847",
+        "duration_s": 291
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.0 · Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754867",
+        "duration_s": 252
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754881",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754894",
+        "duration_s": 163
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754926",
+        "duration_s": 210
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754939",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754941",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754968",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754970",
+        "duration_s": 228
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754984",
+        "duration_s": 270
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754986",
+        "duration_s": 223
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754989",
+        "duration_s": 255
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346754993",
+        "duration_s": 289
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755001",
+        "duration_s": 267
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755022",
+        "duration_s": 171
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755027",
+        "duration_s": 233
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755068",
+        "duration_s": 250
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755078",
+        "duration_s": 406
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755156",
+        "duration_s": 238
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755163",
+        "duration_s": 237
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755183",
+        "duration_s": 268
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755216",
+        "duration_s": 268
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755251",
+        "duration_s": 313
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755255",
+        "duration_s": 295
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755265",
+        "duration_s": 265
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · pmm-client docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755268",
+        "duration_s": 377
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755269",
+        "duration_s": 217
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755278",
+        "duration_s": 293
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · MySQL 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755287",
+        "duration_s": 220
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Percona Server 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755305",
+        "duration_s": 266
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Generic",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755329",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PSMDB Shard 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755340",
+        "duration_s": 328
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755343",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PXC 5.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755351",
+        "duration_s": 272
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · HA Proxy",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755360",
+        "duration_s": 137
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.9.1 · PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755374",
+        "duration_s": 205
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Percona Server 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755378",
+        "duration_s": 263
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · MySQL 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755412",
+        "duration_s": 236
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Valkey 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755470",
+        "duration_s": 233
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Percona Server 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755472",
+        "duration_s": 253
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PD PostgreSQL 14",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755494",
+        "duration_s": 222
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PSMDB Replica 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755500",
+        "duration_s": 309
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Remove",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755521",
+        "duration_s": 233
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PD PostgreSQL 18",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755533",
+        "duration_s": 234
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · pmm-server container",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755538",
+        "duration_s": 319
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Valkey 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755552",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PSMDB Shard 7.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755583",
+        "duration_s": 283
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PD PostgreSQL 15",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755601",
+        "duration_s": 193
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PXC 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755621",
+        "duration_s": 298
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · help tests",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755622",
+        "duration_s": 153
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PXC 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755638",
+        "duration_s": 282
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PSMDB Replica 8.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755650",
+        "duration_s": 318
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PD PostgreSQL 16",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755651",
+        "duration_s": 277
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PSMDB Replica 6.x",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755660",
+        "duration_s": 291
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PD PostgreSQL 17",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755673",
+        "duration_s": 218
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · Percona Server 8.4",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755696",
+        "duration_s": 262
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · MySQL 8.0",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755720",
+        "duration_s": 168
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "Access control tests / e2e tests: @LBAC",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755751",
+        "duration_s": 638
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "PDPGSQL SSL tests / e2e tests: @ssl-postgres",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755767",
+        "duration_s": 703
+      },
+      {
+        "source": "github",
+        "group": "CLI Integration Compatibility",
+        "name": "3.8.0 · PXC 9.7",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755773",
+        "duration_s": 285
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "PS, PXC and Haproxy integration tests / e2e tests: @pmm-ps-pxc-haproxy-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755782",
+        "duration_s": 1422
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "Settings and cli UI tests / e2e tests: @settings|@cli",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755794",
+        "duration_s": 542
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "PSMDB integration tests / e2e tests: @pmm-psmdb-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755811",
+        "duration_s": 399
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "Settings UI tests / e2e tests: @settings",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755824",
+        "duration_s": 317
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "Disconnect from PMM Server / e2e tests: @disconnect",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755845",
+        "duration_s": 1370
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "MongoDB SSL tests / e2e tests: @ssl-mongo",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755846",
+        "duration_s": 822
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "MySQL SSL tests / e2e tests: @ssl-mysql",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755847",
+        "duration_s": 1347
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "New Navigation UI tests / e2e tests: @new-navigation|@menu",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755850",
+        "duration_s": 597
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "Inventory|Image renderer tests / e2e tests: @inventory|@image-renderer",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346755893",
+        "duration_s": 441
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 8 / prepare",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346756999",
+        "duration_s": 8
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 9 / prepare",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757326",
+        "duration_s": 8
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PSMDB Arbiter Replica UI tests / e2e tests: @pmm-psmdb-arbiter-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757480",
+        "duration_s": 484
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Settings tests / e2e tests: @fb-settings",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757530",
+        "duration_s": 444
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PGSM UI tests / e2e tests: @pgsm-pmm-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757559",
+        "duration_s": 1635
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / MongoDB Exporter tests / e2e tests: @mongodb-exporter",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757570",
+        "duration_s": 2484
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Dump Tool UI tests / e2e tests: @dump",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757578",
+        "duration_s": 421
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / User with changed password UI tests / podman e2e tests: @user-password",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757620",
+        "duration_s": 353
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PSMDB Replica UI tests / e2e tests: @pmm-psmdb-replica-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757667",
+        "duration_s": 421
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Percona Server for MySQL UI integration tests / e2e tests: @pmm-ps-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757674",
+        "duration_s": 742
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Service Accounts tests / e2e tests: @service-account",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757717",
+        "duration_s": 397
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PS UI Role based access control / e2e tests: @rbac",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757778",
+        "duration_s": 609
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Alerting and Settings UI tests / e2e tests: @fb-alerting|@fb-settings",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757820",
+        "duration_s": 462
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Exporters tests / e2e tests: @exporters",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757837",
+        "duration_s": 488
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Docker configuration tests / e2e tests: @docker-configuration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757875",
+        "duration_s": 1227
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PSMDB Sharding UI tests / e2e tests: @pmm-psmdb-sharding-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757886",
+        "duration_s": 934
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Docker configuration tests / e2e tests: @docker-configuration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757892",
+        "duration_s": 1050
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Backup Management Common and Locations UI tests / e2e tests: @bm-locations",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757903",
+        "duration_s": 669
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Instances UI tests / e2e tests: @fb-instances",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757908",
+        "duration_s": 447
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / RTA tests / e2e tests: @rta",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757914",
+        "duration_s": 534
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / User with changed password UI tests / e2e tests: @user-password",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757915",
+        "duration_s": 426
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / PGSS UI tests / e2e tests: @pgss-pmm-integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757936",
+        "duration_s": 580
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Backup Management MongoDB UI tests / e2e tests: @bm-mongo",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757950",
+        "duration_s": 2073
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Instances UI tests / e2e tests: @fb-instances",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757956",
+        "duration_s": 1300
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Encryption tests / e2e tests: @fb-encryption",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346757998",
+        "duration_s": 456
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Nomad tests / e2e tests: @nomad",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346758011",
+        "duration_s": 402
+      },
+      {
+        "source": "github",
+        "group": "E2E Tests",
+        "name": "FB E2E tests / Alerting tests / e2e tests: @alerting|@fb-alerting",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346758087",
+        "duration_s": 468
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.7.0 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766773",
+        "duration_s": 1640
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.8.0 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766778",
+        "duration_s": 1664
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.6.0 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766791",
+        "duration_s": 1595
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.5.0 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766812",
+        "duration_s": 1775
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "pmm3-rc · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766819",
+        "duration_s": 1542
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.5.0 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766826",
+        "duration_s": 1792
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.7.1 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766833",
+        "duration_s": 1417
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.8.1 · UI",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766846",
+        "duration_s": 1369
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.8.1 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766847",
+        "duration_s": 1355
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.6.0 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766855",
+        "duration_s": 1592
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.9.1 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766858",
+        "duration_s": 1579
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.9.0 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766900",
+        "duration_s": 1537
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.7.1 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766905",
+        "duration_s": 1655
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.8.0 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346766944",
+        "duration_s": 1562
+      },
+      {
+        "source": "github",
+        "group": "Upgrade",
+        "name": "3.7.0 · Docker",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346767180",
+        "duration_s": 1434
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346945984",
+        "duration_s": 383
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346945990",
+        "duration_s": 380
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346945991",
+        "duration_s": 351
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946000",
+        "duration_s": 369
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946007",
+        "duration_s": 344
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946010",
+        "duration_s": 428
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946012",
+        "duration_s": 375
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946014",
+        "duration_s": 575
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946020",
+        "duration_s": 375
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946031",
+        "duration_s": 410
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946037",
+        "duration_s": 227
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946040",
+        "duration_s": 321
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946041",
+        "duration_s": 348
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946042",
+        "duration_s": 266
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946047",
+        "duration_s": 425
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946048",
+        "duration_s": 336
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946049",
+        "duration_s": 386
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946050",
+        "duration_s": 574
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946051",
+        "duration_s": 353
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946058",
+        "duration_s": 198
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946062",
+        "duration_s": 286
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946065",
+        "duration_s": 556
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946066",
+        "duration_s": 426
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946070",
+        "duration_s": 321
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946075",
+        "duration_s": 345
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946077",
+        "duration_s": 392
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946083",
+        "duration_s": 244
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946085",
+        "duration_s": 301
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946089",
+        "duration_s": 475
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946090",
+        "duration_s": 162
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946091",
+        "duration_s": 239
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946092",
+        "duration_s": 337
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946097",
+        "duration_s": 227
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946101",
+        "duration_s": 196
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946111",
+        "duration_s": 356
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946114",
+        "duration_s": 452
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946115",
+        "duration_s": 258
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946119",
+        "duration_s": 458
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946124",
+        "duration_s": 215
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946125",
+        "duration_s": 236
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946135",
+        "duration_s": 195
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946141",
+        "duration_s": 241
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946144",
+        "duration_s": 295
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946148",
+        "duration_s": 381
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946149",
+        "duration_s": 203
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946154",
+        "duration_s": 162
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946155",
+        "duration_s": 419
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946156",
+        "duration_s": 225
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol9-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946158",
+        "duration_s": 328
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946159",
+        "duration_s": 193
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946162",
+        "duration_s": 251
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946168",
+        "duration_s": 289
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol8-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946187",
+        "duration_s": 481
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946189",
+        "duration_s": 161
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946190",
+        "duration_s": 288
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946191",
+        "duration_s": 220
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946198",
+        "duration_s": 239
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946201",
+        "duration_s": 159
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ol10-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946203",
+        "duration_s": 249
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian12-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946246",
+        "duration_s": 222
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol10-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946271",
+        "duration_s": 306
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian12-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946310",
+        "duration_s": 259
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol9-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946379",
+        "duration_s": 402
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ol8-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346946679",
+        "duration_s": 411
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947792",
+        "duration_s": 265
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947797",
+        "duration_s": 223
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947801",
+        "duration_s": 233
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947805",
+        "duration_s": 202
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947806",
+        "duration_s": 269
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947815",
+        "duration_s": 188
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947824",
+        "duration_s": 215
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947825",
+        "duration_s": 207
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947826",
+        "duration_s": 223
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947829",
+        "duration_s": 254
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947830",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947834",
+        "duration_s": 243
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947835",
+        "duration_s": 252
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947850",
+        "duration_s": 220
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947852",
+        "duration_s": 267
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947854",
+        "duration_s": 199
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947855",
+        "duration_s": 267
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947858",
+        "duration_s": 212
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947859",
+        "duration_s": 270
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947863",
+        "duration_s": 258
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947866",
+        "duration_s": 255
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947868",
+        "duration_s": 244
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947870",
+        "duration_s": 228
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947872",
+        "duration_s": 199
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947873",
+        "duration_s": 180
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947878",
+        "duration_s": 251
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947881",
+        "duration_s": 311
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947883",
+        "duration_s": 214
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947886",
+        "duration_s": 220
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947888",
+        "duration_s": 219
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947891",
+        "duration_s": 229
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "debian13-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947896",
+        "duration_s": 248
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947897",
+        "duration_s": 261
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947906",
+        "duration_s": 205
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947907",
+        "duration_s": 222
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947918",
+        "duration_s": 229
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947921",
+        "duration_s": 198
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947922",
+        "duration_s": 229
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947926",
+        "duration_s": 223
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947930",
+        "duration_s": 213
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947932",
+        "duration_s": 203
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947939",
+        "duration_s": 254
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947942",
+        "duration_s": 288
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2204-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947944",
+        "duration_s": 218
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947949",
+        "duration_s": 268
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947959",
+        "duration_s": 218
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947961",
+        "duration_s": 228
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947970",
+        "duration_s": 198
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947975",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2204-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947976",
+        "duration_s": 216
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947981",
+        "duration_s": 262
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947986",
+        "duration_s": 204
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2404-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947987",
+        "duration_s": 252
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346947991",
+        "duration_s": 207
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_auth_register",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948004",
+        "duration_s": 209
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_upgrade",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948006",
+        "duration_s": 211
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948011",
+        "duration_s": 221
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2404-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948013",
+        "duration_s": 241
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948027",
+        "duration_s": 226
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "debian13-amd64 / pmm3-client_integration_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948034",
+        "duration_s": 234
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948041",
+        "duration_s": 240
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_upgrade_custom_port",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948042",
+        "duration_s": 271
+      },
+      {
+        "source": "github",
+        "group": "Package ARM",
+        "name": "ubuntu2604-arm64 / pmm3-client_integration_auth_config",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948071",
+        "duration_s": 210
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "ubuntu2604-amd64 / pmm3-client_integration_upgrade_custom_path",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117346948114",
+        "duration_s": 294
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 8 / ol8-amd64 / pmm3-client_integration_tarball_gssapi",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117348983199",
+        "duration_s": 373
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 9 / ol9-amd64 / pmm3-client_integration_tarball_gssapi",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117348996092",
+        "duration_s": 360
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 9 / summary",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117363158324",
+        "duration_s": 3
+      },
+      {
+        "source": "github",
+        "group": "Integrations",
+        "name": "GSSAPI Tests Matrix / Package Test - OL 8 / summary",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117363158604",
+        "duration_s": 3
+      },
+      {
+        "source": "github",
+        "group": "Package AMD",
+        "name": "summary",
+        "result": "success",
+        "url": "https://github.com/percona/pmm-qa/actions/runs/39015506200/job/117363171013",
+        "duration_s": 3
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.9.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1152/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "docker",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1143/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.8.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1150/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly Compatibility",
+        "name": "client 3.7.1",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1148/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "ami",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1145/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "ha",
+        "result": "failure",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1147/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "HA, OpenShift & GSSAPI",
+        "name": "ha backup-restore",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/15/",
+        "duration_s": null
+      },
+      {
+        "source": "jenkins",
+        "group": "Nightly",
+        "name": "helm",
+        "result": "success",
+        "url": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1146/",
+        "duration_s": null
+      }
+    ],
+    "investigations": []
   }
 ]
