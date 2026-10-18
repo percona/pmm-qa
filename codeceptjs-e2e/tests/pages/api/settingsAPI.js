@@ -4,12 +4,6 @@ const { I, codeceptjsConfig } = inject();
 
 const mailosaur = codeceptjsConfig.config.helpers.Mailosaur;
 
-const defaultCheckIntervals = {
-  standard_interval: '86400s',
-  rare_interval: '280800s',
-  frequent_interval: '14400s',
-};
-
 const defaultResolution = {
   hr: '5s',
   mr: '10s',
@@ -19,40 +13,9 @@ const defaultResolution = {
 const endpoint = 'v1/server/settings';
 
 module.exports = {
-  defaultCheckIntervals,
   defaultResolution,
 
   // methods for preparing state of application before test
-  async apiEnableSTT() {
-    const body = {
-      enable_advisor: true,
-      enable_telemetry: true,
-    };
-    const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
-    const resp = await I.sendPutRequest(endpoint, body, headers);
-
-    assert.ok(
-      resp.status === 200,
-      `Failed to enabled STT. ${resp.data.message}`,
-    );
-  },
-
-  async apiDisableSTT() {
-    const body = {
-      enable_advisor: false,
-      enable_telemetry: true,
-    };
-    const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
-    const resp = await I.sendPutRequest(endpoint, body, headers);
-
-    assert.ok(
-      resp.status === 200,
-      `Failed to disable STT. ${resp.data.message}`,
-    );
-  },
-
   async apiDisableIA() {
     await this.changeSettings({ alerting: false });
   },
@@ -90,15 +53,6 @@ module.exports = {
       delete body.enable_advisor;
       await I.sendPutRequest(endpoint, body, headers);
     }
-  },
-
-  async setCheckIntervals(intervals = defaultCheckIntervals) {
-    const body = {
-      advisor_run_intervals: intervals,
-    };
-    const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
-    await I.sendPutRequest(endpoint, body, headers);
   },
 
   async setEmailAlertingSettings(settings) {
