@@ -3282,6 +3282,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-19T09:14:20Z"
+    },
+    {
+      "suites": [
+        "UI"
+      ],
+      "verdict": "not reproduced",
+      "summary": "Only the mysql80 case of the RDS MySQL Instances Overview check failed (61 panels without data, 9 expected); mysql57 and mysql84 passed in the same build, so likely RDS/CloudWatch data lag. Not reproduced: needs the QA AWS RDS secrets, which this host lacks.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-19T09:14:27Z"
     }
   ],
   "claims": [
@@ -3290,13 +3300,6 @@
       "at": "2026-10-19T03:08:13Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-19T03:08:13Z",
-      "suites": [
-        "UI"
       ]
     }
   ]
