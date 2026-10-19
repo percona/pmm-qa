@@ -98237,16 +98237,18 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-19T20:01:50Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-19T19:55:06Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "not reproduced",
+        "summary": "Only PMM-T2371 failed (kube-apiserver up=0 for 2 min after 3 retries) on OpenShift 4.21 with the 3.10.0-rc server; build 139 passed it with 3-dev-latest on the same cluster type and chart branch, the chart tip only bumped version tags in between, so a 3.10.0-rc vs dev difference is suspected but unproven; no repro, OpenShift cluster is gone and CHAOS has k3s only.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-19T20:01:56Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
