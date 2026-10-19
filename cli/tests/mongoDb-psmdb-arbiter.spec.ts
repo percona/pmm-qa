@@ -25,7 +25,7 @@ test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbit
       const metrics = await cli.getMetrics(serviceName, 'pmm', 'mypass', containerName);
       expect(metrics, 'Arbiter exporter must report mongodb_up 1!').toMatch(/^mongodb_up(\{[^}]*\})? 1$/m);
       expect(metrics, 'Arbiter exporter must report the ARBITER (7) replica set state!').toMatch(/^mongodb_mongod_replset_my_state(\{[^}]*\})? 7$/m);
-    }).toPass({ intervals: [2_000], timeout: 120_000 });
+    }).toPass({ intervals: [2_000], timeout: 60_000 });
 
     await removeMongoService(containerName, serviceName);
   });
