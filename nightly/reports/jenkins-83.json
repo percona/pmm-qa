@@ -3303,6 +3303,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-19T20:01:44Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "test fix",
+      "summary": "pmm3-upgrade-ami-test-runner asserts the upgraded server reports PMM_SERVER_LATEST, which the orchestrator reads from pmm-submodules v3/VERSION (3.10.1), but the RC image is 3.10.0, so all 5 AMI upgrades fail at 'expected 3.10.1'; fix is in jenkins-pipelines pmm/v3/pmm3-nightly-orchestrator.groovy: pass the RC version (imageTag minus -rc) as PMM_SERVER_LATEST when isRc; no PR opened yet.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-19T20:01:50Z"
     }
   ],
   "claims": [
@@ -3311,13 +3321,6 @@
       "at": "2026-10-19T19:55:06Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-19T19:55:06Z",
-      "suites": [
-        "Upgrade AMI"
       ]
     }
   ]
