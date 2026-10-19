@@ -3272,15 +3272,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-19T03:08:13Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
-    },
+      ],
+      "verdict": "not reproduced",
+      "summary": "Percona Server 8.4 image build timed out fetching the sysbench tarball from github.com (curl 28, 133s); the one re-run of the failed job passed (run 39180650672, attempt 2) and the URL serves 200 now, so a transient runner-to-GitHub network failure.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-19T09:14:20Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-19T03:08:13Z",
