@@ -3293,16 +3293,19 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-19T20:01:38Z"
+    },
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "not reproduced",
+      "summary": "All @ssl-mysql tests passed (test step succeeded); only the 2-second 'Record launchable test results' step failed, a Launchable reporting hiccup, not a product or test defect; not reproduced, not investigated further.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-19T20:01:44Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-19T19:55:06Z",
-      "suites": [
-        "E2E Tests"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-19T19:55:06Z",
