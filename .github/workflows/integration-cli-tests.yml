@@ -476,6 +476,54 @@ jobs:
       services_list: '--database psmdb=8.0,SETUP_TYPE=sharding'
       test_name: 'PSMDB Shard 8.x'
 
+  psmdb-7-arbiter-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@arbiter-psmdb'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=psa'
+      test_name: 'PSMDB Arbiter 7.x'
+
+  psmdb-8-arbiter-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@arbiter-psmdb'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=psa'
+      test_name: 'PSMDB Arbiter 8.x'
+
+  psmdb-8-3-arbiter-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@arbiter-psmdb'
+      services_list: '--database psmdb=8.3,SETUP_TYPE=psa'
+      test_name: 'PSMDB Arbiter 8.3'
+
   haproxy-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
