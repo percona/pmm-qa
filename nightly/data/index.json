@@ -98204,7 +98204,21 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Package AMD",
+          "Package ARM",
+          "Integrations",
+          "Upgrade"
+        ],
+        "verdict": "not reproduced",
+        "summary": "GitHub-hosted runners with kernel 6.19+ cannot start mongod (log: 'MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility', SERVER-121912), so pmm3-client_integration* fail on the unlucky runners while identical jobs pass elsewhere; read in ol10-arm64, ol8-amd64 and GSSAPI ol9-amd64 logs, the 3.9.1 docker upgrade (psmdb primary ECONNREFUSED 27017) is inferred; no VM repro, runner kernel cannot be mimicked and nightly cannot be re-run.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-19T20:01:38Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -98218,34 +98232,6 @@
         "at": "2026-10-19T19:55:06Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-19T19:55:06Z",
-        "suites": [
-          "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-19T19:55:06Z",
-        "suites": [
-          "Package AMD"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-19T19:55:06Z",
-        "suites": [
-          "Package ARM"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-19T19:55:06Z",
-        "suites": [
-          "Upgrade"
         ]
       },
       {
