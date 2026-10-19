@@ -413,12 +413,12 @@ EOF
   grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=rs203 --port=27017$' "$DOCKER_CALLS"
 }
 
-@test "PSMDB 8.3 psa registers its arbiter through localhost, which PMM-15650 needs" {
+@test "PSMDB 8.3 psa registers its arbiter by hostname too, so PMM-15650 stays visible" {
   stub_prebaked_docker
   parse_database_spec 'psmdb=8.3,SETUP_TYPE=psa,MINIO=false'
   dispatch_setup
 
-  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=rs103 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm --password=pmmpass --host=rs101 --port=27017$' "$DOCKER_CALLS"
 }
 

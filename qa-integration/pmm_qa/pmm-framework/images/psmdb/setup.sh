@@ -203,14 +203,6 @@ psmdb_replica_set() {
     fi
   fi
 
-  # From 8.1 buildInfo needs auth, which an arbiter (it holds no users) grants only
-  # through the localhost exception: PMM can't add one by hostname until PMM-15650 is fixed.
-  local arbiter_host=
-  case $version in
-    6.* | 7.* | 8.0 | 8.0.*) ;;
-    *) arbiter_host=127.0.0.1 ;;
-  esac
-
   log_info '==> Register with PMM'
   for node in "${nodes[@]}"; do
     # The extra set gets no environment, and a replication set only on its arbiter.
@@ -222,8 +214,9 @@ psmdb_replica_set() {
       fi
     fi
     if [[ $node == "$arbiter" || $node == "${arbiter/103/203}" ]]; then
-      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "--host=${arbiter_host:-$node}" \
-        --port=27017
+      # An arbiter holds no users, and from 8.1 buildInfo needs auth: until PMM-15650
+      # is fixed this add fails there, as it does for users adding one by hostname.
+      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "--host=$node" --port=27017
     else
       psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "${credentials[@]}" \
         "--host=$node" --port=27017
