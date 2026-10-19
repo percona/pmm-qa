@@ -16,7 +16,9 @@ export default class ServicesPage extends BasePage {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
     delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
   };
-  elements = {};
+  elements = {
+    unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
+  };
   inputs = {};
   messages = {
     deleteConfirmation: this.grafanaIframe().getByTestId('delete-services-description'),

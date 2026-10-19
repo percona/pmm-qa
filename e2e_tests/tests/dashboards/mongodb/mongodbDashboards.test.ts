@@ -8,7 +8,10 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
 
   pmmTest(
     'PMM-T1932 - Verify MongoDB Router Summary @pmm-psmdb-sharding-integration @post-upgrade',
-    async ({ dashboard, page, urlHelper }) => {
+    async ({ api, dashboard, page, urlHelper }) => {
+      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary(
+        'mongodb_ss_uptime{node_name=~"mongos.*"}',
+      );
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
           from: 'now-1h',
@@ -56,6 +59,9 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       const services: GetService[] =
         await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+');
 
+      await api.prometheusApi.waitForSampleBeforeFiveMinuteBoundary(
+        'mongodb_mongod_replset_my_state{cluster="sharded"}',
+      );
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
           cluster: 'sharded',

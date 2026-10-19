@@ -4,6 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 
 const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
+const workloadRows = 'div[role="row"][class*="tr-"]:not(.tr-0)';
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
@@ -79,6 +80,8 @@ export default class StoredMetricsPage extends BasePage {
         .nth(columnNumber - 1),
     sortingValue: (columnNumber: number) => this.builders.sortControl(columnNumber).locator('span'),
     tab: (tabName: string) => this.grafanaIframe().getByRole('tab', { name: tabName }),
+    workloadRowsWithoutText: (text: string) =>
+      this.grafanaIframe().locator(workloadRows).filter({ hasNotText: text }),
   };
   buttons = {
     closeDetails: this.grafanaIframe().getByRole('button', { name: 'Close' }),
@@ -100,18 +103,31 @@ export default class StoredMetricsPage extends BasePage {
       'div[data-testid^="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text',
     ),
     classicExplainError: this.grafanaIframe().getByTestId('classic-explain-error'),
+    codeBlock: this.grafanaIframe()
+      .getByTestId('highlight-code')
+      .or(this.grafanaIframe().locator('.pretty-json-container')),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
     filterLabels: this.grafanaIframe().locator('.checkbox-container__label-text'),
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
+    firstWorkloadRow: this.grafanaIframe()
+      .locator(workloadRows)
+      .filter({ hasNot: this.page.getByRole('cell', { name: /^explain\b/i }) })
+      .first(),
     iframe: this.page.locator('iframe').first(),
     latencyChart: this.grafanaIframe().locator('.latency-chart-container'),
     metricTooltip: this.grafanaIframe().locator('.ant-tooltip-content'),
     noClassicExplain: this.grafanaIframe().locator('pre').filter({ hasText: 'No classic explain found' }),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
     noDataMessage: this.grafanaIframe().getByTestId('table-no-data').getByRole('heading', { level: 1 }),
+    noExamples: this.grafanaIframe()
+      .locator('pre')
+      .filter({ hasText: 'Sorry, no examples found for this query' }),
     noJsonExplain: this.grafanaIframe().locator('pre').filter({ hasText: 'No JSON explain found' }),
+    noTable: this.grafanaIframe()
+      .locator('pre')
+      .filter({ hasText: 'No table info from example nor explain' }),
     overviewColumnTooltip: this.grafanaIframe().locator('.overview-column-tooltip'),
     pageProgressBar: this.page.getByRole('progressbar'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
@@ -132,6 +148,10 @@ export default class StoredMetricsPage extends BasePage {
     selectedRowQueryText: this.grafanaIframe().locator('.selected-overview-row').getByRole('cell').nth(1),
     sparklineTooltip: this.grafanaIframe().locator('div.tippy-content'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
+    tableTabs: this.grafanaIframe()
+      .getByRole('tablist')
+      .filter({ hasNot: this.page.getByRole('tab', { exact: true, name: 'Details' }) })
+      .getByRole('tab'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
   };
   inputs = {
@@ -239,6 +259,12 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openExamplesTab = async () => {
+    await this.builders.tab('Examples').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(this.elements.codeBlock.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   openInNewTab = async (url: string) => {
     const page = await this.page.context().newPage();
     const storedMetrics = new StoredMetricsPage(page);
@@ -254,6 +280,15 @@ export default class StoredMetricsPage extends BasePage {
     await this.waitForLoad();
   };
 
+  openQueryDetails = async (url: string) => {
+    await expect(async () => {
+      await this.page.goto(url);
+      await this.waitForLoad();
+      await expect(this.elements.firstWorkloadRow).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await this.selectFirstWorkloadRow();
+  };
+
   refreshIfNoQueries = async () => {
     if ((await this.elements.queryRows.visible().count()) <= 1) await this.buttons.refresh.click();
   };
@@ -261,6 +296,18 @@ export default class StoredMetricsPage extends BasePage {
   removeColumn = async (columnName: string) => {
     await this.builders.columnHeader(columnName).click();
     await this.elements.removeColumnOption.click({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  searchByQueryText = async (value: string) => {
+    await this.searchByValue(value);
+    await this.builders
+      .queryRowQueryText(1)
+      .filter({ hasText: value })
+      .waitFor({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders
+      .workloadRowsWithoutText(value)
+      .first()
+      .waitFor({ state: 'detached', timeout: Timeouts.THIRTY_SECONDS });
   };
 
   searchByValue = async (value: string) => {
@@ -278,6 +325,12 @@ export default class StoredMetricsPage extends BasePage {
   selectFilterContaining = async (text: string) => {
     await this.selectFilter(text, this.builders.filterCheckboxContaining(text));
     await this.waitForLoad();
+  };
+
+  selectFirstWorkloadRow = async () => {
+    await this.elements.firstWorkloadRow.click({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForLoad();
+    await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
   };
 
   selectRefreshInterval = async (interval: string) => {
@@ -373,12 +426,39 @@ export default class StoredMetricsPage extends BasePage {
     }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  verifyExplain = async (allowUnsupported = false) => {
+    await this.builders.tab('Explain').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(this.elements.codeBlock.or(this.elements.explainError).first()).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+    await expect(
+      allowUnsupported
+        ? this.elements.explainError.filter({
+            hasNotText: /not supported for explain|cannot explain this type of query/i,
+          })
+        : this.elements.explainError,
+    ).toBeHidden();
+  };
+
   verifyLoadSparklineTooltip = async (rowNumber: number, text: string) => {
     await expect(async () => {
       await this.inputs.addColumn.hover();
       await this.builders.loadSparkline(rowNumber).hover();
       await expect(this.elements.sparklineTooltip).toContainText(text, { timeout: Timeouts.FIVE_SECONDS });
     }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  verifyNoExplainErrors = async () => {
+    const { codeBlock, explainError, noClassicExplain, noJsonExplain } = this.elements;
+
+    await this.builders.tab('Explain').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(codeBlock.or(noClassicExplain).or(noJsonExplain).or(explainError).first()).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+
+    for (const message of [noClassicExplain, noJsonExplain, explainError]) await expect(message).toBeHidden();
   };
 
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
@@ -421,6 +501,11 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.totalCount).toHaveText(new RegExp(`^${range} of \\d+ items$`));
   };
 
+  verifyPlan = async () => {
+    await this.openPlanTab();
+    await expect(this.elements.emptyPlan).toBeHidden();
+  };
+
   verifyPlanShown = async () => {
     await expect(this.elements.noClassicExplain).toBeHidden();
     await expect(this.elements.noJsonExplain).toBeHidden();
@@ -434,6 +519,19 @@ export default class StoredMetricsPage extends BasePage {
     await this.waitUntilQanStoredMetricsLoaded();
     await expect(this.elements.noData).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(this.elements.firstRow).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  verifyTables = async () => {
+    await this.builders.tab('Tables').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(this.elements.tableTabs.first()).toBeVisible({ timeout: Timeouts.TWO_SECONDS });
+
+    for (const table of await this.elements.tableTabs.visible().all()) {
+      await table.click();
+      await this.waitForLoad();
+      await expect(this.elements.codeBlock.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(this.elements.noTable).toBeHidden();
+    }
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {

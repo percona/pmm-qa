@@ -3,6 +3,8 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
+import type Api from '@api/api';
+import { AgentStatus } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { HaNodesResponse, HaStatusResponse } from '@interfaces/ha';
 import { expect } from '@playwright/test';
@@ -39,6 +41,39 @@ const parseVersion = (body: string): unknown => {
  */
 export default class HaClusterHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
+
+  /**
+   * The chart's `dataRetentionDays`, read from what it rendered rather than from the settings API:
+   * `PMM_DATA_RETENTION` on every pod and `retentionPeriod` on the VMCluster must agree on it.
+   */
+  dataRetentionDaysFromChart = (): number => {
+    const fromPods = this.podNames().map((podName) => {
+      const { stdout } = this.k8sHelper.execInPod(podName, 'printenv PMM_DATA_RETENTION', { silent: true });
+
+      return { podName, value: stdout.trim() };
+    });
+    const hours = /^(\d+)h$/.exec(fromPods[0].value)?.[1];
+
+    if (!hours || Number(hours) % 24 !== 0 || fromPods.some(({ value }) => value !== fromPods[0].value)) {
+      throw new Error(
+        `Expected every pod to export the same whole-day PMM_DATA_RETENTION, got: ${fromPods
+          .map(({ podName, value }) => `${podName}=${value || '(unset)'}`)
+          .join(', ')}`,
+      );
+    }
+
+    const days = Number(hours) / 24;
+    const vmRetention = this.k8sHelper
+      .exec(`get vmcluster -o jsonpath='{.items[*].spec.retentionPeriod}'`)
+      .assertSuccess()
+      .stdout.trim();
+
+    if (vmRetention !== `${days}d`) {
+      throw new Error(`PMM_DATA_RETENTION is ${days} days but VMCluster retentionPeriod is "${vmRetention}"`);
+    }
+
+    return days;
+  };
 
   /**
    * Moves leadership onto one of `podNames` by restarting whoever leads until it
@@ -181,6 +216,26 @@ export default class HaClusterHelper {
   };
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
+
+  /** @param since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns */
+  servicesRunningAndReporting = async (api: Api, since: number): Promise<string[]> => {
+    const running = (await api.inventoryApi.getServices()).services
+      .filter((service) => {
+        const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
+
+        return agents.length > 0 && agents.every((agent) => agent.status === AgentStatus.running);
+      })
+      .map((service) => service.service_name);
+    const reporting = (
+      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""}))', {
+        nocache: '1',
+      })
+    )
+      .filter((sample) => Number(sample.value[1]) > since)
+      .map((sample) => sample.metric.service_name);
+
+    return running.filter((serviceName) => reporting.includes(serviceName)).sort();
+  };
 
   /** Looked up by label, not hardcoded: the name is the Helm release name. */
   statefulSetName = (): string => {

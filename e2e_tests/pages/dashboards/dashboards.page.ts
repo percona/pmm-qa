@@ -48,10 +48,14 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
       ),
+    noDataMarkerInPanel: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelCanvasByExactName: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('canvas'),
     panelContentByExactName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
@@ -87,6 +91,8 @@ export default class Dashboards extends BasePage {
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
+    slowQueriesCount: this.builders.panelContentByExactName('Slow queries').getByText(/^\d+$/),
+    summaryFingerprint: this.grafanaIframe().getByTestId('pt-summary-fingerprint'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
@@ -284,17 +290,20 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
-    let missingMetrics: string[] = [];
+    let missingMetrics: string[];
+    const deadline = Date.now() + timeout;
 
-    for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
+    for (;;) {
       const noDataPanels = await this.collectTextsAcrossGridItems(this.elements.noDataPanelName);
 
       missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
-      if (missingMetrics.length == 0) break;
+      if (missingMetrics.length == 0 || Date.now() >= deadline) break;
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+      await this.page.reload();
+      await this.loadAllPanels();
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
@@ -336,6 +345,22 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPanelHasDataAfterRefresh = async (panelName: string, timeout: Timeouts) => {
+    await expect(this.builders.panelByExactName(panelName)).toBeVisible({
+      timeout: Timeouts.FIFTEEN_SECONDS,
+    });
+    await expect(async () => {
+      await this.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
+      await this.elements.refreshButton.click();
+      await expect(this.builders.noDataMarkerInPanel(panelName)).toHaveCount(0, {
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+      await expect(this.builders.panelCanvasByExactName(panelName)).not.toHaveCount(0, {
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+    }).toPass({ timeout });
+  };
+
   verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
     await this.loadAllPanels();
 
@@ -349,6 +374,17 @@ export default class Dashboards extends BasePage {
         })
         .toBeTruthy();
     }
+  };
+
+  verifyPanelTextAfterRefresh = async (panelName: string, expected: string | RegExp, timeout: Timeouts) => {
+    const panelContent = this.builders.panelContentByExactName(panelName);
+
+    await expect(panelContent).toBeVisible({ timeout: Timeouts.FIFTEEN_SECONDS });
+    await expect(async () => {
+      await panelContent.scrollIntoViewIfNeeded();
+      await this.elements.refreshButton.click();
+      await expect(panelContent).toHaveText(expected, { timeout: Timeouts.FIVE_SECONDS });
+    }).toPass({ timeout });
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
@@ -449,6 +485,15 @@ export default class Dashboards extends BasePage {
       .toHaveLength(0);
   };
 
+  verifySlowQueriesPanel = async (timeFrame: string) => {
+    await this.waitForDashboardToLoad();
+    await this.elements.refreshButton.click();
+    await expect(this.builders.panelContentByExactName('Slow queries')).toContainText(
+      `the last ${timeFrame}`,
+    );
+    await expect(this.elements.slowQueriesCount).toHaveText(/^[1-9]\d*$/);
+  };
+
   waitForDashboardToLoad = async () => {
     const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
 
@@ -457,6 +502,28 @@ export default class Dashboards extends BasePage {
       await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
       await expectPanel(this.elements.loadingText).toHaveCount(0);
     });
+  };
+
+  waitForNoDataPanelsAtMost = async (
+    url: string,
+    maxNoDataPanels: number,
+    timeout = Timeouts.FIVE_MINUTES,
+  ) => {
+    await expect
+      .poll(
+        async () => {
+          await this.page.goto(url);
+          await this.loadAllPanels();
+
+          return this.elements.noDataPanelName.count();
+        },
+        {
+          intervals: [Timeouts.TEN_SECONDS],
+          message: `${url} should show at most ${maxNoDataPanels} panels without data`,
+          timeout,
+        },
+      )
+      .toBeLessThanOrEqual(maxNoDataPanels);
   };
 
   private changeRow = async (locator: Locator, error: string) => {

@@ -5,7 +5,7 @@ interface BuildUrlParameters {
   schema?: string;
   environment?: string;
   nodeName?: string;
-  serviceName?: string;
+  serviceName?: string | string[];
   replicationSet?: string;
   refresh?: string;
   from?: string;
@@ -66,6 +66,6 @@ export default class UrlHelper {
       }
     }
 
-    return buildUrl(baseUrl, { queryParams });
+    return buildUrl(baseUrl, { disableCSV: true, queryParams });
   };
 }

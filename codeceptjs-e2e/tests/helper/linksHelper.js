@@ -1,7 +1,6 @@
 module.exports = {
   communicationDocs: 'https://www.percona.com/doc/percona-monitoring-and-management/2.x/how-to/configure.html#communication',
   integratedAlertingDocs: 'https://per.co.na/alerting',
-  advisorsDocs: 'https://per.co.na/advisors',
   termsOfService: 'https://per.co.na/pmm/platform-terms',
   privacyPolicy: 'https://per.co.na/pmm/platform-privacy',
   forgotPassword: 'https://okta.percona.com/signin/forgot-password',
