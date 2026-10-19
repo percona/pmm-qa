@@ -58,13 +58,10 @@ Scenario('Verify Advanced Section Elements @settings @grafana-pr', async ({ I, p
   I.see('Data retention', pmmSettingsPage.fields.advancedLabel);
   I.see('Telemetry', pmmSettingsPage.fields.telemetryLabel);
   I.see('Check for updates', pmmSettingsPage.fields.checkForUpdatesLabel);
-  I.see('Advisors', pmmSettingsPage.fields.sttLabel);
   I.seeElement(pmmSettingsPage.fields.telemetrySwitchSelectorInput);
   I.seeElement(pmmSettingsPage.fields.telemetryLabel);
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesSwitch);
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesLabel);
-  I.seeElement(pmmSettingsPage.fields.sttSwitchSelectorInput);
-  I.seeElement(pmmSettingsPage.fields.sttLabel);
 });
 
 // Scenario('PMM-T89 - Verify validation for invalid SSH Key @settings @grafana-pr', async ({ I, pmmSettingsPage }) => {

@@ -1,5 +1,4 @@
 const { I } = inject();
-const assert = require('assert');
 
 module.exports = {
   url: 'https://pmmdemo.percona.com/',
@@ -37,7 +36,6 @@ module.exports = {
     copyright: '//a[contains(text(), "Copyright")]',
     legal: '//a[contains(text(), "Legal")]',
     title: '//span[contains(text(), "Percona Monitoring and Management")]',
-    failedSecurityChecks: '//span[contains(text(), "Failed security check")]',
     noAccess: '$unauthorized',
   },
 
@@ -48,12 +46,6 @@ module.exports = {
     I.seeElement(this.fields.privacy);
     I.seeElement(this.fields.copyright);
     I.seeElement(this.fields.legal);
-  },
-
-  async checkDBPanelText(text) {
-    const checkedText = await I.grabTextFrom(this.fields.noAccess);
-
-    assert.equal(checkedText, text, 'Check the DB security checks text');
   },
 
   getHostLocator(hostType) {
