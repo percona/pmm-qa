@@ -3272,5 +3272,28 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-19T03:08:13Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-19T03:08:13Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-19T03:08:13Z",
+      "suites": [
+        "UI"
+      ]
+    }
+  ]
 }
