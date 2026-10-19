@@ -214,9 +214,9 @@ psmdb_replica_set() {
       fi
     fi
     if [[ $node == "$arbiter" || $node == "${arbiter/103/203}" ]]; then
-      # An arbiter holds no users, and from 8.1 buildInfo needs auth: until PMM-15650
-      # is fixed this add fails there, as it does for users adding one by hostname.
-      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "--host=$node" --port=27017
+      # An arbiter holds no users, and from 8.3 buildInfo needs auth except
+      # through the localhost exception.
+      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" --host=127.0.0.1 --port=27017
     else
       psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "${credentials[@]}" \
         "--host=$node" --port=27017
