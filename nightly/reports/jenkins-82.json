@@ -3292,15 +3292,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-19T09:14:27Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-19T03:08:13Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "PMM-T2371 failed 3 of 3 attempts on OpenShift with min(up{job=\"kube-apiserver\"}) = 0, after passing in #15 (server 3.10.0-rc; #16 ran 3-dev-latest, same PMM-HA-GA chart, vmagent v1.151.0 from the chart). Cause unknown: no repro because CHAOS is at its 20-instance limit. Needs a rerun or a cluster to check whether the kube-apiserver target is down on OpenShift or only in this run.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-19T09:14:32Z"
     }
-  ]
+  ],
+  "claims": []
 }
