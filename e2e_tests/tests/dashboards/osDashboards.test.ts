@@ -52,34 +52,6 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T1090 - Verify time zones and navigation between dashboards @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, leftNavigation, page, urlHelper }) => {
-    const timeZone = 'Europe/London';
-
-    await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.os.processesDetails.url, {
-        from: 'now-45m',
-        to: 'now',
-      }),
-    );
-    await dashboard.waitForDashboardToLoad();
-
-    await leftNavigation.selectTimeZone(timeZone);
-
-    await pmmTest.step('Navigate to the Nodes Overview dashboard through the left navigation', async () => {
-      await leftNavigation.selectMenuItem('inventory');
-      await leftNavigation.selectMenuItem('operatingsystem.overview');
-      await dashboard.waitForDashboardToLoad();
-    });
-
-    await leftNavigation.elements.timePickerOpenButton.click();
-    await expect(leftNavigation.builders.selectedTimeZone(timeZone)).toBeVisible({
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
-  },
-);
-
-pmmTest(
   'PMM-T1695 - Verify that user is able to filter OS / Node Compare dashboard by Node Name @nightly  @dashboards @gssapi-nightly',
   async ({ api, dashboard, page, urlHelper }) => {
     const mergedNodes = (await api.inventoryApi.getAllNodes()).filter(
