@@ -3335,6 +3335,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1635",
       "by": "travagliad",
       "at": "2026-10-20T11:10:42Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "test fix",
+      "summary": "On RC nights the orchestrator passes the dev version 3.10.1 from pmm-submodules v3/VERSION as PMM_SERVER_LATEST, so the RC server's correct 3.10.0 fails the post-upgrade version check",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4593",
+      "by": "travagliad",
+      "at": "2026-10-20T11:10:47Z"
     }
   ],
   "claims": []
