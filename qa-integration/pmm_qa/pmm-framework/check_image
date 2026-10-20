@@ -58,8 +58,16 @@ case $engine in
     docker run --rm --entrypoint sh "$image" -c 'command -v krb5kdc && command -v kadmin.local && command -v kdb5_util'
     ;;
   psmdb)
-    # mongod needs the mongod.conf compose mounts, so check the tools run.
-    docker run --rm "$image" sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen'
+    # mongod needs the mongod.conf compose mounts, so check the tools run. rseq fails
+    # with ENOSYS, as in the image's systemd drop-ins: on kernel 6.19+ PSMDB 8.0.21-8.0.34
+    # won't even print its version with tcmalloc per-CPU caches on (SERVER-121912).
+    seccomp=$(mktemp)
+    echo '{"defaultAction":"SCMP_ACT_ALLOW","syscalls":[{"names":["rseq"],"action":"SCMP_ACT_ERRNO","errnoRet":38}]}' >"$seccomp"
+    status=0
+    docker run --rm --security-opt "seccomp=$seccomp" "$image" \
+      sh -c 'mongod --version && mongos --version && pbm version && command -v mgodatagen' || status=$?
+    rm -f "$seccomp"
+    exit "$status"
     ;;
   pxc-proxysql)
     # The full cluster: three nodes synced and ProxySQL seeing all of them.
