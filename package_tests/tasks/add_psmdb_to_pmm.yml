@@ -42,8 +42,6 @@
     regexp: '^#replication:'
     replace: 'replication:\n  replSetName: "rs1"'
 
-- include_tasks: psmdb_kernel_rseq_workaround.yml
-
 - name: start mongod service
   service: name=mongod state=started
 
