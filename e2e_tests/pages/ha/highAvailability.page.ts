@@ -10,6 +10,7 @@ export default class HighAvailabilityPage extends BasePage {
   buttons = {
     // Expands without navigating; the item itself links to a child with no url.
     haNavItemToggle: this.page.getByTestId('navitem-high-availability-toggle'),
+    overviewNavItem: this.page.getByTestId('navitem-high-availability-overview'),
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),
@@ -28,6 +29,21 @@ export default class HighAvailabilityPage extends BasePage {
     await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
     await this.buttons.haNavItemToggle.click({ timeout: Timeouts.TEN_SECONDS });
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+  };
+
+  /**
+   * Opens "PMM HA" -> "Overview". Deliberately not built on
+   * {@link expandHaNavItem}, which waits for the "Leader:" row the HA menu no
+   * longer carries once it has children.
+   */
+  openOverviewDashboard = async (): Promise<void> => {
+    await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
+
+    if (!(await this.buttons.overviewNavItem.isVisible())) {
+      await this.buttons.haNavItemToggle.click({ timeout: Timeouts.TEN_SECONDS });
+    }
+
+    await this.buttons.overviewNavItem.click({ timeout: Timeouts.TEN_SECONDS });
   };
 
   /**
