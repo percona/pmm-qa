@@ -3283,15 +3283,17 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-20T03:15:28Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-20T03:11:24Z",
       "suites": [
         "Upgrade"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "All three 'Setup databases + clients' failures are psmdb docker containers (pmm-qa/psmdb:8.0-ol9) refusing connections on 127.0.0.1:27017 after 120-270 attempts, the same mongod-not-starting symptom as the package jobs on the same runner fleet; upgrade steps never ran. Not reproduced on a CHAOS VM and no fix PR; cause inside the containers is unconfirmed.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-20T03:15:33Z"
     }
-  ]
+  ],
+  "claims": []
 }
