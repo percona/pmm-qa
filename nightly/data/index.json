@@ -101525,6 +101525,29 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-20T03:11:24Z",
+        "suites": [
+          "Package AMD"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-20T03:11:24Z",
+        "suites": [
+          "Package ARM"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-20T03:11:24Z",
+        "suites": [
+          "Upgrade"
+        ]
+      }
+    ]
   }
 ]
