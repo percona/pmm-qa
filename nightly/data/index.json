@@ -104897,6 +104897,16 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4593",
         "by": "travagliad",
         "at": "2026-10-20T11:10:47Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "not a bug",
+        "summary": "pmm3-ha-rosa can't create any ROSA cluster since ~04:27Z because AWS billing account 119175775298 is no longer linked to the Red Hat organization; an account admin has to relink it",
+        "link": "",
+        "by": "travagliad",
+        "at": "2026-10-20T11:10:52Z"
       }
     ],
     "claims": []
