@@ -104832,15 +104832,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-20T07:03:11Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
+        ],
+        "verdict": "not reproduced",
+        "summary": "Infra, not PMM or tests: both HA lanes died provisioning OpenShift because pmm3-ha-rosa #350/#351 (and #352 at 06:49) get CLUSTERS-MGMT-400 'billing account 119175775298 not linked to organization 1IQQauGmwrUH143LVRXQKXXnVHC at the aws marketplace'; #349 at 01:15 UTC was the last success, so the ROSA/AWS Marketplace billing link broke overnight and needs DevOps/account-owner action before any HA lane can run.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-20T08:18:28Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-20T07:03:11Z",
