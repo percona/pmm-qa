@@ -104864,16 +104864,19 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4593",
         "by": "Investigator routine",
         "at": "2026-10-20T08:18:39Z"
+      },
+      {
+        "suites": [
+          "Integrations"
+        ],
+        "verdict": "not reproduced",
+        "summary": "PMM_PXC_TEST 'Verify dashboard after PXC Instances are added' found 5 empty panels (Ready to Accept Queries, Local State, Desync Mode, Cluster Status) against 3 tolerated on PXC Galera Node Summary for the client node; two CI-identical re-dispatches of PMM_PROXYSQL.yaml on main (3.10.0-rc server, pmm3-rc client, PXC 8.0) passed 4/4 each (runs 39392110719, 39392120917), and it passed on nights #80-#84, so this is an intermittent wsrep panel gap, not a PMM or test defect confirmed.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-20T08:27:11Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-20T07:03:11Z",
-        "suites": [
-          "Integrations"
-        ]
-      },
       {
         "by": "travagliad",
         "at": "2026-10-20T07:40:16Z",
