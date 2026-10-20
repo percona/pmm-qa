@@ -13,7 +13,7 @@ test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbit
     await result.outContains('true', 'PSMDB arbiter rs103 should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=psa');
   });
 
-  test('PMM-15650 Verify that a PSMDB arbiter added by hostname without credentials is monitored', async ({}) => {
+  test('PMM-T2399 - Verify that a PSMDB arbiter added by hostname without credentials is monitored', async ({}) => {
     await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`);
 
     // An arbiter holds no users, and from 8.1 the connection check's buildInfo needs auth.
