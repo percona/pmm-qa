@@ -3355,6 +3355,16 @@
       "link": "",
       "by": "travagliad",
       "at": "2026-10-20T11:10:52Z"
+    },
+    {
+      "suites": [
+        "Integrations"
+      ],
+      "verdict": "not reproduced",
+      "summary": "PMM_PXC_TEST saw 5 empty Galera status panels for pxc_node__2 on an unaffected kernel-6.8 runner; passed in the previous and 2026-10-17 nightlies and in every repro run",
+      "link": "",
+      "by": "travagliad",
+      "at": "2026-10-20T11:10:57Z"
     }
   ],
   "claims": []
