@@ -6,6 +6,9 @@ ARG OL_VERSION
 FROM oraclelinux:${OL_VERSION}
 ARG OL_VERSION
 # A major (8.0) installs its newest patch; a full patch (8.0.26-11) pins it.
+# The kernel-rseq drop-ins fail rseq with ENOSYS, keeping tcmalloc's per-CPU caches
+# off: with them on, PSMDB 8.0.21-8.0.34 exits at startup on kernel 6.19 and later
+# (SERVER-121912), even for --version, which is why the version check reads rpm.
 ARG PSMDB_VERSION
 ARG PBM_VERSION
 ARG MGODATAGEN_VERSION
@@ -37,11 +40,16 @@ RUN set -eux; \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin mgodatagen; \
     sed -i 's/Type=forking/#Type=forking/' /usr/lib/systemd/system/mongod.service; \
     systemctl enable mongod pbm-agent; \
+    for unit in mongod mongos; do \
+        mkdir -p "/etc/systemd/system/$unit.service.d"; \
+        printf '[Service]\nSystemCallFilter=~rseq\nSystemCallErrorNumber=ENOSYS\n' \
+            > "/etc/systemd/system/$unit.service.d/kernel-rseq.conf"; \
+    done; \
     dnf clean all; \
     rm -rf /var/cache/dnf /tmp/mgodatagen.tar.gz /data/db; \
     mkdir -p /data/db; \
     ln -s /usr/bin/mongosh /usr/bin/mongo; \
-    mongod --version | grep -q "v${PSMDB_VERSION%%-*}"
+    rpm -q --qf '%{VERSION}' percona-server-mongodb-server | grep -q "^${PSMDB_VERSION%%-*}"
 
 COPY conf/sysconfig/mongod /etc/sysconfig/
 COPY --chown=mongod --chmod=0400 keyfile /etc/keyfile

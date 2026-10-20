@@ -1,9 +1,9 @@
-# The PSMDB unit sets GLIBC_TUNABLES=glibc.pthread.rseq=0 so tcmalloc uses per-CPU
-# caches, and PSMDB 8.0.21-8.0.34 then refuses to start on kernel 6.19 and later
-# ("MongoDB cannot start: Linux kernel versions 6.19 and newer...", SERVER-121912;
-# 8.0.35 exempts the fixed kernels). With the variable cleared glibc keeps rseq,
-# tcmalloc falls back to per-thread caches, and the startup check passes.
-- name: Clear GLIBC_TUNABLES for mongod on kernel {{ ansible_kernel }}
+# PSMDB 8.0.21-8.0.34 refuses to start on kernel 6.19 and later whenever tcmalloc
+# runs with per-CPU caches ("MongoDB cannot start: Linux kernel versions 6.19 and
+# newer...", SERVER-121912; 8.0.35 exempts the fixed kernels). Failing rseq with
+# ENOSYS turns per-CPU caches off on every OS. Clearing GLIBC_TUNABLES is not
+# enough: glibc 2.28 on OL8 never registers rseq, so tcmalloc always gets it.
+- name: Keep tcmalloc per-CPU caches off for mongod on kernel {{ ansible_kernel }}
   when: ansible_kernel is version('6.19', '>=')
   block:
     - name: Create the mongod drop-in directory
@@ -12,13 +12,14 @@
         state: directory
         mode: '0755'
 
-    - name: Add the mongod drop-in that clears GLIBC_TUNABLES
+    - name: Add the mongod drop-in that fails rseq
       copy:
         dest: /etc/systemd/system/mongod.service.d/kernel-rseq.conf
         mode: '0644'
         content: |
           [Service]
-          Environment=GLIBC_TUNABLES=
+          SystemCallFilter=~rseq
+          SystemCallErrorNumber=ENOSYS
 
     - name: Reload systemd units
       systemd:
