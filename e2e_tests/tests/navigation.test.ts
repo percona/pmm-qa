@@ -111,7 +111,6 @@ pmmTest(
     await page.reload();
     // The sidebar re-expands MySQL on reload; clicking its toggle before that collapses it again.
     await leftNavigation.menuItemLocator('mysql.innodbDetails').waitFor();
-    // Clicked straight after the reload: before the fix the link was built before the dashboard loaded its time range.
     await leftNavigation.selectMenuItem('mysql.summary');
     await expect(page).toHaveURL(/mysql-instance-summary/);
     await expect(leftNavigation.elements.timePickerOpenButton).toContainText(`${from} to ${to}`, {
