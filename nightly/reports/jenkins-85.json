@@ -3290,6 +3290,18 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-20T08:18:28Z"
+    },
+    {
+      "suites": [
+        "Package AMD",
+        "Package ARM",
+        "Upgrade"
+      ],
+      "verdict": "not reproduced",
+      "summary": "Same cause as #83/#84: PSMDB 8.0.32 refuses to start on the GitHub runner image ubuntu-24.04 20261015.610 (kernel 6.19+; mongod logs 'MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility', SERVER-121912). All 37 failed package/GSSAPI jobs and both UI upgrade setups (3.6.0, 3.7.1) ran on 20261015.610; 0 of 105 jobs on 20261012.601 failed. Runner-environment issue, no pmm-qa or PMM defect; needs a PSMDB build that supports kernel 6.19 or pinning these jobs off the new image.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-20T08:18:34Z"
     }
   ],
   "claims": [
@@ -3298,27 +3310,6 @@
       "at": "2026-10-20T07:03:11Z",
       "suites": [
         "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-20T07:03:11Z",
-      "suites": [
-        "Package AMD"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-20T07:03:11Z",
-      "suites": [
-        "Package ARM"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-20T07:03:11Z",
-      "suites": [
-        "Upgrade"
       ]
     },
     {
