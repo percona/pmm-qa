@@ -101525,22 +101525,20 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-20T03:11:24Z",
         "suites": [
-          "Package AMD"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-20T03:11:24Z",
-        "suites": [
+          "Package AMD",
           "Package ARM"
-        ]
-      },
+        ],
+        "verdict": "not reproduced",
+        "summary": "mongod never starts on the GitHub runner in the failing client_integration jobs (systemd container logs 'Error enabling Transparent Huge pages' on read-only /sys, then ECONNREFUSED 127.0.0.1:27017); failure rate tracks runner image/arch (amd64 image 20261018.339: 17 of 20 jobs, 20261012.334: 7 of 46; arm64 about 77%) and not a test change. No CHAOS VM repro since it is runner-environment specific; no fix PR, needs a re-run or pmm-qa maintainer look.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-20T03:15:28Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-20T03:11:24Z",
