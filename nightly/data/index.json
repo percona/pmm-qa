@@ -104874,16 +104874,21 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-20T08:27:11Z"
+      },
+      {
+        "suites": [
+          "Package AMD",
+          "Package ARM",
+          "Integrations",
+          "Upgrade"
+        ],
+        "verdict": "test fix",
+        "summary": "GitHub ubuntu-24.04 runner images 20261018.* moved to kernel 7.0, where PSMDB 8.0.32 refuses to start (SERVER-121912); the fix makes rseq fail with ENOSYS for mongod so tcmalloc per-CPU caches stay off (Integrations: only the GSSAPI ol8 tarball job)",
+        "link": "https://github.com/percona/pmm-qa/pull/1635",
+        "by": "travagliad",
+        "at": "2026-10-20T11:10:42Z"
       }
     ],
-    "claims": [
-      {
-        "by": "travagliad",
-        "at": "2026-10-20T07:40:16Z",
-        "suites": [
-          "Package AMD"
-        ]
-      }
-    ]
+    "claims": []
   }
 ]
