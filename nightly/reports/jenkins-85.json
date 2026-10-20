@@ -3280,5 +3280,49 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "Integrations"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "Package AMD"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "Package ARM"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "Upgrade"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-20T07:03:11Z",
+      "suites": [
+        "Upgrade AMI"
+      ]
+    }
+  ]
 }
