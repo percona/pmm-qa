@@ -171,6 +171,19 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
 
+  e2e_tests_matrix_arm64:
+    if: ${{ !inputs.skip_compatibility }}
+    name: E2E Tests Matrix (CodeceptJS) ARM64
+    needs: [plan, resolve]
+    uses: ./.github/workflows/e2e-tests-matrix.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ needs.resolve.outputs.server_image }}
+      pmm_client_image: ${{ needs.resolve.outputs.client_image }}
+      pmm_client_version: ${{ needs.resolve.outputs.client_version }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      arch: 'arm64'
+
   helm_tests:
     if: ${{ !inputs.skip_compatibility }}
     name: pmm3-helm
