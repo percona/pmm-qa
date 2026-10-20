@@ -104854,6 +104854,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-20T08:18:34Z"
+      },
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "test fix",
+        "summary": "All 5 AMI upgrades fail 'PMM Server reports 3.10.0 / expected 3.10.1': pmm3-nightly-orchestrator passes pmm-submodules v3/VERSION (now 3.10.1) as PMM_SERVER_LATEST even for the 3.10.0-rc image; fix passes the RC tag's version instead.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4593",
+        "by": "Investigator routine",
+        "at": "2026-10-20T08:18:39Z"
       }
     ],
     "claims": [
@@ -104862,13 +104872,6 @@
         "at": "2026-10-20T07:03:11Z",
         "suites": [
           "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-20T07:03:11Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       },
       {
