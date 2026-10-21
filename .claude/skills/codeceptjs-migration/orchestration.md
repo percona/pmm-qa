@@ -48,7 +48,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Never edit `e2e_tests/.env`. Pass `PMM_UI_URL` (default `https://127.0.0.1/`) and `ADMIN_PASSWORD` (default `admin`, non-default for UI-login tests, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them.
 - Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
-- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/local-pmm.sh down` from the parent. The runner owns cleanup on every path it reaches.
+- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/local-pmm.sh down` from the parent and closes the Playwright MCP browser (`mcp__playwright__browser_close`). The runner owns cleanup on every path it reaches.
 - Record the tracker `in-progress` commit SHA in the handoff as the active-row marker.
 - Restore control's worktree to clean after publication (`branch-workflow.md` Tracker completion and cleanup).
 
@@ -187,5 +187,5 @@ pending
 -> revalidate in that worktree
 -> push, PR opened
 -> tracker done on control, restore control's worktree clean
--> tear down the local PMM environment and the publish worktree
+-> tear down the local PMM environment, the Playwright MCP browser and the publish worktree
 ```

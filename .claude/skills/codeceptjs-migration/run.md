@@ -134,6 +134,6 @@ Do not merge the publish branch into control. `done` means the PR was opened.
 
 ## 8. Cleanup
 
-Run `bash .claude/scripts/local-pmm.sh down` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
+Run `bash .claude/scripts/local-pmm.sh down` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Close the Playwright MCP browser with `mcp__playwright__browser_close` (load it through `ToolSearch`) in the same step. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
 
 On a terminal path before publication, control's worktree still holds the uncommitted work: say so in the handoff and do not discard it. Teardown is classifier-blocked inside a subagent: when refused, report it and leave the environment for the parent.
