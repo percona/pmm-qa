@@ -239,7 +239,8 @@ jobs:
   test:
     name: ${{ matrix.os }}-${{ matrix.arch }} / ${{ matrix.test }}
     needs: prepare
-    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    # 22.04 until PSMDB ships 8.0.35: 8.0.32 won't start on the 24.04 images' kernel 7.0 (SERVER-121912)
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     # Up to three attempts, each held to the Jenkins job's 90 minutes.
     timeout-minutes: 300
     permissions:

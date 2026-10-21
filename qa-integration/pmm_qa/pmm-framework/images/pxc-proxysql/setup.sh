@@ -3,8 +3,9 @@
 # images/pxc-proxysql/setup.sh -- PXC with ProxySQL, on the prebaked pxc-proxysql image.
 
 # Three nodes and ProxySQL in one container, pxc_proxysql_pmm_VERSION:
-# node N on 127.0.0.1:3305+N, ProxySQL admin on 6032 and host port 6033, and
+# node N on 127.0.0.1:3305+N, ProxySQL admin on 6032 and traffic on 6033, and
 # one pmm-agent monitoring all of them. Tests exec into the container by name.
+# No host port is published, so two PXC versions can share a host.
 #
 # ProxySQL is 2 below PXC 8.4 and 3 from it, baked into the image, so the
 # old PROXYSQL_VERSION and PROXYSQL_PACKAGE overrides are refused rather
@@ -42,7 +43,7 @@ setup_pxc() {
 
 pxc_start() {
   must docker run --detach --init --name "$container" --hostname "$container" \
-    --label pmm-qa.engine=pxc --network pmm-qa --publish 6033:6033 \
+    --label pmm-qa.engine=pxc --network pmm-qa \
     "pmm-qa/pxc-proxysql:$image_tag" >/dev/null
   docker exec --user root "$container" pmm_pxc start ||
     die "PXC did not come up in $container."

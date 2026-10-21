@@ -460,7 +460,7 @@ EOF
   parse_database_spec 'PXC=8.4,QUERY_SOURCE=slowlog'
   dispatch_setup
 
-  grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 .*--publish 6033:6033 pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 --hostname pxc_proxysql_pmm_8.4 --label pmm-qa.engine=pxc --network pmm-qa pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
   grep -q '^exec --user root pxc_proxysql_pmm_8.4 pmm_pxc start$' "$DOCKER_CALLS"
   grep -q -- '^exec --user root pxc_proxysql_pmm_8.4 pmm-agent setup .* pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4-ps-gr-pxc-valkey$' "$DOCKER_CALLS"
   [[ $(grep -c "SET GLOBAL log_slow_rate_limit=1" "$DOCKER_CALLS") -eq 3 ]]
