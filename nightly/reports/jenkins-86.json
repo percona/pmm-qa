@@ -3272,21 +3272,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-21T03:18:57Z",
       "suites": [
-        "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-21T03:18:57Z",
-      "suites": [
+        "Nightly",
         "Nightly Compatibility"
-      ]
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T348 (newly @nightly via #1633) fails in every lane: the migrated page object tolerates no empty panels, but 'Galera Network Usage Hourly' (1h increase at a 1h step) has no points on a fresh setup; the CodeceptJS original tolerated 2.",
+      "link": "https://github.com/percona/pmm-qa/pull/1638",
+      "by": "Investigator routine",
+      "at": "2026-10-21T04:05:58Z"
     }
-  ]
+  ],
+  "claims": []
 }
