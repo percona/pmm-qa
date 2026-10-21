@@ -50,7 +50,14 @@ valkey_run() {
   docker volume rm -f "$name-data" >/dev/null 2>&1 || true
   must docker run --detach --name "$name" --hostname "$name-node" --label pmm-qa.engine=valkey \
     --network pmm-qa --restart unless-stopped --publish "$host_port:$port" --volume "$name-data:/data" \
-    "pmm-qa/valkey:$version" "$@" >/dev/null
+    "${SYSTEMD_RUN[@]}" "pmm-qa/valkey:$version" >/dev/null
+  # COMMAND runs as the valkey unit, quoted into a script as given.
+  printf '#!/bin/bash\ncd /data\nexec %s\n' "$(printf '%q ' "$@")" |
+    docker exec -i "$name" sh -c 'cat >/usr/local/bin/valkey-run && chmod +x /usr/local/bin/valkey-run' ||
+    die "Writing the valkey command of $name failed."
+  must docker exec "$name" sh -ceu "printf '%s\n' '[Service]' 'ExecStart=/usr/local/bin/valkey-run' 'Restart=always' \
+      '[Install]' 'WantedBy=multi-user.target' >/etc/systemd/system/valkey.service
+    systemctl enable -q --now valkey"
   local -a auth=(-a "$VALKEY_PASSWORD" --no-auth-warning)
   if ((port == 26379)); then
     auth=()

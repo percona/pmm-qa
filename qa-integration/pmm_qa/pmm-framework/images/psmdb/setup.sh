@@ -130,12 +130,14 @@ psmdb_pbm_agent() {
 # /var/log/pmm-agent.log with the Kerberos keytab.
 psmdb_client() {
   install_pmm_client "$1" "$client" "$tarball"
+  # The log and keytab go in a drop-in: a package upgrade replaces the unit itself.
   # shellcheck disable=SC2016 # expanded by the container's shell
   must docker exec "$1" sh -ceu '
     unit=/usr/lib/systemd/system/pmm-agent.service
     [ -f $unit ] || install -D -m 0644 "$(find /tmp/pmm-client -name pmm-agent.service -print -quit)" $unit
-    sed -i -e "/ExecStart/a StandardError=file:/var/log/pmm-agent.log" \
-      -e "/\[Service\]/a Environment=\"KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab\"" $unit
+    mkdir -p /etc/systemd/system/pmm-agent.service.d
+    printf "%s\n" "[Service]" "StandardError=file:/var/log/pmm-agent.log" \
+      "Environment=\"KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab\"" >/etc/systemd/system/pmm-agent.service.d/pmm-qa.conf
     ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/sbin/pmm-agent
     ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/sbin/pmm-admin
     tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id
