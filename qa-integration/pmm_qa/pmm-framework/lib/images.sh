@@ -11,11 +11,7 @@ readonly PREBAKED_SOURCE_LABEL=org.opencontainers.image.source=https://github.co
 readonly SYSBENCH_VERSION=1.0.20
 readonly PBM_VERSION=2.9.1-1
 readonly MGODATAGEN_VERSION=0.11.2
-# Every image runs systemd on this OS so consumers never guess the package
-# manager or init. Exceptions: MySQL 5.7 (mysql:5.7, EL7: no EL9 package),
-# PSMDB (OL_VERSION 8|9, for GSSAPI's OS-specific client) and the Alpine KDC.
-# Oracle Linux 9: the Dockerfiles install EL9 repositories, and the PGSM build
-# enables ol9_codeready_builder.
+# Base of every systemd image except MySQL 5.7, PSMDB and the KDC; Oracle Linux 9 only (ARCHITECTURE.md).
 readonly BASE_OS=${BASE_OS:-oraclelinux:9}
 
 # DIR is images/<DIR> unless absolute.

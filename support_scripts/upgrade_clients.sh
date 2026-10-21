@@ -33,9 +33,6 @@ upgrade_client() {
     else
       echo "Upgrading using packages to repository: $repository"
       docker exec "$c" percona-release enable-only pmm3-client "$repository"
-      # repo.percona.com republishes the experimental repository continuously, so
-      # a reader can see a package mid-write: retry with fresh metadata. An
-      # unreachable unrelated repository (EPEL, PGDG) must not fail the upgrade.
       for attempt in 1 2 3 4 5; do
         docker exec "$c" dnf --refresh --setopt=skip_if_unavailable=True install -y pmm-client && break
         if [ "$attempt" -eq 5 ]; then
@@ -46,12 +43,7 @@ upgrade_client() {
         sleep 60
       done
     fi
-    # pmm-framework containers run pmm-agent as a systemd unit, which the
-    # package's own restart reaches. A container without systemd (a Nomad
-    # companion, MySQL 5.7) runs it standalone, holding the agent's local API
-    # port (127.0.0.1:7777), so a unit started beside it would crash-loop. Stop
-    # every instance and wait for the port to free before starting the
-    # upgraded agent.
+    # A standalone pmm-agent (no systemd) holds 127.0.0.1:7777; stop every instance before restarting.
     docker exec "$c" sh -c '
       systemctl stop pmm-agent 2>/dev/null || true
       pkill -x pmm-agent 2>/dev/null || true
