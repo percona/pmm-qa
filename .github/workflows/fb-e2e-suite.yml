@@ -154,7 +154,6 @@ jobs:
 
   instances:
     name: Instances UI tests
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
