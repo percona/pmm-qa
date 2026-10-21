@@ -144,7 +144,7 @@ pxc_proxysql_tag() {
 
 # Where .github/workflows/build-prebaked-images.yml publishes. Set it empty to
 # always build locally, e.g. to try a Dockerfile change.
-PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa}
+PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa/el9}
 
 # Local copy, else pull, else build. PREBAKED_PULL=always pulls over a local
 # copy, keeping it if the pull fails. The builder gets BUILD_ARGS, or TAG.
