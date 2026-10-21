@@ -111502,6 +111502,29 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-21T22:36:43Z",
+        "suites": [
+          "Integrations"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-21T22:36:43Z",
+        "suites": [
+          "Nightly Compatibility"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-21T22:36:43Z",
+        "suites": [
+          "Upgrade"
+        ]
+      }
+    ]
   }
 ]
