@@ -64,16 +64,22 @@ export default class InventoryApi {
     return filteredServices;
   };
 
-  getNodeName = async (nodeId: string): Promise<string> => {
-    const response = await this.request.get(`${apiEndpoints.management.nodes}/${nodeId}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-    const nodes = Object.values((await response.json()) as Record<string, GetNode>).flat();
-    const node = nodes.find((node: GetNode) => node.node_id === nodeId);
+  getNodeWithMysqlService = async (nodeName: string) => {
+    const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
 
-    if (!node) throw new Error(`Node with id ${nodeId} is not present`);
+    expect(nodes, `Node ${nodeName} must be registered exactly once`).toHaveLength(1);
 
-    return node.node_name;
+    const services = (await this.getServices()).services.filter(
+      (service) => service.node_id === nodes[0].node_id && service.service_type === ServiceType.mysql,
+    );
+
+    expect(services, `Node ${nodeName} must have exactly one MySQL service`).toHaveLength(1);
+
+    return {
+      nodeId: nodes[0].node_id,
+      serviceId: services[0].service_id,
+      serviceName: services[0].service_name,
+    };
   };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
