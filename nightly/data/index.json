@@ -108195,6 +108195,22 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-21T03:18:57Z",
+        "suites": [
+          "Nightly"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-21T03:18:57Z",
+        "suites": [
+          "Nightly Compatibility"
+        ]
+      }
+    ]
   }
 ]
