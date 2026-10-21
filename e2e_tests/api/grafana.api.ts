@@ -96,6 +96,8 @@ export default class GrafanaApi {
       (await search.json()) as { serviceAccounts: { id: number; isDisabled: boolean; name: string }[] }
     ).serviceAccounts.find((serviceAccount) => serviceAccount.name === name);
 
+    expect(account, `Service account ${name} must exist`).toBeDefined();
+
     if (!account?.isDisabled) return;
 
     const response = await this.request.patch(`${apiEndpoints.grafana.serviceAccounts}/${account.id}`, {

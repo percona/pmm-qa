@@ -97,38 +97,12 @@ pmmTest(
 
     const nodeServiceAccount = `pmm-agent-sa-${nodeName}`;
 
-    const registeredNode = async () => {
-      const nodes = (await api.inventoryApi.getAllNodes()).filter((node) => node.node_name === nodeName);
-
-      expect(nodes, `Node ${nodeName} must be registered exactly once`).toHaveLength(1);
-
-      const services = (await api.inventoryApi.getServices()).services.filter(
-        (service) => service.node_id === nodes[0].node_id && service.service_type === 'mysql',
-      );
-
-      expect(services, `Node ${nodeName} must have exactly one MySQL service`).toHaveLength(1);
-
-      return {
-        nodeId: nodes[0].node_id,
-        serviceId: services[0].service_id,
-        serviceName: services[0].service_name,
-      };
-    };
-
-    const verifyInventoryUi = async (serviceName: string) => {
-      await page.goto(nodesPage.url);
-      await expect(nodesPage.builders.nodeRow(nodeName)).toHaveCount(1, { timeout: Timeouts.THIRTY_SECONDS });
-      await page.goto(servicesPage.url);
-      await expect(servicesPage.builders.serviceNameCell(serviceName)).toHaveCount(1, {
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
-    };
-
     try {
       const before = await pmmTest.step('The Node is listed once with its MySQL service', async () => {
-        const registered = await registeredNode();
+        const registered = await api.inventoryApi.getNodeWithMysqlService(nodeName);
 
-        await verifyInventoryUi(registered.serviceName);
+        await nodesPage.verifyNodeListedOnce(nodeName);
+        await servicesPage.verifyServiceListedOnce(registered.serviceName);
 
         return registered;
       });
@@ -169,8 +143,9 @@ pmmTest(
       });
 
       await pmmTest.step('The same Node is still listed once with its MySQL service', async () => {
-        expect(await registeredNode()).toEqual(before);
-        await verifyInventoryUi(before.serviceName);
+        expect(await api.inventoryApi.getNodeWithMysqlService(nodeName)).toEqual(before);
+        await nodesPage.verifyNodeListedOnce(nodeName);
+        await servicesPage.verifyServiceListedOnce(before.serviceName);
       });
 
       await pmmTest.step("Enable the Node's service account again", async () => {
