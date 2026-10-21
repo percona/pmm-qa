@@ -82,6 +82,10 @@ jobs:
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
           if [ -n "$ENGINES" ]; then
             engines=$(jq -Rc 'split(",") | map(gsub(" "; "")) | map(select(. != ""))' <<<"$ENGINES")
+            if [ "$engines" = '[]' ]; then
+              echo "::error::engines must name at least one engine"
+              exit 1
+            fi
           elif [ "$SCHEDULE" = "$DAILY" ]; then
             # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
             stale=()

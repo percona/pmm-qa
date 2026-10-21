@@ -111,7 +111,7 @@ upgrade's own `systemctl restart pmm-agent` reaches the running agent; PXC
 An RPM that enables its own unit at boot (`mysqld`, PXC's `mysql`, `proxysql`,
 `percona-telemetry-agent`) is disabled in its Dockerfile.
 
-Every image has dnf, and all but MySQL 5.7, PSMDB and the KDC run systemd:
+Every image but MySQL 5.7 (EL7, yum) and the Alpine KDC has dnf and runs systemd:
 install PMM Client with `install_pmm_client` and upgrade it with
 `support_scripts/upgrade_clients.sh`. `BASE_OS` must be Oracle Linux 9: EPEL,
 Oracle MySQL, HAProxy and PGDG are EL9 repositories, `upstream_version` reads

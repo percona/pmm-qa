@@ -61,9 +61,7 @@ install_pmm_client() {
       cd "$(dirname "$(find /tmp/pmm-client -type f -name install_tarball -print -quit)")"
       bash ./install_tarball'
   else
-    # Every image has dnf, except mysql:5.7: EL7, where yum would quietly
-    # install a PMM 2 client. percona-release is brought to the latest,
-    # in case an image's is too old to know the pmm3-client repo.
+    # EL7 (mysql:5.7) has no PMM 3 package; percona-release is refreshed so it knows pmm3-client.
     # shellcheck disable=SC2016 # expanded by the container's shell
     install='case $(. /etc/os-release; echo "$VERSION_ID") in
         7*) echo "PMM 3 Client packages are not published for EL7; use a tarball CLIENT_VERSION." >&2; exit 3 ;;
