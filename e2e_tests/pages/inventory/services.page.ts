@@ -7,6 +7,7 @@ export default class ServicesPage extends BasePage {
   builders = {
     monitoringStatusByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
+    serviceNameCell: (serviceName: string) => this.grafanaIframe().locator(`td[title="${serviceName}"]`),
     statusByServiceName: (serviceName: string) =>
       this.grafanaIframe()
         .getByRole('row', { name: serviceName })
