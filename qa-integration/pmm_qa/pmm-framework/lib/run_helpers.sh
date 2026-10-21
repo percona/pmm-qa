@@ -8,8 +8,7 @@
 readonly BUSYBOX_IMAGE=busybox:1.37.0
 # The Nomad agent pmm-agent runs exits unless it can write to cgroups.
 readonly -a NOMAD_CGROUPS=(--privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw)
-# systemd as PID 1 without --privileged, which breaks mysqld under AppArmor on
-# GitHub runners. A private cgroup namespace does not boot.
+# systemd as PID 1, unprivileged: --privileged breaks mysqld under AppArmor on GitHub runners.
 readonly -a SYSTEMD_RUN=(--cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock)
 
 # Run a command, dying if it fails. Only the first words are echoed, so a

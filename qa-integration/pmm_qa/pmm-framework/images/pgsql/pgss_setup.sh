@@ -9,8 +9,7 @@ data=/var/lib/pgsql/$version/data
 # percona-release: support_scripts/upgrade_clients.sh upgrades pmm-client through it.
 dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
   "https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-$(uname -m)/pgdg-redhat-repo-latest.noarch.rpm"
-# PGDG's paths take the OS minor release, which Oracle Linux leaves empty
-# (rhel-9.-x86_64); its rhel-9 paths serve every minor.
+# Oracle Linux leaves $releasever_minor empty, so PGDG's repo uses its major-only rhel-9 paths.
 # shellcheck disable=SC2016 # dnf's variables, not the shell's
 sed -i 's/\$releasever_major\.\$releasever_minor/$releasever_major/' /etc/yum.repos.d/pgdg-redhat-all.repo
 dnf install -y "postgresql$version-server" "postgresql$version-contrib" \

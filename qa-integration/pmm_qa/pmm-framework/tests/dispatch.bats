@@ -14,8 +14,7 @@ stub_prebaked_docker() {
   # shellcheck disable=SC2329,SC2317
   docker() {
     printf '%s\n' "$*" >>"$DOCKER_CALLS"
-    # What a setup writes into a container (mysqld options, scripts), kept per
-    # container in stdin/NAME: parallel nodes would interleave in one file.
+    # Each container's stdin goes to stdin/NAME: parallel nodes would interleave in one file.
     if [[ $1 == exec && ($2 == -i || $2 == --interactive) ]]; then
       local arg
       for arg in "${@:3}"; do

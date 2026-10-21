@@ -34,8 +34,7 @@ RUN set -eux; \
     dnf install -y "$pkg" systemd sudo sysbench iproute findutils gzip openssl procps-ng tar; \
     dnf clean all; \
     rm -rf /var/cache/dnf; \
-    # pmm_pxc runs the nodes and ProxySQL; packaged units started at boot would
-    # take node 1's Galera port and ProxySQL's pid file first.
+    # pmm_pxc runs the nodes and ProxySQL, so their packaged units must not start at boot.
     systemctl disable mysql; \
     if systemctl is-enabled -q proxysql; then systemctl disable proxysql; fi; \
     # No telemetry from test containers, as in Percona's own images.

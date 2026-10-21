@@ -196,9 +196,7 @@ mysql_start_node() {
   fi
 }
 
-# What the upstream image's entrypoint did, on systemd: FLAGS become
-# /etc/my.cnf.d/zz-pmm-qa.cnf, then root gets MYSQL_ROOT_PASSWORD from anywhere,
-# outside the binlog so replicas and group members start without GTIDs.
+# Root's password is set outside the binlog, so replicas and group members start without GTIDs.
 # Usage: mysql_systemd_start NODE MY_ROCKS FLAGS...
 mysql_systemd_start() {
   local name=$1 my_rocks=$2 flag socket=''
