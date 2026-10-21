@@ -161,6 +161,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
+      # The arm64 runner image omits Ansible; the external PostgreSQL tests run playbooks.
+      - name: Install Ansible
+        if: ${{ env.ARCH == 'arm64' }}
+        run: pip3 install --user ansible-core
+
       - name: Setup npm modules for e2e tests
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
