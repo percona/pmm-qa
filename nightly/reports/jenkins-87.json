@@ -3280,20 +3280,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "EPEL mirror mirrors.wcupa.edu serves an incomplete TLS chain, so setupPMM3Client's dnf version lookup silently returned empty and staging-start ran 'dnf install pmm-client-'; reproduced on OL9 and fixed by skipping unavailable repos and failing on an empty version (jenkins-pipelines commit, no PR yet).",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/93145b545dd6c60993b35da0232a41a49747f956",
+      "by": "Investigator routine",
+      "at": "2026-10-21T22:56:13Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-21T22:36:43Z",
       "suites": [
         "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-21T22:36:43Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
