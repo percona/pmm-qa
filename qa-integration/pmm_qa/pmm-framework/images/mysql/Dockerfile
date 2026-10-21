@@ -41,13 +41,15 @@ USER root
 RUN ln -sfn /usr/local/share/sysbench /usr/share/sysbench
 RUN echo /usr/local/lib64 > /etc/ld.so.conf.d/sysbench-mysql.conf \
     && ldconfig
-# iproute: the Nomad agent pmm-agent runs needs `ip`.
+# iproute: the Nomad agent pmm-agent runs needs `ip`. perl: pt-mysql-summary,
+# behind the Service Summary panel, which the PMM Client tarball does not pull in.
 RUN yum install -y \
         curl \
         findutils \
         gzip \
         iproute \
         openssl \
+        perl \
         tar \
     && yum clean all \
     && sysbench --version \
@@ -71,7 +73,7 @@ RUN set -eux; \
         -o /tmp/epel-release.rpm; \
     rpm -Uvh /tmp/epel-release.rpm; \
     rm /tmp/epel-release.rpm; \
-    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl procps-ng tar; \
+    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl perl procps-ng tar; \
     "$PKG_MGR" clean all; \
     sysbench --version; \
     tar --version
