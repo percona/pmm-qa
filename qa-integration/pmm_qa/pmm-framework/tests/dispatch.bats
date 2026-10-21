@@ -189,8 +189,8 @@ stub_prebaked_docker() {
     [[ $1 != image ]]
   }
   ensure_image ps 8.4
-  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/ps:8.4$' "$DOCKER_CALLS"
-  grep -q '^tag ghcr.io/percona/pmm-qa/ps:8.4 pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/el9/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^tag ghcr.io/percona/pmm-qa/el9/ps:8.4 pmm-qa/ps:8.4$' "$DOCKER_CALLS"
   [[ $(grep -c '^build ' "$DOCKER_CALLS") -eq 0 ]]
 
   : >"$DOCKER_CALLS"
@@ -210,7 +210,7 @@ stub_prebaked_docker() {
     esac
   }
   run ensure_image ps 8.4
-  [[ $output == *'WARNING: Could not pull ghcr.io/percona/pmm-qa/ps:8.4: Error response from daemon: Head "https://ghcr.io/v2/": unauthorized'* ]]
+  [[ $output == *'WARNING: Could not pull ghcr.io/percona/pmm-qa/el9/ps:8.4: Error response from daemon: Head "https://ghcr.io/v2/": unauthorized'* ]]
   grep -q '^build .* -t pmm-qa/ps:8.4 ' "$DOCKER_CALLS"
 
   : >"$DOCKER_CALLS"
@@ -219,7 +219,7 @@ stub_prebaked_docker() {
 
   LOCAL_COPY=yes PREBAKED_PULL=always run ensure_image ps 8.4
   [[ $status -eq 0 && $output == *'WARNING: Could not pull '* ]]
-  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^pull --quiet ghcr.io/percona/pmm-qa/el9/ps:8.4$' "$DOCKER_CALLS"
   [[ $(grep -c '^build ' "$DOCKER_CALLS") -eq 0 ]]
 }
 
