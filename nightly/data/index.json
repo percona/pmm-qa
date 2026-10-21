@@ -111523,6 +111523,16 @@
         "link": "",
         "by": "Investigator routine",
         "at": "2026-10-21T22:56:19Z"
+      },
+      {
+        "suites": [
+          "Upgrade"
+        ],
+        "verdict": "not reproduced",
+        "summary": "Upgrade 3.6.0 Docker died in 'npm ci' with ECONNRESET from the npm registry before any upgrade step ran; network failure, nothing to fix.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-21T22:56:24Z"
       }
     ],
     "claims": []
