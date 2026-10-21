@@ -70,6 +70,8 @@ RUN set -eux; \
       'gpgcheck=1' 'gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' >/etc/yum.repos.d/mysql-community.repo; \
     dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
         "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"; \
+    # EPEL's master, not its mirror list: lagging mirrors fail the metadata checksum.
+    sed -i 's|^metalink=.*|baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/$basearch/|' /etc/yum.repos.d/epel.repo; \
     dnf install -y mysql-community-server systemd sudo sysbench iproute openssl perl procps-ng findutils gzip tar; \
     dnf clean all; \
     rm -rf /var/cache/dnf /var/lib/mysql/*; \

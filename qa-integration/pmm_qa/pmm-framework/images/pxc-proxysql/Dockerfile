@@ -21,6 +21,8 @@ RUN set -eux; \
     esac; \
     dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
         "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"; \
+    # EPEL's master, not its mirror list: lagging mirrors fail the metadata checksum.
+    sed -i 's|^metalink=.*|baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/$basearch/|' /etc/yum.repos.d/epel.repo; \
     percona-release enable-only "$repo" release; \
     percona-release enable tools release; \
     if [ -n "$PROXYSQL_PACKAGE" ]; then \

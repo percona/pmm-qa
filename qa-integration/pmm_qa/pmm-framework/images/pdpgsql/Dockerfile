@@ -15,6 +15,8 @@ RUN set -eux; \
     : "${PG_VERSION:?PG_VERSION build-arg is required}"; \
     dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
         "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"; \
+    # EPEL's master, not its mirror list: lagging mirrors fail the metadata checksum.
+    sed -i 's|^metalink=.*|baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/$basearch/|' /etc/yum.repos.d/epel.repo; \
     percona-release enable-only "ppg-$PG_VERSION" release; \
     dnf install -y "percona-postgresql$PG_VERSION-server" "percona-postgresql$PG_VERSION-contrib" \
       "percona-pg_stat_monitor$PG_VERSION" percona-pgbackrest percona-patroni etcd python3-etcd \
