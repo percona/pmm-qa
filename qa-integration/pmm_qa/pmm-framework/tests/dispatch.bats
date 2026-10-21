@@ -330,6 +330,7 @@ stub_prebaked_docker() {
 
   grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--cgroupns=host .*--publish 5432:5432 pmm-qa/pdpgsql:17$' "$DOCKER_CALLS"
   [[ $(grep -c -- '--privileged' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--cap-add NET_ADMIN ' "$DOCKER_CALLS"
   grep -Fq 'enable-only pmm3-client experimental && dnf install -y pmm-client' "$DOCKER_CALLS"
   grep -q "CREATE ROLE pmm LOGIN PASSWORD 'pmm' IN ROLE pg_monitor;" "$DOCKER_CALLS"
   grep -q -- ' pdpgsql_pmm_17_1 container pdpgsql_pmm_17_1$' "$DOCKER_CALLS"

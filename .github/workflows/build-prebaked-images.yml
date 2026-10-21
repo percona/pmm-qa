@@ -6,7 +6,12 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Sundays 00:00 UTC: everything, for base-image OS updates
     - cron: '0 0 * * 1-6' # other days 00:00 UTC: engines whose upstream version moved (DAILY below)
-  workflow_dispatch: # everything
+  workflow_dispatch:
+    inputs:
+      engines:
+        description: "Comma-separated engines to rebuild, e.g. pdpgsql,pgsql; empty rebuilds every engine"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths:
@@ -61,6 +66,7 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
+          ENGINES: ${{ inputs.engines }}
           DAILY: '0 0 * * 1-6'
           BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
@@ -74,7 +80,9 @@ jobs:
             done | jq -sc .
           }
           all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
-          if [ "$SCHEDULE" = "$DAILY" ]; then
+          if [ -n "$ENGINES" ]; then
+            engines=$(jq -Rc 'split(",") | map(gsub(" "; "")) | map(select(. != ""))' <<<"$ENGINES")
+          elif [ "$SCHEDULE" = "$DAILY" ]; then
             # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
             stale=()
             while read -r engine version; do

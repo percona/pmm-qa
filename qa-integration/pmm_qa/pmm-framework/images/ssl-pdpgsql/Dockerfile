@@ -22,7 +22,7 @@ RUN set -eux; \
       systemd sudo initscripts-service openssl iproute procps-ng findutils gzip tar; \
     dnf clean all; \
     rm -rf /var/cache/dnf; \
-    su postgres -c "initdb -D $data"; \
+    su postgres -c "initdb -D $data -E UTF8 --locale=C.UTF-8"; \
     printf '%s\n' \
       'local   all     all                       trust' \
       'host    all     all       127.0.0.1/32    trust' \

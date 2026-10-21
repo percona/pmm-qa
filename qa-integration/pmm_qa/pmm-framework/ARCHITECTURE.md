@@ -84,7 +84,7 @@ push to `main` rebuilds and publishes only the images whose baked-in files
 changed; a pull request builds and checks them without publishing. Daily at
 00:00 UTC it rebuilds the engines whose label no longer matches
 `upstream_version`, so a new database patch is baked within a day; on Sundays
-that run, like a manual one, rebuilds everything, for base-image OS updates.
+that run, like a manual one without `engines`, rebuilds everything, for base-image OS updates.
 
 ### One base: Oracle Linux 9 and systemd
 

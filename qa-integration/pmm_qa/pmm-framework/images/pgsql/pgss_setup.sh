@@ -18,7 +18,7 @@ dnf install -y "postgresql$version-server" "postgresql$version-contrib" \
 dnf clean all
 rm -rf /var/cache/dnf
 
-su postgres -c "initdb -D $data"
+su postgres -c "initdb -D $data -E UTF8 --locale=C.UTF-8"
 cat >"$data/pg_hba.conf" <<'EOF'
 local   all             all                                     trust
 host    all             all             127.0.0.1/32            trust

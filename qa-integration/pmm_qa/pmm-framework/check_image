@@ -43,6 +43,7 @@ case $engine in
       sleep 1
     done
     docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
+    docker exec -u postgres probe psql -tAc 'SHOW server_encoding' | grep -qx UTF8
     docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
     ;;
   ssl-pdpgsql)
@@ -59,6 +60,7 @@ case $engine in
   pgsql)
     boot
     docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM pg_stat_statements'
+    docker exec -u postgres probe psql -tAc 'SHOW server_encoding' | grep -qx UTF8
     ;;
   valkey)
     boot

@@ -20,14 +20,15 @@ RUN set -eux; \
     percona-release enable-only "ppg-$PG_VERSION" release; \
     dnf install -y "percona-postgresql$PG_VERSION-server" "percona-postgresql$PG_VERSION-contrib" \
       "percona-pg_stat_monitor$PG_VERSION" percona-pgbackrest percona-patroni etcd python3-etcd \
-      systemd sudo initscripts-service iproute jq procps-ng findutils gzip tar wget; \
+    # iproute-tc: PMM-T2224 delays the loopback with tc (the setup adds NET_ADMIN).
+      systemd sudo initscripts-service iproute iproute-tc jq procps-ng findutils gzip tar wget; \
     dnf clean all; \
     rm -rf /var/cache/dnf; \
     patroni --version
 
 RUN set -eux; \
     data=/var/lib/pgsql/$PG_VERSION/data; \
-    su postgres -c "initdb -D $data"; \
+    su postgres -c "initdb -D $data -E UTF8 --locale=C.UTF-8"; \
     printf '%s\n' \
       "listen_addresses = '*'" \
       "shared_preload_libraries = 'pg_stat_monitor'" \

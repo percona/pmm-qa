@@ -88,7 +88,7 @@ pdpgsql_start() {
 
 pdpgsql_start_node() {
   must docker run --detach --name "$1" --restart=always --label pmm-qa.engine=pdpgsql --network pmm-qa \
-    "${SYSTEMD_RUN[@]}" --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
+    "${SYSTEMD_RUN[@]}" --cap-add NET_ADMIN --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
   pdpgsql_ready "$1"
   if [[ -n $pgsm_branch ]]; then
     retry 3 "pg_stat_monitor build tools on $1" docker exec --user root "$1" dnf install -y \
