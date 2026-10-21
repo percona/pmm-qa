@@ -3283,6 +3283,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1638",
       "by": "Investigator routine",
       "at": "2026-10-21T04:05:58Z"
+    },
+    {
+      "suites": [
+        "Nightly"
+      ],
+      "verdict": "test fix",
+      "summary": "PMM-T317 (newly @nightly via #1633) fails on docker and ami when it picks the mysql_pmm service: the mysql prebaked image lacks perl, so pt-mysql-summary errors and the Service Summary panel never renders.",
+      "link": "https://github.com/percona/pmm-qa/pull/1638",
+      "by": "Investigator routine",
+      "at": "2026-10-21T04:06:04Z"
     }
   ],
   "claims": []
