@@ -3290,22 +3290,18 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/93145b545dd6c60993b35da0232a41a49747f956",
       "by": "Investigator routine",
       "at": "2026-10-21T22:56:13Z"
-    }
-  ],
-  "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-21T22:36:43Z",
-      "suites": [
-        "Integrations"
-      ]
     },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-21T22:36:43Z",
       "suites": [
-        "Upgrade"
-      ]
+        "Upgrade",
+        "Integrations"
+      ],
+      "verdict": "not reproduced",
+      "summary": "Transient EPEL mirror failure (repomd.xml checksum mismatch / all mirrors failed) broke the in-container client upgrade of ps_pmm_8_4_1 in Upgrade 3.7.0 Docker and the epel setup of the GSSAPI OL8 tarball package test; EPEL metalink and origin agree again, no product or test defect.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-21T22:56:19Z"
     }
-  ]
+  ],
+  "claims": []
 }
