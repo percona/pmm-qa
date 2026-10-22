@@ -114824,6 +114824,17 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/1db434d",
         "by": "Investigator routine",
         "at": "2026-10-22T02:43:38Z"
+      },
+      {
+        "suites": [
+          "Package AMD",
+          "Package ARM"
+        ],
+        "verdict": "not reproduced",
+        "summary": "3 package jobs (ol8-amd64 pmm3-client_integration, ol10-arm64 auth_register, and one more) died at the epel repomd.xml download, 'All mirrors were tried': a transient EPEL mirror failure, the same as night #87.",
+        "link": "",
+        "by": "Investigator routine",
+        "at": "2026-10-22T02:43:44Z"
       }
     ],
     "claims": [
