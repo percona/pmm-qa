@@ -48,7 +48,6 @@ pmm_pod_image() {
     kubectl get pod --selector=app.kubernetes.io/name=pmm -o jsonpath="{.items[*].spec.containers[*].image}"
 }
 
-# Polls /v1/server/version through the port-forward until it reports the expected version.
 assert_pmm_version() {
     local expected=$1
     local pmm_address admin_pass version=""
