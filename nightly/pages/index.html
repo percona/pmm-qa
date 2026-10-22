@@ -256,8 +256,8 @@ const GROUP_ORDER = ['Package AMD', 'Package ARM', 'Upgrade', 'Upgrade AMI', 'Ni
   'HA, OpenShift & GSSAPI', 'E2E Tests', 'CLI Integration', 'CLI Integration Compatibility', 'Integrations', 'Other'];
 const orderOf = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
 const srcIcons = jobs => `<span class="src">${[...new Set(jobs.map(j => j.source).filter(Boolean))].map(s => icon[s] || '').join('')}</span>`;
-// A group whose findings are all `unstable` or `setup fix` passed on re-run, so its failed jobs count as unstable.
-const rerunGreen = (r, g) => { const fs = (r.investigations || []).filter(f => suitesOf(f).includes(g)); return fs.length && fs.every(f => ['unstable', 'setup fix'].includes(f.verdict)); };
+// A group whose findings are all `unstable` or `setup bug` passed on re-run, so its failed jobs count as unstable.
+const rerunGreen = (r, g) => { const fs = (r.investigations || []).filter(f => suitesOf(f).includes(g)); return fs.length && fs.every(f => ['unstable', 'setup bug'].includes(f.verdict)); };
 const detailsOf = r => (r.jobs || []).map(j => { const group = j.group || j.name; return { group, ...j, ...(FAILED.includes(j.result) && rerunGreen(r, group) ? { result: 'unstable' } : {}) }; });
 const suitesOf = f => f.suites || (f.job ? [f.job] : []);
 const tally = jobs => ({
@@ -284,7 +284,7 @@ const investigateUrl = (r, group, failed) => 'https://claude.ai/code?' + new URL
     `2. Read what is already known: https://percona.github.io/pmm-qa/nightly/reports/${r.run_id}.json (its investigations and claims for "${group}").\n` +
     `3. Launch one subagent with the Agent tool. Its prompt: "Read plugins/pmm-qa/agents/investigator.md in percona/pmm-ai (main) ` +
     `and act as that role, following it exactly." followed by the failed jobs above, the build URL, and any existing findings from step 2. ` +
-    `Ask it to finish with one line per root cause: the groups it explains, verdict (unstable | setup fix | test bug | product bug), ` +
+    `Ask it to finish with one line per root cause: the groups it explains, verdict (test bug | setup bug | product bug, or unstable only when none of those fits), ` +
     `a one-sentence summary, and the green re-run, fix PR or Jira URL.\n` +
     `4. For each root cause it returns, run in percona/pmm-qa:\n` +
     `   nightly/ci/finding.sh ${r.run_id} <login> "<verdict>" "<summary>" <link or -> "<group>" ["<other group>" ...]\n` +
@@ -386,7 +386,7 @@ function runView(id) {
       const state = x.fail ? 'fail' : x.warn ? 'warn' : 'pass';
       const verdicts = finds.length ? `<ul class="verdicts">${finds.map(f => {
         const others = suitesOf(f).filter(s => s !== g);
-        return `<li class="verdict"><span class="pill ${{ 'product bug': 's-fail', 'test bug': 's-fail', 'setup fix': 's-warn', unstable: 's-warn' }[f.verdict] || 's-idle'}">${esc(f.verdict)}</span>
+        return `<li class="verdict"><span class="pill ${{ 'product bug': 's-fail', 'test bug': 's-fail', 'setup bug': 's-warn', unstable: 's-warn' }[f.verdict] || 's-idle'}">${esc(f.verdict)}</span>
           <div><div class="why">${esc(f.summary)}${f.link ? ` <a class="ref" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">${esc(linkLabel(f.link))}${icon.ext}</a>` : ''}</div>
           <div class="also">${f.by ? `By ${esc(f.by)}${f.at ? `, ${esc(ago(f.at))}` : ''}` : ''}${f.by && others.length ? ' · ' : ''}${others.length ? `Same cause as ${others.map(esc).join(', ')}` : ''}</div></div></li>`;
       }).join('')}</ul>` : '';
