@@ -295,7 +295,7 @@ const linkLabel = u => {
   if (pr) return (pr[1] === 'percona/pmm-qa' ? '' : pr[1]) + `PR #${pr[2]}`;
   const jira = /\/browse\/([A-Z][A-Z0-9]+-\d+)/.exec(u || '');
   if (jira) return jira[1];
-  return 'Re-run';
+  return 'Link';
 };
 const ago = at => {
   const s = (Date.now() - new Date(at)) / 1000;
@@ -387,7 +387,7 @@ function runView(id) {
       const verdicts = finds.length ? `<ul class="verdicts">${finds.map(f => {
         const others = suitesOf(f).filter(s => s !== g);
         return `<li class="verdict"><span class="pill ${{ 'product bug': 's-fail', 'test bug': 's-fail', 'setup bug': 's-warn', unstable: 's-warn' }[f.verdict] || 's-idle'}">${esc(f.verdict)}</span>
-          <div><div class="why">${esc(f.summary)}${f.link ? ` <a class="ref" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">${esc(linkLabel(f.link))}${icon.ext}</a>` : ''}</div>
+          <div><div class="why">${esc(f.summary)}${f.link ? ` <a class="ref" href="${esc(safeUrl(f.link))}" target="_blank" rel="noopener">${esc(f.verdict === 'unstable' && linkLabel(f.link) === 'Link' ? 'Re-run' : linkLabel(f.link))}${icon.ext}</a>` : ''}</div>
           <div class="also">${f.by ? `By ${esc(f.by)}${f.at ? `, ${esc(ago(f.at))}` : ''}` : ''}${f.by && others.length ? ' · ' : ''}${others.length ? `Same cause as ${others.map(esc).join(', ')}` : ''}</div></div></li>`;
       }).join('')}</ul>` : '';
       const claims = liveClaims(r, g);
