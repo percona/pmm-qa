@@ -64,6 +64,24 @@ export default class InventoryApi {
     return filteredServices;
   };
 
+  getNodeWithMysqlService = async (nodeName: string) => {
+    const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
+
+    expect(nodes, `Node ${nodeName} must be registered exactly once`).toHaveLength(1);
+
+    const services = (await this.getServices()).services.filter(
+      (service) => service.node_id === nodes[0].node_id && service.service_type === ServiceType.mysql,
+    );
+
+    expect(services, `Node ${nodeName} must have exactly one MySQL service`).toHaveLength(1);
+
+    return {
+      nodeId: nodes[0].node_id,
+      serviceId: services[0].service_id,
+      serviceName: services[0].service_name,
+    };
+  };
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>

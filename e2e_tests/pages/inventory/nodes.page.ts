@@ -72,4 +72,9 @@ export default class NodesPage extends BasePage {
       });
     }
   };
+
+  verifyNodeListedOnce = async (nodeName: string): Promise<void> => {
+    await this.page.goto(this.url);
+    await expect(this.builders.nodeRow(nodeName)).toHaveCount(1, { timeout: Timeouts.THIRTY_SECONDS });
+  };
 }
