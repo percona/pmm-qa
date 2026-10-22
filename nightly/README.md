@@ -51,8 +51,10 @@ nightly/ci/finding.sh jenkins-123 <login> "not a bug" "one-line summary" \
   https://github.com/percona/pmm-qa/pull/1511 "CLI Integration Compatibility" "E2E Tests"
 ```
 
-`verdict` is one of `not reproduced`, `not a bug`, `test fix`, `product bug`. The link
-(or `-` for none) is the fix PR or Jira bug; the page labels it `PR #N` or `PMM-N`.
+`verdict` is one of `unstable` (external cause, passed on re-run), `setup fix`, `test bug`,
+`product bug`. The link (or `-` for none; required for `unstable` and `setup fix`) is the green
+re-run, fix PR or Jira bug; the page labels it `Re-run`, `PR #N` or `PMM-N`. A group whose
+findings are all `unstable` or `setup fix` shows its failed jobs as unstable.
 Claims are per group: claiming one group never touches another group's claim.
 Findings only ever append.
 
