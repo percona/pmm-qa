@@ -3306,15 +3306,17 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/93145b545dd6c60993b35da0232a41a49747f956",
       "by": "Investigator routine",
       "at": "2026-10-22T02:43:49Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-22T02:38:11Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "not reproduced",
+      "summary": "Both HA lanes died provisioning ROSA: pmm3-ha-rosa #359/#360 got an Akamai HTML error page from Red Hat SSO at 00:27-00:28Z ('Failed to create OCM connection'). The rosa builds the day before (#355-#358) passed, and SSO answers JSON again now, so this was a transient Red Hat outage.",
+      "link": "",
+      "by": "Investigator routine",
+      "at": "2026-10-22T02:43:54Z"
     }
-  ]
+  ],
+  "claims": []
 }
