@@ -130,6 +130,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   cli_integration_tests:
+    name: CLI integration (pmm-cli-integration-tests)
     needs: [plan, resolve]
     uses: ./.github/workflows/integration-cli-tests.yml
     secrets:
