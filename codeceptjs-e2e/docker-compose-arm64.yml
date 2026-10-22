@@ -3,8 +3,6 @@
 # Merged over docker-compose.yml on arm64 runners. The profiled services' images
 # have no arm64 build, and nothing enables the profile, so they never start.
 services:
-  pmm-server:
-    platform: linux/arm64
   mysql:
     profiles: [amd64-only]
   mysql8:
