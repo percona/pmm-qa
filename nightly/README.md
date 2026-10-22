@@ -47,12 +47,15 @@ the existing report instead of replacing it.
 nightly/ci/claim.sh jenkins-123 "CLI Integration Compatibility" <login>
 
 # One finding per root cause, listing every group it explains. Drops that author's claim.
-nightly/ci/finding.sh jenkins-123 <login> "not a bug" "one-line summary" \
+nightly/ci/finding.sh jenkins-123 <login> "test bug" "one-line summary" \
   https://github.com/percona/pmm-qa/pull/1511 "CLI Integration Compatibility" "E2E Tests"
 ```
 
-`verdict` is one of `not reproduced`, `not a bug`, `test fix`, `product bug`. The link
-(or `-` for none) is the fix PR or Jira bug; the page labels it `PR #N` or `PMM-N`.
+`verdict` is one of `test bug`, `setup bug`, `product bug`, or `unstable` only when none of
+those fits (external cause, passed on re-run). The link (or `-` for none; required for
+`unstable` and `setup bug`) is the green re-run, fix PR or Jira bug; the page labels it
+`Re-run`, `PR #N` or `PMM-N`. A group whose findings are all `unstable` or `setup bug` shows
+its failed jobs as unstable.
 Claims are per group: claiming one group never touches another group's claim.
 Findings only ever append.
 
