@@ -47,7 +47,7 @@ the existing report instead of replacing it.
 nightly/ci/claim.sh jenkins-123 "CLI Integration Compatibility" <login>
 
 # One finding per root cause, listing every group it explains. Drops that author's claim.
-nightly/ci/finding.sh jenkins-123 <login> "not a bug" "one-line summary" \
+nightly/ci/finding.sh jenkins-123 <login> "test bug" "one-line summary" \
   https://github.com/percona/pmm-qa/pull/1511 "CLI Integration Compatibility" "E2E Tests"
 ```
 
