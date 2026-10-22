@@ -58,10 +58,10 @@ pmmTest.afterAll(async ({ browser }) => {
 
 pmmTest(
   'PMM-T510 - Verify built-in rule templates are non-editable @fb-alerting @grafana-pr',
-  async ({ alertingPage, page }) => {
+  async ({ alertingPage }) => {
     const builtIn = alertingPage.builders.templateRowsBySource('TEMPLATE_SOURCE_BUILT_IN');
 
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(builtIn.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(builtIn.getByTestId('create-from-template-button')).toHaveCount(await builtIn.count());
@@ -73,7 +73,7 @@ pmmTest(
 pmmTest(
   'PMM-T496 - Verify rule templates list elements @fb-alerting @grafana-pr',
   async ({ alertingPage, api, page }) => {
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
     for (const header of ['Name', 'Source', 'Actions']) {
@@ -100,27 +100,24 @@ pmmTest(
   },
 );
 
-pmmTest(
-  'PMM-T2327 - Add rule template modal elements @fb-alerting @grafana-pr',
-  async ({ alertingPage, page }) => {
-    await page.goto(alertingPage.urls.templates);
-    await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await alertingPage.buttons.addTemplate.click();
-    await expect(alertingPage.elements.modalHeader).toContainText('Add alert rule template');
-    await expect(alertingPage.buttons.closeModal).toBeVisible();
-    await expect(alertingPage.buttons.uploadFile).toBeVisible();
-    await expect(alertingPage.buttons.submitTemplate).toBeVisible();
-    await expect(alertingPage.buttons.cancelTemplate).toBeVisible();
-  },
-);
+pmmTest('PMM-T2327 - Add rule template modal elements @fb-alerting @grafana-pr', async ({ alertingPage }) => {
+  await alertingPage.openTemplates();
+  await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  await alertingPage.buttons.addTemplate.click();
+  await expect(alertingPage.elements.modalHeader).toContainText('Add alert rule template');
+  await expect(alertingPage.buttons.closeModal).toBeVisible();
+  await expect(alertingPage.buttons.uploadFile).toBeVisible();
+  await expect(alertingPage.buttons.submitTemplate).toBeVisible();
+  await expect(alertingPage.buttons.cancelTemplate).toBeVisible();
+});
 
 pmmTest(
   'PMM-T1993 - verify editor can create alert rule template @fb-alerting',
-  async ({ alertingPage, grafanaHelper, page }) => {
+  async ({ alertingPage, grafanaHelper }) => {
     const templateName = 'E2E editor permissions input YML';
 
     await grafanaHelper.authorize(editor.username, editor.password);
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.createTemplate(
       readTemplateFile(inputTemplate)
@@ -143,13 +140,13 @@ for (const [unit, range] of [
 ] as const) {
   pmmTest(
     `PMM-T500 + PMM-T595 + PMM-T596 - Add rule templates with different units, empty range @fb-alerting | unit ${unit}, range ${range || 'empty'}`,
-    async ({ alertingPage, page }) => {
+    async ({ alertingPage }) => {
       const {
         content,
         templates: [{ summary }],
       } = readTemplateFile(inputTemplate);
 
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
       await alertingPage.createTemplate(
         content.replace("unit: '%'", `unit: '${unit}'`).replace('range: [0, 100]', `range: ${range}`),
@@ -165,8 +162,8 @@ for (const [unit, range] of [
 
 pmmTest(
   'PMM-T500 + PMM-T595 + PMM-T596 - Add rule templates with different units, empty range @fb-alerting | unit *, range [0, 100]',
-  async ({ alertingPage, page }) => {
-    await page.goto(alertingPage.urls.templates);
+  async ({ alertingPage }) => {
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.createTemplate(
       readTemplateFile(inputTemplate).content.replace("unit: '%'", "unit: '*'"),
@@ -180,14 +177,14 @@ pmmTest(
 for (const file of ['template.yaml', 'template.yml', 'customParam.yml']) {
   pmmTest(
     `PMM-T482 + PMM-T499 + PMM-T766 + PMM-T758 + PMM-T767 + PMM-T931 - Upload rule templates @fb-alerting | ${file}`,
-    async ({ alertingPage, page }) => {
+    async ({ alertingPage }) => {
       const path = `${templatesDir}/${file}`;
       const {
         content,
         templates: [{ summary }],
       } = readTemplateFile(path);
 
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
       await alertingPage.attachTemplateFile(path);
       await expect.poll(() => alertingPage.inputs.template.inputValue()).toContain(content);
@@ -212,10 +209,10 @@ for (const [file, error] of [
 ] as const) {
   pmmTest(
     `PMM-T482 + PMM-T499 + PMM-T766 + PMM-T758 + PMM-T767 + PMM-T931 - Upload rule templates @fb-alerting | ${file}`,
-    async ({ alertingPage, page }) => {
+    async ({ alertingPage }) => {
       const path = `${templatesDir}/${file}`;
 
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
       await alertingPage.attachTemplateFile(path);
       await expect
@@ -227,10 +224,10 @@ for (const [file, error] of [
   );
 }
 
-pmmTest('PMM-T1785 - Bulk rule templates upload @fb-alerting', async ({ alertingPage, page }) => {
+pmmTest('PMM-T1785 - Bulk rule templates upload @fb-alerting', async ({ alertingPage }) => {
   const { content, templates } = readTemplateFile(bulkTemplates);
 
-  await page.goto(alertingPage.urls.templates);
+  await alertingPage.openTemplates();
   await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   await alertingPage.attachTemplateFile(bulkTemplates);
   await expect.poll(() => alertingPage.inputs.template.inputValue()).toContain(content);
@@ -245,7 +242,7 @@ pmmTest('PMM-T1785 - Bulk rule templates upload @fb-alerting', async ({ alerting
   }
 });
 
-pmmTest('PMM-T1786 - Edit bulk uploaded rule template @fb-alerting', async ({ alertingPage, api, page }) => {
+pmmTest('PMM-T1786 - Edit bulk uploaded rule template @fb-alerting', async ({ alertingPage, api }) => {
   const { content, templates } = readTemplateFile(bulkTemplates);
 
   await api.alertingApi.uploadTemplate(content);
@@ -253,7 +250,7 @@ pmmTest('PMM-T1786 - Edit bulk uploaded rule template @fb-alerting', async ({ al
   for (const { summary, yaml } of templates) {
     const updatedYaml = yaml.replaceAll(summary, `${summary}_updated`);
 
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.builders.editTemplate(summary).click();
     await expect(alertingPage.inputs.template).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -272,31 +269,28 @@ pmmTest('PMM-T1786 - Edit bulk uploaded rule template @fb-alerting', async ({ al
   }
 });
 
-pmmTest(
-  'PMM-T1787 - Delete bulk uploaded rule template @fb-alerting',
-  async ({ alertingPage, api, page }) => {
-    const { content, templates } = readTemplateFile(bulkTemplates);
+pmmTest('PMM-T1787 - Delete bulk uploaded rule template @fb-alerting', async ({ alertingPage, api }) => {
+  const { content, templates } = readTemplateFile(bulkTemplates);
 
-    await api.alertingApi.uploadTemplate(content);
+  await api.alertingApi.uploadTemplate(content);
 
-    for (const { summary } of templates) {
-      await page.goto(alertingPage.urls.templates);
-      await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await alertingPage.deleteTemplate(summary);
-    }
-  },
-);
+  for (const { summary } of templates) {
+    await alertingPage.openTemplates();
+    await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await alertingPage.deleteTemplate(summary);
+  }
+});
 
 pmmTest(
   'PMM-T501 - Upload duplicate rule template @fb-alerting @grafana-pr',
-  async ({ alertingPage, api, page }) => {
+  async ({ alertingPage, api }) => {
     const {
       content,
       templates: [{ name }],
     } = readTemplateFile(templateYaml);
 
     await api.alertingApi.uploadTemplate(content);
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.attachTemplateFile(templateYaml);
     await expect.poll(() => alertingPage.inputs.template.inputValue()).toContain(content);
@@ -310,7 +304,7 @@ pmmTest(
 for (const user of users) {
   pmmTest(
     `PMM-T483 + PMM-T699 + PMM-T1994 - Verify user can edit UI-created IA rule template @grafana-pr @fb-alerting | ${user.username}`,
-    async ({ alertingPage, api, grafanaHelper, page }) => {
+    async ({ alertingPage, api, grafanaHelper }) => {
       const newSummary = 'Updated E2E Template';
       const {
         content,
@@ -320,7 +314,7 @@ for (const user of users) {
 
       await grafanaHelper.authorize(user.username, user.password);
       await api.alertingApi.uploadTemplate(content);
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
       await alertingPage.builders.editTemplate(summary).click();
       await expect(alertingPage.inputs.template).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -348,7 +342,7 @@ for (const user of users) {
 for (const user of users) {
   pmmTest(
     `PMM-T562 + PMM-T1995 - Verify user can delete User-defined (UI) rule templates @grafana-pr @fb-alerting | ${user.username}`,
-    async ({ alertingPage, api, grafanaHelper, page }) => {
+    async ({ alertingPage, api, grafanaHelper }) => {
       const {
         content,
         templates: [{ summary }],
@@ -356,7 +350,7 @@ for (const user of users) {
 
       await grafanaHelper.authorize(user.username, user.password);
       await api.alertingApi.uploadTemplate(content);
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
       await alertingPage.deleteTemplate(summary);
     },
@@ -365,7 +359,7 @@ for (const user of users) {
 
 pmmTest(
   'PMM-T553 - Verify rule template can be deleted if there is a rule based on it @fb-alerting',
-  async ({ alertingPage, api, page }) => {
+  async ({ alertingPage, api }) => {
     const {
       content,
       templates: [{ name, summary }],
@@ -383,7 +377,7 @@ pmmTest(
       templateName: name,
       threshold: 0.01,
     });
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.deleteTemplate(summary);
   },
@@ -391,14 +385,14 @@ pmmTest(
 
 pmmTest(
   'PMM-T825 + PMM-T821 - Verify User can add Alert rule template in the file system @fb-alerting',
-  async ({ alertingPage, cliHelper, page }) => {
+  async ({ alertingPage, cliHelper }) => {
     for (const file of ['customParam.yml', 'spaceInParam.yml', 'template.txt']) {
       cliHelper
         .execute(`docker cp ${templatesDir}/${file} pmm-server:/srv/alerting/templates`)
         .assertSuccess();
     }
 
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(alertingPage.builders.createRuleFromTemplate('Custom parameter template')).toBeVisible();
     await expect(alertingPage.builders.createRuleFromTemplate('Space in parameter')).toBeHidden();
@@ -409,8 +403,8 @@ pmmTest(
 
 pmmTest(
   'PMM-T1514 - Verify that alert rule templates has only 1 exit button @fb-alerting',
-  async ({ alertingPage, page }) => {
-    await page.goto(alertingPage.urls.templates);
+  async ({ alertingPage }) => {
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
     const [templateName] = (await alertingPage.elements.templateNames.first().innerText()).split('\n');
@@ -423,8 +417,8 @@ pmmTest(
 
 pmmTest(
   'PMM-T2164 - Verify user can create alert from template with tiers field @fb-alerting',
-  async ({ alertingPage, page }) => {
-    await page.goto(alertingPage.urls.templates);
+  async ({ alertingPage }) => {
+    await alertingPage.openTemplates();
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.createTemplate(readTemplateFile(`${templatesDir}/templateWithTiers.yml`).content);
     await expect(alertingPage.messages.popUp).toContainText(added, { timeout: Timeouts.THIRTY_SECONDS });

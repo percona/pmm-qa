@@ -146,6 +146,7 @@ export default class AlertingPage extends BasePage {
     evaluationGroupName: this.grafanaIframe().getByTestId('data-testid alert-rule new-evaluation-group-name'),
     name: this.grafanaIframe().getByTestId('data-testid alert-rule name-field'),
     pendingPeriod: this.grafanaIframe().getByRole('textbox', { name: 'Pending period' }),
+    rowsPerPage: this.grafanaIframe().getByTestId('pagination-size-select'),
     ruleExpression: this.grafanaIframe().getByPlaceholder('Math operations on one or more queries'),
     ruleName: this.grafanaIframe().getByRole('textbox', { name: 'Name' }),
     severity: this.grafanaIframe().getByTestId('severity-select-input'),
@@ -253,6 +254,13 @@ export default class AlertingPage extends BasePage {
       `graph/alerting/grafana/namespaces/${folderUid}/groups/${encodeURIComponent(group)}/edit`,
     );
     await expect(this.buttons.save).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  // Test templates sort after the built-ins, past the first page of 25.
+  openTemplates = async () => {
+    await this.page.goto(this.urls.templates);
+    await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders.selectOption('100').click();
   };
 
   runQueries = async (): Promise<number> => {
