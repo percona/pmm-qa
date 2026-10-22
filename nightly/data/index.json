@@ -114811,15 +114811,22 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-22T02:38:11Z",
         "suites": [
-          "CLI Integration"
-        ]
-      },
+          "Package AMD",
+          "Package ARM",
+          "CLI Integration",
+          "Integrations"
+        ],
+        "verdict": "test fix",
+        "summary": "47 package jobs, CLI Generic and both GSSAPI tarball jobs expected v3's 3.10.1 but got 3.10.0: RC build pmm3-client-autobuild-amd #2479 (GIT_BRANCH=pmm-3.10.0, DESTINATION=testing) overwrote PR-BUILDS pmm-client-latest.tar.gz and the dynamic ol8/ol9 -latest tarballs at 18:07Z, and no v3 build has run since. Fix publishes -latest only from experimental builds (pushed to a jenkins-pipelines branch, no PR yet); until a v3 client autobuild runs, the next nightly fails the same way.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/1db434d",
+        "by": "Investigator routine",
+        "at": "2026-10-22T02:43:38Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-22T02:38:11Z",
@@ -114831,28 +114838,7 @@
         "by": "Investigator routine",
         "at": "2026-10-22T02:38:11Z",
         "suites": [
-          "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-22T02:38:11Z",
-        "suites": [
           "Nightly Compatibility"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-22T02:38:11Z",
-        "suites": [
-          "Package AMD"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-22T02:38:11Z",
-        "suites": [
-          "Package ARM"
         ]
       }
     ]
