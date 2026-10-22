@@ -9,6 +9,14 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     'Binlogs created hourly',
     'Relay log written hourly',
   ];
+  sourceNoDataMetrics: string[] = [
+    ...this.noDataMetrics,
+    'IO thread running',
+    'SQL thread running',
+    'Replication delay',
+    'MySQL replication lag',
+    'Relay log space',
+  ];
 
   metrics = (serviceName: string): GrafanaPanel[] => [
     { name: 'Node', type: 'stat' },
@@ -52,6 +60,6 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     { name: `Network traffic -  - ${serviceName}`, type: 'timeSeries' },
   ];
 
-  metricsWithData = (serviceName: string) =>
-    this.metrics(serviceName).filter((metric) => !this.noDataMetrics.includes(metric.name));
+  metricsWithData = (serviceName: string, noDataMetrics = this.noDataMetrics) =>
+    this.metrics(serviceName).filter((metric) => !noDataMetrics.includes(metric.name));
 }
