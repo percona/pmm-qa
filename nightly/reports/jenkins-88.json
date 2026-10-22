@@ -3296,6 +3296,16 @@
       "link": "",
       "by": "Investigator routine",
       "at": "2026-10-22T02:43:44Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "test fix",
+      "summary": "client 3.8.0: pmm3-aws-staging-start #27339 hit the EPEL mirror mirrors.wcupa.edu with an incomplete TLS chain, so the dnf version lookup returned empty and 'dnf install pmm-client-' failed 3 times. This is the cause found on night #87; its fix 93145b5 is still only on the unmerged branch claude/quirky-bohr-f8of7d and needs a PR.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/commit/93145b545dd6c60993b35da0232a41a49747f956",
+      "by": "Investigator routine",
+      "at": "2026-10-22T02:43:49Z"
     }
   ],
   "claims": [
@@ -3304,13 +3314,6 @@
       "at": "2026-10-22T02:38:11Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-22T02:38:11Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
