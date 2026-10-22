@@ -2,15 +2,18 @@
 
 repo_root=$(pwd)
 
-### Call PS5.7 Setup Scripts
-bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_ps_5_7.sh
+# docker-compose-arm64.yml leaves these containers out: their images are amd64-only.
+if [[ $(uname -m) == x86_64 ]]; then
+  ### Call PS5.7 Setup Scripts
+  bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_ps_5_7.sh
 
 
-### Call PS8.0 Setup Scripts
-bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_ps_8_0.sh
+  ### Call PS8.0 Setup Scripts
+  bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_ps_8_0.sh
 
-### Call Postgres Docker Setup Script
-bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_postgres_13.sh
+  ### Call Postgres Docker Setup Script
+  bash -x ${repo_root}/testdata/docker-db-setup-scripts/docker_postgres_13.sh
+fi
 
 ### Assert PMM-T1087's precondition: no `postgres` database on postgresnodb
 bash -x ${repo_root}/testdata/docker-db-setup-scripts/verify_no_default_db.sh || exit 1
