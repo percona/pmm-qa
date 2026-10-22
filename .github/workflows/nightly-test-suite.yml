@@ -130,7 +130,6 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   cli_integration_tests:
-    if: ${{ !inputs.skip_compatibility }}
     name: CLI integration (pmm-cli-integration-tests)
     needs: [plan, resolve]
     uses: ./.github/workflows/integration-cli-tests.yml
@@ -160,8 +159,7 @@ jobs:
       pmm_client_version: ${{ matrix.tarball }}
 
   e2e_tests_matrix:
-    if: ${{ !inputs.skip_compatibility }}
-    name: E2E Tests Matrix (CodeceptJS)
+    name: E2E Tests Matrix
     needs: [plan, resolve]
     uses: ./.github/workflows/e2e-tests-matrix.yml
     secrets: inherit
@@ -171,8 +169,19 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
 
+  e2e_tests_matrix_arm64:
+    name: E2E Tests Matrix ARM64
+    needs: [plan, resolve]
+    uses: ./.github/workflows/e2e-tests-matrix.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ needs.resolve.outputs.server_image }}
+      pmm_client_image: ${{ needs.resolve.outputs.client_image }}
+      pmm_client_version: ${{ needs.resolve.outputs.client_version }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      arch: 'arm64'
+
   helm_tests:
-    if: ${{ !inputs.skip_compatibility }}
     name: pmm3-helm
     needs: [plan, resolve]
     uses: ./.github/workflows/helm-tests.yml
@@ -214,7 +223,6 @@ jobs:
       pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
 
   qa_integration_psmdb_pbm_full:
-    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PSMDB_PBM_FULL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
@@ -224,7 +232,6 @@ jobs:
       pmm_server_image: ${{ needs.resolve.outputs.server_image }}
 
   qa_integration_proxysql:
-    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PROXYSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PROXYSQL.yaml
@@ -236,7 +243,6 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   qa_integration_pdpgsql:
-    if: ${{ !inputs.skip_compatibility }}
     name: PMM_PDPGSQL
     needs: [plan, resolve]
     uses: ./.github/workflows/PMM_PDPGSQL.yaml
@@ -247,7 +253,6 @@ jobs:
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
 
   upgrade_tests:
-    if: ${{ !inputs.skip_compatibility }}
     name: PMM Upgrade
     needs: [plan, resolve]
     uses: ./.github/workflows/upgrade-pmm.yml

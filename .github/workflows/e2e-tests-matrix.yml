@@ -68,7 +68,6 @@ on:
 jobs:
   settings_and_cli:
     name: Settings and cli UI tests
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -79,10 +78,10 @@ jobs:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
       setup_services: '--database pgsql'
       tags_for_tests: '@settings|@cli'
+      arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
 
   ssl_mysql:
     name: MySQL SSL tests
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -93,10 +92,10 @@ jobs:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
       setup_services: '--database ssl_mysql'
       tags_for_tests: '@ssl-mysql'
+      arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
 
   ssl_mongo:
     name: MongoDB SSL tests
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -107,10 +106,10 @@ jobs:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
       setup_services: '--database ssl_psmdb'
       tags_for_tests: '@ssl-mongo'
+      arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
 
   ssl_postgres:
     name: PDPGSQL SSL tests
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
@@ -121,10 +120,10 @@ jobs:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
       setup_services: '--database ssl_pdpgsql=16'
       tags_for_tests: '@ssl-postgres'
+      arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
 
   disconnect:
     name: Disconnect from PMM Server
-    if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
