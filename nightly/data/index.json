@@ -122072,6 +122072,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1658",
         "by": "Investigator routine",
         "at": "2026-10-23T17:30:33Z"
+      },
+      {
+        "suites": [
+          "Nightly Compatibility"
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T2051 (compat 3.8.0, 3.8.1): the PostgreSQL Replication Overview 'Replicas' table is built from flush_lag_seconds, which PostgreSQL nulls once standbys catch up, so after an hour without writes it empties while 'Number of Replicas' still shows 2. Reproduced on a CHAOS VM (passed 16:52, failed 2/2 at 17:25 with no writes in between); not client-version specific.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15784",
+        "by": "Investigator routine",
+        "at": "2026-10-23T17:30:39Z"
       }
     ],
     "claims": [
@@ -122087,13 +122097,6 @@
         "at": "2026-10-23T15:54:34Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T15:54:34Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
