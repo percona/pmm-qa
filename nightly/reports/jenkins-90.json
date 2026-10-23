@@ -3608,22 +3608,18 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/39959323146/attempts/2",
       "by": "Investigator routine",
       "at": "2026-10-23T17:30:53Z"
-    }
-  ],
-  "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-23T15:54:34Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
     },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-23T15:54:34Z",
       "suites": [
+        "CLI Integration Compatibility",
         "E2E Tests"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "CLI 3.9.0 PXC 8.0, MongoDB SSL and FB PSMDB Replica jobs hung in apt-get update / playwright install --with-deps on azure.archive.ubuntu.com until their job timeouts (same mirror as night #89); all three passed on re-run.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/39959323146/attempts/2",
+      "by": "Investigator routine",
+      "at": "2026-10-23T17:30:59Z"
     }
-  ]
+  ],
+  "claims": []
 }
