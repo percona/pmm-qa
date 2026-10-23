@@ -304,6 +304,7 @@ stub_prebaked_docker() {
   [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
+# Usage: stub_deb_fetch [STATUS]  (non-zero: the version is not in the index)
 stub_deb_fetch() {
   DEBIAN_NODE=true
   # Setups still read their data files, such as the Patroni template, from images/.
@@ -314,6 +315,7 @@ stub_deb_fetch() {
   cat >"$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >>'$BATS_TEST_TMPDIR/deb.calls'
+[[ ${1:-0} -eq 0 ]] || exit ${1:-0}
 echo /cache/pmm-client.deb
 EOF
   chmod +x "$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh"
@@ -354,6 +356,30 @@ EOF
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_3 pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_3_[0-9]+$' "$DOCKER_CALLS"
+}
+
+@test "a pinned client release that left the Debian index installs from its release tarball" {
+  stub_prebaked_docker
+  stub_deb_fetch 1
+  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3.7.1'
+  # shellcheck disable=SC2329,SC2317
+  fetch_client_tarball() {
+    [[ $1 == http* ]] || return 0
+    echo "$1" >>"$BATS_TEST_TMPDIR/tarball.calls"
+    printf '/cache/client.tar.gz'
+  }
+  dispatch_setup
+
+  grep -q 'main noble /tmp/pmm-client-cache 1800 3.7.1' "$BATS_TEST_TMPDIR/deb.calls"
+  [[ $(cat "$BATS_TEST_TMPDIR/tarball.calls") == "https://downloads.percona.com/downloads/pmm3/3.7.1/binary/tarball/pmm-client-3.7.1-$(uname -m).tar.gz" ]]
+  grep -q '^cp /cache/client.tar.gz pdpgsql_pmm_17_1:/tmp/pmm-client.tar.gz$' "$DOCKER_CALLS"
+  grep -q 'bash ./install_tarball' "$DOCKER_CALLS"
+  [[ $(grep -c 'apt-get install' "$DOCKER_CALLS") -eq 0 ]]
+
+  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3-dev-latest'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'Could not fetch the PMM Client package for pdpgsql_pmm_17_1'* ]]
 }
 
 @test "PDPGSQL replication streams a basebackup replica and rejects an unknown SETUP_TYPE" {
