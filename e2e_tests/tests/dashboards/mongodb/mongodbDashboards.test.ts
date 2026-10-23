@@ -149,6 +149,10 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
       const rows = dashboard.mongo.replSetSummary.metrics([service.service_name], [service.node_name]);
 
+      await api.grafanaApi.waitForMetric(
+        `mongodb_mongod_replset_member_replication_lag{cluster="${service.cluster}"}`,
+        Timeouts.TWO_MINUTES,
+      );
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
           cluster: service.cluster,
