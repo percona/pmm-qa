@@ -131,7 +131,8 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
           cluster: 'sharded',
           from: 'now-5m',
-          refresh: '5s',
+          // At 5s some of this dashboard's panels are always reloading, so loadAllPanels never sees zero loading bars.
+          refresh: '30s',
         }),
       );
 
