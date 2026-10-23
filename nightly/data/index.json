@@ -118448,6 +118448,17 @@
         "link": "https://github.com/percona/pmm-qa/pull/1656",
         "by": "Investigator routine",
         "at": "2026-10-23T04:21:04Z"
+      },
+      {
+        "suites": [
+          "Upgrade",
+          "Upgrade AMI"
+        ],
+        "verdict": "setup bug",
+        "summary": "All three upgrades from 3.7.1 died in setup with 'Could not fetch the PMM Client package': each codename's pmm3-client apt index keeps the last 5 releases, so 3.10.0 pushed 3.7.1 out of noble/jammy, while the upgrade matrix still starts from it (the workflow's pool check is fooled by leftover bullseye debs). Reproduced on a CHAOS VM; the fix makes pmm-framework install a pinned release from its downloads.percona.com tarball when apt no longer has it.",
+        "link": "https://github.com/percona/pmm-qa/pull/1657",
+        "by": "Investigator routine",
+        "at": "2026-10-23T04:21:16Z"
       }
     ],
     "claims": [
@@ -118463,20 +118474,6 @@
         "at": "2026-10-23T03:23:39Z",
         "suites": [
           "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T03:23:39Z",
-        "suites": [
-          "Upgrade"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T03:23:39Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       }
     ]
