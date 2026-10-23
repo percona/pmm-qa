@@ -3598,16 +3598,19 @@
       "link": "https://github.com/percona/pmm-qa/pull/1657",
       "by": "Investigator routine",
       "at": "2026-10-23T04:21:16Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "setup bug",
+      "summary": "pmm3-ha-tests #150 (via pmm3-ha-rosa #366) and pmm3-ha-backup-restore-tests #23 cloned percona-helm-charts branch PMM-HA-GA, which no longer exists: the jobs still held their old HELM_CHART_BRANCH default when the orchestrator fired them. jenkins-pipelines #4608 (merged 2026-10-22) moved the default to main, and both jobs now show main, so the next nightly picks it up; no further fix needed.",
+      "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4608",
+      "by": "Investigator routine",
+      "at": "2026-10-23T04:21:22Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-23T03:23:39Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-23T03:23:39Z",
