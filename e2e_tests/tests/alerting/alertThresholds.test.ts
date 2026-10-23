@@ -46,7 +46,7 @@ pmmTest(
     const ruleName = 'dt-cpu-80';
 
     await pmmTest.step('Only Node high CPU load is a Dynamic built-in template', async () => {
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await expect(alertingPage.builders.dynamicBadge('Node high CPU load')).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
@@ -112,7 +112,7 @@ pmmTest(
 pmmTest(
   'PMM-T2365 - Verify valid overridable templates are accepted and shown as Dynamic @fb-alerting',
   async ({ alertingPage, page }) => {
-    await page.goto(alertingPage.urls.templates);
+    await alertingPage.openTemplates();
 
     await pmmTest.step('A valid overridable template is added and shown as Dynamic', async () => {
       await alertingPage.addDynamicTemplate(
@@ -146,7 +146,7 @@ for (const { message, name, options, shape } of rejectedTemplates) {
   pmmTest(
     `PMM-T2365 - Verify an overridable template with ${shape} is refused @fb-alerting`,
     async ({ alertingPage, page }) => {
-      await page.goto(alertingPage.urls.templates);
+      await alertingPage.openTemplates();
       await alertingPage.verifyTemplateRefused(overridableTemplate(name, options), message);
       await page.reload();
       await expect(alertingPage.builders.templateRow('Node high CPU load')).toBeVisible({
