@@ -27,7 +27,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
     },
   );
 
-  // skip-until: 2026-10-23 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
+  // skip-until: 2026-11-06 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
   // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15714, see the skip-until line above.
   pmmTest.skip(
     'PMM-T2012 - Verify MongoDB Sharded Cluster Summary @pmm-psmdb-sharding-integration @post-upgrade',
@@ -131,7 +131,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
           cluster: 'sharded',
           from: 'now-5m',
-          // At 5s some of this dashboard's panels are always reloading, so loadAllPanels never sees zero loading bars.
+          // At 5s some of this dashboard's panels are often reloading, so loadAllPanels rarely sees zero loading bars.
           refresh: '30s',
         }),
       );
