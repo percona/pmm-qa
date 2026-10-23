@@ -122061,7 +122061,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly",
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test bug",
+        "summary": "PMM-T1698 asserts data in the MongoDB ReplSet Summary 'Replication Lag' panel, whose query keeps only lag > 0, so it is empty whenever no secondary lags: the helm run's trace shows every refresh empty for rs102/rs103 at 0 lag (also gssapi). Fix allows the panel to be empty and waits for the lag series itself; verified 3/3 on a CHAOS VM.",
+        "link": "https://github.com/percona/pmm-qa/pull/1658",
+        "by": "Investigator routine",
+        "at": "2026-10-23T17:30:33Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -122075,20 +122087,6 @@
         "at": "2026-10-23T15:54:34Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T15:54:34Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T15:54:34Z",
-        "suites": [
-          "Nightly"
         ]
       },
       {
