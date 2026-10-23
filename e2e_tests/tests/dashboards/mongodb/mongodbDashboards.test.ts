@@ -122,9 +122,10 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   pmmTest(
     'PMM-T2401 - Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
     async ({ api, dashboard, page, urlHelper }) => {
-      const serviceNames = (
-        await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?[0-9]+_[0-9]+')
-      ).map((service: GetService) => service.service_name);
+      // The nightly server also carries the pss replica set (rs101-rs103, cluster replicaset) from another shard.
+      const serviceNames = (await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?[0-9]+_[0-9]+'))
+        .filter((service: GetService) => service.cluster === 'sharded')
+        .map((service: GetService) => service.service_name);
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
