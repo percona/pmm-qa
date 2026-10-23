@@ -3619,6 +3619,16 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/39959323146/attempts/2",
       "by": "Investigator routine",
       "at": "2026-10-23T17:30:59Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "unstable",
+      "summary": "compat 3.9.0: pmm3-aws-staging-start #27360's PMM Server missed its 100s readiness check on a slow EC2 host (image pull 2m10s vs 36-55s, Grafana migrations 12.9s vs 2.7s on its siblings); sibling #27362 on the same image and minute was ready in 47s. Not re-run: no Jenkins write access from this session, the link is the in-window control.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-aws-staging-start/27362/",
+      "by": "Investigator routine",
+      "at": "2026-10-23T17:31:04Z"
     }
   ],
   "claims": []
