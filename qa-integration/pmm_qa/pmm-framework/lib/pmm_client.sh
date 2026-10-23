@@ -64,7 +64,7 @@ install_pmm_client() {
       install='apt-get install -y /tmp/pmm-client.deb'
     elif [[ -n $version ]]; then
       # Each codename's apt index keeps only the last five releases; every release keeps its tarball.
-      log_warn "pmm-client $version is not in the $codename index; installing its release tarball on $node."
+      log_warn "pmm-client $version could not be fetched from the $codename index; installing its release tarball on $node."
       tarball=$(fetch_client_tarball "https://downloads.percona.com/downloads/pmm3/$version/binary/tarball/pmm-client-$version-$(uname -m).tar.gz") ||
         die "Could not fetch the PMM Client $version tarball for $node."
     else
