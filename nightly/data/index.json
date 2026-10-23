@@ -122082,6 +122082,17 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15784",
         "by": "Investigator routine",
         "at": "2026-10-23T17:30:39Z"
+      },
+      {
+        "suites": [
+          "Upgrade",
+          "Upgrade AMI"
+        ],
+        "verdict": "unstable",
+        "summary": "Docker Hub returned 500 on pgsty/minio blobs and 'unauthorized' on redis:latest between 13:29:54 and 13:30:23Z, failing setup in Upgrade 3.7.0 Docker, Upgrade 3.8.1 UI and the AMI 3.8.1 upgrade lane; the re-run of the GitHub jobs passed (the Jenkins AMI lane could not be re-run from here: no jenkins-mcp-writers access).",
+        "link": "https://github.com/percona/pmm-qa/actions/runs/39959323146/attempts/2",
+        "by": "Investigator routine",
+        "at": "2026-10-23T17:30:53Z"
       }
     ],
     "claims": [
@@ -122097,20 +122108,6 @@
         "at": "2026-10-23T15:54:34Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T15:54:34Z",
-        "suites": [
-          "Upgrade"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-23T15:54:34Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       }
     ]
