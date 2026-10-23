@@ -118469,16 +118469,18 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4608",
         "by": "Investigator routine",
         "at": "2026-10-23T04:21:22Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-10-23T03:23:39Z",
         "suites": [
           "Integrations"
-        ]
+        ],
+        "verdict": "unstable",
+        "summary": "PMM_PXC_TEST hit its 40-minute timeout before the tests ran because 'playwright install --with-deps' pulled 89.4 MB from azure.archive.ubuntu.com at 48 kB/s (30m51s); the job normally takes 9-11 minutes, and its re-run on the same commit passed in 11 minutes.",
+        "link": "https://github.com/percona/pmm-qa/actions/runs/39877994079/job/120238646896",
+        "by": "Investigator routine",
+        "at": "2026-10-23T04:39:31Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
