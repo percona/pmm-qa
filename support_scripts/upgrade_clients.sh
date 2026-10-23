@@ -24,8 +24,7 @@ upgrade_client() {
   log=$(mktemp)
   {
     if [ -n "${CLIENT_TARBALL_UPGRADE:-}" ]; then
-      docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v apt-get >/dev/null && apt-get install -y wget || $(command -v dnf || command -v microdnf) install -y wget)'
-      docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
+      docker exec "$c" curl -fsSLo /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
       docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz &&
         d=$(ls -1td pmm-client*/ | head -n1) &&
         rm -rf /usr/local/bin/pmm-client &&
@@ -34,15 +33,17 @@ upgrade_client() {
     else
       echo "Upgrading using packages to repository: $repository"
       docker exec "$c" percona-release enable-only pmm3-client "$repository"
-      docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || $(command -v dnf || command -v microdnf) install -y pmm-client'
+      for attempt in 1 2 3 4 5; do
+        docker exec "$c" dnf --refresh --setopt=skip_if_unavailable=True install -y pmm-client && break
+        if [ "$attempt" -eq 5 ]; then
+          echo "pmm-client install failed 5 times; the version check below reports it"
+          break
+        fi
+        echo "pmm-client install failed (attempt $attempt of 5), retrying in 60s"
+        sleep 60
+      done
     fi
-    # The pmm-client package ships a pmm-agent.service, but the QA DB
-    # containers already run pmm-agent as a standalone (nohup) process that
-    # holds the agent's local API port (127.0.0.1:7777). A bare
-    # `systemctl restart` then starts the new binary as a service that cannot
-    # bind that port and crash-loops (Restart=always), while the old process
-    # keeps serving pmm-admin on the previous version. Stop every instance and
-    # wait for the port to free before starting the upgraded agent.
+    # A standalone pmm-agent (no systemd) holds 127.0.0.1:7777; stop every instance before restarting.
     docker exec "$c" sh -c '
       systemctl stop pmm-agent 2>/dev/null || true
       pkill -x pmm-agent 2>/dev/null || true

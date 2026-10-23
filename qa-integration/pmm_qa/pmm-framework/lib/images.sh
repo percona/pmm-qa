@@ -11,6 +11,8 @@ readonly PREBAKED_SOURCE_LABEL=org.opencontainers.image.source=https://github.co
 readonly SYSBENCH_VERSION=1.0.20
 readonly PBM_VERSION=2.9.1-1
 readonly MGODATAGEN_VERSION=0.11.2
+# Base of every systemd image except MySQL 5.7, PSMDB and the KDC; Oracle Linux 9 only (ARCHITECTURE.md).
+readonly BASE_OS=${BASE_OS:-oraclelinux:9}
 
 # DIR is images/<DIR> unless absolute.
 # Usage: build_image NAME:TAG DIR [DOCKER_BUILD_ARGS...]
@@ -28,20 +30,17 @@ has_image() {
 }
 
 build_ps_image() {
-  local version=$1 xtrabackup=percona-xtrabackup-${1/./}
-  has_image PS "$version"
-  [[ $version != 5.7 ]] || xtrabackup=percona-xtrabackup-24
-  build_image "ps:$version" ps --build-arg "PS_IMAGE=percona/percona-server:$version" \
-    --build-arg "XTRABACKUP_PACKAGE=$xtrabackup" --build-arg "SYSBENCH_VERSION=$SYSBENCH_VERSION"
+  has_image PS "$1"
+  build_image "ps:$1" ps --build-arg "BASE_OS=$BASE_OS" --build-arg "PS_VERSION=$1"
 }
 
-# mysql:5.7 is Oracle Linux 7 with no EPEL sysbench, hence its own stage.
+# mysql:5.7 is Oracle Linux 7 with no EL9 package or EPEL sysbench, hence its own stage.
 build_mysql_image() {
-  local version=$1 stage=mysql-epel
+  local version=$1 stage=mysql-el9
   has_image MYSQL "$version"
   [[ $version != 5.7 ]] || stage=mysql-57
-  build_image "mysql:$version" mysql --target "$stage" --build-arg "MYSQL_IMAGE=mysql:$version" \
-    --build-arg "SYSBENCH_VERSION=$SYSBENCH_VERSION"
+  build_image "mysql:$version" mysql --target "$stage" --build-arg "BASE_OS=$BASE_OS" \
+    --build-arg "MYSQL_VERSION=$version" --build-arg "SYSBENCH_VERSION=$SYSBENCH_VERSION"
 }
 
 # 8.4 dropped mysql_native_password, which Percona's proxysql2 needs, so 8.4+
@@ -57,7 +56,7 @@ build_pxc_proxysql_image() {
   if [[ -n $tarball ]]; then
     tag=$(pxc_proxysql_tag "$version" "$tarball")
   fi
-  build_image "pxc-proxysql:$tag" pxc-proxysql --build-arg "PXC_VERSION=$version" \
+  build_image "pxc-proxysql:$tag" pxc-proxysql --build-arg "BASE_OS=$BASE_OS" --build-arg "PXC_VERSION=$version" \
     --build-arg "PROXYSQL_PACKAGE=$package" --build-arg "PXC_TARBALL=$tarball"
 }
 
@@ -72,7 +71,7 @@ build_psmdb_image() {
 
 build_haproxy_image() {
   [[ $1 == latest ]] || die "HAProxy has no prebaked image '$1'; use latest."
-  build_image haproxy:latest haproxy
+  build_image haproxy:latest haproxy --build-arg "BASE_OS=$BASE_OS"
 }
 
 # The KDC the PSMDB replica set compose file runs as kerberos/local.
@@ -83,7 +82,7 @@ build_kerberos_image() {
 
 build_valkey_image() {
   has_image VALKEY "$1"
-  build_image "valkey:$1" valkey --build-arg "VALKEY_VERSION=$1"
+  build_image "valkey:$1" valkey --build-arg "BASE_OS=$BASE_OS" --build-arg "VALKEY_VERSION=$1"
 }
 
 # <redis_exporter version>-<process-exporter version>
@@ -92,23 +91,23 @@ readonly EXTERNAL_TAG=1.58.0-0.7.10
 build_external_image() {
   local tag=$1
   [[ $tag == *-* ]] || die "External image tag '$tag' must be <redis_exporter>-<process-exporter>."
-  build_image "external:$tag" external --build-arg "REDIS_EXPORTER_VERSION=${tag%-*}" \
+  build_image "external:$tag" external --build-arg "BASE_OS=$BASE_OS" --build-arg "REDIS_EXPORTER_VERSION=${tag%-*}" \
     --build-arg "PROCESS_EXPORTER_VERSION=${tag#*-}"
 }
 
 build_pdpgsql_image() {
   has_image PDPGSQL "$1"
-  build_image "pdpgsql:$1" pdpgsql --build-arg "PG_VERSION=$1"
+  build_image "pdpgsql:$1" pdpgsql --build-arg "BASE_OS=$BASE_OS" --build-arg "PG_VERSION=$1"
 }
 
 build_ssl_pdpgsql_image() {
   has_image SSL_PDPGSQL "$1"
-  build_image "ssl-pdpgsql:$1" ssl-pdpgsql --build-arg "PG_VERSION=$1"
+  build_image "ssl-pdpgsql:$1" ssl-pdpgsql --build-arg "BASE_OS=$BASE_OS" --build-arg "PG_VERSION=$1"
 }
 
 build_pgsql_image() {
   has_image PGSQL "$1"
-  build_image "pgsql:$1" pgsql --build-arg "PG_VERSION=$1"
+  build_image "pgsql:$1" pgsql --build-arg "BASE_OS=$BASE_OS" --build-arg "PG_VERSION=$1"
 }
 
 # Stdout: the tags build-prebaked-images.yml publishes for ENGINE, one per line
@@ -141,7 +140,7 @@ pxc_proxysql_tag() {
 
 # Where .github/workflows/build-prebaked-images.yml publishes. Set it empty to
 # always build locally, e.g. to try a Dockerfile change.
-PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa}
+PREBAKED_REGISTRY=${PREBAKED_REGISTRY-ghcr.io/percona/pmm-qa/el9}
 
 # Local copy, else pull, else build. PREBAKED_PULL=always pulls over a local
 # copy, keeping it if the pull fails. The builder gets BUILD_ARGS, or TAG.

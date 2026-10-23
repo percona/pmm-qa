@@ -25,7 +25,7 @@ setup_haproxy() {
 haproxy_start() {
   fresh_containers "$container"
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
-    --network pmm-qa --publish 42100:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:latest >/dev/null
+    --network pmm-qa --publish 42100:42100 "${SYSTEMD_RUN[@]}" --privileged pmm-qa/haproxy:latest >/dev/null
   must docker cp "$FRAMEWORK_DIR/images/haproxy/haproxy.cfg" "$container:/haproxy.cfg"
   must docker exec "$container" haproxy -f /haproxy.cfg -D
   retry 30 "HAProxy's metrics on :42100" docker exec "$container" curl -fsS http://127.0.0.1:42100/metrics >/dev/null

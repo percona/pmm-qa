@@ -14,45 +14,65 @@ image=pmm-qa/$engine:$version
 
 trap 'docker rm -fv probe >/dev/null 2>&1 || true' EXIT
 
+# Start the image as setups do, unprivileged under systemd, and fail on any failed unit.
+boot() {
+  local state='' i
+  docker run -d --name probe --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock "$@" "$image"
+  # Until systemd is up, systemctl prints no state, or offline.
+  for i in $(seq 1 30); do
+    state=$(docker exec probe systemctl is-system-running --wait 2>/dev/null) && break
+    [ -z "$state" ] || [ "$state" = offline ] || break
+    sleep 1
+  done
+  if [ "$state" != running ]; then
+    docker exec probe systemctl --failed --no-pager
+    exit 1
+  fi
+}
+
 case $engine in
   pdpgsql)
     # systemd starts PostgreSQL with pg_stat_monitor preloaded.
-    docker run -d --name probe --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw "$image"
+    boot
     for i in $(seq 1 60); do
       docker exec -u postgres probe pg_isready -q 2>/dev/null && break
       if [ "$i" -eq 60 ]; then
-        docker exec probe journalctl -u "postgresql@$version-main" --no-pager | tail -30
+        docker exec probe tail -30 "/var/log/postgresql/postgresql-$version-main.log"
         exit 1
       fi
       sleep 1
     done
     docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION pg_stat_monitor' -c 'SELECT pg_stat_monitor_version()'
+    docker exec -u postgres probe psql -tAc 'SHOW server_encoding' | grep -qx UTF8
     docker exec probe sh -c 'patroni --version && etcd --version && pgbackrest version'
     ;;
   ssl-pdpgsql)
     # The image ships no certificates; make a set as setup_ssl_pdpgsql does.
-    docker run -d --name probe "$image"
+    boot
     docker exec probe sh -ceu "cd /artifacts && bash create_certs.sh >/dev/null 2>&1
-      cp -a certificates/. /var/lib/postgresql/$version/main/
-      chown -R postgres:postgres /var/lib/postgresql/$version/main
-      chmod -R 0700 /var/lib/postgresql/$version/main
+      cp -a certificates/. /var/lib/pgsql/$version/data/
+      chown -R postgres:postgres /var/lib/pgsql/$version/data
+      chmod -R 0700 /var/lib/pgsql/$version/data
       service postgresql start"
     docker exec -e PGPASSWORD=pmm probe psql -v ON_ERROR_STOP=1 'host=127.0.0.1 user=pmm dbname=postgres sslmode=require' \
       -c 'SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()' -c 'SELECT count(*) FROM pg_stat_statements'
     ;;
   pgsql)
-    docker run -d --name probe "$image"
-    docker exec probe service postgresql start
+    boot
     docker exec -u postgres probe psql -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM pg_stat_statements'
+    docker exec -u postgres probe psql -tAc 'SHOW server_encoding' | grep -qx UTF8
     ;;
   valkey)
-    docker run --rm "$image" sh -c 'valkey-server --version && valkey-cli --version'
+    boot
+    docker exec probe sh -c 'valkey-server --version && valkey-cli --version'
     ;;
   external)
-    docker run --rm --entrypoint sh "$image" -c 'redis_exporter --version && process-exporter --version'
+    boot --privileged
+    docker exec probe sh -c 'redis_exporter --version && process-exporter --version'
     ;;
   haproxy)
-    docker run --rm --entrypoint haproxy "$image" -vv | grep prometheus-exporter
+    boot --privileged
+    docker exec probe haproxy -vv | grep prometheus-exporter
     ;;
   kerberos)
     docker run --rm --entrypoint sh "$image" -c 'command -v krb5kdc && command -v kadmin.local && command -v kdb5_util'
@@ -63,12 +83,18 @@ case $engine in
     ;;
   pxc-proxysql)
     # The full cluster: three nodes synced and ProxySQL seeing all of them.
-    docker run -d --init --name probe "$image"
+    boot
     docker exec --user root probe pmm_pxc start
     docker exec probe sysbench --version
     ;;
-  ps | mysql)
-    docker run -d --name probe -e MYSQL_ROOT_PASSWORD=probe "$image"
+  mysql)
+    if [ "$version" != 5.7 ]; then
+      boot
+      docker exec probe sh -ceu 'mysqld --initialize-insecure --user=mysql; systemctl start mysqld'
+      docker exec probe mysql -uroot -e "ALTER USER root@localhost IDENTIFIED BY 'probe'"
+    else
+      docker run -d --name probe -e MYSQL_ROOT_PASSWORD=probe "$image"
+    fi
     for i in $(seq 1 90); do
       if docker exec -e MYSQL_PWD=probe probe mysql -uroot -h127.0.0.1 -e 'SELECT VERSION()'; then
         break
@@ -80,9 +106,12 @@ case $engine in
       sleep 1
     done
     docker exec probe sysbench --version
-    if [ "$engine" = ps ]; then
-      docker exec --user root probe xtrabackup --version
-    fi
+    ;;
+  ps)
+    boot
+    docker exec probe sh -ceu 'mysqld --initialize-insecure --user=mysql; systemctl start mysqld'
+    docker exec probe mysql -uroot -e 'SELECT VERSION()'
+    docker exec probe sh -c 'sysbench --version && xtrabackup --version && ps-admin --help >/dev/null'
     ;;
   *)
     echo "No check for '$engine'." >&2

@@ -42,8 +42,8 @@ setup_pxc() {
 }
 
 pxc_start() {
-  must docker run --detach --init --name "$container" --hostname "$container" \
-    --label pmm-qa.engine=pxc --network pmm-qa \
+  must docker run --detach --name "$container" --hostname "$container" \
+    --label pmm-qa.engine=pxc --network pmm-qa "${SYSTEMD_RUN[@]}" \
     "pmm-qa/pxc-proxysql:$image_tag" >/dev/null
   docker exec --user root "$container" pmm_pxc start ||
     die "PXC did not come up in $container."
