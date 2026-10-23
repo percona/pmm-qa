@@ -38,3 +38,11 @@ export interface KubernetesPodResource {
 export interface KubernetesEventResource {
   message?: string;
 }
+
+export interface KubernetesStatefulSetResource {
+  spec: {
+    replicas: number;
+    serviceName: string;
+    template: { spec: { containers: { env?: { name: string; value?: string }[]; name: string }[] } };
+  };
+}
