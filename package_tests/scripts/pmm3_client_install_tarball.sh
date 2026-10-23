@@ -8,11 +8,12 @@ Help()
    echo "Custom PMM 3 Client installation script. To handle custom installations path and"
    echo "To handle custom installation path and port listening tests"
    echo
-   echo "Syntax: pmm3_client_install_tarball.sh [-v X.XX.X] [-p /my/path] [-h|l]"
+   echo "Syntax: pmm3_client_install_tarball.sh [-v X.XX.X] [-f /my/tarball] [-p /my/path] [-h|l]"
    echo "options:"
    echo "h     Print this Help."
    echo "v     Installing specified version 3.XX.X or feature build, ex: PR-2734-6fe2553"
    echo "      Also full s3 url to FB tarball is supported"
+   echo "f     Install from a local tarball file instead of downloading, ex: -f /tmp/pmm-client.tar.gz"
    echo "p     Installation path. Default: /usr/local/percona/pmm."
    echo "      Sets default version to 3.0.0 if no version specified"
    echo "l     listening custom port mode. Sets default version to 3.0.0 if no version specified"
@@ -32,7 +33,7 @@ update_flag=""
 ############################################################
 # Process the input options.                               #
 ############################################################
-while getopts "v:p:hlu" option; do
+while getopts "v:p:f:hlu" option; do
    case $option in
       h) # display Help
         Help
@@ -43,6 +44,9 @@ while getopts "v:p:hlu" option; do
         ;;
       p) # Enter a custom path
         path=$OPTARG
+        ;;
+      f) # Local tarball file
+        file=$OPTARG
         ;;
       l) # listening custom port starts from 3.0.0
         port_listening=1
@@ -107,9 +111,14 @@ if [ -n "${fb}" ]; then
   fi
 fi
 ### Main program
-echo "Downloading ${tarball_url}"
 mkdir -p ./tmp/
-wget -O ./tmp/pmm-client.tar.gz --progress=dot:giga "${tarball_url}" || exit 1
+if [[ -n "${file}" ]]; then
+  echo "Using ${file}"
+  cp "${file}" ./tmp/pmm-client.tar.gz || exit 1
+else
+  echo "Downloading ${tarball_url}"
+  wget -O ./tmp/pmm-client.tar.gz --progress=dot:giga "${tarball_url}" || exit 1
+fi
 tar -xvf "./tmp/pmm-client.tar.gz" -C ./tmp/
 cd ./tmp || exit 1
 extracted_folder_name=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
