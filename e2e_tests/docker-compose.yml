@@ -55,7 +55,7 @@ services:
       - pmm-qa
 
   sftp-server:
-    image: atmoz/sftp
+    image: jmcombs/sftp
     profiles: [sftp]
     container_name: sftp-server
     command: foo:password
@@ -79,7 +79,7 @@ services:
       start_period: 2m
 
   postgres:
-    image: perconalab/percona-distribution-postgresql:15.4
+    image: perconalab/percona-distribution-postgresql:15
     profiles: [encryption]
     container_name: postgres
     command: -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements

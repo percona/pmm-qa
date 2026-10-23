@@ -114,6 +114,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@LBAC`
 - `@menu`
+- `@mongodb-exporter`
 - `@new-navigation`
 - `@nightly`
 - `@nomad`

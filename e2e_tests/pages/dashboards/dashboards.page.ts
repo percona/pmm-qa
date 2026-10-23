@@ -3,7 +3,7 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
-import BasePage from '@pages/base.page';
+import BasePage, { DropdownName } from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
@@ -63,11 +63,21 @@ export default class Dashboards extends BasePage {
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    removeSelectedVariableValue: (variableName: DropdownName) =>
+      this.grafanaIframe()
+        .getByTestId('data-testid template variable')
+        .filter({ hasText: variableName })
+        .getByRole('button', { name: 'Remove' }),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
+    templateVariableCombobox: (variableName: DropdownName) =>
+      this.grafanaIframe()
+        .getByTestId('data-testid template variable')
+        .filter({ hasText: variableName })
+        .getByRole('combobox'),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
@@ -80,6 +90,8 @@ export default class Dashboards extends BasePage {
     collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
+    imageRendererPluginInfo: this.grafanaIframe().getByTestId('data-testid Alert info'),
+    imageRendererPluginLink: this.grafanaIframe().getByTestId('data-testid Alert info').getByRole('link'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
@@ -96,6 +108,7 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+    variableOptions: this.grafanaIframe().getByTestId('data-testid Select option'),
   };
   inputs = {};
   messages = {};
@@ -193,6 +206,13 @@ export default class Dashboards extends BasePage {
     );
   };
 
+  getFeatureCompatibilityVersion = async () =>
+    parseFloat(
+      await this.builders
+        .panelContentByExactName('Feature Compatibility Version')
+        .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
+    );
+
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
     // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
@@ -269,13 +289,17 @@ export default class Dashboards extends BasePage {
     });
   };
 
-  renderImageForPanel = async (panelName: string) => {
+  openPanelShareLink = async (panelName: string) => {
     await this.openPanelMenu(panelName);
 
-    await pmmTest.step(`Hover over Share and click on generate image menu item`, async () => {
+    await pmmTest.step(`Hover over Share and click on Share link menu item`, async () => {
       await this.builders.panelMenuItemByName('Share').hover();
       await this.builders.panelMenuItemByName('Share link').click();
     });
+  };
+
+  renderImageForPanel = async (panelName: string) => {
+    await this.openPanelShareLink(panelName);
 
     await pmmTest.step('Click on generate image button and verify that image is rendered', async () => {
       await this.buttons.imageRendererGenerateImage.click();
@@ -284,6 +308,15 @@ export default class Dashboards extends BasePage {
         timeout: Timeouts.THIRTY_SECONDS,
       });
     });
+  };
+
+  unselectVariableValue = async (variableName: DropdownName) => {
+    await this.builders.removeSelectedVariableValue(variableName).click({ timeout: Timeouts.TEN_SECONDS });
+    await this.page.keyboard.press('Escape');
+    await expect(this.builders.templateVariableCombobox(variableName)).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   };
 
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
@@ -359,6 +392,15 @@ export default class Dashboards extends BasePage {
         timeout: Timeouts.FIVE_SECONDS,
       });
     }).toPass({ timeout });
+  };
+
+  verifyPanelsDisplayed = async (panelNames: string[]) => {
+    await expect
+      .poll(async () => this.collectTextsAcrossScroll(this.elements.panelName), {
+        message: `Dashboard panels should include ${panelNames.join(', ')}`,
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toEqual(expect.arrayContaining(panelNames));
   };
 
   verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {

@@ -35,6 +35,8 @@ const apiEndpoints = {
     provisioningAlertRules: '/graph/api/v1/provisioning/alert-rules',
     receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
     ruler: '/graph/api/ruler/grafana/api/v1/rules',
+    serviceAccounts: '/graph/api/serviceaccounts',
+    serviceAccountsSearch: '/graph/api/serviceaccounts/search',
   },
   ha: {
     nodes: '/v1/ha/nodes',

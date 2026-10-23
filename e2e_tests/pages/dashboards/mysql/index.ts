@@ -3,6 +3,8 @@ import MysqlInstanceSummary from './mysqlInstanceSummary';
 import MySQLInstancesCompare from './mysqlInstancesCompare';
 import PXCGaleraClusterSummary from './pxcGaleraClusterSummary';
 import PXCGaleraNodesCompare from './pxcGaleraNodesCompare';
+import PXCGaleraNodeSummary from './pxcGaleraNodeSummary';
+import ProxysqlInstanceSummary from './proxysqlInstanceSummary';
 import MySQLUserDetails from './mysqlUserDetails';
 import MysqlGroupReplicationSummary from './mysqlGroupReplicationSummary';
 import MysqlMyRocksDetails from './mysqlMyRocksDetails';
@@ -27,8 +29,10 @@ export const MysqlDashboards = {
   mysqlReplicationSummary: new MysqlReplicationSummary(),
   mysqlUserDetails: new MySQLUserDetails(),
   mysqlWaitEventAnalysesDetails: new MysqlWaitEventAnalysesDetails(),
+  proxysqlInstanceSummary: new ProxysqlInstanceSummary(),
   pxcGaleraClusterSummary: new PXCGaleraClusterSummary(),
   pxcGaleraNodesCompare: new PXCGaleraNodesCompare(),
+  pxcGaleraNodeSummary: new PXCGaleraNodeSummary(),
 };
 
 export type MysqlDashboardsType = typeof MysqlDashboards & Record<string, DashboardInterface>;
