@@ -69,17 +69,19 @@ trim() {
     echo -n "$var"
 }
 
-# Function to update values.yaml based on the OS
+# Function to update the top-level image: block of values.yaml based on the OS
+# Other images in the chart, such as encryptionKey.image (alpine/kubectl), must keep their defaults
 update_values_yaml() {
     local property=$1
     local value=$2
+    local expr="/^image:/,/^[^ ]/ s|^  $property: .*|  $property: \"$value\"|"
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
-        sed -i "s|$property: .*|$property: \"$value\"|g" values.yaml
+        sed -i "$expr" values.yaml
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS
-        sed -i '' "s|$property: .*|$property: \"$value\"|g" values.yaml
+        sed -i '' "$expr" values.yaml
     else
         echo "Unsupported OS: $OSTYPE"
         return 1

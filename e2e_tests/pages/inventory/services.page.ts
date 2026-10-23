@@ -7,6 +7,8 @@ export default class ServicesPage extends BasePage {
   readonly url = 'graph/inventory/services';
   readonly pagination = new InventoryPagination(this.grafanaIframe());
   builders = {
+    addressByServiceName: (serviceName: string) =>
+      this.grafanaIframe().getByRole('row', { name: serviceName }).getByRole('cell').nth(5),
     monitoringStatusByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
     serviceNameCell: (serviceName: string) => this.grafanaIframe().locator(`td[title="${serviceName}"]`),
@@ -32,5 +34,15 @@ export default class ServicesPage extends BasePage {
     await expect(this.builders.serviceNameCell(serviceName)).toHaveCount(1, {
       timeout: Timeouts.THIRTY_SECONDS,
     });
+  };
+
+  verifyServiceMonitoringStatusOk = async (serviceName: string) => {
+    await expect(async () => {
+      await this.page.reload();
+      await expect(
+        this.builders.monitoringStatusByServiceName(serviceName),
+        `'${serviceName}' is expected to have 'OK' monitoring status`,
+      ).toHaveText('OK', { timeout: Timeouts.FIVE_SECONDS });
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 }

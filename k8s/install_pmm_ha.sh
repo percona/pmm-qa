@@ -15,11 +15,11 @@
 # Install - both charts, the published pmm-ha, the newest released server image:
 #   ./install_pmm_ha.sh --platform eks --external-access
 #   ./install_pmm_ha.sh --platform lke --image percona/pmm-server:3.9.0
-#   ./install_pmm_ha.sh --platform openshift --chart-branch PMM-HA-GA
+#   ./install_pmm_ha.sh --platform openshift --chart-branch main
 #
 # Upgrade in the order a real one happens - dependencies first, then the server,
-#   ./install_pmm_ha.sh --platform openshift --charts deps --chart-branch PMM-HA-GA
-#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch PMM-HA-GA \
+#   ./install_pmm_ha.sh --platform openshift --charts deps --chart-branch main
+#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch main \
 #       --image perconalab/pmm-server:3-dev-latest --external-access
 #
 # Upgrade the server image alone, holding the chart still at the installed version:
@@ -32,7 +32,7 @@
 #
 # Backups (charts/pmm-ha/docs/pmm-backup.md) to an in-cluster MinIO, or to a bucket
 # whose keys are in BACKUP_S3_ACCESS_KEY / BACKUP_S3_SECRET_KEY:
-#   ./install_pmm_ha.sh --platform openshift --chart-branch PMM-HA-GA --backup-minio
+#   ./install_pmm_ha.sh --platform openshift --chart-branch main --backup-minio
 #   ./install_pmm_ha.sh --platform eks --backup-s3-bucket pmm-ha-backups --backup-s3-region us-east-2
 #
 # A DR target for a cross-namespace restore, on the source's pmm-secret and reading

@@ -63,6 +63,11 @@ export default class Dashboards extends BasePage {
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    removeSelectedVariableValue: (variableName: DropdownName) =>
+      this.grafanaIframe()
+        .getByTestId('data-testid template variable')
+        .filter({ hasText: variableName })
+        .getByRole('button', { name: 'Remove' }),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -201,6 +206,13 @@ export default class Dashboards extends BasePage {
     );
   };
 
+  getFeatureCompatibilityVersion = async () =>
+    parseFloat(
+      await this.builders
+        .panelContentByExactName('Feature Compatibility Version')
+        .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
+    );
+
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
     // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
@@ -298,6 +310,15 @@ export default class Dashboards extends BasePage {
     });
   };
 
+  unselectVariableValue = async (variableName: DropdownName) => {
+    await this.builders.removeSelectedVariableValue(variableName).click({ timeout: Timeouts.TEN_SECONDS });
+    await this.page.keyboard.press('Escape');
+    await expect(this.builders.templateVariableCombobox(variableName)).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  };
+
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
@@ -371,6 +392,15 @@ export default class Dashboards extends BasePage {
         timeout: Timeouts.FIVE_SECONDS,
       });
     }).toPass({ timeout });
+  };
+
+  verifyPanelsDisplayed = async (panelNames: string[]) => {
+    await expect
+      .poll(async () => this.collectTextsAcrossScroll(this.elements.panelName), {
+        message: `Dashboard panels should include ${panelNames.join(', ')}`,
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toEqual(expect.arrayContaining(panelNames));
   };
 
   verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {

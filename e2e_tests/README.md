@@ -114,9 +114,11 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@LBAC`
 - `@menu`
+- `@mongodb-exporter`
 - `@new-navigation`
 - `@nightly`
 - `@nomad`
+- `@not-ui-pipeline`
 - `@pbm-nightly`
 - `@permissions-nightly`
 - `@pmm-ha`
@@ -125,6 +127,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
+- `@pmm-ps-replica-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-psmdb-sharding-integration`
 - `@pmm-upgrade`
