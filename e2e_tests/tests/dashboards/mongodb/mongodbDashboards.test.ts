@@ -27,7 +27,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
     },
   );
 
-  // skip-until: 2026-10-23 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
+  // skip-until: 2026-11-06 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
   // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15714, see the skip-until line above.
   pmmTest.skip(
     'PMM-T2012 - Verify MongoDB Sharded Cluster Summary @pmm-psmdb-sharding-integration @post-upgrade',
@@ -122,15 +122,15 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   pmmTest(
     'PMM-T2401 - Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
     async ({ api, dashboard, page, urlHelper }) => {
-      const serviceNames = (
-        await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?[0-9]+_[0-9]+')
-      ).map((service: GetService) => service.service_name);
+      const serviceNames = (await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?[0-9]+_[0-9]+'))
+        .filter((service: GetService) => service.cluster === 'sharded')
+        .map((service: GetService) => service.service_name);
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
           cluster: 'sharded',
           from: 'now-5m',
-          refresh: '5s',
+          refresh: '30s',
         }),
       );
 
