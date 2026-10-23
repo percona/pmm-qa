@@ -1,4 +1,5 @@
 import { Timeouts } from '@helpers/timeouts';
+import pmmTest from '@fixtures/pmmTest';
 import BasePage from '@pages/base.page';
 import { AlertSeverity } from '@interfaces/alerting';
 import { expect, Locator } from '@playwright/test';
@@ -258,9 +259,11 @@ export default class AlertingPage extends BasePage {
 
   // Test templates sort after the built-ins, past the first page of 25.
   openTemplates = async () => {
-    await this.page.goto(this.urls.templates);
-    await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
-    await this.builders.selectOption('100').click();
+    await pmmTest.step('Open Alert templates with 100 rows per page', async () => {
+      await this.page.goto(this.urls.templates);
+      await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
+      await this.builders.selectOption('100').click();
+    });
   };
 
   runQueries = async (): Promise<number> => {
