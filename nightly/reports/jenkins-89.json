@@ -3576,7 +3576,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly",
+        "Nightly Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T2401 (new in #1651) failed in all 10 nightly E2E runs: it expects an Oplog GB/Hour panel for every rsNNN_N service, but the shared nightly server also carries the pss replica set (rs101-rs103, cluster replicaset) from the mysql-psmdb-pgsql shard, which the cluster=sharded dashboard never draws. Reproduced on a CHAOS VM; the fix filters to cluster=sharded and opens the dashboard at refresh=30s, as a 5s refresh also timed out the loading-bar wait in 3 of 10 runs.",
+      "link": "https://github.com/percona/pmm-qa/pull/1656",
+      "by": "Investigator routine",
+      "at": "2026-10-23T04:21:04Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -3590,20 +3602,6 @@
       "at": "2026-10-23T03:23:39Z",
       "suites": [
         "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-23T03:23:39Z",
-      "suites": [
-        "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-23T03:23:39Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
