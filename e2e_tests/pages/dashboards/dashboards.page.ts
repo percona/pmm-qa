@@ -56,14 +56,19 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelLegendSeries: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId(/^data-testid VizLegend series /),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    rowTitle: (rowName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid dashboard-row-title-${rowName}`),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
+    textInDashboard: (text: string) => this.grafanaIframe().getByText(text, { exact: true }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),

@@ -1,4 +1,5 @@
 import DashboardInterface from '@interfaces/dashboard';
+import MongodbClusterSyncDetails from './mongodbClusterSyncDetails';
 import MongodbInstanceSummary from './mongodbInstanceSummary';
 import MongodbUnusedIndexes from './mongodbUnusedIndexes';
 import MongodbRouterSummaryDashboard from '@pages/dashboards/mongo/mongodbRouterSummary';
@@ -6,6 +7,7 @@ import MongodbShardedClusterSummary from '@pages/dashboards/mongo/mongodbSharded
 import MongodbReplSetSummary from '@pages/dashboards/mongo/mongodbReplSetSummary';
 
 export const MongoDashboards = {
+  clusterSyncDetails: new MongodbClusterSyncDetails(),
   instanceSummary: new MongodbInstanceSummary(),
   replSetSummary: new MongodbReplSetSummary(),
   routerSummary: new MongodbRouterSummaryDashboard(),

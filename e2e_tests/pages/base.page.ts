@@ -2,7 +2,14 @@ import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import SnackbarComponent from '@components/snackbar.component';
 
-export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
+export type DropdownName =
+  | 'Service Name'
+  | 'Node Name'
+  | 'Environment'
+  | 'Source Cluster'
+  | 'Target Cluster'
+  | 'ClusterSync Cluster'
+  | 'ClusterSync Instance';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
