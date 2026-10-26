@@ -858,6 +858,7 @@ helm upgrade --install "$RELEASE" "$PMM_CHART" \
     --wait --timeout "$TIMEOUT" \
     --set "image.repository=${IMAGE%:*}" \
     --set "image.tag=${IMAGE##*:}" \
+    --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
     ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
     ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 
