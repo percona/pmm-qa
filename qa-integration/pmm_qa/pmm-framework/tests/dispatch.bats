@@ -2,6 +2,26 @@
 
 load helpers/test_helper
 
+# pcsm-1 holds the HA lease until it is stopped; a freed lease goes to the
+# lowest-numbered instance whose last pkill came before its last start.
+pcsm_lease_holder() {
+  local lease=$BATS_TEST_TMPDIR/pcsm.lease node
+  if [[ ! -s $lease ]]; then
+    printf pcsm-1
+  elif [[ $(<"$lease") == none ]]; then
+    for node in pcsm-1 pcsm-2 pcsm-3; do
+      if awk -v n="$node" '$0 == "exec --detach " n " sh -c exec pcsm >>/var/log/pcsm.log 2>&1" { up = 1 }
+        $0 == "exec " n " pkill -x pcsm" { up = 0 } END { exit !up }' "$DOCKER_CALLS"; then
+        printf '%s' "$node" >"$lease"
+        break
+      fi
+    done
+    cat "$lease"
+  else
+    cat "$lease"
+  fi
+}
+
 # Records every docker call and answers the readiness probes the setups poll,
 # so a setup runs end to end without a daemon.
 stub_prebaked_docker() {
@@ -44,8 +64,12 @@ stub_prebaked_docker() {
         [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
         printf '%s\n' "${PSMDB_SOURCE_PROBE-rs 8.0.32-14}"
         ;;
-      'exec pcsm-1 curl -fsS http://127.0.0.1:2242/metrics')
-        printf '%s\n' '# TYPE percona_clustersync_mongodb_ha_active gauge' 'percona_clustersync_mongodb_ha_active 1'
+      'exec pcsm-'[1-3]' pkill -x pcsm')
+        if [[ $2 == "$(pcsm_lease_holder)" ]]; then printf none >"$BATS_TEST_TMPDIR/pcsm.lease"; fi
+        ;;
+      'exec pcsm-'[1-3]' curl -fsS http://127.0.0.1:2242/metrics')
+        printf '%s\n' '# TYPE percona_clustersync_mongodb_ha_active gauge' \
+          "percona_clustersync_mongodb_ha_active $([[ $2 == "$(pcsm_lease_holder)" ]] && echo 1 || echo 0)"
         ;;
       *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
     esac
@@ -619,6 +643,26 @@ EOF
   ! grep -q '^exec pcsm-2 pcsm start$' "$DOCKER_CALLS" || false
   grep -q '^exec pcsm-1 sh -c pcsm status | jq -e ' "$DOCKER_CALLS"
   grep -q '^exec --detach pcsm-src-1 mongo --quiet mongodb://root:root@127.0.0.1:27017/admin --eval .*while (true)' "$DOCKER_CALLS"
+  ! grep -q 'pkill -x pcsm$' "$DOCKER_CALLS" || false
+}
+
+@test "PCSM with HANDOVER makes every instance ACTIVE in turn while the workload runs, then hands the lease back" {
+  local -a handover
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  sleep() { printf 'sleep %s\n' "$*" >>"$DOCKER_CALLS"; }
+  parse_database_spec 'pcsm,INSTANCES=3,HANDOVER=true'
+  dispatch_setup
+
+  mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 mongo .*while (true)/,$p' "$DOCKER_CALLS" |
+    grep -E '^(exec pcsm-[1-3] pkill -x pcsm|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)')
+  [[ ${handover[*]} == "exec pcsm-1 pkill -x pcsm exec pcsm-3 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-1 pkill -x pcsm exec pcsm-2 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-2 pkill -x pcsm exec pcsm-3 pkill -x pcsm exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1" ]]
+  [[ $(pcsm_lease_holder) == pcsm-1 ]]
+  grep -Fq 'exec pcsm-1 sh -c pcsm status | jq -e ".state == \"running\" and .lagTimeSeconds < 10" >/dev/null' "$DOCKER_CALLS"
+
+  parse_database_spec 'pcsm,INSTANCES=1,HANDOVER=true'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM HANDOVER needs INSTANCES of 2 or 3.'* ]]
 }
 
 @test "PCSM honours NODES_COUNT, INSTANCES and a cross-version sync, and refuses one PCSM cannot run" {

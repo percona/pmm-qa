@@ -11,7 +11,7 @@
 # pcsm-N's environment, so a test that stops an instance with `pkill -x pcsm`
 # restarts it with `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 setup_pcsm() {
-  local version sync_source source_version target_version nodes_count instances client tarball='' node i
+  local version sync_source source_version target_version nodes_count instances handover client tarball='' node i
   local source_set=rs-src source_uri=$PSMDB_ROOT_URI
   local -a src_nodes=() tgt_nodes=() pcsm_nodes=() own_src_nodes=()
   version=$(resolved_version PCSM_VERSION PCSM "$DB_VERSION")
@@ -21,6 +21,7 @@ setup_pcsm() {
   target_version=$(resolve_value PCSM TARGET_VERSION DB_CONFIG)
   nodes_count=$(resolve_value PCSM NODES_COUNT DB_CONFIG)
   instances=$(resolve_value PCSM INSTANCES DB_CONFIG)
+  handover=$(bool_string "$(resolve_value PCSM HANDOVER DB_CONFIG)")
   client=$(resolved_client_version PCSM DB_CONFIG)
 
   case $sync_source in
@@ -33,6 +34,9 @@ setup_pcsm() {
   pcsm_supported TARGET_VERSION "$target_version"
   [[ $nodes_count == [1-3] ]] || die "Unsupported PCSM NODES_COUNT '$nodes_count': use 1 to 3."
   [[ $instances == [1-3] ]] || die "Unsupported PCSM INSTANCES '$instances': use 1 to 3."
+  if [[ $handover == true && $instances == 1 ]]; then
+    die 'PCSM HANDOVER needs INSTANCES of 2 or 3.'
+  fi
   if [[ $sync_source == psmdb ]]; then
     source_set=rs
     source_uri=$PCSM_PSMDB_URI
@@ -94,10 +98,15 @@ setup_pcsm() {
   # After registering, so PMM charts the initial clone.
   step 'Start the sync' pcsm_sync
   step 'Start the source workload' pcsm_workload
+  if [[ $handover == true ]]; then
+    step 'Hand the HA lease to every instance and back' pcsm_handover
+  fi
   report_agent_status "${all_nodes[@]}"
 }
 
 readonly PCSM_PASSWORD=pcsmpass
+# Long enough for an ACTIVE instance's worker and flush panels to chart a few 10 s scrapes.
+readonly PCSM_HANDOVER_SECONDS=60
 # setup_psmdb's replica set rs, through whichever member is primary.
 readonly PCSM_PSMDB_URI='mongodb://root:root@127.0.0.1:27017/admin?replicaSet=rs'
 
@@ -169,6 +178,11 @@ pcsm_start() {
     --env "PCSM_SOURCE_URI=$(pcsm_uri pcsm_source "$source_set" "${src_nodes[@]}")" \
     --env "PCSM_TARGET_URI=$(pcsm_uri pcsm_target rs-tgt "${tgt_nodes[@]}")" \
     --env PCSM_GROUP_NAME=pcsm-sync-1 "pmm-qa/pcsm:$version" >/dev/null
+  pcsm_run "$1"
+}
+
+# Start PCSM in its running container, from the URIs in its environment.
+pcsm_run() {
   must docker exec --detach "$1" sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'
   if ! (retry 60 "PCSM on $1" docker exec "$1" curl -fsS http://127.0.0.1:2242/metrics >/dev/null); then
     docker exec "$1" tail -20 /var/log/pcsm.log >&2 || true
@@ -188,12 +202,16 @@ pcsm_register() {
     "--host=$node" --port=27017 --environment=pcsm-dev "--cluster=$replset" "--replication-set=$replset" "$node"
 }
 
+# Usage: pcsm_is_active NODE
+pcsm_is_active() {
+  [[ $(docker exec "$1" curl -fsS http://127.0.0.1:2242/metrics) == *$'\npercona_clustersync_mongodb_ha_active 1'* ]]
+}
+
 # Stdout: the instance that holds the HA lease
 pcsm_active() {
-  local node metrics
+  local node
   for node in "${pcsm_nodes[@]}"; do
-    metrics=$(docker exec "$node" curl -fsS http://127.0.0.1:2242/metrics) || continue
-    if [[ $metrics == *$'\npercona_clustersync_mongodb_ha_active 1'* ]]; then
+    if pcsm_is_active "$node"; then
       printf '%s' "$node"
       return 0
     fi
@@ -210,6 +228,43 @@ pcsm_sync() {
   must docker exec "$active" pcsm start >/dev/null
   retry 600 "the initial sync on $active" docker exec "$active" sh -c \
     'pcsm status | jq -e ".state == \"running\" and .initialSync.completed" >/dev/null' >/dev/null
+}
+
+# Each instance's worker panels chart only while it is ACTIVE, so every other
+# instance holds the lease for PCSM_HANDOVER_SECONDS while the workload runs,
+# then the first takes it back. PCSM counts the initial clone per process, so
+# afterwards Copy Progress has no clone data on any instance.
+pcsm_handover() {
+  local first node
+  first=$(retry 60 'an ACTIVE PCSM instance' pcsm_active)
+  for node in "${pcsm_nodes[@]}"; do
+    if [[ $node != "$first" ]]; then
+      pcsm_take_lease "$node" "$PCSM_HANDOVER_SECONDS"
+    fi
+  done
+  pcsm_take_lease "$first" 0
+  retry 120 "$first to catch up after the handover" docker exec "$first" sh -c \
+    'pcsm status | jq -e ".state == \"running\" and .lagTimeSeconds < 10" >/dev/null' >/dev/null
+  log_info "ACTIVE PCSM instance: $first"
+}
+
+# A STANDBY takes an expired lease, and which one is not chosen, so every other
+# instance stops until NODE holds it, then restarts as a STANDBY.
+# Usage: pcsm_take_lease NODE HOLD_SECONDS
+pcsm_take_lease() {
+  local node=$1 other
+  local -a stopped=()
+  for other in "${pcsm_nodes[@]}"; do
+    if [[ $other != "$node" ]]; then
+      must docker exec "$other" pkill -x pcsm
+      stopped+=("$other")
+    fi
+  done
+  retry 60 "$node to take the HA lease" pcsm_is_active "$node"
+  sleep "$2"
+  for other in "${stopped[@]}"; do
+    pcsm_run "$other"
+  done
 }
 
 pcsm_workload() {
