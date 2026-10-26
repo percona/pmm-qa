@@ -125,19 +125,22 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
-        // At the default 12 hours the Auto interval steps past a setup only minutes old.
-        await page.goto(
-          urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: 'pcsm-1' }),
-        );
-        await dashboard.loadAllPanels();
+        // At the default 12 hours the Auto interval steps past a setup only minutes old,
+        // and right after setup the rate panels wait for their first samples.
+        await expect(async () => {
+          await page.goto(
+            urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: 'pcsm-1' }),
+          );
+          await dashboard.loadAllPanels();
 
-        expect(await statText(dashboard, 'Instances Up')).toMatch(/^pcsm-1\s+UP$/);
-        expect(await statText(dashboard, 'Role Transitions')).toMatch(/^pcsm-1\s+\d+$/);
+          expect(await statText(dashboard, 'Instances Up')).toMatch(/^pcsm-1\s+UP$/);
+          expect(await statText(dashboard, 'Role Transitions')).toMatch(/^pcsm-1\s+\d+$/);
 
-        for (const panelName of ['CPU Usage', 'Resident Memory']) {
-          await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
-          await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText(['pcsm-1']);
-        }
+          for (const panelName of ['CPU Usage', 'Resident Memory']) {
+            await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
+            await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText(['pcsm-1']);
+          }
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
       });
     },
   );
