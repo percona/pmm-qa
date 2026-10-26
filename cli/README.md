@@ -40,6 +40,7 @@ Run commands from `cli/`.
 
 <!-- CLI-TAGS-START -->
 
+- `@arbiter-psmdb`
 - `@client-docker`
 - `@generic`
 - `@haproxy`
