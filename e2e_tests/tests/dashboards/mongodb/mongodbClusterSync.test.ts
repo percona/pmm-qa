@@ -50,6 +50,7 @@ const verifyClusterHealth = async (dashboard: Dashboards) => {
   expect(await statText(dashboard, 'Disk Space Used')).toMatch(/^[\d.]+%$/);
 };
 
+// The failover test runs last: it leaves an ACTIVE instance that never ran the initial clone.
 pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -204,6 +205,46 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
+    'Verify the ClusterSync dashboard follows a migration out of a three-member PSMDB replica set @pmm-pcsm-psmdb-integration',
+    async ({ api, dashboard, page, urlHelper }) => {
+      const clusterSync = dashboard.mongo.clusterSyncDetails;
+      const active = await activeInstance(api.prometheusApi);
+
+      await page.goto(
+        urlHelper.buildUrlWithParameters(clusterSync.url, {
+          from: 'now-1h',
+          sourceCluster,
+          targetCluster,
+        }),
+      );
+      await dashboard.loadAllPanels();
+
+      await pmmTest.step('Verify the source and target health', async () => {
+        await verifyClusterHealth(dashboard);
+        await dashboard.verifyPanelValuesInView(clusterSync.metrics);
+      });
+
+      await pmmTest.step('Verify the sync progress', async () => {
+        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
+        expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
+      });
+
+      await pmmTest.step('Open the source ReplSet Summary from the column header', async () => {
+        const link = dashboard.builders.panelByExactName('Source Cluster').getByRole('link', {
+          name: 'ReplSet Summary',
+        });
+
+        await link.scrollIntoViewIfNeeded();
+        await link.click();
+        await expect(dashboard.builders.dashboardTitle('MongoDB ReplSet Summary').first()).toBeVisible({
+          timeout: Timeouts.THIRTY_SECONDS,
+        });
+        await expect(page).toHaveURL(new RegExp(`var-cluster=${sourceCluster}`));
+      });
+    },
+  );
+
+  pmmTest(
     'Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
@@ -278,46 +319,6 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
             `percona_clustersync_mongodb_ha_active{service_name="${stopped}"}`,
           ),
         ).toBe(0);
-      });
-    },
-  );
-
-  pmmTest(
-    'Verify the ClusterSync dashboard follows a migration out of a three-member PSMDB replica set @pmm-pcsm-psmdb-integration',
-    async ({ api, dashboard, page, urlHelper }) => {
-      const clusterSync = dashboard.mongo.clusterSyncDetails;
-      const active = await activeInstance(api.prometheusApi);
-
-      await page.goto(
-        urlHelper.buildUrlWithParameters(clusterSync.url, {
-          from: 'now-1h',
-          sourceCluster,
-          targetCluster,
-        }),
-      );
-      await dashboard.loadAllPanels();
-
-      await pmmTest.step('Verify the source and target health', async () => {
-        await verifyClusterHealth(dashboard);
-        await dashboard.verifyPanelValuesInView(clusterSync.metrics);
-      });
-
-      await pmmTest.step('Verify the sync progress', async () => {
-        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
-        expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
-      });
-
-      await pmmTest.step('Open the source ReplSet Summary from the column header', async () => {
-        const link = dashboard.builders.panelByExactName('Source Cluster').getByRole('link', {
-          name: 'ReplSet Summary',
-        });
-
-        await link.scrollIntoViewIfNeeded();
-        await link.click();
-        await expect(dashboard.builders.dashboardTitle('MongoDB ReplSet Summary').first()).toBeVisible({
-          timeout: Timeouts.THIRTY_SECONDS,
-        });
-        await expect(page).toHaveURL(new RegExp(`var-cluster=${sourceCluster}`));
       });
     },
   );
