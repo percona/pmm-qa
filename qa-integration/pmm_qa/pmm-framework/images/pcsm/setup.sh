@@ -237,6 +237,10 @@ pcsm_sync() {
 pcsm_handover() {
   local first node
   first=$(retry 60 'an ACTIVE PCSM instance' pcsm_active)
+  # A new ACTIVE resumes from the checkpoint the old one saves every 15 s, and
+  # fails for good if it still shows the clone running.
+  retry 60 'a PCSM checkpoint of the finished clone' psmdb_true "${tgt_nodes[0]}" "$PSMDB_ROOT_URI" \
+    'const cp = db.getSiblingDB("percona_clustersync_mongodb").checkpoints.findOne({ _id: "pcsm" }); !!(cp && cp.data.clone && cp.data.clone.finishTime)'
   for node in "${pcsm_nodes[@]}"; do
     if [[ $node != "$first" ]]; then
       pcsm_take_lease "$node" "$PCSM_HANDOVER_SECONDS"

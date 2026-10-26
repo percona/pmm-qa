@@ -64,6 +64,7 @@ stub_prebaked_docker() {
         [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
         printf '%s\n' "${PSMDB_SOURCE_PROBE-rs 8.0.32-14}"
         ;;
+      *'checkpoints.findOne({ _id: "pcsm" })'*) printf 'true\n' ;;
       'exec pcsm-'[1-3]' pkill -x pcsm')
         if [[ $2 == "$(pcsm_lease_holder)" ]]; then printf none >"$BATS_TEST_TMPDIR/pcsm.lease"; fi
         ;;
@@ -655,8 +656,9 @@ EOF
   dispatch_setup
 
   mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 mongo .*while (true)/,$p' "$DOCKER_CALLS" |
-    grep -E '^(exec pcsm-[1-3] pkill -x pcsm|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)')
-  [[ ${handover[*]} == "exec pcsm-1 pkill -x pcsm exec pcsm-3 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-1 pkill -x pcsm exec pcsm-2 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-2 pkill -x pcsm exec pcsm-3 pkill -x pcsm exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1" ]]
+    grep -E '^(exec pcsm-[1-3] pkill -x pcsm|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)|checkpoints\.findOne' |
+    sed 's/^exec -i pcsm-tgt-1 mongo .*checkpoints\.findOne.*/checkpoint/')
+  [[ ${handover[*]} == "checkpoint exec pcsm-1 pkill -x pcsm exec pcsm-3 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-1 pkill -x pcsm exec pcsm-2 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-2 pkill -x pcsm exec pcsm-3 pkill -x pcsm exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1" ]]
   [[ $(pcsm_lease_holder) == pcsm-1 ]]
   grep -Fq 'exec pcsm-1 sh -c pcsm status | jq -e ".state == \"running\" and .lagTimeSeconds < 10" >/dev/null' "$DOCKER_CALLS"
 
