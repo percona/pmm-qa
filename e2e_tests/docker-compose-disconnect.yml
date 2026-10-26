@@ -24,6 +24,7 @@ services:
       - '8143:8443'
     environment:
       - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
     healthcheck:
       start_period: 2m
     networks:
