@@ -7,7 +7,6 @@ PMM_CHART_BRANCH=${PMM_CHART_BRANCH:-"latest"}
 PMM_HELM_CHARTS_REPO="https://github.com/percona/percona-helm-charts.git"
 # Default to a unique temp directory; allow override via env.
 PMM_HELM_CHARTS_DIR="${PMM_HELM_CHARTS_DIR:-$(mktemp -d -t percona-helm-charts.XXXXXX)}"
-# A values file, not --set-string: helm cannot --set a key under the null pmmEnv of a chart's own values.yaml.
 PMM_TELEMETRY_VALUES="$(dirname "${BASH_SOURCE[0]}")/telemetry-off.values.yaml"
 get_pmm_addr(){
     local node_port=8443
