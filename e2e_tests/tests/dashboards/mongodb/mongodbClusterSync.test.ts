@@ -6,6 +6,9 @@ import Dashboards from '@pages/dashboards/dashboards.page';
 import PrometheusApi from '@api/prometheus.api';
 
 const instances = ['pcsm-1', 'pcsm-2'];
+// pmm-framework --database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb migrates replica set rs to rs-tgt.
+const sourceCluster = 'replicaset';
+const targetCluster = 'rs-tgt';
 const haActive = (value: 0 | 1) => `percona_clustersync_mongodb_ha_active == ${value}`;
 const unitSeconds: Record<string, number> = { min: 60, mins: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
 
@@ -59,7 +62,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   });
 
   pmmTest(
-    'Verify the MongoDB ClusterSync Details dashboard opens from the MongoDB menu and is listed in the MongoDB folder @pmm-pcsm-integration',
+    'Verify the MongoDB ClusterSync Details dashboard opens from the MongoDB menu and is listed in the MongoDB folder @pmm-pcsm-psmdb-integration',
     async ({ dashboard, leftNavigation, page, searchDashboardsPage }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
 
@@ -96,7 +99,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify the ClusterSync dashboard filters list the source, target and PCSM instances only @pmm-pcsm-integration',
+    'Verify the ClusterSync dashboard filters list the source, target and PCSM instances only @pmm-pcsm-psmdb-integration',
     async ({ dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
 
@@ -104,8 +107,8 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await dashboard.waitForDashboardToLoad();
 
       await pmmTest.step('Verify the default source and target clusters', async () => {
-        await expect(dashboard.builders.selectedVariableValues('Source Cluster')).toHaveText('rs-src');
-        await expect(dashboard.builders.selectedVariableValues('Target Cluster')).toHaveText('rs-tgt');
+        await expect(dashboard.builders.selectedVariableValues('Source Cluster')).toHaveText(sourceCluster);
+        await expect(dashboard.builders.selectedVariableValues('Target Cluster')).toHaveText(targetCluster);
       });
 
       await pmmTest.step('Verify the PCSM filters list only the PCSM group', async () => {
@@ -115,9 +118,9 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify the target list leaves out the selected source', async () => {
-        expect(await dashboard.getVariableValues('Target Cluster')).toEqual(['rs-tgt']);
-        await dashboard.selectVariableValue('Source Cluster', 'rs-tgt');
-        expect(await dashboard.getVariableValues('Target Cluster')).toEqual(['rs-src']);
+        expect(await dashboard.getVariableValues('Target Cluster')).toEqual([targetCluster]);
+        await dashboard.selectVariableValue('Source Cluster', targetCluster);
+        expect(await dashboard.getVariableValues('Target Cluster')).toEqual([sourceCluster]);
       });
 
       await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
@@ -136,7 +139,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-integration',
+    'Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-psmdb-integration',
     async ({ api, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const active = await activeInstance(api.prometheusApi);
@@ -201,7 +204,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-integration',
+    'Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-15m' });
@@ -288,8 +291,8 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await page.goto(
         urlHelper.buildUrlWithParameters(clusterSync.url, {
           from: 'now-1h',
-          sourceCluster: 'replicaset',
-          targetCluster: 'rs-tgt',
+          sourceCluster,
+          targetCluster,
         }),
       );
       await dashboard.loadAllPanels();
@@ -314,7 +317,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         await expect(dashboard.builders.dashboardTitle('MongoDB ReplSet Summary').first()).toBeVisible({
           timeout: Timeouts.THIRTY_SECONDS,
         });
-        await expect(page).toHaveURL(/var-cluster=replicaset/);
+        await expect(page).toHaveURL(new RegExp(`var-cluster=${sourceCluster}`));
       });
     },
   );
