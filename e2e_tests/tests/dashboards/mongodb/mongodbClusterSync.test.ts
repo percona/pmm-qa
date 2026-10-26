@@ -180,8 +180,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify the clone progress', async () => {
-        // HANDOVER restarted every instance, and PCSM counts the clone per process, so Copy Progress
-        // has no clone data; the clone stays visible in the progress time series.
+        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
         await dashboard.verifyPanelValuesInView(clusterSync.progressMetrics);
       });
 
@@ -220,8 +219,9 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
   pmmTest(
     'Verify the ClusterSync dashboard follows a migration out of a three-member PSMDB replica set @pmm-pcsm-psmdb-integration',
-    async ({ dashboard, page, urlHelper }) => {
+    async ({ api, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
+      const active = await activeInstance(api.prometheusApi);
 
       await page.goto(
         urlHelper.buildUrlWithParameters(clusterSync.url, {
@@ -238,6 +238,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify the sync progress', async () => {
+        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
         await dashboard.verifyPanelValuesInView(clusterSync.progressMetrics);
         expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
       });

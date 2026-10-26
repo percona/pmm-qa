@@ -99,7 +99,7 @@ setup_pcsm() {
   step 'Start the sync' pcsm_sync
   step 'Start the source workload' pcsm_workload
   if [[ $handover == true ]]; then
-    step 'Hand the HA lease to every instance and back' pcsm_handover
+    step 'Hand the HA lease to every instance, then clone again' pcsm_handover
   fi
   report_agent_status "${all_nodes[@]}"
 }
@@ -230,13 +230,14 @@ pcsm_sync() {
     'pcsm status | jq -e ".state == \"running\" and .initialSync.completed" >/dev/null' >/dev/null
 }
 
-# Each instance's worker panels chart only while it is ACTIVE, so every other
-# instance holds the lease for PCSM_HANDOVER_SECONDS while the workload runs,
-# then the first takes it back. PCSM counts the initial clone per process, so
-# afterwards Copy Progress has no clone data on any instance.
+# Each instance's worker panels chart only while it is ACTIVE, so every
+# instance holds the lease for PCSM_HANDOVER_SECONDS while the workload runs.
+# PCSM counts the clone only in the process that ran it, so a fresh run then
+# clones again into the ACTIVE instance, for Copy Progress.
 pcsm_handover() {
   local first node
   first=$(retry 60 'an ACTIVE PCSM instance' pcsm_active)
+  sleep "$PCSM_HANDOVER_SECONDS"
   # A new ACTIVE resumes from the checkpoint the old one saves every 15 s, and
   # fails for good if it still shows the clone running.
   retry 60 'a PCSM checkpoint of the finished clone' psmdb_true "${tgt_nodes[0]}" "$PSMDB_ROOT_URI" \
@@ -246,10 +247,25 @@ pcsm_handover() {
       pcsm_take_lease "$node" "$PCSM_HANDOVER_SECONDS"
     fi
   done
-  pcsm_take_lease "$first" 0
-  retry 120 "$first to catch up after the handover" docker exec "$first" sh -c \
-    'pcsm status | jq -e ".state == \"running\" and .lagTimeSeconds < 10" >/dev/null' >/dev/null
-  log_info "ACTIVE PCSM instance: $first"
+  pcsm_reclone
+}
+
+# /start refuses a run whose clone finished, so every instance stops, the run's
+# lease, members and checkpoint are reset, and the clone, which skips documents
+# the target already has, starts on an empty target.
+pcsm_reclone() {
+  local node
+  for node in "${pcsm_nodes[@]}"; do
+    must docker exec "$node" pkill -x pcsm
+  done
+  must docker exec "${pcsm_nodes[0]}" pcsm reset >/dev/null
+  psmdb_js "${tgt_nodes[0]}" "$PSMDB_ROOT_URI" \
+    'db.adminCommand({ listDatabases: 1, nameOnly: true }).databases.map((d) => d.name).filter((n) => !["admin", "config", "local", "percona_clustersync_mongodb"].includes(n)).forEach((n) => db.getSiblingDB(n).dropDatabase())' \
+    >/dev/null || die 'Dropping the migrated databases on the target failed.'
+  for node in "${pcsm_nodes[@]}"; do
+    pcsm_run "$node"
+  done
+  pcsm_sync
 }
 
 # A STANDBY takes an expired lease, and which one is not chosen, so every other

@@ -647,8 +647,9 @@ EOF
   ! grep -q 'pkill -x pcsm$' "$DOCKER_CALLS" || false
 }
 
-@test "PCSM with HANDOVER makes every instance ACTIVE in turn while the workload runs, then hands the lease back" {
-  local -a handover
+@test "PCSM with HANDOVER makes every instance ACTIVE in turn while the workload runs, then clones again" {
+  local start='sh -c exec pcsm >>/var/log/pcsm.log 2>&1'
+  local -a handover expected
   stub_prebaked_docker
   # shellcheck disable=SC2329,SC2317
   sleep() { printf 'sleep %s\n' "$*" >>"$DOCKER_CALLS"; }
@@ -656,11 +657,18 @@ EOF
   dispatch_setup
 
   mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 mongo .*while (true)/,$p' "$DOCKER_CALLS" |
-    grep -E '^(exec pcsm-[1-3] pkill -x pcsm|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)|checkpoints\.findOne' |
-    sed 's/^exec -i pcsm-tgt-1 mongo .*checkpoints\.findOne.*/checkpoint/')
-  [[ ${handover[*]} == "checkpoint exec pcsm-1 pkill -x pcsm exec pcsm-3 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-1 pkill -x pcsm exec pcsm-2 pkill -x pcsm sleep 60 exec --detach pcsm-1 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec pcsm-2 pkill -x pcsm exec pcsm-3 pkill -x pcsm exec --detach pcsm-2 sh -c exec pcsm >>/var/log/pcsm.log 2>&1 exec --detach pcsm-3 sh -c exec pcsm >>/var/log/pcsm.log 2>&1" ]]
-  [[ $(pcsm_lease_holder) == pcsm-1 ]]
-  grep -Fq 'exec pcsm-1 sh -c pcsm status | jq -e ".state == \"running\" and .lagTimeSeconds < 10" >/dev/null' "$DOCKER_CALLS"
+    grep -E '^(exec pcsm-[1-3] (pkill -x pcsm|pcsm reset|pcsm start)|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)|checkpoints\.findOne|dropDatabase' |
+    sed -e 's/^exec -i pcsm-tgt-1 mongo .*checkpoints\.findOne.*/checkpoint/' -e 's/^exec -i pcsm-tgt-1 mongo .*dropDatabase.*/drop/')
+  expected=(
+    'sleep 60' checkpoint
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-3 pkill -x pcsm' 'sleep 60' "exec --detach pcsm-1 $start" "exec --detach pcsm-3 $start"
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-2 pkill -x pcsm' 'sleep 60' "exec --detach pcsm-1 $start" "exec --detach pcsm-2 $start"
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-2 pkill -x pcsm' 'exec pcsm-3 pkill -x pcsm' 'exec pcsm-1 pcsm reset' drop
+    "exec --detach pcsm-1 $start" "exec --detach pcsm-2 $start" "exec --detach pcsm-3 $start" 'exec pcsm-1 pcsm start'
+  )
+  [[ $(printf '%s\n' "${handover[@]}") == "$(printf '%s\n' "${expected[@]}")" ]]
+  grep -Fq 'db.adminCommand({ listDatabases: 1, nameOnly: true }).databases.map((d) => d.name).filter((n) => !["admin", "config", "local", "percona_clustersync_mongodb"].includes(n)).forEach((n) => db.getSiblingDB(n).dropDatabase())' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec pcsm-1 sh -c pcsm status | jq -e ' "$DOCKER_CALLS") -eq 2 ]]
 
   parse_database_spec 'pcsm,INSTANCES=1,HANDOVER=true'
   run dispatch_setup
