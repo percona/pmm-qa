@@ -58,7 +58,7 @@ install_pmm_chart() {
     echo "Installing PMM chart from: $chart_path"
     echo "Additional args: ${additional_args[*]}"
 
-    helm install "$instance_name" "${additional_args[@]}" "$chart_path"
+    helm install "$instance_name" "${additional_args[@]}" --set-string pmmEnv.PMM_ENABLE_TELEMETRY=0 "$chart_path"
 }
 
 # Function to upgrade PMM helm chart with branch support
@@ -74,7 +74,7 @@ upgrade_pmm_chart() {
     echo "Upgrading PMM chart from: $chart_path"
     echo "Additional args: ${additional_args[*]}"
 
-    helm upgrade "$instance_name" "${additional_args[@]}" "$chart_path"
+    helm upgrade "$instance_name" "${additional_args[@]}" --set-string pmmEnv.PMM_ENABLE_TELEMETRY=0 "$chart_path"
 }
 
 # Function to show PMM chart values with branch support
