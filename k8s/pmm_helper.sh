@@ -7,6 +7,8 @@ PMM_CHART_BRANCH=${PMM_CHART_BRANCH:-"latest"}
 PMM_HELM_CHARTS_REPO="https://github.com/percona/percona-helm-charts.git"
 # Default to a unique temp directory; allow override via env.
 PMM_HELM_CHARTS_DIR="${PMM_HELM_CHARTS_DIR:-$(mktemp -d -t percona-helm-charts.XXXXXX)}"
+# A values file, not --set-string: helm cannot --set a key under the null pmmEnv of a chart's own values.yaml.
+PMM_TELEMETRY_VALUES="$(dirname "${BASH_SOURCE[0]}")/telemetry-off.values.yaml"
 get_pmm_addr(){
     local node_port=8443
     local node_ip=127.0.0.1
@@ -58,7 +60,7 @@ install_pmm_chart() {
     echo "Installing PMM chart from: $chart_path"
     echo "Additional args: ${additional_args[*]}"
 
-    helm install "$instance_name" "${additional_args[@]}" --set-string pmmEnv.PMM_ENABLE_TELEMETRY=0 "$chart_path"
+    helm install "$instance_name" "${additional_args[@]}" -f "$PMM_TELEMETRY_VALUES" "$chart_path"
 }
 
 # Function to upgrade PMM helm chart with branch support
@@ -74,7 +76,7 @@ upgrade_pmm_chart() {
     echo "Upgrading PMM chart from: $chart_path"
     echo "Additional args: ${additional_args[*]}"
 
-    helm upgrade "$instance_name" "${additional_args[@]}" --set-string pmmEnv.PMM_ENABLE_TELEMETRY=0 "$chart_path"
+    helm upgrade "$instance_name" "${additional_args[@]}" -f "$PMM_TELEMETRY_VALUES" "$chart_path"
 }
 
 # Function to show PMM chart values with branch support
