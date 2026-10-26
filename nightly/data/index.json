@@ -125696,15 +125696,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-10-26T03:28:32Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T2108 failed on the restored HA cluster because the PG primary's pmm sidecar never added its PostgreSQL service at install (2 of 3 sources); present before the backup, not caused by restore.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-10-26T04:16:36Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
