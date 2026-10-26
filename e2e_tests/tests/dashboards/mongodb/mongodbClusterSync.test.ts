@@ -125,7 +125,10 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
-        await page.goto(urlHelper.buildUrlWithParameters(clusterSync.url, { serviceName: 'pcsm-1' }));
+        // At the default 12 hours the Auto interval steps past a setup only minutes old.
+        await page.goto(
+          urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: 'pcsm-1' }),
+        );
         await dashboard.loadAllPanels();
 
         expect(await statText(dashboard, 'Instances Up')).toMatch(/^pcsm-1\s+UP$/);
