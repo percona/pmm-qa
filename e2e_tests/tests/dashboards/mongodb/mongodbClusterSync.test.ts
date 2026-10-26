@@ -211,7 +211,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           expect(series.length, `${panelName} must chart the PCSM instances`).toBeGreaterThan(0);
 
           for (const name of series) {
-            expect(name, `${panelName} must chart only PCSM instances`).toMatch(/pcsm-[12]$/);
+            expect(name.trim(), `${panelName} must chart only PCSM instances`).toMatch(/pcsm-[12]$/);
           }
         }
       });
