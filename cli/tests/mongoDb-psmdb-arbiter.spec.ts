@@ -3,7 +3,7 @@ import * as cli from '@helpers/cli-helper';
 import { removeMongoService } from '@root/helpers/pmm-admin';
 
 const containerName = 'rs103';
-const serviceName = 'arbiter_by_hostname';
+const serviceName = 'arbiter_by_localhost';
 
 test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbiter-psmdb' }, () => {
   test.use({ pmmClientContainer: containerName });
@@ -13,11 +13,11 @@ test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbit
     await result.outContains('true', 'PSMDB arbiter rs103 should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=psa');
   });
 
-  test('PMM-T2399 - Verify that a PSMDB arbiter added by hostname without credentials is monitored', async ({}) => {
+  test('PMM-T2399 - Verify that a PSMDB arbiter added through 127.0.0.1 without credentials is monitored', async ({}) => {
     await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`);
 
-    // An arbiter holds no users, and from 8.1 the connection check's buildInfo needs auth.
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb --host=${containerName} --port=27017 --agent-password=mypass --cluster=replicaset --replication-set=rs ${serviceName}`);
+    // An arbiter holds no users; pmm-framework already adds this one by hostname.
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb --host=127.0.0.1 --port=27017 --agent-password=mypass --cluster=replicaset --replication-set=rs ${serviceName}`);
     await output.assertSuccess();
     await output.outContains('MongoDB Service added');
 
