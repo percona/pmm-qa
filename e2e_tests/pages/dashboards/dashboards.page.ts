@@ -57,7 +57,7 @@ export default class Dashboards extends BasePage {
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelLegendSeries: (panelName: string) =>
-      this.builders.panelByExactName(panelName).getByTestId(/^data-testid VizLegend series /),
+      this.builders.panelByExactName(panelName).locator('button[class*="LegendLabel"]'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),

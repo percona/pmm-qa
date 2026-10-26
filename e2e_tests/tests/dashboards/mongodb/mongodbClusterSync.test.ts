@@ -2,14 +2,16 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import { NestedLocators } from '@pages/base.page';
+import Dashboards from '@pages/dashboards/dashboards.page';
+import PrometheusApi from '@api/prometheus.api';
 
 const instances = ['pcsm-1', 'pcsm-2'];
-const activeQuery = 'percona_clustersync_mongodb_ha_active == 1';
-const unitSeconds: Record<string, number> = { min: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
+const haActive = (value: 0 | 1) => `percona_clustersync_mongodb_ha_active == ${value}`;
+const unitSeconds: Record<string, number> = { min: 60, mins: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
 
-// Stat panels render a duration as "350 ms" or "1.20 s".
+// Stat panels render a duration as "350 ms", "2 s" or "5.43 mins".
 const toSeconds = (text: string) => {
-  const match = /(-?[\d.]+)\s*(min|ms|µs|ns|s)\b/.exec(text);
+  const match = /(-?[\d.]+)\s*(mins?|ms|µs|ns|s)\b/.exec(text);
 
   if (!match) throw new Error(`No duration in "${text}"`);
 
@@ -22,11 +24,34 @@ const panelText = async (panel: Locator) => {
   return (await panel.innerText()).trim();
 };
 
+// A stat panel lists each series as its name on one line and its value on the next.
+const statText = (dashboard: Dashboards, panelName: string, index = 0) =>
+  panelText(dashboard.builders.panelContentByExactName(panelName).nth(index));
+const activeInstance = async (prometheusApi: PrometheusApi) =>
+  (await prometheusApi.instantQuery(haActive(1)))[0].metric.service_name;
+
+const verifyClusterHealth = async (dashboard: Dashboards) => {
+  for (const panelName of dashboard.mongo.clusterSyncDetails.clusterStats) {
+    await expect(dashboard.builders.panelContentByExactName(panelName)).toHaveCount(2);
+
+    for (const index of [0, 1]) {
+      expect(await statText(dashboard, panelName, index), `${panelName} must show a value`).toMatch(
+        /^[\d.]+\s*\S*$/,
+      );
+    }
+  }
+
+  expect(await statText(dashboard, 'Members Down', 0)).toBe('0');
+  expect(await statText(dashboard, 'Members Down', 1)).toBe('0');
+  expect(toSeconds(await statText(dashboard, 'Oplog Window'))).toBeGreaterThan(0);
+  expect(await statText(dashboard, 'Disk Space Used')).toMatch(/^[\d.]+%$/);
+};
+
 pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     await grafanaHelper.authorize();
     await expect
-      .poll(async () => (await api.prometheusApi.instantQuery(activeQuery)).length, {
+      .poll(async () => (await api.prometheusApi.instantQuery(haActive(1))).length, {
         message: 'Exactly one PCSM instance must hold the HA lease',
         timeout: Timeouts.TWO_MINUTES,
       })
@@ -61,10 +86,10 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         await searchDashboardsPage.builders.expandFolderButton('MongoDB').click();
         await searchDashboardsPage.builders.dashboardRow(clusterSync.title).getByRole('link').click();
         await expect(page).toHaveURL(new RegExp(clusterSync.url));
-        await dashboard.waitForDashboardToLoad();
+        await dashboard.loadAllPanels();
 
         for (const row of Object.values(clusterSync.rows)) {
-          await expect(dashboard.builders.rowTitle(row)).toBeVisible();
+          await expect(dashboard.builders.rowTitle(row)).toBeAttached();
         }
       });
     },
@@ -97,14 +122,14 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
       await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
         await page.goto(urlHelper.buildUrlWithParameters(clusterSync.url, { serviceName: 'pcsm-1' }));
-        await dashboard.waitForDashboardToLoad();
-        await dashboard.expandRow(clusterSync.rows.instances);
+        await dashboard.loadAllPanels();
 
-        for (const panelName of ['Instance Availability', 'Instance Roles', 'CPU Usage', 'Resident Memory']) {
+        expect(await statText(dashboard, 'Instances Up')).toMatch(/^pcsm-1\s+UP$/);
+        expect(await statText(dashboard, 'Role Transitions')).toMatch(/^pcsm-1\s+\d+$/);
+
+        for (const panelName of ['CPU Usage', 'Resident Memory']) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
-          await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText(['pcsm-1'], {
-            timeout: Timeouts.THIRTY_SECONDS,
-          });
+          await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText(['pcsm-1']);
         }
       });
     },
@@ -114,76 +139,51 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
     'Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-integration',
     async ({ api, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
-      const [active] = await api.prometheusApi.instantQuery(activeQuery);
-      const activeInstance = active.metric.service_name;
+      const active = await activeInstance(api.prometheusApi);
 
       await page.goto(urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h' }));
-      await dashboard.waitForDashboardToLoad();
+      await dashboard.loadAllPanels();
 
       await pmmTest.step('Verify the source and target health', async () => {
-        for (const panelName of clusterSync.clusterStats) {
-          const panels = dashboard.builders.panelContentByExactName(panelName);
-
-          await expect(panels).toHaveCount(2);
-
-          for (const panel of await panels.all()) {
-            expect(await panelText(panel), `${panelName} must show a value`).toMatch(/^[\d.]+\s*\S*$/);
-          }
-        }
-
-        await expect(dashboard.builders.panelContentByExactName('Members Down').first()).toHaveText('0');
-        await expect(dashboard.builders.panelContentByExactName('Members Down').last()).toHaveText('0');
-        await expect(dashboard.builders.panelContentByExactName('Oplog Window')).toHaveText(/\d/);
-        await expect(dashboard.builders.panelContentByExactName('Disk Space Used')).toHaveText(
-          /\d+(\.\d+)?%/,
-        );
+        await verifyClusterHealth(dashboard);
       });
 
       await pmmTest.step('Verify the ClusterSync column', async () => {
-        const instancesUp = await panelText(dashboard.builders.panelContentByExactName('Instances Up'));
+        const instancesUp = await statText(dashboard, 'Instances Up');
 
         for (const instance of instances) expect(instancesUp).toMatch(new RegExp(`${instance}\\s+UP`));
 
-        await expect(dashboard.builders.panelContentByExactName('Active Instance')).toHaveText(
-          new RegExp(`^${activeInstance}\\s+ACTIVE$`),
-        );
-        expect(
-          toSeconds(await panelText(dashboard.builders.panelContentByExactName('Replication Lag'))),
-        ).toBeLessThan(10);
+        expect(await statText(dashboard, 'Active Instance')).toMatch(new RegExp(`^${active}\\s+ACTIVE$`));
+        expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
         await expect(dashboard.builders.panelLegendSeries('Change Events Rate')).toHaveText([
-          `Read - ${activeInstance}`,
-          `Applied - ${activeInstance}`,
+          `Read - ${active}`,
+          `Applied - ${active}`,
         ]);
         await dashboard.verifyPanelValuesInView(clusterSync.metrics);
       });
 
       await pmmTest.step('Verify the clone progress', async () => {
-        await expect(dashboard.builders.panelContentByExactName('Copy Progress')).toHaveText('100%');
+        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
         await dashboard.verifyPanelValuesInView(clusterSync.progressMetrics);
       });
 
       await pmmTest.step('Verify the replication pipeline row', async () => {
-        await dashboard.expandRow(clusterSync.rows.pipeline);
         await dashboard.verifyPanelValuesInView(clusterSync.pipelineMetrics);
 
-        for (const panelName of clusterSync.perWorkerPanels(activeInstance)) {
+        for (const panelName of clusterSync.perWorkerPanels(active)) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeGreaterThan(0);
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeLessThanOrEqual(10);
         }
 
         await expect(dashboard.builders.textInDashboard('Waiting for first flush')).toHaveCount(0);
-        await dashboard.collapseRow(clusterSync.rows.pipeline);
       });
 
       await pmmTest.step('Verify the instance row', async () => {
-        await dashboard.expandRow(clusterSync.rows.instances);
-        await expect(dashboard.builders.panelContentByExactName('Lease Term')).toHaveText(/^\d+$/);
-
-        const roles = await panelText(dashboard.builders.panelByExactName('Instance Roles'));
-
-        expect(roles).toContain('ACTIVE');
-        expect(roles).toContain('STANDBY');
+        expect(await statText(dashboard, 'Lease Term')).toMatch(/^pcsm-sync-1\s+\d+$/);
+        // Instance Roles is a state timeline drawn on a canvas, so the roles are read from its metric.
+        expect(await api.prometheusApi.instantQuery(haActive(1))).toHaveLength(1);
+        expect(await api.prometheusApi.instantQuery(haActive(0))).toHaveLength(1);
 
         for (const panelName of clusterSync.processPanels) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
@@ -205,20 +205,21 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-15m' });
-      const [active] = await api.prometheusApi.instantQuery(activeQuery);
-      const stopped = active.metric.service_name;
+      const stopped = await activeInstance(api.prometheusApi);
       const takeover = instances.find((instance) => instance !== stopped) as string;
-      const leaseTerm = async () =>
-        Number(await panelText(dashboard.builders.panelContentByExactName('Lease Term')));
+      const leaseTerm = async () => Number((await statText(dashboard, 'Lease Term')).split(/\s+/).pop());
+      const roleTransitions = async (instance: string) =>
+        Number(new RegExp(`${instance}\\s+(\\d+)`).exec(await statText(dashboard, 'Role Transitions'))?.[1]);
 
-      await page.goto(url);
-      await dashboard.waitForDashboardToLoad();
-      await dashboard.expandRow(clusterSync.rows.instances);
+      const reload = async () => {
+        await page.goto(url);
+        await dashboard.loadAllPanels();
+      };
+
+      await reload();
 
       const termBefore = await leaseTerm();
-      const transitionsBefore = (await api.prometheusApi.instantQueryValue(
-        `percona_clustersync_mongodb_ha_role_transitions_total{service_name="${takeover}"}`,
-      )) as number;
+      const transitionsBefore = await roleTransitions(takeover);
 
       try {
         await pmmTest.step(`Stop PCSM on the ACTIVE instance ${stopped}`, async () => {
@@ -227,46 +228,31 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
         await pmmTest.step(`Verify ${stopped} is DOWN and ${takeover} took over`, async () => {
           await expect(async () => {
-            await page.goto(url);
-            await dashboard.waitForDashboardToLoad();
-            expect(await panelText(dashboard.builders.panelContentByExactName('Instances Up'))).toMatch(
-              new RegExp(`${stopped}\\s+DOWN`),
-            );
-            await expect(dashboard.builders.panelContentByExactName('Active Instance')).toHaveText(
+            await reload();
+            expect(await statText(dashboard, 'Instances Up')).toMatch(new RegExp(`${stopped}\\s+DOWN`));
+            expect(await statText(dashboard, 'Active Instance')).toMatch(
               new RegExp(`^${takeover}\\s+ACTIVE$`),
             );
           }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
         });
 
         await pmmTest.step('Verify the lease term and role transitions moved on', async () => {
-          await dashboard.expandRow(clusterSync.rows.instances);
-          expect(await leaseTerm()).toBe(termBefore + 1);
-          await expect
-            .poll(() =>
-              api.prometheusApi.instantQueryValue(
-                `percona_clustersync_mongodb_ha_role_transitions_total{service_name="${takeover}"}`,
-              ),
-            )
-            .toBeGreaterThan(transitionsBefore);
-          await dashboard.builders.panelByExactName('Role Transitions').scrollIntoViewIfNeeded();
-          await expect(dashboard.builders.panelContentByExactName('Role Transitions')).toContainText(
-            takeover,
-          );
+          await expect(async () => {
+            expect(await leaseTerm()).toBe(termBefore + 1);
+            expect(await roleTransitions(takeover)).toBeGreaterThan(transitionsBefore);
+          }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.ONE_MINUTE });
         });
 
         await pmmTest.step('Verify the sync panels follow the new ACTIVE instance', async () => {
           await expect(async () => {
-            expect(
-              toSeconds(await panelText(dashboard.builders.panelContentByExactName('Replication Lag'))),
-            ).toBeLessThan(10);
-          }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.ONE_MINUTE });
-          await expect(dashboard.builders.panelLegendSeries('Change Events Rate')).toHaveText([
-            `Read - ${takeover}`,
-            `Applied - ${takeover}`,
-          ]);
-          await expect(dashboard.builders.panelContentByExactName('Copy Progress')).toHaveText(
-            'No clone data',
-          );
+            await reload();
+            expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
+            await expect(dashboard.builders.panelLegendSeries('Change Events Rate')).toContainText([
+              `Read - ${takeover}`,
+              `Applied - ${takeover}`,
+            ]);
+          }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+          expect(await statText(dashboard, 'Copy Progress')).toBe('No clone data');
         });
       } finally {
         await pmmTest.step(`Start PCSM on ${stopped} again`, async () => {
@@ -280,13 +266,10 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
       await pmmTest.step(`Verify ${stopped} is UP again as STANDBY`, async () => {
         await expect(async () => {
-          await page.goto(url);
-          await dashboard.waitForDashboardToLoad();
-          expect(await panelText(dashboard.builders.panelContentByExactName('Instances Up'))).toMatch(
-            new RegExp(`${stopped}\\s+UP`),
-          );
+          await reload();
+          expect(await statText(dashboard, 'Instances Up')).toMatch(new RegExp(`${stopped}\\s+UP`));
         }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
-        // The state timeline shows roles over time, so the current role is read from its metric.
+        // Instance Roles is a state timeline drawn on a canvas, so the role is read from its metric.
         expect(
           await api.prometheusApi.instantQueryValue(
             `percona_clustersync_mongodb_ha_active{service_name="${stopped}"}`,
@@ -298,8 +281,9 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
   pmmTest(
     'Verify the ClusterSync dashboard follows a migration out of a three-member PSMDB replica set @pmm-pcsm-psmdb-integration',
-    async ({ dashboard, page, urlHelper }) => {
+    async ({ api, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
+      const active = await activeInstance(api.prometheusApi);
 
       await page.goto(
         urlHelper.buildUrlWithParameters(clusterSync.url, {
@@ -308,40 +292,29 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           targetCluster: 'rs-tgt',
         }),
       );
-      await dashboard.waitForDashboardToLoad();
+      await dashboard.loadAllPanels();
 
       await pmmTest.step('Verify the source and target health', async () => {
-        for (const panelName of clusterSync.clusterStats) {
-          for (const panel of await dashboard.builders.panelContentByExactName(panelName).all()) {
-            expect(await panelText(panel), `${panelName} must show a value`).toMatch(/^[\d.]+\s*\S*$/);
-          }
-        }
-
-        await expect(dashboard.builders.panelContentByExactName('Members Down').first()).toHaveText('0');
-        await expect(dashboard.builders.panelContentByExactName('Members Down').last()).toHaveText('0');
-        await expect(dashboard.builders.panelContentByExactName('Oplog Window')).toHaveText(/\d/);
-        await expect(dashboard.builders.panelContentByExactName('Disk Space Used')).toHaveText(
-          /\d+(\.\d+)?%/,
-        );
+        await verifyClusterHealth(dashboard);
         await dashboard.verifyPanelValuesInView(clusterSync.metrics);
       });
 
       await pmmTest.step('Verify the sync progress', async () => {
-        await expect(dashboard.builders.panelContentByExactName('Copy Progress')).toHaveText('100%');
-        expect(
-          toSeconds(await panelText(dashboard.builders.panelContentByExactName('Replication Lag'))),
-        ).toBeLessThan(10);
+        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
+        expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
       });
 
       await pmmTest.step('Open the source ReplSet Summary from the column header', async () => {
-        await dashboard.builders
-          .panelByName('Source Cluster')
-          .getByRole('link', { name: 'ReplSet Summary' })
-          .click();
+        const link = dashboard.builders.panelByExactName('Source Cluster').getByRole('link', {
+          name: 'ReplSet Summary',
+        });
+
+        await link.scrollIntoViewIfNeeded();
+        await link.click();
         await expect(dashboard.builders.dashboardTitle('MongoDB ReplSet Summary').first()).toBeVisible({
           timeout: Timeouts.THIRTY_SECONDS,
         });
-        await expect(dashboard.builders.selectedVariableValues('Cluster')).toHaveText('replicaset');
+        await expect(page).toHaveURL(/var-cluster=replicaset/);
       });
     },
   );
