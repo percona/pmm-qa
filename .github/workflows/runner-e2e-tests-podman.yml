@@ -183,6 +183,7 @@ jobs:
           DISABLE_UPDATES=1
           #ENABLE_DBAAS=1
           PMM_DEBUG=1
+          PMM_ENABLE_TELEMETRY=0
           PMM_ENABLE_INTERNAL_PG_QAN=1
           GF_SECURITY_ADMIN_PASSWORD=${{ env.ADMIN_PASSWORD }}
           PERCONA_TEST_SAAS_HOST=check-dev.percona.com:443
