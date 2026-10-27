@@ -24,7 +24,10 @@ stub_prebaked_docker() {
         return
         ;;
       *VERSION_CODENAME*) printf 'noble\n' ;;
-      *'pmm-admin --version') printf 'ProjectName: pmm-admin\nVersion: %s\n' "${PMM_ADMIN_VERSION:-3.11.0}" ;;
+      'exec rs'*' pmm-admin --version')
+        [[ ${PMM_ADMIN_VERSION:-} != fail ]] || return 1
+        printf 'ProjectName: pmm-admin\nVersion: %s\n' "${PMM_ADMIN_VERSION:-3.11.0}"
+        ;;
       *'patronictl -c /patroni.yml list'*)
         printf '| %s | %s:5432 | %s | %s | 1 |\n' pdpgsql_pmm_patroni_17_1 x Leader running \
           pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
@@ -453,6 +456,13 @@ EOF
   PMM_ADMIN_VERSION=3.10.1-v3-4443b2b90
   dispatch_setup
   grep -Eq '^exec rs103 pmm-admin add mongodb .* --host=rs103 --port=27017$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  PMM_ADMIN_VERSION=fail
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'Could not read the pmm-admin version on rs103.'* ]]
+  ! grep -q '^exec rs103 pmm-admin add mongodb' "$DOCKER_CALLS" || false
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
