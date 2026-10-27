@@ -3720,15 +3720,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-27T03:03:36Z",
       "suites": [
         "CLI Integration Compatibility"
-      ]
-    },
+      ],
+      "verdict": "test bug",
+      "summary": "PSMDB Arbiter 8.3 compat jobs (clients 3.8.0-3.10.0) died in setup: #1634 adds the arbiter by hostname, which on PSMDB 8.1+ needs the 3.11.0 agent fix (percona/pmm#6024, PMM-15650); released clients get 'buildInfo requires authentication'. Reproduced on a CHAOS VM; fix falls back to 127.0.0.1 for released clients before 3.11.0.",
+      "link": "https://github.com/percona/pmm-qa/pull/1666",
+      "by": "Investigator routine",
+      "at": "2026-10-27T03:54:29Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-27T03:03:36Z",
