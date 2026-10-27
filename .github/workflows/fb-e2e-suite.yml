@@ -341,7 +341,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch || 'amd64' }}
-      setup_services: '--database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb,NODES_COUNT=3,HANDOVER=true'
+      setup_services: '--database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb,NODES_COUNT=3'
       pmm_test_flag: '@pmm-pcsm-psmdb-integration'
 
   dump_tool:

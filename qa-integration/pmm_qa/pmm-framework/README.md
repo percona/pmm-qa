@@ -105,7 +105,7 @@ Names and option keys are case-insensitive. Supported setup keys are:
 (`pcsm-tgt-N`) with an HA group of Percona ClusterSync for MongoDB instances
 (`pcsm-N`), registered as external services with `--metrics-mode=push`.
 `SOURCE_VERSION` and `TARGET_VERSION` pick the PSMDB versions (6.0, 7.0 or 8.0;
-the target no older than the source), `NODES_COUNT` the members per replica
+the target the source's major or the next one), `NODES_COUNT` the members per replica
 set and `INSTANCES` the PCSM processes, each 1 to 3:
 
 ```bash
@@ -128,14 +128,6 @@ PCSM's HTTP port has no authentication and also serves `/start` and
 A failover test stops an instance with `docker exec pcsm-N pkill -x pcsm`,
 which leaves its PMM Client reporting it down, and starts it again with
 `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
-
-`HANDOVER=true` (default `false`, needs `INSTANCES` of 2 or 3) makes every
-instance ACTIVE for 60 s while the workload runs, so each one's
-replication-worker panels have data. To give the lease to an instance, PCSM
-stops on every other one, which restarts as STANDBY. PCSM counts the clone only
-in the process that ran it, so the setup then stops every instance, runs
-`pcsm reset`, drops the migrated databases on the target and starts a fresh
-sync, which clones again into whichever instance is ACTIVE.
 
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `pmm-framework --list-databases` prints each

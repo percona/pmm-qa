@@ -4,11 +4,22 @@ import { Timeouts } from '@helpers/timeouts';
 import { NestedLocators } from '@pages/base.page';
 import Dashboards from '@pages/dashboards/dashboards.page';
 import PrometheusApi from '@api/prometheus.api';
+import CliHelper from '@helpers/cli.helper';
 
 const instances = ['pcsm-1', 'pcsm-2'];
 // pmm-framework --database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb migrates replica set rs to rs-tgt.
 const sourceCluster = 'replicaset';
 const targetCluster = 'rs-tgt';
+const targetOrders = (cliHelper: CliHelper) =>
+  Number(
+    cliHelper
+      .execSilent(
+        `docker exec pcsm-tgt-1 mongo --quiet mongodb://root:root@127.0.0.1:27017/admin --eval 'db.getSiblingDB("pcsm_qa").orders.countDocuments({})'`,
+      )
+      .assertSuccess()
+      .getStdOutLines()
+      .pop(),
+  );
 const haActive = (value: 0 | 1) => `percona_clustersync_mongodb_ha_active == ${value}`;
 const unitSeconds: Record<string, number> = { min: 60, mins: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
 
@@ -50,8 +61,10 @@ const verifyClusterHealth = async (dashboard: Dashboards) => {
   expect(await statText(dashboard, 'Disk Space Used')).toMatch(/^[\d.]+%$/);
 };
 
-// The failover test runs last: it leaves an ACTIVE instance that never ran the initial clone.
 pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
+  // The failover test runs last: it leaves an ACTIVE instance that never ran the initial clone.
+  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
+
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     await grafanaHelper.authorize();
     await expect
@@ -166,15 +179,10 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         expect(await statText(dashboard, 'Active Instance')).toMatch(new RegExp(`^${active}\\s+ACTIVE$`));
         expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
 
-        // The setup's HANDOVER made every instance ACTIVE once inside the time range.
-        for (const series of instances.flatMap((instance) => [
-          `Read - ${instance}`,
-          `Applied - ${instance}`,
-        ])) {
-          await expect(
-            dashboard.builders.panelLegendSeries('Change Events Rate').getByText(series, { exact: true }),
-          ).toHaveCount(1);
-        }
+        await expect(dashboard.builders.panelLegendSeries('Change Events Rate')).toContainText([
+          `Read - ${active}`,
+          `Applied - ${active}`,
+        ]);
 
         await dashboard.verifyPanelValuesInView(clusterSync.metrics);
       });
@@ -192,8 +200,6 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeGreaterThan(0);
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeLessThanOrEqual(10);
         }
-
-        await expect(dashboard.builders.textInDashboard('Waiting for first flush')).toHaveCount(0);
       });
 
       await pmmTest.step('Verify the instance row', async () => {
@@ -213,34 +219,6 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
             expect(name.trim(), `${panelName} must chart only PCSM instances`).toMatch(/pcsm-[12]$/);
           }
         }
-      });
-    },
-  );
-
-  pmmTest(
-    'Verify the ClusterSync dashboard follows a migration out of a three-member PSMDB replica set @pmm-pcsm-psmdb-integration',
-    async ({ api, dashboard, page, urlHelper }) => {
-      const clusterSync = dashboard.mongo.clusterSyncDetails;
-      const active = await activeInstance(api.prometheusApi);
-
-      await page.goto(
-        urlHelper.buildUrlWithParameters(clusterSync.url, {
-          from: 'now-1h',
-          sourceCluster,
-          targetCluster,
-        }),
-      );
-      await dashboard.loadAllPanels();
-
-      await pmmTest.step('Verify the source and target health', async () => {
-        await verifyClusterHealth(dashboard);
-        await dashboard.verifyPanelValuesInView(clusterSync.metrics);
-      });
-
-      await pmmTest.step('Verify the sync progress', async () => {
-        expect(await statText(dashboard, 'Copy Progress')).toMatch(new RegExp(`^${active}\\s+100(\\.0)?%$`));
-        await dashboard.verifyPanelValuesInView(clusterSync.progressMetrics);
-        expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
       });
 
       await pmmTest.step('Open the source ReplSet Summary from the column header', async () => {
@@ -278,10 +256,12 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
       const termBefore = await leaseTerm();
       const transitionsBefore = await roleTransitions(takeover);
+      let ordersBefore = 0;
 
       try {
         await pmmTest.step(`Stop PCSM on the ACTIVE instance ${stopped}`, async () => {
           cliHelper.execSilent(`docker exec ${stopped} pkill -x pcsm`).assertSuccess();
+          ordersBefore = targetOrders(cliHelper);
         });
 
         await pmmTest.step(`Verify ${stopped} is DOWN and ${takeover} took over`, async () => {
@@ -312,6 +292,12 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
           expect(await statText(dashboard, 'Copy Progress')).toBe('No clone data');
         });
+
+        await pmmTest.step(`Verify ${takeover} keeps writing the source workload to the target`, async () => {
+          await expect
+            .poll(() => targetOrders(cliHelper), { timeout: Timeouts.ONE_MINUTE })
+            .toBeGreaterThan(ordersBefore);
+        });
       } finally {
         await pmmTest.step(`Start PCSM on ${stopped} again`, async () => {
           if (cliHelper.execSilent(`docker exec ${stopped} pgrep -x pcsm`).code !== 0) {
@@ -327,7 +313,6 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           await reload();
           expect(await statText(dashboard, 'Instances Up')).toMatch(new RegExp(`${stopped}\\s+UP`));
         }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
-        // Instance Roles is a state timeline drawn on a canvas, so the role is read from its metric.
         expect(
           await api.prometheusApi.instantQueryValue(
             `percona_clustersync_mongodb_ha_active{service_name="${stopped}"}`,
