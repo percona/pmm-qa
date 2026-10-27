@@ -24,6 +24,10 @@ stub_prebaked_docker() {
         return
         ;;
       *VERSION_CODENAME*) printf 'noble\n' ;;
+      'exec rs'*' pmm-admin --version')
+        [[ ${PMM_ADMIN_VERSION:-} != fail ]] || return 1
+        printf 'ProjectName: pmm-admin\nVersion: %s\n' "${PMM_ADMIN_VERSION:-3.11.0}"
+        ;;
       *'patronictl -c /patroni.yml list'*)
         printf '| %s | %s:5432 | %s | %s | 1 |\n' pdpgsql_pmm_patroni_17_1 x Leader running \
           pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
@@ -437,6 +441,28 @@ EOF
   grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=rs103 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=rs203 --port=27017$' "$DOCKER_CALLS"
+}
+
+@test "PSMDB psa adds the arbiter through 127.0.0.1 with a released client older than 3.11.0" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=8.3,SETUP_TYPE=psa,MINIO=false'
+  PMM_ADMIN_VERSION=3.10.0
+  dispatch_setup
+
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs102 pmm-admin add mongodb .* --host=rs102 --port=27017$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  PMM_ADMIN_VERSION=3.10.1-v3-4443b2b90
+  dispatch_setup
+  grep -Eq '^exec rs103 pmm-admin add mongodb .* --host=rs103 --port=27017$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  PMM_ADMIN_VERSION=fail
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'Could not read the pmm-admin version on rs103.'* ]]
+  ! grep -q '^exec rs103 pmm-admin add mongodb' "$DOCKER_CALLS" || false
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
