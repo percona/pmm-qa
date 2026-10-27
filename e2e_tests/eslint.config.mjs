@@ -285,7 +285,6 @@ export default defineConfig([
             'verifyAllMenuItems',
             'verifyHaNodeRoles',
             'verifyUiRenders',
-            'verifyLeaderBadge',
             'verifyHaEnabled',
             'verifySingleLeader',
             'waitForMetric',
