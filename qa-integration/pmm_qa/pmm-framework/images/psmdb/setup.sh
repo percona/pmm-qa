@@ -161,6 +161,19 @@ psmdb_register() {
   pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
 }
 
+# Prints the address an arbiter on NODE is added by. From 8.1 adding one by hostname needs
+# percona/pmm#6024 (PMM-15650, 3.11.0); released clients before it go through the localhost
+# exception. Dev builds (3.10.1-v3-...) carry the fix.
+psmdb_arbiter_host() {
+  local node=$1 version
+  version=$(docker exec "$node" pmm-admin --version 2>/dev/null | sed -n 's/^Version: //p') || true
+  if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $(printf '%s\n' 3.11.0 "$version" | sort -V | head -n 1) != 3.11.0 ]]; then
+    printf '127.0.0.1'
+  else
+    printf '%s' "$node"
+  fi
+}
+
 psmdb_replica_set() {
   local arbiter='' external=false node
   local -a nodes=(rs101 rs102 rs103) credentials=(--username=pmm --password=pmmpass)
@@ -214,9 +227,10 @@ psmdb_replica_set() {
       fi
     fi
     if [[ $node == "$arbiter" || $node == "${arbiter/103/203}" ]]; then
-      # An arbiter holds no users. Added by hostname like the other members, so the
-      # inventory addresses match; from 8.1 this needs percona/pmm#6024 (PMM-15650).
-      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "--host=$node" --port=27017
+      # An arbiter holds no users. Added by hostname like the other members where the
+      # client allows it, so the inventory addresses match.
+      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" \
+        "--host=$(psmdb_arbiter_host "$node")" --port=27017
     else
       psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "${credentials[@]}" \
         "--host=$node" --port=27017
