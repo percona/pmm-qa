@@ -3740,15 +3740,17 @@
       "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1266/",
       "by": "Investigator routine",
       "at": "2026-10-27T04:40:31Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-27T03:03:36Z",
       "suites": [
         "E2E Tests"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "@ssl-mysql PMM-T1403 (default Max Query Length row, x64+ARM): the qan-mysql-perfschema agent missed the query in events_statements_history and fell back to DIGEST_TEXT as the example (perfschema.go:408-412); QAN's Explain then ran 'SELECT COUNT ( * ) FROM ...', which MySQL 8.4 rejects with Error 1064 (confirmed on a CHAOS VM). Existing ticket PMM-12069. The history miss itself didn't reproduce (3 idle + 6 loaded runs green; ARM re-run green).",
+      "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+      "by": "Investigator routine",
+      "at": "2026-10-27T05:31:38Z"
     }
-  ]
+  ],
+  "claims": []
 }
