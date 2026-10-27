@@ -10,15 +10,15 @@
 #   migration.sh revalidate <file>...                                   conventions, eslint, tsc, README check, tested-copy check
 #   migration.sh publish <title> <body-file> <flag> <setup-services>    push, open or edit PR, dispatch the Playwright runner, link the job
 #
-# Env: PMM_UI_URL (https://127.0.0.1/), ADMIN_PASSWORD (admin-password).
+# Env: PMM_UI_URL, ADMIN_PASSWORD: the row's CHAOS VM, from `eval "$(chaos-pmm.sh env <run_id>)"`.
 set -uo pipefail
 
 control=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 publish=$(dirname "$control")/pmm-qa-publish
 base_tree=$(dirname "$control")/pmm-qa-base
 tracker=.claude/skills/codeceptjs-migration/tracker.md
-url=${PMM_UI_URL:-https://127.0.0.1/}
-pass=${ADMIN_PASSWORD:-admin-password}
+url=${PMM_UI_URL:+${PMM_UI_URL%/}/}
+pass=${ADMIN_PASSWORD:-}
 repo=percona/pmm-qa
 
 die() { echo "STOP: $*" >&2; exit 1; }
@@ -26,7 +26,7 @@ die() { echo "STOP: $*" >&2; exit 1; }
 # One line per test job: grep expression, setup_services, file:job[:shard], framework (playwright|codeceptjs).
 # The framework comes from the runner workflow a job calls, or a matrix entry's tests_framework.
 ci_jobs() {
-  python - "$1"/.github/workflows/*.yml <<'EOF'
+  python3 - "$1"/.github/workflows/*.yml <<'EOF'
 import os, sys, yaml
 for path in sys.argv[1:]:
     for name, job in ((yaml.safe_load(open(path, encoding='utf-8')) or {}).get('jobs') or {}).items():
@@ -45,10 +45,10 @@ for path in sys.argv[1:]:
 EOF
 }
 
-# Local setup from CI: each source scenario's tags pick the Playwright job that runs it, and that job's
-# setup_services become the local --database list. A job with its own setup is copied whole; on the shared
+# Setup from CI: each source scenario's tags pick the Playwright job that runs it, and that job's
+# setup_services become the CHAOS VM's --database list. A job with its own setup is copied whole; on the shared
 # nightly server only the shard argument for each engine the scenario names is taken (shortest variant).
-# --args prints only the list, for `local-pmm.sh up $(migration.sh setup --args <source>)`.
+# --args prints only the list, for `chaos-pmm.sh up <run_id> $(migration.sh setup --args <source>)`.
 setup() {
   local only_args=''
   [[ ${1:-} == --args ]] && { only_args=1; shift; }
@@ -57,7 +57,7 @@ setup() {
   local jobs
   jobs=$(mktemp)
   ci_jobs "$control" >"$jobs" || exit 1
-  python - "$control/$src" "$jobs" "$control/.github/workflows/nightly-e2e-tests-matrix.yml" "$only_args" <<'EOF'
+  python3 - "$control/$src" "$jobs" "$control/.github/workflows/nightly-e2e-tests-matrix.yml" "$only_args" <<'EOF'
 import re, sys, yaml
 src, jobs_file, nightly_file, only_args = sys.argv[1:]
 code = '\n'.join(l for l in open(src, encoding='utf-8').read().splitlines() if not l.lstrip().startswith('//'))
@@ -117,7 +117,7 @@ if only_args:
 else:
     print('\n'.join(notes))
     print(f'nightly shard arguments: {" | ".join(shard_args)}')
-    print(f'local: {line or "(server only)"}')
+    print(f'vm: {line or "(server only)"}')
 EOF
 }
 
@@ -158,7 +158,7 @@ preflight() {
 mark() {
   local row=$1 status=$2 pr=${3:-}
   cd "$control" || exit 1
-  python - "$tracker" "$row" "$status" "$pr" <<'EOF' || exit 1
+  python3 - "$tracker" "$row" "$status" "$pr" <<'EOF' || exit 1
 import re, sys
 path, row, status, pr = sys.argv[1:]
 lines = open(path, 'rb').read().split(b'\n')
@@ -179,17 +179,18 @@ EOF
 }
 
 env_check() {
+  [[ -n $url && -n $pass ]] || die 'PMM_UI_URL/ADMIN_PASSWORD unset: eval "$(chaos-pmm.sh env <run_id>)"'
   curl -sk -o /dev/null -w '%{http_code}' -u "admin:$pass" "${url}v1/users/me" | grep -q 200 || die "/v1/users/me not 200 (wrong password?)"
   local from to report services
   from=$(date -u -d '-120 min' +%FT%TZ)
   to=$(date -u +%FT%TZ)
-  services=$(curl -sk -u "admin:$pass" "${url}v1/inventory/services" | python -c 'import sys,json;[print(s["service_name"]) for v in json.load(sys.stdin).values() for s in v]')
+  services=$(curl -sk -u "admin:$pass" "${url}v1/inventory/services" | python3 -c 'import sys,json;[print(s["service_name"]) for v in json.load(sys.stdin).values() for s in v]')
   report=$(curl -sk -u "admin:$pass" -X POST "${url}v1/qan/metrics:getReport" \
     -d "{\"period_start_from\":\"$from\",\"period_start_to\":\"$to\",\"group_by\":\"service_name\",\"limit\":200,\"columns\":[\"num_queries\"]}")
   local p rc=0 name rows
   for p in "$@"; do
     name=$(grep -m1 -E "^$p" <<<"$services")
-    rows=$(python -c 'import sys,json;d=json.load(sys.stdin);print(next((r.get("num_queries",0) for r in d.get("rows",[]) if r.get("dimension")==sys.argv[1]),0))' "$name" <<<"$report")
+    rows=$(python3 -c 'import sys,json;d=json.load(sys.stdin);print(next((r.get("num_queries",0) for r in d.get("rows",[]) if r.get("dimension")==sys.argv[1]),0))' "$name" <<<"$report")
     echo "$p -> ${name:-MISSING} qan=$rows"
     [[ -n $name && $rows != 0 ]] || rc=1
   done
@@ -278,7 +279,7 @@ revalidate() {
     (cd e2e_tests && npx eslint "${ts[@]}") || rc=1
   fi
   (cd e2e_tests && npx tsc --noEmit -p .) || rc=1
-  python support_scripts/generate_readme.py --check || rc=1
+  python3 support_scripts/generate_readme.py --check || rc=1
   for f in "$@"; do
     [[ $f == e2e_tests/* ]] || continue
     [[ -f $control/$f ]] && cmp -s "$f" "$control/$f" && echo "tested copy: $f identical to control" || echo "tested copy: $f DIFFERS from control (rerun it)"

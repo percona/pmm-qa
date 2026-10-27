@@ -36,7 +36,7 @@ The reviewer works this twice: before execution and after. Clear the Shape block
 
 - [ ] Hooks, suite setup, cleanup, assertion strictness, and UI/API/CLI/download/file behaviour preserved. Reachable custom steps inspected and mapped.
 - [ ] No `describe.configure({ retries })`; the source's `.retry(N)` is dropped and recorded in the commit message (`SKILL.md` Waits and retries). Version conditionals use `versionGates.ts`.
-- [ ] Where a helper branches on server configuration, `docker exec pmm-server env` was read and the evidence names the branch the green run took.
+- [ ] Where a helper branches on server configuration, `chaos-pmm.sh ssh <run_id> docker exec pmm-server env` was read and the evidence names the branch the green run took.
 - [ ] Every new or edited invocation checked against `mappings.md` Helpers, CodeceptSyntax, Custom Steps and Skip policy. No `eslint-disable` added to dodge a rule fixable in code.
 
 SafeOmission registry:

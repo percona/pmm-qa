@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Wait for the local PMM environment created by .claude/scripts/local-pmm.sh, then run one
-# Playwright test file or an anchored grep-filtered subset. This script does not
-# create or tear down that environment.
+# Runs on the CHAOS VM, through `chaos-pmm.sh test`: wait for the PMM environment
+# chaos-pmm.sh up created there, then run one Playwright test file or an anchored
+# grep-filtered subset. This script does not create or tear down that environment.
 # Usage:
 #   run-migration-single-test.sh <tests/file.test.ts> [--prepare-only] [--grep regex]
 set -Eeuo pipefail
@@ -126,7 +126,7 @@ wait_readyz() {
 
 if ! readyz_once; then
   wait_readyz || {
-    echo "ERROR: could not reach the local PMM environment at ${PMM_UI_URL}. Provision it first with bash .claude/scripts/local-pmm.sh up." >&2
+    echo "ERROR: could not reach the PMM environment at ${PMM_UI_URL}. Provision it first with chaos-pmm.sh up <run_id>." >&2
     exit 2
   }
 fi

@@ -4,7 +4,7 @@ What each worker phase does and what it returns. The parent's steps 1, 2a and 3,
 
 Every phase edits control's worktree and commits nothing there; only the parent commits on control, and only the tracker. Publication (step 7) moves the work to a branch cut from `origin/main` in an isolated worktree.
 
-Environment contract: reuse the prepared local PMM, never recreate or clean it, pass the parent's `PMM_UI_URL` and `ADMIN_PASSWORD` to every command, never edit `e2e_tests/.env`. Never send a request with a wrong password: Grafana blocks `admin` after 5 failed logins in a rolling 5-minute window, for basic auth and the UI form alike, and every retry re-arms it. Read the password state from `/srv/logs/grafana.log` in the pmm-server container. `/v1/server/readyz` is unauthenticated and proves nothing about credentials; the oracle is one call to `/v1/users/me` (200 correct, 401 wrong).
+Environment contract: reuse the prepared CHAOS VM, never recreate or clean it, pass the parent's run id, `PMM_UI_URL` and `ADMIN_PASSWORD` to every command, never edit `e2e_tests/.env`. Never send a request with a wrong password: Grafana blocks `admin` after 5 failed logins in a rolling 5-minute window, for basic auth and the UI form alike, and every retry re-arms it. Read the password state from `/srv/logs/grafana.log` in the pmm-server container (`chaos-pmm.sh ssh <run_id> docker exec pmm-server tail /srv/logs/grafana.log`). `/v1/server/readyz` is unauthenticated and proves nothing about credentials; the oracle is one call to `/v1/users/me` (200 correct, 401 wrong).
 
 Search contract: the Grep tool, an explicit path scope, an explicit `output_mode`.
 
@@ -34,7 +34,7 @@ Step 8, against jobs as they exist today (coverage YAML is edited only at step 5
 
 Step 10: if a migrated tag does not already appear under `e2e_tests`, run `python support_scripts/generate_readme.py` then `--check` from the repository root before returning; there is no npm script for it. It rewrites the `qa-integration`, `e2e_tests` and `cli` READMEs; a change outside `e2e_tests/README.md` is pre-existing drift, not this migration's.
 
-Step 11 catches what static review cannot: a wrong environment, stale expected text, leftover state. Wait for `/v1/users/me` to return 200 with the parent's password (a bounded until-loop, 10 minutes at most), then run the new or changed target file once with `--workers=1`, `PMM_MIGRATION=1` and the parent's `PMM_UI_URL`/`ADMIN_PASSWORD`. On Windows point the shell variable at Git bash for the process, so `cliHelper` commands quote as on the Linux runner: `$env:ComSpec` from PowerShell, uppercase `COMSPEC` from Git Bash (which already exports `COMSPEC=cmd.exe`, so a mixed-case `ComSpec` never reaches node). Fix a migration-logic failure and rerun; report a locator, environment or product failure in `smokeRun.failuresLeft` for the reviewer and the parent, without working around it. This run does not replace the runner's step 5.
+Step 11 catches what static review cannot: a wrong environment, stale expected text, leftover state. Wait for `/v1/users/me` to return 200 with the parent's password (a bounded until-loop, 10 minutes at most), then run the new or changed target file once on the VM: `bash .claude/scripts/chaos-pmm.sh test <run_id> <target-test-file>` copies `e2e_tests/` across and runs it with `--workers=1` and `PMM_MIGRATION=1`. Run it with `run_in_background`, since a file outlasts the Bash timeout. Its traces stay on the VM under `/root/pmm-qa/e2e_tests/test-results/`; fetch one with `chaos-vm.sh get`. Fix a migration-logic failure and rerun; report a locator, environment or product failure in `smokeRun.failuresLeft` for the reviewer and the parent, without working around it. This run does not replace the runner's step 5.
 
 Leave the changes uncommitted and report the changed paths.
 
@@ -73,7 +73,7 @@ Failure routing:
 
 - locator failure: reviewer;
 - migration logic failure: writer;
-- environment or product failure: run the unmigrated source against the same environment first. If the source passes where the migration fails, the failure is the migration's; otherwise keep `in-progress` and record the reason;
+- environment or product failure: run the unmigrated source on the same VM first (from the VM's own `/root/pmm-qa/codeceptjs-e2e` checkout of `main`, through `chaos-pmm.sh ssh`). If the source passes where the migration fails, the failure is the migration's; otherwise keep `in-progress` and record the reason;
 - stale environment state: reset and rerun, no review needed.
 
 Any code change is reviewed again before rerunning. Never clean or recreate the environment after a failure.
@@ -134,6 +134,6 @@ Do not merge the publish branch into control. `done` means the PR was opened.
 
 ## 8. Cleanup
 
-Run `bash .claude/scripts/local-pmm.sh down` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Close the Playwright MCP browser with `mcp__playwright__browser_close` (load it through `ToolSearch`) in the same step. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
+Run `bash .claude/scripts/chaos-pmm.sh down <run_id>` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Close the Playwright MCP browser with `mcp__playwright__browser_close` (load it through `ToolSearch`) in the same step. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
 
 On a terminal path before publication, control's worktree still holds the uncommitted work: say so in the handoff and do not discard it. Teardown is classifier-blocked inside a subagent: when refused, report it and leave the environment for the parent.

@@ -9,7 +9,7 @@ readonly: false
 
 Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (step 2 is yours), `mappings.md`, and `playwright-practices.md`. Do not read `orchestration.md`. Invoke the `ponytail` skill (intensity `full`) before writing or changing any code; on conflict this skill wins, and ponytail never justifies weakening an assertion, scenario, tag, id or strictness argument.
 
-Input: one tracker row, source path, optional target path, control worktree, and this migration's timeline file.
+Input: one tracker row, source path, optional target path, control worktree, the CHAOS run id, and this migration's timeline file.
 
 Do only the selected migration, in control's worktree, and leave every change uncommitted. Provisioning runs in the background while you work: never start, recreate or clean it. Once the code is written, run the migrated tests once against it (`run.md` step 11) and fix any migration-logic failure before returning. Do not use MCP, publish, mark `done`, or invent behaviour, locators or setup.
 
