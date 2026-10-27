@@ -179,10 +179,15 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         expect(await statText(dashboard, 'Active Instance')).toMatch(new RegExp(`^${active}\\s+ACTIVE$`));
         expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
 
-        await expect(dashboard.builders.panelLegendSeries('Change Events Rate')).toContainText([
-          `Read - ${active}`,
-          `Applied - ${active}`,
-        ]);
+        // The setup's HANDOVER made every instance ACTIVE once inside the time range.
+        for (const series of instances.flatMap((instance) => [
+          `Read - ${instance}`,
+          `Applied - ${instance}`,
+        ])) {
+          await expect(
+            dashboard.builders.panelLegendSeries('Change Events Rate').getByText(series, { exact: true }),
+          ).toHaveCount(1);
+        }
 
         await dashboard.verifyPanelValuesInView(clusterSync.metrics);
       });
@@ -195,11 +200,13 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await pmmTest.step('Verify the replication pipeline row', async () => {
         await dashboard.verifyPanelValuesInView(clusterSync.pipelineMetrics);
 
-        for (const panelName of clusterSync.perWorkerPanels(active)) {
+        for (const panelName of instances.flatMap(clusterSync.perWorkerPanels)) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeGreaterThan(0);
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeLessThanOrEqual(10);
         }
+
+        await expect(dashboard.builders.textInDashboard('Waiting for first flush')).toHaveCount(0);
       });
 
       await pmmTest.step('Verify the instance row', async () => {

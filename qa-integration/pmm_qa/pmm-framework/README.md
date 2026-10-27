@@ -129,6 +129,14 @@ A failover test stops an instance with `docker exec pcsm-N pkill -x pcsm`,
 which leaves its PMM Client reporting it down, and starts it again with
 `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
 
+`HANDOVER=true` (default `false`, needs `INSTANCES` of 2 or 3) makes every
+instance ACTIVE for 60 s while the workload runs, so each one's
+replication-worker panels have data. To give the lease to an instance, PCSM
+stops on every other one, which restarts as STANDBY. PCSM counts the clone only
+in the process that ran it, so the setup then stops every instance, runs
+`pcsm reset`, drops the migrated databases on the target and starts a fresh
+sync, which clones again into whichever instance is ACTIVE.
+
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `pmm-framework --list-databases` prints each
 type's default and supported versions, without needing Docker. `VERSION`
