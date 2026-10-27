@@ -12,11 +12,11 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
 - The `Tags` cell is a per-file union and is not what CI selects on. Before provisioning, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the cell if the union was wrong, and record the expansion on the timeline.
-- `Setup` is the planned `--database` argument set for `.claude/scripts/local-pmm.sh up` (`orchestration.md` step 3); empty means server only. `migration.sh setup <source>` derives it from the CI jobs the source's tags select and wins over this cell (`orchestration.md` step 2a). `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
+- `Setup` is the planned `--database` argument set for `.claude/scripts/chaos-pmm.sh up <run_id>` (`orchestration.md` step 3); empty means server only. `migration.sh setup <source>` derives it from the CI jobs the source's tags select and wins over this cell (`orchestration.md` step 2a). `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
-  each migration still owns and tears down its local Docker environment. Within a bucket, UI-only comes first and
+  each migration still owns and tears down its own CHAOS VM. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
-- Local Docker through `.claude/scripts/local-pmm.sh` is the only execution environment. Rows needing vendor cloud resources, appliance images, or pmm-demo access are `blocked-infra`.
+- A throwaway CHAOS VM through `.claude/scripts/chaos-pmm.sh` is the only execution environment. Rows needing vendor cloud resources, appliance images, or pmm-demo access are `blocked-infra`.
 
 Target selection, source rename, branch and PR mechanics, and what is committed where: `orchestration.md` and `branch-workflow.md`. After the PR opens, update the row with its status and PR link only.
 
@@ -28,7 +28,7 @@ Row selection only ever picks a `pending` row. A row in any other status is not 
 
 ## Env bucket summary
 
-| Bucket | Env                          | Setup (`local-pmm.sh up` arguments)                     |
+| Bucket | Env                          | Setup (`chaos-pmm.sh up` arguments)                     |
 | ------ | ---------------------------- | ------------------------------------------------------- |
 | B1     | none (UI/server only)        | (none); omit legacy `-h` / `--help`                    |
 | B2     | pgsql / pdpgsql              | `--database pgsql` or `--database pdpgsql`              |
@@ -156,6 +156,6 @@ Best-fit rule (Target column is a hint, not a mandate): `SKILL.md` Repository ma
   check the target folder; if a test already covers the source, mark the row `done` with a note
   instead of duplicating. Rows #13/#14 (Insight dashboards root vs dashboards/) are likely
   near-duplicates - reconcile into one target.
-- Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the local Docker PMM.
+- Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the CHAOS VM's Docker PMM.
   They carry `blocked-infra`, with the required infrastructure named in the Env column.
 - Row 10 (PR #1437): a duplicate-title finding was refuted twice on counts of 1 taken over a default load; `loadAllPanels()` showed 81 sections and four titles at 2. The agent then split the test per panel after declining that split, and added `statusPanels`/`panelId` outside `DashboardInterface`; both were reverted on review. The retirement body's `@gssapi-nightly` claim needed two correction commits.

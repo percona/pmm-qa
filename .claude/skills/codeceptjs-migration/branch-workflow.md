@@ -92,15 +92,13 @@ In the publish worktree, before pushing:
 
 1. `bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" <every changed file, workflow YAML included>`. The migration scripts and skill exist only on control; invoke them by absolute path. The diff-scoped checks compare against `origin/main` inside the worktree and refuse to run without that ref.
 2. Static validation (lint, typecheck, build) and `python support_scripts/generate_readme.py --check` from the worktree root (there is no npm script for it).
-3. The migrated test, against the parent's live environment and credential pair:
+3. The migrated test, on the parent's CHAOS VM, from the publish worktree's copy:
 
 ```bash
-cd ../pmm-qa-publish/e2e_tests
-PMM_MIGRATION=1 PMM_UI_URL='<parent's PMM_UI_URL>' ADMIN_PASSWORD='<parent's ADMIN_PASSWORD>' \
-  npx playwright test <target-test-file> --workers=1
+bash "<control-worktree>/.claude/scripts/chaos-pmm.sh" test <run_id> --from ../pmm-qa-publish <target-test-file>
 ```
 
-`PMM_MIGRATION=1` stops `e2e_tests/.env` from overriding both values (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`). The password is the parent's, frequently not `admin`. If the test selects state by index, empty that state first; this is a second run against the same environment. A test that creates a named external resource fails its own rerun: an argument-less `pmm-admin config` registers a node under the machine hostname, so run 1 makes run 2 exit 1. Deleting the node is not a clean reset on its own: the agent keeps pushing under the deleted identity, so a metric wait on the new label is pre-satisfied and that step proves nothing on the rerun. Stop the agent as well, or record that the rerun proves the transplant and not the wait; expect the delete itself to need the user (`orchestration.md` Parent rules).
+It runs with `PMM_MIGRATION=1`, which stops `e2e_tests/.env` from overriding the URL and password (`playwright.config.ts` does `dotenv.config({ override: !process.env.PMM_MIGRATION })`). If the test selects state by index, empty that state first; this is a second run against the same environment. A test that creates a named external resource fails its own rerun: an argument-less `pmm-admin config` registers a node under the machine hostname, so run 1 makes run 2 exit 1. Deleting the node is not a clean reset on its own: the agent keeps pushing under the deleted identity, so a metric wait on the new label is pre-satisfied and that step proves nothing on the rerun. Stop the agent as well, or record that the rerun proves the transplant and not the wait; expect the delete itself to need the user (`orchestration.md` Parent rules).
 
 `support_scripts/lint/lint-changed.sh` runs `actionlint` on the PR behind the `Lint` check, so a workflow edit is schema-checked in CI even when `actionlint` is unavailable locally; do not report it as unverified.
 
@@ -214,7 +212,7 @@ The body is this template and nothing more, 25 lines and 1,500 characters at mos
 Migrates `<source path>` to `<target path>`.
 
 **Scenarios:** PMM-Txxxx, PMM-Tyyyy (N rows) - tags `@a @b` preserved.
-**Setup:** `<setup_services>`; local Docker via pmm-framework (`.claude/scripts/local-pmm.sh`).
+**Setup:** `<setup_services>`; CHAOS VM via pmm-framework (`.claude/scripts/chaos-pmm.sh`).
 **Coverage:** <one line: which job/tag selects them now, e.g. "appended @x to nightly Playwright matrix; FB job `settings` added">.
 **Retired:** `<source>_test.js` -> `_migrated.js`; <job deleted, if any>.
 **Deviations:** <one line per deliberate change from the source, or "none">.
@@ -249,7 +247,7 @@ A job still running is linked as it is; do not wait for CI before marking `done`
 gh api repos/percona/pmm-qa/actions/jobs/<job id>/logs | grep -c '✓.*<target file>'
 ```
 
-Every migrated title needs a linked job that ran it. Always dispatch the Playwright runner on the publish branch and link its job, whether or not a job the push started selects the titles; a local run is not a substitute. Its flag is the migrated tests' most specific shared tag (`@dashboards` for row 37: 44 tests, 10 files), a regression check of that area; `@nightly`, `@qan` and other tags spread over several nightly setup jobs are too wide. List what the flag selects (`npx playwright test --list --grep '<flag>'`) and set `setup_services` to the union of databases every listed test needs: the services each filters on, `docker exec`s into or counts (row 37: `--database ps --database psmdb,SETUP_TYPE=pss --database pgsql --database pdpgsql --database pdpgsql,SETUP_TYPE=patroni --database valkey`). The `Run:` line names the flag and test count. When one runner cannot cover that union, narrow the flag to the migrated titles plus every test in a modified target file (ids with a trailing space, `'PMM-T128 |PMM-T193 '`, or a literal title where an id is shared) and prove the list equals that set. Name the narrowing on the PR's Deviations line. No `*` or `(`: the runner names its report artifact after the flag, and those characters fail the upload:
+Every migrated title needs a linked job that ran it. Always dispatch the Playwright runner on the publish branch and link its job, whether or not a job the push started selects the titles; a CHAOS VM run is not a substitute. Its flag is the migrated tests' most specific shared tag (`@dashboards` for row 37: 44 tests, 10 files), a regression check of that area; `@nightly`, `@qan` and other tags spread over several nightly setup jobs are too wide. List what the flag selects (`npx playwright test --list --grep '<flag>'`) and set `setup_services` to the union of databases every listed test needs: the services each filters on, `docker exec`s into or counts (row 37: `--database ps --database psmdb,SETUP_TYPE=pss --database pgsql --database pdpgsql --database pdpgsql,SETUP_TYPE=patroni --database valkey`). The `Run:` line names the flag and test count. When one runner cannot cover that union, narrow the flag to the migrated titles plus every test in a modified target file (ids with a trailing space, `'PMM-T128 |PMM-T193 '`, or a literal title where an id is shared) and prove the list equals that set. Name the narrowing on the PR's Deviations line. No `*` or `(`: the runner names its report artifact after the flag, and those characters fail the upload:
 
 ```bash
 gh workflow run runner-e2e-tests-playwright.yml --repo percona/pmm-qa --ref "$BR" -f pmm_qa_branch="$BR" -f pmm_test_flag='<tag>' -f setup_services='<--database ...>' -f pmm_server_version='perconalab/pmm-server:3-dev-latest' -f pmm_client_version='latest-tarball'
@@ -261,7 +259,7 @@ A later push cancels the jobs of the run it supersedes: after every push, re-tak
 
 On control's own checkout, after the PR exists:
 
-1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
+1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python3 -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
 2. Restore control's worktree:
 
 ```bash
@@ -272,7 +270,7 @@ git -C <control-worktree> status --short        # must be empty
 `restore --staged --worktree` relies on the intent-to-add entries from `git add -N`; never `git reset` first (the restore then aborts on the untracked file and leaves every other path dirty), and never `git clean -fd` (it removes whole directories). Inspect any path still showing by name before removing it.
 
 3. Do not merge the publish branch into control; the next `main` merge delivers it.
-4. Once the PR exists and `git rev-list --count HEAD ^origin/<branch>` prints 0, `git worktree remove ../pmm-qa-publish`. Review comments are fixed with `git switch <branch>` in control's own checkout, never in a new worktree; if `git status --short` is not empty first, stop and hand the uncommitted changes to the user for review, never stash, discard or carry them. If Windows reports `Permission denied`, retry later.
+4. Once the PR exists and `git rev-list --count HEAD ^origin/<branch>` prints 0, `git worktree remove ../pmm-qa-publish`. Review comments are fixed with `git switch <branch>` in control's own checkout, never in a new worktree; if `git status --short` is not empty first, stop and hand the uncommitted changes to the user for review, never stash, discard or carry them.
 5. Last, with control pushed and `git status --short` empty, `git switch <publish-branch>` in control's checkout so the app's PR panel shows the PR. The next run switches back to control before anything else.
 
 If the PR opened but the tracker update failed, report publication as incomplete.

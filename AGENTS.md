@@ -84,7 +84,7 @@ flowchart LR
 
 `pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
 
-For local Docker runs, including CodeceptJS-to-Playwright migration verification, use [.claude/scripts/local-pmm.sh](.claude/scripts/local-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on local images (built when missing, never pulled).
+CodeceptJS-to-Playwright migration verification runs on a throwaway CHAOS VM through [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on the prebaked images CI pulls, Playwright on the VM. Never Docker on the runner host.
 
 ## CI / Pipelines
 
@@ -281,7 +281,7 @@ Agents working here capture reusable lessons with the `skill-gardener` skill; le
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |
 | `HEADLESS` | `true` | Browser visibility (`false` for headed) |
-| `PMM_DEBUG` | `1` in local provisioning | Enable verbose PMM Server logging; override with `--server-env PMM_DEBUG=0` |
+| `PMM_DEBUG` | `1` in CHAOS VM provisioning | Enable verbose PMM Server logging; override with `--server-env PMM_DEBUG=0` |
 | `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose) |
 | `CLIENT_VERSION` | framework default | PMM Client version or tarball URL for pmm-framework |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |
@@ -307,7 +307,6 @@ Agents in this repository run under Git Bash on Windows. These bite whatever you
 - **`git show <ref>:<path>` is path-mangled** - `origin/main:.github/workflows/x.yml` reaches git as `origin\main;.github\workflows\x.yml` and dies with "Not a valid object name". Quoting the argument does not help. Use `git ls-tree --name-only <ref> -- <path>`, which takes the ref and the path separately. Wrapped in the obvious loop that maps a non-zero exit to "absent", the mangled form reports **every** path as absent.
 - **Write a patch with `git diff --output=<file>`, never `>` or a pipe.** Both re-encode the bytes with a UTF-8 BOM and CRLF, and `git apply` then accepts the corrupted patch silently.
 - **A fresh `git worktree` has no `node_modules`** - run `npm ci` in its `e2e_tests/` first. Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean run, and `.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged` MODULE_NOT_FOUND, including a docs-only one staging no `.ts`. Install rather than reaching for `--no-verify`.
-- **Set `COMSPEC` to Git Bash for local Playwright runs that shell out with single quotes.** Node's `exec` runs through `%COMSPEC%` (cmd.exe), which does not strip single quotes, so a `cliHelper.execute("docker exec pmm-server sh -c '...'")` fails every test locally while CI (Linux) is green. Prefix the run with `COMSPEC='C:\Program Files\Git\bin\bash.exe'`; uppercase only, `ComSpec` is ignored.
 - **Do not read `$?` after a pipe**: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks like a pass. Put the check on its own line, or use `PIPESTATUS`.
 
 ## Key Files to Reference
@@ -315,7 +314,7 @@ Agents in this repository run under Git Bash on Windows. These bite whatever you
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
 - [e2e_tests/fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) — shared test fixtures
 - [e2e_tests/docker-compose.yml](e2e_tests/docker-compose.yml) — local PMM Server environment
-- [.claude/scripts/local-pmm.sh](.claude/scripts/local-pmm.sh) — local PMM Server plus pmm-framework databases on local images
+- [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh) — migration PMM Server plus pmm-framework databases on a throwaway CHAOS VM
 - [k8s/helm-test.bats](k8s/helm-test.bats) — Helm chart test suite
 - [.github/workflows/runner-e2e-tests-playwright.yml](.github/workflows/runner-e2e-tests-playwright.yml) — reusable Playwright CI runner
 - [.agents/README.md](.agents/README.md) — LLM workflow prompts and MCP config
