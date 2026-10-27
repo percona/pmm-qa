@@ -6,6 +6,7 @@ import {
   AlertRule,
   AlertRulesResponse,
   AlertSeverity,
+  ProvisionedAlertRule,
   RulerRulesResponse,
   TemplatedAlertRule,
 } from '@interfaces/alerting';
@@ -113,8 +114,29 @@ export default class AlertingApi {
     return folder;
   };
 
+  getProvisionedRule = async (uid: string): Promise<ProvisionedAlertRule> => {
+    const response = await this.request.get(`${apiEndpoints.grafana.provisioningAlertRules}/${uid}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()) as ProvisionedAlertRule;
+  };
+
   getRule = async (name: string): Promise<AlertRule | undefined> =>
     (await this.getRuleGroups()).flatMap((group) => group.rules).find((rule) => rule.name === name);
+
+  /** A resolved instance stays listed as "Normal" (or "Normal (MissingSeries)"); `activeOnly` drops those. */
+  getRuleAlerts = async (
+    ruleName: string,
+    label: string,
+    value: string,
+    { activeOnly = false } = {},
+  ): Promise<AlertInstance[]> =>
+    ((await this.getRule(ruleName))?.alerts ?? []).filter(
+      (alert) => alert.labels[label] === value && !(activeOnly && alert.state.startsWith('Normal')),
+    );
 
   getRuleGroups = async (): Promise<AlertRulesResponse['data']['groups']> => {
     const response = await this.request.get(apiEndpoints.grafana.prometheusRules, {

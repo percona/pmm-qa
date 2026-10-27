@@ -61,6 +61,9 @@
   - name: Start agent on custom port non-default port
     shell: pmm-agent --debug --config-file={{ install_path }}/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 
+  - name: Wait for pmm-agent to open its local API
+    include_tasks: ./tasks/wait_for_pmm_agent.yml
+
   - name: check that PMM client version is correct
     include_tasks: ./tasks/verify_pmm_status_versions.yml
 

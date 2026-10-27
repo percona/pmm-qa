@@ -21,8 +21,7 @@ services:
       - PMM_ENABLE_ACCESS_CONTROL=1
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_AUTH_OAUTH_ALLOW_INSECURE_EMAIL_LOOKUP=1
-      - PMM_DEV_TELEMETRY_INTERVAL=10s
-      - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
+      - PMM_ENABLE_TELEMETRY=0
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
       - PMM_ENABLE_NOMAD=${PMM_ENABLE_NOMAD:-0}
@@ -55,7 +54,7 @@ services:
       - pmm-qa
 
   sftp-server:
-    image: atmoz/sftp
+    image: jmcombs/sftp
     profiles: [sftp]
     container_name: sftp-server
     command: foo:password
@@ -79,7 +78,7 @@ services:
       start_period: 2m
 
   postgres:
-    image: perconalab/percona-distribution-postgresql:15.4
+    image: perconalab/percona-distribution-postgresql:15
     profiles: [encryption]
     container_name: postgres
     command: -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements

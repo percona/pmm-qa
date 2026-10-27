@@ -24,6 +24,7 @@ services:
       - '8143:8443'
     environment:
       - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
     healthcheck:
       start_period: 2m
     networks:
@@ -54,7 +55,7 @@ services:
 
   ps8:
     container_name: ps8
-    image: percona:8.0
+    image: percona/percona-server:8.0
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:

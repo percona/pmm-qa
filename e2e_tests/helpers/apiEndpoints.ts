@@ -13,6 +13,7 @@ const apiEndpoints = {
   backups: {
     artifacts: '/v1/backups/artifacts',
     locations: '/v1/backups/locations',
+    removeScheduled: '/v1/backups',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
@@ -31,8 +32,11 @@ const apiEndpoints = {
     dsQuery: '/graph/api/ds/query',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+    provisioningAlertRules: '/graph/api/v1/provisioning/alert-rules',
     receivers: '/graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers',
     ruler: '/graph/api/ruler/grafana/api/v1/rules',
+    serviceAccounts: '/graph/api/serviceaccounts',
+    serviceAccountsSearch: '/graph/api/serviceaccounts/search',
   },
   ha: {
     nodes: '/v1/ha/nodes',
@@ -65,6 +69,7 @@ const apiEndpoints = {
     // 200 only on the HA leader; HAProxy routes on it.
     leaderHealthCheck: '/v1/server/leaderHealthCheck',
     logs: '/logs.zip',
+    readonlySettings: '/v1/server/settings/readonly',
     readyz: '/v1/server/readyz',
     serverVersion: '/v1/server/version',
     settings: '/v1/server/settings',

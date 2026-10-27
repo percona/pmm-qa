@@ -18,7 +18,6 @@ services:
   pmm-server:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server
-    platform: linux/amd64
     ports:
       - "80:8080"
       - "443:8443"

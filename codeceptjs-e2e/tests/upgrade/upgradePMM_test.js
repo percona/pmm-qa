@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { isOvFAmiJenkinsJob, SERVICE_TYPE } = require('../helper/constants');
 
-const { psMySql, dashboardPage, databaseChecksPage } = inject();
+const { psMySql, dashboardPage } = inject();
 
 const clientDbServices = new DataTable(['serviceType', 'name', 'metric', 'annotationName', 'dashboard', 'upgrade_service']);
 

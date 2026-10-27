@@ -7,7 +7,9 @@ export default class AddInstancePage extends BasePage {
     azure: this.grafanaIframe().getByTestId('azure-instance'),
     mysql: this.grafanaIframe().getByTestId('mysql-instance'),
   };
-  elements = {};
+  elements = {
+    unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
+  };
   inputs = {};
   messages = {};
 }

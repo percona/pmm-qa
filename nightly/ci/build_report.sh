@@ -21,13 +21,15 @@ while IFS=$'\t' read -r lane run_id; do
   page=1
   : > "$tmp/jobs.ndjson"
   while :; do
-    body="$(curl -fsS --retry 3 --max-time 60 ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} -H "Accept: application/vnd.github+json" \
-      "https://api.github.com/repos/percona/pmm-qa/actions/runs/${run_id}/jobs?per_page=100&page=${page}")" || {
+    # -o, not $(...): curl truncates a file before a retry but would append to stdout.
+    curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --max-time 60 -o "$tmp/page.json" \
+      ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/repos/percona/pmm-qa/actions/runs/${run_id}/jobs?per_page=100&page=${page}" || {
       echo "warning: could not list jobs of run ${run_id} (page ${page}); lane '${lane}' is incomplete" >&2
       break
     }
-    n="$(jq '.jobs | length' <<<"$body")"
-    jq -c '.jobs[]' <<<"$body" >> "$tmp/jobs.ndjson"
+    n="$(jq '.jobs | length' "$tmp/page.json")"
+    jq -c '.jobs[]' "$tmp/page.json" >> "$tmp/jobs.ndjson"
     [ "$n" -lt 100 ] && break
     page=$((page + 1))
   done
