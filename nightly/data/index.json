@@ -129442,6 +129442,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1666",
         "by": "Investigator routine",
         "at": "2026-10-27T03:54:29Z"
+      },
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "unstable",
+        "summary": "nightly/docker: pmm3-aws-staging-start #27375's PMM Server missed its 100s readiness wait on a slow EC2 host (agent boot 4m26s vs 2m20s, image pull 2m33s vs ~50s, Grafana first-boot dashboard sync ~25s); sibling #27376, same image, instance type and minute, was ready in <47s. Same cause as night #90's compat 3.9.0. Re-run #1266 passed.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1266/",
+        "by": "Investigator routine",
+        "at": "2026-10-27T04:40:31Z"
       }
     ],
     "claims": [
@@ -129450,13 +129460,6 @@
         "at": "2026-10-27T03:03:36Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-27T03:03:36Z",
-        "suites": [
-          "Nightly"
         ]
       }
     ]
