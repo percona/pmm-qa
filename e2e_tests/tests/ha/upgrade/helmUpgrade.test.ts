@@ -44,6 +44,7 @@ interface Baseline {
   images: string[];
   podNames: string[];
   revision: number;
+  services: string[];
   version: string;
 }
 
@@ -62,6 +63,7 @@ const readBaseline = (): Baseline => {
 const writeBaseline = (baseline: Baseline): void => {
   mkdirSync(dirname(baselineFile), { recursive: true });
   writeFileSync(baselineFile, JSON.stringify(baseline, undefined, 2));
+  console.log(`Baseline: ${JSON.stringify(baseline)}`);
 };
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
@@ -85,7 +87,7 @@ pmmTest(
   }) => {
     await haClusterHelper.verifyHaEnabled(api.haApi);
 
-    const baseline = await pmmTest.step('Baseline the release, images and version in place', async () => {
+    const baseline = await pmmTest.step('Baseline the release, images, version and services', async () => {
       helmHelper.assertAvailable();
 
       expect(targetImage, `"${targetImage}" must be a repository:tag pair`).toContain(':');
@@ -107,10 +109,18 @@ pmmTest(
         repositoryAndTag(releaseImage),
       ]);
 
+      const services = await haClusterHelper.servicesRunningAndReporting(
+        api,
+        (await api.prometheusApi.waitForServerTime()) - 120,
+      );
+
+      expect(services.length, 'At least one service must be monitored').toBeGreaterThan(0);
+
       return {
         images,
         podNames: pods.map((pod) => pod.name).sort(),
         revision: Number(release.revision),
+        services,
         version: (await api.serverApi.getPmmVersion()).version,
       };
     });
@@ -191,6 +201,7 @@ pmmTest(
       }
     });
 
+    await haClusterHelper.verifyServicesReportAgain(api, before.services);
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
 
     const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
@@ -257,6 +268,8 @@ pmmTest(
         ).toEqual(version.version);
       }
     });
+
+    await haClusterHelper.verifyServicesReportAgain(api, before.services);
 
     const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
 

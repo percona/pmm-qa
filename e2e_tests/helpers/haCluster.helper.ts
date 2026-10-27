@@ -257,6 +257,20 @@ export default class HaClusterHelper {
       expect(await haApi.getStatus()).toEqual('Enabled');
     });
 
+  verifyServicesReportAgain = async (api: Api, services: string[]): Promise<void> =>
+    await pmmTest.step(`Verify the ${services.length} monitored services run and report again`, async () => {
+      const since = await api.prometheusApi.waitForServerTime();
+
+      await expect(async () => {
+        const reporting = await this.servicesRunningAndReporting(api, since);
+
+        expect(
+          services.filter((serviceName) => !reporting.includes(serviceName)),
+          'Every service that reported before must run and report again',
+        ).toEqual([]);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    });
+
   /**
    * One leader, agreed on by all three sources: the per-pod health check, the
    * `pmm_ha_leader_status` sum and `/v1/ha/nodes`.

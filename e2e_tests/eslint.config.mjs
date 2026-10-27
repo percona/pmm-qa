@@ -286,6 +286,7 @@ export default defineConfig([
             'verifyHaNodeRoles',
             'verifyUiRenders',
             'verifyHaEnabled',
+            'verifyServicesReportAgain',
             'verifySingleLeader',
             'waitForMetric',
             'verifyRowMetricsPresent',
