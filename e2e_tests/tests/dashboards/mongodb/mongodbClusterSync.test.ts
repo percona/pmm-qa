@@ -20,6 +20,15 @@ const targetOrders = (cliHelper: CliHelper) =>
       .getStdOutLines()
       .pop(),
   );
+
+const startPcsm = (cliHelper: CliHelper, instance: string) => {
+  if (cliHelper.execSilent(`docker exec ${instance} pgrep -x pcsm`).code !== 0) {
+    cliHelper
+      .execSilent(`docker exec --detach ${instance} sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`)
+      .assertSuccess();
+  }
+};
+
 const haActive = (value: 0 | 1) => `percona_clustersync_mongodb_ha_active == ${value}`;
 const unitSeconds: Record<string, number> = { min: 60, mins: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
 
@@ -244,6 +253,58 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
+    'Verify the ClusterSync dashboard reports the PCSM group down when every instance stops @pmm-pcsm-psmdb-integration',
+    async ({ cliHelper, dashboard, page, urlHelper }) => {
+      const url = urlHelper.buildUrlWithParameters(dashboard.mongo.clusterSyncDetails.url, {
+        from: 'now-15m',
+      });
+
+      const reload = async () => {
+        await page.goto(url);
+        await dashboard.loadAllPanels();
+      };
+
+      try {
+        await pmmTest.step('Stop PCSM on every instance', async () => {
+          for (const instance of instances) {
+            cliHelper.execSilent(`docker exec ${instance} pkill -x pcsm`).assertSuccess();
+          }
+        });
+
+        await pmmTest.step('Verify every instance is DOWN and none is ACTIVE', async () => {
+          await expect(async () => {
+            await reload();
+
+            const instancesUp = await statText(dashboard, 'Instances Up');
+
+            for (const instance of instances) expect(instancesUp).toMatch(new RegExp(`${instance}\\s+DOWN`));
+
+            expect(await statText(dashboard, 'Active Instance')).toBe('none');
+            expect(await statText(dashboard, 'Replication Lag')).toBe('No PCSM data');
+          }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+        });
+      } finally {
+        await pmmTest.step('Start PCSM on every instance again', async () => {
+          for (const instance of instances) startPcsm(cliHelper, instance);
+        });
+      }
+
+      await pmmTest.step('Verify the group recovers with one ACTIVE instance', async () => {
+        await expect(async () => {
+          await reload();
+
+          const instancesUp = await statText(dashboard, 'Instances Up');
+
+          for (const instance of instances) expect(instancesUp).toMatch(new RegExp(`${instance}\\s+UP`));
+
+          expect(await statText(dashboard, 'Active Instance')).toMatch(/^pcsm-[12]\s+ACTIVE$/);
+          expect(toSeconds(await statText(dashboard, 'Replication Lag'))).toBeLessThan(10);
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+      });
+    },
+  );
+
+  pmmTest(
     'Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
@@ -306,13 +367,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
             .toBeGreaterThan(ordersBefore);
         });
       } finally {
-        await pmmTest.step(`Start PCSM on ${stopped} again`, async () => {
-          if (cliHelper.execSilent(`docker exec ${stopped} pgrep -x pcsm`).code !== 0) {
-            cliHelper
-              .execSilent(`docker exec --detach ${stopped} sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`)
-              .assertSuccess();
-          }
-        });
+        await pmmTest.step(`Start PCSM on ${stopped} again`, async () => startPcsm(cliHelper, stopped));
       }
 
       await pmmTest.step(`Verify ${stopped} is UP again as STANDBY`, async () => {
