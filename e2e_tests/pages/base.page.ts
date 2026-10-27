@@ -10,7 +10,11 @@ export type DropdownName =
   | 'Node Namegroup'
   | 'Cluster'
   | 'Node'
-  | 'Replication Set';
+  | 'Replication Set'
+  | 'Source Cluster'
+  | 'Target Cluster'
+  | 'ClusterSync Cluster'
+  | 'ClusterSync Instance';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
@@ -49,7 +53,8 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
+    // Clicking the wrapper can land on a multi-value chip's Remove button instead of opening the list.
+    await combobox.click({ timeout: Timeouts.THIRTY_SECONDS });
 
     const options = frame.getByRole('option');
 

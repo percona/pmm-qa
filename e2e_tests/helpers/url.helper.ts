@@ -14,6 +14,8 @@ interface BuildUrlParameters {
   metric?: string;
   viewPanel?: string;
   search?: string;
+  sourceCluster?: string;
+  targetCluster?: string;
 }
 
 export default class UrlHelper {
@@ -60,6 +62,12 @@ export default class UrlHelper {
           break;
         case 'search':
           queryParams.dimensionSearchText = parameters[key];
+          break;
+        case 'sourceCluster':
+          queryParams['var-source_cluster'] = parameters[key];
+          break;
+        case 'targetCluster':
+          queryParams['var-target_cluster'] = parameters[key];
           break;
         default:
           throw new Error('Unsupported environment ' + key);

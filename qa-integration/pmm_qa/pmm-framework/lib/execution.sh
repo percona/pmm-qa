@@ -10,7 +10,7 @@ preflight_database_setups() {
   local spec
   local mysql_data_owner='' conflict='' host_conflict='' setup_type
   local patroni_seen=false pgsql_replication_seen=false
-  local external_seen=false valkey_seen=false
+  local external_seen=false valkey_seen=false psmdb_setup_type='' pcsm_source pcsm_from_psmdb=false
   local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   local pg_port_conflict='PDPGSQL (patroni) and PGSQL (replication) setups (both publish host port 6432)'
   declare -A seen_types=()
@@ -31,6 +31,24 @@ preflight_database_setups() {
         conflict="$mysql_data_owner and $DB_TYPE setups (both publish host ports from 3306)"
       fi
       mysql_data_owner=$DB_TYPE
+    elif [[ $DB_TYPE == PSMDB ]]; then
+      psmdb_setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
+      psmdb_setup_type=${psmdb_setup_type,,}
+      if [[ $pcsm_from_psmdb == true ]]; then
+        die 'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'
+      fi
+    # SOURCE=psmdb syncs the replica set of a PSMDB setup, so it runs after one in this run.
+    elif [[ $DB_TYPE == PCSM ]]; then
+      pcsm_source=$(resolve_value PCSM SOURCE DB_CONFIG)
+      if [[ ${pcsm_source,,} == psmdb ]]; then
+        pcsm_from_psmdb=true
+        if [[ -n $psmdb_setup_type && $psmdb_setup_type != ps? ]]; then
+          die 'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'
+        fi
+        if [[ -n $psmdb_setup_type ]]; then
+          conflict='PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set)'
+        fi
+      fi
     elif [[ $DB_TYPE == PDPGSQL ]]; then
       setup_type=$(resolve_value PDPGSQL SETUP_TYPE DB_CONFIG)
       if [[ ${setup_type,,} == patroni ]]; then

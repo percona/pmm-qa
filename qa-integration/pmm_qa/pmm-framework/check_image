@@ -51,6 +51,10 @@ case $engine in
   external)
     docker run --rm --entrypoint sh "$image" -c 'redis_exporter --version && process-exporter --version'
     ;;
+  pcsm)
+    # PCSM needs both clusters to start, so check it runs and the client install's tools are there.
+    docker run --rm --entrypoint sh "$image" -c 'pcsm version && command -v tar gzip find curl jq pkill'
+    ;;
   haproxy)
     docker run --rm --entrypoint haproxy "$image" -vv | grep prometheus-exporter
     ;;
