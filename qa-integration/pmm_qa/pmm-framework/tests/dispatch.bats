@@ -28,9 +28,9 @@ stub_prebaked_docker() {
       printf '%s' "$5" >"$BATS_TEST_TMPDIR/override.path"
     fi
     case "$*" in
-      # Nomad companions run sleep, not systemd.
+      # Nomad companions and MySQL 5.7 run without systemd.
       *'test -d /run/systemd/system'*)
-        [[ $* != *nomad_agent_* ]]
+        [[ $* != *nomad_agent_* && $* != *mysql_pmm_5_7_* ]]
         return
         ;;
       'exec rs'*' pmm-admin --version')
@@ -286,6 +286,7 @@ stub_prebaked_docker() {
   grep -q -- '--name mysql_pmm_5_7_1 --hostname mysql_pmm_5_7_1 --user root .*--volume /tmp/mysql-sockets/1:/var/run/mysqld ' "$DOCKER_CALLS"
   grep -q -- 'pmm-qa/mysql:5.7 .* --user=mysql' "$DOCKER_CALLS"
   grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
+  grep -q -- '^exec --detach --user root mysql_pmm_5_7_1 sh -c exec pmm-agent ' "$DOCKER_CALLS"
 
   build_mysql_image 5.7
   grep -q -- "^build --target mysql-57 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=5.7 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 $FRAMEWORK_DIR/images/mysql$" "$DOCKER_CALLS"
