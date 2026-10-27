@@ -38,7 +38,7 @@ export default class ExternalPostgresHelper {
         `docker run -d --name ${pmmContainer} --restart always --network=pmm-qa -p 8082:8080 -p 8447:8443
           -e PMM_POSTGRES_DBNAME=grafana -e PMM_POSTGRES_ADDR=${postgresContainer}:5432
           -e PMM_POSTGRES_USERNAME=postgres -e PMM_POSTGRES_DBPASSWORD=pmm_password
-          -e PMM_DISABLE_BUILTIN_POSTGRES=1
+          -e PMM_DISABLE_BUILTIN_POSTGRES=1 -e PMM_ENABLE_TELEMETRY=0
           ${ssl ? '-e PMM_POSTGRES_SSL_MODE=verify-ca -e PMM_POSTGRES_SSL_CA_PATH=/etc/ssl/postgresql/ca.crt -e PMM_POSTGRES_SSL_KEY_PATH=/etc/ssl/postgresql/client.key -e PMM_POSTGRES_SSL_CERT_PATH=/etc/ssl/postgresql/client.crt' : ''}
           -e GF_DATABASE_TYPE=postgres -e GF_DATABASE_NAME=grafana -e GF_DATABASE_PASSWORD=pmm_password
           -e GF_DATABASE_HOST=${postgresContainer}:5432 -e GF_DATABASE_USER=postgres

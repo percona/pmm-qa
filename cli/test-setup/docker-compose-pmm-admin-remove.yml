@@ -10,6 +10,7 @@ services:
       - '8444:8443'
     environment:
       - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
 
   pmm-client-remove:
     image: ${PMM_CLIENT_IMAGE:-perconalab/pmm-client:3-dev-latest}

@@ -170,7 +170,7 @@ update_values_yaml() {
     update_values_yaml "tag" "$RELEASE_TAG"
     update_values_yaml "repository" "$RELEASE_REPO"
 
-    helm install pmm3 --version 1.4.0 -f values.yaml --wait percona/pmm
+    helm install pmm3 --version 1.4.0 -f values.yaml -f "$PMM_TELEMETRY_VALUES" --wait percona/pmm
     wait_for_pmm
     start_port_forward
 
