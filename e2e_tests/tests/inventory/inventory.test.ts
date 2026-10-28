@@ -121,57 +121,28 @@ pmmTest(
 
 pmmTest(
   'PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly @gssapi-nightly',
-  async ({ page, servicesPage }) => {
-    let servicesRequests = 0;
-
-    await using servicesMock = await page.route(apiEndpoints.management.services, (route) => {
-      servicesRequests++;
-
-      return route.fulfill({
-        body: JSON.stringify({
-          services: Array.from({ length: 50 }, (_, index) => ({
-            address: `127.0.0.${index + 1}`,
-            agents: [],
-            cluster: '',
-            custom_labels: {},
-            database_name: 'postgres',
-            environment: '',
-            external_group: '',
-            node_id: 'pmm-server',
-            node_name: `mocked-service-node-${index + 1}`,
-            port: 5_432,
-            replication_set: '',
-            service_id: `30edfcf1-bea1-4422-b111-d2d263bdcfc${index + 1}`,
-            service_name: `mocked-service-${index + 1}`,
-            service_type: 'postgresql',
-            socket: '',
-            status: 'STATUS_UP',
-            version: '',
-          })),
-        }),
-        status: 200,
-      });
-    });
+  async ({ mocks, page, servicesPage }) => {
+    await using servicesMock = await mocks.mockServicesList(50);
 
     await page.goto(servicesPage.url);
     await servicesPage.pagination.nextPageButton.click({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(servicesPage.pagination.activePageButton).toHaveText('2');
 
-    const startServices = await servicesPage.elements.serviceNames.allTextContents();
-    const requestsOnSecondPage = servicesRequests;
+    const startServices = await servicesPage.getServiceNames();
+    const requestsOnSecondPage = servicesMock.requests();
 
     expect(startServices, 'Page 2 should list services').not.toHaveLength(0);
     await expect
-      .poll(() => servicesRequests, {
+      .poll(() => servicesMock.requests(), {
         message: 'Services list should be refreshed from the backend',
         timeout: Timeouts.THIRTY_SECONDS,
       })
       .toBeGreaterThanOrEqual(requestsOnSecondPage + 3);
     await expect
-      .poll(async () => (await servicesPage.elements.serviceNames.allTextContents()).toSorted(), {
+      .poll(() => servicesPage.getServiceNames(), {
         message: `List of displayed services after refresh should equal the list before: [${startServices}]`,
       })
-      .toEqual(startServices.toSorted());
+      .toEqual(startServices);
     await expect
       .poll(() => servicesPage.elements.serviceRows.count(), {
         message: 'Expected number of rows to be less than 50',
@@ -187,13 +158,12 @@ for (const tab of ['services', 'nodes'] as const) {
       // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
       pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
-      const { elements, pagination, url } = tab === 'services' ? servicesPage : nodesPage;
+      const { pagination, url } = tab === 'services' ? servicesPage : nodesPage;
 
       await page.goto(url);
       await pagination.selectRowsPerPage('100');
       await expect(pagination.rowsPerPageDropdown).toHaveText('100');
-      await expect(elements.monitoringStatuses.first()).toBeVisible();
-      await expect(elements.monitoringNotOkRows, `${tab} with incorrect monitoring statuses`).toHaveText([]);
+      await pagination.verifyMonitoringStatusesOk(tab);
     },
   );
 }

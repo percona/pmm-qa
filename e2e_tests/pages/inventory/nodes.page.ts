@@ -34,14 +34,6 @@ export default class NodesPage extends BasePage {
   };
   elements = {
     detailsContent: this.grafanaIframe().getByTestId('details-row-content'),
-    monitoringNotOkRows: this.grafanaIframe()
-      .locator('tbody')
-      .getByTestId('table-tbody-tr')
-      .filter({ hasNot: this.page.getByRole('link', { exact: true, name: 'OK' }) }),
-    monitoringStatuses: this.grafanaIframe()
-      .locator('tbody')
-      .getByTestId('table-tbody-tr')
-      .locator('xpath=td[5]'),
     nodeRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
     runningAgents: this.grafanaIframe().locator('[data-testid^="status-badge"]'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),

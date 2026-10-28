@@ -22,14 +22,6 @@ export default class ServicesPage extends BasePage {
     delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
   };
   elements = {
-    monitoringNotOkRows: this.grafanaIframe()
-      .locator('tbody')
-      .getByTestId('table-tbody-tr')
-      .filter({ hasNot: this.page.getByRole('link', { exact: true, name: 'OK' }) }),
-    monitoringStatuses: this.grafanaIframe()
-      .locator('tbody')
-      .getByTestId('table-tbody-tr')
-      .locator('xpath=td[5]'),
     serviceNames: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr').locator('xpath=td[3]'),
     serviceRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
@@ -38,6 +30,8 @@ export default class ServicesPage extends BasePage {
   messages = {
     deleteConfirmation: this.grafanaIframe().getByTestId('delete-services-description'),
   };
+
+  getServiceNames = async () => (await this.elements.serviceNames.allTextContents()).toSorted();
 
   verifyServiceListedOnce = async (serviceName: string): Promise<void> => {
     await this.page.goto(this.url);

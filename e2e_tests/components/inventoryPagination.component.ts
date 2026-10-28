@@ -7,6 +7,8 @@ export default class InventoryPagination {
   readonly activePageButton: Locator;
   readonly firstPageButton: Locator;
   readonly itemsInterval: Locator;
+  readonly monitoringNotOkRows: Locator;
+  readonly monitoringStatuses: Locator;
   readonly nextPageButton: Locator;
   readonly previousPageButton: Locator;
   readonly rowsPerPageDropdown: Locator;
@@ -18,6 +20,11 @@ export default class InventoryPagination {
     this.activePageButton = frame.getByTestId('page-button-active');
     this.firstPageButton = frame.getByTestId('first-page-button');
     this.itemsInterval = frame.getByTestId('pagination-items-inverval');
+    this.monitoringNotOkRows = frame
+      .locator('tbody')
+      .getByTestId('table-tbody-tr')
+      .filter({ hasNot: frame.owner().page().getByRole('link', { exact: true, name: 'OK' }) });
+    this.monitoringStatuses = frame.locator('tbody').getByTestId('table-tbody-tr').locator('xpath=td[5]');
     this.nextPageButton = frame.getByTestId('next-page-button');
     this.previousPageButton = frame.getByTestId('previous-page-button');
     this.rowsPerPageDropdown = frame.getByTestId('pagination-size-select');
@@ -46,6 +53,11 @@ export default class InventoryPagination {
   selectRowsPerPage = async (rowsPerPage: RowsPerPage) => {
     await this.rowsPerPageDropdown.click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.rowsPerPageOption(rowsPerPage).click({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  verifyMonitoringStatusesOk = async (listName: string) => {
+    await expect(this.monitoringStatuses.first()).toBeVisible();
+    await expect(this.monitoringNotOkRows, `${listName} with incorrect monitoring statuses`).toHaveText([]);
   };
 
   verifyPaginationFunctionality = async () => {

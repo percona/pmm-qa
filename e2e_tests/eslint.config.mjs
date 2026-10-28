@@ -132,7 +132,6 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/no-empty-function': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { ignoreUsingDeclarations: true }],
       // -----------------------------------------------------------------------
       // Core ESLint Rules (Native Rules)
       // -----------------------------------------------------------------------
