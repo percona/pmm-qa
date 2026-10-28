@@ -1,7 +1,7 @@
 name: "Nightly E2E tests Matrix (remote PMM Server)"
 # Triggered by Jenkins (pmm3-ui-tests-nightly-gha.groovy) once the PMM Server
 # is up. Fans out one setup shard per group of client setups and one job per
-# tag bucket, so each worker only runs the tests it has data for.
+# tag bucket: @qan on one, the nightly tags split over the other four (--shard).
 
 # Only compat lanes pass an exact client version (3.x.y); the rest need no label.
 run-name: >-
@@ -85,31 +85,30 @@ on:
 
 jobs:
   shard:
-    name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}"
+    name: ${{ matrix.test_shard && format('Nightly {0}', matrix.test_shard) || 'QAN' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - shard_name: mysql-psmdb-pgsql
             setup_services: '--database mysql --database psmdb,SETUP_TYPE=pss --database pgsql'
-            tags_for_tests: '@qan|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
-            tests_framework: playwright
+            tags_for_tests: '@qan'
           - shard_name: ps-gr-pxc-valkey
             setup_services: '--database ps,SETUP_TYPE=gr --database pxc --database valkey'
-            tags_for_tests: '@nightly'
-            tests_framework: codeceptjs
+            tags_for_tests: '@nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            test_shard: 1/4
           - shard_name: ps-replication-psmdb-sharded
             setup_services: '--database ps,SETUP_TYPE=replication --database psmdb,SETUP_TYPE=sharding'
-            tags_for_tests: '@nightly'
-            tests_framework: playwright
+            tags_for_tests: '@nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            test_shard: 2/4
           - shard_name: ps-myrocks-pdpgsql-patroni-external
             setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true --database pdpgsql,SETUP_TYPE=patroni --database external'
-            tags_for_tests: ''
-            tests_framework: ''
+            tags_for_tests: '@nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            test_shard: 3/4
           - shard_name: extra-pxc-pdpgsql-haproxy
             setup_services: '--database pxc --database pdpgsql --database haproxy'
-            tags_for_tests: ''
-            tests_framework: ''
+            tags_for_tests: '@nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+            test_shard: 4/4
 
     runs-on: ubuntu-22.04
     timeout-minutes: 210
@@ -126,17 +125,18 @@ jobs:
       SHARD_NAME: ${{ matrix.shard_name }}
       TAGS_FOR_TESTS: ${{ matrix.tags_for_tests }}
       PMM_TEST_FLAG: ${{ matrix.tags_for_tests }}
+      TEST_SHARD: ${{ matrix.test_shard }}
       WORKERS: ${{ 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
       INSTALLATION_TYPE: ${{ inputs.installation_type || 'docker' }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
-      TESTS_DIR: ${{ matrix.tests_framework == 'playwright' && 'pmm-qa/e2e_tests' || 'pmm-qa/codeceptjs-e2e' }}
-      SUBSET_FILE_NAME: ${{ matrix.tests_framework == 'playwright' && 'launchable-subset.txt' || 'launchable-subset.json' }}
+      TESTS_DIR: pmm-qa/e2e_tests
+      SUBSET_FILE_NAME: launchable-subset.txt
       SETUP_BARRIER_STEP: 'Barrier: setup complete'
       TEST_BARRIER_STEP: 'Barrier: tests complete'
       EXPECTED_SETUP_JOBS: ${{ 5 }}
-      EXPECTED_TEST_SHARDS: ${{ 3 }}
+      EXPECTED_TEST_SHARDS: ${{ 5 }}
       WAIT_POLL_INTERVAL_SECONDS: 300
       WAIT_TIMEOUT_SECONDS: 10800
 
@@ -211,7 +211,7 @@ jobs:
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
-      - name: Run setup for E2E tests (start client services on this runner)
+      - name: Start databases (${{ matrix.shard_name }})
         timeout-minutes: 60
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
@@ -250,7 +250,6 @@ jobs:
         run: echo "Setup finished on shard ${SHARD_NAME}."
 
       - name: Wait for every setup shard
-        if: ${{ matrix.tags_for_tests != '' }}
         uses: actions/github-script@v9
         with:
           retries: 3
@@ -309,16 +308,7 @@ jobs:
               await sleep(pollIntervalMs);
             }
 
-      - name: Setup npm modules for CodeceptJS tests
-        if: ${{ matrix.tests_framework == 'codeceptjs' }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          npm ci
-          npx playwright install --with-deps
-          envsubst < env.list > env.generated.list
-
-      - name: Setup npm modules for Playwright tests
-        if: ${{ matrix.tests_framework == 'playwright' }}
+      - name: Setup npm modules
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
@@ -326,34 +316,13 @@ jobs:
           npx playwright install chromium
 
       - uses: actions/github-script@v9
-        if: ${{ matrix.tags_for_tests != '' }}
         id: tags_processed
         with:
           script: |
             return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
           result-encoding: string
 
-      - name: Prepare launchable for CodeceptJS
-        if: ${{ matrix.tests_framework == 'codeceptjs' }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          pip3 install --user --upgrade launchable~=1.0
-          launchable verify || true
-
-          docker pull ${{ env.DOCKER_VERSION }} || true
-          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
-          export DOCKER_IMAGE_ID
-          echo "Launchable build: ${DOCKER_IMAGE_ID}"
-
-          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
-            > launchable-session.txt || true
-          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
-            --use-case feature-branch codeceptjs < test_list.txt > "${{ env.SUBSET_FILE_NAME }}" || true
-          cat "${{ env.SUBSET_FILE_NAME }}" || true
-
-      - name: Prepare launchable for Playwright
-        if: ${{ matrix.tests_framework == 'playwright' }}
+      - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
         run: |
           pip3 install --user --upgrade launchable~=1.0
@@ -372,7 +341,6 @@ jobs:
           cat "${{ env.SUBSET_FILE_NAME }}" || true
 
       - name: Check if launchable subset is empty
-        if: ${{ matrix.tags_for_tests != '' }}
         id: check_launchable_subset
         working-directory: ${{ env.TESTS_DIR }}
         run: |
@@ -388,31 +356,16 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         run: sleep 60
 
-      - name: Execute CodeceptJS e2e tests
-        if: ${{ matrix.tests_framework == 'codeceptjs' && steps.check_launchable_subset.outputs.has_subset == 'true' }}
+      - name: Execute e2e tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
-        id: codeceptjs_tests
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
-          sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
-
-          npx codeceptjs run-workers ${{ env.WORKERS }} \
-            -c pr.codecept.js \
-            --grep "${{ env.TAGS_FOR_TESTS }}" \
-            --reporter mocha-multi \
-            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
-
-      - name: Execute Playwright e2e tests
-        if: ${{ matrix.tests_framework == 'playwright' && steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        continue-on-error: true
-        id: playwright_tests
+        id: e2e_tests
         working-directory: pmm-qa/e2e_tests
         run: |
           # shellcheck disable=SC2046
           # The launchable subset is a whitespace-separated list of test files,
           # so it has to split into separate arguments.
-          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}")
+          npx playwright test --grep "$PMM_TEST_FLAG" ${TEST_SHARD:+--shard="$TEST_SHARD"} $(cat "$SUBSET_FILE_NAME")
 
       - name: Download PMM Server logs
         if: ${{ always() && steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -428,20 +381,14 @@ jobs:
         working-directory: ${{ env.TESTS_DIR }}
         continue-on-error: true
         run: |
-          if [ "${{ matrix.tests_framework }}" = 'playwright' ]; then
-            launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json || true
-          else
-            sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-            launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-          fi
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json || true
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs on failure
         if: >-
           always() && steps.check_launchable_subset.outputs.has_subset == 'true' &&
           (steps.launchable_gate.outcome == 'failure' ||
-           steps.codeceptjs_tests.outcome == 'failure' ||
-           steps.playwright_tests.outcome == 'failure')
+           steps.e2e_tests.outcome == 'failure')
         working-directory: ${{ env.TESTS_DIR }}
         continue-on-error: true
         run: |
@@ -454,8 +401,6 @@ jobs:
           name: "artifacts_${{ matrix.shard_name }}"
           if-no-files-found: ignore
           path: |
-            ${{ env.TESTS_DIR }}/tests/output/*.png
-            ${{ env.TESTS_DIR }}/tests/output/trace/*.zip
             ${{ env.TESTS_DIR }}/playwright-report
             ${{ env.TESTS_DIR }}/test-results
             ${{ env.TESTS_DIR }}/logs
@@ -467,11 +412,10 @@ jobs:
           name: "junit_${{ matrix.shard_name }}"
           if-no-files-found: ignore
           path: |
-            ${{ env.TESTS_DIR }}/tests/output/result.xml
             ${{ env.TESTS_DIR }}/output/junit.xml
 
       - name: 'Barrier: tests complete'
-        if: ${{ always() && matrix.tags_for_tests != '' }}
+        if: ${{ always() }}
         run: echo "Tests finished on shard ${SHARD_NAME}."
 
       - name: Waiting for tests execution
@@ -540,8 +484,7 @@ jobs:
 
       - name: Fail the shard if its own tests failed
         if: >-
-          steps.codeceptjs_tests.outcome == 'failure' ||
-          steps.playwright_tests.outcome == 'failure' ||
+          steps.e2e_tests.outcome == 'failure' ||
           steps.launchable_gate.outcome == 'failure'
         run: |
           echo "Test execution failed on shard ${SHARD_NAME} (${TAGS_FOR_TESTS})." >&2

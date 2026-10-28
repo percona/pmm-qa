@@ -1,9 +1,5 @@
 const assert = require('assert');
-const {
-  SERVICE_TYPE, NODE_TYPE,
-  AGENT_STATUS,
-  AGENT_NAMES,
-} = require('../helper/constants');
+const { NODE_TYPE, AGENT_STATUS } = require('../helper/constants');
 
 const {
   remoteInstancesPage, pmmInventoryPage, remoteInstancesHelper,
@@ -67,25 +63,6 @@ Feature('Inventory page');
 Before(async ({ I }) => {
   await I.Authorize();
 });
-
-// Skipping temporarily because sorting is not yet implemented in new Inventory page (PMM 2.37.0)
-Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Services tab) @inventory @nightly ',
-  async ({ I, pmmInventoryPage }) => {
-    I.amOnPage(pmmInventoryPage.url);
-    await pmmInventoryPage.checkSort(4);
-  },
-);
-
-Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Nodes tab) @inventory @nightly ',
-  async ({ I, pmmInventoryPage }) => {
-    I.amOnPage(pmmInventoryPage.url);
-    I.waitForVisible(pmmInventoryPage.fields.nodesLink, 20);
-    I.click(pmmInventoryPage.fields.nodesLink);
-    await pmmInventoryPage.checkSort(4);
-  },
-);
 
 Scenario(
   'PMM-T339 - Verify MySQL service is removed on PMM Inventory page @inventory',
@@ -237,7 +214,7 @@ Scenario.skip(
 );
 
 (skipOnHa ? Scenario.skip : Scenario)(
-  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
+  'PMM-T554 - Check that all agents have status "RUNNING" @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     await I.amOnPage(pmmInventoryPage.url);
     await I.waitForVisible(pmmInventoryPage.fields.showRowDetails, 10);
@@ -276,41 +253,6 @@ Scenario.skip(
     }
 
     assert.ok(errors.length === 0, `Errors found: \n${JSON.stringify(errors, null, 2)}`);
-  },
-);
-
-Scenario(
-  'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @gssapi-nightly @exporters',
-  async ({
-    I, pmmInventoryPage, inventoryAPI, serverApi,
-  }) => {
-    // HA keeps PMM's own database outside the server, so there is no pmm-server-postgresql service.
-    if (!await serverApi.isHaEnabled()) {
-      I.amOnPage(pmmInventoryPage.url);
-      const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
-
-      await pmmInventoryPage.openAgents(service_id);
-      await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.POSTGRESQL_EXPORTER, 'process_exec_path=/usr/local/percona/pmm/exporters/postgres_exporter');
-    }
-
-    const actAg = await inventoryAPI.apiGetAgents();
-    const arr = [];
-
-    for (const key of Object.keys(actAg.data)) {
-      if (key.endsWith('exporter') && key !== 'external_exporter') {
-        // eslint-disable-next-line no-return-assign
-        actAg.data[key].map((o) => o.type = key);
-
-        arr.push(...actAg.data[key]);
-      }
-    }
-
-    assert.ok(arr.length, 'no exporter agents found');
-
-    for (const key of arr) {
-      await I.say(JSON.stringify(key, null, 2));
-      assert.ok(key.process_exec_path, `process_exec_path value is empty for ${key.type}`);
-    }
   },
 );
 
@@ -592,74 +534,3 @@ Data(aws_instances).Scenario(
     assert.ok(count > 0, `The queries for service ${instance_id} instance do NOT exist, check QAN Data`);
   },
 ).retry(1);
-
-Scenario('PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly  @gssapi-nightly', async ({ I, pmmInventoryPage }) => {
-  I.usePlaywrightTo('Mock Services List', async ({ page }) => {
-    const mockedServices = { services: [] };
-
-    for (let i = 1; i <= 50; i++) {
-      mockedServices.services.push({
-        address: `127.0.0.${i}`,
-        agents: [],
-        cluster: '',
-        custom_labels: {},
-        database_name: 'postgres',
-        environment: '',
-        external_group: '',
-        node_id: 'pmm-server',
-        node_name: `mocked-service-node-${i}`,
-        port: 5432,
-        replication_set: '',
-        service_id: `30edfcf1-bea1-4422-b111-d2d263bdcfc${i}`,
-        service_name: `mocked-service-${i}`,
-        service_type: 'postgresql',
-        socket: '',
-        status: 'STATUS_UP',
-        version: '',
-      });
-    }
-
-    await page.route('**/v1/management/services', (route) => route.fulfill({
-      status: 200,
-      body: JSON.stringify(mockedServices),
-    }));
-  });
-
-  pmmInventoryPage.open();
-  I.click(pmmInventoryPage.pagination.elements.pageNumberButton('2'));
-  const startServices = await I.grabTextFromAll(pmmInventoryPage.fields.serviceNames);
-
-  I.wait(15);
-  const numberOfRows = await I.grabNumberOfVisibleElements(pmmInventoryPage.fields.tableRow);
-
-  I.assertTrue(
-    await pmmInventoryPage.verifyDisplayedServices(startServices),
-    `List of displayed services after wait does not equal list of displayed services before wait: [${startServices}]`,
-  );
-  I.assertTrue(numberOfRows < 50, `Expected number of rows to be less than 25, actual number of rows is: ${numberOfRows}`);
-});
-
-const tabs = [pmmInventoryPage.servicesTab.url, pmmInventoryPage.nodesTab.url];
-
-(skipOnHa ? xData : Data)(tabs).Scenario(
-  'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly ',
-  async ({ I, pmmInventoryPage, current }) => {
-    I.amOnPage(current);
-    await pmmInventoryPage.pagination.selectRowsPerPage('100');
-    I.waitForVisible(pmmInventoryPage.fields.servicesMonitoringStatus);
-    const monitoringStatuses = await I.grabTextFromAll(pmmInventoryPage.fields.servicesMonitoringStatus);
-    const failedStatuses = [];
-
-    for (const monitoringStatus of monitoringStatuses) {
-      const index = monitoringStatuses.indexOf(monitoringStatus);
-
-      if (monitoringStatus !== 'OK') {
-        const serviceName = await I.grabTextFrom(pmmInventoryPage.fields.serviceNameByIndex(index + 1));
-
-        failedStatuses.push({ serviceName, status: monitoringStatus });
-      }
-    }
-
-    I.assertEqual(failedStatuses.length, 0, `Services with incorrect monitoring statuses are: ${JSON.stringify(failedStatuses)}`);
-  },
-);
