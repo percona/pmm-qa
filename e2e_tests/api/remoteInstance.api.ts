@@ -9,6 +9,8 @@ export interface AddRemoteInstance {
   external?: RemoteInstanceBody;
   mysql?: RemoteInstanceBody;
   postgresql?: RemoteInstanceBody;
+  rds?: RemoteInstanceBody &
+    Required<Pick<RemoteInstanceBody, 'instance_id' | 'port' | 'region' | 'username'>>;
 }
 
 export interface RemoteUpgradeInstance {
@@ -51,6 +53,16 @@ interface RemoteInstanceBody {
   tls_skip_verify?: boolean;
   authentication_mechanism?: string;
   engine?: 'DISCOVER_RDS_ENGINE_MYSQL';
+  aws_access_key?: string;
+  aws_secret_key?: string;
+  az?: string;
+  disable_basic_metrics?: boolean;
+  disable_enhanced_metrics?: boolean;
+  instance_id?: string;
+  isRDS?: boolean;
+  rds_exporter?: boolean;
+  region?: string;
+  replication_set?: string;
   qan_mysql_perfschema?: boolean;
   qan_postgresql_pgstatmonitor_agent?: boolean;
   qan_mongodb_profiler?: boolean;
@@ -68,6 +80,9 @@ export default class RemoteInstanceApi {
 
     expect(response.status()).toEqual(200);
   };
+
+  addRemoteService = async (instance: RemoteUpgradeInstance) =>
+    this.addRemoteInstance(this.buildRemoteInstanceDataBody(instance));
 
   buildRemoteInstanceDataBody = (instance: RemoteUpgradeInstance): AddRemoteInstance => {
     const body = {

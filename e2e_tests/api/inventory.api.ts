@@ -1,6 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetAgents, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -26,6 +26,19 @@ export default class InventoryApi {
       response.status(),
       `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
+  };
+
+  getAgents = async (): Promise<GetAgents> => {
+    const response = await this.request.get(apiEndpoints.inventory.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get agents API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()) as GetAgents;
   };
 
   getAllNodes = async (): Promise<GetNode[]> => {
@@ -81,6 +94,11 @@ export default class InventoryApi {
       serviceName: services[0].service_name,
     };
   };
+
+  getServiceAgents = async (serviceId: string) =>
+    Object.values(await this.getAgents())
+      .flat()
+      .filter((agent) => agent.service_id === serviceId);
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
