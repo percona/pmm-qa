@@ -85,7 +85,7 @@ on:
 
 jobs:
   shard:
-    name: "${{ matrix.shard_name }}${{ matrix.tags_for_tests && format(' + {0}', matrix.tags_for_tests) || ' (databases only)' }}${{ matrix.test_shard && format(' ({0})', matrix.test_shard) || '' }}"
+    name: "${{ matrix.shard_name }} + ${{ matrix.tags_for_tests }}${{ matrix.test_shard && format(' ({0})', matrix.test_shard) || '' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -250,7 +250,6 @@ jobs:
         run: echo "Setup finished on shard ${SHARD_NAME}."
 
       - name: Wait for every setup shard
-        if: ${{ matrix.tags_for_tests != '' }}
         uses: actions/github-script@v9
         with:
           retries: 3
@@ -310,7 +309,6 @@ jobs:
             }
 
       - name: Setup npm modules for Playwright tests
-        if: ${{ matrix.tags_for_tests != '' }}
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
@@ -318,7 +316,6 @@ jobs:
           npx playwright install chromium
 
       - uses: actions/github-script@v9
-        if: ${{ matrix.tags_for_tests != '' }}
         id: tags_processed
         with:
           script: |
@@ -326,7 +323,6 @@ jobs:
           result-encoding: string
 
       - name: Prepare launchable for Playwright
-        if: ${{ matrix.tags_for_tests != '' }}
         working-directory: pmm-qa/e2e_tests
         run: |
           pip3 install --user --upgrade launchable~=1.0
@@ -345,7 +341,6 @@ jobs:
           cat "${{ env.SUBSET_FILE_NAME }}" || true
 
       - name: Check if launchable subset is empty
-        if: ${{ matrix.tags_for_tests != '' }}
         id: check_launchable_subset
         working-directory: ${{ env.TESTS_DIR }}
         run: |
@@ -420,7 +415,7 @@ jobs:
             ${{ env.TESTS_DIR }}/output/junit.xml
 
       - name: 'Barrier: tests complete'
-        if: ${{ always() && matrix.tags_for_tests != '' }}
+        if: ${{ always() }}
         run: echo "Tests finished on shard ${SHARD_NAME}."
 
       - name: Waiting for tests execution
