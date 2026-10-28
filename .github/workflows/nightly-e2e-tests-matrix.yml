@@ -308,7 +308,7 @@ jobs:
               await sleep(pollIntervalMs);
             }
 
-      - name: Setup npm modules for Playwright tests
+      - name: Setup npm modules
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
@@ -322,7 +322,7 @@ jobs:
             return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
           result-encoding: string
 
-      - name: Prepare launchable for Playwright
+      - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
         run: |
           pip3 install --user --upgrade launchable~=1.0
@@ -356,10 +356,10 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         run: sleep 60
 
-      - name: Execute Playwright e2e tests
+      - name: Execute e2e tests
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         continue-on-error: true
-        id: playwright_tests
+        id: e2e_tests
         working-directory: pmm-qa/e2e_tests
         run: |
           # shellcheck disable=SC2046
@@ -388,7 +388,7 @@ jobs:
         if: >-
           always() && steps.check_launchable_subset.outputs.has_subset == 'true' &&
           (steps.launchable_gate.outcome == 'failure' ||
-           steps.playwright_tests.outcome == 'failure')
+           steps.e2e_tests.outcome == 'failure')
         working-directory: ${{ env.TESTS_DIR }}
         continue-on-error: true
         run: |
@@ -484,7 +484,7 @@ jobs:
 
       - name: Fail the shard if its own tests failed
         if: >-
-          steps.playwright_tests.outcome == 'failure' ||
+          steps.e2e_tests.outcome == 'failure' ||
           steps.launchable_gate.outcome == 'failure'
         run: |
           echo "Test execution failed on shard ${SHARD_NAME} (${TAGS_FOR_TESTS})." >&2
