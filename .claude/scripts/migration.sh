@@ -24,7 +24,7 @@ repo=percona/pmm-qa
 die() { echo "STOP: $*" >&2; exit 1; }
 
 # One line per test job: grep expression, setup_services, file:job[:shard], framework (playwright|codeceptjs).
-# The framework comes from the runner workflow a job calls, or a matrix entry's tests_framework.
+# The framework comes from the runner workflow a job calls, or a matrix entry's tests_framework (playwright when absent).
 ci_jobs() {
   python3 - "$1"/.github/workflows/*.yml <<'EOF'
 import os, sys, yaml
@@ -40,8 +40,9 @@ for path in sys.argv[1:]:
                         print(f"{w[k]}\t{w.get('setup_services', '-h')}\t{where}\t{fw}")
         matrix = (job.get('strategy') or {}).get('matrix')
         for e in (matrix.get('include') or []) if isinstance(matrix, dict) else []:
-            if isinstance(e, dict) and e.get('tests_framework') in ('playwright', 'codeceptjs') and e.get('tags_for_tests'):
-                print(f"{e['tags_for_tests']}\t{e.get('setup_services')}\t{where}:{e.get('shard_name')}\t{e['tests_framework']}")
+            fw = e.get('tests_framework', 'playwright') if isinstance(e, dict) else None
+            if fw in ('playwright', 'codeceptjs') and e.get('tags_for_tests'):
+                print(f"{e['tags_for_tests']}\t{e.get('setup_services')}\t{where}:{e.get('shard_name')}\t{fw}")
 EOF
 }
 
