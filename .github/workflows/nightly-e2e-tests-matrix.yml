@@ -85,7 +85,7 @@ on:
 
 jobs:
   shard:
-    name: "${{ matrix.shard_name }} + ${{ matrix.tags_for_tests }}${{ matrix.test_shard && format(' ({0})', matrix.test_shard) || '' }}"
+    name: ${{ matrix.test_shard && format('Nightly {0}', matrix.test_shard) || 'QAN' }}
     strategy:
       fail-fast: false
       matrix:
@@ -211,7 +211,7 @@ jobs:
               --admin_password "${{ env.ADMIN_PASSWORD }}" \
               --use_metrics_mode no
 
-      - name: Run setup for E2E tests (start client services on this runner)
+      - name: Start databases (${{ matrix.shard_name }})
         timeout-minutes: 60
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
