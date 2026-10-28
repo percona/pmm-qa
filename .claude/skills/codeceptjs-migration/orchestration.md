@@ -2,7 +2,7 @@
 
 The parent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Workers read `run.md`, not this file.
 
-Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one CHAOS VM from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout stays on control for the whole row, publication uses an isolated `git worktree`; only after cleanup is it switched to the publish branch so the app's PR panel shows the PR (`branch-workflow.md` Tracker completion and cleanup). The skill and scripts exist only on control, so a run starts with `git switch CodeceptJS-migration` on a clean tree. Run `.claude/scripts/*.sh` with bash on the runner host, keep them LF-only, and `bash -n` them after editing.
+Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one CHAOS VM from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout stays on control for the whole row, publication uses an isolated `git worktree`; only after cleanup is it switched to the publish branch so the app's PR panel shows the PR (`branch-workflow.md` Tracker completion and cleanup). The skill and scripts exist only on control, so a run starts with `git switch PMM-7-codeceptjs-migration-control` on a clean tree. Run `.claude/scripts/*.sh` with bash on the runner host, keep them LF-only, and `bash -n` them after editing.
 
 `.claude/scripts/migration.sh` does the mechanical steps; the sections below say what each one checks and what stays judgement:
 
@@ -99,7 +99,7 @@ A batch runs as one row:
 - one tracker commit marks every row `in-progress`; one timeline and one gate ledger, named after the first row;
 - one writer spawn migrates every row, and each gate (initial review, runner, final review) is one spawn covering the whole batch;
 - every row's tests still run and pass, and every row still gets its own worth-porting and coverage evidence;
-- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row `done` with that PR link.
+- one publish branch `PMM-7-migrate-<category>-<first-test-name>`, one PR listing every source, every row `done` with that PR link.
 
 Once the writer returns, measure the real size (`git diff --numstat` plus untracked new files) and record estimate and actual on the timeline. An actual over 200 does not split the batch.
 

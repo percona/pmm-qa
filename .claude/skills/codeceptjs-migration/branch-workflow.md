@@ -39,7 +39,7 @@ git add .claude/skills/codeceptjs-migration/tracker.md
 git commit -m "chore(migration): mark <test-name> in progress"
 ```
 
-Everything the migration produces from here stays uncommitted in control's worktree until publication. Publish branch name: `migrate-<category>-<test-name>`.
+Everything the migration produces from here stays uncommitted in control's worktree until publication. Publish branch name: `PMM-7-migrate-<category>-<test-name>`, both parts lowercased with no inner hyphens (`PMM-7-migrate-metrics-verifymysqlloglevel`): the runner hosts' branch guard accepts only `PMM-<n>-` plus two to four lowercase words.
 
 ## Before publication
 
@@ -49,7 +49,7 @@ Cut the publish branch only after initial review, MCP locator verification, migr
 
 ```bash
 git fetch origin main
-git worktree add ../pmm-qa-publish -b migrate-<category>-<test-name> origin/main
+git worktree add ../pmm-qa-publish -b PMM-7-migrate-<category>-<test-name> origin/main
 cd ../pmm-qa-publish/e2e_tests && npm ci && cd -
 ```
 

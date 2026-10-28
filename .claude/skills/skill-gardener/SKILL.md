@@ -78,7 +78,7 @@ The CodeceptJS migration skill, its agents, and its hook are being reworked on t
 
 A lesson is **branch-local** when both hold:
 
-1. the checkout is on the migration control branch, `CodeceptJS-migration` — renaming that branch means updating this line;
+1. the checkout is on the migration control branch, `PMM-7-codeceptjs-migration-control` — renaming that branch means updating this line;
 2. its target is one of:
    - any file under `.claude/skills/codeceptjs-migration/`;
    - `.claude/agents/pmm-migration-writer.md`, `.claude/agents/pmm-migration-reviewer.md`, or `.claude/agents/pmm-migration-runner.md`;
