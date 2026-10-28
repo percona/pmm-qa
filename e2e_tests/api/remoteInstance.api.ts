@@ -9,7 +9,8 @@ export interface AddRemoteInstance {
   external?: RemoteInstanceBody;
   mysql?: RemoteInstanceBody;
   postgresql?: RemoteInstanceBody;
-  rds?: RemoteInstanceBody;
+  rds?: RemoteInstanceBody &
+    Required<Pick<RemoteInstanceBody, 'instance_id' | 'port' | 'region' | 'username'>>;
 }
 
 export interface RemoteUpgradeInstance {
@@ -67,36 +68,6 @@ interface RemoteInstanceBody {
   qan_mongodb_profiler?: boolean;
 }
 
-const remoteServiceConnections = {
-  mongodb: {
-    address: 'rs101',
-    cluster: 'mongo_clstr',
-    password: 'pbmpass',
-    port: '27017',
-    qan_mongodb_profiler: true,
-    tls_skip_verify: true,
-    username: 'pbm',
-  },
-  mysql: {
-    address: 'ps_pmm_8_4_1',
-    cluster: 'mysql_clstr',
-    engine: 'DISCOVER_RDS_ENGINE_MYSQL',
-    password: 'GRgrO9301RuF',
-    port: '3306',
-    qan_mysql_perfschema: true,
-    username: 'root',
-  },
-  postgresql: {
-    address: 'pdpgsql_pmm_17_1',
-    cluster: 'pgsql_clstr',
-    password: 'pmm',
-    port: '5432',
-    qan_postgresql_pgstatmonitor_agent: true,
-    tls_skip_verify: true,
-    username: 'pmm',
-  },
-} as const;
-
 export default class RemoteInstanceApi {
   constructor(private request: APIRequestContext) {}
 
@@ -110,20 +81,8 @@ export default class RemoteInstanceApi {
     expect(response.status()).toEqual(200);
   };
 
-  addRemoteService = async (
-    serviceType: keyof typeof remoteServiceConnections,
-    serviceName: string,
-    options: Pick<RemoteInstanceBody, 'skip_connection_check'> = {},
-  ) =>
-    this.addRemoteInstance({
-      [serviceType]: {
-        add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
-        pmm_agent_id: 'pmm-server',
-        service_name: serviceName,
-        ...remoteServiceConnections[serviceType],
-        ...options,
-      },
-    });
+  addRemoteService = async (instance: RemoteUpgradeInstance) =>
+    this.addRemoteInstance(this.buildRemoteInstanceDataBody(instance));
 
   buildRemoteInstanceDataBody = (instance: RemoteUpgradeInstance): AddRemoteInstance => {
     const body = {

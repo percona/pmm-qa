@@ -55,7 +55,7 @@ export default class InventoryPagination {
     await this.rowsPerPageOption(rowsPerPage).click({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
-  verifyMonitoringStatusesOk = async (listName: string) => {
+  verifyMonitoringStatusesOk = async (listName: 'services' | 'nodes') => {
     await expect(this.monitoringStatuses.first()).toBeVisible();
     await expect(this.monitoringNotOkRows, `${listName} with incorrect monitoring statuses`).toHaveText([]);
   };

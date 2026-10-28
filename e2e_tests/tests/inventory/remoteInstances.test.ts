@@ -45,6 +45,12 @@ pmmTest.afterAll(async ({ browser }) => {
     await api.inventoryApi.deleteNode(node_id, true);
   }
 
+  for (const { service_id } of (await api.inventoryApi.getServices()).services.filter(({ service_name }) =>
+    remoteNodeNames.includes(service_name),
+  )) {
+    await api.managementApi.removeService(service_id);
+  }
+
   await api.settingsApi.changeSettings({ enable_azurediscover: false });
   await page.close();
 });
