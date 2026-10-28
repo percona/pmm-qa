@@ -3720,15 +3720,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-28T03:07:45Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
+      ],
+      "verdict": "product bug",
+      "summary": "PMM-T2108 on the restored HA cluster: one internal pg-db instance is never monitored (pg_exporter_scrapes_total from 2 of 3 PostgreSQL sources), recurrence of PMM-15794.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+      "by": "Investigator routine",
+      "at": "2026-10-28T03:27:19Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-28T03:07:45Z",
