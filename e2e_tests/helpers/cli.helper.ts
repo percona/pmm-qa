@@ -123,7 +123,7 @@ export default class CliHelper {
       .assertSuccess()
       .stdout.split(' ')[0];
 
-    this.execute(`docker cp ${container}:/${archive} ${archivePath}`).assertSuccess();
+    this.execute(`docker cp ${container}:/${archive} "${archivePath}"`).assertSuccess();
 
     return (
       JSON.parse(new AdmZip(archivePath).readAsText('client/status.json')) as {

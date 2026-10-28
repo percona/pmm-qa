@@ -32,7 +32,7 @@ export default class AddInstancePage extends BasePage {
   buttons = {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add service' }),
     azure: this.grafanaIframe().getByTestId('azure-instance'),
-    discover: this.grafanaIframe().getByRole('button', { name: 'Discover' }),
+    discover: this.grafanaIframe().getByRole('button', { exact: true, name: 'Discover' }),
     mongodbProfiler: this.grafanaIframe().getByTestId('qan_mongodb_profiler-field-label'),
     mysql: this.grafanaIframe().getByTestId('mysql-instance'),
     pgStatStatements: this.grafanaIframe().getByText('PG Stat Statements', { exact: true }),

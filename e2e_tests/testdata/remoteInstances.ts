@@ -1,4 +1,15 @@
-import { AddRemoteInstance } from '@api/remoteInstance.api';
+import { AddRemoteInstance, RemoteUpgradeInstance } from '@api/remoteInstance.api';
+import { services } from '@testdata/externalServices';
+
+const [mysqlService] = services.filter(({ serviceType }) => serviceType === 'mysql');
+const [mongodbService] = services.filter(({ serviceType }) => serviceType === 'mongodb');
+const [pgsqlService] = services.filter(({ serviceType }) => serviceType === 'postgresql');
+
+export const inventoryServices: Record<RemoteUpgradeInstance['serviceType'], RemoteUpgradeInstance> = {
+  mongodb: mongodbService,
+  mysql: mysqlService,
+  postgresql: { ...pgsqlService, connection: { ...pgsqlService.connection, address: 'pdpgsql_pmm_17_1' } },
+};
 
 export const awsCredentials = {
   accessKey: process.env.PMM_QA_AWS_ACCESS_KEY_ID ?? '',

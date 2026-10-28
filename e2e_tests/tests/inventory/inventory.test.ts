@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
+import { inventoryServices } from '@testdata/remoteInstances';
 
 let calls: { method: string; requestTime: Date; url: string }[] = [];
 const dataTests = [
@@ -16,6 +17,8 @@ const remoteNodeNames = [
   'pg_15_version_test',
   'ps_5.7_version_test',
 ];
+
+pmmTest.describe.configure({ mode: 'default' });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -80,7 +83,7 @@ pmmTest(
   async ({ api, nodesPage, page, servicesPage }) => {
     const serviceName = 'ServiceToDelete';
 
-    await api.remoteInstanceApi.addRemoteService('mysql', serviceName, { skip_connection_check: true });
+    await api.remoteInstanceApi.addRemoteService({ ...inventoryServices.mysql, name: serviceName });
 
     const { service_id } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
 
@@ -107,7 +110,7 @@ pmmTest(
   async ({ api, nodesPage, page, servicesPage }) => {
     const serviceName = 'NodeToDelete';
 
-    await api.remoteInstanceApi.addRemoteService('mysql', serviceName, { skip_connection_check: true });
+    await api.remoteInstanceApi.addRemoteService({ ...inventoryServices.mysql, name: serviceName });
 
     const { service_id } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
 
@@ -128,18 +131,18 @@ pmmTest(
   'PMM-T1811 - verify version displayed for added service on Inventory page @inventory @inventory-fb',
   async ({ api, page, servicesPage }) => {
     const services = [
-      ['mysql', 'ps_5.7_version_test'],
-      ['mongodb', 'mongo_4.2_version_test'],
-      ['postgresql', 'pg_15_version_test'],
-    ] as const;
+      { ...inventoryServices.mysql, name: 'ps_5.7_version_test' },
+      { ...inventoryServices.mongodb, name: 'mongo_4.2_version_test' },
+      { ...inventoryServices.postgresql, name: 'pg_15_version_test' },
+    ];
 
-    for (const [serviceType, serviceName] of services) {
-      await api.remoteInstanceApi.addRemoteService(serviceType, serviceName);
+    for (const service of services) {
+      await api.remoteInstanceApi.addRemoteService(service);
     }
 
     await page.goto(servicesPage.url);
 
-    for (const [, serviceName] of services) {
+    for (const { name: serviceName } of services) {
       const { version } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
 
       expect(version, `${serviceName} should report the version of its database`).not.toEqual('');
@@ -167,7 +170,7 @@ pmmTest(
   async ({ agentsPage, api, page, servicesPage }) => {
     const serviceName = 'AgentToDelete';
 
-    await api.remoteInstanceApi.addRemoteService('mysql', serviceName, { skip_connection_check: true });
+    await api.remoteInstanceApi.addRemoteService({ ...inventoryServices.mysql, name: serviceName });
 
     const { service_id } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
     const nodesBefore = (await api.inventoryApi.getAllNodes()).length;
