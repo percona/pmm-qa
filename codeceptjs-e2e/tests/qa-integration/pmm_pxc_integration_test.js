@@ -106,7 +106,13 @@ Scenario(
     const serviceList = [clientServiceName, remoteServiceName];
 
     for (const service of serviceList) {
-      url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodeSummaryDashboard.clearUrl, { from: 'now-15m', service_name: service });
+      // The Galera stat panels query on a 5m grid, so a service that just started reporting shows
+      // "No data" there until the next 5-minute boundary. Refresh and poll past one boundary.
+      url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodeSummaryDashboard.clearUrl, {
+        from: 'now-15m',
+        refresh: '10s',
+        service_name: service,
+      });
 
       I.amOnPage(url);
       I.wait(30);
@@ -114,11 +120,7 @@ Scenario(
       adminPage.performPageDown(5);
       await dashboardPage.expandEachDashboardRow();
       adminPage.performPageUp(5);
-      if (service === remoteServiceName) {
-        await dashboardPage.verifyThereAreNoGraphsWithoutData(6);
-      } else {
-        await dashboardPage.verifyThereAreNoGraphsWithoutData(3);
-      }
+      await dashboardPage.waitForGraphsToHaveData(service === remoteServiceName ? 6 : 3, 360);
     }
 
     I.amOnPage(dashboardPage.proxysqlInstanceSummaryDashboard.url);
