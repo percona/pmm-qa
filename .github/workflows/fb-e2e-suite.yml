@@ -137,7 +137,7 @@ jobs:
       tags_for_tests: '@exporters'
 
   exporters_playwright:
-    name: Exporters tests
+    name: Exporters tests (Playwright)
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}

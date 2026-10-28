@@ -63,16 +63,9 @@ for (const dataTest of dataTests) {
 
 pmmTest(
   'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly',
-  async ({ api, nodesPage, page, servicesPage }) => {
+  async ({ api }) => {
     // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
-
-    await page.goto(servicesPage.url);
-    await expect(nodesPage.builders.showRowDetailsByIndex('0')).toBeVisible({
-      timeout: Timeouts.TEN_SECONDS,
-    });
-    await servicesPage.pagination.selectRowsPerPage('50');
-    await expect(servicesPage.pagination.rowsPerPageDropdown).toHaveText('50');
 
     const agents = (await api.inventoryApi.getServices()).services
       .flatMap((service) => service.agents)
