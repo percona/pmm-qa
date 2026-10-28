@@ -55,6 +55,8 @@ export default class AlertingPage extends BasePage {
       this.grafanaIframe()
         .getByTestId('data-testid Select option')
         .filter({ has: this.page.getByText(option, { exact: true }) }),
+    severityBadge: (alertName: string, band: string) =>
+      this.builders.severityCell(alertName).getByTestId(`alert-severity-${band.toLowerCase()}`),
     severityCell: (alertName: string) => this.builders.alertRow(alertName).getByRole('cell').nth(5),
     stateCell: (alertName: string) =>
       this.builders.alertRow(alertName).getByRole('cell').nth(1).locator('[class*="filled"]'),

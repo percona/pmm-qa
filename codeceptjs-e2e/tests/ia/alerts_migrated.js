@@ -3,6 +3,7 @@ const { users } = require('../helper/constants');
 
 const ruleName = 'PSQL immortal rule';
 const ruleFolder = 'PostgreSQL';
+// `text` is the band the Alert Status page shows for each level, see PMM-15239.
 const rulesForAlerts = [
   {
     severity: 'SEVERITY_CRITICAL',
@@ -14,7 +15,7 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_NOTICE',
-    text: 'Notice',
+    text: 'Info',
   },
   {
     severity: 'SEVERITY_WARNING',
@@ -22,7 +23,7 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_ALERT',
-    text: 'Alert',
+    text: 'Critical',
   },
   {
     severity: 'SEVERITY_INFO',
@@ -30,11 +31,11 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_DEBUG',
-    text: 'Debug',
+    text: 'Info',
   },
   {
     severity: 'SEVERITY_EMERGENCY',
-    text: 'Emergency',
+    text: 'Critical',
   },
 ];
 
