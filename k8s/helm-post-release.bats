@@ -107,14 +107,14 @@ assert_pmm_version() {
     fi
     echo "Upgrading chart ${prev_chart} (PMM ${PMM_SERVER_PREVIOUS}) -> ${latest_chart} (PMM ${PMM_SERVER_LATEST})"
 
-    helm install pmm-upgrade percona/pmm --version "$prev_chart" --wait --timeout 10m
+    helm install pmm-upgrade percona/pmm --version "$prev_chart" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
     wait_for_pmm
     assert_equal "$(pmm_pod_image)" "percona/pmm-server:${PMM_SERVER_PREVIOUS}"
     start_port_forward
     assert_pmm_version "$PMM_SERVER_PREVIOUS"
     stop_port_forward
 
-    helm upgrade pmm-upgrade percona/pmm --version "$latest_chart" --wait --timeout 10m
+    helm upgrade pmm-upgrade percona/pmm --version "$latest_chart" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
     kubectl rollout status statefulset/pmm-upgrade --timeout=10m
     wait_for_pmm
 
