@@ -120,7 +120,7 @@ Scenario(
       adminPage.performPageDown(5);
       await dashboardPage.expandEachDashboardRow();
       adminPage.performPageUp(5);
-      await dashboardPage.waitForGraphsToHaveData(service === remoteServiceName ? 6 : 3, 360);
+      await dashboardPage.waitForGraphsToHaveData(service === remoteServiceName ? 6 : 3, 180);
     }
 
     I.amOnPage(dashboardPage.proxysqlInstanceSummaryDashboard.url);
