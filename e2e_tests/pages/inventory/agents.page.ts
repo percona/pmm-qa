@@ -11,6 +11,12 @@ export default class AgentsPage extends BasePage {
         .filter({ hasText: label }),
     agentTypeCell: (agentType: string) =>
       this.grafanaIframe().getByRole('cell', { exact: true, name: agentType }),
+    selectAgentCheckbox: (agentType: string) =>
+      this.grafanaIframe()
+        .getByTestId('table-tbody-tr')
+        .filter({ has: this.page.getByRole('cell', { exact: true, name: agentType }) })
+        .getByTestId('select-row')
+        .locator('span'),
     showAgentDetails: (agentType: string) =>
       this.grafanaIframe()
         .getByTestId('table-tbody-tr')
@@ -19,6 +25,8 @@ export default class AgentsPage extends BasePage {
   };
   buttons = {
     backToNodes: this.grafanaIframe().getByRole('link', { name: 'Go back to nodes' }),
+    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
+    proceed: this.grafanaIframe().getByRole('button', { name: 'Proceed' }),
   };
   elements = {
     agentTypes: this.grafanaIframe().getByTestId('table-tbody-tr').locator('xpath=td[3]'),
@@ -28,6 +36,18 @@ export default class AgentsPage extends BasePage {
   };
   inputs = {};
   messages = {};
+
+  deleteAgent = async (agentType: string) => {
+    await this.builders.selectAgentCheckbox(agentType).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.delete.click();
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes('/v1/inventory/agents/') && response.request().method() === 'DELETE',
+      ),
+      this.buttons.proceed.click(),
+    ]);
+  };
 
   serviceAgentsUrl = (serviceId: string) => `graph/inventory/services/${serviceId}/agents`;
 

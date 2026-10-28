@@ -5,6 +5,14 @@ export interface NodeAgent {
   status: string;
 }
 
+export interface InventoryAgent {
+  agent_id: string;
+  process_exec_path?: string;
+  service_id?: string;
+}
+
+export type GetAgents = Record<string, InventoryAgent[]>;
+
 export interface GetNode {
   agents?: NodeAgent[];
   node_id: string;

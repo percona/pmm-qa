@@ -96,6 +96,8 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@ami-ovf-post-upgrade`
+- `@ami-ovf-pre-upgrade`
 - `@annotations`
 - `@dashboards`
 - `@disconnect`
@@ -112,6 +114,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
+- `@instances`
 - `@inventory`
 - `@inventory-fb`
 - `@LBAC`
