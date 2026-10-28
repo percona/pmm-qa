@@ -3730,15 +3730,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15794",
       "by": "Investigator routine",
       "at": "2026-10-28T03:27:19Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-28T03:07:45Z",
       "suites": [
         "Integrations"
-      ]
+      ],
+      "verdict": "test bug",
+      "summary": "PXC Galera Node Summary check counts empty panels once right after setup, but its 5m-interval stat panels stay empty until the next 5-minute boundary; the fix polls with refresh past one boundary.",
+      "link": "https://github.com/percona/pmm-qa/pull/1673",
+      "by": "Investigator routine",
+      "at": "2026-10-28T04:25:55Z"
     }
-  ]
+  ],
+  "claims": []
 }
