@@ -31,7 +31,7 @@ test.describe(
      */
     test('PMM-T224 run docker container with a invalid value for a environment variable PMM_DATA_RETENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -57,7 +57,7 @@ test.describe(
      */
     test('PMM-T225 run docker container with a unexpected environment variable PMM_DATA_TENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -122,7 +122,7 @@ test.describe(
       const containerName = 'PMM-T526';
       const httpPort = 84;
       await cli.exec(
-        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} ${DOCKER_IMAGE}`,
+        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       stopList.push(containerName);
       removeList.push(containerName);
