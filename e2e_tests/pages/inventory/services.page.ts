@@ -22,6 +22,16 @@ export default class ServicesPage extends BasePage {
     delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
   };
   elements = {
+    monitoringNotOkRows: this.grafanaIframe()
+      .locator('tbody')
+      .getByTestId('table-tbody-tr')
+      .filter({ hasNot: this.page.getByRole('link', { exact: true, name: 'OK' }) }),
+    monitoringStatuses: this.grafanaIframe()
+      .locator('tbody')
+      .getByTestId('table-tbody-tr')
+      .locator('xpath=td[5]'),
+    serviceNames: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr').locator('xpath=td[3]'),
+    serviceRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
   };
   inputs = {};

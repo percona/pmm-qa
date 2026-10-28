@@ -102,6 +102,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
+- `@exporters`
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
@@ -112,6 +113,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ia`
 - `@image-renderer`
 - `@inventory`
+- `@inventory-fb`
 - `@LBAC`
 - `@menu`
 - `@mongodb-exporter`

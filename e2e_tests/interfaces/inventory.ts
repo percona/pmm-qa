@@ -69,7 +69,7 @@ export interface GetService {
         additionalProp2: string;
         additionalProp3: string;
       };
-      disabled: true;
+      disabled: boolean;
       disabled_collectors: [string];
       listen_port: 0;
       log_level: string;
