@@ -2,7 +2,7 @@
 
 Candidates for overlapping migration workflow steps, with the evidence gathered so far. `orchestration.md` permits only overlaps recorded here as `implemented`.
 
-Evidence comes from `.migration-observations/<row>-<slug>.md`. A candidate needs timing data from at least two migrations before moving off `needs-evidence`. `skill-gardener` updates verdicts here from that evidence; a parallelization observation updates a row instead of opening a lesson entry, and any resulting lesson stays on the control branch in `migration/skill-lessons/`.
+Evidence comes from `.migration-observations/<row>-<slug>.md`. A candidate needs timing data from at least two migrations before moving off `needs-evidence`. `skill-gardener` updates verdicts here from that evidence; a parallelization observation updates a row instead of opening a lesson entry, and any resulting lesson stays on the control branch in `.claude/skill-lessons-migration/`.
 
 Status values: `implemented` | `safe` | `unsafe` | `needs-evidence`.
 

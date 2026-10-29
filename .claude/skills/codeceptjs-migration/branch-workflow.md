@@ -10,7 +10,7 @@ The commands below are scripted in `.claude/scripts/migration.sh` (`orchestratio
 | --- | --- |
 | `origin/main` merge | control |
 | tracker row `in-progress`, tracker row `done` | control |
-| `migration/skill-lessons/` entries, and any target edit the user approves from one | control |
+| `.claude/skill-lessons-migration/` entries, and any target edit the user approves from one | control |
 | migrated Playwright test, POMs, helpers, API clients, fixtures | publish branch |
 | workflow-coverage YAML | publish branch |
 | CodeceptJS source retirement | publish branch |
