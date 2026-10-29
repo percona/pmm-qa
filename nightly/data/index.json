@@ -136970,6 +136970,16 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-ha-tests/156/",
         "by": "Investigator routine",
         "at": "2026-10-29T06:09:55Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "unstable",
+        "summary": "pmm3-ha-backup-restore-tests #29: the ROSA API hostname stopped resolving (DNS 'no such host') mid helm install, a minute after kubectl and helm had reached it; a re-run with identical parameters passed 25/25, install and restore included.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/30/",
+        "by": "Investigator routine",
+        "at": "2026-10-29T06:10:02Z"
       }
     ],
     "claims": []
