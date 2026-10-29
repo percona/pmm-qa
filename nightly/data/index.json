@@ -136950,20 +136950,24 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "test bug",
+        "summary": "All 5 AMI upgrade lanes died in 'Setup Dependencies and PMM Client' before any test ran: jenkins-pipelines#4624 added 'sudo npx playwright install-deps chromium' (apt-based, copied from the Ubuntu GSSAPI job) to a runner on agent-amd64, which has no apt-get (exit 127). The fix drops that line; pmm3-ui-tests runs Playwright chromium on the same label without it.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4627",
+        "by": "Investigator routine",
+        "at": "2026-10-29T02:38:00Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-10-29T02:32:41Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-29T02:32:41Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       }
     ]
