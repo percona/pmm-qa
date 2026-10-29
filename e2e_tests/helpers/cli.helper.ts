@@ -118,6 +118,24 @@ export default class CliHelper {
     ).stdout;
   };
 
+  getPmmAdminField = (output: string, field: string): string => {
+    const value = output
+      .split('\n')
+      .find((line) => line.startsWith(field))
+      ?.split(':')[1]
+      ?.trim();
+
+    if (!value) throw new Error(`Failed to find '${field}' in pmm-admin output:\n${output}`);
+
+    return value;
+  };
+
+  getPmmAdminStatusField = (container: string, field: string): string =>
+    this.getPmmAdminField(
+      this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
+      field,
+    );
+
   getSummaryAgentsInfo = (container: string, archivePath: string) => {
     const archive = this.execute(`docker exec ${container} pmm-admin summary`)
       .assertSuccess()
