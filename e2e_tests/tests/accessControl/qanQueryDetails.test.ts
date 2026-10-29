@@ -19,8 +19,8 @@ const scenarioFor = (serviceType: AccessServiceType): AccessUserScenario => {
 
 const mysqlUser = scenarioFor('mysql');
 const postgresUser = scenarioFor('postgresql');
-// mysqld_exporter runs this query on every scrape, so it always has an example to explain.
-const mysqlQueryText = 'SELECT SCHEMA_NAME FROM `information_schema` . `schemata`';
+// mysqld_exporter runs this query on every scrape, and its example has no placeholder that would break Explain.
+const mysqlQueryText = 'SELECT * FROM `information_schema` . `client_statistics`';
 // pmm-framework runs the school workload on PostgreSQL with pg_stat_monitor, which stores its plan.
 const postgresQueryText = 'SELECT s.first_name';
 const timeRangeHours = 6;
