@@ -40,7 +40,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - A repeat attempt of the same gate goes to the reviewer that returned the previous one, through `SendMessage` with the open ids and the delta, so it does not re-read the skill. Spawn a fresh reviewer only when that one is unreachable, and always for the final gate after an initial one. The ledger stays the record either way.
 - The final gate reuses the initial gate's MCP locator verification and mutation proof for every file `cmp` shows byte-identical to what the initial gate checked on the same environment; it re-runs MCP only for locators added or changed since. Pass that `cmp` result in the spawn.
 - Five attempts per gate, counted by the ledger's `attempt`. After a fifth non-pass: keep the row `in-progress`, run teardown, report the open blockers verbatim with the ledger path. A five-round disagreement is a rule conflict for a human.
-- Pass the gate ledger path (`.claude/migration-observations/<row>-<slug>.gates.yaml`) on every gate spawn; the reviewer reads and appends it itself (`run.md` section Gate ledger). A `FINAL_REVIEW_FAILED` entry whose blockers are all `open` routes work to the writer or runner, not to a re-spawn.
+- Pass the gate ledger path (`.migration-observations/<row>-<slug>.gates.yaml`) on every gate spawn; the reviewer reads and appends it itself (`run.md` section Gate ledger). A `FINAL_REVIEW_FAILED` entry whose blockers are all `open` routes work to the writer or runner, not to a re-spawn.
 - Overlap only what `parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, MCP checks after readyz. Everything else is serial.
 
 **Environment and control**
@@ -88,7 +88,7 @@ State both counts. Append each untracked file as a `pending` row (Bucket/Env/Set
 
 Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, refresh that file against the release notes before migrating.
 
-Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .claude/migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
+Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
 ## 1b. Batch small rows
 
@@ -146,7 +146,7 @@ Every later command reuses this pair. If the environment becomes unreachable, ke
 
 ## Phase timeline
 
-One file per migration at `.claude/migration-observations/<row>-<slug>.md`, appended and never rewritten, gitignored, excluded from the PR, pruned to the last ten migrations:
+One file per migration at `.migration-observations/<row>-<slug>.md` (outside `.claude/`, whose writes stop an unattended run for approval even in auto mode), appended and never rewritten, gitignored, excluded from the PR, pruned to the last ten migrations:
 
 ```markdown
 # <row> <source> -> <target>

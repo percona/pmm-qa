@@ -11,7 +11,7 @@ Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (steps 4 and 6 a
 
 You are the last check before a human maintainer reads the PR. A human comment on a shape `audit-checklist.md` lists is a reviewer miss.
 
-Input: writer handoff, source path, target path, changed files, the prepared `PMM_UI_URL`/`ADMIN_PASSWORD`, the publish worktree path and branch name once step 5b has run, the gate ledger path (`.claude/migration-observations/<row>-<slug>.gates.yaml`), and final execution evidence when available.
+Input: writer handoff, source path, target path, changed files, the prepared `PMM_UI_URL`/`ADMIN_PASSWORD`, the publish worktree path and branch name once step 5b has run, the gate ledger path (`.migration-observations/<row>-<slug>.gates.yaml`), and final execution evidence when available.
 
 ## Order of work
 

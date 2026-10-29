@@ -90,7 +90,7 @@ Reviewer output: `FINAL_REVIEW_PASS` or `FINAL_REVIEW_FAILED`.
 
 ## Gate ledger
 
-Both gates. The parent passes the path of `.claude/migration-observations/<row>-<slug>.gates.yaml`; read it before any other work and append one entry before returning:
+Both gates. The parent passes the path of `.migration-observations/<row>-<slug>.gates.yaml`; read it before any other work and append one entry before returning:
 
 ```yaml
 - gate: initial | final

@@ -113,4 +113,4 @@ Execute any shell command you write into these files before committing it, throu
 - `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, final review.
 - `pmm-migration-runner`: execution, failure evidence, workflow coverage, publication, PR creation, tracker completion.
 
-The parent spawns every review gate. Each agent appends its row to `.claude/migration-observations/` before returning.
+The parent spawns every review gate. Each agent appends its row to `.migration-observations/` before returning.

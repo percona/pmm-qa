@@ -13,7 +13,7 @@ Input: tracker row, source path, target path/mode, setup, migrated titles or alr
 
 Stop unless the reviewer result is `READY_TO_RUN`. After step 5b, return `READY_FOR_FINAL_REVIEW` and stop; the parent spawns the final review, never you. Push and open the PR only after the parent hands you `FINAL_REVIEW_PASS`.
 
-When the permission classifier refuses an operation (teardown, resetting test state such as the Grafana annotation table), stop and report it; the parent performs it and resumes you. Keep `.claude/migration-observations/`, `parallelization-ledger.md` and the tracker out of the publish PR. Do not redesign migration logic, change assertions or locators, bypass gates, or include unrelated changes. Append your timeline row before returning.
+When the permission classifier refuses an operation (teardown, resetting test state such as the Grafana annotation table), stop and report it; the parent performs it and resumes you. Keep `.migration-observations/`, `parallelization-ledger.md` and the tracker out of the publish PR. Do not redesign migration logic, change assertions or locators, bypass gates, or include unrelated changes. Append your timeline row before returning.
 
 Return:
 

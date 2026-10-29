@@ -172,6 +172,6 @@ terraform/linode-runner/*.pem
 graphify-out/cache
 
 # Local migration phase observations (evidence for skill-gardener, not repo content)
-.claude/migration-observations/
+.migration-observations/
 .playwright-cli/
 qa-integration

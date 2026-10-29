@@ -221,7 +221,7 @@ publish_branch() {
 
 selection() {
   [[ -d $publish ]] || die "no publish worktree"
-  local base out=$control/.claude/migration-observations/selection
+  local base out=$control/.migration-observations/selection
   base=$(git -C "$publish" merge-base HEAD origin/main)
   [[ $(git -C "$publish" rev-parse --abbrev-ref '@{u}' 2>/dev/null) ]] && base=$(git -C "$publish" rev-parse '@{u}')
   rm -rf "$out" && mkdir -p "$out"
