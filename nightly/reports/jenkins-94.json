@@ -3746,15 +3746,17 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4627",
       "by": "Investigator routine",
       "at": "2026-10-29T02:38:00Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-29T02:32:41Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "pmm3-ha-tests #155: PMM-T2371 read min(up{job=\"kube-apiserver\"})=0 for ~6 min on the ROSA cluster while apiserver-proxied kubelet/cAdvisor scrapes stayed up; no chart, pmm-qa or PMM change in the window, and a re-run with identical parameters passed 24/24.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ha-tests/156/",
+      "by": "Investigator routine",
+      "at": "2026-10-29T06:09:55Z"
     }
-  ]
+  ],
+  "claims": []
 }
