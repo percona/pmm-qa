@@ -3,6 +3,7 @@
 #
 #   migration.sh preflight [--allow-unpushed] [--allow-open-pr <n>]   checks, main merge, drift, next pending row
 #   migration.sh mark <row> <in-progress|done> [pr-url]                 tracker status edit + commit on control
+#   migration.sh set-setup <row> <setup-args>                           tracker Setup cell edit, uncommitted (mark commits it)
 #   migration.sh setup <source-test>                                    Playwright job and databases per source scenario
 #   migration.sh env-check <service-prefix>...                          creds, services, QAN rows per prefix (now-120m)
 #   migration.sh publish-branch <branch>                                worktree from origin/<branch> or origin/main, apply control's changes, npm ci
@@ -16,7 +17,7 @@ set -uo pipefail
 control=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 publish=$(dirname "$control")/pmm-qa-publish
 base_tree=$(dirname "$control")/pmm-qa-base
-tracker=.claude/skills/codeceptjs-migration/tracker.md
+tracker=migration/tracker.md
 url=${PMM_UI_URL:+${PMM_UI_URL%/}/}
 pass=${ADMIN_PASSWORD:-}
 repo=percona/pmm-qa
@@ -178,6 +179,23 @@ EOF
   git commit -q -m "chore(migration): mark $name ${status/-/ }" && git log --oneline -1
 }
 
+set_setup() {
+  local row=$1 setup=$2
+  cd "$control" || exit 1
+  python3 - "$tracker" "$row" "$setup" <<'EOF' || exit 1
+import re, sys
+path, row, setup = sys.argv[1:]
+lines = open(path, 'rb').read().split(b'\n')
+hits = [i for i, l in enumerate(lines) if re.match(rb'^\| %s +\|' % row.encode(), l)]
+assert len(hits) == 1, f'row {row}: {len(hits)} matches'
+cells = lines[hits[0]].split(b'|')
+cells[5] = b' ' + ('`%s`' % setup).encode().ljust(len(cells[5]) - 2) + b' '
+lines[hits[0]] = b'|'.join(cells)
+open(path, 'wb').write(b'\n'.join(lines))
+EOF
+  grep -E "^\| $row +\|" "$tracker"
+}
+
 env_check() {
   [[ -n $url && -n $pass ]] || die 'PMM_UI_URL/ADMIN_PASSWORD unset: eval "$(chaos-pmm.sh env <run_id>)"'
   curl -sk -o /dev/null -w '%{http_code}' -u "admin:$pass" "${url}v1/users/me" | grep -q 200 || die "/v1/users/me not 200 (wrong password?)"
@@ -221,7 +239,7 @@ publish_branch() {
 
 selection() {
   [[ -d $publish ]] || die "no publish worktree"
-  local base out=$control/.claude/migration-observations/selection
+  local base out=$control/.migration-observations/selection
   base=$(git -C "$publish" merge-base HEAD origin/main)
   [[ $(git -C "$publish" rev-parse --abbrev-ref '@{u}' 2>/dev/null) ]] && base=$(git -C "$publish" rev-parse '@{u}')
   rm -rf "$out" && mkdir -p "$out"
@@ -324,6 +342,7 @@ shift || true
 case $cmd in
   preflight) preflight "$@" ;;
   mark) mark "$@" ;;
+  set-setup) set_setup "$@" ;;
   setup) setup "$@" ;;
   env-check) env_check "$@" ;;
   publish-branch) publish_branch "$@" ;;

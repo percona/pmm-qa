@@ -28,14 +28,14 @@ git merge origin/main
 git status --short        # must be empty before the migration starts
 ```
 
-Resolve a conflict on its markers, file by file. `git checkout --theirs`/`--ours` replaces the whole file and drops the other side's auto-merged hunks. Before committing the merge, `git check-ignore -q .claude/skills/codeceptjs-migration/tracker.md` must exit 1.
+Resolve a conflict on its markers, file by file. `git checkout --theirs`/`--ours` replaces the whole file and drops the other side's auto-merged hunks. Before committing the merge, `git check-ignore -q migration/tracker.md` must exit 1.
 
 ## Starting the migration
 
 Mark the row on control in a tracker-only commit; it identifies the active row:
 
 ```bash
-git add .claude/skills/codeceptjs-migration/tracker.md
+git add migration/tracker.md
 git commit -m "chore(migration): mark <test-name> in progress"
 ```
 
