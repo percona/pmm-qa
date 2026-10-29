@@ -17,6 +17,7 @@ import BasePage from '@pages/base.page';
 
 export default class FeaturePage extends BasePage {
   url = '/replace-with-feature-url';
+  expectedTitle = 'Replace expected title';
   builders = {};
   buttons = {
     primaryAction: this.page.getByRole('button', { name: 'Replace action name' }),
@@ -73,7 +74,7 @@ pmmTest('PMM-Txxxx - Verify feature behavior @tag', async ({ featurePage }) => {
 
   await pmmTest.step('Search and verify the result', async () => {
     await featurePage.searchAndApply('replace-search-text');
-    await expect(featurePage.elements.featureTitle).toHaveText('Replace expected title');
+    await expect(featurePage.elements.featureTitle).toHaveText(featurePage.expectedTitle);
   });
 });
 ```
