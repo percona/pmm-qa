@@ -130,6 +130,12 @@ export default class CliHelper {
     return value;
   };
 
+  getPmmAdminStatusField = (container: string, field: string): string =>
+    this.getPmmAdminField(
+      this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
+      field,
+    );
+
   getSummaryAgentsInfo = (container: string, archivePath: string) => {
     const archive = this.execute(`docker exec ${container} pmm-admin summary`)
       .assertSuccess()
