@@ -14,6 +14,7 @@ import HaApi from '@api/ha.api';
 import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
 import DumpApi from '@api/dump.api';
+import QanApi from '@api/qan.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
@@ -27,6 +28,7 @@ export default class Api {
   readonly inventoryApi: InventoryApi;
   readonly managementApi: ManagementApi;
   readonly prometheusApi: PrometheusApi;
+  readonly qanApi: QanApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
   readonly remoteInstanceApi: RemoteInstanceApi;
   readonly serverApi: ServerApi;
@@ -43,6 +45,7 @@ export default class Api {
     this.inventoryApi = new InventoryApi(request);
     this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
+    this.qanApi = new QanApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.remoteInstanceApi = new RemoteInstanceApi(request);

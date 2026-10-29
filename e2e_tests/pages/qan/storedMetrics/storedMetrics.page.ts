@@ -106,6 +106,7 @@ export default class StoredMetricsPage extends BasePage {
     codeBlock: this.grafanaIframe()
       .getByTestId('highlight-code')
       .or(this.grafanaIframe().locator('.pretty-json-container')),
+    detailsNoData: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('table-no-data'),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
@@ -129,6 +130,7 @@ export default class StoredMetricsPage extends BasePage {
       .locator('pre')
       .filter({ hasText: 'No table info from example nor explain' }),
     overviewColumnTooltip: this.grafanaIframe().locator('.overview-column-tooltip'),
+    overviewNoData: this.grafanaIframe().getByRole('rowgroup').getByTestId('table-no-data'),
     pageProgressBar: this.page.getByRole('progressbar'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
     planInfoIcon: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('icon-info-circle'),
@@ -192,6 +194,26 @@ export default class StoredMetricsPage extends BasePage {
 
       return parseFloat(value) * (magnitudes[value.slice(-1)] ?? 1) * (timeUnits[unit] ?? 1);
     });
+
+  /** Rate, sum and per-query values of each metric in the Details tab, without the share of the total. */
+  getDetailMetricValues = async (metricNames: string[]) => {
+    const values: Record<string, string[]> = {};
+
+    for (const metricName of metricNames) {
+      await expect(this.builders.detailMetricValue(metricName, 3)).not.toBeEmpty({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      values[metricName] = [];
+
+      for (const columnNumber of [2, 3, 4]) {
+        values[metricName].push(
+          ((await this.builders.detailMetricValue(metricName, columnNumber).textContent()) ?? '').trim(),
+        );
+      }
+    }
+
+    return values;
+  };
 
   getPlanId = async () => {
     await this.elements.planInfoIcon.hover();
