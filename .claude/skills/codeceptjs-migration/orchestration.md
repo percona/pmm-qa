@@ -9,7 +9,8 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 | Step | Command |
 | --- | --- |
 | 1 preflight checks 1-3 (plus no unpushed commits on control), `origin/main` merge, drift counts, Playwright version, next `pending` row | `migration.sh preflight` |
-| 1 `in-progress` marker, after correcting the row's Setup by hand | `migration.sh mark <row> in-progress` |
+| 1 the row's Setup, from step 2a | `migration.sh set-setup <row> '<--database ...>'` |
+| 1 `in-progress` marker | `migration.sh mark <row> in-progress` |
 | 2a the VM's `--database` list from the CI job each source scenario's tags select (no job printed means a retag is needed) | `migration.sh setup [--args] <source>` |
 | 3 credentials, services and QAN rows per service the source names | `migration.sh env-check <service-prefix>...` |
 | 5b publish worktree, move the work, `npm ci` | `migration.sh publish-branch <branch>` |
@@ -41,10 +42,11 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - The final gate reuses the initial gate's MCP locator verification and mutation proof for every file `cmp` shows byte-identical to what the initial gate checked on the same environment; it re-runs MCP only for locators added or changed since. Pass that `cmp` result in the spawn.
 - Five attempts per gate, counted by the ledger's `attempt`. After a fifth non-pass: keep the row `in-progress`, run teardown, report the open blockers verbatim with the ledger path. A five-round disagreement is a rule conflict for a human.
 - Pass the gate ledger path (`.migration-observations/<row>-<slug>.gates.yaml`) on every gate spawn; the reviewer reads and appends it itself (`run.md` section Gate ledger). A `FINAL_REVIEW_FAILED` entry whose blockers are all `open` routes work to the writer or runner, not to a re-spawn.
-- Overlap only what `parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, MCP checks after readyz. Everything else is serial.
+- Overlap only what `migration/parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, MCP checks after readyz. Everything else is serial.
 
 **Environment and control**
 
+- A run writes nothing under `.claude/`: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. Run state lives in `migration/` (tracker, parallelization ledger, skill lessons) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup` and `mark`.
 - Never edit `e2e_tests/.env`. Pass the run id, `PMM_UI_URL` and `ADMIN_PASSWORD` (the VM's URL and per-run password, from `chaos-pmm.sh env <run_id>`, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them. `chaos-pmm.sh test` gives the run on the VM its own on-box pair.
 - Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
@@ -71,17 +73,17 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
 Then merge `origin/main` into control (`branch-workflow.md` Control branch preflight). If the merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow: confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, merge again. Never `--allow-unrelated-histories`.
 
-`tracker.md` is tens of kilobytes; never read it whole. Select with a scoped `grep`/`head` over the status column and read only that row and the header section you need.
+`migration/tracker.md` is tens of kilobytes; never read it whole. Select with a scoped `grep`/`head` over the status column and read only that row and the header section you need.
 
 Check tracker drift with exactly this form (`grep -P` and `sed` backslash expressions fail silently here and read as "no drift"):
 
 ```bash
 comm -23 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
          <(grep -oE 'codeceptjs-e2e/tests/[A-Za-z0-9_/.-]+_test\.js' \
-             .claude/skills/codeceptjs-migration/tracker.md | sort -u)   # untracked drift
+             migration/tracker.md | sort -u)   # untracked drift
 comm -13 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
          <(grep -oE 'codeceptjs-e2e/tests/[A-Za-z0-9_/.-]+_test\.js' \
-             .claude/skills/codeceptjs-migration/tracker.md | sort -u)   # tracked but absent
+             migration/tracker.md | sort -u)   # tracked but absent
 ```
 
 State both counts. Append each untracked file as a `pending` row (Bucket/Env/Setup blank until confirmed from its hooks and `Data(...)`) in its own tracker-only commit; in test-run mode, report without editing.
@@ -109,7 +111,7 @@ When the parent designates a dry run, skip only: tracker status writes, step 5b 
 
 ## 2a. Start provisioning in the background
 
-Before launching the writer, take the setup from CI, not from the tracker's `Setup` (a planned default that is regularly wrong): `bash .claude/scripts/migration.sh setup <source>` matches each scenario's tags to the Playwright job that selects it (else the CodeceptJS job that runs it today), takes one job per scenario, copies that job's `setup_services` whole, and on the shared nightly server takes one shard argument per service the scenario names. Read its per-scenario lines, then add by hand only a database for a scenario it marks `NO job selects it` and one an existing target file you will modify needs (the services it filters on, `docker exec`s into or registers). Run it before step 1's `in-progress` commit and write the final list into the row's `Setup` there.
+Before launching the writer, take the setup from CI, not from the tracker's `Setup` (a planned default that is regularly wrong): `bash .claude/scripts/migration.sh setup <source>` matches each scenario's tags to the Playwright job that selects it (else the CodeceptJS job that runs it today), takes one job per scenario, copies that job's `setup_services` whole, and on the shared nightly server takes one shard argument per service the scenario names. Read its per-scenario lines, then add by hand only a database for a scenario it marks `NO job selects it` and one an existing target file you will modify needs (the services it filters on, `docker exec`s into or registers). Run it before step 1's `in-progress` commit and write the final list into the row's `Setup` with `migration.sh set-setup`.
 
 Name the run `mig-<row>-$(date +%m%d%H%M)` (a batch takes its first row). Start `bash .claude/scripts/chaos-pmm.sh up <run_id> $(bash .claude/scripts/migration.sh setup --args <source>) <hand-added args>` with `run_in_background`: VM creation, cloud-init, Node and the server image took 16 minutes on the first measured run, databases extra. A failed `up` is retried once under a new run id, after `chaos-pmm.sh down` on the failed one. Then launch the writer immediately, and record the run id, exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 

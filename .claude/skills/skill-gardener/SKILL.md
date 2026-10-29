@@ -87,7 +87,7 @@ A lesson is **branch-local** when both hold:
 Any other lesson captured on that branch follows "Commit captured lessons" unchanged. A branch-local lesson uses the same entry format and the same filename convention; only the directory differs. Then:
 
 1. Commit it on the control branch in the user's checkout, staging only the new entry files. No gardener worktree, no `skill-gardener/<YYYY-MM-DD>` branch, and no push of its own — the entries ride along with whatever the control branch normally pushes.
-2. Never promote it to `main` and never open a PR for it. Publish does not read `.claude/skill-lessons-migration/` in any mode.
+2. Never promote it to `main` and never open a PR for it. Publish does not read `migration/skill-lessons/` in any mode.
 3. **Never apply it.** Report the entry once at handoff with its path and leave the target untouched. A branch-local lesson reaches its target only when the user has reviewed it and asks for it, and that edit is committed on this branch.
 
 ## Review and worth threshold

@@ -153,7 +153,7 @@ dist
 !.claude/scripts/
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
-!.claude/skill-lessons-migration/
+!migration/skill-lessons/
 .cursor
 .cursorrules
 

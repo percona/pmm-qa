@@ -16,7 +16,7 @@ Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`or
 | Review checklist and done gate | `audit-checklist.md` |
 | Broken locator recovery | `locator-fix.md` |
 | Branch, coverage, PR and tracker publishing | `branch-workflow.md` |
-| Work queue | `tracker.md` |
+| Work queue | `migration/tracker.md` |
 
 ## Required outcome
 
