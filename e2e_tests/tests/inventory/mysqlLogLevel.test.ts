@@ -5,7 +5,7 @@ import { expect } from '@playwright/test';
 
 const serviceName = 'mysql_service';
 const agentTypes = ['mysqld-exporter', 'qan-mysql-slowlog-agent', 'qan-mysql-perfschema-agent'] as const;
-const logLevels = ['warn', 'debug', 'info', 'warn', 'error'] as const;
+const logLevels = ['debug', 'info', 'warn', 'error'] as const;
 const fatalLevelError = '--log-level must be one of "debug","info","warn","error" but got "fatal"';
 let containerName: string;
 let port: number;

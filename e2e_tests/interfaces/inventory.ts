@@ -7,10 +7,8 @@ export interface NodeAgent {
 
 export interface InventoryAgent {
   agent_id: string;
-  log_level?: string;
   process_exec_path?: string;
   service_id?: string;
-  status?: string;
 }
 
 export type GetAgents = Record<string, InventoryAgent[]>;
