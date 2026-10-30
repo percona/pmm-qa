@@ -1,6 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetAgents, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -26,6 +26,19 @@ export default class InventoryApi {
       response.status(),
       `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
+  };
+
+  getAgents = async (): Promise<GetAgents> => {
+    const response = await this.request.get(apiEndpoints.inventory.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get agents API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()) as GetAgents;
   };
 
   getAllNodes = async (): Promise<GetNode[]> => {
@@ -63,6 +76,29 @@ export default class InventoryApi {
 
     return filteredServices;
   };
+
+  getNodeWithMysqlService = async (nodeName: string) => {
+    const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
+
+    expect(nodes, `Node ${nodeName} must be registered exactly once`).toHaveLength(1);
+
+    const services = (await this.getServices()).services.filter(
+      (service) => service.node_id === nodes[0].node_id && service.service_type === ServiceType.mysql,
+    );
+
+    expect(services, `Node ${nodeName} must have exactly one MySQL service`).toHaveLength(1);
+
+    return {
+      nodeId: nodes[0].node_id,
+      serviceId: services[0].service_id,
+      serviceName: services[0].service_name,
+    };
+  };
+
+  getServiceAgents = async (serviceId: string) =>
+    Object.values(await this.getAgents())
+      .flat()
+      .filter((agent) => agent.service_id === serviceId);
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();

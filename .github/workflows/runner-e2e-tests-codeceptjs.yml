@@ -46,6 +46,14 @@ on:
         default: 'null'
         required: false
         type: string
+      arch:
+        description: "Runner architecture"
+        default: 'amd64'
+        required: false
+        type: choice
+        options:
+          - amd64
+          - arm64
 
   workflow_call:
     inputs:
@@ -76,6 +84,10 @@ on:
       sha:
         required: false
         type: string
+      arch:
+        required: false
+        type: string
+        default: amd64
 
     secrets:
       LAUNCHABLE_TOKEN:
@@ -87,9 +99,10 @@ jobs:
   ui-tests-e2e:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     timeout-minutes: 90
     env:
+      ARCH: ${{ inputs.arch || 'amd64' }}
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
@@ -148,6 +161,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
+      # The arm64 runner image omits Ansible; the external PostgreSQL tests run playbooks.
+      - name: Install Ansible
+        if: ${{ env.ARCH == 'arm64' }}
+        run: pip3 install --user ansible-core
+
       - name: Setup npm modules for e2e tests
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
@@ -205,12 +223,16 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           docker network create pmm-qa || true
+          compose_files=(-f ${{ env.DOCKER_COMPOSE_FILE }})
+          if [[ $ARCH == arm64 ]]; then
+            compose_files+=(-f docker-compose-arm64.yml)
+          fi
           for attempt in 1 2 3; do
-            PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} pull --quiet && break
+            PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose "${compose_files[@]}" pull --quiet && break
             echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
             sleep 15
           done
-          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose "${compose_files[@]}" up -d
           # shellcheck disable=SC2016
           # Deliberately unexpanded: the inner bash -c does the expanding, and
           # curl's %{http_code} must reach curl literally.

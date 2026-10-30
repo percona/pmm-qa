@@ -128,7 +128,8 @@ jobs:
     name: ${{ matrix.engine }}:${{ matrix.version }} ${{ matrix.arch }}
     needs: plan
     if: needs.plan.outputs.cells != '[]'
-    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    # 22.04 until PSMDB ships 8.0.35: 8.0.32 won't start on the 24.04 images' kernel 7.0 (SERVER-121912)
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     timeout-minutes: 45
     permissions:
       contents: read

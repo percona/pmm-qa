@@ -7,6 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
+import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -15,6 +16,7 @@ import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
@@ -63,6 +65,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
+  externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
@@ -81,6 +84,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
+  pageNotFoundPage: PageNotFoundPage;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -152,6 +156,7 @@ const pmmTest = base.extend<{
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
+  externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
@@ -189,6 +194,7 @@ const pmmTest = base.extend<{
     await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 

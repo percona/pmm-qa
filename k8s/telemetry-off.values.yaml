@@ -1,0 +1,2 @@
+pmmEnv:
+  PMM_ENABLE_TELEMETRY: "0"

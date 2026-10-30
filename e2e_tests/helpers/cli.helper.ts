@@ -1,3 +1,4 @@
+import AdmZip from 'adm-zip';
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
 import { Timeouts } from '@helpers/timeouts';
@@ -115,6 +116,38 @@ export default class CliHelper {
     return this.execute(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
+  };
+
+  getPmmAdminField = (output: string, field: string): string => {
+    const value = output
+      .split('\n')
+      .find((line) => line.startsWith(field))
+      ?.split(':')[1]
+      ?.trim();
+
+    if (!value) throw new Error(`Failed to find '${field}' in pmm-admin output:\n${output}`);
+
+    return value;
+  };
+
+  getPmmAdminStatusField = (container: string, field: string): string =>
+    this.getPmmAdminField(
+      this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
+      field,
+    );
+
+  getSummaryAgentsInfo = (container: string, archivePath: string) => {
+    const archive = this.execute(`docker exec ${container} pmm-admin summary`)
+      .assertSuccess()
+      .stdout.split(' ')[0];
+
+    this.execute(`docker cp ${container}:/${archive} "${archivePath}"`).assertSuccess();
+
+    return (
+      JSON.parse(new AdmZip(archivePath).readAsText('client/status.json')) as {
+        agents_info: { agent_type: string; process_exec_path?: string }[];
+      }
+    ).agents_info;
   };
 
   /**
