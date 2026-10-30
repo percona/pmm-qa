@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { Document, MongoClient } from 'mongodb';
 import { Timeouts } from './timeouts';
 
 interface MongoConfig {
@@ -24,6 +24,9 @@ export default class MongoDBHelper {
     });
   }
 
+  addUser = async (username: string, password: string, roles: Document[]) =>
+    this.client.db('admin').command({ createUser: username, pwd: password, roles });
+
   createIndexStats = async (dbName: string, collectionName: string) => {
     const collection = this.client.db(dbName).collection(collectionName);
 
@@ -38,6 +41,8 @@ export default class MongoDBHelper {
   };
 
   dropDatabase = async (dbName: string) => this.client.db(dbName).dropDatabase();
+
+  dropUser = async (username: string) => this.client.db('admin').command({ dropUser: username });
 
   /**
    * Ensures the collection has at least n documents. Used so a find with $where

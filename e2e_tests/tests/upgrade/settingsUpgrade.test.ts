@@ -6,7 +6,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     await grafanaHelper.authorize();
   });
 
-  pmmTest('Verify user is able to set custom Settings @pre-upgrade', async ({ api }) => {
+  pmmTest('Verify user is able to set custom Settings @pmm-upgrade @pre-upgrade', async ({ api }) => {
     const body = {
       data_retention: '172800s',
       metrics_resolutions: {
