@@ -124,3 +124,38 @@ get_pmm_version() {
 
     echo $output
 }
+
+# Published versions of a percona chart, newest first: "<chart version> <app version>" per line.
+chart_releases() {
+    helm search repo "percona/$1" --versions --output json \
+        | jq -r --arg name "percona/$1" '.[] | select(.name == $name) | "\(.version) \(.app_version)"'
+}
+
+# Newest published chart version of percona/<chart> that ships PMM <app version>.
+chart_for_app() {
+    chart_releases "$1" | awk -v app="$2" '$2 == app {print $1; exit}'
+}
+
+pmm_pod_image() {
+    kubectl get pod --selector=app.kubernetes.io/name=pmm -o jsonpath="{.items[*].spec.containers[*].image}"
+}
+
+assert_pmm_version() {
+    local expected=$1
+    local pmm_address admin_pass version=""
+
+    pmm_address=$(get_pmm_addr)
+    admin_pass=$(get_pmm_pswd)
+
+    for _ in $(seq 1 60); do
+        version=$(curl -sk --user "admin:${admin_pass}" "https://${pmm_address}/v1/server/version" | jq -r '.version // empty' || true)
+        version=${version%%-*}
+        if [[ "$version" == "$expected" ]]; then
+            echo "PMM Server reports ${version}"
+            return 0
+        fi
+        sleep 5
+    done
+
+    fail "PMM Server reports '${version}', expected '${expected}'"
+}
