@@ -24,6 +24,10 @@ stub_prebaked_docker() {
         return
         ;;
       *VERSION_CODENAME*) printf 'noble\n' ;;
+      'exec rs'*' pmm-admin --version')
+        [[ ${PMM_ADMIN_VERSION:-} != fail ]] || return 1
+        printf 'ProjectName: pmm-admin\nVersion: %s\n' "${PMM_ADMIN_VERSION:-3.11.0}"
+        ;;
       *'patronictl -c /patroni.yml list'*)
         printf '| %s | %s:5432 | %s | %s | 1 |\n' pdpgsql_pmm_patroni_17_1 x Leader running \
           pdpgsql_pmm_patroni_17_2 x Replica streaming pdpgsql_pmm_patroni_17_3 x Replica streaming
@@ -304,6 +308,7 @@ stub_prebaked_docker() {
   [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
+# Usage: stub_deb_fetch [STATUS]  (non-zero: the version is not in the index)
 stub_deb_fetch() {
   DEBIAN_NODE=true
   # Setups still read their data files, such as the Patroni template, from images/.
@@ -314,6 +319,7 @@ stub_deb_fetch() {
   cat >"$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >>'$BATS_TEST_TMPDIR/deb.calls'
+[[ ${1:-0} -eq 0 ]] || exit ${1:-0}
 echo /cache/pmm-client.deb
 EOF
   chmod +x "$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh"
@@ -354,6 +360,30 @@ EOF
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_3 pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_3_[0-9]+$' "$DOCKER_CALLS"
+}
+
+@test "a pinned client release that left the Debian index installs from its release tarball" {
+  stub_prebaked_docker
+  stub_deb_fetch 1
+  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3.7.1'
+  # shellcheck disable=SC2329,SC2317
+  fetch_client_tarball() {
+    [[ $1 == http* ]] || return 0
+    echo "$1" >>"$BATS_TEST_TMPDIR/tarball.calls"
+    printf '/cache/client.tar.gz'
+  }
+  dispatch_setup
+
+  grep -q 'main noble /tmp/pmm-client-cache 1800 3.7.1' "$BATS_TEST_TMPDIR/deb.calls"
+  [[ $(cat "$BATS_TEST_TMPDIR/tarball.calls") == "https://downloads.percona.com/downloads/pmm3/3.7.1/binary/tarball/pmm-client-3.7.1-$(uname -m).tar.gz" ]]
+  grep -q '^cp /cache/client.tar.gz pdpgsql_pmm_17_1:/tmp/pmm-client.tar.gz$' "$DOCKER_CALLS"
+  grep -q 'bash ./install_tarball' "$DOCKER_CALLS"
+  [[ $(grep -c 'apt-get install' "$DOCKER_CALLS") -eq 0 ]]
+
+  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3-dev-latest'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'Could not fetch the PMM Client package for pdpgsql_pmm_17_1'* ]]
 }
 
 @test "PDPGSQL replication streams a basebackup replica and rejects an unknown SETUP_TYPE" {
@@ -408,9 +438,31 @@ EOF
   ! grep -Fq '$external' "$DOCKER_CALLS" || false
   grep -q '^exec rs103 systemctl stop pbm-agent$' "$DOCKER_CALLS"
   grep -q '^exec rs203 systemctl stop pbm-agent$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=rs103 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec rs202 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs202_[0-9]+ --cluster=replicaset --username=pmm --password=pmmpass --host=rs202 --port=27017$' "$DOCKER_CALLS"
-  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs203 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs203_[0-9]+ --cluster=replicaset --replication-set=rs1 --host=rs203 --port=27017$' "$DOCKER_CALLS"
+}
+
+@test "PSMDB psa adds the arbiter through 127.0.0.1 with a released client older than 3.11.0" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=8.3,SETUP_TYPE=psa,MINIO=false'
+  PMM_ADMIN_VERSION=3.10.0
+  dispatch_setup
+
+  grep -Eq '^exec rs103 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs103_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=127.0.0.1 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec rs102 pmm-admin add mongodb .* --host=rs102 --port=27017$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  PMM_ADMIN_VERSION=3.10.1-v3-4443b2b90
+  dispatch_setup
+  grep -Eq '^exec rs103 pmm-admin add mongodb .* --host=rs103 --port=27017$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  PMM_ADMIN_VERSION=fail
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'Could not read the pmm-admin version on rs103.'* ]]
+  ! grep -q '^exec rs103 pmm-admin add mongodb' "$DOCKER_CALLS" || false
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {

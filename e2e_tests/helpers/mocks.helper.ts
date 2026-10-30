@@ -78,6 +78,41 @@ export default class mocksHelper {
     );
   };
 
+  mockServicesList = async (count: number) => {
+    let requests = 0;
+    const route = await this.page.route(apiEndpoints.management.services, (route) => {
+      requests++;
+
+      return route.fulfill({
+        body: JSON.stringify({
+          services: Array.from({ length: count }, (_, index) => ({
+            address: `127.0.0.${index + 1}`,
+            agents: [],
+            cluster: '',
+            custom_labels: {},
+            database_name: 'postgres',
+            environment: '',
+            external_group: '',
+            node_id: 'pmm-server',
+            node_name: `mocked-service-node-${index + 1}`,
+            port: 5_432,
+            replication_set: '',
+            service_id: `30edfcf1-bea1-4422-b111-d2d263bdcfc${index + 1}`,
+            service_name: `mocked-service-${index + 1}`,
+            service_type: 'postgresql',
+            socket: '',
+            status: 'STATUS_UP',
+            version: '',
+          })),
+        }),
+        contentType: 'application/json',
+        status: 200,
+      });
+    });
+
+    return Object.assign(route, { requests: () => requests });
+  };
+
   mockSnoozedUpdate = async (updateVersion: string): Promise<{ snoozedAt: number }> => {
     const state = { snoozedAt: 0, snoozedVersion: '' };
 
