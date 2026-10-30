@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Builds migration.json for the gh-pages Migration tab.
 
-  python3 migration/dashboard/build.py --main <pmm-qa main checkout> --out <file>
+  python3 migration/dashboard/build.py --main <pmm-qa main checkout> --out migration/dashboard/migration.json
       [--tracker migration/tracker.md] [--jenkins <jenkins-pipelines checkout>] [--pw-list]
 
 Sources: the tracker on this branch; the GitHub workflows the nightly suites run, from --main;
 the nightly orchestrator's lanes and the jobs they call, from --jenkins (else fetched from GitHub).
 --pw-list counts Playwright tests per expression with `npx playwright test --list` in
 <main>/e2e_tests, which needs its node_modules; without it the Playwright counts are omitted.
+The gh-pages page reads migration/dashboard/migration.json from this branch, so committing a
+rebuilt file here is the whole refresh.
 """
 import argparse
 import datetime
@@ -49,7 +51,7 @@ def tracker_rows(path):
         rows.append({
             'row': int(c[0]), 'status': c[1], 'bucket': c[2], 'env': c[3], 'setup': c[4].strip('`'),
             'source': c[5].strip('`'), 'target': c[6].strip('`'), 'tags': c[7].split(),
-            'date': c[9], 'notes': notes, 'prs': prs,
+            'date': c[9], 'notes': notes[:300], 'prs': prs,
         })
     return rows
 
@@ -231,7 +233,7 @@ def main():
         'jobs': jobs,
     }
     with open(a.out, 'w', encoding='utf-8') as f:
-        json.dump(out, f, indent=1)
+        json.dump(out, f, separators=(',', ':'), ensure_ascii=False)
     print(f"{a.out}: {len(rows)} rows, {len(jobs)} jobs, {len(remaining)} CodeceptJS tests left")
 
 

@@ -190,8 +190,9 @@ const moveTip = (e) => { const r = tip.getBoundingClientRect(); tip.style.left =
 const hideTip = () => { tip.style.opacity = 0; };
 const hoverable = (el, html) => { el.addEventListener('mouseenter', (e) => showTip(e, html)); el.addEventListener('mousemove', moveTip); el.addEventListener('mouseleave', hideTip); };
 
-fetch('data/migration.json', { cache: 'no-store' }).then((r) => r.json()).then(render).catch((e) => {
-  document.getElementById('kpis').innerHTML = `<p class="empty">Could not load data/migration.json (${esc(e.message)}).</p>`;
+const DATA = 'https://raw.githubusercontent.com/percona/pmm-qa/CodeceptJS-migration/migration/dashboard/migration.json';
+fetch(DATA, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(render).catch((e) => {
+  document.getElementById('kpis').innerHTML = `<p class="empty">Could not load the migration data (${esc(e.message)}).</p>`;
 });
 
 function render(d) {
