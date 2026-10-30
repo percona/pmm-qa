@@ -3760,15 +3760,17 @@
       "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11917/",
       "by": "Investigator routine",
       "at": "2026-10-30T04:21:12Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-30T03:09:01Z",
       "suites": [
         "Nightly Compatibility"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "compat client 3.8.1 (GH run 40980845498) died in setup on shard ps-replication-psmdb-sharded: the runner was slow (InnoDB init took 70s and PS never accepted connections), rs102 registration got HTTP 500 ten times, and the retry got 'Invalid username or password' (likely Grafana's login lockout after those attempts). No server logs survived to confirm the 500s. Re-run #1298 passed all 5 shards.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1298/",
+      "by": "Investigator routine",
+      "at": "2026-10-30T04:21:18Z"
     }
-  ]
+  ],
+  "claims": []
 }
