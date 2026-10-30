@@ -27,4 +27,15 @@ export default class PageNotFoundPage extends BasePage {
     ),
   };
 
+  // page.goto() starts React Router history at index 0, which hides "Go back".
+  navigateInApp = async (path: string) => {
+    await this.page.evaluate((target) => {
+      window.history.pushState(
+        { idx: (window.history.state?.idx ?? 0) + 1, key: 'pmm-qa', usr: null },
+        '',
+        target,
+      );
+      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+    }, path);
+  };
 }
