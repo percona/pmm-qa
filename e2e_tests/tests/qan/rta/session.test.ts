@@ -8,8 +8,8 @@ let rs102ServiceId: string;
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
 
-  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
+  const service1 = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
+  const service2 = await api.inventoryApi.getServiceDetailsByRegex('^rs102_');
 
   rs101ServiceId = service1.service_id;
   rs102ServiceId = service2.service_id;

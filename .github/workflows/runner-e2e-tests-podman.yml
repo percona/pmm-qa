@@ -100,7 +100,7 @@ jobs:
     steps:
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
           sha: ${{ env.SHA }}
 
       - name: "Checkout PMM QA: ${{ env.PMM_QA_BRANCH }}"
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.PMM_QA_BRANCH }}
           repository: percona/pmm-qa
@@ -121,7 +121,7 @@ jobs:
       - name: Setup tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
+          sudo apt-get install -y apt-transport-https ca-certificates dirmngr libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
           echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
               /etc/apt/sources.list.d/clickhouse.list
@@ -183,6 +183,7 @@ jobs:
           DISABLE_UPDATES=1
           #ENABLE_DBAAS=1
           PMM_DEBUG=1
+          PMM_ENABLE_TELEMETRY=0
           PMM_ENABLE_INTERNAL_PG_QAN=1
           GF_SECURITY_ADMIN_PASSWORD=${{ env.ADMIN_PASSWORD }}
           PERCONA_TEST_SAAS_HOST=check-dev.percona.com:443
@@ -257,7 +258,7 @@ jobs:
 
       - name: Upload pmm-framework setup logs
         if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: ${{ steps.framework_logs.outputs.artifact_name }}
@@ -276,7 +277,7 @@ jobs:
           PMM_UI_URL: "http://127.0.0.1/"
         run: npx playwright test --grep "$PMM_TEST_FLAG"
 
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         if: ${{ always() }}
         id: artifact_name
         with:
@@ -286,7 +287,7 @@ jobs:
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}

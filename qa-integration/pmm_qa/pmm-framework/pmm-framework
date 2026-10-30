@@ -6,42 +6,20 @@
 #   ./pmm-framework --parallel --pmm-server-ip 10.0.0.5 --database valkey=8
 #   ./pmm-framework --help
 #
-# This entrypoint is intentionally thin: it checks the Bash version, works out
-# where the repo lives, sources every module, then hands over to parse_args()
-# and run_database_setups(). All real behaviour lives in lib/ and setups/.
-#
-# Layout:
-#   lib/common.sh     logging, die(), small value helpers
-#   lib/config.sh     the database catalogue and value resolution
-#   lib/cli.sh        argument parsing and the --database spec grammar
-#   lib/docker.sh     finding the PMM Server
-#   lib/ansible.sh    running playbooks
-#   lib/runners.sh    running setup scripts, plus version/password helpers
-#   setups/*.sh       one function per database type, and the dispatch table
-#   lib/execution.sh  preflight and the sequential/parallel strategies
-#
-# See ARCHITECTURE.md for the call flow, a diagram, and how to add a database.
+# See ARCHITECTURE.md for the module map and how to add a database.
 
 set -euo pipefail
 
-# Bash 4.4 is the floor: expanding an empty array under `set -u` (setups with
-# no environment variables, such as DOCKERCLIENTS) errors on 4.3 and older,
-# and `inherit_errexit` below does not exist there either.
-if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
-  printf 'ERROR: pmm-framework requires Bash 4.4 or newer (found %s).\n' \
+# 5.1 for `wait -n -p`.
+if ((BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 1))); then
+  printf 'ERROR: pmm-framework requires Bash 5.1 or newer (found %s).\n' \
     "$BASH_VERSION" >&2
   exit 1
 fi
 
-# Let command substitutions inherit `set -e`, so a failing $(...) aborts the
-# run instead of silently yielding an empty value.
+# A failing $(...) aborts instead of yielding ''.
 shopt -s inherit_errexit
 
-# Anchor every path to this script rather than the caller's cwd, so the
-# framework can be invoked from anywhere:
-#   FRAMEWORK_DIR       .../qa-integration/pmm_qa/pmm-framework
-#   PMM_QA_ROOT         .../qa-integration/pmm_qa        (playbooks live here)
-#   QA_INTEGRATION_ROOT .../qa-integration               (setup scripts here)
 FRAMEWORK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PMM_QA_ROOT=$(cd "$FRAMEWORK_DIR/.." && pwd)
 QA_INTEGRATION_ROOT=$(cd "$PMM_QA_ROOT/.." && pwd)
@@ -53,32 +31,36 @@ source "$FRAMEWORK_DIR/lib/common.sh"
 source "$FRAMEWORK_DIR/lib/config.sh"
 # shellcheck source=lib/cli.sh
 source "$FRAMEWORK_DIR/lib/cli.sh"
-# shellcheck source=lib/docker.sh
-source "$FRAMEWORK_DIR/lib/docker.sh"
-# shellcheck source=lib/ansible.sh
-source "$FRAMEWORK_DIR/lib/ansible.sh"
-# shellcheck source=lib/runners.sh
-source "$FRAMEWORK_DIR/lib/runners.sh"
-# shellcheck source=setups/mysql.sh
-source "$FRAMEWORK_DIR/setups/mysql.sh"
-# shellcheck source=setups/postgresql.sh
-source "$FRAMEWORK_DIR/setups/postgresql.sh"
-# shellcheck source=setups/mongodb.sh
-source "$FRAMEWORK_DIR/setups/mongodb.sh"
-# shellcheck source=setups/services.sh
-source "$FRAMEWORK_DIR/setups/services.sh"
-# shellcheck source=setups/dispatch.sh
-source "$FRAMEWORK_DIR/setups/dispatch.sh"
+# shellcheck source=lib/pmm_server.sh
+source "$FRAMEWORK_DIR/lib/pmm_server.sh"
+# shellcheck source=lib/images.sh
+source "$FRAMEWORK_DIR/lib/images.sh"
+# shellcheck source=lib/run_helpers.sh
+source "$FRAMEWORK_DIR/lib/run_helpers.sh"
+# shellcheck source=lib/pmm_client.sh
+source "$FRAMEWORK_DIR/lib/pmm_client.sh"
+# shellcheck source=images/mysql/setup.sh
+source "$FRAMEWORK_DIR/images/mysql/setup.sh"
+# shellcheck source=images/pxc-proxysql/setup.sh
+source "$FRAMEWORK_DIR/images/pxc-proxysql/setup.sh"
+# shellcheck source=images/pdpgsql/setup.sh
+source "$FRAMEWORK_DIR/images/pdpgsql/setup.sh"
+# shellcheck source=images/pgsql/setup.sh
+source "$FRAMEWORK_DIR/images/pgsql/setup.sh"
+# shellcheck source=images/psmdb/setup.sh
+source "$FRAMEWORK_DIR/images/psmdb/setup.sh"
+# shellcheck source=images/haproxy/setup.sh
+source "$FRAMEWORK_DIR/images/haproxy/setup.sh"
+# shellcheck source=images/external/setup.sh
+source "$FRAMEWORK_DIR/images/external/setup.sh"
+# shellcheck source=images/valkey/setup.sh
+source "$FRAMEWORK_DIR/images/valkey/setup.sh"
 # shellcheck source=lib/execution.sh
 source "$FRAMEWORK_DIR/lib/execution.sh"
 
 parse_args "$@"
 
-# Checked up front so a missing tool fails in milliseconds. curl is not here:
-# only the PSMDB setups need it, so preflight checks for it conditionally.
 require_command docker
-require_command bash
-require_command ansible-playbook
-require_command ansible-galaxy
+require_command curl
 
 run_database_setups

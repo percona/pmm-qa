@@ -1,7 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { AddRdsParameters, AddRdsResponse } from '@interfaces/inventory';
+import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
 
 // The Percona QA RDS instances listen on a non-default port, all in one region.
 const rdsPort = 42_001;
@@ -38,6 +38,17 @@ export default class ManagementApi {
     ).toEqual(200);
 
     return (await response.json()) as AddRdsResponse;
+  };
+
+  addService = async (service: object): Promise<AddServiceResponse> => {
+    const response = await this.request.post(apiEndpoints.management.services, {
+      data: service,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), `Adding service failed: ${await response.text()}`).toEqual(200);
+
+    return (await response.json()) as AddServiceResponse;
   };
 
   removeService = async (serviceId: string): Promise<void> => {

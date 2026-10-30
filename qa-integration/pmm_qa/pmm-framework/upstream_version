@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# upstream_version -- print the upstream version a prebaked image would bake
+# today: the full Docker Hub tag of its base image, or the newest package in
+# its repository. The build workflow labels each image with it and rebuilds an
+# engine when the label and this output differ.
+#
+#   ./upstream_version ps=8.4         # 8.4.11-11.1
+#   ./upstream_version psmdb=8.0-ol9  # 8.0.32-14
+
+set -euo pipefail
+
+[[ $# -eq 1 && $1 == *=* ]] || { echo 'Usage: upstream_version ENGINE=TAG' >&2; exit 2; }
+engine=${1%%=*}
+tag=${1#*=}
+
+# Stdout: the longest numeric tag of Docker Hub REPO that has TAG's digest.
+hub() {
+  local repo=$1 tag=$2 digest
+  digest=$(curl -fsS "https://hub.docker.com/v2/repositories/$repo/tags/$tag" | jq -r .digest)
+  curl -fsS "https://hub.docker.com/v2/repositories/$repo/tags?page_size=100&ordering=last_updated&name=${tag%%[!0-9.]*}" |
+    jq -r --arg d "$digest" '[.results[] | select(.digest == $d and (.name | test("^[0-9]"))) | .name]
+      | max_by([(test("[a-z]") | not), length]) // $d'
+}
+
+# Stdout: the newest VERSION among PACKAGE[-_]VERSION SUFFIX files in the
+# directory listing URL. SUFFIX is an extended regex; '~' marks a snapshot.
+newest() {
+  curl -fsS "$1" | grep -oE "$2[-_][0-9][^\"<~]*$3" | sed -E "s/^$2[-_]//; s/$3\$//" | sort -uV | tail -1
+}
+
+case $engine in
+  ps) hub percona/percona-server "$tag" ;;
+  mysql) hub library/mysql "$tag" ;;
+  pxc-proxysql) hub percona/percona-xtradb-cluster "$tag" ;;
+  valkey) hub valkey/valkey "$tag-bookworm" ;;
+  haproxy) hub library/haproxy "$tag" ;;
+  kerberos) hub library/alpine "$tag" ;;
+  external) echo "$tag" ;;
+  psmdb)
+    version=${tag%-ol*}
+    newest "https://repo.percona.com/psmdb-${version/./}/yum/release/${tag##*-ol}/RPMS/x86_64/" \
+      percona-server-mongodb-server "\.el${tag##*-ol}\.x86_64\.rpm"
+    ;;
+  pdpgsql) newest "https://repo.percona.com/ppg-$tag/apt/pool/main/p/percona-postgresql-$tag/" "percona-postgresql-$tag" '\.noble_amd64\.deb' ;;
+  ssl-pdpgsql) newest "https://repo.percona.com/ppg-$tag/apt/pool/main/p/percona-postgresql-$tag/" "percona-postgresql-$tag" '\.jammy_amd64\.deb' ;;
+  pgsql) newest "https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-$tag/" "postgresql-$tag" '\.pgdg22\.04[^"<]*_amd64\.deb' ;;
+  *) echo "No upstream for '$engine'." >&2; exit 2 ;;
+esac

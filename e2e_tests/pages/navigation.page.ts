@@ -120,14 +120,6 @@ export default class LeftNavigation extends BasePage {
       temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
-    perconaadvisors: {
-      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
-      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
-      locator: this.page.getByTestId('navitem-advisors'),
-      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
-      query: { locator: this.page.getByTestId('navitem-advisors-query') },
-      security: { locator: this.page.getByTestId('navitem-advisors-security') },
-    },
     postgresql: {
       ha: {
         patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
@@ -165,13 +157,16 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
     changeTimeSettingsButton: this.grafanaIframe().getByTestId(
       'data-testid Time zone picker Change time settings button',
     ),
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
+    homeMenuItem: this.page.getByTestId('navitem-home-page'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
@@ -182,6 +177,8 @@ export default class LeftNavigation extends BasePage {
     tourPopover: this.page.locator('.reactour__popover'),
   };
   inputs = {
+    timeRangeFrom: this.grafanaIframe().getByTestId('data-testid Time Range from field'),
+    timeRangeTo: this.grafanaIframe().getByTestId('data-testid Time Range to field'),
     timeZonePicker: this.grafanaIframe().getByRole('combobox', { name: 'Time zone picker' }),
   };
   messages = {};
@@ -286,6 +283,22 @@ export default class LeftNavigation extends BasePage {
     });
   };
 
+  selectTimeZone = async (timeZone: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click();
+    await this.elements.changeTimeSettingsButton.click();
+    await this.inputs.timeZonePicker.fill(timeZone);
+    await this.builders.timeZoneOption(timeZone).click();
+    await this.elements.timePickerOpenButton.click();
+  };
+
+  setAbsoluteTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeFrom.fill(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeTo.fill(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
   verifyAllMenuItems = async (): Promise<void> => {
@@ -308,6 +321,14 @@ export default class LeftNavigation extends BasePage {
         expect(`${url.pathname}${url.hash}`).not.toMatch(/\/(?:404|error|not-found)(?:\/|$)/i);
       });
     }
+  };
+
+  verifySelectedTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeFrom).toHaveValue(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeTo).toHaveValue(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
   };
 
   /** The PMM shell at `url`: sidebar up, and the home dashboard rendering in it. */

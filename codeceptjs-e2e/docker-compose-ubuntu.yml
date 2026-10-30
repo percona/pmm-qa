@@ -4,6 +4,8 @@ services:
   pmm-server-ubuntu:
     container_name: pmm-server-ubuntu
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    environment:
+      - PMM_ENABLE_TELEMETRY=0
     ports:
       - 8445:8443
     restart: always

@@ -10,6 +10,7 @@ export enum AlertSeverity {
 }
 
 export interface AlertInstance {
+  annotations?: Record<string, string>;
   labels: Record<string, string>;
   state: string;
 }
@@ -25,6 +26,21 @@ export interface AlertRulesResponse {
     groups: { folderUid: string; name: string; rules: AlertRule[] }[];
   };
 }
+
+export interface ProvisionedAlertRule {
+  data: { model: { expression?: string }; refId: string }[];
+  folderUID: string;
+  for: string;
+  labels?: Record<string, string>;
+  provenance?: string;
+  ruleGroup: string;
+  title: string;
+}
+
+export type RulerRulesResponse = Record<
+  string,
+  { name: string; rules: { grafana_alert: { namespace_uid: string; provenance?: string; uid: string } }[] }[]
+>;
 
 export interface TemplatedAlertRule {
   folderUid: string;

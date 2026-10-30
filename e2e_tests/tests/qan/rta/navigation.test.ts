@@ -3,7 +3,6 @@ import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, queryAnalytics }) => {
-  await page.goto('');
   await grafanaHelper.authorize();
   await page.goto(queryAnalytics.url);
   await queryAnalytics.storedMetrics.elements.firstRow.waitFor({

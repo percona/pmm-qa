@@ -17,7 +17,6 @@ on:
         required: false
         options:
           - 'docker-compose.yml'
-          - 'docker-compose-nomad.yml'
         type: choice
       pmm_client_image:
         description: 'pmm3-client docker image'
@@ -47,6 +46,14 @@ on:
         default: 'null'
         required: false
         type: string
+      arch:
+        description: "Runner architecture"
+        default: 'amd64'
+        required: false
+        type: choice
+        options:
+          - amd64
+          - arm64
 
   workflow_call:
     inputs:
@@ -77,6 +84,10 @@ on:
       sha:
         required: false
         type: string
+      arch:
+        required: false
+        type: string
+        default: amd64
 
     secrets:
       LAUNCHABLE_TOKEN:
@@ -88,9 +99,10 @@ jobs:
   ui-tests-e2e:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     timeout-minutes: 90
     env:
+      ARCH: ${{ inputs.arch || 'amd64' }}
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
@@ -111,7 +123,7 @@ jobs:
     steps:
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
@@ -123,7 +135,7 @@ jobs:
           sha: ${{ env.SHA }}
 
       - name: Detect GSSAPI execution
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         if: ${{ always() }}
         id: gssapi_detected
         with:
@@ -136,7 +148,7 @@ jobs:
           result-encoding: string
 
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
@@ -149,6 +161,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
+      # The arm64 runner image omits Ansible; the external PostgreSQL tests run playbooks.
+      - name: Install Ansible
+        if: ${{ env.ARCH == 'arm64' }}
+        run: pip3 install --user ansible-core
+
       - name: Setup npm modules for e2e tests
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
@@ -156,7 +173,7 @@ jobs:
           npx playwright install --with-deps
           envsubst < env.list > env.generated.list
 
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         if: ${{ always() }}
         id: tags_processed
         with:
@@ -206,12 +223,16 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           docker network create pmm-qa || true
+          compose_files=(-f ${{ env.DOCKER_COMPOSE_FILE }})
+          if [[ $ARCH == arm64 ]]; then
+            compose_files+=(-f docker-compose-arm64.yml)
+          fi
           for attempt in 1 2 3; do
-            PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} pull --quiet && break
+            PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose "${compose_files[@]}" pull --quiet && break
             echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
             sleep 15
           done
-          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose "${compose_files[@]}" up -d
           # shellcheck disable=SC2016
           # Deliberately unexpanded: the inner bash -c does the expanding, and
           # curl's %{http_code} must reach curl literally.
@@ -251,7 +272,7 @@ jobs:
 
       - name: Upload pmm-framework setup logs
         if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: ${{ steps.framework_logs.outputs.artifact_name }}
@@ -307,7 +328,7 @@ jobs:
         run: |
           launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ always() && (failure() || steps.execute_tests.outputs.codecept_failed == 'true') }}
         continue-on-error: true
         with:
@@ -319,7 +340,7 @@ jobs:
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@v2
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}

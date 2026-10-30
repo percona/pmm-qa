@@ -31,7 +31,7 @@ test.describe(
      */
     test('PMM-T224 run docker container with a invalid value for a environment variable PMM_DATA_RETENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -57,7 +57,7 @@ test.describe(
      */
     test('PMM-T225 run docker container with a unexpected environment variable PMM_DATA_TENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -118,10 +118,11 @@ test.describe(
      * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats#L53
      */
     test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy', async ({}) => {
+      test.setTimeout(300_000);
       const containerName = 'PMM-T526';
       const httpPort = 84;
       await cli.exec(
-        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} ${DOCKER_IMAGE}`,
+        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       stopList.push(containerName);
       removeList.push(containerName);
@@ -133,12 +134,13 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
+      // The image's healthcheck grace is 90s plus 3 failed 4s probes (PMM-15361).
+      await test.step(`Waiting for ${containerName} to be unhealthy(150 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 45_000 });
+        }).toPass({ intervals: [2_000], timeout: 150_000 });
       });
     });
 

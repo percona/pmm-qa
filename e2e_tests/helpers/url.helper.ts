@@ -5,13 +5,15 @@ interface BuildUrlParameters {
   schema?: string;
   environment?: string;
   nodeName?: string;
-  serviceName?: string;
+  serviceName?: string | string[];
   replicationSet?: string;
   refresh?: string;
   from?: string;
   to?: string;
   cluster?: string;
   metric?: string;
+  viewPanel?: string;
+  search?: string;
 }
 
 export default class UrlHelper {
@@ -53,11 +55,17 @@ export default class UrlHelper {
         case 'metric':
           queryParams['var-metric'] = parameters[key];
           break;
+        case 'viewPanel':
+          queryParams.viewPanel = parameters[key];
+          break;
+        case 'search':
+          queryParams.dimensionSearchText = parameters[key];
+          break;
         default:
           throw new Error('Unsupported environment ' + key);
       }
     }
 
-    return buildUrl(baseUrl, { queryParams });
+    return buildUrl(baseUrl, { disableCSV: true, queryParams });
   };
 }

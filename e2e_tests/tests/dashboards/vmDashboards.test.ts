@@ -7,7 +7,13 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T506 - Verify metrics on VictoriaMetrics dashboard @nightly  @dashboards @gssapi-nightly',
-  async ({ dashboard, page }) => {
+  async ({ api, dashboard, page }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- HA runs a VictoriaMetrics cluster that pmm-managed does not scrape as job "victoriametrics"; its health is on PMM HA Health Overview.
+    pmmTest.skip(
+      await api.haApi.isEnabled(),
+      'The VictoriaMetrics dashboard reads job "victoriametrics", which HA does not scrape',
+    );
+
     await page.goto(dashboard.insight.victoriaMetrics.url);
     await dashboard.verifyMetricsPresent(dashboard.insight.victoriaMetrics.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.insight.victoriaMetrics.noDataMetrics);

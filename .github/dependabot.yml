@@ -73,3 +73,7 @@ updates:
       - dependency-name: codeceptjs
         versions:
           - ">=4.0.0"
+      # mocha-junit-reporter 2.2.1 breaks on Mocha 12 (ES-class Base); lift once it supports 12.
+      - dependency-name: mocha
+        versions:
+          - ">=12.0.0"

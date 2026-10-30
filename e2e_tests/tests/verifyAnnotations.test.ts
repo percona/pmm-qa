@@ -49,6 +49,12 @@ for (const annotation of annotations) {
   pmmTest(
     `PMM-T878 - Verify adding annotation specific dashboard @nightly  @dashboards @annotations | ${JSON.stringify(annotation)}`,
     async ({ api, dashboard, page, urlHelper }) => {
+      // eslint-disable-next-line playwright/no-skipped-test -- HA keeps PMM's own database outside the server, so there is no pmm-server PostgreSQL service.
+      pmmTest.skip(
+        annotation.service === 'pmm-server' && (await api.haApi.isEnabled()),
+        'HA has no pmm-server PostgreSQL service',
+      );
+
       const { nodeName, serviceName } = await pmmTest.step(
         `Add annotation ${annotation.annotationName} for ${annotation.service}`,
         async () => {

@@ -67,12 +67,13 @@ never the account-wide `pmm-qa-ephemeral`.
 ## Reports (GitHub Pages)
 
 Once the perf pipeline is wired into CI, each run publishes its report to the
-`gh-pages` branch, which GitHub Pages serves as a trend dashboard (per-scale indicator,
+`gh-pages` branch under `performance/`, which GitHub Pages serves at
+https://percona.github.io/pmm-qa/performance/ as a trend dashboard (per-scale indicator,
 deviation chart, runs table with shared PMM snapshot links). Nothing in this repo calls
 the script yet. The report schema lives in that branch's `README.md`.
 
 ```bash
-performance/ci/publish_report.sh perf-report.json   # adds reports/<run_id>.json, rebuilds data/index.json, pushes
+performance/ci/publish_report.sh perf-report.json   # adds performance/reports/<run_id>.json, rebuilds performance/data/index.json, pushes
 ```
 
 In CI the job needs `permissions: contents: write` and either `PAGES_REMOTE` set to an

@@ -1,7 +1,16 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import SnackbarComponent from '@components/snackbar.component';
 
-export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
+export type DropdownName =
+  | 'Service Name'
+  | 'Node Name'
+  | 'Environment'
+  | 'ProxySQL Instance'
+  | 'Node Namegroup'
+  | 'Cluster'
+  | 'Node'
+  | 'Replication Set';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
@@ -13,13 +22,16 @@ export type NestedLocator = Locator | NestedLocators;
 export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
-  abstract builders: Record<string, (...args: string[]) => Locator>;
+  snackBar: SnackbarComponent;
+  abstract builders: Record<string, (...args: never[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
   abstract messages: Record<string, Locator>;
 
-  constructor(protected page: Page) {}
+  constructor(protected page: Page) {
+    this.snackBar = new SnackbarComponent(this.page);
+  }
 
   duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();

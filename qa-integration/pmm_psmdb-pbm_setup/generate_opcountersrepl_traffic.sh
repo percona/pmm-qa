@@ -1,64 +1,22 @@
 #!/bin/bash
 #
-# generate_opcountersrepl_traffic.sh
+# Continuous insert/update/delete/read and TTL-expiry load on a qa-integration
+# PSMDB cluster, so every "Command Operations" series has data: opcounters,
+# opcountersRepl (secondaries applying the oplog) and ttl_deletedDocuments.
+# The sharded cluster goes through mongos, a replica set through rs101.
 #
-# Generates a *continuous* stream of insert/update/delete/read + TTL-expiry
-# operations against a qa-integration PSMDB cluster so the PMM/Grafana
-# "Command Operations" panel actually has live data. It feeds every series that
-# panel plots:
+# opcountersRepl exists only on replica-set members, never on mongos: point the
+# panel at the shard/config members, or at a replica set's secondaries.
 #
-#   mongodb_ss_opcounters{legacy_op_type="insert|update|delete|query|getmore"}
-#       -> insert/update/delete come from the write loop, query/getmore come
-#          from the read loop (a batched cursor scan that forces getMore).
-#   mongodb_ss_opcountersRepl{legacy_op_type="insert|update|delete"}
-#       -> the same writes as they are applied from the oplog on secondaries.
-#   mongodb_ss_metrics_ttl_deletedDocuments
-#       -> a collection with a TTL index (test.ttlload, expireAfterSeconds=
-#          $TTL_SECONDS) that the loop keeps feeding, so the per-mongod TTL
-#          monitor deletes expired docs every ~60s forever.
-#
-# Works against either topology (auto-detected via isMaster().msg=="isdbgrid"):
-#   - sharded cluster (docker-compose-sharded*.yaml)  -> connect via mongos
-#   - plain replica set (docker-compose-rs.yaml)      -> connect via primary rs101
-#
-# By default it runs CONTINUOUS=yes / BACKGROUND=yes: the load loop is launched
-# *detached inside the mongo container* and keeps running after this script (and
-# the setup that called it) returns, so the panel keeps showing data until the
-# environment is torn down. Set CONTINUOUS=no for a bounded run, or BACKGROUND=no
-# to run in the foreground (useful for debugging).
-#
-# WHERE TO POINT THE PANEL (this is the other half of "panel is empty"):
-#   opcountersRepl is only ever reported by mongod replica-set members (it counts
-#   ops applied from the oplog); mongos routers never expose it. So on the sharded
-#   cluster point the panel's service_name at the shard/config members, NOT only
-#   at the mongos. Every node started by start-sharded.sh / start-sharded-with-pmm.sh
-#   shares the mongos' random suffix, e.g. for mongos service "mongos_31226":
-#       rs101_31226 rs102_31226 rs103_31226 rs201_31226 rs202_31226 rs203_31226
-#       rscfg01_31226 rscfg02_31226 rscfg03_31226
-#   On a plain replica set point it at the secondaries (rs102_/rs103_), not the
-#   primary -- the primary applies writes directly, only secondaries apply them
-#   via replication. (opcounters/query B/C do show on the primary and mongos too.)
-#
-# Usage (run from qa-integration/pmm_psmdb-pbm_setup):
-#   ./generate_opcountersrepl_traffic.sh
-#
-# Env vars:
-#   COMPOSE_FILE      docker-compose-sharded.yaml (default), or
-#                     docker-compose-sharded-with-pmm.yaml, or docker-compose-rs.yaml
-#   MONGO_SERVICE     compose service to connect through (default: mongos;
-#                     use rs101 for the plain replica set setup)
-#   MONGO_URI         default: mongodb://root:root@localhost
-#                     use mongodb://root:root@localhost/?replicaSet=rs for a
-#                     plain replica set
-#   CONTINUOUS        yes (default) = run forever; no = stop after DURATION_SECONDS
-#   BACKGROUND        yes (default) = detach the loop inside the container; no =
-#                     run in the foreground and block
-#   DURATION_SECONDS  bounded-run length when CONTINUOUS=no (default: 300)
-#   INTERVAL_MS       delay between op cycles in ms (default: 200)
-#   TTL_SECONDS       TTL index expiry for test.ttlload (default: 60)
-#   READ_COLLECTION   collection in db "test" scanned to drive query/getMore
-#                     (default: test -- the mgodatagen collection created by the
-#                     setup scripts)
+# Run from qa-integration/pmm_psmdb-pbm_setup. Env vars (defaults):
+#   COMPOSE_FILE      docker-compose-sharded.yaml, or docker-compose-rs.yaml
+#   MONGO_SERVICE     mongos (rs101 for a replica set)
+#   MONGO_URI         mongodb://root:root@localhost (add /?replicaSet=rs for one)
+#   CONTINUOUS        yes; no stops after DURATION_SECONDS (300)
+#   BACKGROUND        yes detaches the loop inside the container; no blocks
+#   INTERVAL_MS       200, delay between op cycles
+#   TTL_SECONDS       60, expiry of test.ttlload
+#   READ_COLLECTION   test, the collection scanned to drive query/getMore
 
 set -euo pipefail
 
@@ -82,11 +40,6 @@ echo "ttl expiry:      ${TTL_SECONDS}s"
 echo "read collection: test.${READ_COLLECTION}"
 echo
 
-# Newer PSMDB images only ship mongosh, older ones only ship the legacy `mongo`
-# shell -- both understand the JS below, so pick whichever is present.
-MONGO_BIN=$(docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" bash -c 'command -v mongosh || command -v mongo' | tr -d '\r')
-echo "using shell binary: $MONGO_BIN"
-echo
 
 cont_bool=false
 [ "$CONTINUOUS" = "yes" ] && cont_bool=true
@@ -95,12 +48,9 @@ cont_bool=false
 # quoted heredoc (no shell-vs-mongo '$operator' escaping headaches).
 config_js="var CONTINUOUS=${cont_bool}; var DURATION_MS=$((DURATION_SECONDS * 1000)); var INTERVAL_MS=${INTERVAL_MS}; var TTL_SECONDS=${TTL_SECONDS}; var READ_COLLECTION='${READ_COLLECTION}';"
 
-# Build the full program (config + one-time setup + the load loop) and write it
-# into the container so we can run it detached.
 {
   echo "$config_js"
   cat <<'JS'
-// ---- one-time setup ---------------------------------------------------------
 var isMongos = false;
 try { isMongos = (db.isMaster().msg === "isdbgrid"); } catch (e) {}
 print((isMongos ? "mongos" : "replica set") + " detected");
@@ -130,7 +80,6 @@ var i = 0;
 print("generating insert/update/delete/read + TTL traffic against db 'test' " +
       (CONTINUOUS ? "continuously ..." : "for " + (DURATION_MS / 1000) + "s ..."));
 
-// ---- load loop --------------------------------------------------------------
 while (CONTINUOUS || new Date().getTime() < endTime) {
     // insert + update + rolling delete -> opcounters/opcountersRepl insert/update/delete
     var doc = { _id: new ObjectId(), seq: i, ts: new Date(), payload: "x".repeat(128) };
@@ -167,7 +116,7 @@ print("done: " + i + " cycles");
 JS
 } | docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" bash -c 'cat > /tmp/opcounters_traffic.js'
 
-run_cmd="$MONGO_BIN \"$MONGO_URI\" --quiet /tmp/opcounters_traffic.js"
+run_cmd="mongosh \"$MONGO_URI\" --quiet /tmp/opcounters_traffic.js"
 
 if [ "$BACKGROUND" = "yes" ]; then
     echo "launching load loop detached inside '$MONGO_SERVICE' (logs: /tmp/opcounters_traffic.log)"

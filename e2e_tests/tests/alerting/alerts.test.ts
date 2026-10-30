@@ -37,6 +37,7 @@ pmmTest.beforeAll(async ({ browser }) => {
   await api.settingsApi.updateSettings({ enable_alerting: true });
   fs.rmSync(alertFile, { force: true });
   await api.alertingApi.removeAllAlertRules();
+  await api.alertingApi.deleteActiveSilences();
   await api.alertingApi.setEmptyReceiverIntegrations([webhook]);
   await api.alertingApi.createRuleFromTemplate({
     ...postgresqlRule,
@@ -45,15 +46,14 @@ pmmTest.beforeAll(async ({ browser }) => {
     severity: AlertSeverity.Critical,
   });
 
-  const { users } = await grafanaHelper.listUsers();
-  const existingViewer = users.find((user) => user.login === viewer.username);
-  const existingEditor = users.find((user) => user.login === editor.username);
-  const editorId = existingEditor?.id ?? (await grafanaHelper.createUser(editor.username, editor.password));
+  const editorUser = await grafanaHelper.findOrCreateUser(editor.username, editor.password);
+  const viewerUser = await grafanaHelper.findOrCreateUser(viewer.username, viewer.password);
 
-  if (!existingViewer) createdUserIds.push(await grafanaHelper.createUser(viewer.username, viewer.password));
-  if (!existingEditor) createdUserIds.push(editorId);
+  for (const { created, id } of [editorUser, viewerUser]) {
+    if (created) createdUserIds.push(id);
+  }
 
-  await grafanaHelper.promoteToEditor(editorId);
+  await grafanaHelper.promoteToEditor(editorUser.id);
   await page.close();
 });
 
@@ -211,6 +211,7 @@ pmmTest(
   async ({ alertingPage, api, page }) => {
     await api.alertingApi.removeAllAlertRules();
     await page.goto(alertingPage.url);
+    await alertingPage.filterByState('Firing');
     await expect(alertingPage.elements.noAlerts).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
   },
 );
@@ -246,5 +247,6 @@ pmmTest('PMM-T564 - Verify fired alert severity colors @ia', async ({ alertingPa
 pmmTest('PMM-T1467 - Verify empty Fired alerts list @fb-alerting', async ({ alertingPage, api, page }) => {
   await api.alertingApi.removeAllAlertRules();
   await page.goto(alertingPage.url);
+  await alertingPage.filterByState('Firing');
   await expect(alertingPage.elements.noAlerts).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
 });

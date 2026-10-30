@@ -4,7 +4,10 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import AccessControlHelper from '@helpers/accessControl.helper';
+import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
+import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -13,11 +16,13 @@ import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
+import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
@@ -35,20 +40,34 @@ import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
 import AlertingPage from '@pages/alerting.page';
+import DumpPage from '@pages/dump.page';
+import AddInstancePage from '@pages/inventory/addInstance.page';
+import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
+import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
+  accessControlHelper: AccessControlHelper;
   settingsPage: SettingsPage;
+  addInstancePage: AddInstancePage;
+  alertStatusPage: AlertStatusPage;
+  alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
+  clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
   credentials: Credentials;
   loginPage: LoginPage;
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
+  dumpPage: DumpPage;
+  externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
+  haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
@@ -56,6 +75,7 @@ const pmmTest = base.extend<{
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
+  scheduledBackupsPage: ScheduledBackupsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   searchDashboardsPage: SearchDashboardsPage;
@@ -64,6 +84,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
+  pageNotFoundPage: PageNotFoundPage;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -74,15 +95,22 @@ const pmmTest = base.extend<{
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
+  testState: TestState;
 }>({
+  accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
+    await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
+  addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
+  alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
+  alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
     await use(inventoryApi);
   },
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
+  clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
 
@@ -127,11 +155,14 @@ const pmmTest = base.extend<{
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
+  dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
+  externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
     await use(grafanaHelper);
   },
+  haBackupHelper: async ({ k8sHelper }, use) => await use(new HaBackupHelper(k8sHelper)),
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {
@@ -163,6 +194,7 @@ const pmmTest = base.extend<{
     await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
@@ -179,12 +211,14 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
   serviceAccountsPage: async ({ page }, use) => await use(new ServiceAccountsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
+  testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 

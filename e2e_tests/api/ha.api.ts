@@ -59,6 +59,17 @@ export default class HaApi {
       .sort();
   };
 
+  /** The PMM Server Node for node dashboards: in HA each replica is its own Node, named after its pod, so the leader's. */
+  getPmmServerNodeName = async (): Promise<string> => {
+    if (!(await this.isEnabled())) return 'pmm-server';
+
+    const leader = await this.getLeaderNode();
+
+    if (!leader) throw new Error('PMM HA reports no leader node');
+
+    return leader.node_name;
+  };
+
   /**
    * Per-node Raft term changes over `window`. A rolling window, so a count is only
    * ever a lower bound on the changes a node has seen - older ones age out of it.
@@ -85,6 +96,8 @@ export default class HaApi {
   /** Live nodes carrying a Raft vote; below the replica count the cluster cannot hold quorum. */
   getVoterCount = async (): Promise<number | undefined> =>
     await this.prometheusApi.instantQueryValue(`count(${HaApi.upMetric}{role="voter"} == 1)`);
+
+  isEnabled = async (): Promise<boolean> => (await this.getStatus()) === 'Enabled';
 
   /**
    * Metrics trail a failover by a scrape, and HAProxy 5xxs until it re-points at

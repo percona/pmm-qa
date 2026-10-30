@@ -49,6 +49,12 @@ export default class ServerApi {
     };
   };
 
+  getWithoutRedirect = async (path: string, secFetchDest?: 'document' | 'iframe') =>
+    this.request.get(path, {
+      headers: secFetchDest ? { 'Sec-Fetch-Dest': secFetchDest } : {},
+      maxRedirects: 0,
+    });
+
   waitForReady = async (overallTimeoutMs: Timeouts = Timeouts.ONE_MINUTE): Promise<void> => {
     const pollIntervalMs = Timeouts.FIVE_SECONDS;
     const deadline = Date.now() + overallTimeoutMs;

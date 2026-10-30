@@ -36,9 +36,7 @@ pmmTest(
       await expect(changePasswordPage.buttons.changePassword).toBeVisible({
         timeout: Timeouts.ONE_MINUTE,
       });
-      await changePasswordPage.inputs.oldPassword.fill(INITIAL_ADMIN_PASSWORD);
-      await changePasswordPage.inputs.newPassword.fill(NEW_ADMIN_PASSWORD);
-      await changePasswordPage.inputs.confirmPassword.fill(NEW_ADMIN_PASSWORD);
+      await changePasswordPage.fillChangePasswordForm(INITIAL_ADMIN_PASSWORD, NEW_ADMIN_PASSWORD);
       await changePasswordPage.buttons.changePassword.click();
       await expect(changePasswordPage.messages.successPopUp).toContainText('User password changed', {
         timeout: Timeouts.THIRTY_SECONDS,
@@ -55,9 +53,8 @@ pmmTest(
     await pmmTest.step('Verify every inventory service is still monitored', async () => {
       await page.goto(servicesPage.url);
       await expect(servicesPage.buttons.addService).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await servicesPage.elements.rowsPerPageDropdown.click({ timeout: Timeouts.THIRTY_SECONDS });
-      await servicesPage.builders.rowsPerPageOption('100').click({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(servicesPage.elements.rowsPerPageDropdown).toHaveText('100', {
+      await servicesPage.pagination.selectRowsPerPage('100');
+      await expect(servicesPage.pagination.rowsPerPageDropdown).toHaveText('100', {
         timeout: Timeouts.THIRTY_SECONDS,
       });
 

@@ -1,19 +1,39 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { SettingsResponse } from '@interfaces/settings';
 
-interface SettingsResponse {
-  settings: {
-    backup_management_enabled: boolean;
-    data_retention: string;
-    default_role_id?: number | string;
-    enable_access_control: boolean;
-    pmm_public_address: string;
+interface SettingsBody {
+  data_retention?: string;
+  pmm_public_address?: string;
+  enable_telemetry?: boolean;
+  enable_updates?: boolean;
+  enable_alerting?: boolean;
+  enable_backup_management?: boolean;
+  enable_internal_pg_qan?: boolean;
+  enable_advisor?: boolean;
+  advisor_run_intervals?: {
+    rare_interval: string;
+    standard_interval: string;
+    frequent_interval: string;
   };
+  enable_azurediscover?: boolean;
+  enable_access_control?: boolean;
 }
 
 export default class SettingsApi {
   constructor(private request: APIRequestContext) {}
+
+  changeSettings = async (body: SettingsBody) => {
+    const response = await this.request.put(apiEndpoints.server.settings, {
+      data: body,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return (await response.json()) as SettingsResponse;
+  };
 
   enableAccessControl = async () => {
     const settings = await this.getSettings();
@@ -40,6 +60,11 @@ export default class SettingsApi {
 
     return (await response.json()) as SettingsResponse;
   };
+
+  putSettings = async (
+    data: Record<string, unknown>,
+    headers: Record<string, string> = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> => await this.request.put(apiEndpoints.server.settings, { data, headers });
 
   restoreSettingsDefaults = async (): Promise<void> => {
     const body: Record<string, unknown> = {
@@ -73,10 +98,21 @@ export default class SettingsApi {
     delete body.enable_advisor;
     delete body.enable_telemetry;
 
-    const retry = await this.request.put(apiEndpoints.server.settings, {
+    let retry = await this.request.put(apiEndpoints.server.settings, {
       data: body,
       headers: GrafanaHelper.getAuthHeader(),
     });
+
+    if (
+      retry.status() === 400 &&
+      (await retry.text()).includes('is set via PMM_DATA_RETENTION environment variable')
+    ) {
+      delete body.data_retention;
+      retry = await this.request.put(apiEndpoints.server.settings, {
+        data: body,
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+    }
 
     expect(retry.status()).toEqual(200);
   };

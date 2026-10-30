@@ -8,12 +8,14 @@ import StateTimePanel from '@components/dashboards/panels/stateTime.component';
 import TablePanel from '@components/dashboards/panels/table.component';
 import TextPanel from '@components/dashboards/panels/text.component';
 import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
+import SingleStateTimePanel from '@components/dashboards/panels/singleStateTime.component';
 
 const panels = (page: Page) => ({
   barGauge: new BarGaugePanel(page),
   barTime: new BarTimePanel(page),
   gauge: new GaugePanel(page),
   polyStat: new PolyStatPanel(page),
+  singleStateTime: new SingleStateTimePanel(page),
   stat: new StatPanel(page),
   stateTime: new StateTimePanel(page),
   table: new TablePanel(page),

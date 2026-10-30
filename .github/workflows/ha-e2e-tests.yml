@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
@@ -144,7 +144,7 @@ jobs:
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Setup PMM-Client against remote PMM HA Server
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 20
           retry_wait_seconds: '10'
@@ -190,7 +190,7 @@ jobs:
 
       - name: Upload pmm-framework setup logs
         if: ${{ (failure() || cancelled()) && steps.framework_logs.outcome == 'success' && steps.framework_logs.outputs.artifact_name != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: ${{ steps.framework_logs.outputs.artifact_name }}
@@ -226,7 +226,7 @@ jobs:
 
       - name: Generate and Attach the report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.REPORT_NAME }}
           path: |

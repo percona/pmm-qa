@@ -25,15 +25,15 @@ jobs:
       # is checking -- lint-changed.sh, the installers it sources, and `npm ci`
       # all execute PR-controlled content. The default leaves GITHUB_TOKEN
       # readable in .git/config for that code, and nothing here pushes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.9.8
           terraform_wrapper: false
@@ -45,11 +45,11 @@ jobs:
           set -euo pipefail
           for ws in e2e_tests cli; do (cd "$ws" && npm ci); done
 
-      # One call, because .claude/hooks/lint-changed.sh already owns the
+      # One call, because support_scripts/lint/lint-changed.sh already owns the
       # which-linter-for-which-file mapping and the PreToolUse commit gate calls
       # the same script. Re-listing the linters here is how CI and the local
       # gate drift apart. The dispatcher runs every group before returning, so a
       # run still reports all failures at once, and it prints a `==> <linter>`
       # header per group so the log stays readable.
       - name: Lint (all tracked files)
-        run: git ls-files -z | xargs -0 bash .claude/hooks/lint-changed.sh
+        run: git ls-files -z | xargs -0 bash support_scripts/lint/lint-changed.sh

@@ -1,5 +1,9 @@
+import AdmZip from 'adm-zip';
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { ServiceType } from '@interfaces/inventory';
+import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 interface getMetrics {
   serviceName: string;
@@ -25,10 +29,14 @@ export default class CliHelper {
    * Provides no logs to skip huge outputs.
    *
    * @param       command   sh command to execute
+   * @param       timeout   ms after which the command is killed and returns a non-zero code
    * @return      {@link ExecReturnClass} instance
    */
-  execSilent = (command: string): ExecReturn => {
-    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  execSilent = (command: string, timeout?: number): ExecReturn => {
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), {
+      silent: true,
+      timeout,
+    });
 
     return new ExecReturn(command, code, stdout, stderr);
   };
@@ -38,12 +46,16 @@ export default class CliHelper {
    * returns handy {@link ExecReturn} object.
    *
    * @param       command   sh command to execute
+   * @param       timeout   ms after which the command is killed and returns a non-zero code
    * @return      {@link ExecReturnClass} instance
    */
-  execute = (command: string): ExecReturn => {
+  execute = (command: string, timeout?: number): ExecReturn => {
     console.log(`exec: "${command}"`);
 
-    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), {
+      silent: false,
+      timeout,
+    });
 
     if (stdout.length > 0) console.log(`Out: "${stdout}"`);
     if (stderr.length > 0) console.log(`Error: "${stderr}"`);
@@ -105,5 +117,86 @@ export default class CliHelper {
     return this.execute(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
+  };
+
+  getPmmAdminField = (output: string, field: string): string => {
+    const value = output
+      .split('\n')
+      .find((line) => line.startsWith(field))
+      ?.split(':')[1]
+      ?.trim();
+
+    if (!value) throw new Error(`Failed to find '${field}' in pmm-admin output:\n${output}`);
+
+    return value;
+  };
+
+  getPmmAdminStatusField = (container: string, field: string): string =>
+    this.getPmmAdminField(
+      this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
+      field,
+    );
+
+  getSummaryAgentsInfo = (container: string, archivePath: string) => {
+    const archive = this.execute(`docker exec ${container} pmm-admin summary`)
+      .assertSuccess()
+      .stdout.split(' ')[0];
+
+    this.execute(`docker cp ${container}:/${archive} "${archivePath}"`).assertSuccess();
+
+    return (
+      JSON.parse(new AdmZip(archivePath).readAsText('client/status.json')) as {
+        agents_info: { agent_type: string; process_exec_path?: string }[];
+      }
+    ).agents_info;
+  };
+
+  /**
+   * Stops and removes a docker container, ignoring one that does not exist. Any other removal
+   * failure is reported here, since the name would stay taken for the next `docker run`.
+   * Stopping first lets PMM Server's PostgreSQL remove its postmaster.pid, which a container
+   * recreated on the same volume would otherwise trip over.
+   *
+   * @param   containerName   name of the container to remove
+   */
+  removeContainer = (containerName: string) => {
+    this.execSilent(`docker stop ${containerName} || true`);
+
+    const removal = this.execSilent(`docker rm -f ${containerName}`);
+
+    if (!removal.stderr.includes('No such container')) removal.assertSuccess();
+  };
+
+  /**
+   * Removes a service through a container's pmm-admin, ignoring one that is not registered.
+   *
+   * @param   container     container whose pmm-agent registered the service
+   * @param   serviceType   pmm-admin service type
+   * @param   serviceName   name of the service to remove
+   */
+  removeService = (container: string, serviceType: ServiceType, serviceName: string) => {
+    const removal = this.execSilent(
+      `docker exec ${container} pmm-admin remove ${serviceType} ${serviceName}`,
+    );
+
+    if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
+  };
+
+  verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
+    const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
+
+    expect(containers, 'No pmm-client containers to check').not.toHaveLength(0);
+
+    await expect(() => {
+      for (const container of containers) {
+        for (const command of ['status', 'list']) {
+          const output = this.execSilent(`docker exec ${container} pmm-admin ${command}`).stdout;
+
+          expect(output, `pmm-admin ${command} in ${container} has a bad agent status`).not.toMatch(
+            badStatus,
+          );
+        }
+      }
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 }

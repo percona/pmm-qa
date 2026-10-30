@@ -8,6 +8,7 @@ const realTimeTableTestId = 'realtime-overview-table';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
+  readonly durationFilterParameter = 'overview.f.queryExecutionDurationMs';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
@@ -94,7 +95,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await pmmTest.step(`Filter queries by text: ${queryText}`, async () => {
       await this.builders.rowByIndex('1').waitFor({ state: 'visible' });
       await this.elements.noQueriesAvailable.waitFor({ state: 'hidden' });
-      await this.openFilters();
+      await this.openFiltersIfHidden();
       await this.inputs.filterByQueryText.fill(queryText);
 
       await expect(this.builders.queryByRowIndex('1')).toContainText(queryText);
@@ -117,6 +118,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
     return count;
   };
+
+  getDurationFilter = () => new URL(this.page.url()).searchParams.get(this.durationFilterParameter);
+
+  getDurations = async () => (await this.elements.durationCells.allTextContents()).map(Number.parseFloat);
 
   getElapsedTimeForQueryByRow = async (rowIndex: string) => {
     await this.builders.elapsedTimeForRow(rowIndex).waitFor({ state: 'visible' });
@@ -166,9 +171,13 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
 
   openFiltersIfHidden = async () => {
-    if (!(await this.inputs.filterByQueryText.isVisible())) {
-      await this.openFilters();
-    }
+    await expect(async () => {
+      if (!(await this.inputs.filterByQueryText.isVisible())) {
+        await this.openFilters();
+      }
+
+      await expect(this.inputs.filterByQueryText).toBeVisible({ timeout: Timeouts.TWO_SECONDS });
+    }).toPass({ timeout: Timeouts.TEN_SECONDS });
   };
 
   selectClusterService = async () => {

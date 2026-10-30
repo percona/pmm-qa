@@ -74,10 +74,12 @@ pmmTest(
         await expect(async () => {
           const changes = await api.haApi.getRaftTermChanges();
 
-          expect(Object.keys(changes).sort()).toEqual(haClusterHelper.podNames());
-
-          Object.entries(changes).forEach(([node, count]) => {
-            expect(count, `Node "${node}" must count the term change the switch caused`).toBeGreaterThan(0);
+          // The 15m window still holds pods a preceding scale-down removed, so only current pods are checked.
+          haClusterHelper.podNames().forEach((node) => {
+            expect(
+              changes[node],
+              `Node "${node}" must count the term change the switch caused`,
+            ).toBeGreaterThan(0);
           });
         }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       },
