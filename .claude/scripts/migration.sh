@@ -2,7 +2,9 @@
 # Mechanical steps of the CodeceptJS migration, so agents spend time only on judgement.
 #
 #   migration.sh preflight [--allow-unpushed] [--allow-open-pr <n>]   checks, main merge, drift, next pending row
-#   migration.sh mark <row> <in-progress|done> [pr-url]                 tracker status edit + commit on control
+#   migration.sh mark <row> <in-progress|done|retired> [pr-url]         tracker status, PR and Opened + dashboard data, one commit on control
+#   migration.sh merged                                                 fill Merged for rows whose source left origin/main, one commit
+#   migration.sh dashboard                                              rebuild migration/dashboard/migration.json, uncommitted
 #   migration.sh set-setup <row> <setup-args>                           tracker Setup cell edit, uncommitted (mark commits it)
 #   migration.sh setup <source-test>                                    Playwright job and databases per source scenario
 #   migration.sh env-check <service-prefix>...                          creds, services, QAN rows per prefix (now-120m)
@@ -18,6 +20,7 @@ control=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 publish=$(dirname "$control")/pmm-qa-publish
 base_tree=$(dirname "$control")/pmm-qa-base
 tracker=migration/tracker.md
+dashboard_json=migration/dashboard/migration.json
 url=${PMM_UI_URL:+${PMM_UI_URL%/}/}
 pass=${ADMIN_PASSWORD:-}
 repo=percona/pmm-qa
@@ -153,30 +156,83 @@ preflight() {
   pw=$(grep -oE '"@playwright/test": "[^0-9]*[0-9.]+' e2e_tests/package.json | grep -oE '[0-9.]+$')
   verified=$(grep -oE 'verifiedAgainst: [0-9.]+' .claude/skills/codeceptjs-migration/playwright-practices.md | grep -oE '[0-9.]+$')
   [[ $pw == "$verified" ]] || echo "WARN: @playwright/test $pw != verifiedAgainst $verified"
+  merged
+  local missing
+  missing=$(grep -E '^\| [0-9]+ +\| (done|retired) ' "$tracker" | awk -F'|' '$10 ~ /^ *$/ || $11 ~ /^ *$/ {print $2}' | xargs)
+  [[ -z $missing ]] || echo "WARN: done/retired rows without PR or Opened: $missing; report them, never invent the values"
   echo "next: $(grep -m1 -E '^\| [0-9]+ +\| pending' "$tracker")"
 }
 
+# Tracker columns: | # | Status | Bucket | Env | Setup | Source | Target | Tags | PR | Opened | Merged | Notes |
+# split('|') puts them at 1..12. `done` and `retired` need the PR that retires the source: its number goes in
+# PR and today's date in Opened; Merged is filled by `merged` once the source has left origin/main.
 mark() {
   local row=$1 status=$2 pr=${3:-}
+  [[ $status != "done" && $status != "retired" ]] || [[ $pr =~ /pull/[0-9]+ ]] || die "mark $row $status needs the PR url"
   cd "$control" || exit 1
   python3 - "$tracker" "$row" "$status" "$pr" <<'EOF' || exit 1
-import re, sys
+import datetime, re, sys
 path, row, status, pr = sys.argv[1:]
 lines = open(path, 'rb').read().split(b'\n')
 hits = [i for i, l in enumerate(lines) if re.match(rb'^\| %s +\|' % row.encode(), l)]
 assert len(hits) == 1, f'row {row}: {len(hits)} matches'
 cells = lines[hits[0]].split(b'|')
-cells[2] = b' ' + status.encode().ljust(len(cells[2]) - 2) + b' '
+assert len(cells) == 14, f'row {row}: {len(cells) - 2} columns, expected 12'
+put = lambda i, v: cells.__setitem__(i, b' ' + v.encode().ljust(len(cells[i]) - 2) + b' ')
+put(2, status)
 if pr:
-    cells[-2] = b' ' + b' '.join(x for x in (cells[-2].strip(), pr.encode()) if x) + b' '
+    n = '#' + re.search(r'/pull/(\d+)', pr).group(1)
+    prs = cells[9].decode().split()
+    put(9, ' '.join(prs + [n] if n not in prs else prs))
+    if not cells[10].strip():
+        put(10, datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d'))
 lines[hits[0]] = b'|'.join(cells)
 open(path, 'wb').write(b'\n'.join(lines))
 EOF
   [[ $(git diff --numstat -- "$tracker" | cut -f1,2) == $'1\t1' ]] || die "tracker diff is not one line"
   git add -- "$tracker" || exit 1
+  if [[ $status == "done" || $status == "retired" ]]; then
+    dashboard && git add -- "$dashboard_json" || die "dashboard rebuild failed"
+  fi
   local name
   name=$(grep -E "^\| $row +\|" "$tracker" | grep -oE 'tests/[A-Za-z0-9_/.-]+_test\.js' | head -1 | xargs basename | sed 's/\.js$//')
   git commit -q -m "chore(migration): mark $name ${status/-/ }" && git log --oneline -1
+}
+
+# Merged is the date the source left origin/main: the commit that retired it is the squash-merge of its PR.
+merged() {
+  cd "$control" || exit 1
+  python3 - "$tracker" <<'EOF' || exit 1
+import re, subprocess, sys
+path = sys.argv[1]
+lines = open(path, 'rb').read().split(b'\n')
+for i, l in enumerate(lines):
+    if not re.match(rb'^\| \d+ +\|', l):
+        continue
+    cells = l.split(b'|')
+    if not cells[9].strip() or cells[11].strip():
+        continue
+    src = cells[6].strip().strip(b'`').decode()
+    if subprocess.run(['git', 'cat-file', '-e', f'origin/main:{src}'], capture_output=True, check=False).returncode == 0:
+        continue
+    date = subprocess.run(['git', 'log', 'origin/main', '--no-renames', '--diff-filter=D', '-1', '--format=%cs', '--', src],
+                          capture_output=True, text=True, check=False).stdout.strip()
+    if date:
+        cells[11] = b' ' + date.encode().ljust(len(cells[11]) - 2) + b' '
+        lines[i] = b'|'.join(cells)
+open(path, 'wb').write(b'\n'.join(lines))
+EOF
+  git diff --quiet -- "$tracker" && return 0
+  dashboard && git add -- "$tracker" "$dashboard_json" || die "dashboard rebuild failed"
+  git commit -q -m "chore(migration): record merge dates" && git log --oneline -1
+}
+
+# Data for the gh-pages Migration tab, which reads it from this branch. Control carries main's workflows and
+# CodeceptJS sources after the preflight merge; Playwright counts need e2e_tests/node_modules, else the last ones stay.
+dashboard() {
+  local pw=()
+  [[ -d $control/e2e_tests/node_modules ]] && pw=(--pw-list)
+  python3 "$control/migration/dashboard/build.py" --main "$control" --out "$control/$dashboard_json" "${pw[@]}"
 }
 
 set_setup() {
@@ -342,6 +398,8 @@ shift || true
 case $cmd in
   preflight) preflight "$@" ;;
   mark) mark "$@" ;;
+  merged) merged ;;
+  dashboard) dashboard ;;
   set-setup) set_setup "$@" ;;
   setup) setup "$@" ;;
   env-check) env_check "$@" ;;

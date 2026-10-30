@@ -17,7 +17,9 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 | 5b and 6 selectability of every workflow expression, base vs branch, and nightly shard counts | `migration.sh selection [extra-grep]...` |
 | 7 revalidation, and whether the tested copy is unchanged | `migration.sh revalidate <file>...` |
 | 7 push, PR, runner dispatch, `Run:` line | `migration.sh publish <title> <body> <flag> <setup>` |
-| 7 tracker `done` | `migration.sh mark <row> done <pr-url>` |
+| 7 tracker `done`: PR, Opened date and dashboard data in one commit | `migration.sh mark <row> done <pr-url>` |
+| 1 Merged dates for rows whose source left `origin/main` (preflight runs it) | `migration.sh merged` |
+| any: rebuild the gh-pages Migration tab's data, uncommitted | `migration.sh dashboard` |
 
 ## Parent rules
 
@@ -101,7 +103,7 @@ A batch runs as one row:
 - one tracker commit marks every row `in-progress`; one timeline and one gate ledger, named after the first row;
 - one writer spawn migrates every row, and each gate (initial review, runner, final review) is one spawn covering the whole batch;
 - every row's tests still run and pass, and every row still gets its own worth-porting and coverage evidence;
-- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row `done` with that PR link.
+- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row marked `done` with that PR's URL.
 
 Once the writer returns, measure the real size (`git diff --numstat` plus untracked new files) and record estimate and actual on the timeline. An actual over 200 does not split the batch.
 
