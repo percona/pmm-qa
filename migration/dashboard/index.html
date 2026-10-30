@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeceptJS Migration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --sunken: #eef1f5;
+    --ink: #151a23; --ink-2: #4a5566; --ink-3: #697586;
+    --line: #dde2ea; --line-strong: #c3cad6;
+    --pass: #137a3a; --pass-bg: #e3f4e9; --fail: #c0262d; --fail-bg: #fbe7e8;
+    --warn: #93600a; --warn-bg: #fbf0da; --idle: #697586; --idle-bg: #eef1f5;
+    --queue: #2447d6; --queue-bg: #e6ebfc; --retired: #9aa3b2;
+    --accent: #2447d6;
+    --shadow: 0 1px 2px rgba(21, 26, 35, .06), 0 4px 12px rgba(21, 26, 35, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+      --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+      --line: #262e3a; --line-strong: #364152;
+      --pass: #4cc47a; --pass-bg: #16301f; --fail: #ff6b6f; --fail-bg: #3a1a1c;
+      --warn: #e8b04a; --warn-bg: #362a12; --idle: #8c97a8; --idle-bg: #1c222c;
+      --queue: #7c95ff; --queue-bg: #1d2546; --retired: #5d6879;
+      --accent: #7c95ff;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --surface: #161b23; --sunken: #1c222c;
+    --ink: #e8ecf2; --ink-2: #b1bac8; --ink-3: #8c97a8;
+    --line: #262e3a; --line-strong: #364152;
+    --pass: #4cc47a; --pass-bg: #16301f; --fail: #ff6b6f; --fail-bg: #3a1a1c;
+    --warn: #e8b04a; --warn-bg: #362a12; --idle: #8c97a8; --idle-bg: #1c222c;
+    --queue: #7c95ff; --queue-bg: #1d2546; --retired: #5d6879;
+    --accent: #7c95ff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.5 "IBM Plex Sans", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
+  a { color: var(--accent); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  header .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  .brand { font-weight: 600; letter-spacing: -.01em; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+  nav { display: flex; gap: 16px; align-self: stretch; }
+  nav a { display: flex; align-items: center; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav a:hover { color: var(--ink); }
+  nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+  main.wrap { padding: 28px 16px 56px; }
+  h1 { font-size: 22px; line-height: 1.25; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+  h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .lede { color: var(--ink-2); margin: 4px 0 20px; }
+  .meta { color: var(--ink-3); font-size: 12.5px; }
+  .grid { display: grid; gap: 16px; margin-top: 16px; }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .g32 { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; min-width: 0; }
+  .ph { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+
+  .kpi .label { color: var(--ink-2); font-size: 13px; }
+  .kpi .value { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; margin-top: 2px; }
+  .kpi .value small { font-size: 15px; color: var(--ink-3); font-weight: 500; }
+  .kpi .sub { color: var(--ink-3); font-size: 12.5px; margin-top: 2px; }
+
+  .bar { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; }
+  .seg { min-width: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; color: var(--ink-2); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .buckets { display: grid; grid-template-columns: 170px 1fr 44px; gap: 6px 12px; align-items: center; }
+  .buckets .name { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .buckets .bar { height: 12px; border-radius: 4px; }
+  .buckets .n { color: var(--ink-3); font-size: 12px; text-align: right; }
+
+  .pace svg { display: block; width: 100%; height: 180px; overflow: visible; }
+  .pace .axis text { fill: var(--ink-3); font-size: 11px; }
+  .pace .grid line { stroke: var(--line); }
+  .pace .area { fill: color-mix(in srgb, var(--pass) 14%, transparent); }
+  .pace .line { fill: none; stroke: var(--pass); stroke-width: 2; }
+  .pace .cross { stroke: var(--ink-3); stroke-dasharray: 3 3; }
+  .pace .dot { fill: var(--pass); stroke: var(--surface); stroke-width: 2; }
+
+  .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .recent li button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 5px 6px; border-radius: 6px; }
+  .recent li button:hover { background: var(--sunken); }
+  .recent .d { color: var(--ink-3); font-size: 12px; }
+  .recent .s { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent .p { color: var(--accent); font-size: 12.5px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { all: unset; cursor: pointer; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); font-size: 12.5px; background: var(--surface); white-space: nowrap; }
+  .chip[aria-pressed="true"], .chip[aria-selected="true"] { border-color: var(--accent); color: var(--ink); background: var(--queue-bg); }
+  .chip .c { color: var(--ink-3); margin-left: 4px; }
+  input[type="search"] { flex: 1 1 180px; min-width: 0; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+
+  .jobs { display: grid; gap: 10px; margin-top: 12px; }
+  .jrow { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .jrow .gname { font-size: 12.5px; color: var(--ink-2); padding-top: 4px; }
+  .jrow .gname small { display: block; color: var(--ink-3); font-size: 11.5px; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tile { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; max-width: 260px; padding: 4px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; }
+  .tile:hover { border-color: var(--line-strong); }
+  .tile .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .k { color: var(--ink-3); font-size: 11.5px; white-space: nowrap; }
+  .tile::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .tile.st-codecept { --c: var(--warn); background: var(--warn-bg); border-color: transparent; }
+  .tile.st-migrated { --c: var(--pass); }
+  .tile.st-other { --c: var(--retired); color: var(--ink-2); }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .flist { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  .flist td, .flist th { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .flist th { color: var(--ink-3); font-weight: 500; font-size: 12px; }
+  .flist tbody tr { cursor: pointer; }
+  .flist tbody tr:hover { background: var(--sunken); }
+  .flist .num { width: 46px; color: var(--ink-3); }
+  .flist .bk { width: 64px; }
+  .flist .pr { width: 120px; }
+  .flist .dt { width: 104px; color: var(--ink-3); }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; color: var(--ink-3); font-size: 12.5px; }
+  .pager button { all: unset; cursor: pointer; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink-2); }
+  .pager button[disabled] { opacity: .4; cursor: default; }
+  .empty { color: var(--ink-3); padding: 10px 0; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .b-done, .b-playwright { color: var(--pass); background: var(--pass-bg); }
+  .b-in-progress, .b-codeceptjs, .b-mixed { color: var(--warn); background: var(--warn-bg); }
+  .b-pending { color: var(--queue); background: var(--queue-bg); }
+  .b-blocked-infra { color: var(--fail); background: var(--fail-bg); }
+  .b-retired, .b-other { color: var(--idle); background: var(--idle-bg); }
+
+  #drawer { position: fixed; inset: 0 0 0 auto; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0, 0, 0, .12); transform: translateX(100%); transition: transform .2s cubic-bezier(.16, 1, .3, 1); z-index: 20; display: flex; flex-direction: column; }
+  #drawer.open { transform: none; }
+  #drawer .dh { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  #drawer .dh h3 { margin: 0; font-size: 15px; font-weight: 600; word-break: break-word; }
+  #drawer .close { all: unset; cursor: pointer; font-size: 20px; line-height: 1; color: var(--ink-3); padding: 2px 6px; border-radius: 6px; }
+  #drawer .db { padding: 14px 18px 24px; overflow: auto; font-size: 13px; color: var(--ink-2); }
+  #drawer dl { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px 12px; margin: 0; }
+  #drawer dt { color: var(--ink-3); }
+  #drawer dd { margin: 0; color: var(--ink); word-break: break-word; }
+  #drawer ul { margin: 6px 0 0; padding-left: 18px; }
+  #drawer li { margin: 3px 0; }
+  #scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .25); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 15; }
+  #scrim.open { opacity: 1; pointer-events: auto; }
+  #tip { position: fixed; pointer-events: none; z-index: 30; background: var(--ink); color: var(--bg); padding: 6px 9px; border-radius: 6px; font-size: 12.5px; box-shadow: var(--shadow); opacity: 0; max-width: 280px; }
+
+  @media (max-width: 900px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g2, .g32 { grid-template-columns: 1fr; } .jrow { grid-template-columns: 1fr; gap: 4px; } }
+  @media (max-width: 560px) { .flist .bk, .flist .dt { display: none; } .buckets { grid-template-columns: 110px 1fr 40px; } }
+  @media (prefers-reduced-motion: reduce) { #drawer, #scrim { transition: none; } }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="../"><span class="dot" aria-hidden="true"></span>PMM QA Reports</a>
+  <nav aria-label="Reports"><a href="../nightly/">Nightly</a><a href="../performance/">Performance</a><a href="./" aria-current="page">Migration</a></nav>
+</div></header>
+<main class="wrap">
+  <h1>CodeceptJS → Playwright migration</h1>
+  <p class="lede">Each CodeceptJS test file in the <code>CodeceptJS-migration</code> tracker, and the nightly jobs that still run CodeceptJS. <span class="meta" id="meta"></span></p>
+
+  <div class="grid g4" id="kpis"></div>
+
+  <div class="grid g32">
+    <section class="panel pace">
+      <div class="ph"><h2>Test files migrated over time</h2><span class="meta" id="paceNote"></span></div>
+      <svg id="pace" role="img"></svg>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>Recently migrated</h2><span class="meta">by merge date</span></div>
+      <ul class="recent" id="recent"></ul>
+    </section>
+  </div>
+
+  <div class="grid g2">
+    <section class="panel">
+      <div class="ph"><h2>Test files by status</h2></div>
+      <div class="bar" id="statusBar" role="img"></div>
+      <div class="legend" id="statusLegend"></div>
+      <div class="ph" style="margin:20px 0 6px"><h2>Next in the queue</h2><span class="meta">the routine takes them top down</span></div>
+      <ul class="recent" id="nextUp"></ul>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>By environment bucket</h2><span class="meta">migrated / total</span></div>
+      <div class="buckets" id="buckets"></div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:16px">
+    <div class="ph"><h2>Nightly jobs</h2><span class="meta">Jenkins orchestrator lanes and the GitHub suites it starts. Select a job for its details.</span></div>
+    <div class="toolbar" id="jobFilters"></div>
+    <div class="jobs" id="jobs"></div>
+  </section>
+
+  <section class="panel" style="margin-top:16px">
+    <div class="ph"><h2>Test files</h2><span class="meta">Select a file for its details.</span></div>
+    <div class="tabs" id="fileTabs" role="tablist"></div>
+    <div class="toolbar" style="margin-bottom:8px"><input type="search" id="fileSearch" placeholder="Search file, target, tag, PR" aria-label="Search test files"></div>
+    <table class="flist" id="files"><thead><tr><th class="num">#</th><th>Test file</th><th class="bk">Bucket</th><th class="pr">PR</th><th class="dt" id="dateHead">Merged</th></tr></thead><tbody></tbody></table>
+    <div class="pager"><span id="pageInfo"></span><span><button type="button" id="prev">Prev</button> <button type="button" id="next">Next</button></span></div>
+  </section>
+</main>
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true" aria-labelledby="drawerTitle"><div class="dh"><h3 id="drawerTitle"></h3><button class="close" type="button" aria-label="Close">×</button></div><div class="db" id="drawerBody"></div></aside>
+<div id="tip" role="tooltip"></div>
+<script>
+const STATUS = [
+  ['done', 'Done', '--pass'], ['pending', 'Pending', '--queue'], ['in-progress', 'In progress', '--warn'],
+  ['retired', 'Retired', '--retired'], ['blocked-infra', 'Blocked (infra)', '--fail'],
+];
+const FW = { playwright: 'Playwright', codeceptjs: 'CodeceptJS', mixed: 'CodeceptJS + Playwright', other: 'No CodeceptJS' };
+const REPO = 'https://github.com/percona/pmm-qa';
+const DATA = new URLSearchParams(location.search).get('data') || 'https://raw.githubusercontent.com/percona/pmm-qa/CodeceptJS-migration/migration/dashboard/migration.json';
+const PAGE = 10;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badge = (cls, text) => `<span class="badge b-${cls}">${esc(text)}</span>`;
+const short = (p) => p.replace('codeceptjs-e2e/tests/', '');
+const prLinks = (f) => (f.prs.length ? f.prs.map((n) => `<a href="${REPO}/pull/${n}" target="_blank" rel="noopener">#${n}</a>`).join(' ') : '<span class="meta">—</span>');
+const tip = $('tip');
+const showTip = (e, html) => { tip.innerHTML = html; tip.style.opacity = 1; moveTip(e); };
+const moveTip = (e) => { const r = tip.getBoundingClientRect(); tip.style.left = Math.min(e.clientX + 12, innerWidth - r.width - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; };
+const hideTip = () => { tip.style.opacity = 0; };
+const hoverable = (el, html) => { el.addEventListener('mouseenter', (e) => showTip(e, html)); el.addEventListener('mousemove', moveTip); el.addEventListener('mouseleave', hideTip); };
+
+function openDrawer(title, html) {
+  $('drawerTitle').textContent = title;
+  $('drawerBody').innerHTML = html;
+  $('drawer').classList.add('open');
+  $('drawer').setAttribute('aria-hidden', 'false');
+  $('scrim').classList.add('open');
+  $('drawer').querySelector('.close').focus();
+}
+function closeDrawer() {
+  $('drawer').classList.remove('open');
+  $('drawer').setAttribute('aria-hidden', 'true');
+  $('scrim').classList.remove('open');
+}
+$('scrim').addEventListener('click', closeDrawer);
+$('drawer').querySelector('.close').addEventListener('click', closeDrawer);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+
+fetch(DATA, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(render).catch((e) => {
+  $('kpis').innerHTML = `<p class="empty">Could not load the migration data (${esc(e.message)}).</p>`;
+});
+
+function render(d) {
+  const files = d.files || d.rows;
+  const byRow = Object.fromEntries(files.map((f) => [f.row, f]));
+  const count = (s) => files.filter((f) => f.status === s).length;
+  const scope = files.filter((f) => f.status !== 'retired').length;
+  const done = count('done');
+  const ccJobs = d.jobs.filter((j) => (j.codecept_tests ?? 0) > 0);
+  $('meta').textContent = `Data from ${d.generated_at.replace('T', ' ').replace(':00Z', ' UTC').replace(/:\d\dZ$/, ' UTC')}: main ${d.sources.main}, tracker ${d.sources.tracker}.`;
+
+  $('kpis').innerHTML = [
+    ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope`],
+    ['Test files left', count('pending') + count('in-progress') + count('blocked-infra'), `${count('pending') + count('in-progress')} in the queue, ${count('blocked-infra')} blocked on infra`],
+    ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files`],
+    ['Nightly jobs on CodeceptJS', `${ccJobs.length}<small> / ${d.jobs.length}</small>`, 'jobs whose grep still selects a CodeceptJS test'],
+  ].map(([l, v, s]) => `<div class="panel kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
+
+  const bar = $('statusBar');
+  bar.setAttribute('aria-label', STATUS.map(([k, l]) => `${l} ${count(k)}`).join(', '));
+  for (const [k, l, c] of STATUS) {
+    if (!count(k)) continue;
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.style.flex = `${count(k)} 0 0`;
+    seg.style.background = `var(${c})`;
+    hoverable(seg, `<b>${l}</b>: ${count(k)} test files (${Math.round((100 * count(k)) / files.length)}%)`);
+    bar.append(seg);
+  }
+  $('statusLegend').innerHTML = STATUS.map(([k, l, c]) => `<span><span class="sw" style="background:var(${c})"></span>${l} <b>${count(k)}</b></span>`).join('');
+
+  const envOf = {};
+  for (const f of files) envOf[f.bucket] ??= f.env;
+  const buckets = [...new Set(files.map((f) => f.bucket))].sort((a, b) => +a.slice(1) - +b.slice(1));
+  for (const b of buckets) {
+    const bf = files.filter((f) => f.bucket === b);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = `${b} · ${envOf[b]}`;
+    name.title = name.textContent;
+    const bb = document.createElement('div');
+    bb.className = 'bar';
+    for (const [k, l, c] of STATUS) {
+      const n = bf.filter((f) => f.status === k).length;
+      if (!n) continue;
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      seg.style.flex = `${n} 0 0`;
+      seg.style.background = `var(${c})`;
+      hoverable(seg, `<b>${b}</b> ${l}: ${n} of ${bf.length}`);
+      bb.append(seg);
+    }
+    const n = document.createElement('div');
+    n.className = 'n';
+    const inScope = bf.filter((f) => f.status !== 'retired').length;
+    n.textContent = inScope ? `${bf.filter((f) => f.status === 'done').length}/${inScope}` : 'retired';
+    $('buckets').append(name, bb, n);
+  }
+
+  const migrated = files.filter((f) => f.status === 'done' && f.merged).sort((a, b) => b.merged.localeCompare(a.merged) || b.row - a.row);
+  $('recent').innerHTML = migrated.slice(0, 8).map((f) => `<li><button type="button" data-row="${f.row}"><span class="d">${f.merged}</span><span class="s mono" title="${esc(f.source)}">${esc(f.source.split('/').pop())}</span><span class="p">${f.prs.map((n) => '#' + n).join(' ')}</span></button></li>`).join('')
+    || '<li class="empty">Nothing merged yet.</li>';
+  $('recent').addEventListener('click', (e) => { const b = e.target.closest('button[data-row]'); if (b) showFile(byRow[b.dataset.row], d.jobs); });
+
+  const queue = files.filter((f) => f.status === 'pending' || f.status === 'in-progress');
+  $('nextUp').innerHTML = queue.slice(0, 5).map((f) => `<li><button type="button" data-row="${f.row}"><span class="d">#${f.row} · ${f.bucket}</span><span class="s mono" title="${esc(f.source)}">${esc(f.source.split('/').pop())}</span><span class="p">${f.status === 'in-progress' ? badge('in-progress', 'in progress') : esc(f.env)}</span></button></li>`).join('')
+    || '<li class="empty">The queue is empty.</li>';
+  $('nextUp').addEventListener('click', (e) => { const b = e.target.closest('button[data-row]'); if (b) showFile(byRow[b.dataset.row]); });
+
+  drawPace(migrated);
+  renderJobs(d.jobs, byRow);
+  renderFiles(files, d.jobs);
+}
+
+function drawPace(migrated) {
+  const svg = $('pace');
+  const pts = [...migrated].sort((a, b) => a.merged.localeCompare(b.merged)).map((f, i) => ({ t: Date.parse(f.merged), n: i + 1, f }));
+  if (!pts.length) { svg.outerHTML = '<p class="empty">No merged migrations yet.</p>'; return; }
+  const week = pts.filter((p) => p.t >= Date.now() - 7 * 864e5).length;
+  $('paceNote').textContent = `${week} in the last 7 days`;
+  const W = svg.clientWidth || 640, H = 180, L = 30, R = 8, T = 8, B = 22;
+  const t0 = pts[0].t, t1 = Math.max(pts.at(-1).t, Date.now());
+  const x = (t) => L + ((t - t0) / (t1 - t0 || 1)) * (W - L - R);
+  const ymax = Math.ceil(pts.at(-1).n / 10) * 10;
+  const y = (n) => T + (1 - n / ymax) * (H - T - B);
+  const step = pts.map((p, i) => `${i ? `H${x(p.t)}V${y(p.n)}` : `M${x(p.t)} ${y(0)}V${y(p.n)}`}`).join('') + `H${x(t1)}`;
+  const yt = [0, ymax / 2, ymax];
+  const months = [];
+  for (let d = new Date(t0); d <= t1; d.setUTCDate(d.getUTCDate() + 1)) if (d.getUTCDate() === 1) months.push(d.getTime());
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('aria-label', `${pts.at(-1).n} test files migrated between ${migrated.at(-1).merged} and ${migrated[0].merged}`);
+  svg.innerHTML = `<g class="grid">${yt.map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`).join('')}</g>
+    <g class="axis">${yt.map((v) => `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('')}
+    ${months.map((m) => `<text x="${x(m)}" y="${H - 4}" text-anchor="middle">${new Date(m).toLocaleString('en', { month: 'short', timeZone: 'UTC' })}</text>`).join('')}</g>
+    <path class="area" d="${step}V${y(0)}Z"/><path class="line" d="${step}"/>
+    <line class="cross" y1="${T}" y2="${H - B}" visibility="hidden"/><circle class="dot" r="4" visibility="hidden"/>`;
+  const cross = svg.querySelector('.cross'), dot = svg.querySelector('.dot');
+  svg.addEventListener('mousemove', (e) => {
+    const r = svg.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) * W;
+    let p = pts[0];
+    for (const q of pts) if (x(q.t) <= px) p = q;
+    cross.setAttribute('x1', x(p.t)); cross.setAttribute('x2', x(p.t)); cross.setAttribute('visibility', 'visible');
+    dot.setAttribute('cx', x(p.t)); dot.setAttribute('cy', y(p.n)); dot.setAttribute('visibility', 'visible');
+    showTip(e, `<b>${p.f.merged}</b>: ${p.n} migrated<br>${esc(p.f.source.split('/').pop())}`);
+  });
+  svg.addEventListener('mouseleave', () => { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); hideTip(); });
+}
+
+const jobState = (j) => (j.framework === 'other' ? 'other' : (j.codecept_tests ?? 0) > 0 ? 'codecept' : 'migrated');
+
+function renderJobs(jobs, byRow) {
+  const filters = [['all', 'All'], ['codecept', 'Still on CodeceptJS'], ['migrated', 'Playwright only'], ['other', 'No UI tests']];
+  let current = 'codecept';
+  const fEl = $('jobFilters');
+  fEl.innerHTML = filters.map(([k, l]) => `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === current}">${l}<span class="c">${k === 'all' ? jobs.length : jobs.filter((j) => jobState(j) === k).length}</span></button>`).join('');
+  const draw = () => {
+    const groups = [];
+    for (const j of jobs.filter((j) => current === 'all' || jobState(j) === current)) {
+      const key = `${j.surface}|${j.group}`;
+      let g = groups.find((x) => x.key === key);
+      if (!g) groups.push((g = { key, surface: j.surface, group: j.group, jobs: [] }));
+      g.jobs.push(j);
+    }
+    groups.sort((a, b) => (a.surface === b.surface ? 0 : a.surface === 'jenkins' ? -1 : 1));
+    $('jobs').innerHTML = groups.map((g) => `<div class="jrow"><div class="gname">${esc(g.group)}<small>${g.surface === 'jenkins' ? 'Jenkins' : 'GitHub'}</small></div><div class="tiles">${g.jobs.map((j) => {
+      const i = jobs.indexOf(j);
+      const k = jobState(j) === 'codecept' ? `${j.codecept_tests} CJS` : j.playwright_tests !== undefined ? `${j.playwright_tests} PW` : '';
+      return `<button type="button" class="tile st-${jobState(j)}" data-i="${i}" title="${esc(j.name)}${j.expr ? ' — ' + esc(j.expr) : ''}"><span class="t">${esc(j.name)}</span>${k ? `<span class="k">${k}</span>` : ''}</button>`;
+    }).join('')}</div></div>`).join('') || '<p class="empty">No job in this view.</p>';
+  };
+  fEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    current = b.dataset.k;
+    fEl.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    draw();
+  });
+  $('jobs').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t) showJob(jobs[t.dataset.i], byRow); });
+  draw();
+}
+
+function showJob(j, byRow) {
+  const state = jobState(j);
+  const fw = state === 'migrated' && j.framework === 'mixed' ? badge('playwright', 'Playwright (CodeceptJS step empty)') : badge(j.framework, FW[j.framework]);
+  const left = (j.codecept_files || []).map((f) => `<li><button type="button" class="chip" data-row="${f.row ?? ''}">${esc(short(f.file))}</button> ${f.tests} test${f.tests === 1 ? '' : 's'}${f.row ? ` ${badge(f.status, f.status)}` : ''}</li>`).join('');
+  openDrawer(j.name, `<dl>
+    <dt>Runs</dt><dd>${fw}</dd>
+    <dt>Where</dt><dd>${j.surface === 'jenkins' ? `Jenkins <code>${esc(j.job)}</code>` : `<code>${esc(j.where)}</code>`}${j.note ? `<br><span class="meta">${esc(j.note)}</span>` : ''}</dd>
+    ${j.expr ? `<dt>Grep</dt><dd><code>${esc(j.expr)}</code></dd>` : ''}${j.file ? `<dt>File</dt><dd><code>${esc(short(j.file))}</code></dd>` : ''}
+    ${j.setup ? `<dt>Setup</dt><dd><code>${esc(j.setup)}</code></dd>` : ''}
+    <dt>Tests</dt><dd>${j.codecept_tests !== undefined ? `${j.codecept_tests} CodeceptJS` : ''}${j.codecept_tests !== undefined && j.playwright_tests !== undefined ? ' · ' : ''}${j.playwright_tests !== undefined ? `${j.playwright_tests} Playwright` : ''}${j.codecept_tests === undefined && j.playwright_tests === undefined ? '—' : ''}</dd>
+  </dl>${left ? `<p style="margin:16px 0 0"><b>CodeceptJS test files still behind this job</b></p><ul>${left}</ul>` : state === 'other' ? '<p>This job runs no CodeceptJS or Playwright UI tests, so it has nothing to migrate.</p>' : '<p>No CodeceptJS test is left behind this job.</p>'}`);
+  $('drawerBody').querySelectorAll('button[data-row]').forEach((b) => b.addEventListener('click', () => b.dataset.row && showFile(byRow[b.dataset.row])));
+}
+
+function showFile(f) {
+  openDrawer(f.source.split('/').pop(), `<dl>
+    <dt>Status</dt><dd>${badge(f.status, f.status)}</dd>
+    <dt>Source</dt><dd><code>${esc(f.source)}</code></dd>
+    <dt>Target</dt><dd><code>${esc(f.target || '—')}</code></dd>
+    <dt>PR</dt><dd>${prLinks(f)}</dd>
+    <dt>Opened</dt><dd>${esc(f.opened || '—')}</dd>
+    <dt>Merged</dt><dd>${esc(f.merged || '—')}</dd>
+    <dt>Bucket</dt><dd>${esc(f.bucket)} · ${esc(f.env)}</dd>
+    <dt>Setup</dt><dd><code>${esc(f.setup || 'server only')}</code></dd>
+    <dt>Tags</dt><dd class="mono">${esc(f.tags.join(' ') || '—')}</dd>
+    <dt>Tracker</dt><dd>#${f.row}</dd>
+  </dl>${f.notes ? `<p style="margin:16px 0 0;white-space:pre-wrap">${esc(f.notes)}</p>` : ''}`);
+}
+
+function renderFiles(files) {
+  const tabs = [['pending', 'Queue'], ['done', 'Migrated'], ['blocked-infra', 'Blocked'], ['retired', 'Retired'], ['all', 'All']];
+  let tab = 'pending', page = 0;
+  const tEl = $('fileTabs');
+  const n = (k) => (k === 'all' ? files.length : k === 'pending' ? files.filter((f) => f.status === 'pending' || f.status === 'in-progress').length : files.filter((f) => f.status === k).length);
+  tEl.innerHTML = tabs.map(([k, l]) => `<button class="chip" role="tab" type="button" data-k="${k}" aria-selected="${k === tab}">${l}<span class="c">${n(k)}</span></button>`).join('');
+  const draw = () => {
+    const q = $('fileSearch').value.trim().toLowerCase();
+    let list = files.filter((f) => tab === 'all' || f.status === tab || (tab === 'pending' && f.status === 'in-progress'));
+    if (q) list = list.filter((f) => [f.source, f.target, f.tags.join(' '), f.prs.map((p) => '#' + p).join(' '), f.notes].join(' ').toLowerCase().includes(q));
+    if (tab === 'done') list.sort((a, b) => (b.merged || '').localeCompare(a.merged || '') || b.row - a.row);
+    const pages = Math.max(1, Math.ceil(list.length / PAGE));
+    page = Math.min(page, pages - 1);
+    $('dateHead').textContent = tab === 'pending' ? 'Env' : 'Merged';
+    document.querySelector('#files tbody').innerHTML = list.slice(page * PAGE, page * PAGE + PAGE).map((f) => `<tr data-row="${f.row}">
+      <td class="num">${f.row}</td><td class="mono" title="${esc(f.source)}">${esc(short(f.source))}</td><td class="bk">${f.bucket}</td>
+      <td class="pr">${f.prs.length ? f.prs.map((p) => '#' + p).join(' ') : '—'}</td><td class="dt" title="${esc(tab === 'pending' ? f.env : f.merged)}">${tab === 'pending' ? esc(f.env) : esc(f.merged || '—')}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="empty">No test file matches.</td></tr>';
+    $('pageInfo').textContent = list.length ? `${page * PAGE + 1}–${Math.min(list.length, page * PAGE + PAGE)} of ${list.length}${tab === 'pending' ? ', in queue order' : ''}` : '';
+    $('prev').disabled = page === 0;
+    $('next').disabled = page >= pages - 1;
+  };
+  tEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    tab = b.dataset.k; page = 0;
+    tEl.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    draw();
+  });
+  $('fileSearch').addEventListener('input', () => { page = 0; draw(); });
+  $('prev').addEventListener('click', () => { page--; draw(); });
+  $('next').addEventListener('click', () => { page++; draw(); });
+  const byRow = Object.fromEntries(files.map((f) => [f.row, f]));
+  document.querySelector('#files tbody').addEventListener('click', (e) => { const r = e.target.closest('tr[data-row]'); if (r) showFile(byRow[r.dataset.row]); });
+  draw();
+}
+</script>
+</body>
+</html>

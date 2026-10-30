@@ -17,7 +17,9 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 | 5b and 6 selectability of every workflow expression, base vs branch, and nightly shard counts | `migration.sh selection [extra-grep]...` |
 | 7 revalidation, and whether the tested copy is unchanged | `migration.sh revalidate <file>...` |
 | 7 push, PR, runner dispatch, `Run:` line | `migration.sh publish <title> <body> <flag> <setup>` |
-| 7 tracker `done` | `migration.sh mark <row> done <pr-url>` |
+| 7 tracker `done`: PR, Opened date and dashboard data in one commit | `migration.sh mark <row> done <pr-url>` |
+| 1 Merged dates for rows whose source left `origin/main` (preflight runs it) | `migration.sh merged` |
+| any: rebuild the gh-pages Migration tab's data, uncommitted | `migration.sh dashboard` |
 
 ## Parent rules
 
@@ -46,7 +48,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 **Environment and control**
 
-- A run writes nothing under `.claude/` (skills, agents, scripts, hooks), for any reason: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. A gate that trips, a `STOP:` from `migration.sh`, a script that looks wrong or a rule that seems to block the row is the run's result: send a `PushNotification` naming it, with the change you would propose, and end the run; the skill and its scripts change in attended sessions only. Run state lives in `migration/` (tracker, parallelization ledger) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup` and `mark`.
+- A run writes nothing under `.claude/` (skills, agents, scripts, hooks), for any reason: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. A gate that trips, a `STOP:` from `migration.sh`, a script that looks wrong or a rule that seems to block the row is the run's result: send a `PushNotification` naming it, with the change you would propose, and end the run; the skill and its scripts change in attended sessions only. Run state lives in `migration/` (tracker, parallelization ledger) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup`, `mark` and `merged`.
 - Never edit `e2e_tests/.env`. Pass the run id, `PMM_UI_URL` and `ADMIN_PASSWORD` (the VM's URL and per-run password, from `chaos-pmm.sh env <run_id>`, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them. `chaos-pmm.sh test` gives the run on the VM its own on-box pair.
 - Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
@@ -101,7 +103,7 @@ A batch runs as one row:
 - one tracker commit marks every row `in-progress`; one timeline and one gate ledger, named after the first row;
 - one writer spawn migrates every row, and each gate (initial review, runner, final review) is one spawn covering the whole batch;
 - every row's tests still run and pass, and every row still gets its own worth-porting and coverage evidence;
-- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row `done` with that PR link.
+- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row marked `done` with that PR's URL.
 
 Once the writer returns, measure the real size (`git diff --numstat` plus untracked new files) and record estimate and actual on the timeline. An actual over 200 does not split the batch.
 

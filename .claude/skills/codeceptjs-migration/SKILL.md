@@ -26,7 +26,7 @@ Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`or
 4. The migrated test passes; the whole target file passes when an existing file was modified. Both pass on the row's CHAOS VM before anything is pushed. A change that alters no executed statement (a title, a commit message, a comment) needs lint, the convention script and a `--list --grep` check that every selecting job still matches, not a local run.
 5. Every migrated scenario is selected by some Playwright job, committed on the PR branch.
 6. The final independent review passes.
-7. A PR targeting `main` is open and the tracker row is `done`.
+7. A PR targeting `main` is open and the tracker row is `done` with its PR and Opened date, set by `migration.sh mark`, and the dashboard data is rebuilt in the same commit.
 
 ## Repository map
 
