@@ -140706,7 +140706,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "test bug",
+        "summary": "All 5 AMI upgrade lanes (pmm3-upgrade-ami-test-runner #1437-#1441) died again in 'Setup Dependencies and PMM Client' on 'sudo npx playwright install-deps chromium' (apt-get: command not found, exit 127) before any test ran. Same cause as night 94; the fix, jenkins-pipelines#4627, is still open and unmerged.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4627",
+        "by": "Investigator routine",
+        "at": "2026-10-30T03:20:22Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -140727,13 +140738,6 @@
         "at": "2026-10-30T03:09:01Z",
         "suites": [
           "UI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-30T03:09:01Z",
-        "suites": [
-          "Upgrade AMI"
         ]
       }
     ]
