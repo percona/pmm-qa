@@ -3750,6 +3750,16 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4629",
       "by": "Investigator routine",
       "at": "2026-10-30T03:20:33Z"
+    },
+    {
+      "suites": [
+        "UI"
+      ],
+      "verdict": "unstable",
+      "summary": "pmm3-ui-tests #11915: PMM-T743 found no azure_memory_percent_average in 2x90s, while the same Azure service's mysql_global_status_max_used_connections row passed. That metric comes from Azure Monitor through azure_exporter. Re-run #11917 on the same image and branch passed (47 CodeceptJS + 14 Playwright). The Azure-side delay is inferred, not proven; it is the first such failure in the last 8 @instances runs.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/11917/",
+      "by": "Investigator routine",
+      "at": "2026-10-30T04:21:12Z"
     }
   ],
   "claims": [
@@ -3758,13 +3768,6 @@
       "at": "2026-10-30T03:09:01Z",
       "suites": [
         "Nightly Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-30T03:09:01Z",
-      "suites": [
-        "UI"
       ]
     }
   ]
