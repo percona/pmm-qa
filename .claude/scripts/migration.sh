@@ -22,7 +22,11 @@ url=${PMM_UI_URL:+${PMM_UI_URL%/}/}
 pass=${ADMIN_PASSWORD:-}
 repo=percona/pmm-qa
 
-die() { echo "STOP: $*" >&2; exit 1; }
+die() {
+  echo "STOP: $*" >&2
+  echo "This stop is the run's result: report it (PushNotification when unattended) and end the run. Never edit .claude/ to get past it." >&2
+  exit 1
+}
 
 # One line per test job: grep expression, setup_services, file:job[:shard], framework (playwright|codeceptjs).
 # The framework comes from the runner workflow a job calls, or a matrix entry's tests_framework.
@@ -152,7 +156,7 @@ preflight() {
   local pw verified
   pw=$(grep -oE '"@playwright/test": "[^0-9]*[0-9.]+' e2e_tests/package.json | grep -oE '[0-9.]+$')
   verified=$(grep -oE 'verifiedAgainst: [0-9.]+' .claude/skills/codeceptjs-migration/playwright-practices.md | grep -oE '[0-9.]+$')
-  [[ $pw == "$verified" ]] || echo "WARN: @playwright/test $pw != verifiedAgainst $verified"
+  [[ $pw == "$verified" ]] || echo "WARN: @playwright/test $pw != verifiedAgainst $verified; unattended, report it and end the run instead of refreshing playwright-practices.md"
   echo "next: $(grep -m1 -E '^\| [0-9]+ +\| pending' "$tracker")"
 }
 

@@ -105,6 +105,8 @@ One throwaway CHAOS VM per migration through `.claude/scripts/chaos-pmm.sh` (`or
 
 ## Editing this skill
 
+Attended sessions only. An unattended run never edits these files or anything else under `.claude/`; it reports what it would change and ends (`orchestration.md` Environment and control).
+
 Execute any shell command you write into these files before committing it, through the same quoting path the skill will use, with its output shown. `grep -P` is unavailable and a carriage-return literal does not survive its own heredoc; `AGENTS.md` section Shell and tooling notes has the working forms. Rules are short imperatives; incident history goes in the tracker Notes.
 
 ## Agent responsibilities
