@@ -284,3 +284,36 @@ pmmTest(
     }
   },
 );
+
+for (const serviceName of [
+  'rs101',
+  ...(process.env.JOB_NAME?.includes('gssapi')
+    ? []
+    : ['pdpgsql_pmm_(?!.*patroni)', 'pgsql_pgss_pmm', 'ps_pmm', 'mysql_pmm_', 'pxc_node__1']),
+]) {
+  pmmTest(
+    `PMM-T2063 - Verify QAN has data for all services @qan @gssapi-nightly | ${serviceName}`,
+    async ({ api, page, qanStoredMetrics, urlHelper }) => {
+      const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}`);
+
+      await expect(async () => {
+        await page.goto(
+          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-120m', to: 'now' }),
+        );
+        await qanStoredMetrics.waitForLoad();
+        await qanStoredMetrics.selectFilter(
+          service_name,
+          qanStoredMetrics.builders.filterCheckboxInGroup(service_name, 'Service Name'),
+        );
+        await expect(page).toHaveURL((url) =>
+          url.searchParams.getAll('var-service_name').includes(service_name),
+        );
+        await qanStoredMetrics.waitForLoad();
+        expect(
+          await qanStoredMetrics.getQueryCount(),
+          `The queries for service ${service_name} do NOT exist, check QAN Data`,
+        ).toBeGreaterThan(0);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    },
+  );
+}

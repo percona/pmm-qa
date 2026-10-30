@@ -85,7 +85,6 @@ pmmTest('Verify Advanced Section Elements @settings @grafana-pr', async ({ page,
     await expect(settingsPage.elements.advancedLabel).toContainText('Data retention');
     await expect(settingsPage.elements.telemetryLabel).toContainText('Telemetry');
     await expect(settingsPage.elements.checkForUpdatesLabel).toContainText('Check for updates');
-    await expect(settingsPage.elements.advisorsLabel).toContainText('Advisors');
   });
 
   await pmmTest.step('Verify the advanced section toggles', async () => {
@@ -93,8 +92,6 @@ pmmTest('Verify Advanced Section Elements @settings @grafana-pr', async ({ page,
     await expect(settingsPage.elements.telemetryLabel).toBeVisible();
     await expect(settingsPage.buttons.toggles.checkForUpdates.locator).toBeVisible();
     await expect(settingsPage.elements.checkForUpdatesLabel).toBeVisible();
-    await expect(settingsPage.buttons.toggles.advisors.locator).toBeVisible();
-    await expect(settingsPage.elements.advisorsLabel).toBeVisible();
   });
 });
 
@@ -364,12 +361,6 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T254 - Ensure Advisors are on by default @fb-instances', async ({ api }) => {
-  const { settings } = await api.settingsApi.getSettings();
-
-  expect(settings.advisor_enabled, 'Advisors should be turned on by default').toBe(true);
-});
-
 pmmTest(
   'PMM-T1227 + PMM-T1338 - Verify tooltip "Read more" links on PMM Settings page redirect to working pages Verify that all the metrics from config are displayed on Telemetry tooltip in Settings > Advanced @fb-settings',
   async ({ api, page, request, settingsPage }) => {
@@ -391,12 +382,6 @@ pmmTest(
         link: 'https://per.co.na/telemetry',
         tab: 'advanced',
         text: 'Sends anonymous usage statistics to help improve PMM. No personal or database content is collected.',
-      },
-      {
-        label: 'advanced-advisors',
-        link: 'https://per.co.na/advisors',
-        tab: 'advanced',
-        text: 'Run automated checks to identify potential database performance and configuration issues.',
       },
     ] as const) {
       await pmmTest.step(`Verify the ${row.label} tooltip and its Read more link`, async () => {

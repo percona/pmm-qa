@@ -49,13 +49,13 @@ pmmTest(
     );
 
     await pmmTest.step(`Wait for "${initialLeader}" to rejoin the cluster`, async () => {
-      // `kubectl wait` fails outright on a pod the StatefulSet has not recreated yet.
-      await expect
-        .poll(() => k8sHelper.getPods().find((pod) => pod.name === initialLeader)?.ready === true, {
-          message: `Pod "${initialLeader}" must come back as a follower`,
-          timeout: Timeouts.FIVE_MINUTES,
-        })
-        .toBeTruthy();
+      // Pod readiness is not membership: the role labels render the HA memberlist, which a restarted
+      // node rejoins only once its pmm-managed is up. The leader is still asserted against the pods.
+      await expect(async () => {
+        expect(await api.haApi.getNodeNames(), `"${initialLeader}" must rejoin the HA memberlist`).toEqual(
+          podNames,
+        );
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     });
 
     await pmmTest.step(`Verify the Nodes page shows "${newLeader}" leading and every node Up`, async () => {

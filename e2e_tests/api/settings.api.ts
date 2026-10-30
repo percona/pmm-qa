@@ -1,18 +1,7 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
-
-interface SettingsResponse {
-  settings: {
-    advisor_enabled: boolean;
-    backup_management_enabled: boolean;
-    data_retention: string;
-    default_role_id?: number | string;
-    enable_access_control: boolean;
-    pmm_public_address: string;
-    telemetry_summaries: string[];
-  };
-}
+import { SettingsResponse } from '@interfaces/settings';
 
 interface SettingsBody {
   data_retention?: string;
@@ -71,6 +60,11 @@ export default class SettingsApi {
 
     return (await response.json()) as SettingsResponse;
   };
+
+  putSettings = async (
+    data: Record<string, unknown>,
+    headers: Record<string, string> = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> => await this.request.put(apiEndpoints.server.settings, { data, headers });
 
   restoreSettingsDefaults = async (): Promise<void> => {
     const body: Record<string, unknown> = {

@@ -21,13 +21,15 @@ while IFS=$'\t' read -r lane run_id; do
   page=1
   : > "$tmp/jobs.ndjson"
   while :; do
-    body="$(curl -fsS --retry 3 --max-time 60 ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} -H "Accept: application/vnd.github+json" \
-      "https://api.github.com/repos/percona/pmm-qa/actions/runs/${run_id}/jobs?per_page=100&page=${page}")" || {
+    # -o, not $(...): curl truncates a file before a retry but would append to stdout.
+    curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --max-time 60 -o "$tmp/page.json" \
+      ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/repos/percona/pmm-qa/actions/runs/${run_id}/jobs?per_page=100&page=${page}" || {
       echo "warning: could not list jobs of run ${run_id} (page ${page}); lane '${lane}' is incomplete" >&2
       break
     }
-    n="$(jq '.jobs | length' <<<"$body")"
-    jq -c '.jobs[]' <<<"$body" >> "$tmp/jobs.ndjson"
+    n="$(jq '.jobs | length' "$tmp/page.json")"
+    jq -c '.jobs[]' "$tmp/page.json" >> "$tmp/jobs.ndjson"
     [ "$n" -lt 100 ] && break
     page=$((page + 1))
   done
@@ -51,10 +53,8 @@ jq -n \
     then ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) else null end;
   # Report groups: the unit the page summarises and the Investigate button covers.
   def jenkins_group:
-    if   startswith("pkg amd64 / ") then "Package AMD"
-    elif startswith("pkg arm64 / ") then "Package ARM"
-    elif startswith("upgrade / ami ") then "Upgrade AMI"
-    elif . == "nightly / gssapi" or . == "ha" or . == "openshift" then "HA, OpenShift & GSSAPI"
+    if   startswith("upgrade / ami ") then "Upgrade AMI"
+    elif . == "nightly / gssapi" or . == "ha" or . == "ha backup-restore" or . == "openshift" then "HA, OpenShift & GSSAPI"
     elif startswith("nightly / ") then "Nightly"
     elif startswith("compat / ") then "Nightly Compatibility"
     elif startswith("ui / ") then "UI"
@@ -64,6 +64,8 @@ jq -n \
     elif startswith("Compatibility CLI") then "CLI Integration Compatibility"
     elif startswith("CLI integration") then "CLI Integration"
     elif startswith("PMM Upgrade") then "Upgrade"
+    elif test("^Package Tests / [^/]+-arm64 / ") then "Package ARM"
+    elif startswith("Package Tests") then "Package AMD"
     elif test("^(GSSAPI Tests Matrix|pmm3-helm|PMM_PSMDB_PBM_FULL|PMM_PROXYSQL|PMM_PDPGSQL)") then "Integrations"
     else "Other" end;
   def leaf: (index(" / ")) as $cut | if $cut then .[$cut + 3:] else . end;
@@ -74,14 +76,14 @@ jq -n \
       | map(select(.name | test("^(Resolve build under test|Compatibility matrix|GA pmm-client tags)") | not))
       | map((.name | split(" / ")) as $p | {
           source: "github",
-          group: ($p[0] | github_group),
+          group: (.name | github_group),
           name: (($p[1:] | map(select(. != "CLI" and . != "Integration"))) as $rest |
             if ($p[0] | startswith("Compatibility CLI")) then
               "\($p[0] | capture("\\((?<v>[^)]+)\\)").v // $p[0]) · \($rest | join(" / "))"
             elif ($p[0] | startswith("PMM Upgrade")) then
               (($p[1] // "") | capture("^(?<type>\\S+) \\((?<from>[^)]+)\\)$") // null) as $u |
               if $u then "\($u.from) · \($u.type)" else $p[-1] end
-            elif ($p[0] | test("^(E2E Tests Matrix|CLI integration)")) and ($rest | length) > 0 then $rest | join(" / ")
+            elif ($p[0] | test("^(E2E Tests Matrix|CLI integration|Package Tests)")) and ($rest | length) > 0 then $rest | join(" / ")
             else .name end),
           result: ((.conclusion // .status) | norm),
           url: .html_url,

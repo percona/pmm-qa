@@ -15,11 +15,11 @@
 # Install - both charts, the published pmm-ha, the newest released server image:
 #   ./install_pmm_ha.sh --platform eks --external-access
 #   ./install_pmm_ha.sh --platform lke --image percona/pmm-server:3.9.0
-#   ./install_pmm_ha.sh --platform openshift --chart-branch PMM-HA-GA
+#   ./install_pmm_ha.sh --platform openshift --chart-branch main
 #
 # Upgrade in the order a real one happens - dependencies first, then the server,
-#   ./install_pmm_ha.sh --platform openshift --charts deps --chart-branch PMM-HA-GA
-#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch PMM-HA-GA \
+#   ./install_pmm_ha.sh --platform openshift --charts deps --chart-branch main
+#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch main \
 #       --image perconalab/pmm-server:3-dev-latest --external-access
 #
 # Upgrade the server image alone, holding the chart still at the installed version:
@@ -29,6 +29,17 @@
 # Upgrade from a working checkout instead of a branch the script clones:
 #   ./install_pmm_ha.sh --platform eks --charts pmm-ha --chart-dir ~/percona-helm-charts \
 #       --image perconalab/pmm-server:3-dev-latest
+#
+# Backups (charts/pmm-ha/docs/pmm-backup.md) to an in-cluster MinIO, or to a bucket
+# whose keys are in BACKUP_S3_ACCESS_KEY / BACKUP_S3_SECRET_KEY:
+#   ./install_pmm_ha.sh --platform openshift --chart-branch main --backup-minio
+#   ./install_pmm_ha.sh --platform eks --backup-s3-bucket pmm-ha-backups --backup-s3-region us-east-2
+#
+# A DR target for a cross-namespace restore, on the source's pmm-secret and reading
+# the source's MinIO with the source's keys:
+#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --namespace pmm-dr --release pmm-dr \
+#       --pmm-secret-from pmm --backup-s3-bucket pmm-backups --backup-s3-provider Minio \
+#       --backup-s3-endpoint http://pmm-backup-minio.pmm.svc.cluster.local:9000
 #
 # With no --image it installs the newest released percona/pmm-server tag, resolved
 # from Docker Hub.
@@ -63,6 +74,13 @@ RELEASED_REPOSITORY="${RELEASED_REPOSITORY:-percona/pmm-server}"
 # pmm-ha install then fails against a webhook that cannot serve. Only observed on
 # OpenShift, hence the platform default.
 WEBHOOK_SETTLE_SECONDS="${WEBHOOK_SETTLE_SECONDS:-}"
+PMM_SECRET_FROM="${PMM_SECRET_FROM:-}"
+BACKUP_MINIO="${BACKUP_MINIO:-false}"
+BACKUP_S3_BUCKET="${BACKUP_S3_BUCKET:-}"
+BACKUP_S3_ENDPOINT="${BACKUP_S3_ENDPOINT:-}"
+BACKUP_S3_REGION="${BACKUP_S3_REGION:-us-east-1}"
+BACKUP_S3_PROVIDER="${BACKUP_S3_PROVIDER:-AWS}"
+BACKUP_FROM_FLAG="false"
 EXTRA_SET=()
 
 # pmm3-ha-eks / pmm3-ha-rosa already pass the image split in two, accept it as-is.
@@ -74,6 +92,11 @@ PMM_SERVER_SELECTOR='app.kubernetes.io/component=pmm-server'
 HAPROXY_SELECTOR='app.kubernetes.io/name=haproxy'
 HAPROXY_SERVICE='pmm-ha-haproxy'
 OPERATOR_NAMES=(victoria-metrics-operator altinity-clickhouse-operator pg-operator)
+# The access-key / secret-key names are the chart's existingSecretKeys defaults.
+BACKUP_SECRET='pmm-backup-s3'
+MINIO_NAME='pmm-backup-minio'
+MINIO_IMAGE='pgsty/minio:RELEASE.2026-08-04T00-00-00Z'
+MC_IMAGE='pgsty/mc:RELEASE.2026-09-16T00-00-00Z'
 
 usage() {
     echo "Installs or upgrades PMM HA on the cluster KUBECONFIG points at.
@@ -86,7 +109,7 @@ usage() {
         --deps-release NAME     pmm-ha-dependencies release name (default: pmm-operators)
         --chart-branch BRANCH   install the pmm-ha chart from this percona-helm-charts
                                 branch, cloned into a temp dir (default: latest, which
-                                is the published chart)
+                                is the published chart); OWNER:BRANCH clones OWNER's fork
         --chart-dir DIR         install from a percona-helm-charts checkout you already
                                 have, instead of cloning or using the published repo
         --chart-version VER     published pmm-ha chart version (default: latest)
@@ -101,6 +124,18 @@ usage() {
         --external-access       expose HAProxy and wait for PMM to serve on it:
                                 an NLB on eks, a LoadBalancer on lke, a Route on openshift
         --set KEY=VALUE         extra --set for the pmm-ha chart; repeatable
+        --backup-s3-bucket B    enable backups (centralBackupStorage, s3 mode) into bucket
+                                B; its keys are read from BACKUP_S3_ACCESS_KEY and
+                                BACKUP_S3_SECRET_KEY into the $BACKUP_SECRET secret, or
+                                that secret is kept when it already exists
+        --backup-s3-endpoint URL S3-compatible endpoint; empty for AWS
+        --backup-s3-region R    bucket region (default: us-east-1)
+        --backup-s3-provider P  rclone provider: AWS, Minio, Ceph or Other (default: AWS)
+        --backup-minio          enable backups to a MinIO this script deploys in the
+                                namespace, bucket pmm-backups unless --backup-s3-bucket
+        --pmm-secret-from NS    copy pmm-secret, and the $BACKUP_SECRET secret when
+                                backups are on, from namespace NS before installing, as a
+                                cross-namespace restore target needs the source's
         --charts WHICH          which charts to install or upgrade (default: all)
                                   all     pmm-ha-dependencies, then pmm-ha
                                   deps    pmm-ha-dependencies only
@@ -113,7 +148,8 @@ usage() {
         DEPS_RELEASE, CHART_DIR, CHART_BRANCH (or PMM_CHART_BRANCH), CHART_REPO, CHART_VERSION, PMM_IMAGE (or
         DEPS_CHART_VERSION, PMM_IMAGE_REPOSITORY + PMM_IMAGE_TAG), PMM_ADMIN_PASSWORD,
         EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
-        RELEASED_REPOSITORY.
+        RELEASED_REPOSITORY, BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
+        BACKUP_S3_PROVIDER, BACKUP_MINIO, PMM_SECRET_FROM.
         "
     exit 2
 }
@@ -132,6 +168,12 @@ while [ $# -gt 0 ]; do
         --admin-password)  ADMIN_PASSWORD="$2"; shift 2 ;;
         --external-access) EXTERNAL_ACCESS="true"; EXTERNAL_ACCESS_FROM_FLAG="true"; shift ;;
         --set)             EXTRA_SET+=(--set "$2"); shift 2 ;;
+        --backup-s3-bucket)   BACKUP_S3_BUCKET="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
+        --backup-s3-endpoint) BACKUP_S3_ENDPOINT="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
+        --backup-s3-region)   BACKUP_S3_REGION="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
+        --backup-s3-provider) BACKUP_S3_PROVIDER="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
+        --backup-minio)    BACKUP_MINIO="true"; BACKUP_FROM_FLAG="true"; shift ;;
+        --pmm-secret-from) PMM_SECRET_FROM="$2"; shift 2 ;;
         --charts)          CHARTS="$2"; shift 2 ;;
         --timeout)         TIMEOUT="$2"; shift 2 ;;
         --debug-dir)       DEBUG_DIR="$2"; shift 2 ;;
@@ -152,6 +194,20 @@ normalize_bool() {
     esac
 }
 EXTERNAL_ACCESS="$(normalize_bool "$EXTERNAL_ACCESS")"
+BACKUP_MINIO="$(normalize_bool "$BACKUP_MINIO")"
+
+if [ "$BACKUP_MINIO" = "true" ]; then
+    [ -z "$BACKUP_S3_ENDPOINT" ] || fail "--backup-minio points backups at its own MinIO; drop --backup-s3-endpoint."
+    BACKUP_S3_BUCKET="${BACKUP_S3_BUCKET:-pmm-backups}"
+    BACKUP_S3_ENDPOINT="http://${MINIO_NAME}.${NAMESPACE}.svc.cluster.local:9000"
+    BACKUP_S3_PROVIDER="Minio"
+fi
+BACKUP_ENABLED="false"
+if [ -n "$BACKUP_S3_BUCKET" ]; then
+    BACKUP_ENABLED="true"
+elif [ "$BACKUP_FROM_FLAG" = "true" ]; then
+    fail "the --backup-s3-* options need --backup-s3-bucket, or --backup-minio."
+fi
 
 case "$CHARTS" in
     all)    INSTALL_DEPS="true";  INSTALL_PMM="true" ;;
@@ -172,6 +228,10 @@ done
 if [ "$EXTERNAL_ACCESS" = "true" ]; then
     command -v curl >/dev/null 2>&1 || fail "'curl' is not installed, needed by --external-access."
 fi
+if [ -n "$PMM_SECRET_FROM" ]; then
+    command -v jq >/dev/null 2>&1 || fail "'jq' is not installed, needed by --pmm-secret-from."
+    [ "$PMM_SECRET_FROM" != "$NAMESPACE" ] || fail "--pmm-secret-from names the namespace being installed into."
+fi
 
 if [ "$INSTALL_PMM" = "false" ]; then
     if [ -n "$IMAGE" ]; then
@@ -185,6 +245,13 @@ if [ "$INSTALL_PMM" = "false" ]; then
         log "WARNING: ignoring external access from the environment, --charts $CHARTS does not install pmm-ha"
         EXTERNAL_ACCESS="false"
     fi
+
+    if [ "$BACKUP_ENABLED" = "true" ]; then
+        [ "$BACKUP_FROM_FLAG" = "false" ] || fail "backups are configured on the pmm-ha chart, which --charts $CHARTS does not install."
+        log "WARNING: ignoring the backup settings from the environment, --charts $CHARTS does not install pmm-ha"
+        BACKUP_ENABLED="false"
+    fi
+    [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from applies to the pmm-ha chart, which --charts $CHARTS does not install."
 
     [ -z "$CHART_VERSION" ] || log "WARNING: --chart-version ignored, --charts $CHARTS does not install pmm-ha"
 elif [ -n "$IMAGE" ]; then
@@ -203,6 +270,11 @@ fi
 if [ "$CHART_BRANCH" != "latest" ]; then
     [ -z "$CHART_DIR" ] || fail "--chart-branch and --chart-dir both name a chart source; pass one."
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --chart-branch '$CHART_BRANCH'."
+fi
+# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
+if [[ "$CHART_BRANCH" == *:* ]]; then
+    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
+    CHART_BRANCH="${CHART_BRANCH#*:}"
 fi
 if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
@@ -281,6 +353,12 @@ write_summary() {
             echo "image=$IMAGE"
             echo "url=${PMM_URL:-<no external access>}"
             [ -n "${LINODE_HOST:-}" ] && echo "linode_host=$LINODE_HOST"
+            echo "backup_enabled=$BACKUP_ENABLED"
+            if [ "$BACKUP_ENABLED" = "true" ]; then
+                echo "backup_s3_bucket=$BACKUP_S3_BUCKET"
+                echo "backup_s3_endpoint=${BACKUP_S3_ENDPOINT:-<aws>}"
+                echo "backup_s3_prefix=$NAMESPACE/$RELEASE"
+            fi
 
             if [ "$SECRET_CREATED" = "true" ]; then
                 echo "pmm_admin_password=$ADMIN_PASSWORD"
@@ -326,6 +404,221 @@ wait_for_pods_ready() {
     done
 
     retry kubectl wait --for=condition=ready pod -l "$selector" -n "$NAMESPACE" --timeout="$TIMEOUT"
+}
+
+# Copies a secret from --pmm-secret-from, returning 1 if the source has none. A source that
+# cannot be read fails rather than passing for a missing one, which would get fresh keys.
+copy_source_secret() {
+    local name="$1" source
+
+    source="$(kubectl get secret "$name" -n "$PMM_SECRET_FROM" --ignore-not-found -o json)" \
+        || fail "could not read $name from namespace $PMM_SECRET_FROM."
+    [ -n "$source" ] || return 1
+
+    if kubectl get secret "$name" -n "$NAMESPACE" >/dev/null 2>&1; then
+        [ "$(kubectl get secret "$name" -n "$NAMESPACE" -o json | jq -S -c '.data')" = "$(echo "$source" | jq -S -c '.data')" ] \
+            || fail "$NAMESPACE already holds a $name that differs from the one in $PMM_SECRET_FROM; it can only be copied before the first install."
+        log "The $name in $NAMESPACE already matches $PMM_SECRET_FROM"
+        return 0
+    fi
+
+    echo "$source" \
+        | jq --arg ns "$NAMESPACE" '{apiVersion, kind, type, data, metadata: {name: .metadata.name, namespace: $ns}}' \
+        | kubectl apply -f -
+    log "Copied $name from $PMM_SECRET_FROM into $NAMESPACE"
+}
+
+ensure_backup_secret() {
+    local access_key="${BACKUP_S3_ACCESS_KEY:-}" secret_key="${BACKUP_S3_SECRET_KEY:-}"
+
+    if [ -z "$access_key" ] || [ -z "$secret_key" ]; then
+        if kubectl get secret "$BACKUP_SECRET" -n "$NAMESPACE" >/dev/null 2>&1; then
+            log "Keeping the $BACKUP_SECRET secret already in $NAMESPACE"
+            return 0
+        fi
+        if [ -n "$PMM_SECRET_FROM" ] && copy_source_secret "$BACKUP_SECRET"; then
+            return 0
+        fi
+        [ "$BACKUP_MINIO" = "true" ] \
+            || fail "backups to $BACKUP_S3_BUCKET need BACKUP_S3_ACCESS_KEY and BACKUP_S3_SECRET_KEY, or a $BACKUP_SECRET secret already in $NAMESPACE."
+        access_key="$(random_password)"
+        secret_key="$(random_password)"
+    fi
+
+    kubectl create secret generic "$BACKUP_SECRET" -n "$NAMESPACE" \
+        --from-literal=access-key="$access_key" \
+        --from-literal=secret-key="$secret_key" \
+        --dry-run=client -o yaml | kubectl apply -f -
+}
+
+# The backup keys double as MinIO's root credentials.
+deploy_minio() {
+    local pinned_ids=''
+
+    # restricted-v2 assigns the uid and fsGroup itself and refuses pinned ones.
+    [ "$PLATFORM" = "openshift" ] || pinned_ids=$'\n        runAsUser: 1000\n        runAsGroup: 1000\n        fsGroup: 1000'
+
+    log "Deploying MinIO as $MINIO_NAME, bucket $BACKUP_S3_BUCKET"
+    kubectl apply -f - <<MINIO_EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${MINIO_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: ${MINIO_NAME}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${MINIO_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: ${MINIO_NAME}
+spec:
+  selector:
+    app.kubernetes.io/name: ${MINIO_NAME}
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${MINIO_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: ${MINIO_NAME}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${MINIO_NAME}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${MINIO_NAME}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault${pinned_ids}
+      containers:
+        - name: minio
+          image: ${MINIO_IMAGE}
+          args: [server, /data, --certs-dir, /tmp/certs]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef: {name: ${BACKUP_SECRET}, key: access-key}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: ${BACKUP_SECRET}, key: secret-key}
+          ports:
+            - name: s3
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ${MINIO_NAME}
+        - name: tmp
+          emptyDir: {}
+MINIO_EOF
+    retry kubectl rollout status deployment/"$MINIO_NAME" -n "$NAMESPACE" --timeout="$TIMEOUT"
+
+    # A Job's pod template is immutable, so a re-run replaces it.
+    kubectl delete job "${MINIO_NAME}-bucket" -n "$NAMESPACE" --ignore-not-found
+    kubectl apply -f - <<BUCKET_EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${MINIO_NAME}-bucket
+  namespace: ${NAMESPACE}
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault${pinned_ids}
+      containers:
+        - name: mc
+          image: ${MC_IMAGE}
+          command: [sh, -c, "mc --config-dir /tmp/mc mb --ignore-existing minio/${BACKUP_S3_BUCKET}"]
+          env:
+            - name: ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: ${BACKUP_SECRET}, key: access-key}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef: {name: ${BACKUP_SECRET}, key: secret-key}
+            - name: MC_HOST_minio
+              value: http://\$(ACCESS_KEY):\$(SECRET_KEY)@${MINIO_NAME}:9000
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+BUCKET_EOF
+    kubectl wait --for=condition=complete job/"${MINIO_NAME}-bucket" -n "$NAMESPACE" --timeout=5m \
+        || fail "could not create bucket $BACKUP_S3_BUCKET in MinIO: $(kubectl logs job/"${MINIO_NAME}-bucket" -n "$NAMESPACE" 2>&1 | tail -5)"
+}
+
+# Not `rollout status`: it refuses the OnDelete StatefulSets (vmstorage, vmselect, PostgreSQL).
+statefulsets_not_rolled() {
+    local rows
+
+    rows="$(kubectl get statefulsets -n "$NAMESPACE" --no-headers -o custom-columns='NAME:.metadata.name,GEN:.metadata.generation,OBSERVED:.status.observedGeneration,DESIRED:.spec.replicas,UPDATED:.status.updatedReplicas,READY:.status.readyReplicas')" \
+        || { echo "<kubectl get statefulsets failed>"; return 0; }
+
+    echo "$rows" | awk '$3 != $2 || $5 + 0 != $4 || $6 + 0 != $4 { print $1 }'
+}
+
+wait_for_statefulsets_rolled() {
+    local pending deadline
+    deadline=$(( $(date +%s) + 900 ))
+
+    until pending="$(statefulsets_not_rolled)"; [ -z "$pending" ]; do
+        [ "$(date +%s)" -lt "$deadline" ] || fail "StatefulSets still rolling out after 15m: $(echo "$pending" | tr '\n' ' ')"
+        sleep 15
+    done
 }
 
 if [ "$CHART_BRANCH" != "latest" ]; then
@@ -496,6 +789,13 @@ DEPS_SUMMARY_EOF
     exit 0
 fi
 
+# A restore brings the source's grafana database, admin password included, while
+# the operators create their users from pmm-secret at install time - so a restore
+# target starts on the source's secret rather than being handed it afterwards.
+if [ -n "$PMM_SECRET_FROM" ]; then
+    copy_source_secret pmm-secret || fail "no pmm-secret in namespace $PMM_SECRET_FROM to copy."
+fi
+
 # Rotating these on an existing cluster would break PG, ClickHouse and VM, which
 # still hold the old ones - so an existing secret is kept, never overwritten.
 SECRET_CREATED="false"
@@ -524,6 +824,22 @@ else
     log "Created pmm-secret in $NAMESPACE"
 fi
 
+BACKUP_SET=()
+if [ "$BACKUP_ENABLED" = "true" ]; then
+    ensure_backup_secret
+    [ "$BACKUP_MINIO" = "false" ] || deploy_minio
+
+    BACKUP_SET+=(
+        --set centralBackupStorage.enabled=true
+        --set centralBackupStorage.mode=s3
+        --set-string "centralBackupStorage.s3.bucket=$BACKUP_S3_BUCKET"
+        --set-string "centralBackupStorage.s3.region=$BACKUP_S3_REGION"
+        --set-string "centralBackupStorage.s3.provider=$BACKUP_S3_PROVIDER"
+        --set-string "centralBackupStorage.s3.existingSecret=$BACKUP_SECRET"
+    )
+    [ -z "$BACKUP_S3_ENDPOINT" ] || BACKUP_SET+=(--set-string "centralBackupStorage.s3.endpoint=$BACKUP_S3_ENDPOINT")
+fi
+
 # OpenShift already runs a node-exporter on host port 9100, so the bundled
 # DaemonSet stays Pending forever and --wait would never return. The chart's own
 # openshift mode scrapes the platform one instead. Placed before EXTRA_SET so
@@ -542,7 +858,14 @@ helm upgrade --install "$RELEASE" "$PMM_CHART" \
     --wait --timeout "$TIMEOUT" \
     --set "image.repository=${IMAGE%:*}" \
     --set "image.tag=${IMAGE##*:}" \
-    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+    --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
+    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
+    ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+
+# A chart from before PMM-13858 ignores centralBackupStorage without a word.
+if [ "$BACKUP_ENABLED" = "true" ] && ! kubectl get deployment "${RELEASE}-backup-tools" -n "$NAMESPACE" >/dev/null 2>&1; then
+    fail "backups were requested, but $CHART_SOURCE rendered no ${RELEASE}-backup-tools Deployment; it predates backup support."
+fi
 
 # Resolved by label rather than named: the StatefulSet is named after the release.
 log "Waiting for the PMM Server StatefulSet to roll out"
@@ -558,6 +881,9 @@ retry kubectl rollout status "$STATEFULSET" -n "$NAMESPACE" --timeout="$TIMEOUT"
 # server then surfaces as the rollout above, not as an opaque HAProxy timeout.
 log "Waiting for HAProxy"
 wait_for_pods_ready "$HAPROXY_SELECTOR" "HAProxy"
+
+log "Waiting for the operators to finish rolling their StatefulSets"
+wait_for_statefulsets_rolled
 
 PMM_URL=""
 EXTERNAL_HOST=""
@@ -649,6 +975,7 @@ cat <<SUMMARY_EOF
  Release    : $RELEASE ($RELEASE_CHART)
  Image      : $IMAGE
  URL        : ${PMM_URL:-<no external access; pass --external-access>}
+ Backups    : $([ "$BACKUP_ENABLED" = "true" ] && echo "s3://$BACKUP_S3_BUCKET/$NAMESPACE/$RELEASE ${BACKUP_S3_ENDPOINT:+via $BACKUP_S3_ENDPOINT}" || echo "off")
  Summary    : $SUMMARY_FILE (credentials, mode 600)
 ============================================================
 SUMMARY_EOF

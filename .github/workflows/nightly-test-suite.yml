@@ -23,6 +23,16 @@ on:
         required: false
         default: 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
         type: string
+      pmm_client_tarball_amd64:
+        description: 'amd64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz'
+        type: string
+      pmm_client_tarball_arm64:
+        description: 'arm64 pmm-client tarball for the package lanes'
+        required: false
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz'
+        type: string
       pmm_qa_branch:
         description: 'PMM QA branch'
         required: false
@@ -149,7 +159,7 @@ jobs:
       pmm_client_version: ${{ matrix.tarball }}
 
   e2e_tests_matrix:
-    name: E2E Tests Matrix (CodeceptJS)
+    name: E2E Tests Matrix
     needs: [plan, resolve]
     uses: ./.github/workflows/e2e-tests-matrix.yml
     secrets: inherit
@@ -158,6 +168,18 @@ jobs:
       pmm_client_image: ${{ needs.resolve.outputs.client_image }}
       pmm_client_version: ${{ needs.resolve.outputs.client_version }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+
+  e2e_tests_matrix_arm64:
+    name: E2E Tests Matrix ARM64
+    needs: [plan, resolve]
+    uses: ./.github/workflows/e2e-tests-matrix.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ needs.resolve.outputs.server_image }}
+      pmm_client_image: ${{ needs.resolve.outputs.client_image }}
+      pmm_client_version: ${{ needs.resolve.outputs.client_version }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      arch: 'arm64'
 
   helm_tests:
     name: pmm3-helm
@@ -183,6 +205,22 @@ jobs:
       pmm_client_version_ol9: ${{ inputs.pmm_client_tarball_ol9 }}
       repository: ${{ needs.resolve.outputs.repository }}
       expected_version: ${{ inputs.pmm_image_tag }}
+
+  package_tests:
+    name: Package Tests
+    needs: [plan, resolve]
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/pmm3-package-tests-matrix.yml
+    with:
+      arch: all
+      pmm_server_image: ${{ needs.resolve.outputs.server_image }}
+      install_repo: ${{ needs.resolve.outputs.repository }}
+      pmm_version: ${{ inputs.pmm_image_tag }}
+      tarball: ${{ inputs.pmm_client_tarball_amd64 }}
+      tarball_arm64: ${{ inputs.pmm_client_tarball_arm64 }}
+      pmm_qa_ref: ${{ inputs.pmm_qa_branch }}
 
   qa_integration_psmdb_pbm_full:
     name: PMM_PSMDB_PBM_FULL

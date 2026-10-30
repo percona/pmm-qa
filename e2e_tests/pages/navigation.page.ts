@@ -120,14 +120,6 @@ export default class LeftNavigation extends BasePage {
       temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
-    perconaadvisors: {
-      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
-      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
-      locator: this.page.getByTestId('navitem-advisors'),
-      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
-      query: { locator: this.page.getByTestId('navitem-advisors-query') },
-      security: { locator: this.page.getByTestId('navitem-advisors-security') },
-    },
     postgresql: {
       ha: {
         patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
@@ -172,7 +164,9 @@ export default class LeftNavigation extends BasePage {
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
+    homeMenuItem: this.page.getByTestId('navitem-home-page'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),

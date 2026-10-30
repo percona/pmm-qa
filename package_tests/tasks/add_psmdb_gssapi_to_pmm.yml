@@ -1,0 +1,152 @@
+# Sets up the preinstalled Percona Server for MongoDB with Kerberos (GSSAPI)
+# authentication and LDAP authorization on Oracle Linux, and adds it to PMM. The
+# playbook does not install it: package_tests/docker/install-databases.sh bakes it
+# into the client images, at the version docker/database-versions sets.
+#
+# Task adjustments are handled by parent playbook vars:
+#             var "port_flag"      :  to access agent with custom port
+#                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
+#
+- set_fact:
+    psmdb_version: "{{ psmdb_to_test.split('-')[1] }}"
+
+# psmdb_to_test carries the version docker/database-versions sets (psmdb-8.0);
+# the installed server has to be that series, or the test would cover another one.
+- name: Read the installed Percona Server for MongoDB version
+  command: "{{ psmdb_version_query[ansible_os_family] }}"
+  vars:
+    psmdb_version_query:
+      Debian: "dpkg-query -W -f=${Version} percona-server-mongodb-server"
+      RedHat: "rpm -q --qf %{VERSION} percona-server-mongodb-server"
+  register: psmdb_package_version
+  changed_when: false
+  failed_when: false
+
+- name: Verify Percona Server for MongoDB is the version docker/database-versions sets
+  assert:
+    that:
+      - psmdb_package_version.rc == 0
+      - (psmdb_version ~ '.') in psmdb_package_version.stdout
+    fail_msg: >-
+      docker/database-versions sets Percona Server for MongoDB {{ psmdb_version }} for this OS, but the
+      package query reports "{{ psmdb_package_version.stdout or psmdb_package_version.stderr | default('nothing') }}".
+      Rebuild the image (build-package-test-images.yml).
+    success_msg: "Percona Server for MongoDB {{ psmdb_version }}: {{ psmdb_package_version.stdout }}"
+
+# The setup half of install_setup_psmdb.yml from Percona-QA/psmdb-testing.
+- name: stop mongod service
+  service: name=mongod state=stopped
+
+- name: add replica set name into mongod config
+  replace:
+    path: /etc/mongod.conf
+    regexp: '^#replication:'
+    replace: 'replication:\n  replSetName: "rs1"'
+
+- name: start mongod service
+  service: name=mongod state=started
+
+- name: check mongod ready status
+  shell: mongo --eval="printjson(db.serverStatus().ok)"
+  register: mongodbready
+  until: mongodbready.stdout | int == 1
+  retries: 20
+  delay: 1
+
+- name: initiate mongod replica set
+  command: mongo --eval 'rs.initiate()'
+
+- name: Install Kerberos
+  dnf:
+    name:
+      - krb5-workstation
+      - krb5-server
+      - krb5-pkinit
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Deploy krb5.conf from template
+  template:
+    src: ../templates/krb5.conf.j2
+    dest: /etc/krb5.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Setup mongodb with gssapi
+  template:
+    src: ../templates/mongod.conf.j2
+    dest: /etc/mongod.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+# mongod.conf.j2 authorizes against the directory at 127.0.0.1:1389 and will
+# not start without it. The client cannot run that container itself, so the
+# environment provides it, as it does the databases: the matrix cell starts
+# docker.io/bitnamilegacy/openldap in the client's network namespace, with the
+# pmm-test user (password1) in the readers group setup_psmdb.js maps a role to.
+- name: Wait for the LDAP server mongod authorizes against
+  wait_for:
+    host: 127.0.0.1
+    port: 1389
+    timeout: 120
+    msg: >-
+      Nothing listens on 127.0.0.1:1389. Start an LDAP server there with the pmm-test user
+      (password1) in the readers group; .github/scripts/package-test-cell.sh shows how.
+
+- name: Generate certificates for tests
+  shell: |
+    rm -rf easy-rsa pki certs && mkdir certs
+    git clone https://github.com/OpenVPN/easy-rsa.git
+    ./easy-rsa/easyrsa3/easyrsa init-pki
+    ./easy-rsa/easyrsa3/easyrsa --req-cn=Percona --batch build-ca nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=server --subject-alt-name=DNS:pmm-server --batch build-server-full pmm-server nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=server --subject-alt-name=DNS:psmdb-server --batch build-server-full psmdb-server nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=client --batch build-client-full pmm-test nopass
+    openssl dhparam -out certs/dhparam.pem 2048
+    cp pki/ca.crt certs/ca-certs.pem
+    cp pki/private/pmm-server.key certs/certificate.key
+    cp pki/issued/pmm-server.crt certs/certificate.crt
+    cat pki/private/psmdb-server.key pki/issued/psmdb-server.crt > certs/psmdb-server.pem
+    cat pki/private/pmm-test.key pki/issued/pmm-test.crt > certs/client.pem
+    find certs -type f -exec chmod 644 {} \;
+    mkdir -p /mongodb_certs
+    cp -r ./certs/* /mongodb_certs/
+- name: Setup kerberos
+  shell: |
+    mkdir -p /keytabs
+    chmod 700 /keytabs
+    kdb5_util -P password create -s
+    kadmin.local -q "addprinc -pw password root/admin"
+    kadmin.local -q "addprinc -pw mongodb mongodb/127.0.0.1"
+    kadmin.local -q "addprinc -pw password1 pmm-test"
+    kadmin.local -q "ktadd -k /etc/krb5.keytab mongodb/127.0.0.1@PERCONATEST.COM"
+    chown mongod:mongod /etc/krb5.keytab
+    chmod 600 /etc/krb5.keytab
+    systemctl enable krb5kdc
+    systemctl start krb5kdc
+    echo "password1" | kinit pmm-test@PERCONATEST.COM
+- name: Creata root user for MongoDB
+  shell: |
+    mongo --eval 'db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] })'
+- name: Setup MongoDB config file
+  shell: |
+    mongo -u root -p 'root' ./support-files/setup_psmdb.js
+- name: Restart mongodb to use new config
+  shell: |
+    chown -R mongod:mongod /var/lib/mongo
+    systemctl restart mongod
+    systemctl status mongod.service
+  ignore_errors: yes
+
+- name: Add mongodb metrics to monitoring
+  command: >-
+    pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --service-name={{ mongo_service_name }} --username="pmm-test@PERCONATEST.COM" --password=password1
+    --authentication-mechanism=GSSAPI --authentication-database='$external'
+
+- name: Wait 30 seconds for percona server for mongodb start to complete
+  pause:
+    seconds: 30

@@ -7,6 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
+import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -21,6 +22,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
+import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
@@ -44,15 +46,15 @@ import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
-import AdvisorsPage from '@pages/advisors/advisors.page';
+import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
-  advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
+  alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -63,7 +65,9 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
+  externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
+  haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
@@ -96,10 +100,10 @@ const pmmTest = base.extend<{
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
-  advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
+  alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -152,11 +156,13 @@ const pmmTest = base.extend<{
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
+  externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
     await use(grafanaHelper);
   },
+  haBackupHelper: async ({ k8sHelper }, use) => await use(new HaBackupHelper(k8sHelper)),
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {

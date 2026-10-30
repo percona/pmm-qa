@@ -41,10 +41,13 @@ WORKERS=1
 | `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
 | `WORKERS`        | `1`                 | Playwright worker count.                               |
 
-`@pmm-ha` tests need `kubectl` on the runner and a `KUBECONFIG` pointing at the PMM HA
-cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
+`@pmm-ha` and `@ha-backup-restore` tests need `kubectl` on the runner and a `KUBECONFIG`
+pointing at the PMM HA cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
 constructor — change it there, or pass one in. Nothing skips itself: an unreachable
-namespace fails the test with kubectl's own error.
+namespace fails the test with kubectl's own error. `@ha-backup-restore` also needs the
+chart's backups on, which [`k8s/install_pmm_ha.sh`](../k8s/install_pmm_ha.sh) `--backup-minio`
+sets up; without them it fails on the missing backup-tools Deployment. It is kept out of
+`@pmm-ha` because a restore takes the cluster down for about ten minutes.
 
 PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
 It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
@@ -93,39 +96,52 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@ami-ovf-post-upgrade`
+- `@ami-ovf-pre-upgrade`
 - `@annotations`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
+- `@exporters`
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
+- `@instances`
 - `@inventory`
+- `@inventory-fb`
 - `@LBAC`
 - `@menu`
+- `@mongodb-exporter`
 - `@new-navigation`
 - `@nightly`
 - `@nomad`
+- `@not-ui-pipeline`
+- `@pbm-nightly`
+- `@permissions-nightly`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
 - `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
+- `@pmm-ps-replica-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-psmdb-sharding-integration`
 - `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
 - `@post-server-upgrade`
 - `@post-upgrade`
 - `@pre-upgrade`
+- `@pt-summary-nightly`
 - `@qan`
 - `@rta`
 - `@service-account`

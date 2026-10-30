@@ -83,6 +83,31 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  enableServiceAccount = async (name: string): Promise<void> => {
+    const headers = GrafanaHelper.getAuthHeader();
+    const search = await this.request.get(apiEndpoints.grafana.serviceAccountsSearch, {
+      headers,
+      params: { query: name },
+    });
+
+    expect(search.status(), await search.text()).toEqual(200);
+
+    const account = (
+      (await search.json()) as { serviceAccounts: { id: number; isDisabled: boolean; name: string }[] }
+    ).serviceAccounts.find((serviceAccount) => serviceAccount.name === name);
+
+    expect(account, `Service account ${name} must exist`).toBeDefined();
+
+    if (!account?.isDisabled) return;
+
+    const response = await this.request.patch(`${apiEndpoints.grafana.serviceAccounts}/${account.id}`, {
+      data: { isDisabled: false },
+      headers,
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   getActiveTargetByExternalGroup = async (externalGroup: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
@@ -112,16 +137,18 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
-  getFolderUid = async (title: string): Promise<string> => {
+  getFolders = async (): Promise<{ title: string; uid: string }[]> => {
     const response = await this.request.get(apiEndpoints.grafana.folders, {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    expect(response.status()).toEqual(200);
+    expect(response.status(), await response.text()).toEqual(200);
 
-    const uid = ((await response.json()) as { title: string; uid: string }[]).find(
-      (folder) => folder.title === title,
-    )?.uid;
+    return (await response.json()) as { title: string; uid: string }[];
+  };
+
+  getFolderUid = async (title: string): Promise<string> => {
+    const uid = (await this.getFolders()).find((folder) => folder.title === title)?.uid;
 
     expect(uid, `Folder "${title}" must exist`).toBeDefined();
 

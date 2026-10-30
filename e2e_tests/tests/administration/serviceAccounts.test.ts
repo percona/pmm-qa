@@ -17,6 +17,10 @@ const exporterRunningCommand = (container: string, exporter: string) =>
   `docker exec ${container} pmm-admin list | grep ${exporter} | grep -q Running; echo $?`;
 const addMysqlCommand = (container: string, credentials: Credentials, serviceName: string) =>
   `sudo docker exec ${container} pmm-admin add mysql --username=${credentials.perconaServer.username} --password=${credentials.perconaServer.password} --host=127.0.0.1 --port=3306 --service-name=${serviceName}`;
+const adminSetupCommand = (container: string) =>
+  `docker exec ${container} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=pmm-server:8443 --server-insecure-tls --server-username=admin --server-password=${process.env.ADMIN_PASSWORD || 'admin'}`;
+const expectedDisabledMessage =
+  'Auth method is not service account token. Please check username and password.';
 const newServiceName = 'mysql_service_service_token1';
 const loadDatabase = 'pmm_t1883_load';
 let serviceAccountUsername = '';
@@ -77,6 +81,94 @@ pmmTest.afterEach(async ({ cliHelper }) => {
     .assertSuccess();
 });
 
+// Runs before PMM-T1883, which re-registers the client with a token of its own: this case needs the client
+// still running with its Node's service account token, as pmm-framework registered it.
+pmmTest(
+  'PMM-T2400 - Verify re-running client setup while its service account is disabled keeps the Node and its services @service-account',
+  async ({ api, cliHelper, nodesPage, page, serviceAccountsPage, servicesPage }) => {
+    const psContainerName = cliHelper.execute(psContainerCommand).assertSuccess().stdout.trim();
+    const status = cliHelper
+      .execute(`docker exec ${psContainerName} pmm-admin status`)
+      .assertSuccess().stdout;
+    const agentId = cliHelper.getPmmAdminField(status, 'Agent ID');
+    const nodeName = cliHelper.getPmmAdminField(status, 'Node name');
+    const nodeServiceAccount = `pmm-agent-sa-${nodeName}`;
+
+    try {
+      const before = await pmmTest.step('The Node is listed once with its MySQL service', async () => {
+        const registered = await api.inventoryApi.getNodeWithMysqlService(nodeName);
+
+        await nodesPage.verifyNodeListedOnce(nodeName);
+        await servicesPage.verifyServiceListedOnce(registered.serviceName);
+
+        return registered;
+      });
+
+      await pmmTest.step("Disable the Node's service account", async () => {
+        await page.goto(serviceAccountsPage.url);
+        await serviceAccountsPage.builders
+          .disableAccountButton(nodeServiceAccount)
+          .click({ timeout: Timeouts.ONE_MINUTE });
+        await serviceAccountsPage.buttons.confirmDisable.click();
+        await expect(serviceAccountsPage.messages.successPopUp).toContainText(
+          serviceAccountsPage.accountEditedMessage,
+          { timeout: Timeouts.THIRTY_SECONDS },
+        );
+        await serviceAccountsPage.closeSuccessPopUp();
+        await expect(serviceAccountsPage.builders.enableAccountButton(nodeServiceAccount)).toBeVisible();
+      });
+
+      await pmmTest.step('pmm-admin list fails with the credentials hint', async () => {
+        const listCommand = `docker exec ${psContainerName} pmm-admin list`;
+
+        await expect
+          .poll(() => cliHelper.execSilent(listCommand).code, {
+            message: `"${listCommand}" should exit with an error while the service account is disabled`,
+            // pmm-managed caches a token's auth result for up to a minute.
+            timeout: Timeouts.TWO_MINUTES + Timeouts.ONE_MINUTE,
+          })
+          .not.toBe(0);
+        expect(cliHelper.execSilent(listCommand).stdout.trim()).toBe(expectedDisabledMessage);
+      });
+
+      await pmmTest.step('Setup without --force keeps the registration and names the Node', async () => {
+        const setup = cliHelper.execSilent(adminSetupCommand(psContainerName)).assertSuccess();
+
+        expect(`${setup.stdout}${setup.stderr}`).toContain(
+          `PMM Server has pmm-agent ${agentId} on Node ${nodeName}, but does not accept the token pmm-agent runs with.`,
+        );
+      });
+
+      await pmmTest.step('The same Node is still listed once with its MySQL service', async () => {
+        expect(await api.inventoryApi.getNodeWithMysqlService(nodeName)).toEqual(before);
+        await nodesPage.verifyNodeListedOnce(nodeName);
+        await servicesPage.verifyServiceListedOnce(before.serviceName);
+      });
+
+      await pmmTest.step("Enable the Node's service account again", async () => {
+        await page.goto(serviceAccountsPage.url);
+        await serviceAccountsPage.builders
+          .enableAccountButton(nodeServiceAccount)
+          .click({ timeout: Timeouts.ONE_MINUTE });
+        await expect(serviceAccountsPage.messages.successPopUp).toContainText(
+          serviceAccountsPage.accountEditedMessage,
+          { timeout: Timeouts.THIRTY_SECONDS },
+        );
+        await serviceAccountsPage.closeSuccessPopUp();
+      });
+    } finally {
+      await api.grafanaApi.enableServiceAccount(nodeServiceAccount);
+    }
+
+    await expect
+      .poll(() => cliHelper.execSilent(`docker exec ${psContainerName} pmm-admin list`).code, {
+        message: 'pmm-admin list should work again once the service account is enabled',
+        timeout: Timeouts.TWO_MINUTES,
+      })
+      .toBe(0);
+  },
+);
+
 pmmTest.describe(() => {
   pmmTest.describe.configure({ retries: 1 });
 
@@ -113,27 +205,13 @@ pmmTest.describe(() => {
       });
 
       await pmmTest.step('Nodes Overview reports data for the re-registered node', async () => {
-        await page.goto(nodesUrl);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data',
-            timeout: Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(nodesUrl, 19, Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE);
       });
 
       await pmmTest.step('Nodes Overview still reports data after a PMM Server restart', async () => {
         cliHelper.execute('sudo docker restart pmm-server').assertSuccess();
         await api.serverApi.waitForReady(Timeouts.ONE_MINUTE);
-        await page.goto(dashboard.os.nodesOverview.url);
-        await dashboard.loadAllPanels();
-        await expect
-          .poll(() => dashboard.elements.noDataPanelName.count(), {
-            message: 'Nodes Overview should show at most 19 panels without data after the restart',
-            timeout: Timeouts.FIVE_MINUTES,
-          })
-          .toBeLessThanOrEqual(19);
+        await dashboard.waitForNoDataPanelsAtMost(dashboard.os.nodesOverview.url, 19);
       });
 
       const mysqlCredentials = `-h 127.0.0.1 --port 3306 -u${credentials.perconaServer.username} -p${credentials.perconaServer.password}`;
@@ -169,14 +247,9 @@ pmmTest.describe(() => {
   );
 });
 
-// skip-until: 2026-10-20 -- pmm-admin says "check PMM Server logs" for a disabled service account (PMM-15692); decide bug vs test fix.
-// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15692, see the skip-until line above.
-pmmTest.skip(
+pmmTest(
   'PMM-T1884 - Verify disabling service account @service-account',
   async ({ cliHelper, page, serviceAccountsPage }) => {
-    const expectedDisabledMessage =
-      'Auth method is not service account token. Please check username and password.';
-
     await page.goto(serviceAccountsPage.url);
     await serviceAccountsPage.builders
       .disableAccountButton(serviceAccountUsername)
@@ -194,7 +267,8 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(containerListCommand).code, {
         message: `"${containerListCommand}" should exit with an error while the service account is disabled`,
-        timeout: Timeouts.TEN_SECONDS,
+        // pmm-managed caches a token's auth result for up to a minute.
+        timeout: Timeouts.TWO_MINUTES,
       })
       .not.toBe(0);
 
@@ -219,7 +293,7 @@ pmmTest.skip(
     await expect
       .poll(() => cliHelper.execSilent(hostListCommand).code, {
         message: `"${hostListCommand}" should exit with 0 once the service account is enabled again`,
-        timeout: Timeouts.TEN_SECONDS,
+        timeout: Timeouts.ONE_MINUTE,
       })
       .toBe(0);
 
