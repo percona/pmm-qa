@@ -1,6 +1,7 @@
+# check=skip=InvalidDefaultArgInFrom
 # Oracle's MySQL with sysbench. Built by build_mysql_image in lib/images.sh,
-# which picks the mysql-57 or mysql-epel stage; PMM Client is installed at run time.
-ARG MYSQL_IMAGE
+# which picks the mysql-57 or mysql-el9 stage; PMM Client is installed at run time.
+ARG BASE_OS
 ARG SYSBENCH_VERSION
 
 # mysql:5.7 is Oracle Linux 7 without MySQL client headers; build sysbench on OL7.
@@ -57,29 +58,28 @@ RUN yum install -y \
 
 USER mysql
 
-# mysql:8.0+ ships on Oracle Linux 9; EPEL sysbench does not conflict there.
-FROM ${MYSQL_IMAGE} AS mysql-epel
+# 8.0+ from Oracle's EL9 repository, on systemd. setup_mysql_family writes
+# mysqld's options to /etc/my.cnf.d and starts the mysqld unit.
+FROM ${BASE_OS} AS mysql-el9
+ARG MYSQL_VERSION
 
-USER root
 RUN set -eux; \
-    if command -v microdnf >/dev/null; then \
-        PKG_MGR=microdnf; \
-    else \
-        PKG_MGR=yum; \
-    fi; \
-    . /etc/os-release; \
-    curl -fL \
-        "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" \
-        -o /tmp/epel-release.rpm; \
-    rpm -Uvh /tmp/epel-release.rpm; \
-    rm /tmp/epel-release.rpm; \
-    "$PKG_MGR" install -y sysbench curl findutils gzip iproute openssl perl procps-ng tar; \
-    "$PKG_MGR" clean all; \
-    sysbench --version; \
-    tar --version
+    : "${MYSQL_VERSION:?MYSQL_VERSION build-arg is required}"; \
+    printf '%s\n' '[mysql-community]' 'name=MySQL Community Server' \
+      "baseurl=https://repo.mysql.com/yum/mysql-$MYSQL_VERSION-community/el/9/\$basearch/" \
+      'gpgcheck=1' 'gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' >/etc/yum.repos.d/mysql-community.repo; \
+    dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
+        "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"; \
+    # EPEL's master, not its mirror list: lagging mirrors fail the metadata checksum.
+    sed -i 's|^metalink=.*|baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/$basearch/|' /etc/yum.repos.d/epel.repo; \
+    dnf install -y mysql-community-server systemd sudo sysbench iproute openssl perl procps-ng findutils gzip tar; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf /var/lib/mysql/*; \
+    systemctl disable mysqld; \
+    mkdir -p /etc/my.cnf.d; \
+    grep -q '^!includedir /etc/my.cnf.d' /etc/my.cnf || echo '!includedir /etc/my.cnf.d' >>/etc/my.cnf; \
+    mysqld --version | grep -q " $MYSQL_VERSION"; \
+    sysbench --version
 
-# The AMI upgrade runner calls `apt install -y pmm-client` and `ps aux` (hence
-# procps-ng); apt is this image's installer.
-RUN ln -s "$(command -v dnf || command -v microdnf)" /usr/local/bin/apt
-
-USER mysql
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

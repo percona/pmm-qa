@@ -53,7 +53,7 @@ postgresql:
   listen: 0.0.0.0:5432
   connect_address: "@NODE@:5432"
   data_dir: "@DATA@"
-  bin_dir: /usr/lib/postgresql/@VERSION@/bin
+  bin_dir: /usr/pgsql-@VERSION@/bin
   pgpass: /tmp/pgpass
 
   authentication:

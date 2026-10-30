@@ -13,7 +13,6 @@ setup() {
   cat >"$TEST_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  *'test -f /etc/debian_version'*) exit 1 ;;
   *pg_stat_replication*) echo 1 ;;
   *'pmm-admin status'*) printf '%s\n' 'Connected : true' 'postgres_exporter Running' 'node_exporter Running' ;;
   *'pmm-agent setup'*) printf 'agent: %s\n' "$*" >>"$RECORD_FILE" ;;

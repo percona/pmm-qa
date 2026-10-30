@@ -5,7 +5,7 @@ SHELL := /usr/bin/env bash
 BASH_SOURCES := pmm-framework build_images check_image images/pxc-proxysql/pmm_pxc $(wildcard lib/*.sh images/*/*.sh tests/helpers/*.bash)
 LINT_SOURCES := $(BASH_SOURCES) $(wildcard tests/*.bats)
 
-.PHONY: check syntax lint test
+.PHONY: check syntax lint test dockerfiles
 
 check: syntax lint test
 
@@ -20,3 +20,10 @@ lint:
 test:
 	@command -v bats >/dev/null 2>&1 || { echo "bats is required"; exit 1; }
 	bats tests
+
+# Docker's Dockerfile lint, with the BASE_OS lib/images.sh builds with. Needs docker, so not part of check.
+dockerfiles:
+	@base=$$(sed -n 's/^readonly BASE_OS=$${BASE_OS:-\(.*\)}$$/\1/p' lib/images.sh); \
+	for d in images/*/; do \
+	  docker build --check -q --build-arg "BASE_OS=$${BASE_OS:-$$base}" --build-arg OL_VERSION=9 --build-arg VALKEY_VERSION=8 "$$d" || exit 1; \
+	done

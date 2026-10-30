@@ -1,14 +1,18 @@
-# redis_exporter and process-exporter for setup_external, which starts them
-# and installs PMM Client at run time. Built by build_external_image in
-# lib/images.sh.
-FROM oraclelinux:9
+# check=skip=InvalidDefaultArgInFrom
+# redis_exporter and process-exporter on systemd for setup_external, which
+# starts them and installs PMM Client at run time. Built by
+# build_external_image in lib/images.sh.
+ARG BASE_OS
+
+FROM ${BASE_OS}
 ARG REDIS_EXPORTER_VERSION
 ARG PROCESS_EXPORTER_VERSION
 
 RUN set -eux; \
     : "${REDIS_EXPORTER_VERSION:?REDIS_EXPORTER_VERSION build-arg is required}"; \
     : "${PROCESS_EXPORTER_VERSION:?PROCESS_EXPORTER_VERSION build-arg is required}"; \
-    dnf install -y findutils gzip tar; \
+    dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm; \
+    dnf install -y systemd sudo iproute procps-ng findutils gzip tar; \
     dnf clean all; \
     rm -rf /var/cache/dnf; \
     arch=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/'); \
@@ -19,7 +23,5 @@ RUN set -eux; \
     redis_exporter --version; \
     process-exporter --version
 
-# The AMI upgrade runner calls `apt install -y pmm-client`; apt is this image's installer.
-RUN ln -s "$(command -v dnf || command -v microdnf)" /usr/local/bin/apt
-
-ENTRYPOINT ["sleep", "infinity"]
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

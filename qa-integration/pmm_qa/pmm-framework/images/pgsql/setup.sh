@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
-# images/pgsql/setup.sh -- PGSQL, on the prebaked pgsql image or the official postgres image.
+# images/pgsql/setup.sh -- PGSQL, on the prebaked pgsql image.
 
-# SETUP_TYPE=replication runs on the official postgres image: nothing to bake.
 setup_pgsql() {
   local version setup_type client encrypted tarball='' suffix=$((RANDOM % 10000))
   version=$(resolved_version PGSQL_VERSION PGSQL "$DB_VERSION")
@@ -15,6 +14,7 @@ setup_pgsql() {
     '' | replication) ;;
     *) die "PGSQL SETUP_TYPE must be empty or replication (got '$setup_type')." ;;
   esac
+  step "Prepare image pmm-qa/pgsql:$version" ensure_image pgsql "$version"
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   if [[ -z $setup_type ]]; then
     pgsql_pgss
@@ -26,7 +26,6 @@ setup_pgsql() {
 # ENCRYPTED_CLIENT_CONFIG applies to replication only.
 pgsql_pgss() {
   local container=pgsql_pgss_pmm_$version
-  step "Prepare image pmm-qa/pgsql:$version" ensure_image pgsql "$version"
   step 'Start PostgreSQL' pgsql_pgss_start
   attach_pmm_client "$container" "$client" "$tarball" /pmm-agent.log
   pmm_register "$container" pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements \
@@ -39,13 +38,11 @@ pgsql_pgss() {
 pgsql_pgss_start() {
   fresh_containers "$container"
   must docker run --detach --name "$container" --label pmm-qa.engine=pgsql --network pmm-qa \
-    --publish 5448:5432 "pmm-qa/pgsql:$version" >/dev/null
-  must docker exec "$container" service postgresql start >/dev/null
+    "${SYSTEMD_RUN[@]}" --publish 5448:5432 "pmm-qa/pgsql:$version" >/dev/null
   pdpgsql_ready "$container"
 }
 
 pgsql_replication() {
-  local image=postgres:$version-bookworm
   local -a names=("pgsql_pmm_${version}_1" "pgsql_pmm_${version}_2")
   step 'Start the primary and its replica' pgsql_replication_start
   step 'Wait for PMM Server' wait_pmm_server_ready
@@ -59,32 +56,24 @@ pgsql_replication() {
 }
 
 pgsql_replication_start() {
-  local conf=$FRAMEWORK_DIR/images/pgsql
-  local primary=${names[0]} replica=${names[1]}
+  local primary=${names[0]} replica=${names[1]} data=/var/lib/pgsql/$version/data node
   fresh_containers "${names[@]}"
-  must docker run --detach --name "$primary" --restart=always --label pmm-qa.engine=pgsql --network pmm-qa \
-    --env POSTGRES_PASSWORD=GRgrO9301RuF --volume "$conf/primary.conf:/etc/postgresql/postgresql.conf:ro" \
-    --volume "$conf/hba.conf:/etc/postgresql/pg_hba.conf:ro" --publish 6432:5432 \
-    "$image" -c config_file=/etc/postgresql/postgresql.conf >/dev/null
-  # Over TCP: the entrypoint's first-boot server listens on the socket only.
-  retry 120 "PostgreSQL on $primary" docker exec --user postgres "$primary" pg_isready -q -h 127.0.0.1 >/dev/null
-  pdpgsql_sql "$primary" "CREATE ROLE repl_user WITH REPLICATION LOGIN ENCRYPTED PASSWORD 'GRgrO9301RuF';"
-  pdpgsql_sql "$primary" "CREATE USER pmm WITH PASSWORD 'pmm'; GRANT pg_monitor TO pmm;"
+  for node in "${names[@]}"; do
+    must docker run --detach --name "$node" --restart=always --label pmm-qa.engine=pgsql --network pmm-qa \
+      "${SYSTEMD_RUN[@]}" --publish "$((6431 + ${node##*_})):5432" "pmm-qa/pgsql:$version" >/dev/null
+    pdpgsql_ready "$node"
+  done
+  pdpgsql_sql "$primary" "CREATE ROLE repl_user WITH REPLICATION LOGIN ENCRYPTED PASSWORD 'GRgrO9301RuF';
+    ALTER USER postgres PASSWORD 'GRgrO9301RuF';"
   pdpgsql_sql "$primary" 'CREATE DATABASE pgbench;'
   pdpgsql_grant_pmm "$primary" pgbench
-  # The replica clones the primary into its own PGDATA before its first start,
-  # so it needs no host data directory.
-  # shellcheck disable=SC2016 # expanded by the container's shell
-  must docker run --detach --name "$replica" --label pmm-qa.engine=pgsql --network pmm-qa \
-    --env POSTGRES_PASSWORD=GRgrO9301RuF --volume "$conf/replica.conf:/etc/postgresql/postgresql.conf:ro" \
-    --volume "$conf/hba.conf:/etc/postgresql/pg_hba.conf:ro" --publish 6433:5432 --entrypoint bash "$image" -ceu \
-    'mkdir -p "$PGDATA" && chown postgres "$PGDATA"
-     gosu postgres env PGPASSWORD=GRgrO9301RuF pg_basebackup "--pgdata=$PGDATA" -R -Fp -Xs --checkpoint=fast \
-       "--host=$0" --port=5432 -U repl_user
-     exec docker-entrypoint.sh postgres -c config_file=/etc/postgresql/postgresql.conf' "$primary" >/dev/null
-  retry 120 "PostgreSQL on $replica" docker exec --user postgres "$replica" pg_isready -q -h 127.0.0.1 >/dev/null
+  must docker exec "$replica" systemctl stop postgresql
+  must docker exec --user postgres "$replica" rm -rf "$data"
+  must docker exec --user postgres --env PGPASSWORD=GRgrO9301RuF "$replica" timeout 120 \
+    pg_basebackup "--pgdata=$data" -R -Fp -Xs --checkpoint=fast "--host=$primary" --port=5432 -U repl_user
+  must docker exec "$replica" systemctl start postgresql
+  pdpgsql_ready "$replica"
   retry 60 "$primary to stream to $replica" pdpgsql_streaming "$primary" 1
-  pdpgsql_sql "$primary" 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements;'
 }
 
 # The service name gets a suffix only when the server already has it.
