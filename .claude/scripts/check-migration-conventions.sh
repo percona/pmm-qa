@@ -153,8 +153,6 @@ base=${MIGRATION_BASE:-origin/main}
 
 repo_root() { git -C "$(dirname "$1")" rev-parse --show-toplevel; }
 
-# Run git from the file's own directory with a bare basename: an absolute MSYS path as a pathspec
-# matches nothing on Windows and the diff comes back empty, which reads exactly like a clean file.
 added_lines() {
   local dir name
   dir=$(dirname "$1")

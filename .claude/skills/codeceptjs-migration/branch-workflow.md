@@ -65,7 +65,7 @@ git -C <control-worktree> diff --name-only
 git ls-tree --name-only origin/main -- <path>     # empty output = absent
 ```
 
-Use `git ls-tree`, never `git show origin/main:<path>`, which reports every path as absent on this shell (`AGENTS.md` section Shell and tooling notes). A path absent from `origin/main`, or a file present whose edited block is absent, belongs to an unmerged sibling migration: create what this migration needs scoped to itself, or hold. Never import the sibling's version.
+A path absent from `origin/main`, or a file present whose edited block is absent, belongs to an unmerged sibling migration: create what this migration needs scoped to itself, or hold. Never import the sibling's version.
 
 ### Move the work across
 

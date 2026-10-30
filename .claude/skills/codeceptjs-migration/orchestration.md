@@ -77,7 +77,7 @@ Then merge `origin/main` into control (`branch-workflow.md` Control branch prefl
 
 `migration/tracker.md` is tens of kilobytes; never read it whole. Select with a scoped `grep`/`head` over the status column and read only that row and the header section you need.
 
-Check tracker drift with exactly this form (`grep -P` and `sed` backslash expressions fail silently here and read as "no drift"):
+`migration.sh preflight` prints both drift counts; by hand:
 
 ```bash
 comm -23 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
