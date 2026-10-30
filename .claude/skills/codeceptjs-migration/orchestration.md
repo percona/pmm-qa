@@ -48,7 +48,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 **Environment and control**
 
-- A run writes nothing under `.claude/`: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. Run state lives in `migration/` (tracker, parallelization ledger) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup` and `mark`.
+- A run writes nothing under `.claude/` (skills, agents, scripts, hooks), for any reason: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. A gate that trips, a `STOP:` from `migration.sh`, a script that looks wrong or a rule that seems to block the row is the run's result: send a `PushNotification` naming it, with the change you would propose, and end the run; the skill and its scripts change in attended sessions only. Run state lives in `migration/` (tracker, parallelization ledger) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup`, `mark` and `merged`.
 - Never edit `e2e_tests/.env`. Pass the run id, `PMM_UI_URL` and `ADMIN_PASSWORD` (the VM's URL and per-run password, from `chaos-pmm.sh env <run_id>`, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them. `chaos-pmm.sh test` gives the run on the VM its own on-box pair.
 - Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
@@ -90,7 +90,7 @@ comm -13 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
 
 State both counts. Append each untracked file as a `pending` row (Bucket/Env/Setup blank until confirmed from its hooks and `Data(...)`) in its own tracker-only commit; in test-run mode, report without editing.
 
-Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, refresh that file against the release notes before migrating.
+Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, an attended session refreshes that file against the release notes before migrating; an unattended run reports the drift and ends.
 
 Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
