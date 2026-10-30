@@ -92,7 +92,7 @@ State both counts. Append each untracked file as a `pending` row (Bucket/Env/Set
 
 Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, an attended session refreshes that file against the release notes before migrating; an unattended run reports the drift and ends.
 
-Select the first `pending` row (the legend already excludes `blocked-infra` rows), mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
+Select the first `pending` row, mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
 ## 1b. Batch small rows
 
