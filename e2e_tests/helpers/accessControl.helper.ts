@@ -4,6 +4,7 @@ import DatasourceProxyApi from '@api/datasourceProxy.api';
 import CliHelper from '@helpers/cli.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { AccessUserScenario } from '@interfaces/accessControl';
 import { GrafanaDatasource } from '@interfaces/grafana';
 import {
   dataSourceRoutes,
@@ -46,6 +47,18 @@ export default class AccessControlHelper {
       .execSilent(`docker exec ${serverContainer} ls /srv/victoriametrics/data/snapshots/`)
       .getStdOutLines()
       .filter((line) => line.trim()).length;
+
+  /** Turns access control on and gives each scenario user only its own access role. */
+  ensureScenarioUsers = async (scenarios: AccessUserScenario[]) => {
+    await this.api.settingsApi.enableAccessControl();
+
+    for (const scenario of scenarios) {
+      const role = await this.api.accessControlApi.ensureRole(scenario.role);
+      const { id } = await this.grafanaHelper.findOrCreateUser(scenario.username, scenario.password);
+
+      await this.api.accessControlApi.assignRole(id, role.role_id);
+    }
+  };
 
   getMetricsDataSource = async (): Promise<GrafanaDatasource> =>
     (await this.api.grafanaApi.getDataSourceByName('Metrics')) as GrafanaDatasource;

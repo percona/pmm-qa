@@ -2,22 +2,12 @@ import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { accessControlScenarios, dashboardTimeRange, qanUrl } from './accessControl.constants';
 
-pmmTest.beforeEach(async ({ api, context, grafanaHelper, page }) => {
+pmmTest.beforeEach(async ({ accessControlHelper, context, grafanaHelper, page }) => {
   await page.unroute(apiEndpoints.users.me);
   await context.unroute(apiEndpoints.users.me);
 
   await grafanaHelper.authorize();
-  await api.settingsApi.enableAccessControl();
-
-  for (const scenario of accessControlScenarios) {
-    const ensuredRole = await api.accessControlApi.ensureRole(scenario.role);
-    const existingUser = (await grafanaHelper.listUsers()).users.find(
-      (user) => user.login === scenario.username,
-    );
-    const userId = existingUser?.id ?? (await grafanaHelper.createUser(scenario.username, scenario.password));
-
-    await api.accessControlApi.assignRole(userId, ensuredRole.role_id);
-  }
+  await accessControlHelper.ensureScenarioUsers(accessControlScenarios);
 });
 
 pmmTest(
