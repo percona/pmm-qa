@@ -3720,5 +3720,35 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-30T03:09:01Z",
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-30T03:09:01Z",
+      "suites": [
+        "Nightly Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-30T03:09:01Z",
+      "suites": [
+        "UI"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-10-30T03:09:01Z",
+      "suites": [
+        "Upgrade AMI"
+      ]
+    }
+  ]
 }
