@@ -26,7 +26,7 @@ Migrate exactly one CodeceptJS source at a time, or one batch of small rows (`or
 4. The migrated test passes; the whole target file passes when an existing file was modified. Both pass on the row's CHAOS VM before anything is pushed. A change that alters no executed statement (a title, a commit message, a comment) needs lint, the convention script and a `--list --grep` check that every selecting job still matches, not a local run.
 5. Every migrated scenario is selected by some Playwright job, committed on the PR branch.
 6. The final independent review passes.
-7. A PR targeting `main` is open and the tracker row is `done`.
+7. A PR targeting `main` is open and the tracker row is `done` with its PR and Opened date, set by `migration.sh mark`, and the dashboard data is rebuilt in the same commit.
 
 ## Repository map
 
@@ -47,7 +47,7 @@ rg -n "base.extend|readonly .*Api|new .*Page|new .*Api" e2e_tests/fixtures/pmmTe
 
 Registration points: POM fixtures `e2e_tests/fixtures/pmmTest.ts`; API clients `e2e_tests/api/api.ts`; API paths `e2e_tests/helpers/apiEndpoints.ts`; timeouts `e2e_tests/helpers/timeouts.ts`; POM base `e2e_tests/pages/base.page.ts`. POM locators are grouped in `buttons`, `elements`, `inputs`, `messages` or `builders`, methods are arrow functions, and `url` holds the page URL. Tests authorize through `grafanaHelper.authorize()` in `pmmTest.beforeEach`; `pmmTest` already mocks tour completion and server updates.
 
-Environment setup comes from the source (hooks, data rows, custom steps, helpers, API calls), with the tracker's `Setup` as the planned default and tags as hints. Rows needing AWS RDS, Aurora, Azure, AMI, OVF or pmm-demo stay blocked until that infrastructure exists.
+Environment setup comes from the source (hooks, data rows, custom steps, helpers, API calls), with the tracker's `Setup` as the planned default and tags as hints. Nothing is blocked by infrastructure a pipeline already has: a row needing AWS RDS, Aurora, Azure, GCP or an AMI executes in the CI job that runs its tag today, on the publish branch (`run.md` step 5, CI-only rows). A tag no pipeline runs (`@pmm-ami`, `@pmm-demo` today) goes through the worth-porting gate: retire it with that evidence, or add the Playwright step to a pipeline in the same change.
 
 ## Before migrating: is it worth porting?
 
@@ -105,7 +105,9 @@ One throwaway CHAOS VM per migration through `.claude/scripts/chaos-pmm.sh` (`or
 
 ## Editing this skill
 
-Execute any shell command you write into these files before committing it, through the same quoting path the skill will use, with its output shown. `grep -P` is unavailable and a carriage-return literal does not survive its own heredoc; `AGENTS.md` section Shell and tooling notes has the working forms. Rules are short imperatives; incident history goes in the tracker Notes.
+Attended sessions only. An unattended run never edits these files or anything else under `.claude/`; it reports what it would change and ends (`orchestration.md` Environment and control).
+
+Execute any shell command you write into these files before committing it, through the same quoting path the skill will use, with its output shown. Rules are short imperatives; incident history goes in the tracker Notes.
 
 ## Agent responsibilities
 

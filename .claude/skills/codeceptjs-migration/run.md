@@ -65,6 +65,8 @@ The runner, against the prepared environment with the same credential pair:
 - `targetMode: already-covered`: run the existing target file or matched titles as regression evidence;
 - a migrated test selected by a job with its own `setup_services` (not the shared nightly server), provisioned with that job's setup: also run that job's whole expression once (`--grep '<pmm_test_flag>' --workers=1`), since its other tests share the server and can collide with the new one.
 
+A CI-only row (cloud credentials or an AMI the CHAOS VM cannot have) runs in CI instead, after step 5b has committed and pushed the publish branch without opening a PR: the Jenkins job that runs its tag, with `PMM_QA_GIT_BRANCH` set to the publish branch (`@instances`, `@gcp`: `pmm3-ui-tests` with `TAG=<tag>`; AMI upgrade: `pmm3-ami-upgrade-tests`), dispatched with the Jenkins MCP `build_item`. That build is the execution evidence and the PR's `Run:` line (#1675: `pmm3-ui-tests` #11892, `TAG=@instances`). `pmm3-ui-tests` runs its CodeceptJS stage first and a red one skips `Run Playwright UI Tests Tagged`, so read the stage list and count the migrated titles in the Playwright stage; a skipped stage is no evidence. The CHAOS VM still serves the locator checks for pages it can render. Without permission to start the job, report the row as blocked on that and end.
+
 Run in declaration order unless the source proves the scenarios independent. A test that reads state by index needs that state reset before a run on a reused environment; a file whose `beforeEach` restores its own precondition needs no external reset. If a reset is classifier-refused, stop and ask the parent.
 
 Every test in the run must pass. A red one is a failure to route, never evidence for a gate to judge, whatever lines it is on; a missing database is fixed by re-provisioning.
@@ -127,7 +129,7 @@ Only after `FINAL_REVIEW_PASS`, the runner (the parent, in an unattended run, pe
 
 1. revalidates the publish worktree (`branch-workflow.md` Revalidate, every time; the migration scripts are control-only and invoked by absolute path);
 2. pushes, opens the PR against `main`, and attaches the exact Actions job (`branch-workflow.md` Push and open the PR, Attach CI execution);
-3. on control's own checkout, updates the tracker row to `done` with the PR link and commits and pushes only the tracker (`branch-workflow.md` Tracker completion and cleanup);
+3. on control's own checkout, runs `migration.sh mark <row> done <pr-url>`, which fills the row's PR and Opened date and refreshes the dashboard data in one commit, and pushes it (`branch-workflow.md` Tracker completion and cleanup);
 4. restores control's worktree to clean and verifies `git status --short` is empty.
 
 Do not merge the publish branch into control. `done` means the PR was opened.

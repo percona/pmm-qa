@@ -9,7 +9,7 @@ The commands below are scripted in `.claude/scripts/migration.sh` (`orchestratio
 | Content | Branch |
 | --- | --- |
 | `origin/main` merge | control |
-| tracker row `in-progress`, tracker row `done` | control |
+| tracker row `in-progress`, tracker row `done`, merge dates, `migration/dashboard/migration.json` | control |
 | `.claude/skill-lessons-migration/` entries, and any target edit the user approves from one | control |
 | migrated Playwright test, POMs, helpers, API clients, fixtures | publish branch |
 | workflow-coverage YAML | publish branch |
@@ -65,7 +65,7 @@ git -C <control-worktree> diff --name-only
 git ls-tree --name-only origin/main -- <path>     # empty output = absent
 ```
 
-Use `git ls-tree`, never `git show origin/main:<path>`, which reports every path as absent on this shell (`AGENTS.md` section Shell and tooling notes). A path absent from `origin/main`, or a file present whose edited block is absent, belongs to an unmerged sibling migration: create what this migration needs scoped to itself, or hold. Never import the sibling's version.
+A path absent from `origin/main`, or a file present whose edited block is absent, belongs to an unmerged sibling migration: create what this migration needs scoped to itself, or hold. Never import the sibling's version.
 
 ### Move the work across
 
@@ -259,7 +259,7 @@ A later push cancels the jobs of the run it supersedes: after every push, re-tak
 
 On control's own checkout, after the PR exists:
 
-1. Update the row to `done` with the PR link. Edit it as an anchored byte-level substring replacement (`CLAUDE.md` house style), require `git diff --numstat -- <tracker>` to show `1 1` and `python3 -c "print(open('<tracker>','rb').read().count(bytes([13])))"` to print 0, then commit the tracker. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
+1. Run `migration.sh mark <row> done <pr-url>` (every row of a batch, same URL). It refuses without the URL, writes the PR number to `PR` and today's date to `Opened`, rebuilds `migration/dashboard/migration.json` and commits both. Never edit the tracker's `Status`, `PR`, `Opened` or `Merged` cells by hand, and never leave a `done` or `retired` row without them; `Merged` is filled by `migration.sh merged`, which preflight runs once the source has left `origin/main`. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker, a `record merge dates` commit and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
 2. Restore control's worktree:
 
 ```bash
