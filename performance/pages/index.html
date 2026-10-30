@@ -12,6 +12,7 @@
   :root { --accent:#2447d6; --ink-2:#4a5566; } @media (prefers-color-scheme: dark) { :root { --accent:#7c95ff; --ink-2:#b1bac8; } }
   header.top { border-bottom:1px solid var(--line); }
   header.top .wrap { max-width:1100px; margin:0 auto; padding:0 16px; display:flex; align-items:center; gap:24px; height:56px; }
+  @media (max-width:420px) { header.top .wrap { flex-wrap:wrap; height:auto; min-height:56px; row-gap:0; } }
   .brand { font-weight:600; text-decoration:none; display:flex; align-items:center; gap:8px; }
   .brand .dot { width:10px; height:10px; border-radius:3px; background:var(--accent); }
   nav.tabs { display:flex; gap:16px; align-self:stretch; }

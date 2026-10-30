@@ -72,6 +72,7 @@
   header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
   header.top .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+  @media (max-width: 420px) { header.top .wrap { flex-wrap: wrap; height: auto; min-height: 56px; row-gap: 0; } }
   .brand { font-weight: 600; letter-spacing: -.01em; text-decoration: none; display: flex; align-items: center; gap: 8px; }
   .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   header.top nav { margin-left: auto; display: flex; gap: 16px; }
