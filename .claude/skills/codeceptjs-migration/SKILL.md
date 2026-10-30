@@ -47,7 +47,7 @@ rg -n "base.extend|readonly .*Api|new .*Page|new .*Api" e2e_tests/fixtures/pmmTe
 
 Registration points: POM fixtures `e2e_tests/fixtures/pmmTest.ts`; API clients `e2e_tests/api/api.ts`; API paths `e2e_tests/helpers/apiEndpoints.ts`; timeouts `e2e_tests/helpers/timeouts.ts`; POM base `e2e_tests/pages/base.page.ts`. POM locators are grouped in `buttons`, `elements`, `inputs`, `messages` or `builders`, methods are arrow functions, and `url` holds the page URL. Tests authorize through `grafanaHelper.authorize()` in `pmmTest.beforeEach`; `pmmTest` already mocks tour completion and server updates.
 
-Environment setup comes from the source (hooks, data rows, custom steps, helpers, API calls), with the tracker's `Setup` as the planned default and tags as hints. Rows needing AWS RDS, Aurora, Azure, AMI, OVF or pmm-demo stay blocked until that infrastructure exists.
+Environment setup comes from the source (hooks, data rows, custom steps, helpers, API calls), with the tracker's `Setup` as the planned default and tags as hints. Nothing is blocked by infrastructure a pipeline already has: a row needing AWS RDS, Aurora, Azure, GCP or an AMI executes in the CI job that runs its tag today, on the publish branch (`run.md` step 5, CI-only rows). A tag no pipeline runs (`@pmm-ami`, `@pmm-demo` today) goes through the worth-porting gate: retire it with that evidence, or add the Playwright step to a pipeline in the same change.
 
 ## Before migrating: is it worth porting?
 
