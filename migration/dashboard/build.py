@@ -46,12 +46,10 @@ def tracker_rows(path):
         if not re.match(r'^\| \d+ +\|', line):
             continue
         c = [x.strip() for x in line.rstrip('\n').split('|')[1:-1]]
-        notes = c[10] if len(c) > 10 else ''
-        prs = sorted({int(n) for n in re.findall(r'(?:pull/|PR #|#)(\d{3,5})\b', notes)})
         rows.append({
             'row': int(c[0]), 'status': c[1], 'bucket': c[2], 'env': c[3], 'setup': c[4].strip('`'),
             'source': c[5].strip('`'), 'target': c[6].strip('`'), 'tags': c[7].split(),
-            'date': c[9], 'notes': notes[:300], 'prs': prs,
+            'prs': [int(n) for n in re.findall(r'#(\d+)', c[8])], 'opened': c[9], 'merged': c[10], 'notes': c[11][:300],
         })
     return rows
 
@@ -215,6 +213,12 @@ def main():
             merged.setdefault(key, j)
     jobs = list(merged.values())
 
+    if not a.pw_list and os.path.exists(a.out):
+        with open(a.out, encoding='utf-8') as f:
+            last = {j.get('expr'): j['playwright_tests'] for j in json.load(f)['jobs'] if 'playwright_tests' in j}
+        for j in jobs:
+            if j.get('expr') in last:
+                j['playwright_tests'] = last[j['expr']]
     if a.pw_list:
         counts = pw_counts(a.main, {j['expr'] for j in jobs if j['framework'] in ('playwright', 'mixed') and j.get('expr')})
         for j in jobs:
@@ -224,17 +228,17 @@ def main():
     remaining = [t for t in tests if not t['skipped']]
     out = {
         'generated_at': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'sources': {'main': git(a.main, 'rev-parse', '--short', 'HEAD'),
-                    'tracker': git(os.path.dirname(os.path.abspath(a.tracker)), 'rev-parse', '--short', 'HEAD'),
+        'sources': {'main': git(a.main, 'rev-parse', '--short', 'origin/main'),
+                    'tracker': git(os.path.dirname(os.path.abspath(a.tracker)), 'log', '-1', '--format=%h', '--', os.path.abspath(a.tracker)),
                     'jenkins': jenkins_sha},
         'codecept_remaining': {'tests': len(remaining), 'files': len({t['file'] for t in remaining}),
                                'retired_files': len(glob.glob(f'{a.main}/codeceptjs-e2e/tests/**/*_migrated.js', recursive=True))},
-        'rows': rows,
+        'files': rows,
         'jobs': jobs,
     }
     with open(a.out, 'w', encoding='utf-8') as f:
         json.dump(out, f, separators=(',', ':'), ensure_ascii=False)
-    print(f"{a.out}: {len(rows)} rows, {len(jobs)} jobs, {len(remaining)} CodeceptJS tests left")
+    print(f"{a.out}: {len(rows)} test files, {len(jobs)} jobs, {len(remaining)} CodeceptJS tests left")
 
 
 if __name__ == '__main__':

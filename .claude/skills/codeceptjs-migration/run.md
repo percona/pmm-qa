@@ -127,7 +127,7 @@ Only after `FINAL_REVIEW_PASS`, the runner (the parent, in an unattended run, pe
 
 1. revalidates the publish worktree (`branch-workflow.md` Revalidate, every time; the migration scripts are control-only and invoked by absolute path);
 2. pushes, opens the PR against `main`, and attaches the exact Actions job (`branch-workflow.md` Push and open the PR, Attach CI execution);
-3. on control's own checkout, updates the tracker row to `done` with the PR link and commits and pushes only the tracker (`branch-workflow.md` Tracker completion and cleanup);
+3. on control's own checkout, runs `migration.sh mark <row> done <pr-url>`, which fills the row's PR and Opened date and refreshes the dashboard data in one commit, and pushes it (`branch-workflow.md` Tracker completion and cleanup);
 4. restores control's worktree to clean and verifies `git status --short` is empty.
 
 Do not merge the publish branch into control. `done` means the PR was opened.
