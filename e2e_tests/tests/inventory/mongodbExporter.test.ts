@@ -1,22 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 const containerName = 'rs101';
 const serviceName = 'mongodb_test_pass_plus';
-const testUser = { password: 'pass+', username: 'test_user' } as const;
+const testUser = { password: 'pass+', username: 'mongodb_test_pass_plus_user' } as const;
 
 pmmTest.beforeEach(async ({ cliHelper, mongoDbHelper }) => {
-  await mongoDbHelper.addUser(testUser.username, testUser.password, [
-    { db: 'admin', role: 'explainRole' },
-    { db: 'admin', role: 'clusterMonitor' },
-    { db: 'local', role: 'read' },
-    { collection: '', db: 'admin', role: 'readWrite' },
-    { db: 'admin', role: 'backup' },
-    { db: 'admin', role: 'clusterMonitor' },
-    { db: 'admin', role: 'restore' },
-    { db: 'admin', role: 'pbmAnyAction' },
-  ]);
   expect(
     cliHelper
       .execSilent(`docker ps --filter 'name=${containerName}' --format '{{.Names}}'`)
@@ -24,10 +15,19 @@ pmmTest.beforeEach(async ({ cliHelper, mongoDbHelper }) => {
       .getStdOutLines(),
     `${containerName} docker container should exist. please run pmm-framework with --database psmdb`,
   ).toContain(containerName);
+  await mongoDbHelper.addUser(testUser.username, testUser.password, [
+    { db: 'admin', role: 'explainRole' },
+    { db: 'admin', role: 'clusterMonitor' },
+    { db: 'local', role: 'read' },
+    { collection: '', db: 'admin', role: 'readWrite' },
+    { db: 'admin', role: 'backup' },
+    { db: 'admin', role: 'restore' },
+    { db: 'admin', role: 'pbmAnyAction' },
+  ]);
 });
 
 pmmTest.afterEach(async ({ cliHelper, mongoDbHelper }) => {
-  cliHelper.execSilent(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`);
+  cliHelper.removeService(containerName, ServiceType.mongodb, serviceName);
   await mongoDbHelper.dropUser(testUser.username);
 });
 
