@@ -140726,6 +140726,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15794",
         "by": "Investigator routine",
         "at": "2026-10-30T03:20:28Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "setup bug",
+        "summary": "pmm3-ha-backup-restore-tests #31: 'Install PMM HA with backups' failed on the ROSA API lookup ('no such host'), 6.6 min after the cluster turned ready. Third time in seven runs (#26, #29). pmm3-ha-rosa already waits out this 15-min cached NXDOMAIN with withClusterApiRetry; this job's install ran without it. Fix wraps the install the same way.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4629",
+        "by": "Investigator routine",
+        "at": "2026-10-30T03:20:33Z"
       }
     ],
     "claims": [
