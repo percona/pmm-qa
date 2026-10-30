@@ -140716,16 +140716,19 @@
         "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4627",
         "by": "Investigator routine",
         "at": "2026-10-30T03:20:22Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "product bug",
+        "summary": "pmm3-ha-tests #157: PMM-T2108 got pg_exporter_scrapes_total from 2 of 3 PostgreSQL sources on a fresh ROSA install. One internal pg-db instance is never monitored; this is PMM-15794 recurring (New; recurrence noted on the ticket).",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-10-30T03:20:28Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-10-30T03:09:01Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-10-30T03:09:01Z",
