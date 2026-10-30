@@ -73,7 +73,7 @@ jobs:
                 jq -R --arg e "$engine" '{engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}'
             done | jq -sc .
           }
-          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql"]'
+          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql","pcsm"]'
           if [ "$SCHEDULE" = "$DAILY" ]; then
             # A whole engine rebuilds when one tag lags: cleanup keeps only the tags this run plans.
             stale=()
@@ -112,6 +112,7 @@ jobs:
               pick pdpgsql "^$images/pdpgsql/Dockerfile$"
               pick ssl-pdpgsql "^$images/ssl-pdpgsql/"
               pick pgsql "^$images/pgsql/(Dockerfile|pgss_setup\.sh|run_queries\.sh)$"
+              pick pcsm "^$images/pcsm/Dockerfile$"
               engines="[$(IFS=,; echo "${picked[*]}")]"
             fi
           fi
