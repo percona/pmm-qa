@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -164,6 +165,21 @@ export default class CliHelper {
     const removal = this.execSilent(`docker rm -f ${containerName}`);
 
     if (!removal.stderr.includes('No such container')) removal.assertSuccess();
+  };
+
+  /**
+   * Removes a service through a container's pmm-admin, ignoring one that is not registered.
+   *
+   * @param   container     container whose pmm-agent registered the service
+   * @param   serviceType   pmm-admin service type
+   * @param   serviceName   name of the service to remove
+   */
+  removeService = (container: string, serviceType: ServiceType, serviceName: string) => {
+    const removal = this.execSilent(
+      `docker exec ${container} pmm-admin remove ${serviceType} ${serviceName}`,
+    );
+
+    if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
