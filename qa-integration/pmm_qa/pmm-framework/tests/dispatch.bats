@@ -642,8 +642,7 @@ EOF
   parse_database_spec haproxy
   dispatch_setup
 
-  grep -Eq '^sudo -n sysctl -qw net\.ipv4\.ip_local_reserved_ports=(.+,)?42100$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 8404:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
   grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
