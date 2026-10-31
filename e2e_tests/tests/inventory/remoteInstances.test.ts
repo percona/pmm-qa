@@ -34,6 +34,14 @@ const qanFilters = [
 
 pmmTest.describe.configure({ mode: 'default' });
 
+// The CodeceptJS @instances stage of the same Jenkins job leaves some of these nodes registered.
+pmmTest.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage();
+
+  await new Api(page, page.request).inventoryApi.removeNodesByName(remoteNodeNames);
+  await page.close();
+});
+
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
@@ -97,11 +105,8 @@ pmmTest(
 
 pmmTest(
   'PMM-T2340 - Verify adding and editing RDS instances [critical] @instances',
-  async ({ addInstancePage, api, page, servicesPage }) => {
+  async ({ addInstancePage, page, servicesPage }) => {
     const labels = editedLabels(rdsMysql57.serviceName, rdsMysql57);
-
-    // The CodeceptJS @instances stage of the same Jenkins job leaves this RDS node registered.
-    await api.inventoryApi.removeNodesByName([rdsMysql57.serviceName]);
 
     await page.goto(addInstancePage.url);
     await addInstancePage.discoverRds(awsCredentials.accessKey, awsCredentials.secretKey);
@@ -144,8 +149,6 @@ for (const database of azureDatabases) {
     async ({ addInstancePage, api, page, servicesPage }) => {
       const labels = editedLabels(database.serviceName, database);
 
-      // The CodeceptJS @instances stage of the same Jenkins job leaves azure-MySQL registered.
-      await api.inventoryApi.removeNodesByName([database.serviceName]);
       await api.settingsApi.changeSettings({ enable_azurediscover: true });
       await page.goto(addInstancePage.url);
       await addInstancePage.discoverAzure(azureCredentials);
