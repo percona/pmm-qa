@@ -92,7 +92,7 @@ pmmTest(
     const exporter = await api.inventoryApi.getServiceAgent(ServiceType.mongodb, serviceName, exporterType);
 
     expect(exporter.mongo_db_options.enable_all_collectors, 'enable_all_collectors').toBe(true);
-    expect(exporter.disabled_collectors).toEqual(['topmetrics']);
+    expect(exporter.disabled_collectors, 'disabled_collectors').toEqual(['topmetrics']);
 
     for (const metric of [metrics.dbstats, metrics.collstats, metrics.indexstats]) {
       await api.grafanaApi.waitForMetric(
@@ -154,7 +154,11 @@ pmmTest(
     const exporter = await api.inventoryApi.getServiceAgent(ServiceType.mongodb, serviceName, exporterType);
 
     expect(exporter.mongo_db_options.enable_all_collectors, 'enable_all_collectors').toBe(true);
-    expect(exporter.disabled_collectors).toEqual(['collstats', 'dbstats', 'topmetrics']);
+    expect(exporter.disabled_collectors, 'disabled_collectors').toEqual([
+      'collstats',
+      'dbstats',
+      'topmetrics',
+    ]);
 
     await api.grafanaApi.waitForMetric(
       `${metrics.indexstats}{service_id="${exporter.service_id}"}`,
