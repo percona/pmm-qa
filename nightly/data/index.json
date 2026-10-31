@@ -144502,6 +144502,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1698",
         "by": "Investigator routine",
         "at": "2026-10-31T08:33:49Z"
+      },
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "setup bug",
+        "summary": "ami 3.8.1 and 3.7.1 aborted: pmm3-ami-staging-start #3827 read the new VM public IP 2 s after launch (empty), then its unbounded SSH wait retried admin@ for 71 min until the 90-min timeout, with #3828 queued behind it; fix reads the IP after instance-running with a 2-min bound and caps the SSH wait at 10 min.",
+        "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4633",
+        "by": "Investigator routine",
+        "at": "2026-10-31T08:33:54Z"
       }
     ],
     "claims": [
