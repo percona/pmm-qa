@@ -3750,16 +3750,19 @@
       "link": "https://github.com/Percona-Lab/jenkins-pipelines/pull/4633",
       "by": "Investigator routine",
       "at": "2026-10-31T08:33:54Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "product bug",
+      "summary": "PMM-T2371 on ROSA: the pmm-ha chart's vmagent keeps the 16 MiB default promscrape.maxScrapeSize while ROSA HCP's apiserver /metrics is 13-16.75 MB and growing, so on some nights the scrape is rejected and kube-apiserver goes up=0; reproduced on k3s (fails over the limit, passes with 64MiB), re-run #159 passed 26 KB under the limit.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15833",
+      "by": "Investigator routine",
+      "at": "2026-10-31T08:47:09Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-31T07:31:45Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-10-31T07:31:45Z",
