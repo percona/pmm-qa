@@ -144,6 +144,8 @@ for (const database of azureDatabases) {
     async ({ addInstancePage, api, page, servicesPage }) => {
       const labels = editedLabels(database.serviceName, database);
 
+      // The CodeceptJS @instances stage of the same Jenkins job leaves azure-MySQL registered.
+      await api.inventoryApi.removeNodesByName([database.serviceName]);
       await api.settingsApi.changeSettings({ enable_azurediscover: true });
       await page.goto(addInstancePage.url);
       await addInstancePage.discoverAzure(azureCredentials);
