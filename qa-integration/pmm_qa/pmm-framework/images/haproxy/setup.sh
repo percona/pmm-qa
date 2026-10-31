@@ -18,8 +18,7 @@ setup_haproxy() {
   report_agent_status "$container"
 }
 
-# The host port stays below the ephemeral range (32768-60999): an outbound
-# socket already holding 42100 made the publish fail with "address already in use".
+# Keep the host port below the ephemeral range, where no outbound socket can hold it.
 haproxy_start() {
   fresh_containers "$container"
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
