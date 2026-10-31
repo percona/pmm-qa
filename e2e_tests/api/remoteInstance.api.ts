@@ -1,6 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import apiEndpoints from '../helpers/apiEndpoints';
 import GrafanaHelper from '../helpers/grafana.helper';
+import InventoryApi from './inventory.api';
 
 type Headers = Record<string, string>;
 
@@ -27,12 +28,24 @@ export interface RemoteUpgradeInstance {
   upgradeService: string;
 }
 
+export interface QanRemoteInstance {
+  cluster: string;
+  environment: string;
+  host: string;
+  password: string;
+  port?: string;
+  serviceName: string;
+  type: 'mongodb' | 'mysql';
+  username: string;
+}
+
 interface RemoteInstanceBody {
   metricsParameters?: string;
   schema?: 'https' | 'http';
   pmm_agent_id?: string;
   port?: string;
   cluster?: string;
+  environment?: string;
   group?: string;
   listen_port?: string;
   metrics_path?: string;
@@ -102,5 +115,30 @@ export default class RemoteInstanceApi {
       default:
         throw new Error(`Unknown remote instance type: ${instance.serviceType}`);
     }
+  };
+
+  ensureRemoteService = async (instance: QanRemoteInstance) => {
+    const { services } = await new InventoryApi(this.request).getServices();
+
+    if (services.some(({ service_name }) => service_name === instance.serviceName)) return;
+
+    const body = {
+      add_node: { node_name: instance.serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' as const },
+      address: instance.host,
+      cluster: instance.cluster,
+      environment: instance.environment,
+      password: instance.password,
+      pmm_agent_id: 'pmm-server',
+      port: instance.port ?? '27017',
+      service_name: instance.serviceName,
+      tls_skip_verify: true,
+      username: instance.username,
+    };
+
+    await this.addRemoteInstance(
+      instance.type === 'mysql'
+        ? { mysql: { ...body, qan_mysql_perfschema: true } }
+        : { mongodb: { ...body, qan_mongodb_profiler: true } },
+    );
   };
 }
