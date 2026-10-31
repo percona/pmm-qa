@@ -185,6 +185,14 @@ export default class InventoryApi {
     return service;
   };
 
+  removeNodesByName = async (names: string[]): Promise<void> => {
+    for (const { node_id } of (await this.getAllNodes()).filter(({ node_name }) =>
+      names.includes(node_name),
+    )) {
+      await this.deleteNode(node_id, true);
+    }
+  };
+
   verifyAgentsAreRunning = async (serviceName: string) =>
     this.getServiceDetailsByPartialName(serviceName)
       .then((service) =>
