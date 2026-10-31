@@ -3730,6 +3730,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1697",
       "by": "Investigator routine",
       "at": "2026-10-31T08:10:19Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T554 after the AMI 3.9.0 container upgrade read the inventory once ~2 s after readyz while remote pmm-agents were still in their reconnect backoff (up to ~20 s); reproduced on a CHAOS VM, fix polls the same assertion for up to 2 min, and Jenkins re-runs #1448-#1450 on the fix branch passed.",
+      "link": "https://github.com/percona/pmm-qa/pull/1698",
+      "by": "Investigator routine",
+      "at": "2026-10-31T08:33:49Z"
     }
   ],
   "claims": [
@@ -3745,13 +3755,6 @@
       "at": "2026-10-31T07:31:45Z",
       "suites": [
         "UI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-10-31T07:31:45Z",
-      "suites": [
-        "Upgrade AMI"
       ]
     }
   ]
