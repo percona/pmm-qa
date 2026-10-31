@@ -33,6 +33,7 @@ interface RemoteInstanceBody {
   pmm_agent_id?: string;
   port?: string;
   cluster?: string;
+  environment?: string;
   group?: string;
   listen_port?: string;
   metrics_path?: string;

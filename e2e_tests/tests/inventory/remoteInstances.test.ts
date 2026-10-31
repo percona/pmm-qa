@@ -23,12 +23,49 @@ const remoteNodeNames = [
   rdsMysql57.serviceName,
   auroraInstanceId,
 ];
+type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
+const qanRemoteDatabases = remoteDatabases.filter(
+  (database): database is QanRemoteDatabase => database.type === 'mysql' || database.type === 'mongodb',
+);
 const qanFilters = [
-  ...remoteDatabases
-    .filter(({ type }) => type === 'mysql' || type === 'mongodb')
-    .map(({ environment }) => environment),
+  ...qanRemoteDatabases.map(({ environment }) => environment),
   ...azureDatabases.map(({ environment }) => environment),
 ];
+
+// afterAll also runs whenever a failed test restarts the worker, so a QAN test cannot rely on the
+// service an earlier test added still being registered.
+const ensureRemoteService = async (api: Api, database: QanRemoteDatabase) => {
+  const { services } = await api.inventoryApi.getServices();
+
+  if (services.some(({ service_name }) => service_name === database.serviceName)) return;
+
+  const body = {
+    add_node: { node_name: database.serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' as const },
+    address: database.host,
+    cluster: database.cluster,
+    environment: database.environment,
+    password: database.password,
+    pmm_agent_id: 'pmm-server',
+    port: 'port' in database ? database.port : '27017',
+    service_name: database.serviceName,
+    tls_skip_verify: true,
+    username: database.username,
+  };
+
+  await api.remoteInstanceApi.addRemoteInstance(
+    database.type === 'mysql'
+      ? { mysql: { ...body, qan_mysql_perfschema: true } }
+      : { mongodb: { ...body, qan_mongodb_profiler: true } },
+  );
+};
+
+const removeNodesByName = async (api: Api, names: string[]) => {
+  for (const { node_id } of (await api.inventoryApi.getAllNodes()).filter(({ node_name }) =>
+    names.includes(node_name),
+  )) {
+    await api.inventoryApi.deleteNode(node_id, true);
+  }
+};
 
 pmmTest.describe.configure({ mode: 'default' });
 
@@ -39,11 +76,8 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   const api = new Api(page, page.request);
-  const nodes = await api.inventoryApi.getAllNodes();
 
-  for (const { node_id } of nodes.filter(({ node_name }) => remoteNodeNames.includes(node_name))) {
-    await api.inventoryApi.deleteNode(node_id, true);
-  }
+  await removeNodesByName(api, remoteNodeNames);
 
   for (const { service_id } of (await api.inventoryApi.getServices()).services.filter(({ service_name }) =>
     remoteNodeNames.includes(service_name),
@@ -98,8 +132,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T2340 - Verify adding and editing RDS instances [critical] @instances',
-  async ({ addInstancePage, page, servicesPage }) => {
+  async ({ addInstancePage, api, page, servicesPage }) => {
     const labels = editedLabels(rdsMysql57.serviceName, rdsMysql57);
+
+    // The CodeceptJS @instances stage of the same Jenkins job leaves this RDS node registered.
+    await removeNodesByName(api, [rdsMysql57.serviceName]);
 
     await page.goto(addInstancePage.url);
     await addInstancePage.discoverRds(awsCredentials.accessKey, awsCredentials.secretKey);
@@ -179,9 +216,22 @@ pmmTest(
 for (const filterName of qanFilters) {
   pmmTest(
     `PMM-T2340 - Verify QAN after remote instance is added @instances | ${filterName}`,
-    async ({ page, qanStoredMetrics, urlHelper }) => {
-      await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }));
-      await qanStoredMetrics.waitForLoad();
+    async ({ api, page, qanStoredMetrics, urlHelper }) => {
+      const database = qanRemoteDatabases.find(({ environment }) => environment === filterName);
+
+      if (database) await ensureRemoteService(api, database);
+
+      // A newly started QAN agent reports its first bucket at the next minute boundary.
+      await expect(async () => {
+        await page.goto(
+          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }),
+        );
+        await qanStoredMetrics.waitForLoad();
+        await qanStoredMetrics.inputs.filterBy.fill(filterName);
+        await expect(qanStoredMetrics.builders.filterCheckboxContaining(filterName)).toBeVisible({
+          timeout: Timeouts.FIVE_SECONDS,
+        });
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
       await qanStoredMetrics.selectFilterContaining(filterName);
       expect(
         await qanStoredMetrics.getQueryCount(),
