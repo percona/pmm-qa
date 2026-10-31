@@ -41,12 +41,12 @@ export default class Dashboards extends BasePage {
       this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
     collapseRowByName: (rowName: string) =>
       this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Collapse row"]`,
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Collapse row")]`,
       ),
     dashboardTitle: (dashboardName: string) => this.grafanaIframe().getByText(dashboardName),
     expandRowByName: (rowName: string) =>
       this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
