@@ -144482,6 +144482,36 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-31T07:31:45Z",
+        "suites": [
+          "E2E Tests"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-31T07:31:45Z",
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-31T07:31:45Z",
+        "suites": [
+          "UI"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-10-31T07:31:45Z",
+        "suites": [
+          "Upgrade AMI"
+        ]
+      }
+    ]
   }
 ]
