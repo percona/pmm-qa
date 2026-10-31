@@ -3720,15 +3720,19 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-10-31T07:31:45Z",
       "suites": [
         "E2E Tests"
-      ]
-    },
+      ],
+      "verdict": "setup bug",
+      "summary": "@fb-instances ran no tests: haproxy_pmm publishes host port 42100, inside the ephemeral range, and an outbound socket already holding it as a source port made docker run fail with 'address already in use' (the ip_local_reserved_ports sysctl cannot free a port already taken); reproduced on a CHAOS VM, fix publishes host port 8404 instead.",
+      "link": "https://github.com/percona/pmm-qa/pull/1697",
+      "by": "Investigator routine",
+      "at": "2026-10-31T08:10:19Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-10-31T07:31:45Z",
