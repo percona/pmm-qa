@@ -38,7 +38,8 @@ retry_on() {
       printf '%s' "$output"
       return 0
     fi
-    [[ ${output,,} =~ $pattern ]] || break
+    # macOS's regcomp rejects an empty regex, so =~ '' fails there.
+    [[ -z $pattern || ${output,,} =~ $pattern ]] || break
     sleep 1
   done
   # ${output: -400} is empty, not whole, when the output is shorter than that.

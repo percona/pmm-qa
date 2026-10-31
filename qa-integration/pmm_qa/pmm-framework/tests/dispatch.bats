@@ -168,6 +168,21 @@ stub_prebaked_docker() {
   [[ $output == *'after 3 attempt(s); last output: flaky'* ]]
 }
 
+@test "retry reruns any failure until the command succeeds" {
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  local attempts=$BATS_TEST_TMPDIR/attempts
+  # shellcheck disable=SC2016 # expanded by sh -c
+  run retry 5 'the probe' sh -c '
+    n=$(($(cat "$1" 2>/dev/null || echo 0) + 1))
+    echo "$n" >"$1"
+    if [ "$n" -lt 3 ]; then echo "not ready yet"; exit 1; fi
+    echo ready' sh "$attempts"
+  [[ $status -eq 0 ]]
+  [[ $output == ready ]]
+  [[ $(cat "$attempts") -eq 3 ]]
+}
+
 @test "ensure_image pulls the published image before building one" {
   stub_prebaked_docker
   # shellcheck disable=SC2329,SC2317
