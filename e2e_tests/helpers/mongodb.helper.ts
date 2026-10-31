@@ -27,6 +27,17 @@ export default class MongoDBHelper {
   addUser = async (username: string, password: string, roles: Document[]) =>
     this.client.db('admin').command({ createUser: username, pwd: password, roles });
 
+  createBulkCollections = async (dbName: string, collectionNames: string[]) => {
+    const db = this.client.db(dbName);
+    const existing = (await db.listCollections({}, { nameOnly: true }).toArray()).map(({ name }) => name);
+
+    for (const collectionName of collectionNames) {
+      if (existing.includes(collectionName)) await db.dropCollection(collectionName);
+
+      await (await db.createCollection(collectionName)).insertOne({ a: `${dbName}-${collectionName}` });
+    }
+  };
+
   createIndexStats = async (dbName: string, collectionName: string) => {
     const collection = this.client.db(dbName).collection(collectionName);
 
