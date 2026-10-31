@@ -3760,15 +3760,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15833",
       "by": "Investigator routine",
       "at": "2026-10-31T08:47:09Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-10-31T07:31:45Z",
       "suites": [
         "UI"
-      ]
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T2340 | remote-mongodb: an earlier test's failure (RDS 409 on a node the CodeceptJS stage left behind) restarts the Playwright worker, whose afterAll wipes the remote nodes ~60 s after mongodb_remote_new is added, before the profiler's first per-minute QAN bucket; reproduced on a CHAOS VM, fix pre-deletes the leftover RDS node and re-adds the remote services before the QAN checks (Jenkins #11958/#11959 green on the branch).",
+      "link": "https://github.com/percona/pmm-qa/pull/1696",
+      "by": "Investigator routine",
+      "at": "2026-10-31T10:04:17Z"
     }
-  ]
+  ],
+  "claims": []
 }
