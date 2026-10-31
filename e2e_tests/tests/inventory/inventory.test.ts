@@ -196,8 +196,6 @@ pmmTest(
     // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
-    // Right after a server restart (@ami-ovf-post-upgrade) remote pmm-agents need up to ~20 s to
-    // reconnect: their reconnect backoff caps at 15 s, plus a 5 s dial timeout (pmm agent/client/client.go).
     await expect(async () => {
       const agents = (await api.inventoryApi.getServices()).services
         .flatMap((service) => service.agents)
