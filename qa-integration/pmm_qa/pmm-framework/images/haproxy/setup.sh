@@ -2,14 +2,10 @@
 #
 # images/haproxy/setup.sh -- HAProxy, on the prebaked haproxy image.
 
-# haproxy_pmm serving haproxy.cfg on host port 42100,
+# haproxy_pmm serving haproxy.cfg on :42100, published on host port 8404,
 # registered with --environment=haproxy, with a request every 10 s.
 setup_haproxy() {
-  local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000)) reserved
-  # 42100 is inside the kernel's ephemeral port range, so an outbound socket can
-  # hold it when haproxy_start publishes it. Best effort: needs passwordless sudo.
-  reserved=$(cat /proc/sys/net/ipv4/ip_local_reserved_ports 2>/dev/null)
-  sudo -n sysctl -qw "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}42100" 2>/dev/null || true
+  local container=haproxy_pmm client tarball='' suffix=$((RANDOM % 10000))
   client=$(resolved_client_version HAPROXY DB_CONFIG)
   step 'Prepare image pmm-qa/haproxy:latest' ensure_image haproxy latest
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -22,10 +18,11 @@ setup_haproxy() {
   report_agent_status "$container"
 }
 
+# Keep the host port below the ephemeral range, where no outbound socket can hold it.
 haproxy_start() {
   fresh_containers "$container"
   must docker run --detach --name "$container" --hostname "$container" --label pmm-qa.engine=haproxy \
-    --network pmm-qa --publish 42100:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:latest >/dev/null
+    --network pmm-qa --publish 8404:42100 "${NOMAD_CGROUPS[@]}" pmm-qa/haproxy:latest >/dev/null
   must docker cp "$FRAMEWORK_DIR/images/haproxy/haproxy.cfg" "$container:/haproxy.cfg"
   must docker exec "$container" haproxy -f /haproxy.cfg -D
   retry 30 "HAProxy's metrics on :42100" docker exec "$container" curl -fsS http://127.0.0.1:42100/metrics >/dev/null
