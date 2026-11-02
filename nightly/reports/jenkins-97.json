@@ -3750,6 +3750,16 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-12069",
       "by": "Investigator routine",
       "at": "2026-11-02T04:11:25Z"
+    },
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "unstable",
+      "summary": "@bm-mongo (ARM64 FB lane): a PHYSICAL filesystem restore of mongo-backup-inventory-1 never reached RESTORE_STATUS_SUCCESS, and every later backup on that replica set then stayed unfinished (10 failed, 22 passed). First red in 10 nights; the amd64 and GSSAPI @bm-mongo lanes passed the same night, and the rerun passed 32/6-skipped (job 125071500040). Root cause not established: the artifact's pmm-managed.log is rotated (it starts at 02:03, after the 01:39 restore) and has no logs from the mongo nodes.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/41367041669/job/125071500040",
+      "by": "Investigator routine",
+      "at": "2026-11-02T04:11:30Z"
     }
   ],
   "claims": []
