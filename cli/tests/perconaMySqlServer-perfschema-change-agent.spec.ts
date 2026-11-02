@@ -66,7 +66,7 @@ const pmmAgentPid = async () => (await cli.exec(`docker exec ${containerName} sh
 // The framework starts pmm-agent with `docker exec --detach`, so it is restarted the same way rather than with the container.
 const restartPmmAgent = async (command: string) => {
   const pid = await pmmAgentPid();
-  await (await cli.exec(`docker exec ${containerName} kill ${pid}`)).assertSuccess();
+  if (pid) await (await cli.exec(`docker exec ${containerName} kill ${pid}`)).assertSuccess();
   await expect(async () => expect(await pmmAgentPid()).toEqual('')).toPass({ intervals: [1_000], timeout: 30_000 });
   await (await cli.exec(`docker exec --detach ${containerName} sh -c "exec ${command} >>/tmp/pmm-agent.log 2>&1"`)).assertSuccess();
 };
@@ -310,7 +310,9 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
 
   test('PMM-T1011 - Verify Change agent pmm agent listen port', async ({}) => {
     const pid = await pmmAgentPid();
-    const pmmAgentCommand = (await cli.exec(`docker exec ${containerName} sh -c 'tr "\\0" " " </proc/${pid}/cmdline'`)).stdout.trim();
+    const pmmAgentCommand = (await cli.exec(`docker exec ${containerName} sh -c 'tr "\\0" " " </proc/${pid}/cmdline'`)).stdout
+      .replace(/\s--listen-port=\S+/g, '')
+      .trim();
     expect(pmmAgentCommand, 'pmm-agent command line').toContain('pmm-agent');
 
     await restartPmmAgent(`${pmmAgentCommand} --listen-port=7778`);
