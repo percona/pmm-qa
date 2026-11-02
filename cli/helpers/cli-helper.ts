@@ -248,28 +248,6 @@ export function mongoEval(containerName: string, mongoUri: string, js: string): 
 }
 
 /**
- * Build a "pmm-admin inventory change agent mongodb-exporter" command
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_exporter agent ID
- * @param   flags           flags to change
- */
-export function changeMongoExporter(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId} ${flags}`;
-}
-
-/**
- * Build a "pmm-admin inventory change agent qan-mongodb-profiler-agent" command
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_profiler_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoProfiler(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${agentId} ${flags}`;
-}
-
-/**
  * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN profiler agent
  *
  * @param   containerName   docker container running pmm-agent
@@ -278,7 +256,10 @@ export function changeMongoProfiler(containerName: string, agentId: string, flag
  * @param   flags           flags to change
  */
 export function changeMongoAgents(containerName: string, exporterId: string, profilerId: string, flags: string): string[] {
-  return [changeMongoExporter(containerName, exporterId, flags), changeMongoProfiler(containerName, profilerId, flags)];
+  return [
+    inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, flags),
+    inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbProfilerAgent, profilerId, flags),
+  ];
 }
 
 /**

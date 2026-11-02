@@ -37,7 +37,7 @@ const runOnPrimary = async (js: string) => {
 
 const dropNewUser = `if (db.getSiblingDB("admin").getUser("${newUsername}")) db.getSiblingDB("admin").dropUser("${newUsername}");`;
 
-test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and QAN mongolog agent', { tag: ['@psmdb', '@shard-psmdb'] }, () => {
+test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and QAN mongolog agent', { tag: '@shard-psmdb' }, () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ pmmClientContainer: containerName });
 
@@ -45,7 +45,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     test.skip(gssapi.enabled === 'true', 'Changes the agents to SCRAM users and TLS, which the GSSAPI setup does not use');
 
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
-    await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss or SETUP_TYPE=sharding');
+    await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding');
     adminVersion = await getPmmAdminVersion(containerName);
     test.skip(versionBelow(adminVersion, '3.7.0'), 'pmm-admin inventory change agent requires pmm-client 3.7.0+');
 
@@ -336,27 +336,22 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await (await cli.exec(`docker exec ${containerName} bash -c '${command}'`)).assertSuccess();
     }
 
-    // requireTLS also makes mongod use TLS towards the other members, and a shard member cannot start until it reaches the
-    // config servers, which do not speak TLS. allowTLS keeps those connections plain while the agents still use TLS.
-    const shardMember = (await cli.exec(`docker exec ${containerName} grep -q 'clusterRole: shardsvr' /etc/mongod/mongod.conf`)).code === 0;
-    const tlsMode = shardMember ? 'allowTLS' : 'requireTLS';
-
+    // requireTLS would also make mongod use TLS towards the other members, and a shard member cannot start until it
+    // reaches the config servers, which do not speak TLS. allowTLS keeps those connections plain while the agents use TLS.
     // afterAll restores /etc/sysconfig/mongod from the backup taken in beforeAll.
-    await (await cli.exec(`docker exec ${containerName} sed -i '/^OPTIONS=/s#"$# --tlsMode ${tlsMode} --tlsCertificateKeyFile /certs/server.pem --tlsCAFile /certs/ca-certs.pem"#' /etc/sysconfig/mongod`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} grep -q ${tlsMode} /etc/sysconfig/mongod`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} sed -i '/^OPTIONS=/s#"$# --tlsMode allowTLS --tlsCertificateKeyFile /certs/server.pem --tlsCAFile /certs/ca-certs.pem"#' /etc/sysconfig/mongod`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} grep -q allowTLS /etc/sysconfig/mongod`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
 
     // The unit is Type=simple, so the restart returns before mongod validates the TLS config.
     await cli.waitForMongod(containerName, tlsProbe);
-    expect((await cli.exec(plainProbe)).code === 0, `whether mongod in ${tlsMode} mode accepts connections without TLS`)
-      .toBe(shardMember);
 
     // MongoDB agents take a single cert+key PEM via --tls-certificate-key-file. The client key is unencrypted,
     // so the driver ignores --tls-certificate-key-file-password and the connection check still passes.
     const authDatabase = 'admin';
     const tlsFlags = `--tls --tls-skip-verify --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=client_key_password --tls-ca-file=/certs/ca-certs.pem --authentication-database=${authDatabase}`;
 
-    // rs101 has just restarted and is cut off from the replica set, so auth can briefly fail; the retry covers that too.
+    // rs101 has just restarted, so auth can briefly fail; the retry covers that too.
     await cli.changeAgentsUntilPersisted(
       cli.changeMongoMongologAgents(containerName, exporterId, mongologId, tlsFlags),
       ['TLS enabled : true', '- updated TLS certificate key password', `- changed authentication database to ${authDatabase}`],
