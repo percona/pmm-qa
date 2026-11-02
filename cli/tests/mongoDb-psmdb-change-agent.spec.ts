@@ -56,12 +56,20 @@ const listAgents = async () => {
 
 const getExporterPort = async () => (await listAgents()).find((agent) => agent.agent_id === exporterId)?.port;
 
-const expectAgentsStatus = async (status: string, timeout = 60_000) => {
+// PMM Server marks a disabled agent "Done" as soon as it is changed, before pmm-agent gets the new state,
+// so also wait for pmm-agent's own view: a disable and enable that reach it together never stop the process.
+const expectAgentsRunning = async (running: boolean, timeout = 60_000) => {
+  const serverStatus = running ? 'Running' : 'Done (disabled)';
+  const localStatus = running ? 'Running' : 'not running';
+
   await expect(async () => {
-    const lines = (await cli.exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines();
+    const serverLines = (await cli.exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines();
+    const localLines = (await cli.exec(`docker exec ${containerName} pmm-admin status`)).getStdOutLines();
 
     for (const agentId of [exporterId, profilerId]) {
-      expect(lines.find((line) => line.includes(agentId)), `Agent ${agentId} should be "${status}"`).toContain(status);
+      expect(serverLines.find((line) => line.includes(agentId)), `PMM Server should report ${agentId} as "${serverStatus}"`).toContain(serverStatus);
+      expect(localLines.find((line) => line.includes(agentId)) ?? 'not running', `pmm-agent should report ${agentId} as "${localStatus}"`)
+        .toContain(localStatus);
     }
   }).toPass({ intervals: [5_000], timeout });
 };
@@ -157,7 +165,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContainsMany(['- updated username', '- updated password']);
     }
 
-    await expectAgentsStatus('Running');
+    await expectAgentsRunning(true);
     await expectMongoUp();
   });
 
@@ -199,8 +207,8 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T1005 - Verify Change agent enable true/false', async ({}) => {
-    const disable = { response: '- disabled agent', status: 'Done (disabled)' };
-    const enable = { response: '- enabled agent', status: 'Running' };
+    const disable = { response: '- disabled agent', running: false };
+    const enable = { response: '- enabled agent', running: true };
     const enableCommands = [
       { flag: '--enable=false', ...disable },
       { flag: '--enable=true', ...enable },
@@ -208,14 +216,14 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       { flag: '--enable', ...enable },
     ];
 
-    for (const { flag, response, status } of enableCommands) {
+    for (const { flag, response, running } of enableCommands) {
       for (const command of changeBoth(flag)) {
         const output = await cli.exec(command);
         await output.assertSuccess();
         await output.outContains(response);
       }
 
-      await expectAgentsStatus(status);
+      await expectAgentsRunning(running);
     }
   });
 
@@ -254,7 +262,8 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       expect(exporterLine).toContain('push');
     }).toPass({ intervals: [5_000], timeout: 60_000 });
 
-    await (await cli.exec(`docker exec ${containerName} sh -c 'grep vmagent /var/log/pmm-agent.log | tail -20 | grep -i error || true'`)).outEquals('');
+    // Only vmagent's own output: with --client-debug pmm-agent also logs every SetState, which mentions vmagent.
+    await (await cli.exec(`docker exec ${containerName} sh -c 'grep type=vm_agent /var/log/pmm-agent.log | tail -20 | grep -F "\\terror\\t" || true'`)).outEquals('');
   });
 
   test('PMM-T1009 - Verify Change agent disable collectors', async ({}) => {
@@ -336,7 +345,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await (await cli.exec(command)).assertSuccess();
     }
 
-    await expectAgentsStatus('Running');
+    await expectAgentsRunning(true);
     await expectMongoUp();
   });
 
@@ -387,7 +396,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       }).toPass({ intervals: [5_000], timeout: 120_000 });
     }
 
-    await expectAgentsStatus('Running');
+    await expectAgentsRunning(true);
     await expectMongoUp(300_000);
 
     // SCRAM-SHA-256 is not in the server's authenticationMechanisms, so only check the flag is accepted,
