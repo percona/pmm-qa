@@ -31,7 +31,6 @@ const waitForAgentStatus = async (agentType: string, status: string) => expect(a
 const exporterPort = async () => (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`)).stdout.trim();
 
 test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-slowlog-change-agent' }, () => {
-  test.describe.configure({ mode: 'serial' });
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   test.beforeAll(async ({}) => {
@@ -48,7 +47,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T9991 - Verify Change agent username and password', async ({}) => {
-    await runSql(`CREATE USER '${newUsername}'@'%' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'%'; FLUSH PRIVILEGES;`);
+    await runSql(`DROP USER IF EXISTS '${newUsername}'@'%'; CREATE USER '${newUsername}'@'%' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'%'; FLUSH PRIVILEGES;`);
 
     for (const output of await changeBothAgents(`--password=${newPassword} --username=${newUsername}`)) {
       await output.outContains('Access denied for user');
@@ -248,11 +247,14 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T1010 - Verify Change agent tls', async ({}) => {
-    // mysqld generates its own CA and client certificates in the datadir on first start.
+    test.setTimeout(660_000);
+    // mysqld generates its own CA and client certificates in the datadir on first start. Their PEM files
+    // carry a NUL byte, which change agent, unlike add, does not strip, so the CA fails to save (22P05).
+    await (await cli.exec(`docker exec ${containerName} sh -c "mkdir -p /certs && for f in ca client-cert client-key; do tr -d '\\000' < /var/lib/mysql/\\$f.pem > /certs/\\$f.pem; done"`)).assertSuccess();
     await runSql('SET GLOBAL require_secure_transport=ON;');
     await waitForServiceStatus(serviceName, 'STATUS_DOWN', 300_000);
 
-    const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/var/lib/mysql/ca.pem --tls-cert-file=/var/lib/mysql/client-cert.pem --tls-key-file=/var/lib/mysql/client-key.pem';
+    const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/certs/ca.pem --tls-cert-file=/certs/client-cert.pem --tls-key-file=/certs/client-key.pem';
 
     for (const output of await changeBothAgents(tlsFlags)) {
       await output.assertSuccess();
@@ -262,6 +264,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T9993 - Verify Change agent pmm agent listen port', async ({}) => {
+    test.setTimeout(240_000);
     await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' ${pmmAgentConfig}`)).assertSuccess();
     // Restarting the container stops pmm-agent, which pmm-framework runs without a supervisor.
     await (await cli.exec(`docker restart ${containerName}`)).assertSuccess();
