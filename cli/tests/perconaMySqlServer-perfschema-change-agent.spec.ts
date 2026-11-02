@@ -112,7 +112,7 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
     for (const { alias, id } of agents()) {
       const output = await changeAgent(alias, id, `--username=${newUsername} --password=${newPassword}`);
       await output.assertSuccess();
-      await output.outContainsMany([`Username : ${newUsername}`, '- updated username', '- updated password']);
+      await output.outContainsNormalizedMany([`Username : ${newUsername}`, '- updated username', '- updated password']);
     }
 
     await expectMysqlUp(mysqldExporterId);
@@ -186,7 +186,7 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
   test('PMM-T1007 - Verify Change agent expose exporter', async ({}) => {
     const output = await changeAgent('mysqld-exporter', mysqldExporterId, '--expose-exporter');
     await output.assertSuccess();
-    await output.outContainsMany(['Expose exporter : true', '- enabled expose exporter']);
+    await output.outContainsNormalizedMany(['Expose exporter : true', '- enabled expose exporter']);
 
     await expect(async () => {
       const { port } = await listAgent(mysqldExporterId);
@@ -199,7 +199,7 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
   test('PMM-T1008 - Verify Change agent push metrics', async ({}) => {
     const output = await changeAgent('mysqld-exporter', mysqldExporterId, '--push-metrics');
     await output.assertSuccess();
-    await output.outContainsMany(['Push metrics enabled : true', '- enabled push metrics']);
+    await output.outContainsNormalizedMany(['Push metrics enabled : true', '- enabled push metrics']);
 
     await expect(async () => {
       const agent = await listAgent(mysqldExporterId);
@@ -300,7 +300,7 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
     for (const { alias, id } of agents()) {
       const output = await changeAgent(alias, id, `--username=${tlsUsername} --password=${newPassword} ${tlsFlags}`);
       await output.assertSuccess();
-      await output.outContainsMany(['TLS enabled : true', 'Skip TLS verification : true', '- enabled TLS', '- updated TLS certificate']);
+      await output.outContainsNormalizedMany(['TLS enabled : true', 'Skip TLS verification : true', '- enabled TLS', '- updated TLS certificate']);
     }
 
     await expectMysqlUp(agentPassword);
