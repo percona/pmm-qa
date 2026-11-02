@@ -5,6 +5,7 @@ import { tableLoadedRows } from '@helpers/tableLocators';
 type RowsPerPage = '25' | '50' | '100';
 
 export default class InventoryPagination {
+  readonly firstPageButton: Locator;
   readonly itemsInterval: Locator;
   readonly nextPageButton: Locator;
   readonly previousPageButton: Locator;
@@ -15,6 +16,7 @@ export default class InventoryPagination {
 
   constructor(readonly page: Page) {
     // Material React Table's pagination, e.g. "1-25 of 30"
+    this.firstPageButton = page.getByRole('button', { name: 'Go to first page' });
     this.itemsInterval = page.getByText(/^\d+-\d+ of \d+$/);
     this.nextPageButton = page.getByRole('button', { name: 'Go to next page' });
     this.previousPageButton = page.getByRole('button', { name: 'Go to previous page' });
