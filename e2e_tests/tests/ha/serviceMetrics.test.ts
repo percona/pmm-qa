@@ -15,7 +15,8 @@ const monitoredServices = [
   {
     expectedSources: defaultReplicas,
     groupBy: 'service_name',
-    metric: 'pg_exporter_scrapes_total',
+    // PMM HA's own PostgreSQL only; a monitored PostgreSQL client exports the same metric.
+    metric: 'pg_exporter_scrapes_total{service_name=~".+-pg-db-instance.+"}',
     name: 'PostgreSQL',
   },
   { expectedSources: defaultReplicas, groupBy: 'pod', metric: 'vm_vminsert_conns', name: 'VictoriaMetrics' },
