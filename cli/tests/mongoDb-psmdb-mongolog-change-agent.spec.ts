@@ -22,6 +22,7 @@ const plainProbe = `docker exec ${containerName} mongo "${mongoUri}" --quiet --e
 let adminVersion: string;
 let exporterId: string;
 let mongologId: string;
+let frameworkAgentIds: string[] = [];
 let agentPassword = 'mypass';
 let mongodTlsEnabled = false;
 let pmmAgentListenPortChanged = false;
@@ -53,6 +54,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await logPath.outContains(mongodLogFile, 'mongod on rs101 should log to a file. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog');
 
     await (await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`)).assertSuccess();
+    frameworkAgentIds = (await cli.listAgents(containerName))
+      .filter((agent) => ['AGENT_TYPE_MONGODB_EXPORTER', 'AGENT_TYPE_QAN_MONGODB_MONGOLOG_AGENT'].includes(agent.agent_type))
+      .map((agent) => agent.agent_id);
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --query-source=mongolog --agent-password=${agentPassword} ${serviceName} ${replIpPort}`);
     await output.assertSuccess();
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
@@ -68,6 +72,14 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test.afterAll(async ({}) => {
+    if (mongodTlsEnabled) {
+      await (await cli.exec(`docker exec ${containerName} cp ${mongodSysconfigBackup} /etc/sysconfig/mongod`)).assertSuccess();
+      await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
+      await cli.waitForMongod(containerName, plainProbe);
+    }
+
+    // Only once mongod serves again: restarting pmm-agent restarts every agent, and a mongolog agent whose start
+    // cannot reach mongod stays Done.
     if (pmmAgentListenPortChanged) {
       await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
       await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
@@ -78,17 +90,10 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
 
     if (exporterId) {
       await removeMongoService(containerName, serviceName);
-    }
-
-    if (mongodTlsEnabled) {
-      await (await cli.exec(`docker exec ${containerName} cp ${mongodSysconfigBackup} /etc/sysconfig/mongod`)).assertSuccess();
-      await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
-      await cli.waitForMongod(containerName, plainProbe);
-    }
-
-    if (exporterId) {
       await runOnPrimary(dropNewUser);
     }
+
+    await cli.expectAgentsRunning(containerName, frameworkAgentIds, true);
   });
 
   test('PMM-T2439 - Verify Change agent username and password for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
