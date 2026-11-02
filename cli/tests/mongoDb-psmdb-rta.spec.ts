@@ -42,6 +42,16 @@ const expectRtaAgentStatus = async (status: string, timeout = 60_000) => {
   }).toPass({ intervals: [5_000], timeout });
 };
 
+// The server reports a disabled agent as Done before pmm-agent has stopped it, and batches state updates
+// for a second, so an enable sent right after a disable can cancel it and leave the server status stale.
+const expectRtaAgentOnPmmAgent = async (running: boolean) => {
+  await expect(async () => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+    await output.assertSuccess();
+    expect(output.stdout.includes(rtaAgentId), `pmm-agent running RTA agent ${rtaAgentId}`).toBe(running);
+  }).toPass({ intervals: [2_000], timeout: 30_000 });
+};
+
 test.describe('Real-Time Analytics MongoDB agent: pmm-admin inventory change agent', { tag: '@rta-psmdb' }, () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ pmmClientContainer: containerName });
@@ -101,23 +111,24 @@ test.describe('Real-Time Analytics MongoDB agent: pmm-admin inventory change age
   test('PMM-T2315 - Verify RTA Change agent enable true/false', async ({}) => {
     const enableCommands = [
       {
-        flag: '--enable=false', response: '- disabled agent', status: 'Done (disabled)',
+        flag: '--enable=false', response: '- disabled agent', status: 'Done (disabled)', running: false,
       },
       {
-        flag: '--enable=true', response: '- enabled agent', status: 'Running',
+        flag: '--enable=true', response: '- enabled agent', status: 'Running', running: true,
       },
       {
-        flag: '--enable=false', response: '- disabled agent', status: 'Done (disabled)',
+        flag: '--enable=false', response: '- disabled agent', status: 'Done (disabled)', running: false,
       },
       {
-        flag: '--enable', response: '- enabled agent', status: 'Running',
+        flag: '--enable', response: '- enabled agent', status: 'Running', running: true,
       },
     ];
 
-    for (const { flag, response, status } of enableCommands) {
+    for (const { flag, response, status, running } of enableCommands) {
       const output = await cli.exec(`${changeRtaAgent} ${flag}`);
       await output.assertSuccess();
       await output.outContains(response);
+      await expectRtaAgentOnPmmAgent(running);
       await expectRtaAgentStatus(status);
     }
   });
