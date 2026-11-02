@@ -99,7 +99,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
   });
 
-  test('PMM-T1001 - Verify Change agent username and password for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2439 - Verify Change agent username and password for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     const monitoringRoles = '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
 
     await runOnPrimary(`${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
@@ -124,7 +124,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await cli.expectMongoUp(containerName, serviceName, agentPassword);
   });
 
-  test('PMM-T1002 - Verify Change agent custom labels for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2440 - Verify Change agent custom labels for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     const customLabel = { key: 'env', value: 'qa_testing_mongodb' };
 
     await cli.changeAgentsUntilPersisted(
@@ -139,7 +139,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     );
   });
 
-  test('PMM-T1003 - Verify Change agent log level for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2441 - Verify Change agent log level for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     await cli.changeAgentsUntilPersisted(
       cli.changeMongoMongologAgents(containerName, exporterId, mongologId, '--log-level=debug'),
       ['Log level : debug', '- changed log level to debug'],
@@ -151,7 +151,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     );
   });
 
-  test('PMM-T1004 - Verify Change agent debug, trace and json flags for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2442 - Verify Change agent debug, trace and json flags for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     for (const [command, agentId] of [[cli.changeMongoExporter(containerName, exporterId, '--debug --trace --json'), exporterId], [cli.changeMongoMongolog(containerName, mongologId, '--debug --trace --json'), mongologId]]) {
       const output = await cli.exec(command);
       await output.assertSuccess();
@@ -159,7 +159,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
   });
 
-  test('PMM-T1005 - Verify Change agent enable and disable for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2443 - Verify Change agent enable and disable for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     const disable = { response: '- disabled agent', running: false };
     const enable = { response: '- enabled agent', running: true };
     const enableCommands = [
@@ -186,7 +186,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
   });
 
-  test('PMM-T1006 - Verify Change agent agent password for mongodb-exporter', async ({}) => {
+  test('PMM-T2431 - Verify Change agent agent password for mongodb-exporter', async ({}) => {
     const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--agent-password=${changedAgentPassword}`));
     await output.assertSuccess();
     await output.outContains('- updated agent password');
@@ -195,7 +195,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await cli.expectMongoUp(containerName, serviceName, agentPassword);
   });
 
-  test('PMM-T1007 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
+  test('PMM-T2432 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
     await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
       expect((await cli.getServerAgent(exporterId)).expose_exporter, 'Expose exporter was not persisted on the mongodb_exporter agent').toBe(true);
     });
@@ -207,7 +207,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }).toPass({ intervals: [5_000], timeout: 90_000 });
   });
 
-  test('PMM-T1008 - Verify Change agent push metrics for mongodb-exporter', async ({}) => {
+  test('PMM-T2433 - Verify Change agent push metrics for mongodb-exporter', async ({}) => {
     await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--push-metrics')], ['- enabled push metrics'], async () => {
       expect((await cli.getServerAgent(exporterId)).push_metrics_enabled, 'Push metrics was not persisted on the mongodb_exporter agent').toBe(true);
     });
@@ -225,7 +225,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await (await cli.exec(`docker exec ${containerName} sh -c 'grep type=vm_agent /var/log/pmm-agent.log | tail -20 | grep -F "\\terror\\t" || true'`)).outEquals('');
   });
 
-  test('PMM-T1015 - Verify Change agent max query length for qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2444 - Verify Change agent max query length for qan-mongodb-mongolog-agent', async ({}) => {
     const maxQueryLength = 2_048;
 
     await cli.changeAgentsUntilPersisted(
@@ -293,7 +293,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
   });
 
-  test('PMM-T1013 - Verify Change agent skip connection check for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2445 - Verify Change agent skip connection check for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
 
     for (const command of cli.changeMongoMongologAgents(containerName, exporterId, mongologId, '--password=invalid_skip_check_password --skip-connection-check')) {
@@ -310,7 +310,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await cli.expectMongoUp(containerName, serviceName, agentPassword);
   });
 
-  test('PMM-T1010 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2446 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
 
     const ext = 'basicConstraints=CA:FALSE\\nextendedKeyUsage=serverAuth,clientAuth';
@@ -375,7 +375,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await cli.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
   });
 
-  test('PMM-T1011 - Verify Change agent pmm-agent listen port for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2447 - Verify Change agent pmm-agent listen port for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     pmmAgentListenPortChanged = true;
     await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' ${pmmAgentConfig}`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} grep -q 'listen-port: 7778' ${pmmAgentConfig}`)).assertSuccess();
@@ -396,7 +396,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     );
   });
 
-  test('PMM-T99103 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
+  test('PMM-T2448 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
 
     for (const command of cli.changeMongoMongologAgents(containerName, exporterId, mongologId, `--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
