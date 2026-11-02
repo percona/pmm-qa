@@ -39,7 +39,7 @@ const monitorDatabase = async (api: Api, cliHelper: CliHelper, database: Databas
 
   containers.push(name);
   cliHelper
-    .execute(`docker run --detach --name ${name} --network pmm-qa ${database.dockerArgs}`)
+    .execute(`docker run --detach --quiet --name ${name} --network pmm-qa ${database.dockerArgs}`)
     .assertSuccess();
 
   let service = { node_id: '', service_id: '' };
