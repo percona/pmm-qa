@@ -295,7 +295,9 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
       await output.outContains('Access denied for user');
     }
 
-    const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/var/lib/mysql/ca.pem --tls-cert-file=/var/lib/mysql/client-cert.pem --tls-key-file=/var/lib/mysql/client-key.pem';
+    // mysqld's auto-generated PEM files end with a NUL byte, which change agent fails to store ("Internal server error").
+    await (await cli.exec(`docker exec ${containerName} sh -c 'mkdir -p /tmp/change-agent-tls && for f in ca client-cert client-key; do tr -d "\\000" </var/lib/mysql/$f.pem >/tmp/change-agent-tls/$f.pem; done'`)).assertSuccess();
+    const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/tmp/change-agent-tls/ca.pem --tls-cert-file=/tmp/change-agent-tls/client-cert.pem --tls-key-file=/tmp/change-agent-tls/client-key.pem';
 
     for (const { alias, id } of agents()) {
       const output = await changeAgent(alias, id, `--username=${tlsUsername} --password=${newPassword} ${tlsFlags}`);
