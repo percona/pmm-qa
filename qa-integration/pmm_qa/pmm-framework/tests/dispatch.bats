@@ -493,6 +493,7 @@ EOF
   grep -q '^traffic$' "$DOCKER_CALLS"
   grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
   ! grep -q -- '--query-source' "$DOCKER_CALLS" || false
+  grep -Fq 'diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data"' "$DOCKER_CALLS"
 }
 
 # The stub logs arguments only, and compose reads the config directories it mounts from the environment.
@@ -557,6 +558,7 @@ assert_file_log() {
   assert_file_log "$dir/mongos/mongos.conf" /var/log/mongo/mongos.log
   [[ -f $dir/mongos/mongos.service ]]
   [[ $(grep -Ec '^exec (rs[12]0[123]|rscfg0[123]|mongos) pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ' "$DOCKER_CALLS") -eq 10 ]]
+  ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {

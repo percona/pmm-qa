@@ -332,10 +332,13 @@ psmdb_sharded() {
       "--replication-set=${node%0*}" --username=pmm --password=pmmpass "--host=$node" --port=27017
   done
   # FTDC is off on a mongos until it has a directory, and PMM reads the
-  # router's serverStatus metrics out of it.
-  must docker exec mongos sh -c 'mkdir -p /var/lib/mongo/mongos.diagnostic.data && chown -R mongod:mongod /var/lib/mongo/mongos.diagnostic.data'
-  psmdb_js mongos "$PSMDB_ROOT_URI" 'db.adminCommand({ setParameter: 1, diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data" });
+  # router's serverStatus metrics out of it. A mongos that logs to a file
+  # already writes it next to the log, and its directory can be set only once.
+  if [[ $query_source != mongolog ]]; then
+    must docker exec mongos sh -c 'mkdir -p /var/lib/mongo/mongos.diagnostic.data && chown -R mongod:mongod /var/lib/mongo/mongos.diagnostic.data'
+    psmdb_js mongos "$PSMDB_ROOT_URI" 'db.adminCommand({ setParameter: 1, diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data" });
     db.adminCommand({ setParameter: 1, diagnosticDataCollectionEnabled: true });' >/dev/null || die 'Enabling FTDC on mongos failed.'
+  fi
   # indexstats is off on the router: $indexStats there returns one row per
   # shard, which the exporter reports as duplicate series.
   psmdb_register mongos "mongos_$suffix" "mongos_$suffix" --disable-collectors=indexstats --environment=mongo-sharded-dev \
