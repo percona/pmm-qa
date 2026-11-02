@@ -58,7 +58,7 @@ test.describe('Real-Time Analytics MongoDB agent: pmm-admin inventory change age
 
   test.beforeAll(async ({}) => {
     const containers = await cli.exec(`docker ps --format '{{.Names}}' | grep -x ${containerName}`);
-    await containers.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
+    await containers.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss or psa');
     test.skip(await getPmmAdminMinorVersion(containerName) < 9, 'This suite is relevant for pmm-client version 3.9.0 and above');
 
     [serviceId] = await getAgentIds(`"MongoDB.*${containerName}"`, 4);
