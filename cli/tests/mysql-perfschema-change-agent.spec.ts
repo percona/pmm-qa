@@ -287,7 +287,7 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for MySQL per
     // pmm-framework's PS 5.7 entrypoint leaves mysqld's own certificates unreadable, so mysqld starts without TLS.
     test.skip(tlsAvailable.code !== 0, 'mysqld in this container does not accept TLS connections');
 
-    await (await mysql(`CREATE USER '${tlsUsername}'@'%' IDENTIFIED BY '${newPassword}' REQUIRE X509; GRANT ALL PRIVILEGES ON *.* TO '${tlsUsername}'@'%';`)).assertSuccess();
+    await (await mysql(`CREATE USER '${tlsUsername}'@'%' IDENTIFIED BY '${newPassword}' REQUIRE SSL; GRANT ALL PRIVILEGES ON *.* TO '${tlsUsername}'@'%';`)).assertSuccess();
 
     for (const { alias, id } of agents()) {
       const output = await changeAgent(alias, id, `--username=${tlsUsername} --password=${newPassword}`);
