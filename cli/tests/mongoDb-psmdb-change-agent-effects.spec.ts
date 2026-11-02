@@ -81,7 +81,7 @@ test.describe('PSMDB pmm-admin inventory change agent effects on mongodb_exporte
   });
 
   test('PMM-T2450 - Verify Change agent empty disable collectors re-enables the collectors of mongodb-exporter', async ({}) => {
-    test.fail(true, 'PMM-15837: an empty --disable-collectors= is reported as applied but the stored list is kept');
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15837');
 
     const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, '--disable-collectors='));
     await output.assertSuccess();
@@ -323,7 +323,7 @@ test.describe('PSMDB pmm-admin inventory change agent effects on mongodb_exporte
   });
 
   test('PMM-T2460 - Verify Change agent debug and trace output does not print passwords', async ({}) => {
-    test.fail(true, 'PMM-15836: --debug and --trace log the request body with the passwords');
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15836');
 
     for (const mode of ['--debug', '--trace']) {
       const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--password=${mongoConnection.password} --agent-password=${agentPassword} ${mode}`));
