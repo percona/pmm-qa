@@ -420,3 +420,14 @@ export async function getQanExample(queryId: string, from: Date): Promise<{ exam
 
   return { example: example?.example ?? '', isTruncated: example?.is_truncated === 1 };
 }
+
+/**
+ * Scrape an exporter's /metrics from the pmm-server container, the way an external scraper would reach it
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentId         exporter agent ID
+ * @param   agentPassword   password of the exporter's /metrics endpoint
+ */
+export async function scrapeExporterFromPmmServer(containerName: string, agentId: string, agentPassword: string): Promise<ExecReturn> {
+  return exec(`docker exec pmm-server curl -sS -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
+}
