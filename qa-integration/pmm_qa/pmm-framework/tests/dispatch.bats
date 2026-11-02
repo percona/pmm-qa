@@ -356,6 +356,8 @@ EOF
   grep -q 'main noble /tmp/pmm-client-cache 1800 3.9.1' "$BATS_TEST_TMPDIR/deb.calls"
   [[ $(grep -c '^exec --detach --user postgres pdpgsql_pmm_patroni_17_[123] sh -c exec patroni /patroni.yml' "$DOCKER_CALLS") -eq 3 ]]
   grep -q 'stanza=patroni_backup .*stanza-create' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --user root pdpgsql_pmm_patroni_17_[123] systemctl stop postgresql@17-main$' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c 'systemctl stop postgresql$' "$DOCKER_CALLS") -eq 0 ]]
   grep -q -- ' pdpgsql_pmm_patroni_17_2 container pdpgsql_pmm_patroni_17_2-nightly$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
@@ -394,6 +396,8 @@ EOF
 
   grep -q -- '^exec --user postgres --env PGPASSWORD=GRgrO9301RuF pdpgsql_pmm_replication_16_2 timeout 120 pg_basebackup .*--host=pdpgsql_pmm_replication_16_1 ' "$DOCKER_CALLS"
   [[ $(grep -c 'pg_basebackup' "$DOCKER_CALLS") -eq 1 ]]
+  grep -q '^exec --user root pdpgsql_pmm_replication_16_2 systemctl stop postgresql@16-main$' "$DOCKER_CALLS"
+  [[ $(grep -c 'systemctl stop postgresql$' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--cluster=pdpgsql_replication_cluster --environment=pdpgsql_replication_environment pdpgsql_pmm_replication_16_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -q "pg_create_logical_replication_slot('test_slot', 'test_decoding')" "$DOCKER_CALLS"
 
