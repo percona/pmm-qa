@@ -12,11 +12,6 @@ interface SettingsBody {
   enable_backup_management?: boolean;
   enable_internal_pg_qan?: boolean;
   enable_advisor?: boolean;
-  advisor_run_intervals?: {
-    rare_interval: string;
-    standard_interval: string;
-    frequent_interval: string;
-  };
   enable_azurediscover?: boolean;
   enable_access_control?: boolean;
 }

@@ -45,10 +45,18 @@ import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
+import AdvisorsCatalogPage from '@pages/advisors/advisorsCatalog.page';
+import AdvisorInsightsPage from '@pages/advisors/advisorInsights.page';
+import AdvisorRunsPage from '@pages/advisors/advisorRuns.page';
+import AdvisorSchedulerPage from '@pages/advisors/advisorScheduler.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
+  advisorInsightsPage: AdvisorInsightsPage;
+  advisorRunsPage: AdvisorRunsPage;
+  advisorSchedulerPage: AdvisorSchedulerPage;
+  advisorsCatalogPage: AdvisorsCatalogPage;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
@@ -96,6 +104,10 @@ const pmmTest = base.extend<{
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
+  advisorInsightsPage: async ({ page }, use) => await use(new AdvisorInsightsPage(page)),
+  advisorRunsPage: async ({ page }, use) => await use(new AdvisorRunsPage(page)),
+  advisorsCatalogPage: async ({ page }, use) => await use(new AdvisorsCatalogPage(page)),
+  advisorSchedulerPage: async ({ page }, use) => await use(new AdvisorSchedulerPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),

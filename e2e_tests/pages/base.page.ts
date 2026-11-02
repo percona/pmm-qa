@@ -20,7 +20,7 @@ export default abstract class BasePage {
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
-  abstract messages: Record<string, Locator>;
+  abstract messages: Record<string, Locator | ((...args: never[]) => Locator)>;
 
   constructor(protected page: Page) {
     this.snackBar = new SnackbarComponent(this.page);

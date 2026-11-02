@@ -217,6 +217,27 @@ export default class HaClusterHelper {
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
 
+  /** Like {@link nodesFromPod}, for any call: the pod itself answers, not the leader HAProxy routes to. */
+  requestFromPod = (
+    podName: string,
+    method: 'GET' | 'POST',
+    endpoint: string,
+    body?: object,
+  ): { body: string; status: number } => {
+    const data = body ? ` -H 'Content-Type: application/json' -d ${shellQuote(JSON.stringify(body))}` : '';
+    const lines = this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -X ${method} -w '\\n%{http_code}' -H "Authorization: Basic ${GrafanaHelper.getToken()}"${data} https://127.0.0.1:${pmmServerPort}${endpoint}`,
+        { silent: true },
+      )
+      .assertSuccess()
+      .stdout.trimEnd()
+      .split('\n');
+
+    return { body: lines.slice(0, -1).join('\n'), status: Number(lines.at(-1)) };
+  };
+
   /** @param since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns */
   servicesRunningAndReporting = async (api: Api, since: number): Promise<string[]> => {
     const running = (await api.inventoryApi.getServices()).services

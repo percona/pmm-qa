@@ -137,6 +137,7 @@ export interface AddRdsParameters {
 }
 
 export interface AddServiceResponse {
+  mongodb?: { service: { node_id: string; service_id: string } };
   mysql?: { service: { node_id: string; service_id: string } };
   postgresql?: { service: { node_id: string; service_id: string } };
 }

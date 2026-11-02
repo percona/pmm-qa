@@ -51,6 +51,30 @@ export default class ManagementApi {
     return (await response.json()) as AddServiceResponse;
   };
 
+  // A MySQL service on a port nothing listens on, on its own remote node: every query to it fails,
+  // while checks that only read metrics still run on it.
+  addUnreachableMysql = async (
+    name: string,
+    topology: Record<string, unknown> = {},
+    node: Record<string, unknown> = {},
+  ): Promise<{ node_id: string; service_id: string }> => {
+    const { mysql } = await this.addService({
+      mysql: {
+        add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE', ...node },
+        address: '127.0.0.1',
+        password: 'qa',
+        pmm_agent_id: 'pmm-server',
+        port: 1,
+        service_name: name,
+        skip_connection_check: true,
+        username: 'qa',
+        ...topology,
+      },
+    });
+
+    return mysql?.service as { node_id: string; service_id: string };
+  };
+
   removeService = async (serviceId: string): Promise<void> => {
     const response = await this.request.delete(`${apiEndpoints.management.services}/${serviceId}`, {
       headers: GrafanaHelper.getAuthHeader(),
