@@ -53,6 +53,7 @@ Run commands from `cli/`.
 - `@pgsql`
 - `@proxysql`
 - `@psmdb`
+- `@rta-psmdb`
 - `@server-docker-generic`
 - `@server-only`
 - `@service-removal`

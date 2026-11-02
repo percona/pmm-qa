@@ -132,3 +132,22 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     return output.stdout;
   });
 }
+
+export async function createTlsCertificates(containerName: string) {
+  await test.step(`Create TLS certificates in "${containerName}" container`, async () => {
+    const prefix = `docker exec ${containerName}`;
+    const commands = [
+      `${prefix} bash -c "command -v git >/dev/null 2>&1 || apt-get install -y git || dnf install -y git"`,
+      `${prefix} mkdir -p /certs`,
+      `${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full ${containerName} nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=client --batch build-client-full pmm-test nopass`,
+    ];
+
+    for (const command of commands) {
+      await execute(command).assertSuccess();
+    }
+  });
+}
