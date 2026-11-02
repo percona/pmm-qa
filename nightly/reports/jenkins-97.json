@@ -3740,15 +3740,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15794",
       "by": "Investigator routine",
       "at": "2026-11-02T04:11:19Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-02T03:00:31Z",
       "suites": [
         "E2E Tests"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "@ssl-mysql (amd64): PMM-T1403/T1404/T1426/T1431 found QAN Explain for the remote SSL MySQL service showing 'Error 1064 (42000): You have an error in your SQL syntax' for 60 s. This matches the open PMM-12069 (QAN runs EXPLAIN on the fingerprint instead of the example), so no new ticket. The failure is intermittent: also red on night 92. The rerun of the same job passed 15/15 (job 125071496892). Not reproduced on a VM this session.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+      "by": "Investigator routine",
+      "at": "2026-11-02T04:11:25Z"
     }
-  ]
+  ],
+  "claims": []
 }
