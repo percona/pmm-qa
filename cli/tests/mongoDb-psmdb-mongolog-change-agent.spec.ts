@@ -37,7 +37,7 @@ const runOnPrimary = async (js: string) => {
 
 const dropNewUser = `if (db.getSiblingDB("admin").getUser("${newUsername}")) db.getSiblingDB("admin").dropUser("${newUsername}");`;
 
-test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and QAN mongolog agent', { tag: '@psmdb' }, () => {
+test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and QAN mongolog agent', { tag: ['@psmdb', '@shard-psmdb'] }, () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ pmmClientContainer: containerName });
 
@@ -45,7 +45,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     test.skip(gssapi.enabled === 'true', 'Changes the agents to SCRAM users and TLS, which the GSSAPI setup does not use');
 
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
-    await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
+    await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss or SETUP_TYPE=sharding');
     adminVersion = await getPmmAdminVersion(containerName);
     test.skip(versionBelow(adminVersion, '3.7.0'), 'pmm-admin inventory change agent requires pmm-client 3.7.0+');
 
