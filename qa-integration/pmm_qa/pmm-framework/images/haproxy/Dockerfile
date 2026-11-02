@@ -18,5 +18,8 @@ RUN set -eux; \
     rm -rf /var/cache/dnf; \
     haproxy -vv | grep -q prometheus-exporter
 
+# --privileged shows the host's ttys, where getty can fail and fail the boot.
+RUN systemctl mask getty.target
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
