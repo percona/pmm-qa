@@ -10,8 +10,9 @@
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
+# QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio tarball='' suffix
+  local version ol client setup_type profile gssapi minio query_source tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -20,11 +21,17 @@ setup_psmdb() {
   profile=$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)
   gssapi=$(resolve_value PSMDB GSSAPI DB_CONFIG)
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
+  query_source=$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)
+  query_source=${query_source,,}
   suffix=$RANDOM
 
   case $setup_type in
     pss | psa | shards | sharding) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
+  esac
+  case $query_source in
+    profiler | mongolog | none) ;;
+    *) die "Unsupported PSMDB QUERY_SOURCE '$query_source'." ;;
   esac
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
@@ -146,8 +153,11 @@ psmdb_client() {
 # Usage: psmdb_register NODE NODE_NAME SERVICE_NAME PMM_ADMIN_ADD_ARGS...
 psmdb_register() {
   local node=$1 node_name=$2 service=$3
-  local -a debug=()
+  local -a debug=() query=()
   shift 3
+  if [[ $query_source != profiler ]]; then
+    query=("--query-source=$query_source")
+  fi
   if [[ $(bool_string "$CLIENT_DEBUG") == true ]]; then
     debug=(--debug)
   fi
@@ -158,7 +168,20 @@ psmdb_register() {
   # and needs --config-file when none is running.
   must docker exec "$node" systemctl restart pmm-agent
   wait_pmm_agent "$node"
-  pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
+  pmm_register "$node" pmm-admin add mongodb --enable-all-collectors "${query[@]}" --agent-password=mypass "$service" "$@"
+}
+
+# mongolog tails the file mongod or mongos reports as systemLog.path, and the shipped configs log to syslog. The copy
+# is bind-mounted for as long as the cluster runs, so the next run rewrites it in place instead of removing it.
+# Usage: psmdb_mongolog_config CONFIG_DIR CONFIG_FILE LOG_FILE  (prints the directory holding the copy)
+psmdb_mongolog_config() {
+  local dir=${TMPDIR:-/tmp}/pmm-framework-psmdb-mongolog/${1##*/}
+  mkdir -p "$dir" || die "Creating $dir failed."
+  cp -R "$1/." "$dir" || die "Copying $1 failed."
+  sed "s#^  destination: syslog\$#  destination: file\n  path: $3\n  logAppend: true#" "$1/$2" >"$dir/$2" ||
+    die "Copying $1/$2 failed."
+  grep -q "^  path: $3\$" "$dir/$2" || die "$1/$2 has no 'destination: syslog' line to point at a file."
+  printf '%s' "$dir"
 }
 
 # From 8.1 an arbiter added by hostname needs percona/pmm#6024 (PMM-15650, 3.11.0); older
@@ -176,7 +199,7 @@ psmdb_arbiter_host() {
 }
 
 psmdb_replica_set() {
-  local arbiter='' external=false node
+  local arbiter='' external=false node config_dir=./conf/mongod-rs
   local -a nodes=(rs101 rs102 rs103) credentials=(--username=pmm --password=pmmpass)
   local name_part=''
   if [[ $profile == extra ]]; then
@@ -192,7 +215,13 @@ psmdb_replica_set() {
   fi
   export COMPOSE_PROJECT_NAME=psmdb_pss COMPOSE_PROFILES=$profile
   if [[ $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY] ]]; then
-    export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-inmemory
+    config_dir=./conf/mongod-rs-inmemory
+  fi
+  if [[ $query_source == mongolog ]]; then
+    config_dir=$(psmdb_mongolog_config "$config_dir" mongod.conf /var/log/mongo/mongod.log)
+  fi
+  if [[ $config_dir != ./conf/mongod-rs ]]; then
+    export MONGOD_RS_CONFIG_DIR=$config_dir
   fi
 
   step 'Prepare image pmm-qa/kerberos:latest' ensure_image kerberos latest
@@ -277,6 +306,13 @@ psmdb_sharded() {
   local -a nodes=(rs101 rs102 rs103 rs201 rs202 rs203 rscfg01 rscfg02 rscfg03) leaders=(rs101 rs201 rscfg01)
   local -a clients=("${nodes[@]}" mongos)
   export COMPOSE_PROJECT_NAME=psmdb_sharded
+  if [[ $query_source == mongolog ]]; then
+    MONGOD_RS1_CONFIG_DIR=$(psmdb_mongolog_config ./conf/mongod-rs1 mongod.conf /var/log/mongo/mongod.log)
+    MONGOD_RS2_CONFIG_DIR=$(psmdb_mongolog_config ./conf/mongod-rs2 mongod.conf /var/log/mongo/mongod.log)
+    MONGOD_CFG_CONFIG_DIR=$(psmdb_mongolog_config ./conf/mongod-cfg mongod.conf /var/log/mongo/mongod.log)
+    MONGOS_CONFIG_DIR=$(psmdb_mongolog_config ./conf/mongos mongos.conf /var/log/mongo/mongos.log)
+    export MONGOD_RS1_CONFIG_DIR MONGOD_RS2_CONFIG_DIR MONGOD_CFG_CONFIG_DIR MONGOS_CONFIG_DIR
+  fi
 
   step 'Start sharded cluster containers' psmdb_start docker-compose-sharded.yaml
   step 'Wait for mongod' each_node nodes psmdb_wait_mongod

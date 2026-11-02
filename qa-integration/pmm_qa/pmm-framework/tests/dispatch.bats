@@ -473,7 +473,7 @@ EOF
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
   stub_prebaked_docker
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { printf 'traffic\n' >>"$DOCKER_CALLS"; }
   record_compose_config_dirs
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards'
