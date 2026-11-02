@@ -68,8 +68,8 @@ pdpgsql_ready() {
 
 # Stops the cluster unit itself. postgresql@.service is Before=postgresql.service,
 # so on stop the wrapper finishes first and `systemctl stop postgresql` returns
-# while PostgreSQL is still writing its shutdown checkpoint into pg_wal; an
-# rm -rf of the data dir then fails with "Directory not empty".
+# while PostgreSQL is still writing its shutdown checkpoint (pg_wal, pg_logical);
+# an rm -rf of the data dir then fails with "Directory not empty".
 # Usage: pdpgsql_stop NODE VERSION
 pdpgsql_stop() {
   must docker exec --user root "$1" systemctl stop "postgresql@$2-main"
