@@ -1,0 +1,17 @@
+---
+
+# Merged over docker-compose.yml on arm64 runners. The profiled services' images
+# have no arm64 build, and nothing enables the profile, so they never start.
+services:
+  mysql:
+    profiles: [amd64-only]
+  mysql8:
+    profiles: [amd64-only]
+  mongo:
+    profiles: [amd64-only]
+  postgres:
+    profiles: [amd64-only]
+  proxysql:
+    profiles: [amd64-only]
+  sysbench:
+    profiles: [amd64-only]

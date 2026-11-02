@@ -83,9 +83,9 @@ export ADMIN_PASSWORD=...        DOCKER_VERSION=perconalab/pmm-server:3-dev-late
 export HA_UPGRADE_BASELINE="$PWD/output/ha-upgrade-baseline.json"
 
 npx playwright test --grep "@pmm-helm-pre-upgrade"
-../k8s/install_pmm_ha.sh --platform openshift --charts deps --chart-branch PMM-HA-GA
+../k8s/install_pmm_ha.sh --platform openshift --charts deps --chart-branch main
 npx playwright test --grep "@pmm-helm-mid-upgrade"
-../k8s/install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch PMM-HA-GA \
+../k8s/install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch main \
     --image "$DOCKER_VERSION" --external-access
 npx playwright test --grep "@pmm-helm-post-upgrade"
 ```

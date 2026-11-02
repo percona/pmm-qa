@@ -32,9 +32,9 @@ export default class ScheduleEditorComponent extends BasePage {
     coverageIdle: this.page.getByTestId('schedule-coverage-idle'),
     coverageNothing: this.page.getByTestId('schedule-coverage-nothing'),
     editor: this.page.getByTestId('schedule-editor'),
-    firstPreviewRun: this.page.getByTestId('schedule-preview-runs').locator('li').first(),
     footerMessage: this.page.getByTestId('schedule-editor-message'),
     preview: this.page.getByTestId('schedule-preview'),
+    previewRuns: this.page.getByTestId('schedule-preview-runs'),
   };
   inputs = {
     emailAddresses: this.page.getByTestId('schedule-email-addresses'),

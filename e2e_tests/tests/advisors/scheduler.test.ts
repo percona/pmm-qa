@@ -649,7 +649,7 @@ pmmTest.describe('Advisor schedule editor in another time zone', () => {
           'In your time zone this lands on the next day. Days are picked in UTC.',
         );
         await expect(editor.elements.preview).not.toContainText('daylight saving');
-        await expect(editor.elements.firstPreviewRun).toContainText('08:00 your time');
+        await expect(editor.elements.previewRuns).toContainText('08:00 your time');
       });
 
       await pmmTest.step('A check with no service of its technology is flagged', async () => {

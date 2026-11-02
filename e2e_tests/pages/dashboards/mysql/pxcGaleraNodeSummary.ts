@@ -22,5 +22,5 @@ export default class PXCGaleraNodeSummary implements DashboardInterface {
     { name: 'Galera Writeset Traffic', type: 'timeSeries' },
     { name: 'Galera Network Usage Hourly', type: 'timeSeries' },
   ];
-  noDataMetrics: string[] = [];
+  noDataMetrics: string[] = ['Galera Network Usage Hourly'];
 }

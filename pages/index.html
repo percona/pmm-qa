@@ -44,6 +44,7 @@
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
   header { border-bottom: 1px solid var(--line); background: var(--surface); }
   header .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  @media (max-width: 420px) { header .wrap { flex-wrap: wrap; height: auto; min-height: 56px; row-gap: 0; } }
   .brand { font-weight: 600; letter-spacing: -.01em; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px; }
   .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   nav { display: flex; gap: 16px; align-self: stretch; }
@@ -66,7 +67,7 @@
 <body>
 <header><div class="wrap">
   <a class="brand" href="./"><span class="dot" aria-hidden="true"></span>PMM QA Reports</a>
-  <nav aria-label="Reports"><a href="nightly/">Nightly</a><a href="performance/">Performance</a></nav>
+  <nav aria-label="Reports"><a href="nightly/">Nightly</a><a href="performance/">Performance</a><a href="migration/">Migration</a></nav>
 </div></header>
 <main class="wrap">
   <h1>PMM QA Reports</h1>
@@ -79,6 +80,10 @@
     <a class="card" href="performance/">
       <h2>Performance <span class="go" aria-hidden="true">›</span></h2>
       <p>Resource use of PMM Server and clients before and after an upgrade, per client scale, with the deviation trend across releases.</p>
+    </a>
+    <a class="card" href="migration/">
+      <h2>Migration <span class="go" aria-hidden="true">›</span></h2>
+      <p>CodeceptJS to Playwright: tracker progress, the nightly jobs still running CodeceptJS, and what is left behind each of them.</p>
     </a>
   </div>
 </main>
