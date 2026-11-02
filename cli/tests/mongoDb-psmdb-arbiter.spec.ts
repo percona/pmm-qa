@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { removeMongoService } from '@root/helpers/pmm-admin-helper';
+import { removeMongoService } from '@root/helpers/pmm-admin';
 
 const containerName = 'rs103';
 const serviceName = 'arbiter_by_localhost';

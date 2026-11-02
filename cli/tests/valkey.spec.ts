@@ -1,6 +1,6 @@
 import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion } from '@helpers/pmm-admin-helper';
+import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 
 const containerName = 'valkey-primary-1';
 let adminVersion: number;

@@ -1,7 +1,7 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as zipHelper from '@helpers/zip-helper';
-import { getPmmAdminMinorVersion } from '@root/helpers/pmm-admin-helper';
+import { getPmmAdminMinorVersion } from '@root/helpers/pmm-admin';
 
 const PXC_USER = 'admin';
 const PXC_PASSWORD = 'admin';
