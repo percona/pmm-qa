@@ -287,3 +287,34 @@ export async function waitForMongod(containerName: string, probe: string, timeou
     expect(output.code, `mongod is not serving. mongod journal:\n${journal}`).toEqual(0);
   }).toPass({ intervals: [5_000], timeout });
 }
+
+/**
+ * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
+ * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
+ * so a change that succeeded can be silently reverted (PMM-15835).
+ * The assertion must read stored state (the inventory API), not runtime state: each retry restarts the agent.
+ *
+ * @param   commands          change agent commands to run
+ * @param   expectedOutput    strings every command's output must contain
+ * @param   persisted         assertion on the stored state; throws while the change is missing
+ * @param   timeout           milliseconds to keep re-applying
+ */
+export async function changeAgentsUntilPersisted(
+  commands: string[],
+  expectedOutput: string[],
+  persisted: () => Promise<void>,
+  timeout = 60_000,
+) {
+  await expect(async () => {
+    for (const command of commands) {
+      const output = await exec(command);
+      await output.assertSuccess();
+
+      for (const value of expectedOutput) {
+        await output.outContains(value);
+      }
+    }
+
+    await persisted();
+  }).toPass({ intervals: [5_000], timeout });
+}

@@ -92,11 +92,15 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
 
     await runOnPrimary(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
 
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`)) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-      await output.outContainsMany(['- updated username', '- updated password']);
-    }
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`),
+      ['- updated username', '- updated password'],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).username, `Username was not persisted on ${agentId}`).toEqual(newUsername);
+        }
+      },
+    );
 
     await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true);
     await cli.expectMongoUp(containerName, serviceName, agentPassword);
@@ -105,30 +109,28 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   test('PMM-T2427 - Verify Change agent custom labels for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
     const customLabel = { key: 'env', value: 'qa_testing_mongodb' };
 
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, `--custom-labels=${customLabel.key}=${customLabel.value}`)) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-      await output.outContains(`Custom labels : ${customLabel.key}=${customLabel.value}`);
-      await output.outContains('- updated custom labels');
-    }
-
-    for (const agentId of [exporterId, profilerId]) {
-      expect((await cli.getServerAgent(agentId)).custom_labels, `Custom labels were not persisted on ${agentId}`)
-        .toEqual({ [customLabel.key]: customLabel.value });
-    }
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, `--custom-labels=${customLabel.key}=${customLabel.value}`),
+      [`Custom labels : ${customLabel.key}=${customLabel.value}`, '- updated custom labels'],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).custom_labels, `Custom labels were not persisted on ${agentId}`)
+            .toEqual({ [customLabel.key]: customLabel.value });
+        }
+      },
+    );
   });
 
   test('PMM-T2428 - Verify Change agent log level for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, '--log-level=debug')) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-      await output.outContains('Log level : debug');
-      await output.outContains('- changed log level to debug');
-    }
-
-    for (const agentId of [exporterId, profilerId]) {
-      expect((await cli.getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_DEBUG');
-    }
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, '--log-level=debug'),
+      ['Log level : debug', '- changed log level to debug'],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_DEBUG');
+        }
+      },
+    );
   });
 
   test('PMM-T2429 - Verify Change agent debug, trace and json flags for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
@@ -149,14 +151,20 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       { flag: '--enable', ...enable },
     ];
 
-    for (const { flag, response, running } of enableCommands) {
-      for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, flag)) {
-        const output = await cli.exec(command);
-        await output.assertSuccess();
-        await output.outContains(response);
-      }
+    const agentIds = [exporterId, profilerId];
 
-      await cli.expectAgentsRunning(containerName, [exporterId, profilerId], running);
+    for (const { flag, response, running } of enableCommands) {
+      await cli.changeAgentsUntilPersisted(
+        cli.changeMongoAgents(containerName, exporterId, profilerId, flag),
+        [response],
+        async () => {
+          for (const agentId of agentIds) {
+            expect((await cli.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!running);
+          }
+        },
+      );
+
+      await cli.expectAgentsRunning(containerName, agentIds, running);
     }
   });
 
@@ -170,9 +178,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2432 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, '--expose-exporter'));
-    await output.assertSuccess();
-    await output.outContains('- enabled expose exporter');
+    await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
+      expect((await cli.getServerAgent(exporterId)).expose_exporter, 'Expose exporter was not persisted on the mongodb_exporter agent').toBe(true);
+    });
 
     await expect(async () => {
       const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await cli.getAgentPort(containerName, exporterId)}/metrics`);
@@ -182,9 +190,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2433 - Verify Change agent push metrics for mongodb-exporter', async ({}) => {
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, '--push-metrics'));
-    await output.assertSuccess();
-    await output.outContains('- enabled push metrics');
+    await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--push-metrics')], ['- enabled push metrics'], async () => {
+      expect((await cli.getServerAgent(exporterId)).push_metrics_enabled, 'Push metrics was not persisted on the mongodb_exporter agent').toBe(true);
+    });
 
     await expect(async () => {
       const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await cli.getAgentPort(containerName, exporterId)}/metrics`);
@@ -202,56 +210,68 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   test('PMM-T2434 - Verify Change agent max query length for qan-mongodb-profiler-agent', async ({}) => {
     const maxQueryLength = 2_048;
 
-    const output = await cli.exec(cli.changeMongoProfiler(containerName, profilerId, `--max-query-length=${maxQueryLength}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed max query length to ${maxQueryLength}`);
-
-    expect((await cli.getServerAgent(profilerId)).max_query_length, 'Max query length was not persisted on the qan-mongodb-profiler-agent')
-      .toEqual(maxQueryLength);
+    await cli.changeAgentsUntilPersisted(
+      [cli.changeMongoProfiler(containerName, profilerId, `--max-query-length=${maxQueryLength}`)],
+      [`- changed max query length to ${maxQueryLength}`],
+      async () => {
+        expect((await cli.getServerAgent(profilerId)).max_query_length, 'Max query length was not persisted on the qan-mongodb-profiler-agent')
+          .toEqual(maxQueryLength);
+      },
+    );
   });
 
   test('PMM-T2307 - Verify Change agent stats collections for mongodb-exporter', async ({}) => {
     const statsCollections = ['db1.col1', 'db2.col2'];
 
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--stats-collections=${statsCollections.join(',')}`));
-    await output.assertSuccess();
-    await output.outContains(`- updated stats collections: ${statsCollections.join(',')}`);
-
-    expect((await cli.getServerAgent(exporterId)).stats_collections, 'Stats collections were not persisted on the mongodb_exporter agent')
-      .toEqual(statsCollections);
+    await cli.changeAgentsUntilPersisted(
+      [cli.changeMongoExporter(containerName, exporterId, `--stats-collections=${statsCollections.join(',')}`)],
+      [`- updated stats collections: ${statsCollections.join(',')}`],
+      async () => {
+        expect((await cli.getServerAgent(exporterId)).stats_collections, 'Stats collections were not persisted on the mongodb_exporter agent')
+          .toEqual(statsCollections);
+      },
+    );
   });
 
   test('PMM-T2308 - Verify Change agent collections limit for mongodb-exporter', async ({}) => {
     const collectionsLimit = 100;
 
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--collections-limit=${collectionsLimit}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed collections limit to ${collectionsLimit}`);
-
-    expect((await cli.getServerAgent(exporterId)).collections_limit, 'Collections limit was not persisted on the mongodb_exporter agent')
-      .toEqual(collectionsLimit);
+    await cli.changeAgentsUntilPersisted(
+      [cli.changeMongoExporter(containerName, exporterId, `--collections-limit=${collectionsLimit}`)],
+      [`- changed collections limit to ${collectionsLimit}`],
+      async () => {
+        expect((await cli.getServerAgent(exporterId)).collections_limit, 'Collections limit was not persisted on the mongodb_exporter agent')
+          .toEqual(collectionsLimit);
+      },
+    );
   });
 
   test('PMM-T2309 - Verify Change agent enable diagnostic data histograms for mongodb-exporter', async ({}) => {
     test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
 
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, '--enable-diagnostic-data-histograms'));
-    await output.assertSuccess();
-    await output.outContains('- enabled diagnostic data histograms');
-
-    expect((await cli.getServerAgent(exporterId)).enable_diagnostic_data_histograms, 'Diagnostic data histograms were not enabled on the mongodb_exporter agent')
-      .toBe(true);
+    await cli.changeAgentsUntilPersisted(
+      [cli.changeMongoExporter(containerName, exporterId, '--enable-diagnostic-data-histograms')],
+      ['- enabled diagnostic data histograms'],
+      async () => {
+        expect((await cli.getServerAgent(exporterId)).enable_diagnostic_data_histograms, 'Diagnostic data histograms were not enabled on the mongodb_exporter agent')
+          .toBe(true);
+      },
+    );
   });
 
   test('PMM-T2310 - Verify Change agent disable collectors for mongodb-exporter', async ({}) => {
+    const agentId = exporterId;
+
     // The second list replaces the first rather than adding to it.
     for (const collectorsToDisable of [['diagnosticdata', 'replicasetstatus'], ['collstats', 'dbstats']]) {
-      const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--disable-collectors=${collectorsToDisable.join(',')}`));
-      await output.assertSuccess();
-      await output.outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
-
-      expect((await cli.getServerAgent(exporterId)).disabled_collectors, 'Disabled collectors were not persisted on the mongodb_exporter agent')
-        .toEqual(collectorsToDisable);
+      await cli.changeAgentsUntilPersisted(
+        [cli.changeMongoExporter(containerName, exporterId, `--disable-collectors=${collectorsToDisable.join(',')}`)],
+        [`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`],
+        async () => {
+          expect((await cli.getServerAgent(agentId)).disabled_collectors, 'Disabled collectors were not persisted on the mongodb_exporter agent')
+            .toEqual(collectorsToDisable);
+        },
+      );
     }
   });
 
@@ -307,17 +327,17 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const authDatabase = 'admin';
     const tlsFlags = `--tls --tls-skip-verify --tls-certificate-key-file=/certs/client.pem --tls-certificate-key-file-password=client_key_password --tls-ca-file=/certs/ca-certs.pem --authentication-database=${authDatabase}`;
 
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, tlsFlags)) {
-      // rs101 has just restarted and is cut off from the replica set, so auth can briefly fail.
-      // The change only persists on success, so re-running it is idempotent.
-      await expect(async () => {
-        const output = await cli.exec(command);
-        await output.assertSuccess();
-        await output.outContains('TLS enabled : true');
-        await output.outContains('- updated TLS certificate key password');
-        await output.outContains(`- changed authentication database to ${authDatabase}`);
-      }).toPass({ intervals: [5_000], timeout: 120_000 });
-    }
+    // rs101 has just restarted and is cut off from the replica set, so auth can briefly fail; the retry covers that too.
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, tlsFlags),
+      ['TLS enabled : true', '- updated TLS certificate key password', `- changed authentication database to ${authDatabase}`],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).tls, `TLS was not persisted on ${agentId}`).toBe(true);
+        }
+      },
+      120_000,
+    );
 
     await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true);
     await cli.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
@@ -349,11 +369,15 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await (await cli.exec(`docker exec ${containerName} pmm-admin status --pmm-agent-listen-port=7778`)).assertSuccess();
     }).toPass({ intervals: [2_000], timeout: 60_000 });
 
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, '--log-level=info --pmm-agent-listen-port=7778')) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-      await output.outContains('- changed log level to info');
-    }
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, '--log-level=info --pmm-agent-listen-port=7778'),
+      ['- changed log level to info'],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_INFO');
+        }
+      },
+    );
   });
 
   test('PMM-T2438 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
