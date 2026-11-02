@@ -356,7 +356,9 @@ EOF
   grep -q 'main noble /tmp/pmm-client-cache 1800 3.9.1' "$BATS_TEST_TMPDIR/deb.calls"
   [[ $(grep -c '^exec --detach --user postgres pdpgsql_pmm_patroni_17_[123] sh -c exec patroni /patroni.yml' "$DOCKER_CALLS") -eq 3 ]]
   grep -q 'stanza=patroni_backup .*stanza-create' "$DOCKER_CALLS"
-  [[ $(grep -c '^exec --user root pdpgsql_pmm_patroni_17_[123] systemctl stop postgresql@17-main$' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_1 systemctl stop postgresql@17-main$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_2 systemctl stop postgresql@17-main$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_3 systemctl stop postgresql@17-main$' "$DOCKER_CALLS"
   [[ $(grep -c 'systemctl stop postgresql$' "$DOCKER_CALLS") -eq 0 ]]
   grep -q -- ' pdpgsql_pmm_patroni_17_2 container pdpgsql_pmm_patroni_17_2-nightly$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
