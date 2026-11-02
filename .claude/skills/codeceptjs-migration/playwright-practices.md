@@ -1,8 +1,8 @@
 # Playwright Authoring Practices
 
 ```text
-verifiedAgainst: 1.63.0
-source: https://playwright.dev/docs/best-practices plus release notes 1.52-1.63
+verifiedAgainst: 1.64.1
+source: https://playwright.dev/docs/best-practices plus release notes 1.52-1.64
 ```
 
 How migrated code is written. `SKILL.md` decides whether behaviour is preserved; this file decides how it is expressed. `verifiedAgainst` must match `@playwright/test` in `e2e_tests/package.json`; `orchestration.md` step 1 checks it, and on drift this file is refreshed against the release notes before migrating. A migration never upgrades Playwright and never edits `playwright.config.ts`.
@@ -20,7 +20,7 @@ Ladder, highest first:
 Test id outranks role here because Grafana ships its own `data-testid` values and the config sets no `testIdAttribute`, so they match by literal value including the prefix: `getByTestId('data-testid Panel header <name>')`.
 
 - `getByRole(role, { name, description })`: `description` (1.60) matches the accessible description when several controls share a name.
-- CSS only for MUI and Grafana internals with no stable test id or role (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`). XPath only for positional table cells and the Grafana iframe (`frameLocator`).
+- CSS only for MUI and Grafana internals with no stable test id or role (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`). XPath only for the Grafana iframe (`frameLocator`); a positional table cell is `getByRole('cell').nth(i).within(<row locator>)` (1.64), which resolves `nth` inside each row rather than across the table.
 - Every POM entry is a `Locator`, never a selector string. Chain and scope rather than writing one long selector; `locator.describe('...')` on an otherwise opaque locator.
 - Resolve a strict-mode violation by narrowing the locator (`.locator()` to scope, `.filter({ hasText })` or `.filter({ has })` to select), not with `nth()`, `first()` or `last()`. Those remain legitimate for deliberate indexed iteration and positional table cells, justified in one line; the convention script reports them as advisories. A `filter({ has })` inner locator is matched relative to each outer match, so it is rooted at `page` and never re-enters `frameLocator`; nesting the frame hop inside it relies on a tolerance `playwright-core` guards against elsewhere.
 - An existing POM entry with no consumers is unproven. When it disagrees with a currently-green source selector, verify both through MCP and rewrite it in place; keep the existing form only when a second source attests it.
@@ -39,7 +39,7 @@ Assertions auto-wait and retry; manual predicates do not.
 
 ## Prefer the modern API
 
-All available at 1.62.1 and barely used in the repo yet, so this table is the target form, not a description of existing code. A CodeceptJS call that transliterates into the left column is written as the right column.
+All available at 1.64.1 and barely used in the repo yet, so this table is the target form, not a description of existing code. A CodeceptJS call that transliterates into the left column is written as the right column.
 
 | Instead of | Use | Since |
 | --- | --- | --- |
@@ -49,6 +49,7 @@ All available at 1.62.1 and barely used in the repo yet, so this table is the ta
 | hand-registered `console` / `request` listeners | `page.consoleMessages()`, `page.pageErrors()`, `page.requests()` | 1.56 |
 | a long chain of structural DOM assertions | `expect(page).toMatchAriaSnapshot()` | 1.60 |
 | a manual truthiness wait on page state | `locator.waitForFunction()` | 1.62 |
+| an XPath `td[n]` or a table-wide `nth()` meant per row | `getByRole('cell').nth(n).within(row)` | 1.64 |
 
 Since 1.59 and 1.62, for code this suite writes:
 
@@ -56,8 +57,9 @@ Since 1.59 and 1.62, for code this suite writes:
 - Console checks use `page.clearConsoleMessages()` before the action and `page.consoleMessages({ filter })` after it (1.59), never a `page.on('console')` listener.
 - A locator found by CSS or XPath is run through `locator.normalize()` (1.59) in a scratch script against the live server to propose its test-id or role form; the proposal is then verified through MCP like any other rung.
 - `expect.soft.poll` (1.62) is not used: this suite has no soft assertions, and a migration adds none.
+- Elements inside a hidden iframe are hidden to actions, `isVisible()` and `toBeVisible()` (1.64). A Grafana-frame check runs only once the PMM UI shows that frame; a source step that passed against a frame the UI had hidden is a navigation the port must add, not a locator to work around.
 
-Do not introduce, removed or deprecated upstream: `page.accessibility` (1.57); `browserContext.on('backgroundpage')` and `backgroundPages()` (1.56); `?` and `[]` globs in `page.route()` (1.52, use a regular expression, relevant to the `context` override in `e2e_tests/fixtures/pmmTest.ts`); `-gv` (1.54, use `--grep-invert`).
+Do not introduce `page.getByRef()` (1.64): its refs come from an `'ai'`-mode aria snapshot and change between snapshots, so they are not test locators. Do not introduce, removed or deprecated upstream: `page.accessibility` (1.57); `browserContext.on('backgroundpage')` and `backgroundPages()` (1.56); `?` and `[]` globs in `page.route()` (1.52, use a regular expression, relevant to the `context` override in `e2e_tests/fixtures/pmmTest.ts`); `-gv` (1.54, use `--grep-invert`).
 
 ## Structure
 
