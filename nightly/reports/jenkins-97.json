@@ -3720,7 +3720,18 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "setup bug",
+      "summary": "compat client 3.9.1: pmm-framework 'Configure Patroni' failed both attempts with \"rm: cannot remove .../pg_wal: Directory not empty\", which blocked all 5 test shards. systemctl stop postgresql stops only the Debian wrapper unit, which postgresql@17-main is ordered Before=, so it returns while the cluster is still deactivating (6 postgres processes measured) and the shutdown checkpoint writes into the dir rm is emptying. Reproduced on a CHAOS VM under load (1/12 vs 0/12 with the fix). The fix stops postgresql@<ver>-main; the exact CI setup passed 3/3 on the fix branch.",
+      "link": "https://github.com/percona/pmm-qa/pull/1700",
+      "by": "Investigator routine",
+      "at": "2026-11-02T04:11:06Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
@@ -3734,13 +3745,6 @@
       "at": "2026-11-02T03:00:31Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-02T03:00:31Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
