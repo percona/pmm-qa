@@ -155,13 +155,10 @@ export async function expectFailure(output: ExecReturn, message: string) {
  * Read an agent from the PMM Server inventory API through the pmm-server container
  *
  * @param   agentId         ID of the agent
- * @param   adminPassword   PMM Server admin password
  * @return  the agent's fields, whatever its type
  */
-export async function getServerAgent(agentId: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, unknown>> {
-  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
-  await output.assertSuccess();
-  const response = JSON.parse(output.stdout) as Record<string, Record<string, unknown> | undefined>;
+export async function getServerAgent(agentId: string): Promise<Record<string, unknown>> {
+  const response = await pmmServerApi('GET', `/v1/inventory/agents/${agentId}`) as Record<string, Record<string, unknown> | undefined>;
 
   return Object.values(response)[0] ?? {};
 }
@@ -246,7 +243,9 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
 
   await expect(async () => {
     const serverLines = (await exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines();
-    const localLines = (await exec(`docker exec ${containerName} pmm-admin status`)).getStdOutLines();
+    const localStatusOutput = await exec(`docker exec ${containerName} pmm-admin status`);
+    await localStatusOutput.assertSuccess();
+    const localLines = localStatusOutput.getStdOutLines();
 
     for (const agentId of agentIds) {
       expect(serverLines.find((line) => line.includes(agentId)), `PMM Server should report ${agentId} as "${serverStatus}"`).toContain(serverStatus);
@@ -359,7 +358,7 @@ export async function getExporterArgs(containerName: string, agentId: string): P
  */
 export async function pmmServerApi(method: 'GET' | 'POST', path: string, body?: object, adminPassword = process.env.ADMIN_PASSWORD || 'admin') {
   const data = body ? ` -H 'Content-Type: application/json' -d '${JSON.stringify(body)}'` : '';
-  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} -X ${method}${data} http://127.0.0.1:8080${path}`);
+  const output = await exec(`docker exec pmm-server curl -sSf -u 'admin:${adminPassword}' -X ${method}${data} http://127.0.0.1:8080${path}`);
   await output.assertSuccess();
 
   return JSON.parse(output.stdout) as Record<string, unknown>;
@@ -373,7 +372,7 @@ export async function pmmServerApi(method: 'GET' | 'POST', path: string, body?: 
  * @return  label sets of the returned series
  */
 export async function queryVictoriaMetrics(query: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, string>[]> {
-  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`);
+  const output = await exec(`docker exec pmm-server curl -sSf -u 'admin:${adminPassword}' -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`);
   await output.assertSuccess();
   const response = JSON.parse(output.stdout) as { data: { result: { metric: Record<string, string> }[] } };
 
@@ -430,4 +429,45 @@ export async function getQanExample(queryId: string, from: Date): Promise<{ exam
  */
 export async function scrapeExporterFromPmmServer(containerName: string, agentId: string, agentPassword: string): Promise<ExecReturn> {
   return exec(`docker exec pmm-server curl -sS -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
+}
+
+/**
+ * Add a MongoDB service, replacing one of the same name, and find its mongodb_exporter and QAN profiler agents
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   addFlags        flags for pmm-admin add mongodb
+ * @param   serviceName     service name
+ * @param   address         MongoDB host:port
+ * @return  agent IDs; empty when an agent is not found
+ */
+export async function addMongoServiceAgents(containerName: string, addFlags: string, serviceName: string, address: string) {
+  await (await exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`)).assertSuccess();
+  const output = await exec(`docker exec ${containerName} pmm-admin add mongodb ${addFlags} ${serviceName} ${address}`);
+  await output.assertSuccess();
+  const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
+  expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
+
+  const agents = await listAgents(containerName);
+  const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type && agent.service_id === serviceId)?.agent_id ?? '';
+
+  return { exporterId: agentOfType('AGENT_TYPE_MONGODB_EXPORTER'), profilerId: agentOfType('AGENT_TYPE_QAN_MONGODB_PROFILER_AGENT') };
+}
+
+/**
+ * Run every step even when an earlier one fails, then rethrow the first failure, so one failed cleanup does not skip the rest
+ *
+ * @param   steps   cleanup steps
+ */
+export async function runEach(steps: (() => Promise<unknown>)[]) {
+  const errors: unknown[] = [];
+
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  if (errors.length > 0) throw errors[0];
 }
