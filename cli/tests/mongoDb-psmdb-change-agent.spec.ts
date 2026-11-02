@@ -24,14 +24,6 @@ let agentPassword = 'mypass';
 let mongodTlsEnabled = false;
 let pmmAgentListenPortChanged = false;
 
-// User management must run on the primary. Talk to rs101 (the priority-2 primary) directly: from inside the container
-// replica-set discovery resolves the primary to loopback, and an election makes mongosh fail with ECONNREFUSED.
-const runOnPrimary = async (js: string) => {
-  await expect(async () => {
-    await (await cli.exec(cli.mongoEval(containerName, mongoUri, `if (!db.hello().isWritablePrimary) throw new Error("rs101 is not primary yet"); ${js}`))).assertSuccess();
-  }).toPass({ intervals: [5_000], timeout: 120_000 });
-};
-
 const dropNewUser = `if (db.getSiblingDB("admin").getUser("${newUsername}")) db.getSiblingDB("admin").dropUser("${newUsername}");`;
 
 test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and QAN profiler agent', { tag: '@psmdb' }, () => {
@@ -77,20 +69,20 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
 
     if (exporterId) {
       await removeMongoService(containerName, serviceName);
-      await runOnPrimary(dropNewUser);
+      await cli.runOnPrimary(containerName, mongoUri, dropNewUser);
     }
   });
 
   test('PMM-T2426 - Verify Change agent username and password for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
     const monitoringRoles = '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
 
-    await runOnPrimary(`${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
+    await cli.runOnPrimary(containerName, mongoUri, `${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
 
     for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`)) {
       await cli.expectFailure(await cli.exec(command), 'Authentication failed');
     }
 
-    await runOnPrimary(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
+    await cli.runOnPrimary(containerName, mongoUri, `db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
 
     await cli.changeAgentsUntilPersisted(
       cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`),
@@ -284,12 +276,17 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains('agent configuration updated.');
     }
 
-    for (const command of cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`)) {
-      await (await cli.exec(command)).assertSuccess();
-    }
-
-    await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true);
-    await cli.expectMongoUp(containerName, serviceName, agentPassword);
+    // The agents restart in a loop with the invalid password, so the restore is often reverted (PMM-15835).
+    // Passwords are not readable through the API: check the agents reconnect instead.
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, `--username=${newUsername} --password=${newPassword}`),
+      ['- updated password'],
+      async () => {
+        await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true, 30_000);
+        await cli.expectMongoUp(containerName, serviceName, agentPassword, 30_000);
+      },
+      180_000,
+    );
   });
 
   test('PMM-T2436 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
@@ -301,7 +298,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       'openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pmm-qa-ca -keyout /certs/ca.key -out /certs/ca-certs.pem',
       ...['server', 'client'].flatMap((name) => [
         `openssl req -newkey rsa:2048 -nodes -subj /CN=${name === 'server' ? containerName : 'pmm-test'} -keyout /certs/${name}.key -out /certs/${name}.csr`,
-        `printf "${ext}" > /certs/${name}.ext && openssl x509 -req -in /certs/${name}.csr -CA /certs/ca-certs.pem -CAkey /certs/ca.key -CAcreateserial -days 1 -extfile /certs/${name}.ext -out /certs/${name}.crt`,
+        `printf "${ext}${name === 'server' ? `\\nsubjectAltName=DNS:${containerName}` : ''}" > /certs/${name}.ext && openssl x509 -req -in /certs/${name}.csr -CA /certs/ca-certs.pem -CAkey /certs/ca.key -CAcreateserial -days 1 -extfile /certs/${name}.ext -out /certs/${name}.crt`,
         `cat /certs/${name}.crt /certs/${name}.key > /certs/${name}.pem`,
       ]),
       'chown mongod:mongod /certs/server.pem /certs/ca-certs.pem && chmod 600 /certs/server.pem && chmod 644 /certs/ca-certs.pem',
@@ -339,6 +336,20 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       120_000,
     );
 
+    await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true);
+    await cli.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
+
+    // The server certificate names rs101, so the agents can also verify it against the CA.
+    await cli.changeAgentsUntilPersisted(
+      cli.changeMongoAgents(containerName, exporterId, profilerId, '--tls-skip-verify=false'),
+      ['- disabled TLS skip verification'],
+      async () => {
+        for (const agentId of [exporterId, profilerId]) {
+          expect((await cli.getServerAgent(agentId)).tls_skip_verify, `TLS skip verification is still on for ${agentId}`).toBe(false);
+        }
+      },
+      120_000,
+    );
     await cli.expectAgentsRunning(containerName, [exporterId, profilerId], true);
     await cli.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
 

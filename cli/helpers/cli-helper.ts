@@ -292,7 +292,7 @@ export async function waitForMongod(containerName: string, probe: string, timeou
  * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
  * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
  * so a change that succeeded can be silently reverted (PMM-15835).
- * The assertion must read stored state (the inventory API), not runtime state: each retry restarts the agent.
+ * Each retry restarts the agent, so an assertion on runtime state must wait for the restart within itself.
  *
  * @param   commands          change agent commands to run
  * @param   expectedOutput    strings every command's output must contain
@@ -317,4 +317,106 @@ export async function changeAgentsUntilPersisted(
 
     await persisted();
   }).toPass({ intervals: [5_000], timeout });
+}
+
+/**
+ * Run JavaScript with the mongo shell once the container's mongod is a writable primary.
+ * Connect with directConnection: replica-set discovery from inside the container resolves the primary to loopback,
+ * so an election makes mongosh fail with ECONNREFUSED.
+ *
+ * @param   containerName   docker container running mongod
+ * @param   mongoUri        connection string with directConnection=true
+ * @param   js              JavaScript to evaluate; must not contain single quotes
+ */
+export async function runOnPrimary(containerName: string, mongoUri: string, js: string) {
+  await expect(async () => {
+    const isPrimary = `if (!db.hello().isWritablePrimary) throw new Error("${containerName} is not primary yet");`;
+    await (await exec(mongoEval(containerName, mongoUri, `${isPrimary} ${js}`))).assertSuccess();
+  }).toPass({ intervals: [5_000], timeout: 120_000 });
+}
+
+/**
+ * Command-line arguments of the exporter process an agent runs, found by its listen port
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentId         exporter agent ID
+ */
+export async function getExporterArgs(containerName: string, agentId: string): Promise<string[]> {
+  const port = await getAgentPort(containerName, agentId);
+  expect(port, `Agent ${agentId} has no listen port yet`).toBeTruthy();
+  const output = await exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f "[e]xporters/"); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${port} " && tr "\\0" "\\n" < /proc/$p/cmdline; done'`);
+
+  return output.getStdOutLines();
+}
+
+/**
+ * Call the PMM Server API through the pmm-server container
+ *
+ * @param   method          HTTP method
+ * @param   path            API path, e.g. /v1/qan/metrics:getReport
+ * @param   body            JSON request body
+ * @param   adminPassword   PMM Server admin password
+ */
+export async function pmmServerApi(method: 'GET' | 'POST', path: string, body?: object, adminPassword = process.env.ADMIN_PASSWORD || 'admin') {
+  const data = body ? ` -H 'Content-Type: application/json' -d '${JSON.stringify(body)}'` : '';
+  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} -X ${method}${data} http://127.0.0.1:8080${path}`);
+  await output.assertSuccess();
+
+  return JSON.parse(output.stdout) as Record<string, unknown>;
+}
+
+/**
+ * Run an instant PromQL query against PMM Server's VictoriaMetrics
+ *
+ * @param   query           PromQL query; must not contain single quotes
+ * @param   adminPassword   PMM Server admin password
+ * @return  label sets of the returned series
+ */
+export async function queryVictoriaMetrics(query: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, string>[]> {
+  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`);
+  await output.assertSuccess();
+  const response = JSON.parse(output.stdout) as { data: { result: { metric: Record<string, string> }[] } };
+
+  return response.data.result.map((series) => series.metric);
+}
+
+/**
+ * QAN query classes of a service and database since a point in time
+ *
+ * @param   serviceName     service the queries ran on
+ * @param   database        database the queries ran in
+ * @param   from            start of the period
+ */
+export async function getQanQueries(serviceName: string, database: string, from: Date): Promise<{ queryId: string, fingerprint: string }[]> {
+  const report = await pmmServerApi('POST', '/v1/qan/metrics:getReport', {
+    period_start_from: from.toISOString(),
+    period_start_to: new Date(Date.now() + 60_000).toISOString(),
+    group_by: 'queryid',
+    columns: ['num_queries'],
+    limit: 100,
+    labels: [{ key: 'service_name', value: [serviceName] }, { key: 'database', value: [database] }],
+  }) as { rows?: { dimension?: string, fingerprint?: string }[] };
+
+  return (report.rows ?? [])
+    .filter((row) => row.dimension)
+    .map((row) => ({ queryId: row.dimension!, fingerprint: row.fingerprint ?? '' }));
+}
+
+/**
+ * Latest QAN example of a query class since a point in time
+ *
+ * @param   queryId         QAN query ID
+ * @param   from            start of the period
+ */
+export async function getQanExample(queryId: string, from: Date): Promise<{ example: string, isTruncated: boolean }> {
+  const response = await pmmServerApi('POST', '/v1/qan/query:getExample', {
+    period_start_from: from.toISOString(),
+    period_start_to: new Date(Date.now() + 60_000).toISOString(),
+    filter_by: queryId,
+    group_by: 'queryid',
+    limit: 1,
+  }) as { query_examples?: { example?: string, is_truncated?: number }[] };
+  const [example] = response.query_examples ?? [];
+
+  return { example: example?.example ?? '', isTruncated: example?.is_truncated === 1 };
 }
