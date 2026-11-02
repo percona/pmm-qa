@@ -228,6 +228,7 @@ test.describe('PSMDB pmm-admin inventory change agent effects on mongodb_exporte
 
     const runAndFindInQan = async (shape: string, maxQueryLength: number, otherQueryIds: string[] = []) => {
       const agentId = profilerId;
+      const runningReports = await cli.countAgentRunningReports(containerName, agentId);
 
       await cli.changeAgentsUntilPersisted(
         [cli.changeMongoProfiler(containerName, agentId, `--max-query-length=${maxQueryLength}`)],
@@ -236,7 +237,10 @@ test.describe('PSMDB pmm-admin inventory change agent effects on mongodb_exporte
           expect((await cli.getServerAgent(agentId)).max_query_length).toEqual(maxQueryLength);
         },
       );
-      await cli.expectAgentsRunning(containerName, [agentId], true);
+      // A query the profiler reads before pmm-agent restarts it is sent with the old limit.
+      await expect(async () => {
+        expect(await cli.countAgentRunningReports(containerName, agentId), 'pmm-agent has not restarted the profiler yet').toBeGreaterThan(runningReports);
+      }).toPass({ intervals: [2_000], timeout: 60_000 });
 
       const from = new Date(Date.now() - 60_000);
       const marker = `pmm_qa_${Date.now()}`;

@@ -471,3 +471,15 @@ export async function runEach(steps: (() => Promise<unknown>)[]) {
 
   if (errors.length > 0) throw errors[0];
 }
+
+/**
+ * How many times pmm-agent has reported an agent as running; it grows by one each time pmm-agent (re)starts the agent
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentId         agent ID
+ */
+export async function countAgentRunningReports(containerName: string, agentId: string): Promise<number> {
+  const output = await exec(`docker exec ${containerName} grep -cF 'Sending status: AGENT_STATUS_RUNNING." agentID=${agentId}' /var/log/pmm-agent.log`);
+
+  return Number(output.stdout.trim()) || 0;
+}
