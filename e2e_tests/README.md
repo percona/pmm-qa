@@ -96,12 +96,15 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@ami-ovf-post-upgrade`
+- `@ami-ovf-pre-upgrade`
 - `@annotations`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
+- `@exporters`
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
@@ -111,7 +114,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
+- `@instances`
 - `@inventory`
+- `@inventory-fb`
 - `@LBAC`
 - `@menu`
 - `@mongodb-exporter`

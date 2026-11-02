@@ -357,6 +357,9 @@ stub_prebaked_docker() {
   grep -q 'bin_dir: /usr/pgsql-17/bin' "$BATS_TEST_TMPDIR/stdin/pdpgsql_pmm_patroni_17_2"
   [[ $(grep -c '^exec --detach --user postgres pdpgsql_pmm_patroni_17_[123] sh -c exec patroni /patroni.yml' "$DOCKER_CALLS") -eq 3 ]]
   grep -q 'stanza=patroni_backup .*stanza-create' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_1 systemctl stop postgresql$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_2 systemctl stop postgresql$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_3 systemctl stop postgresql$' "$DOCKER_CALLS"
   grep -q -- ' pdpgsql_pmm_patroni_17_2 container pdpgsql_pmm_patroni_17_2-nightly$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
@@ -371,6 +374,7 @@ stub_prebaked_docker() {
 
   grep -q -- '^exec --user postgres --env PGPASSWORD=GRgrO9301RuF pdpgsql_pmm_replication_16_2 timeout 120 pg_basebackup .*--host=pdpgsql_pmm_replication_16_1 ' "$DOCKER_CALLS"
   [[ $(grep -c 'pg_basebackup' "$DOCKER_CALLS") -eq 1 ]]
+  grep -q '^exec --user root pdpgsql_pmm_replication_16_2 systemctl stop postgresql$' "$DOCKER_CALLS"
   grep -Eq -- '--cluster=pdpgsql_replication_cluster --environment=pdpgsql_replication_environment pdpgsql_pmm_replication_16_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -q "pg_create_logical_replication_slot('test_slot', 'test_decoding')" "$DOCKER_CALLS"
 
@@ -629,8 +633,7 @@ stub_prebaked_docker() {
   parse_database_spec haproxy
   dispatch_setup
 
-  grep -Eq '^sudo -n sysctl -qw net\.ipv4\.ip_local_reserved_ports=(.+,)?42100$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --privileged pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 8404:42100 --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --privileged pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
   grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"

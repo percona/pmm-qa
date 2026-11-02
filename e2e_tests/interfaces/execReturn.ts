@@ -13,6 +13,13 @@ class ExecReturn {
     this.stderr = stdErr;
   }
 
+  assertFailure = (expectedOutput: string) => {
+    expect(this.code, `Verify "${this.command}" exited with an error!`).not.toEqual(0);
+    expect(`${this.stdout}${this.stderr}`, `Output of "${this.command}"`).toContain(expectedOutput);
+
+    return this;
+  };
+
   assertSuccess = () => {
     const errorMsg = this.code === 0 ? '' : ` Error: "${this.stderr || this.stdout}"`;
 
