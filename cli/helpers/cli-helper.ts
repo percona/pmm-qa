@@ -110,6 +110,30 @@ export async function getMetrics(
   // TODO: parse into map(k => v) or json
   return output.stdout;
 }
+
+/**
+ * Build a "pmm-admin inventory change agent qan-mongodb-mongolog-agent" command
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentId         mongodb_mongolog_agent agent ID
+ * @param   flags           flags to change
+ */
+export function changeMongoMongolog(containerName: string, agentId: string, flags: string): string {
+  return `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${agentId} ${flags}`;
+}
+
+/**
+ * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN mongolog agent
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   exporterId      mongodb_exporter agent ID
+ * @param   mongologId      mongodb_mongolog_agent agent ID
+ * @param   flags           flags to change
+ */
+export function changeMongoMongologAgents(containerName: string, exporterId: string, mongologId: string, flags: string): string[] {
+  return [changeMongoExporter(containerName, exporterId, flags), changeMongoMongolog(containerName, mongologId, flags)];
+}
+
 /**
  * Execute command and verify output contains expected content
  * Wrapper around {@link execute} that automatically asserts success and optionally verifies output
@@ -228,29 +252,6 @@ export function changeMongoProfiler(containerName: string, agentId: string, flag
  */
 export function changeMongoAgents(containerName: string, exporterId: string, profilerId: string, flags: string): string[] {
   return [changeMongoExporter(containerName, exporterId, flags), changeMongoProfiler(containerName, profilerId, flags)];
-}
-
-/**
- * Build a "pmm-admin inventory change agent qan-mongodb-mongolog-agent" command
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_mongolog_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoMongolog(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${agentId} ${flags}`;
-}
-
-/**
- * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN mongolog agent
- *
- * @param   containerName   docker container running pmm-agent
- * @param   exporterId      mongodb_exporter agent ID
- * @param   mongologId      mongodb_mongolog_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoMongologAgents(containerName: string, exporterId: string, mongologId: string, flags: string): string[] {
-  return [changeMongoExporter(containerName, exporterId, flags), changeMongoMongolog(containerName, mongologId, flags)];
 }
 
 /**
