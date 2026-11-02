@@ -84,7 +84,7 @@ export async function getExporterArgs(containerName: string, agentId: string): P
  * @param   agentPassword   password of the exporter's /metrics endpoint
  */
 export async function scrapeExporterFromPmmServer(containerName: string, agentId: string, agentPassword: string): Promise<ExecReturn> {
-  return exec(`docker exec pmm-server curl -sS -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
+  return exec(`docker exec pmm-server curl -sSf -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
 }
 
 /**

@@ -143,3 +143,12 @@ export async function expectFailure(output: ExecReturn, message: string) {
   expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
   expect(`${output.stdout}${output.stderr.text}`).toContain(message);
 }
+
+/**
+ * Quote a value as one shell word, so spaces, $, & or ' in it reach the command unchanged
+ *
+ * @param   value   value to quote
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
