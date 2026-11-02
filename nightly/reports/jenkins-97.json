@@ -3730,6 +3730,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1700",
       "by": "Investigator routine",
       "at": "2026-11-02T04:11:06Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "product bug",
+      "summary": "pmm3-ha-tests #160 on ROSA: PMM-T2108 got pg_exporter_scrapes_total from 2 of 3 PostgreSQL sources on all 3 attempts (23/24 passed). This is the known PMM-15794 (New; one internal pg-db instance is never monitored), the same signature as nights 93 and 95. No new ticket and no re-run; not re-reproduced this session.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+      "by": "Investigator routine",
+      "at": "2026-11-02T04:11:19Z"
     }
   ],
   "claims": [
@@ -3738,13 +3748,6 @@
       "at": "2026-11-02T03:00:31Z",
       "suites": [
         "E2E Tests"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-02T03:00:31Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
       ]
     }
   ]
