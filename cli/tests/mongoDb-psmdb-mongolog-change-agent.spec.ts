@@ -336,14 +336,20 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await (await cli.exec(`docker exec ${containerName} bash -c '${command}'`)).assertSuccess();
     }
 
+    // requireTLS also makes mongod use TLS towards the other members, and a shard member cannot start until it reaches the
+    // config servers, which do not speak TLS. allowTLS keeps those connections plain while the agents still use TLS.
+    const shardMember = (await cli.exec(`docker exec ${containerName} grep -q 'clusterRole: shardsvr' /etc/mongod/mongod.conf`)).code === 0;
+    const tlsMode = shardMember ? 'allowTLS' : 'requireTLS';
+
     // afterAll restores /etc/sysconfig/mongod from the backup taken in beforeAll.
-    await (await cli.exec(`docker exec ${containerName} sed -i '/^OPTIONS=/s#"$# --tlsMode requireTLS --tlsCertificateKeyFile /certs/server.pem --tlsCAFile /certs/ca-certs.pem"#' /etc/sysconfig/mongod`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} grep -q requireTLS /etc/sysconfig/mongod`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} sed -i '/^OPTIONS=/s#"$# --tlsMode ${tlsMode} --tlsCertificateKeyFile /certs/server.pem --tlsCAFile /certs/ca-certs.pem"#' /etc/sysconfig/mongod`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} grep -q ${tlsMode} /etc/sysconfig/mongod`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
 
     // The unit is Type=simple, so the restart returns before mongod validates the TLS config.
     await cli.waitForMongod(containerName, tlsProbe);
-    expect((await cli.exec(plainProbe)).code, 'mongod should reject connections without TLS').not.toEqual(0);
+    expect((await cli.exec(plainProbe)).code === 0, `whether mongod in ${tlsMode} mode accepts connections without TLS`)
+      .toBe(shardMember);
 
     // MongoDB agents take a single cert+key PEM via --tls-certificate-key-file. The client key is unencrypted,
     // so the driver ignores --tls-certificate-key-file-password and the connection check still passes.
