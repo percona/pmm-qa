@@ -71,7 +71,7 @@ Spec: [catalog.test.ts:59](catalog.test.ts#L59)
 
 ### TC-03 · PMM-Txxxx - Verify the details pane of a built-in advisor check
 
-Spec: [catalog.test.ts:91](catalog.test.ts#L91)
+Spec: [catalog.test.ts:94](catalog.test.ts#L94)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ Spec: [catalog.test.ts:91](catalog.test.ts#L91)
 
 ### TC-04 · PMM-Txxxx - Verify creating a custom advisor check
 
-Spec: [catalog.test.ts:128](catalog.test.ts#L128)
+Spec: [catalog.test.ts:131](catalog.test.ts#L131)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ Cleanup: the check is deleted through the API.
 
 ### TC-05 · PMM-Txxxx - Verify a custom check name requires the custom_ prefix
 
-Spec: [catalog.test.ts:175](catalog.test.ts#L175)
+Spec: [catalog.test.ts:178](catalog.test.ts#L178)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ Spec: [catalog.test.ts:175](catalog.test.ts#L175)
 
 ### TC-06 · PMM-Txxxx - Verify disabling and enabling a check from the catalog
 
-Spec: [catalog.test.ts:191](catalog.test.ts#L191)
+Spec: [catalog.test.ts:194](catalog.test.ts#L194)
 
 Precondition: the QA custom check exists.
 
@@ -117,7 +117,7 @@ Precondition: the QA custom check exists.
 
 ### TC-07 · PMM-Txxxx - Verify deleting a custom advisor check
 
-Spec: [catalog.test.ts:217](catalog.test.ts#L217)
+Spec: [catalog.test.ts:220](catalog.test.ts#L220)
 
 Precondition: the QA custom check exists.
 
@@ -610,7 +610,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 
 ### TC-44 · PMM-Txxxx - Verify the ten risk categories of the built-in checks
 
-Spec: [catalog.test.ts:242](catalog.test.ts#L242)
+Spec: [catalog.test.ts:245](catalog.test.ts#L245)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -629,7 +629,7 @@ Spec: [checkForm.test.ts:353](checkForm.test.ts#L353)
 
 ### TC-47 · PMM-Txxxx - Verify Run selected and Run all
 
-Spec: [catalog.test.ts:277](catalog.test.ts#L277)
+Spec: [catalog.test.ts:280](catalog.test.ts#L280)
 
 Precondition: two QA custom checks in a category of their own, one of them disabled.
 
