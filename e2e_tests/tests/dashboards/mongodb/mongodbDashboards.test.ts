@@ -143,8 +143,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
     },
   );
 
-  // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-03 -- ReplSet Summary Replication Lag panel intermittently has no data (no PMM ticket yet); unskip once it is fixed.
-  pmmTest.skip(
+  pmmTest(
     'PMM-T1698 - Verify that Disk I/O and Swap Activity and Network Traffic panels have graphs if Node name contains dot symbol @nightly @dashboards @gssapi-nightly',
     async ({ api, dashboard, page, urlHelper }) => {
       const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
