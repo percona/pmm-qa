@@ -483,12 +483,21 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2431 - Verify Change agent agent password for mongodb-exporter', async ({}) => {
-    const output = await cli.exec(pmmAdmin.changeMongoExporter(containerName, exporterId, `--agent-password=${changedAgentPassword}`));
-    await output.assertSuccess();
-    await output.outContains('- updated agent password');
+    const previousAgentPassword = agentPassword;
+
+    // PMM-T2430's restarts make a PMM-15835 revert likely here, and the agent password is not readable through the API.
+    await pmmAdmin.changeAgentsUntilPersisted(
+      [pmmAdmin.changeMongoExporter(containerName, exporterId, `--agent-password=${changedAgentPassword}`)],
+      ['- updated agent password'],
+      async () => {
+        await pmmCli.expectMongoUp(containerName, serviceName, changedAgentPassword, 30_000);
+      },
+      180_000,
+    );
     agentPassword = changedAgentPassword;
 
-    await pmmCli.expectMongoUp(containerName, serviceName, agentPassword);
+    expect(await cli.getMetrics(serviceName, 'pmm', previousAgentPassword, containerName), 'The previous agent password still returns exporter metrics')
+      .not.toMatch(/^mongodb_up/m);
   });
 
   test('PMM-T2432 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
@@ -545,6 +554,10 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
           .toEqual(statsCollections);
       },
     );
+
+    await expect(async () => {
+      expect(await pmmCli.getExporterArgs(containerName, exporterId)).toContain(`--mongodb.collstats-colls=${statsCollections.join(',')}`);
+    }).toPass({ intervals: [3_000], timeout: 60_000 });
   });
 
   test('PMM-T2308 - Verify Change agent collections limit for mongodb-exporter', async ({}) => {
@@ -707,7 +720,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2438 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
-    const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+    const serverUrl = cli.shellQuote(`https://admin:${encodeURIComponent(adminPassword)}@pmm-server:8443/`);
 
     for (const command of pmmAdmin.changeMongoAgents(containerName, exporterId, profilerId, `--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
       await cli.expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');

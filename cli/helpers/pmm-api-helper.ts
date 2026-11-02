@@ -1,4 +1,4 @@
-import { exec } from '@helpers/cli-helper';
+import { exec, shellQuote } from '@helpers/cli-helper';
 
 /**
  * Call the PMM Server API through the pmm-server container
@@ -10,7 +10,7 @@ import { exec } from '@helpers/cli-helper';
  */
 export async function pmmServerApi(method: 'GET' | 'POST', path: string, body?: object, adminPassword = process.env.ADMIN_PASSWORD || 'admin') {
   const data = body ? ` -H 'Content-Type: application/json' -d '${JSON.stringify(body)}'` : '';
-  const output = await exec(`docker exec pmm-server curl -sSf -u 'admin:${adminPassword}' -X ${method}${data} http://127.0.0.1:8080${path}`);
+  const output = await exec(`docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -X ${method}${data} http://127.0.0.1:8080${path}`);
   await output.assertSuccess();
 
   return JSON.parse(output.stdout) as Record<string, unknown>;
@@ -36,7 +36,7 @@ export async function getServerAgent(agentId: string): Promise<Record<string, un
  * @return  label sets of the returned series
  */
 export async function queryVictoriaMetrics(query: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, string>[]> {
-  const output = await exec(`docker exec pmm-server curl -sSf -u 'admin:${adminPassword}' -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`);
+  const output = await exec(`docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`);
   await output.assertSuccess();
   const response = JSON.parse(output.stdout) as { data: { result: { metric: Record<string, string> }[] } };
 
