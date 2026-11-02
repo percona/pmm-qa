@@ -317,7 +317,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
 
       cliHelper.execSilent(`docker exec rscfg01 pmm-admin remove mongodb ${noEnvService}`);
       cliHelper
-        .execute(
+        .execSilent(
           `docker exec rscfg01 pmm-admin add mongodb --cluster=${noEnvCluster} --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg01 --port=27017 ${noEnvService}`,
         )
         .assertSuccess();
