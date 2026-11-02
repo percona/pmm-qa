@@ -41,6 +41,7 @@ Run commands from `cli/`.
 <!-- CLI-TAGS-START -->
 
 - `@arbiter-psmdb`
+- `@change-agent-mysql`
 - `@client-docker`
 - `@generic`
 - `@haproxy`

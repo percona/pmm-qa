@@ -62,7 +62,7 @@ on:
 jobs:
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):
   # @help, @server-only, @client-docker, @generic, @unregister,
-  # @service-removal, @ps, @mysql, @mysql-conf-file, @pdpgsql,
+  # @service-removal, @ps, @mysql, @mysql-conf-file, @change-agent-mysql, @pdpgsql,
   # @psmdb, @shard-psmdb, @haproxy, @proxysql, @mongoDb
   help-tests:
     name: 'CLI / Integration'
@@ -217,7 +217,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@change-agent-mysql'
       services_list: '--database mysql=8.0'
       test_name: 'MySQL 8.0'
 
@@ -233,7 +233,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@change-agent-mysql'
       services_list: '--database mysql=8.4'
       test_name: 'MySQL 8.4'
 
@@ -249,7 +249,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@change-agent-mysql'
       services_list: '--database mysql=9.7'
       test_name: 'MySQL 9.7'
 

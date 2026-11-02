@@ -71,13 +71,13 @@ const restartPmmAgent = async (command: string) => {
   await (await cli.exec(`docker exec --detach ${containerName} sh -c "exec ${command} >>/tmp/pmm-agent.log 2>&1"`)).assertSuccess();
 };
 
-test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona Server perfschema agents', { tag: '@percona-server' }, () => {
+test.describe('PMM Client "pmm-admin inventory change agent" tests for MySQL perfschema agents', { tag: ['@percona-server', '@change-agent-mysql'] }, () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   test.beforeAll(async ({}) => {
-    const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
-    await result.outContains('ps_pmm', 'Percona MySQL docker container should exist. please run pmm-framework with --database ps');
+    const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep -E \'^(ps|mysql)_pmm_\' | head -1');
+    await result.outContains('_pmm_', 'Percona Server or MySQL docker container should exist. please run pmm-framework with --database ps or --database mysql');
     containerName = result.stdout.trim();
 
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --query-source=perfschema --username=root --password=${MYSQL_ROOT_PASSWORD} ${serviceName} 127.0.0.1:3306`);
