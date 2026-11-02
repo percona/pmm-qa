@@ -15,7 +15,6 @@ const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
 const pmmAgentConfig = '/usr/local/percona/pmm/config/pmm-agent.yaml';
 const mongodSysconfigBackup = '/tmp/mongod.sysconfig.mongolog.orig';
-const mongologConfig = '/etc/mongod-mongolog.conf';
 const mongodLogFile = '/var/log/mongo/mongod.log';
 const tlsProbe = `docker exec ${containerName} mongo --tls --host localhost --port 27017 --tlsCAFile /certs/ca-certs.pem --tlsCertificateKeyFile /certs/client.pem --tlsAllowInvalidCertificates --quiet --eval 'db.hello()'`;
 const plainProbe = `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.hello()'`;
@@ -24,7 +23,7 @@ let adminVersion: string;
 let exporterId: string;
 let mongologId: string;
 let agentPassword = 'mypass';
-let mongodConfigChanged = false;
+let mongodTlsEnabled = false;
 let pmmAgentListenPortChanged = false;
 
 // User management must run on the primary. Talk to rs101 (the priority-2 primary) directly: from inside the container
@@ -49,17 +48,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     adminVersion = await getPmmAdminVersion(containerName);
     test.skip(versionBelow(adminVersion, '3.7.0'), 'pmm-admin inventory change agent requires pmm-client 3.7.0+');
 
-    // mongolog tails the file mongod reports as systemLog.path, and the framework's mongod logs to syslog.
-    // /etc/mongod/mongod.conf is a bind mount shared with rs102 and rs103, so rs101 gets its own copy.
-    await (await cli.exec(`docker exec ${containerName} cp /etc/sysconfig/mongod ${mongodSysconfigBackup}`)).assertSuccess();
-    mongodConfigChanged = true;
-    await (await cli.exec(`docker exec ${containerName} cp /etc/mongod/mongod.conf ${mongologConfig}`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} sed -i 's#^  destination: syslog$#  destination: file\\n  path: ${mongodLogFile}\\n  logAppend: true#' ${mongologConfig}`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} grep -q '^  path: ${mongodLogFile}$' ${mongologConfig}`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} sed -i 's#-f /etc/mongod/mongod.conf#-f ${mongologConfig}#' /etc/sysconfig/mongod`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} grep -q ${mongologConfig} /etc/sysconfig/mongod`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
-    await cli.waitForMongod(containerName, plainProbe);
+    // mongolog tails the file mongod reports as systemLog.path.
+    const logPath = await cli.exec(cli.mongoEval(containerName, mongoUri, 'print(db.adminCommand({ getCmdLineOpts: 1 }).parsed.systemLog.path)'));
+    await logPath.outContains(mongodLogFile, 'mongod on rs101 should log to a file. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog');
 
     await (await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName} || true`)).assertSuccess();
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --query-source=mongolog --agent-password=${agentPassword} ${serviceName} ${replIpPort}`);
@@ -89,7 +80,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await removeMongoService(containerName, serviceName);
     }
 
-    if (mongodConfigChanged) {
+    if (mongodTlsEnabled) {
       await (await cli.exec(`docker exec ${containerName} cp ${mongodSysconfigBackup} /etc/sysconfig/mongod`)).assertSuccess();
       await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
       await cli.waitForMongod(containerName, plainProbe);
@@ -336,9 +327,10 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await (await cli.exec(`docker exec ${containerName} bash -c '${command}'`)).assertSuccess();
     }
 
+    await (await cli.exec(`docker exec ${containerName} cp /etc/sysconfig/mongod ${mongodSysconfigBackup}`)).assertSuccess();
+    mongodTlsEnabled = true;
     // requireTLS would also make mongod use TLS towards the other members, and a shard member cannot start until it
     // reaches the config servers, which do not speak TLS. allowTLS keeps those connections plain while the agents use TLS.
-    // afterAll restores /etc/sysconfig/mongod from the backup taken in beforeAll.
     await (await cli.exec(`docker exec ${containerName} sed -i '/^OPTIONS=/s#"$# --tlsMode allowTLS --tlsCertificateKeyFile /certs/server.pem --tlsCAFile /certs/ca-certs.pem"#' /etc/sysconfig/mongod`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} grep -q allowTLS /etc/sysconfig/mongod`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} systemctl restart mongod`)).assertSuccess();
