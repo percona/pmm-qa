@@ -1,6 +1,6 @@
 import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
+import { getPmmAdminMinorVersion } from '@helpers/pmm-admin-helper';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {

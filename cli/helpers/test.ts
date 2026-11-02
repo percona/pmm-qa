@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import { getPmmAdminVersion } from '@helpers/pmm-admin';
+import { getPmmAdminVersion } from '@helpers/pmm-admin-helper';
 import { minPmmClientVersion, versionBelow } from '@helpers/versionGates';
 
 export const test = base.extend<{ pmmClientContainer: string; versionGate: void }>({

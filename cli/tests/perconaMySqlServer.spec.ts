@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removeMySQLService } from '@root/helpers/pmm-admin';
+import { getPmmAdminMinorVersion, removeMySQLService } from '@root/helpers/pmm-admin-helper';
 
 const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';

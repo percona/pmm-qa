@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
+import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin-helper';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
 

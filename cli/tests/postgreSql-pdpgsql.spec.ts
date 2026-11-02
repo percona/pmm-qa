@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removePGService } from '@helpers/pmm-admin';
+import { getPmmAdminMinorVersion, removePGService } from '@helpers/pmm-admin-helper';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
