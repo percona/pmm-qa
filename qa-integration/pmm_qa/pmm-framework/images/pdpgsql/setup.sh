@@ -66,11 +66,6 @@ pdpgsql_ready() {
   retry 60 "PostgreSQL on $1" docker exec --user postgres "$1" pg_isready -q >/dev/null
 }
 
-# Stop the cluster unit, not the postgresql wrapper, which returns before the shutdown checkpoint ends.
-pdpgsql_stop() {
-  must docker exec --user root "$1" systemctl stop "postgresql@$version-main"
-}
-
 pdpgsql_restart() {
   must docker exec --user root "$1" systemctl restart "postgresql@$version-main"
   pdpgsql_ready "$1"
@@ -123,7 +118,7 @@ pdpgsql_replication() {
 # Usage: pdpgsql_replica NODE PRIMARY
 pdpgsql_replica() {
   local data=/var/lib/postgresql/$version/main
-  pdpgsql_stop "$1"
+  must docker exec --user root "$1" systemctl stop "postgresql@$version-main"
   must docker exec --user postgres "$1" rm -rf "$data"
   must docker exec --user postgres --env PGPASSWORD=GRgrO9301RuF "$1" timeout 120 \
     pg_basebackup "--pgdata=$data" -R -Fp -Xs --checkpoint=fast "--host=$2" --port=5432 -U repl_user
@@ -198,7 +193,7 @@ pdpgsql_patroni_start() {
   yaml=${yaml//@VERSION@/$version}
   yaml=${yaml//@SUPERUSER_PASSWORD@/$PDPGSQL_PASSWORD}
   must docker exec --interactive --user root "$node" sh -c 'cat >/patroni.yml' <<<"$yaml"
-  pdpgsql_stop "$node"
+  must docker exec --user root "$node" systemctl stop "postgresql@$version-main"
   if [[ $node != "$primary" ]]; then
     must docker exec --user postgres "$node" rm -rf "$data"
   fi
