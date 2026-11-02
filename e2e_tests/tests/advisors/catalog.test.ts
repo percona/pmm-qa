@@ -61,19 +61,22 @@ pmmTest.describe('Advisors catalog', () => {
       const checks = await api.advisorsApi.listChecks();
       const mongoChecks = checks.filter((check) => check.technology === AdvisorCheckTechnology.mongodb);
       const target = mongoChecks[0];
+      const allChecks = new RegExp(`of ${checks.length}$`);
 
       await page.goto(advisorsCatalogPage.url);
+      // The target is the first row of the full list too, so only the count shows the search applied.
+      await expect(advisorsCatalogPage.elements.pagination).toHaveText(allChecks);
 
       await pmmTest.step('Search narrows the list to the matching check', async () => {
         await advisorsCatalogPage.inputs.search.fill(target.summary);
         await expect(advisorsCatalogPage.builders.row(target.name)).toBeVisible();
-        await expect(advisorsCatalogPage.elements.pagination).not.toHaveText(
-          new RegExp(`of ${checks.length}$`),
-        );
+        await expect(advisorsCatalogPage.elements.pagination).not.toHaveText(allChecks);
       });
 
       await pmmTest.step('Technology filter shows only MongoDB checks', async () => {
         await advisorsCatalogPage.buttons.clearFilters.click();
+        await expect(advisorsCatalogPage.inputs.search).toHaveValue('');
+        await expect(advisorsCatalogPage.elements.pagination).toHaveText(allChecks);
         await advisorsCatalogPage.selectFilter('technology', 'MongoDB');
         await expect(advisorsCatalogPage.elements.pagination).toHaveText(
           new RegExp(`of ${mongoChecks.length}$`),
@@ -82,7 +85,7 @@ pmmTest.describe('Advisors catalog', () => {
 
       await pmmTest.step('Clearing filters restores the full list', async () => {
         await advisorsCatalogPage.buttons.clearFilters.click();
-        await expect(advisorsCatalogPage.elements.pagination).toHaveText(new RegExp(`of ${checks.length}$`));
+        await expect(advisorsCatalogPage.elements.pagination).toHaveText(allChecks);
       });
     },
   );
