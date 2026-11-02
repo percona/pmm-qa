@@ -1,5 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
+import { ChangeAgentType } from '@helpers/cli-helper';
 import { getPmmAdminVersion, removeMongoService } from '@helpers/pmm-admin';
 import { clientCredentialsFlags, gssapi } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
@@ -152,7 +153,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2442 - Verify Change agent debug, trace and json flags for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    for (const [command, agentId] of [[cli.changeMongoExporter(containerName, exporterId, '--debug --trace --json'), exporterId], [cli.changeMongoMongolog(containerName, mongologId, '--debug --trace --json'), mongologId]]) {
+    for (const [command, agentId] of [[cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, '--debug --trace --json'), exporterId], [cli.inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbMongologAgent, mongologId, '--debug --trace --json'), mongologId]]) {
       const output = await cli.exec(command);
       await output.assertSuccess();
       await output.outContains(agentId);
@@ -187,7 +188,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2431 - Verify Change agent agent password for mongodb-exporter', async ({}) => {
-    const output = await cli.exec(cli.changeMongoExporter(containerName, exporterId, `--agent-password=${changedAgentPassword}`));
+    const output = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, `--agent-password=${changedAgentPassword}`));
     await output.assertSuccess();
     await output.outContains('- updated agent password');
     agentPassword = changedAgentPassword;
@@ -196,7 +197,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2432 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
-    await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
+    await cli.changeAgentsUntilPersisted([cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
       expect((await cli.getServerAgent(exporterId)).expose_exporter, 'Expose exporter was not persisted on the mongodb_exporter agent').toBe(true);
     });
 
@@ -208,7 +209,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2433 - Verify Change agent push metrics for mongodb-exporter', async ({}) => {
-    await cli.changeAgentsUntilPersisted([cli.changeMongoExporter(containerName, exporterId, '--push-metrics')], ['- enabled push metrics'], async () => {
+    await cli.changeAgentsUntilPersisted([cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, '--push-metrics')], ['- enabled push metrics'], async () => {
       expect((await cli.getServerAgent(exporterId)).push_metrics_enabled, 'Push metrics was not persisted on the mongodb_exporter agent').toBe(true);
     });
 
@@ -229,7 +230,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const maxQueryLength = 2_048;
 
     await cli.changeAgentsUntilPersisted(
-      [cli.changeMongoMongolog(containerName, mongologId, `--max-query-length=${maxQueryLength}`)],
+      [cli.inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbMongologAgent, mongologId, `--max-query-length=${maxQueryLength}`)],
       [`- changed max query length to ${maxQueryLength}`],
       async () => {
         expect((await cli.getServerAgent(mongologId)).max_query_length, 'Max query length was not persisted on the qan-mongodb-mongolog-agent')
@@ -242,7 +243,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const statsCollections = ['db1.col1', 'db2.col2'];
 
     await cli.changeAgentsUntilPersisted(
-      [cli.changeMongoExporter(containerName, exporterId, `--stats-collections=${statsCollections.join(',')}`)],
+      [cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, `--stats-collections=${statsCollections.join(',')}`)],
       [`- updated stats collections: ${statsCollections.join(',')}`],
       async () => {
         expect((await cli.getServerAgent(exporterId)).stats_collections, 'Stats collections were not persisted on the mongodb_exporter agent')
@@ -255,7 +256,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const collectionsLimit = 100;
 
     await cli.changeAgentsUntilPersisted(
-      [cli.changeMongoExporter(containerName, exporterId, `--collections-limit=${collectionsLimit}`)],
+      [cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, `--collections-limit=${collectionsLimit}`)],
       [`- changed collections limit to ${collectionsLimit}`],
       async () => {
         expect((await cli.getServerAgent(exporterId)).collections_limit, 'Collections limit was not persisted on the mongodb_exporter agent')
@@ -268,7 +269,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
 
     await cli.changeAgentsUntilPersisted(
-      [cli.changeMongoExporter(containerName, exporterId, '--enable-diagnostic-data-histograms')],
+      [cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, '--enable-diagnostic-data-histograms')],
       ['- enabled diagnostic data histograms'],
       async () => {
         expect((await cli.getServerAgent(exporterId)).enable_diagnostic_data_histograms, 'Diagnostic data histograms were not enabled on the mongodb_exporter agent')
@@ -283,7 +284,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     // The second list replaces the first rather than adding to it.
     for (const collectorsToDisable of [['diagnosticdata', 'replicasetstatus'], ['collstats', 'dbstats']]) {
       await cli.changeAgentsUntilPersisted(
-        [cli.changeMongoExporter(containerName, agentId, `--disable-collectors=${collectorsToDisable.join(',')}`)],
+        [cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId, `--disable-collectors=${collectorsToDisable.join(',')}`)],
         [`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`],
         async () => {
           expect((await cli.getServerAgent(agentId)).disabled_collectors, 'Disabled collectors were not persisted on the mongodb_exporter agent')

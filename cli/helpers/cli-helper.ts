@@ -112,14 +112,38 @@ export async function getMetrics(
 }
 
 /**
- * Build a "pmm-admin inventory change agent qan-mongodb-mongolog-agent" command
+ * Agent subcommands of "pmm-admin inventory change agent"
+ */
+export enum ChangeAgentType {
+  NodeExporter = 'node-exporter',
+  MysqldExporter = 'mysqld-exporter',
+  MongodbExporter = 'mongodb-exporter',
+  PostgresExporter = 'postgres-exporter',
+  ProxysqlExporter = 'proxysql-exporter',
+  ExternalExporter = 'external-exporter',
+  RdsExporter = 'rds-exporter',
+  AzureDatabaseExporter = 'azure-database-exporter',
+  ValkeyExporter = 'valkey-exporter',
+  NomadAgent = 'nomad-agent',
+  QanMysqlPerfschemaAgent = 'qan-mysql-perfschema-agent',
+  QanMysqlSlowlogAgent = 'qan-mysql-slowlog-agent',
+  QanMongodbProfilerAgent = 'qan-mongodb-profiler-agent',
+  QanMongodbMongologAgent = 'qan-mongodb-mongolog-agent',
+  QanPostgresqlPgstatementsAgent = 'qan-postgresql-pgstatements-agent',
+  QanPostgresqlPgstatmonitorAgent = 'qan-postgresql-pgstatmonitor-agent',
+  RtaMongodbAgent = 'rta-mongodb-agent',
+}
+
+/**
+ * Build a "pmm-admin inventory change agent" command
  *
  * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_mongolog_agent agent ID
+ * @param   agentType       agent or exporter to change
+ * @param   agentId         ID of the agent
  * @param   flags           flags to change
  */
-export function changeMongoMongolog(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-mongolog-agent ${agentId} ${flags}`;
+export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
+  return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
 }
 
 /**
@@ -131,7 +155,10 @@ export function changeMongoMongolog(containerName: string, agentId: string, flag
  * @param   flags           flags to change
  */
 export function changeMongoMongologAgents(containerName: string, exporterId: string, mongologId: string, flags: string): string[] {
-  return [changeMongoExporter(containerName, exporterId, flags), changeMongoMongolog(containerName, mongologId, flags)];
+  return [
+    inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, flags),
+    inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbMongologAgent, mongologId, flags),
+  ];
 }
 
 /**
