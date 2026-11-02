@@ -1,6 +1,5 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import ExecReturn from '@support/types/exec-return.class';
 import { getPmmAdminVersion, removeMongoService } from '@helpers/pmm-admin';
 import { clientCredentialsFlags, gssapi } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
@@ -18,13 +17,6 @@ const mongodSysconfigBackup = '/tmp/mongod.sysconfig.orig';
 const tlsProbe = `docker exec ${containerName} mongo --tls --host localhost --port 27017 --tlsCAFile /certs/ca-certs.pem --tlsCertificateKeyFile /certs/client.pem --tlsAllowInvalidCertificates --quiet --eval 'db.hello()'`;
 const plainProbe = `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval 'db.hello()'`;
 
-interface ListAgent {
-  agent_id: string;
-  agent_type: string;
-  service_id: string;
-  port?: number;
-}
-
 let adminVersion: string;
 let exporterId: string;
 let profilerId: string;
@@ -36,25 +28,6 @@ const mongoEval = (js: string) => `docker exec ${containerName} mongo "${mongoUr
 const changeExporter = (flags: string) => `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${exporterId} ${flags}`;
 const changeProfiler = (flags: string) => `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${profilerId} ${flags}`;
 const changeBoth = (flags: string) => [changeExporter(flags), changeProfiler(flags)];
-
-const expectFailure = async (output: ExecReturn, message: string) => {
-  expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
-  expect(`${output.stdout}${output.stderr.text}`).toContain(message);
-};
-
-const getServerAgent = async (agentId: string) => {
-  const output = await cli.exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
-  await output.assertSuccess();
-  const response = JSON.parse(output.stdout) as Record<string, Record<string, unknown> | undefined>;
-
-  return response.mongodb_exporter ?? response.qan_mongodb_profiler_agent ?? {};
-};
-
-const listAgents = async () => {
-  return (JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin list --json`)).stdout) as { agent: ListAgent[] }).agent;
-};
-
-const getExporterPort = async () => (await listAgents()).find((agent) => agent.agent_id === exporterId)?.port;
 
 // PMM Server marks a disabled agent "Done" as soon as it is changed, before pmm-agent gets the new state,
 // so also wait for pmm-agent's own view: a disable and enable that reach it together never stop the process.
@@ -119,7 +92,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
     expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
 
-    const agents = await listAgents();
+    const agents = await cli.listAgents(containerName);
     const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type && agent.service_id === serviceId)?.agent_id ?? '';
     exporterId = agentOfType('AGENT_TYPE_MONGODB_EXPORTER');
     profilerId = agentOfType('AGENT_TYPE_QAN_MONGODB_PROFILER_AGENT');
@@ -154,7 +127,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await runOnPrimary(`${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
 
     for (const command of changeBoth(`--username=${newUsername} --password=${newPassword}`)) {
-      await expectFailure(await cli.exec(command), 'Authentication failed');
+      await cli.expectFailure(await cli.exec(command), 'Authentication failed');
     }
 
     await runOnPrimary(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
@@ -180,7 +153,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
 
     for (const agentId of [exporterId, profilerId]) {
-      expect((await getServerAgent(agentId)).custom_labels, `Custom labels were not persisted on ${agentId}`)
+      expect((await cli.getServerAgent(agentId)).custom_labels, `Custom labels were not persisted on ${agentId}`)
         .toEqual({ [customLabel.key]: customLabel.value });
     }
   });
@@ -194,7 +167,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     }
 
     for (const agentId of [exporterId, profilerId]) {
-      expect((await getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_DEBUG');
+      expect((await cli.getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_DEBUG');
     }
   });
 
@@ -242,7 +215,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.outContains('- enabled expose exporter');
 
     await expect(async () => {
-      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await getExporterPort()}/metrics`);
+      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await cli.getAgentPort(containerName, exporterId)}/metrics`);
       await metrics.assertSuccess();
       await metrics.outContains('mongodb_up');
     }).toPass({ intervals: [5_000], timeout: 90_000 });
@@ -254,7 +227,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.outContains('- enabled push metrics');
 
     await expect(async () => {
-      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await getExporterPort()}/metrics`);
+      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await cli.getAgentPort(containerName, exporterId)}/metrics`);
       await metrics.assertSuccess();
       await metrics.outContains('mongodb_up');
       const exporterLine = (await cli.exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines().find((line) => line.includes(exporterId));
@@ -273,7 +246,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.assertSuccess();
     await output.outContains(`- changed max query length to ${maxQueryLength}`);
 
-    expect((await getServerAgent(profilerId)).max_query_length, 'Max query length was not persisted on the qan-mongodb-profiler-agent')
+    expect((await cli.getServerAgent(profilerId)).max_query_length, 'Max query length was not persisted on the qan-mongodb-profiler-agent')
       .toEqual(maxQueryLength);
   });
 
@@ -284,7 +257,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.assertSuccess();
     await output.outContains(`- updated stats collections: ${statsCollections.join(',')}`);
 
-    expect((await getServerAgent(exporterId)).stats_collections, 'Stats collections were not persisted on the mongodb_exporter agent')
+    expect((await cli.getServerAgent(exporterId)).stats_collections, 'Stats collections were not persisted on the mongodb_exporter agent')
       .toEqual(statsCollections);
   });
 
@@ -295,7 +268,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.assertSuccess();
     await output.outContains(`- changed collections limit to ${collectionsLimit}`);
 
-    expect((await getServerAgent(exporterId)).collections_limit, 'Collections limit was not persisted on the mongodb_exporter agent')
+    expect((await cli.getServerAgent(exporterId)).collections_limit, 'Collections limit was not persisted on the mongodb_exporter agent')
       .toEqual(collectionsLimit);
   });
 
@@ -306,7 +279,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await output.assertSuccess();
     await output.outContains('- enabled diagnostic data histograms');
 
-    expect((await getServerAgent(exporterId)).enable_diagnostic_data_histograms, 'Diagnostic data histograms were not enabled on the mongodb_exporter agent')
+    expect((await cli.getServerAgent(exporterId)).enable_diagnostic_data_histograms, 'Diagnostic data histograms were not enabled on the mongodb_exporter agent')
       .toBe(true);
   });
 
@@ -317,7 +290,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.assertSuccess();
       await output.outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
 
-      expect((await getServerAgent(exporterId)).disabled_collectors, 'Disabled collectors were not persisted on the mongodb_exporter agent')
+      expect((await cli.getServerAgent(exporterId)).disabled_collectors, 'Disabled collectors were not persisted on the mongodb_exporter agent')
         .toEqual(collectorsToDisable);
     }
   });
@@ -427,7 +400,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
 
     for (const command of changeBoth(`--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
-      await expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');
+      await cli.expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');
     }
 
     for (const command of changeBoth(`--server-url=${serverUrl} --server-insecure-tls --pmm-agent-listen-port=7778`)) {

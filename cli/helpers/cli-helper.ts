@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from 'node:perf_hooks';
@@ -131,4 +131,56 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     }
     return output.stdout;
   });
+}
+
+export interface ListAgent {
+  agent_id: string;
+  agent_type: string;
+  service_id: string;
+  port?: number;
+}
+
+/**
+ * Assert a command failed and its stdout or stderr contains the expected message
+ *
+ * @param   output    result of the failed command
+ * @param   message   expected error message
+ */
+export async function expectFailure(output: ExecReturn, message: string) {
+  expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
+  expect(`${output.stdout}${output.stderr.text}`).toContain(message);
+}
+
+/**
+ * Read an agent from the PMM Server inventory API through the pmm-server container
+ *
+ * @param   agentId         ID of the agent
+ * @param   adminPassword   PMM Server admin password
+ * @return  the agent's fields, whatever its type
+ */
+export async function getServerAgent(agentId: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, unknown>> {
+  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
+  await output.assertSuccess();
+  const response = JSON.parse(output.stdout) as Record<string, Record<string, unknown> | undefined>;
+
+  return Object.values(response)[0] ?? {};
+}
+
+/**
+ * List agents from "pmm-admin list --json" in a client container
+ *
+ * @param   containerName   docker container running pmm-agent
+ */
+export async function listAgents(containerName: string): Promise<ListAgent[]> {
+  return (JSON.parse((await exec(`docker exec ${containerName} pmm-admin list --json`)).stdout) as { agent: ListAgent[] }).agent;
+}
+
+/**
+ * Listen port of an agent from "pmm-admin list --json" in a client container
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentId         ID of the agent
+ */
+export async function getAgentPort(containerName: string, agentId: string): Promise<number | undefined> {
+  return (await listAgents(containerName)).find((agent) => agent.agent_id === agentId)?.port;
 }
