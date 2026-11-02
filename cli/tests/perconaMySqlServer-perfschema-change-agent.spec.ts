@@ -331,7 +331,8 @@ test.describe('PMM Client "pmm-admin inventory change agent" tests for Percona S
         await output.outContains('- changed log level to info');
       }
     } finally {
-      await restartPmmAgent(pmmAgentCommand);
+      // pmm-agent saves the flag's port into its config file, so the original command alone would keep 7778.
+      await restartPmmAgent(`${pmmAgentCommand} --listen-port=7777`);
       await expect(async () => {
         await (await cli.exec(`docker exec ${containerName} pmm-admin status`)).outContains('Connected : true');
       }).toPass({ intervals: [2_000], timeout: 60_000 });
