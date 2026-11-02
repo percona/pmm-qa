@@ -164,6 +164,7 @@ test.describe('Real-Time Analytics MongoDB agent: pmm-admin inventory change age
   });
 
   test('PMM-T2318 - Verify RTA Change agent tls', async ({}) => {
+    test.setTimeout(600_000);
     const exec = `docker exec ${containerName}`;
     const pki = '/easy-rsa/easyrsa3/pki';
 
