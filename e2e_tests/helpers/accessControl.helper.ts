@@ -48,7 +48,6 @@ export default class AccessControlHelper {
       .getStdOutLines()
       .filter((line) => line.trim()).length;
 
-  /** Turns access control on and gives each scenario user only its own access role. */
   ensureScenarioUsers = async (scenarios: AccessUserScenario[]) => {
     await this.api.settingsApi.enableAccessControl();
 

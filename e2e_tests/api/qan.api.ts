@@ -1,4 +1,4 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+import { APIRequestContext } from '@playwright/test';
 import { ProxyUser } from '@api/datasourceProxy.api';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
@@ -23,33 +23,35 @@ export default class QanApi {
   constructor(private request: APIRequestContext) {}
 
   explainFingerprint = async (user: ProxyUser | undefined, serviceId: string, queryId: string) =>
-    await this.post(apiEndpoints.qan.explainFingerprint, user, { query_id: queryId, serviceid: serviceId });
+    await this.send('POST', apiEndpoints.qan.explainFingerprint, user, {
+      query_id: queryId,
+      serviceid: serviceId,
+    });
 
   getExample = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
-    await this.post<QanExampleBody>(apiEndpoints.qan.getExample, user, {
+    await this.send<QanExampleBody>('POST', apiEndpoints.qan.getExample, user, {
       ...byQueryId(queryId, period),
       limit: 5,
     });
 
   getHistogram = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
-    await this.post<QanHistogramBody>(apiEndpoints.qan.getHistogram, user, { ...period, queryid: queryId });
+    await this.send<QanHistogramBody>('POST', apiEndpoints.qan.getHistogram, user, {
+      ...period,
+      queryid: queryId,
+    });
 
   getLabels = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
-    await this.post<QanLabelsBody>(apiEndpoints.qan.getLabels, user, byQueryId(queryId, period));
+    await this.send<QanLabelsBody>('POST', apiEndpoints.qan.getLabels, user, byQueryId(queryId, period));
 
   getMetrics = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
-    await this.post<QanMetricsBody>(apiEndpoints.qan.getMetrics, user, byQueryId(queryId, period));
+    await this.send<QanMetricsBody>('POST', apiEndpoints.qan.getMetrics, user, byQueryId(queryId, period));
 
   getPlan = async (user: ProxyUser | undefined, queryId: string) =>
-    await QanApi.toResponse<QanPlanBody>(
-      await this.request.get(`${apiEndpoints.qan.query}/${queryId}/plan`, {
-        headers: QanApi.authHeader(user),
-      }),
-    );
+    await this.send<QanPlanBody>('GET', `${apiEndpoints.qan.query}/${queryId}/plan`, user);
 
   /** Query ids of a service whose fingerprint contains the search text, read as Admin. */
   getQueryIds = async (serviceName: string, search: string, period: QanPeriod): Promise<string[]> => {
-    const { body } = await this.post<QanReportBody>(apiEndpoints.qan.getReport, undefined, {
+    const { body } = await this.send<QanReportBody>('POST', apiEndpoints.qan.getReport, undefined, {
       ...period,
       columns: ['load', 'num_queries'],
       group_by: 'queryid',
@@ -73,17 +75,16 @@ export default class QanApi {
     };
   };
 
-  private static authHeader = (user?: ProxyUser): Record<string, string> =>
-    user ? GrafanaHelper.getAuthHeader(user.username, user.password) : GrafanaHelper.getAuthHeader();
-
-  private post = async <T = Record<string, unknown>>(
+  private send = async <T = Record<string, unknown>>(
+    method: 'GET' | 'POST',
     path: string,
     user: ProxyUser | undefined,
-    data: unknown,
-  ): Promise<QanResponse<T>> =>
-    await QanApi.toResponse<T>(await this.request.post(path, { data, headers: QanApi.authHeader(user) }));
-
-  private static toResponse = async <T>(response: APIResponse): Promise<QanResponse<T>> => {
+    data?: unknown,
+  ): Promise<QanResponse<T>> => {
+    const headers = user
+      ? GrafanaHelper.getAuthHeader(user.username, user.password)
+      : GrafanaHelper.getAuthHeader();
+    const response = await this.request.fetch(path, { data, headers, method });
     const text = await response.text();
     let body = {} as T;
 
