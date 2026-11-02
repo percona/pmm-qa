@@ -5,6 +5,7 @@ import { tableDataRows, tableLoadedRows } from '@helpers/tableLocators';
 type RowsPerPage = '25' | '50' | '100';
 
 export default class InventoryPagination {
+  readonly firstPageButton: Locator;
   readonly itemsInterval: Locator;
   readonly monitoringNotOkRows: Locator;
   readonly monitoringStatuses: Locator;
@@ -16,6 +17,7 @@ export default class InventoryPagination {
   readonly selectRowCheckboxes: Locator;
 
   constructor(readonly page: Page) {
+    this.firstPageButton = page.getByRole('button', { name: 'Go to first page' });
     this.itemsInterval = page.getByText(/^\d+-\d+ of \d+$/);
     this.monitoringNotOkRows = page.locator(tableDataRows).filter({
       hasNot: page.getByTestId('monitoring-status-link').filter({ hasText: /^OK$/ }),
