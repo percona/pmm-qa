@@ -202,6 +202,35 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
   );
 
   pmmTest(
+    'PMM-T1334 - Verify MongoDB - MongoDB Oplog Details @mongodb-exporter',
+    async ({ api, cliHelper, dashboard, page, urlHelper }) => {
+      expect(
+        cliHelper
+          .execSilent("docker ps --filter 'name=rs101' --format '{{.Names}}'")
+          .assertSuccess()
+          .getStdOutLines(),
+        'rs101 docker container should exist. please run pmm-framework with --database psmdb',
+      ).toContain('rs101');
+
+      const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mongo.oplogDetails.url, {
+          from: 'now-5m',
+          serviceName: service.service_name,
+          to: 'now',
+        }),
+      );
+
+      await dashboard.verifyMetricsPresent(dashboard.mongo.oplogDetails.metrics, undefined, true);
+      await dashboard.verifyAllPanelsHaveData(
+        dashboard.mongo.oplogDetails.noDataMetrics,
+        Timeouts.TEN_MINUTES,
+      );
+    },
+  );
+
+  pmmTest(
     'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @dashboards @gssapi-nightly',
     async ({ api, dashboard, page, urlHelper }) => {
       const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
