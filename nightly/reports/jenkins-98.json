@@ -3698,15 +3698,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1674",
       "by": "Investigator routine",
       "at": "2026-11-03T02:50:04Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-03T02:47:37Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "pmm3-ha-tests #161 on ROSA: PMM-T2108 got pg_exporter_scrapes_total from 2 of 3 PostgreSQL sources on all 3 attempts (23/24 passed). This is the known PMM-15794 (New), the same signature as nights 91/93/95/97, and pmm-qa#1710 proposes skipping it. Deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+      "by": "Investigator routine",
+      "at": "2026-11-03T02:50:09Z"
     }
-  ]
+  ],
+  "claims": []
 }
