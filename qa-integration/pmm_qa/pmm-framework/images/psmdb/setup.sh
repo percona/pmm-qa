@@ -231,7 +231,7 @@ psmdb_replica_set() {
     done
     step 'Create the mongot user' psmdb_mongot_user
     step "Pull $PSMDB_MONGOT_IMAGE:$mongot_version" retry_on "$PMM_TRANSIENT_ERRORS" 5 'pulling mongot' \
-      docker pull "$PSMDB_MONGOT_IMAGE:$mongot_version"
+      docker pull "$PSMDB_MONGOT_IMAGE:$mongot_version" >/dev/null
     step 'Start mongot' each_node mongots psmdb_mongot_start
   fi
   step 'Wait for PMM Server' wait_pmm_server_ready
