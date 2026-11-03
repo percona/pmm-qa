@@ -67,6 +67,8 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
 
       expect(services).toHaveLength(3);
       await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, { from: 'now-15m' }));
+      // A menu click before the home dashboard settles is undone when its iframe syncs the URL back.
+      await dashboard.waitForDashboardToLoad();
 
       await pmmTest.step('Open the MongoDB menu and verify its items', async () => {
         await leftNavigation.elements.mongoToggle.click();
