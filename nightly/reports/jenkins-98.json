@@ -3688,20 +3688,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "UI"
+      ],
+      "verdict": "test bug",
+      "summary": "pmm3-ui-tests #11995: PMM-T564 expected severity 'Notice' and got 'Info'. percona/pmm#6230 (PMM-15239) merged 2026-11-02 22:02 UTC and collapses the eight severity levels into four bands, so the test's raw-level assertion is now stale. Already fixed by pmm-qa#1674, which was a draft waiting on that merge and can be marked ready now. Deduped, not re-reproduced.",
+      "link": "https://github.com/percona/pmm-qa/pull/1674",
+      "by": "Investigator routine",
+      "at": "2026-11-03T02:50:04Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-03T02:47:37Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-03T02:47:37Z",
-      "suites": [
-        "UI"
       ]
     }
   ]
