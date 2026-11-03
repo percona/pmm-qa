@@ -717,6 +717,9 @@ EOF
   parse_database_spec 'pcsm,SOURCE_VERSION=8.0,TARGET_VERSION=7.0'
   run dispatch_setup
   [[ $status -ne 0 && $output == *'PCSM cannot sync PSMDB 8.0 to an older 7.0.'* ]]
+  parse_database_spec 'pcsm,SOURCE_VERSION=6.0,TARGET_VERSION=8.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM syncs PSMDB 6.0 only to the same or the next major, not 8.0.'* ]]
   parse_database_spec 'pcsm,TARGET_VERSION=8.3'
   run dispatch_setup
   [[ $status -ne 0 && $output == *"Unsupported PCSM TARGET_VERSION '8.3': PCSM syncs PSMDB 6.0, 7.0 and 8.0."* ]]

@@ -2,14 +2,7 @@
 #
 # images/pcsm/setup.sh -- Percona ClusterSync for MongoDB, on the prebaked pcsm image.
 
-# PCSM syncs replica set rs-src (pcsm-src-N) to rs-tgt (pcsm-tgt-N), both on
-# the psmdb image, as one HA group of INSTANCES processes (pcsm-N): one ACTIVE,
-# the rest STANDBY. SOURCE=psmdb syncs the PSMDB setup's replica set rs
-# (rs101-rs103) instead of rs-src. Each PCSM keeps its default localhost:2242
-# listener, which also serves /start and /finalize unauthenticated, so PMM
-# Client runs beside it and PMM scrapes it in push mode. The URIs are in each
-# pcsm-N's environment, so a test that stops an instance with `pkill -x pcsm`
-# restarts it with `docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
+# Syncs rs-src (or, with SOURCE=psmdb, the PSMDB setup's rs) to rs-tgt with an HA group of pcsm-N instances.
 setup_pcsm() {
   local version sync_source source_version target_version nodes_count instances handover client tarball='' node i
   local source_set=rs-src source_uri=$PSMDB_ROOT_URI
@@ -52,6 +45,9 @@ setup_pcsm() {
   fi
   if ((${target_version%%.*} < ${source_version%%.*})); then
     die "PCSM cannot sync PSMDB $source_version to an older $target_version."
+  fi
+  if ((${target_version%%.*} - ${source_version%%.*} > 1)); then
+    die "PCSM syncs PSMDB $source_version only to the same or the next major, not $target_version."
   fi
   for ((i = 1; i <= nodes_count; i++)); do
     tgt_nodes+=("pcsm-tgt-$i")

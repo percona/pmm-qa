@@ -16,6 +16,13 @@ export default class PrometheusApi {
   private datasourceUid?: string;
 
   constructor(private request: APIRequestContext) {}
+  //.metric.service_name
+
+  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> =>
+    (await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`))[0];
+
+  getActiveClusterSyncInstances = async (): Promise<PrometheusSample[]> =>
+    await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`);
 
   /** Looked up rather than hardcoded - the UID is generated per deployment. */
   getDatasourceUid = async (): Promise<string> => {

@@ -105,7 +105,7 @@ Names and option keys are case-insensitive. Supported setup keys are:
 (`pcsm-tgt-N`) with an HA group of Percona ClusterSync for MongoDB instances
 (`pcsm-N`), registered as external services with `--metrics-mode=push`.
 `SOURCE_VERSION` and `TARGET_VERSION` pick the PSMDB versions (6.0, 7.0 or 8.0;
-the target no older than the source), `NODES_COUNT` the members per replica
+the target the source's major or the next one), `NODES_COUNT` the members per replica
 set and `INSTANCES` the PCSM processes, each 1 to 3:
 
 ```bash
