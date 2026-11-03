@@ -8,9 +8,9 @@ import re
 import sys
 from pathlib import Path
 
-from tree_sitter import Language, Parser
 import tree_sitter_javascript
 import tree_sitter_typescript
+from tree_sitter import Language, Parser
 
 _MAX_SOURCE_BYTES = 5_000_000
 _PROVIDER_RE = re.compile(
