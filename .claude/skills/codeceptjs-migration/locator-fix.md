@@ -19,7 +19,7 @@ export PLAYWRIGHT_MCP_IGNORE_HTTPS_ERRORS=true
 AUTH=$(printf 'admin:%s' "$ADMIN_PASSWORD" | base64 -w0)
 playwright-cli -s=<run_id> open about:blank
 playwright-cli -s=<run_id> run-code "async page => { await page.setViewportSize({ width: 1920, height: 1080 }); await page.context().setExtraHTTPHeaders({ Authorization: 'Basic $AUTH' }); await page.route('**/api/user/auth-tokens/rotate', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' })); await page.goto('${PMM_UI_URL%/}/pmm-ui/help'); }"
-playwright-cli -s=<run_id> --raw run-code "async page => { await page.goto('<url>'); await page.locator('#grafana-iframe').waitFor(); const f = page.frameLocator('#grafana-iframe'); return { running: await f.getByTestId('table-tbody-tr').getByText('Running', { exact: true }).count() }; }"
+playwright-cli -s=<run_id> --raw run-code "async page => { await page.goto('${PMM_UI_URL%/}/<POM url>'); await page.locator('#grafana-iframe').waitFor(); const f = page.frameLocator('#grafana-iframe'); await f.getByTestId('table-tbody-tr').first().waitFor(); return { running: await f.getByTestId('table-tbody-tr').getByText('Running', { exact: true }).count() }; }"
 playwright-cli -s=<run_id> snapshot   # aria tree with iframes, for discovery
 playwright-cli -s=<run_id> close
 ```
