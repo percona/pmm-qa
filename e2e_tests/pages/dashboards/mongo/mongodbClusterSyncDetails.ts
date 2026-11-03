@@ -45,10 +45,21 @@ export default class MongodbClusterSyncDetails implements DashboardInterface {
     progress: '2 · Is replication progressing?',
   };
   title = 'MongoDB ClusterSync Details';
-  private unitSeconds: Record<string, number> = { min: 60, mins: 60, ms: 0.001, ns: 1e-9, s: 1, µs: 1e-6 };
+  private unitSeconds: Record<string, number> = {
+    day: 86_400,
+    days: 86_400,
+    hour: 3_600,
+    hours: 3_600,
+    min: 60,
+    mins: 60,
+    ms: 0.001,
+    ns: 1e-9,
+    s: 1,
+    µs: 1e-6,
+  };
 
   convertToSeconds = (text: string) => {
-    const match = /(-?[\d.]+)\s*(mins?|ms|µs|ns|s)\b/.exec(text);
+    const match = /(-?[\d.]+)\s*(days?|hours?|mins?|ms|µs|ns|s)\b/.exec(text);
 
     if (!match) throw new Error(`No duration in "${text}"`);
 
@@ -66,6 +77,9 @@ export default class MongodbClusterSyncDetails implements DashboardInterface {
     `Worker Events Applied - ${serviceName}`,
     `Worker Flush Duration (p99) - ${serviceName}`,
   ];
+
+  sourceReplSetSummaryLink = (dashboard: Dashboards) =>
+    dashboard.builders.panelByExactName('Source Cluster').getByRole('link', { name: 'ReplSet Summary' });
 
   statText = async (dashboard: Dashboards, panelName: string, index = 0) =>
     this.panelText(dashboard.builders.panelContentByExactName(panelName).nth(index));
