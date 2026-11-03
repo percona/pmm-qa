@@ -27,7 +27,7 @@ pmmTest.afterAll(async ({ browser }) => {
 });
 
 pmmTest(
-  'PMM-T2472 - Verify Adding PXC services remotely @pmm-pxc-integration @not-ui-pipeline @pmm-ps-pxc-haproxy-integration',
+  'PMM-T2472 - Verify Adding PXC services remotely @pmm-pxc-integration @not-ui-pipeline',
   async ({ addInstancePage, agentsPage, api, page, servicesPage }) => {
     const { port } = await api.inventoryApi.getServiceDetailsByRegex('^pxc_node__');
 
@@ -65,7 +65,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2473 - Verify metrics from PXC instances on PMM-Server @pmm-pxc-integration @not-ui-pipeline @pmm-ps-pxc-haproxy-integration',
+  'PMM-T2473 - Verify metrics from PXC instances on PMM-Server @pmm-pxc-integration @not-ui-pipeline',
   async ({ api, cliHelper }) => {
     const metric = 'mysql_global_status_max_used_connections';
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('^pxc_node__');
@@ -86,7 +86,7 @@ pmmTest(
 
 for (const service of services) {
   pmmTest(
-    `PMM-T348 - Verify dashboard after PXC Instances are added @pmm-pxc-integration @not-ui-pipeline @pmm-ps-pxc-haproxy-integration | ${service}`,
+    `PMM-T348 - Verify dashboard after PXC Instances are added @pmm-pxc-integration @not-ui-pipeline | ${service}`,
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
       const nodeSummary = dashboard.mysql.pxcGaleraNodeSummary;
@@ -106,7 +106,7 @@ for (const service of services) {
 
 for (const service of services) {
   pmmTest(
-    `PMM-T2063 - Verify QAN after PXC Instances is added @pmm-pxc-integration @not-ui-pipeline @pmm-ps-pxc-haproxy-integration | ${service}`,
+    `PMM-T2063 - Verify QAN after PXC Instances is added @pmm-pxc-integration @not-ui-pipeline | ${service}`,
     async ({ api, qanStoredMetrics, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
 
