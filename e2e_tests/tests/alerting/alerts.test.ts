@@ -25,7 +25,6 @@ const postgresqlRule = {
   templateName: 'pmm_postgresql_too_many_connections',
   threshold: 0.01,
 };
-// The Alert Status page collapses the eight levels into four bands, see PMM-15239.
 const severityBands: Record<AlertSeverity, string> = {
   [AlertSeverity.Alert]: 'Critical',
   [AlertSeverity.Critical]: 'Critical',
