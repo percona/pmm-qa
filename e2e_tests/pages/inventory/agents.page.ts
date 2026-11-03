@@ -33,6 +33,7 @@ export default class AgentsPage extends BasePage {
     rtaAgentStatus: this.grafanaIframe().locator(
       '//td[@title="rta-mongodb-agent"]//parent::tr//td[position()="2"]',
     ),
+    runningStatuses: this.grafanaIframe().getByTestId('table-tbody-tr').getByText('Running', { exact: true }),
   };
   inputs = {};
   messages = {};
