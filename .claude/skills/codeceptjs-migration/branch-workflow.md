@@ -43,7 +43,7 @@ Everything the migration produces from here stays uncommitted in control's workt
 
 ## Before publication
 
-Cut the publish branch only after initial review, MCP locator verification, migrated-scenario execution and, when required, target-file regression have all passed. Source retirement, workflow coverage and the final review happen on the publish branch, so the gate reviews committed content.
+Cut the publish branch only after initial review, live locator verification, migrated-scenario execution and, when required, target-file regression have all passed. Source retirement, workflow coverage and the final review happen on the publish branch, so the gate reviews committed content.
 
 ## Cut the publish branch
 

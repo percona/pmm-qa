@@ -23,7 +23,7 @@ Test id outranks role here because Grafana ships its own `data-testid` values an
 - CSS only for MUI and Grafana internals with no stable test id or role (`[class*="MuiListItemText-secondary"]`, `.reactour__popover`). XPath only for the Grafana iframe (`frameLocator`); a positional table cell is `getByRole('cell').nth(i).within(<row locator>)` (1.64), which resolves `nth` inside each row rather than across the table.
 - Every POM entry is a `Locator`, never a selector string. Chain and scope rather than writing one long selector; `locator.describe('...')` on an otherwise opaque locator.
 - Resolve a strict-mode violation by narrowing the locator (`.locator()` to scope, `.filter({ hasText })` or `.filter({ has })` to select), not with `nth()`, `first()` or `last()`. Those remain legitimate for deliberate indexed iteration and positional table cells, justified in one line; the convention script reports them as advisories. A `filter({ has })` inner locator is matched relative to each outer match, so it is rooted at `page` and never re-enters `frameLocator`; nesting the frame hop inside it relies on a tolerance `playwright-core` guards against elsewhere.
-- An existing POM entry with no consumers is unproven. When it disagrees with a currently-green source selector, verify both through MCP and rewrite it in place; keep the existing form only when a second source attests it.
+- An existing POM entry with no consumers is unproven. When it disagrees with a currently-green source selector, verify both with `playwright-cli` and rewrite it in place; keep the existing form only when a second source attests it.
 
 ## Web-first assertions
 
@@ -55,7 +55,7 @@ Since 1.59 and 1.62, for code this suite writes:
 
 - A `page.route` handler registered inside a test body is scoped with `await using` (1.59, `target: ESNext` in `tsconfig.json` supports it), so it unregisters when the block ends; a mock shared across tests lives in the `mocks` fixture.
 - Console checks use `page.clearConsoleMessages()` before the action and `page.consoleMessages({ filter })` after it (1.59), never a `page.on('console')` listener.
-- A locator found by CSS or XPath is run through `locator.normalize()` (1.59) in a scratch script against the live server to propose its test-id or role form; the proposal is then verified through MCP like any other rung.
+- A locator found by CSS or XPath is run through `locator.normalize()` (1.59) in a scratch script against the live server to propose its test-id or role form; the proposal is then verified with `playwright-cli` like any other rung.
 - `expect.soft.poll` (1.62) is not used: this suite has no soft assertions, and a migration adds none.
 - Elements inside a hidden iframe are hidden to actions, `isVisible()` and `toBeVisible()` (1.64). A Grafana-frame check runs only once the PMM UI shows that frame; a source step that passed against a frame the UI had hidden is a navigation the port must add, not a locator to work around.
 

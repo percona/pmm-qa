@@ -41,18 +41,19 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - `STALE_SUBJECT` (final gate only) means the publish branch moved under the reviewer. It is neither a pass nor a failure: re-spawn the same gate scoped to the delta between the ledger entry's `startRef` and the branch HEAD, and stop whatever is committing to the branch. These re-spawns do not count as attempts.
 - A gate return without evidence is not a verdict. Reject a return whose `conventionScriptOutput` is missing, or whose `shape` block has empty `newNames`, `worthPortingGate`, `assertionMutationProof` or `locatorLadder` while the diff has new names, scenarios, assertions or locators; re-spawn scoped to the missing evidence. To verify a finding yourself, widen its scope (drop the path filter, count the whole repository), never re-run its command.
 - A repeat attempt of the same gate goes to the reviewer that returned the previous one, through `SendMessage` with the open ids and the delta, so it does not re-read the skill. Spawn a fresh reviewer only when that one is unreachable, and always for the final gate after an initial one. The ledger stays the record either way.
-- The final gate reuses the initial gate's MCP locator verification and mutation proof for every file `cmp` shows byte-identical to what the initial gate checked on the same environment; it re-runs MCP only for locators added or changed since. Pass that `cmp` result in the spawn.
+- The final gate reuses the initial gate's live locator verification and mutation proof for every file `cmp` shows byte-identical to what the initial gate checked on the same environment; it re-runs `playwright-cli` checks only for locators added or changed since. Pass that `cmp` result in the spawn.
 - Five attempts per gate, counted by the ledger's `attempt`. After a fifth non-pass: keep the row `in-progress`, run teardown, report the open blockers verbatim with the ledger path. A five-round disagreement is a rule conflict for a human.
 - Pass the gate ledger path (`.migration-observations/<row>-<slug>.gates.yaml`) on every gate spawn; the reviewer reads and appends it itself (`run.md` section Gate ledger). A `FINAL_REVIEW_FAILED` entry whose blockers are all `open` routes work to the writer or runner, not to a re-spawn.
-- Overlap only what `migration/parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, MCP checks after readyz. Everything else is serial.
+- Overlap only what `migration/parallelization-ledger.md` records as `implemented`: provisioning in the background while the writer migrates, static review while PMM provisions, `playwright-cli` checks after readyz. Everything else is serial.
 
 **Environment and control**
 
 - A run writes nothing under `.claude/` (skills, agents, scripts, hooks), for any reason: Claude Code asks for approval on every such write, even in auto mode, and an unanswered prompt parks the unattended session until it is released. A gate that trips, a `STOP:` from `migration.sh`, a script that looks wrong or a rule that seems to block the row is the run's result: send a `PushNotification` naming it, with the change you would propose, and end the run; the skill and its scripts change in attended sessions only. Run state lives in `migration/` (tracker, parallelization ledger) and `.migration-observations/`; tracker cells change only through `migration.sh set-setup`, `mark` and `merged`.
 - Never edit `e2e_tests/.env`. Pass the run id, `PMM_UI_URL` and `ADMIN_PASSWORD` (the VM's URL and per-run password, from `chaos-pmm.sh env <run_id>`, see step 3) explicitly in every handoff and command, with `PMM_MIGRATION=1` so `.env` cannot override them. `chaos-pmm.sh test` gives the run on the VM its own on-box pair.
-- Locator verification uses the Playwright MCP server declared repo-level in `.mcp.json`. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is that one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`). If MCP is unavailable, stop and report.
+- Every phase uses only tools the runner host provides to an unattended session; never one that loads from the checkout (a browser MCP server, a skill or agent type defined only on control), since a scheduled session starts on a branch cut from `main` and switching to control later loads nothing. Locator verification uses `playwright-cli` (`locator-fix.md` Live DOM checks), which `migration.sh preflight` requires. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`).
+- The `pmm-migration-*` agent types are defined only on control, so a session that started elsewhere has no such `subagent_type`. Spawn `general-purpose` instead, with the brief opening: read `.claude/agents/pmm-migration-<role>.md` from control's worktree and follow it as your agent definition.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
-- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/chaos-pmm.sh down <run_id>` from the parent and closes the Playwright MCP browser (`mcp__playwright__browser_close`). The runner owns cleanup on every path it reaches.
+- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/chaos-pmm.sh down <run_id>` from the parent and closes the browser session (`playwright-cli -s=<run_id> close`). The runner owns cleanup on every path it reaches.
 - Record the tracker `in-progress` commit SHA in the handoff as the active-row marker.
 - Restore control's worktree to clean after publication (`branch-workflow.md` Tracker completion and cleanup).
 
@@ -69,7 +70,7 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
    Not `--search 'migrate in:title'`, which matches unrelated titles containing the word. Also run `ListAgents`: another session sharing this worktree will stage or revert files under you, so agree paths with it or stop.
 
-3. Node.js older than 22.18 on the runner host, or `CHAOS_TOKEN` unset (the session is not on a CHAOS runner; never fall back to Docker on the host). `chaos-vm.sh list` shows every pmm-qa VM: one this run did not create is foreign; never adopt, reuse or tear one down.
+3. Node.js older than 22.18 or no `playwright-cli` on the runner host, or `CHAOS_TOKEN` unset (the session is not on a CHAOS runner; never fall back to Docker on the host). `chaos-vm.sh list` shows every pmm-qa VM: one this run did not create is foreign; never adopt, reuse or tear one down.
 
 4. the selected row's source has an active scenario without a `PMM-T` id and no `zephyr_*` tool loads through `ToolSearch` (`select:mcp__plugin_pmm-qa_zephyr-bot__zephyr_create_test_case`). With the tool loaded, the writer looks up the matching case or creates one (`SKILL.md` Title, tags, ids) and the new key goes into the title; without it, ask the user, or unattended skip to the next pending row whose scenarios all carry ids and report the skipped row.
 
@@ -179,7 +180,7 @@ pending
    |
 -> wait for the provisioned environment, verify with --prepare-only
 -> initial review
--> MCP locator verification
+-> live locator verification (playwright-cli)
 -> test execution or already-covered regression on the same CHAOS VM
    (everything so far is UNCOMMITTED in control's worktree)
 -> cut isolated worktree + publish branch from origin/main
@@ -189,5 +190,5 @@ pending
 -> revalidate in that worktree
 -> push, PR opened
 -> tracker done on control, restore control's worktree clean
--> tear down the CHAOS VM, the Playwright MCP browser and the publish worktree
+-> tear down the CHAOS VM, the playwright-cli session and the publish worktree
 ```

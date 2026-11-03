@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PMM for a migration on a throwaway CHAOS VM: pmm-server from e2e_tests/docker-compose.yml plus
 # databases from pmm-framework on the prebaked images CI pulls. Playwright runs on the VM, so
-# cliHelper's `docker exec` reaches the containers; the runner host reaches the UI for MCP.
+# cliHelper's `docker exec` reaches the containers; the runner host reaches the UI for playwright-cli.
 #
 #   chaos-pmm.sh up <run_id> [pmm-framework args...]   # e.g. --database ps=8.4; again on a live VM adds databases
 #   chaos-pmm.sh env <run_id>                          # PMM_UI_URL and ADMIN_PASSWORD, for eval on the runner host

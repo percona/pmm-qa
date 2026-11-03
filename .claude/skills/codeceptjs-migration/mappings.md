@@ -57,7 +57,7 @@ For a legacy remote-instance test, derive the database container's DNS name, int
 | `signOut()` | `await page.goto('graph/logout')` |
 | `useDataQA(sel)` | `getByTestId(sel)` |
 | `seeElementsDisabled(l)`, `seeElementsEnabled(l)` | `expect(l).toHaveAttribute('disabled', ...)` / `toBeEnabled()` |
-| `locate('$testid').find('<tag>')` | `getByTestId('testid')` asserted with `toContainText`; under MUI the child tag is multi-match, so the wrapper's text is the target. Narrow to a child testid only when MCP shows the wrapper itself is multi-match |
+| `locate('$testid').find('<tag>')` | `getByTestId('testid')` asserted with `toContainText`; under MUI the child tag is multi-match, so the wrapper's text is the target. Narrow to a child testid only when a `playwright-cli` count shows the wrapper itself is multi-match |
 | `Before` / `After` | `beforeEach` / `afterEach` |
 | `BeforeSuite` / `AfterSuite` | `beforeAll` / `afterAll`, which run once per worker under `fullyParallel: true`. Pin once-per-file semantics with a top-level `pmmTest.describe.configure({ mode: 'default' })` or a worker-scoped fixture when the hook is expensive or mutates shared state |
 | `I.refreshPage()` | `await page.reload()` |
