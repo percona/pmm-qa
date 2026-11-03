@@ -235,6 +235,7 @@ stub_docker_ps() {
   [[ $(image_tags psmdb | head -2 | paste -sd' ') == "${DB_VERSIONS[PSMDB]%% *}-ol8 ${DB_VERSIONS[PSMDB]%% *}-ol9" ]]
   [[ $(image_tags psmdb) != *latest* ]]
   [[ $(image_tags external) == "$EXTERNAL_TAG" ]]
+  [[ -n ${DB_VERSIONS[PCSM]-} && $(image_tags pcsm | paste -sd' ') == "${DB_VERSIONS[PCSM]}" ]]
   [[ $(image_tags kerberos) == latest ]]
   run image_tags nosuch
   [[ $status -ne 0 && $output == *"No prebaked image for 'nosuch'"* ]]
