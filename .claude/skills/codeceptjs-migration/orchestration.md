@@ -104,7 +104,7 @@ A batch runs as one row:
 - one tracker commit marks every row `in-progress`; one timeline and one gate ledger, named after the first row;
 - one writer spawn migrates every row, and each gate (initial review, runner, final review) is one spawn covering the whole batch;
 - every row's tests still run and pass, and every row still gets its own worth-porting and coverage evidence;
-- one publish branch `migrate-<category>-<first-test-name>`, one PR listing every source, every row marked `done` with that PR's URL.
+- one publish branch `PMM-7-migrate-<category>-<first-test-name>` (`branch-workflow.md` Cut the publish branch), one PR listing every source, every row marked `done` with that PR's URL.
 
 Once the writer returns, measure the real size (`git diff --numstat` plus untracked new files) and record estimate and actual on the timeline. An actual over 200 does not split the batch.
 

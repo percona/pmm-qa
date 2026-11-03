@@ -39,7 +39,7 @@ git add migration/tracker.md
 git commit -m "chore(migration): mark <test-name> in progress"
 ```
 
-Everything the migration produces from here stays uncommitted in control's worktree until publication. Publish branch name: `migrate-<category>-<test-name>`.
+Everything the migration produces from here stays uncommitted in control's worktree until publication. Publish branch name: `PMM-7-migrate-<category>-<test-name>`, `<category>` and `<test-name>` one lowercase `[a-z0-9]` word each (`PMM-7-migrate-metrics-verifymongodb`); the runner hosts' branch guard refuses any other shape at commit, and `migration.sh publish-branch` refuses it before any work.
 
 ## Before publication
 
@@ -49,7 +49,7 @@ Cut the publish branch only after initial review, live locator verification, mig
 
 ```bash
 git fetch origin main
-git worktree add ../pmm-qa-publish -b migrate-<category>-<test-name> origin/main
+git worktree add ../pmm-qa-publish -b PMM-7-migrate-<category>-<test-name> origin/main
 cd ../pmm-qa-publish/e2e_tests && npm ci && cd -
 ```
 
