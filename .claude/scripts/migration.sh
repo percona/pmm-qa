@@ -278,6 +278,7 @@ env_check() {
 
 publish_branch() {
   local branch=$1 base=origin/main
+  [[ $branch =~ ^PMM-[0-9]+(-[a-z0-9]+){2,4}$ ]] || die "publish branch '$branch' must match PMM-<n>-<2 to 4 lowercase words>, e.g. PMM-7-migrate-metrics-verifymongodb"
   cd "$control" || exit 1
   git fetch -q origin
   git ls-remote --exit-code --heads origin "$branch" >/dev/null && base=origin/$branch
