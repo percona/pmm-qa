@@ -3708,6 +3708,16 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15794",
       "by": "Investigator routine",
       "at": "2026-11-03T02:50:09Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "product bug",
+      "summary": "pmm3-ha-backup-restore-tests #34, HA tests on the restored cluster: PMM-T2371 read min(up{job=\"kube-apiserver\"})=0 on all 3 attempts (24/25 passed). This is the known PMM-15833 (New), where vmagent's 16 MiB default maxScrapeSize drops the ROSA apiserver /metrics; first seen on nights 94/96. Deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15833",
+      "by": "Investigator routine",
+      "at": "2026-11-03T02:50:15Z"
     }
   ],
   "claims": []
