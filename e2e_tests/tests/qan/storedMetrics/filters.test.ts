@@ -293,22 +293,14 @@ for (const serviceName of [
 ]) {
   pmmTest(
     `PMM-T2063 - Verify QAN has data for all services @qan @gssapi-nightly | ${serviceName}`,
-    async ({ api, page, qanStoredMetrics, urlHelper }) => {
+    async ({ api, qanStoredMetrics, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}`);
 
       await expect(async () => {
-        await page.goto(
+        await qanStoredMetrics.openFilteredByService(
           urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-120m', to: 'now' }),
-        );
-        await qanStoredMetrics.waitForLoad();
-        await qanStoredMetrics.selectFilter(
           service_name,
-          qanStoredMetrics.builders.filterCheckboxInGroup(service_name, 'Service Name'),
         );
-        await expect(page).toHaveURL((url) =>
-          url.searchParams.getAll('var-service_name').includes(service_name),
-        );
-        await qanStoredMetrics.waitForLoad();
         expect(
           await qanStoredMetrics.getQueryCount(),
           `The queries for service ${service_name} do NOT exist, check QAN Data`,

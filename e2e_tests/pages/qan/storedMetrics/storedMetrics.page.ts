@@ -265,6 +265,16 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.codeBlock.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openFilteredByService = async (url: string, serviceName: string) => {
+    await this.page.goto(url);
+    await this.waitForLoad();
+    await this.selectFilter(serviceName, this.builders.filterCheckboxInGroup(serviceName, 'Service Name'));
+    await expect(this.page).toHaveURL((pageUrl) =>
+      pageUrl.searchParams.getAll('var-service_name').includes(serviceName),
+    );
+    await this.waitForLoad();
+  };
+
   openInNewTab = async (url: string) => {
     const page = await this.page.context().newPage();
     const storedMetrics = new StoredMetricsPage(page);
