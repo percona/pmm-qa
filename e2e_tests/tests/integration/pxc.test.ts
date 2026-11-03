@@ -107,19 +107,14 @@ for (const service of services) {
 for (const service of services) {
   pmmTest(
     `PMM-T2063 - Verify QAN after PXC Instances is added @pmm-pxc-integration @not-ui-pipeline | ${service}`,
-    async ({ api, page, qanStoredMetrics, urlHelper }) => {
+    async ({ api, qanStoredMetrics, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
 
       await expect(async () => {
-        await page.goto(
+        await qanStoredMetrics.openFilteredByService(
           urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-120m', to: 'now' }),
-        );
-        await qanStoredMetrics.waitForLoad();
-        await qanStoredMetrics.selectFilter(
           service_name,
-          qanStoredMetrics.builders.filterCheckboxInGroup(service_name, 'Service Name'),
         );
-        await qanStoredMetrics.waitForLoad();
         expect(
           await qanStoredMetrics.getQueryCount(),
           `The queries for service ${service_name} instance do NOT exist, check QAN Data`,
