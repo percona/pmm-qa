@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM server upgrade tests', () => {
   pmmTest.describe.configure({ mode: 'serial', retries: 0 });
@@ -17,6 +18,18 @@ pmmTest.describe('PMM server upgrade tests', () => {
   });
 
   pmmTest(
+    'PMM-T288 - Verify user can see Update widget before upgrade [critical] @pmm-upgrade',
+    async ({ page, updatesPage }) => {
+      await page.goto(updatesPage.homeUrl);
+      await updatesPage.verifyPreUpdateWidget();
+      await expect(updatesPage.elements.installedVersion).toHaveText(/\S/);
+      await expect(updatesPage.elements.latestVersion).not.toHaveText(
+        await updatesPage.elements.installedVersion.innerText(),
+      );
+    },
+  );
+
+  pmmTest(
     'PMM-T3 - Verify user is able to Upgrade PMM version [blocker] @pmm-upgrade',
     async ({ updatesPage }) => {
       const info = await updatesPage.getUpdateInfo();
@@ -27,14 +40,14 @@ pmmTest.describe('PMM server upgrade tests', () => {
   );
 
   pmmTest(
-    'Verify pmm server is upgraded to correct version @post-upgrade @post-server-upgrade',
+    'Verify pmm server is upgraded to correct version @pmm-upgrade @post-upgrade @post-server-upgrade',
     async ({ updatesPage }) => {
-      const info = await updatesPage.getUpdateInfo();
-
-      expect(
-        info.installed?.version,
-        'Installed PMM version should match the target after upgrade',
-      ).toContain(process.env.PMM_SERVER_LATEST?.trim());
+      await expect
+        .poll(async () => (await updatesPage.getUpdateInfo()).installed?.version, {
+          message: 'Installed PMM version should match the target after upgrade',
+          timeout: Timeouts.TWO_MINUTES,
+        })
+        .toContain(process.env.PMM_SERVER_LATEST?.trim());
     },
   );
 });
