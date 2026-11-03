@@ -12,6 +12,8 @@ export default class NodesPage extends BasePage {
   builders = {
     monitoringLinkByIndex: (index: number) =>
       this.elements.nodeRows.nth(index).getByTestId('monitoring-status-link'),
+    nodeCheckbox: (nodeName: string) =>
+      this.builders.nodeRow(nodeName).getByRole('checkbox', { name: 'Toggle select row' }),
     nodeRoleLabel: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('ha-role-chip'),
     nodeRow: (nodeName: string) =>
       this.elements.nodeRows.filter({ has: this.page.getByText(nodeName, { exact: true }) }),
@@ -22,7 +24,10 @@ export default class NodesPage extends BasePage {
       this.page.getByRole('button', { exact: true, name: 'Expand' }).nth(Number(index)),
   };
   buttons = {
+    confirmDelete: this.page.getByTestId('inventory-delete-modal-confirm'),
     delete: this.page.getByTestId('delete-nodes-button'),
+    deleteNode: this.page.getByRole('menuitem', { name: 'Delete' }),
+    forceDelete: this.page.getByRole('checkbox', { name: 'Force mode' }),
     overrideAlertThresholds: this.page.getByRole('menuitem', { name: 'Override alert thresholds' }),
   };
   elements = {
@@ -36,6 +41,19 @@ export default class NodesPage extends BasePage {
   inputs = {};
   messages = {
     deleteConfirmation: this.page.getByTestId('inventory-delete-modal-message'),
+  };
+
+  deleteNode = async (nodeName: string) => {
+    await this.builders.nodeCheckbox(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.delete.click();
+    await this.buttons.forceDelete.check();
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes('/v1/inventory/nodes/') && response.request().method() === 'DELETE',
+      ),
+      this.buttons.confirmDelete.click(),
+    ]);
   };
 
   openAlertThresholds = async (nodeName: string): Promise<void> => {
@@ -66,5 +84,10 @@ export default class NodesPage extends BasePage {
         ).toHaveText(expectedRole, { timeout: Timeouts.THIRTY_SECONDS });
       });
     }
+  };
+
+  verifyNodeListedOnce = async (nodeName: string): Promise<void> => {
+    await this.page.goto(this.url);
+    await expect(this.builders.nodeRow(nodeName)).toHaveCount(1, { timeout: Timeouts.THIRTY_SECONDS });
   };
 }

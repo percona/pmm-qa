@@ -83,6 +83,31 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  enableServiceAccount = async (name: string): Promise<void> => {
+    const headers = GrafanaHelper.getAuthHeader();
+    const search = await this.request.get(apiEndpoints.grafana.serviceAccountsSearch, {
+      headers,
+      params: { query: name },
+    });
+
+    expect(search.status(), await search.text()).toEqual(200);
+
+    const account = (
+      (await search.json()) as { serviceAccounts: { id: number; isDisabled: boolean; name: string }[] }
+    ).serviceAccounts.find((serviceAccount) => serviceAccount.name === name);
+
+    expect(account, `Service account ${name} must exist`).toBeDefined();
+
+    if (!account?.isDisabled) return;
+
+    const response = await this.request.patch(`${apiEndpoints.grafana.serviceAccounts}/${account.id}`, {
+      data: { isDisabled: false },
+      headers,
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   getActiveTargetByExternalGroup = async (externalGroup: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
@@ -130,11 +155,11 @@ export default class GrafanaApi {
     return uid as string;
   };
 
-  getMetric = async (metricName: string) => {
+  getMetric = async (metricName: string, from = 'now-1m') => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
     const requestBody = {
-      from: 'now-1m',
+      from,
       queries: [
         {
           datasource: { type: 'prometheus', uid: datasource.uid },
@@ -195,5 +220,14 @@ export default class GrafanaApi {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
       await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
     }
+  };
+
+  waitForMetricAbsent = async (metricName: string, from: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await expect
+      .poll(async () => (await this.getMetric(metricName, from)).results.A.frames[0].data.values.length, {
+        message: `Metric ${metricName} must have no data since ${from}`,
+        timeout,
+      })
+      .toBe(0);
   };
 }

@@ -96,12 +96,15 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@ami-ovf-post-upgrade`
+- `@ami-ovf-pre-upgrade`
 - `@annotations`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
+- `@exporters`
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
@@ -111,18 +114,25 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
+- `@instances`
 - `@inventory`
+- `@inventory-fb`
 - `@LBAC`
 - `@menu`
+- `@mongodb-exporter`
 - `@new-navigation`
 - `@nightly`
 - `@nomad`
+- `@not-ui-pipeline`
+- `@pbm-nightly`
+- `@permissions-nightly`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
 - `@pmm-helm-pre-upgrade`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
+- `@pmm-ps-replica-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-psmdb-sharding-integration`
 - `@pmm-upgrade`
@@ -131,6 +141,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@post-server-upgrade`
 - `@post-upgrade`
 - `@pre-upgrade`
+- `@pt-summary-nightly`
 - `@qan`
 - `@rta`
 - `@service-account`

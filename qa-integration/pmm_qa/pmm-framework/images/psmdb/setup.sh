@@ -130,12 +130,14 @@ psmdb_pbm_agent() {
 # /var/log/pmm-agent.log with the Kerberos keytab.
 psmdb_client() {
   install_pmm_client "$1" "$client" "$tarball"
+  # The log and keytab go in a drop-in: a package upgrade replaces the unit itself.
   # shellcheck disable=SC2016 # expanded by the container's shell
   must docker exec "$1" sh -ceu '
     unit=/usr/lib/systemd/system/pmm-agent.service
     [ -f $unit ] || install -D -m 0644 "$(find /tmp/pmm-client -name pmm-agent.service -print -quit)" $unit
-    sed -i -e "/ExecStart/a StandardError=file:/var/log/pmm-agent.log" \
-      -e "/\[Service\]/a Environment=\"KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab\"" $unit
+    mkdir -p /etc/systemd/system/pmm-agent.service.d
+    printf "%s\n" "[Service]" "StandardError=file:/var/log/pmm-agent.log" \
+      "Environment=\"KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab\"" >/etc/systemd/system/pmm-agent.service.d/pmm-qa.conf
     ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/sbin/pmm-agent
     ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/sbin/pmm-admin
     tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id
@@ -159,6 +161,20 @@ psmdb_register() {
   must docker exec "$node" systemctl restart pmm-agent
   wait_pmm_agent "$node"
   pmm_register "$node" pmm-admin add mongodb --enable-all-collectors --agent-password=mypass "$service" "$@"
+}
+
+# From 8.1 an arbiter added by hostname needs percona/pmm#6024 (PMM-15650, 3.11.0); older
+# released clients use the localhost exception. Dev builds (3.10.1-v3-...) carry the fix.
+psmdb_arbiter_host() {
+  local node=$1 output version
+  output=$(docker exec "$node" pmm-admin --version) || die "Could not read the pmm-admin version on $node."
+  version=$(sed -n 's/^Version: //p' <<<"$output")
+  [[ -n $version ]] || die "pmm-admin --version on $node printed no Version line."
+  if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $(printf '%s\n' 3.11.0 "$version" | sort -V | head -n 1) != 3.11.0 ]]; then
+    printf '127.0.0.1'
+  else
+    printf '%s' "$node"
+  fi
 }
 
 psmdb_replica_set() {
@@ -214,9 +230,12 @@ psmdb_replica_set() {
       fi
     fi
     if [[ $node == "$arbiter" || $node == "${arbiter/103/203}" ]]; then
-      # An arbiter holds no users, and from 8.3 buildInfo needs auth except
-      # through the localhost exception.
-      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" --host=127.0.0.1 --port=27017
+      # An arbiter holds no users. Added by hostname like the other members where the
+      # client allows it, so the inventory addresses match.
+      local arbiter_host
+      arbiter_host=$(psmdb_arbiter_host "$node") || die "Could not pick the address to add arbiter $node by."
+      psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" \
+        "--host=$arbiter_host" --port=27017
     else
       psmdb_register "$node" "$node._$suffix" "$node${name_part}_$suffix" "${labels[@]}" "${credentials[@]}" \
         "--host=$node" --port=27017

@@ -81,6 +81,9 @@
   - name: Start agent
     shell: pmm-agent --debug --config-file={{ custom_path }}/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 
+  - name: Wait for pmm-agent to open its local API
+    include_tasks: ./tasks/wait_for_pmm_agent.yml
+
   - name: Grep pmm-admin status output
     shell: cat {{ custom_path }}/config/pmm-agent.yaml
     register: config_content
@@ -209,6 +212,9 @@
 
   - name: Start upgraded agent
     shell: pmm-agent --config-file={{ custom_path }}/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+
+  - name: Wait for pmm-agent to open its local API
+    include_tasks: ./tasks/wait_for_pmm_agent.yml
 
 ### Verifications after upgrade
   - name: Check if the configuration generated with paths-base is using the custom path

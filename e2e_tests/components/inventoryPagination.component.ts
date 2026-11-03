@@ -1,11 +1,13 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { tableLoadedRows } from '@helpers/tableLocators';
+import { tableDataRows, tableLoadedRows } from '@helpers/tableLocators';
 
 type RowsPerPage = '25' | '50' | '100';
 
 export default class InventoryPagination {
   readonly itemsInterval: Locator;
+  readonly monitoringNotOkRows: Locator;
+  readonly monitoringStatuses: Locator;
   readonly nextPageButton: Locator;
   readonly previousPageButton: Locator;
   readonly rowsPerPageDropdown: Locator;
@@ -16,6 +18,10 @@ export default class InventoryPagination {
   constructor(readonly page: Page) {
     // Material React Table's pagination, e.g. "1-25 of 30"
     this.itemsInterval = page.getByText(/^\d+-\d+ of \d+$/);
+    this.monitoringNotOkRows = page.locator(tableDataRows).filter({
+      hasNot: page.getByTestId('monitoring-status-link').filter({ hasText: /^OK$/ }),
+    });
+    this.monitoringStatuses = page.locator(tableDataRows).getByTestId('monitoring-status-link');
     this.nextPageButton = page.getByRole('button', { name: 'Go to next page' });
     this.previousPageButton = page.getByRole('button', { name: 'Go to previous page' });
     this.rowsPerPageDropdown = page.getByRole('combobox', { name: 'Rows per page' });
@@ -57,6 +63,11 @@ export default class InventoryPagination {
     await this.selectRowsPerPage('100');
     await expect(this.rowsPerPageDropdown).toHaveText('100', { timeout: Timeouts.THIRTY_SECONDS });
     await expect(this.itemsInterval, 'Every row should fit on one page of 100').toHaveText(/^1-(\d+) of \1$/);
+  };
+
+  verifyMonitoringStatusesOk = async (listName: 'services' | 'nodes') => {
+    await expect(this.monitoringStatuses.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.monitoringNotOkRows, `${listName} with incorrect monitoring statuses`).toHaveText([]);
   };
 
   verifyPaginationFunctionality = async () => {

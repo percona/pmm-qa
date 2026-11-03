@@ -2,6 +2,7 @@ import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { GetService } from '@interfaces/inventory';
+import { Timeouts } from '@helpers/timeouts';
 
 interface BackupArtifact {
   name: string;
@@ -24,6 +25,7 @@ interface BackupLocationsResponse {
 
 interface ScheduledBackup {
   name: string;
+  scheduled_backup_id: string;
   service_id?: string;
 }
 
@@ -36,10 +38,6 @@ type BackupMode = 'BACKUP_MODE_PITR' | 'BACKUP_MODE_SNAPSHOT';
 const BACKUP_LOCATION_NAME = 'mongo-location-pbm-dashboard-test';
 const BACKUP_NAME_PREFIX = 'test_schedule_pbm';
 const LOCAL_STORAGE_CONFIG = { path: '/tmp/backup_data' };
-const wait = async (milliseconds: number) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
 
 export default class BackupsApi {
   constructor(private request: APIRequestContext) {}
@@ -49,7 +47,22 @@ export default class BackupsApi {
     const scheduleName = `${BACKUP_NAME_PREFIX}_${mode}`;
 
     await this.ensureScheduledBackup(service.service_id, locationId, scheduleName, mode);
-    await this.waitForSuccessfulBackupArtifact(service.service_name, scheduleName);
+    await expect
+      .poll(
+        async () =>
+          (await this.getArtifacts()).some(
+            ({ name, service_name, status }) =>
+              service_name === service.service_name &&
+              name.startsWith(scheduleName) &&
+              status === 'BACKUP_STATUS_SUCCESS',
+          ),
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: `Backup artifact for ${service.service_name} should be successful`,
+          timeout: Timeouts.FIVE_MINUTES,
+        },
+      )
+      .toBe(true);
   };
 
   getLocations = async () => {
@@ -60,6 +73,16 @@ export default class BackupsApi {
     expect(response.status(), response.statusText()).toEqual(200);
 
     return ((await response.json()) as BackupLocationsResponse).locations ?? [];
+  };
+
+  getScheduledBackups = async () => {
+    const response = await this.request.get(apiEndpoints.backups.scheduled, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    return ((await response.json()) as ScheduledBackupsResponse).scheduled_backups ?? [];
   };
 
   private ensureLocalStorageLocation = async () => {
@@ -120,36 +143,5 @@ export default class BackupsApi {
     expect(response.status(), response.statusText()).toEqual(200);
 
     return ((await response.json()) as BackupArtifactsResponse).artifacts ?? [];
-  };
-
-  private getScheduledBackups = async () => {
-    const response = await this.request.get(apiEndpoints.backups.scheduled, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status(), response.statusText()).toEqual(200);
-
-    return ((await response.json()) as ScheduledBackupsResponse).scheduled_backups ?? [];
-  };
-
-  private waitForSuccessfulBackupArtifact = async (
-    serviceName: string,
-    backupNamePrefix: string,
-    timeoutSeconds = 180,
-  ) => {
-    for (let elapsedSeconds = 0; elapsedSeconds < timeoutSeconds; elapsedSeconds += 5) {
-      const artifact = (await this.getArtifacts()).find(
-        ({ name, service_name, status }) =>
-          service_name === serviceName &&
-          name.startsWith(backupNamePrefix) &&
-          status === 'BACKUP_STATUS_SUCCESS',
-      );
-
-      if (artifact) return;
-
-      await wait(5_000);
-    }
-
-    throw new Error(`Backup artifact for ${serviceName} was not successful in ${timeoutSeconds}s`);
   };
 }

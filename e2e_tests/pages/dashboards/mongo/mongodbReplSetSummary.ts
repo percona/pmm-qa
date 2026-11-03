@@ -124,6 +124,8 @@ export default class MongodbReplSetSummary implements DashboardInterface {
             name: `Oplog GB/Hour - ${serviceName}`,
             type: 'timeSeries',
           })),
+          // Its query keeps only lag > 0, so a replica set that is not lagging draws nothing.
+          { name: 'Replication Lag', type: 'timeSeries' },
         ],
         rowName: 'Replication',
       },

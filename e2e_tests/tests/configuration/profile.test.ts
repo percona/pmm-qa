@@ -36,9 +36,7 @@ pmmTest(
       await expect(changePasswordPage.buttons.changePassword).toBeVisible({
         timeout: Timeouts.ONE_MINUTE,
       });
-      await changePasswordPage.inputs.oldPassword.fill(INITIAL_ADMIN_PASSWORD);
-      await changePasswordPage.inputs.newPassword.fill(NEW_ADMIN_PASSWORD);
-      await changePasswordPage.inputs.confirmPassword.fill(NEW_ADMIN_PASSWORD);
+      await changePasswordPage.fillChangePasswordForm(INITIAL_ADMIN_PASSWORD, NEW_ADMIN_PASSWORD);
       await changePasswordPage.buttons.changePassword.click();
       await expect(changePasswordPage.messages.successPopUp).toContainText('User password changed', {
         timeout: Timeouts.THIRTY_SECONDS,
