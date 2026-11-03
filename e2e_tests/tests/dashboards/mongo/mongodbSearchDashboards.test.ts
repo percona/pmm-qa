@@ -445,7 +445,7 @@ pmmTest.describe('MongoDB Search dashboards without mongot', () => {
   });
 
   pmmTest(
-    'PMM-T2483 - Verify the Search dashboards show No data when MongoDB is monitored but no mongot is registered @pmm-mongot-absent',
+    'PMM-T2483 - Verify the Search dashboards show No data when MongoDB is monitored but no mongot is registered @pmm-psmdb-sharding-integration',
     async ({ api, dashboard, page, urlHelper }) => {
       const { searchDetails, searchHealth } = dashboard.mongo;
 
