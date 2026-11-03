@@ -150,6 +150,7 @@ preflight() {
   ahead=$(git log --oneline '@{u}..HEAD')
   [[ -z $ahead || -n $allow_unpushed ]] || die "control has unpushed commits:"$'\n'"$ahead"
   node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a==22&&b>=18)?0:1)' || die "Node < 22.18"
+  command -v playwright-cli >/dev/null || die "playwright-cli not on PATH: the review gates verify locators with it"
   git merge -q --no-edit origin/main || die "merge of origin/main failed; resolve on the markers"
   git check-ignore -q "$tracker" && die "tracker is gitignored"
   local found tracked
