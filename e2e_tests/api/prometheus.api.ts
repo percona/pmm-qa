@@ -16,10 +16,14 @@ export default class PrometheusApi {
   private datasourceUid?: string;
 
   constructor(private request: APIRequestContext) {}
-  //.metric.service_name
 
-  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> =>
-    (await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`))[0];
+  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> => {
+    const active = await this.getActiveClusterSyncInstances();
+
+    expect(active, 'Exactly one PCSM instance must hold the HA lease').toHaveLength(1);
+
+    return active[0];
+  };
 
   getActiveClusterSyncInstances = async (): Promise<PrometheusSample[]> =>
     await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`);

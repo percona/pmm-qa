@@ -2,29 +2,10 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import { NestedLocators } from '@pages/base.page';
-import CliHelper from '@helpers/cli.helper';
 
 const instances = ['pcsm-1', 'pcsm-2'];
 const sourceCluster = 'replicaset';
 const targetCluster = 'rs-tgt';
-const targetOrders = (cliHelper: CliHelper) =>
-  Number(
-    cliHelper
-      .execSilent(
-        `docker exec pcsm-tgt-1 mongo --quiet mongodb://root:root@127.0.0.1:27017/admin --eval 'db.getSiblingDB("pcsm_qa").orders.countDocuments({})'`,
-      )
-      .assertSuccess()
-      .getStdOutLines()
-      .pop(),
-  );
-
-const startPcsm = (cliHelper: CliHelper, instance: string) => {
-  if (cliHelper.execSilent(`docker exec ${instance} pgrep -x pcsm`).code !== 0) {
-    cliHelper
-      .execSilent(`docker exec --detach ${instance} sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`)
-      .assertSuccess();
-  }
-};
 
 pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   // The failover test runs last: it leaves an ACTIVE instance that never ran the initial clone.
@@ -106,7 +87,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
-        for (const serviceName of ['pcsm-1', 'pcsm-2']) {
+        for (const serviceName of instances) {
           await expect(async () => {
             await page.goto(
               urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: serviceName }),
@@ -190,7 +171,9 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         expect(await clusterSync.statText(dashboard, 'Lease Term')).toMatch(/^pcsm-sync-1\s+\d+$/);
         // Instance Roles is a state timeline drawn on a canvas, so the roles are read from its metric.
         expect(await api.prometheusApi.getActiveClusterSyncInstances()).toHaveLength(1);
-        expect(await api.prometheusApi.getActiveClusterSyncInstances()).toHaveLength(1);
+        expect(
+          await api.prometheusApi.instantQuery('percona_clustersync_mongodb_ha_active == 0'),
+        ).toHaveLength(1);
 
         for (const panelName of clusterSync.processPanels) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
@@ -206,9 +189,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       });
 
       await pmmTest.step('Open the source ReplSet Summary from the column header', async () => {
-        const link = dashboard.builders.panelByExactName('Source Cluster').getByRole('link', {
-          name: 'ReplSet Summary',
-        });
+        const link = clusterSync.sourceReplSetSummaryLink(dashboard);
 
         await link.scrollIntoViewIfNeeded();
         await link.click();
@@ -222,7 +203,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
   pmmTest(
     'PMM-T2477 - Verify the ClusterSync dashboard reports the PCSM group down when every instance stops @pmm-pcsm-psmdb-integration',
-    async ({ cliHelper, dashboard, page, urlHelper }) => {
+    async ({ dashboard, page, pcsmHelper, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(dashboard.mongo.clusterSyncDetails.url, {
         from: 'now-15m',
@@ -235,9 +216,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
       try {
         await pmmTest.step('Stop PCSM on every instance', async () => {
-          for (const instance of instances) {
-            cliHelper.execSilent(`docker exec ${instance} pkill -x pcsm`).assertSuccess();
-          }
+          for (const instance of instances) pcsmHelper.stop(instance);
         });
 
         await pmmTest.step('Verify every instance is DOWN and none is ACTIVE', async () => {
@@ -254,7 +233,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
         });
       } finally {
         await pmmTest.step('Start PCSM on every instance again', async () => {
-          for (const instance of instances) startPcsm(cliHelper, instance);
+          for (const instance of instances) pcsmHelper.start(instance);
         });
       }
 
@@ -277,7 +256,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
   pmmTest(
     'PMM-T2478 - Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
-    async ({ api, cliHelper, dashboard, page, urlHelper }) => {
+    async ({ api, dashboard, page, pcsmHelper, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-15m' });
       const stopped = (await api.prometheusApi.getActiveClusterSyncInstance()).metric.service_name;
@@ -304,8 +283,8 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
       try {
         await pmmTest.step(`Stop PCSM on the ACTIVE instance ${stopped}`, async () => {
-          cliHelper.execSilent(`docker exec ${stopped} pkill -x pcsm`).assertSuccess();
-          ordersBefore = targetOrders(cliHelper);
+          pcsmHelper.stop(stopped);
+          ordersBefore = pcsmHelper.countTargetOrders();
         });
 
         await pmmTest.step(`Verify ${stopped} is DOWN and ${takeover} took over`, async () => {
@@ -343,11 +322,11 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
         await pmmTest.step(`Verify ${takeover} keeps writing the source workload to the target`, async () => {
           await expect
-            .poll(() => targetOrders(cliHelper), { timeout: Timeouts.ONE_MINUTE })
+            .poll(() => pcsmHelper.countTargetOrders(), { timeout: Timeouts.ONE_MINUTE })
             .toBeGreaterThan(ordersBefore);
         });
       } finally {
-        await pmmTest.step(`Start PCSM on ${stopped} again`, async () => startPcsm(cliHelper, stopped));
+        await pmmTest.step(`Start PCSM on ${stopped} again`, async () => pcsmHelper.start(stopped));
       }
 
       await pmmTest.step(`Verify ${stopped} is UP again as STANDBY`, async () => {

@@ -100,6 +100,7 @@ why:
 | `psmdb` | `oraclelinux:$OL_VERSION` (8 or 9) | GSSAPI tests the OS-specific dynamic client |
 | `kerberos` | `alpine` | A KDC; nothing is installed into it |
 | `valkey` | `$BASE_OS` plus Valkey's own binaries from `valkey/valkey:<v>-bookworm` | Valkey's own releases; AppStream has only an older 8.0 and no 7 |
+| `pcsm` | `percona/percona-clustersync-mongodb:<v>` | The official PCSM image, without systemd: `sleep infinity` is its entrypoint, `docker exec` starts PCSM and `pmm-agent`, and PMM Client installs from a tarball |
 
 Setups start containers with `SYSTEMD_RUN` (`lib/run_helpers.sh`): systemd
 runs unprivileged with the host cgroup namespace, `/sys/fs/cgroup` mounted
@@ -112,7 +113,7 @@ upgrade's own `systemctl restart pmm-agent` reaches the running agent; PXC
 An RPM that enables its own unit at boot (`mysqld`, PXC's `mysql`, `proxysql`,
 `percona-telemetry-agent`) is disabled in its Dockerfile.
 
-Every image but MySQL 5.7 (EL7, yum) and the Alpine KDC has dnf and runs systemd:
+Every image but MySQL 5.7 (EL7, yum), the Alpine KDC and PCSM has dnf and runs systemd:
 install PMM Client with `install_pmm_client` and upgrade it with
 `support_scripts/upgrade_clients.sh`. `BASE_OS` must be Oracle Linux 9: EPEL,
 Oracle MySQL, HAProxy and PGDG are EL9 repositories, `upstream_version` reads
