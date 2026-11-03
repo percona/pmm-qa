@@ -139,8 +139,12 @@ mysql_first_free_port() {
 
 # Usage: mysql_start_node NODE CLUSTER
 mysql_start_node() {
-  local name=$1 node=${1##*_}
+  local name=$1 node=${1##*_} entrypoint=false
   local -n c=$2
+  # mysql:5.7 (EL7) has no systemd; its entrypoint takes the flags.
+  if [[ ${c[engine]} == mysql && ${c[version]} == 5.7 ]]; then
+    entrypoint=true
+  fi
   # Root: tests `docker exec` without --user
   # and read pmm-agent's root-owned config. mysqld itself still runs as mysql.
   local -a run=(
@@ -148,41 +152,77 @@ mysql_start_node() {
     --label "pmm-qa.engine=${c[engine]}" --label "pmm-qa.${c[engine]}.setup-type=${c[setup_type]:-single}"
     --network pmm-qa --env "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD"
     --volume "${name}_pmm:/usr/local/percona/pmm" --volume "${name}_tmp:/tmp"
+  ) flags=(
+    "--server-id=$node" "--report-host=$name" --bind-address=0.0.0.0 --max-connections=1000
+    --innodb-buffer-pool-size=256M --innodb-monitor-enable=all --user=mysql
   )
+  # /var/run is the systemd images' /run tmpfs, so their socket lives elsewhere.
   if [[ ${c[engine]} == mysql ]]; then
     mysql_socket_dir "$node"
-    run+=(--volume "/tmp/mysql-sockets/$node:/var/run/mysqld")
+    if [[ $entrypoint == true ]]; then
+      run+=(--volume "/tmp/mysql-sockets/$node:/var/run/mysqld")
+    else
+      run+=(--volume "/tmp/mysql-sockets/$node:/var/lib/mysql-sockets")
+      flags+=(--socket=/var/lib/mysql-sockets/mysqld.sock)
+    fi
   fi
   # Node N on host port base+N-1, except PS 5.7, which has none.
   if [[ ${c[engine]} != ps || ${c[version]} != 5.7 ]]; then
     run+=(--publish "$((c[base_port] + node - 1)):3306")
   fi
-  if [[ ${c[my_rocks]} == true ]]; then
-    run+=(--env INIT_ROCKSDB=1)
-  fi
-  run+=(
-    "pmm-qa/${c[engine]}:${c[version]}" "--server-id=$node" "--report-host=$name"
-    --bind-address=0.0.0.0 --max-connections=1000 --innodb-buffer-pool-size=256M
-    --innodb-monitor-enable=all --user=mysql
-  )
   if [[ ${c[engine]} == ps ]]; then
-    run+=(--userstat=1)
+    flags+=(--userstat=1)
   fi
   # Native password auth is needed below 9.x; only 8.4 ships it off.
   if [[ ${c[version]} == 8.4 ]]; then
-    run+=(--mysql-native-password=ON)
+    flags+=(--mysql-native-password=ON)
   fi
   if [[ -n ${c[setup_type]} ]]; then
-    mysql_replication_flags run "$name" "$node" "$2"
+    mysql_replication_flags flags "$name" "$node" "$2"
   fi
   if [[ ${c[setup_type]} == gr ]]; then
-    mysql_gr_flags run "$name" "$2"
+    mysql_gr_flags flags "$name" "$2"
   fi
-  must "${run[@]}" >/dev/null
+  if [[ $entrypoint == true ]]; then
+    must "${run[@]}" "pmm-qa/mysql:5.7" "${flags[@]}" >/dev/null
+  else
+    must "${run[@]}" "${SYSTEMD_RUN[@]}" "pmm-qa/${c[engine]}:${c[version]}" >/dev/null
+    mysql_systemd_start "$name" "${c[my_rocks]}" "${flags[@]}"
+  fi
   if ! (retry 60 "$name to accept MySQL connections" docker exec "$name" mysqladmin ping \
     --host=127.0.0.1 --protocol=tcp -uroot "-p$MYSQL_ROOT_PASSWORD" --silent >/dev/null); then
-    docker logs --tail 40 "$name" >&2 || true
+    docker exec "$name" tail -40 /var/log/mysqld.log >&2 || docker logs --tail 40 "$name" >&2 || true
     die "$name did not start."
+  fi
+}
+
+# Root's password is set outside the binlog, so replicas and group members start without GTIDs.
+# Usage: mysql_systemd_start NODE MY_ROCKS FLAGS...
+mysql_systemd_start() {
+  local name=$1 my_rocks=$2 flag socket=''
+  local -a cnf=('[mysqld]')
+  shift 2
+  for flag; do
+    cnf+=("${flag#--}")
+    if [[ $flag == --socket=* ]]; then
+      socket=${flag#--socket=}
+    fi
+  done
+  if [[ -n $socket ]]; then
+    cnf+=('[client]' "socket=$socket")
+  fi
+  printf '%s\n' "${cnf[@]}" | docker exec -i "$name" sh -c 'cat >/etc/my.cnf.d/zz-pmm-qa.cnf' ||
+    die "Writing the mysqld options of $name failed."
+  if ! docker exec "$name" sh -ceu 'mysqld --initialize-insecure --user=mysql; systemctl enable -q --now mysqld' >/dev/null; then
+    docker exec "$name" tail -40 /var/log/mysqld.log >&2 || true
+    die "mysqld did not start on $name."
+  fi
+  retry 60 "root password on $name" docker exec "$name" mysql -uroot -e "SET SQL_LOG_BIN=0;
+    ALTER USER 'root'@'localhost' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD';
+    CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD';
+    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;" >/dev/null
+  if [[ $my_rocks == true ]]; then
+    must docker exec -e "MYSQL_PWD=$MYSQL_ROOT_PASSWORD" "$name" ps-admin --enable-rocksdb -uroot >/dev/null
   fi
 }
 
@@ -196,7 +236,7 @@ mysql_socket_dir() {
 }
 
 # GTID and binlog flags every replicated topology needs.
-# Usage: mysql_replication_flags RUN_ARRAY NAME NODE CLUSTER
+# Usage: mysql_replication_flags FLAGS_ARRAY NAME NODE CLUSTER
 mysql_replication_flags() {
   local -n repl_flags=$1 c=$4
   local name=$2 node=$3 setup_type=${c[setup_type]} version=${c[version]}
@@ -222,7 +262,7 @@ mysql_replication_flags() {
   fi
 }
 
-# Usage: mysql_gr_flags RUN_ARRAY NAME CLUSTER
+# Usage: mysql_gr_flags FLAGS_ARRAY NAME CLUSTER
 mysql_gr_flags() {
   local -n gr_flags=$1 c=$3
   local name=$2 seed seeds=''
@@ -290,8 +330,8 @@ mysql_configure_replication() {
   mysql_seed_testdb "$1"
 }
 
-# The upstream mysql image logs its first-boot user setup, and a member carrying
-# GTIDs the group lacks is refused (ERROR 3092), so each member starts clean.
+# A member carrying GTIDs the group lacks is refused (ERROR 3092), and the
+# mysql:5.7 entrypoint logs its first-boot user setup, so each member starts clean.
 # Usage: mysql_prepare_gr_member NODE VERSION
 mysql_prepare_gr_member() {
   local version=$2 grants reset='RESET MASTER;'
@@ -506,16 +546,10 @@ ssl_mysql_start() {
   docker network rm "${container}_network" >/dev/null 2>&1 || true
   must docker network create "${container}_network" >/dev/null
   must docker run --detach --name "$container" --hostname "$container" --user root --label pmm-qa.engine=ssl_mysql \
-    --network "${container}_network" --env "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" "pmm-qa/ps:$version" "${args[@]}" >/dev/null
+    --network "${container}_network" "${SYSTEMD_RUN[@]}" "pmm-qa/ps:$version" >/dev/null
   must docker network connect pmm-qa "$container"
+  mysql_systemd_start "$container" false "${args[@]}"
   ssl_mysql_wait "$container"
-  # PS 5.7's entrypoint writes the certificates as the container user, root,
-  # so mysqld (running as mysql) cannot read its key and starts without TLS.
-  if [[ $version == 5.7 ]]; then
-    must docker exec "$container" sh -c 'chown mysql:mysql /var/lib/mysql/*.pem'
-    must docker restart "$container" >/dev/null
-    ssl_mysql_wait "$container"
-  fi
   mysql_sql "$container" "CREATE USER pmm@'%' IDENTIFIED BY 'pmm'; GRANT ALL ON *.* TO pmm@'%'; CREATE USER 'pmm_tls'@'%' REQUIRE X509;"
 }
 
