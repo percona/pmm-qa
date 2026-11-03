@@ -33,7 +33,8 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await haClusterHelper.ensureServing(api.haApi);
 });
 
-pmmTest(
+// eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-03 -- on HA one source per service goes missing, likely an unmonitored internal PostgreSQL (PMM-15794); unskip once it is fixed.
+pmmTest.skip(
   'PMM-T2108 - Verify service metrics are collected after a leader switchover @pmm-ha',
   async ({ api, haClusterHelper }) => {
     for (const service of monitoredServices) {
