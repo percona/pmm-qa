@@ -58,8 +58,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByRole('columnheader', { name: /Elapsed time/ })
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
-    // peak-ui renders the empty row as an info alert before 1.0.30 and as an EmptyState from 1.0.30 on:
-    // match its text, "No data found" when every row is filtered out, so both versions pass.
+    // peak-ui <1.0.30 wraps the empty row in an info alert, >=1.0.30 in an EmptyState (PMM-15002).
     noQueriesAvailable: this.builders.rowByIndex('1').getByText(/^(No queries available|No data found)$/),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
