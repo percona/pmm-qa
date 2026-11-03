@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fast DOM locator check against a prepared local PMM instance.
- * MCP fallback when browser_navigate is unavailable.
+ * One preset; general locator checks use playwright-cli (locator-fix.md Live DOM checks).
  *
  * Usage:
  *   node .claude/scripts/verify-migration-locator.mjs help-export-logs

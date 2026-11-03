@@ -40,7 +40,7 @@ Leave the changes uncommitted and report the changed paths.
 
 Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 
-## 4. Initial review and MCP verification
+## 4. Initial review and live locator verification
 
 The reviewer independently:
 
@@ -48,7 +48,7 @@ The reviewer independently:
 2. compares all source behavior with the migrated implementation;
 3. confirms nothing is missing or weakened;
 4. re-derives the writer's per-scenario selectability check;
-5. verifies every new or changed locator through MCP against the prepared environment, counting over the fully rendered DOM (`locator-fix.md` Lazy rendering);
+5. verifies every new or changed locator with `playwright-cli` (`locator-fix.md` Live DOM checks) against the prepared environment, counting over the fully rendered DOM (`locator-fix.md` Lazy rendering);
 6. fixes locator definitions only when live DOM evidence proves the correction;
 7. reruns static validation after locator changes.
 
@@ -136,6 +136,6 @@ Do not merge the publish branch into control. `done` means the PR was opened.
 
 ## 8. Cleanup
 
-Run `bash .claude/scripts/chaos-pmm.sh down <run_id>` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Close the Playwright MCP browser with `mcp__playwright__browser_close` (load it through `ToolSearch`) in the same step. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
+Run `bash .claude/scripts/chaos-pmm.sh down <run_id>` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. Close the browser session with `playwright-cli -s=<run_id> close` in the same step. Remove the publish worktree (`git worktree remove ../pmm-qa-publish`) once the PR is opened, and leave control's worktree clean.
 
 On a terminal path before publication, control's worktree still holds the uncommitted work: say so in the handoff and do not discard it. Teardown is classifier-blocked inside a subagent: when refused, report it and leave the environment for the parent.

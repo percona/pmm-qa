@@ -15,7 +15,7 @@ The reviewer works this twice: before execution and after. Clear the Shape block
 - [ ] Zero comments in `*.test.ts`; no added comment outside tests narrates a decision.
 - [ ] Nothing inert was ported (`SKILL.md` Port behaviour, simplify shape); each removal is recorded and outcome-neutral.
 - [ ] Every scenario passed the worth-porting gate with evidence (`SKILL.md` Before migrating).
-- [ ] Every assertion can fail where it stands; the riskiest one was proven by mutating its expected value and re-running (inverting a matcher is not a mutation). Through MCP, `expect` is unavailable: emulate and label the evidence. Locator values go through web-first matchers or `expect.poll` (precedent: `e2e_tests/tests/changeTheme.test.ts`); bare `expect` stays correct for API status, CLI stdout and parsed files.
+- [ ] Every assertion can fail where it stands; the riskiest one was proven by mutating its expected value and re-running (inverting a matcher is not a mutation). Inside `playwright-cli run-code`, `expect` is undefined: emulate and label the evidence. Locator values go through web-first matchers or `expect.poll` (precedent: `e2e_tests/tests/changeTheme.test.ts`); bare `expect` stays correct for API status, CLI stdout and parsed files.
 - [ ] Every locator is at the highest resolving ladder rung; for each CSS-by-class locator the reviewer showed nothing higher resolves. No text spliced into selector source. No `.getBy*(` or `.locator(` in a test file, including a refinement chained off a builder.
 - [ ] No `pmmTest.step` around a single `expect`. Each construct with an alternative (locator form, step granularity, navigation, POM shape, assertion style) matches the dominant `e2e_tests` form or the deviation is justified. Count, do not argue.
 - [ ] Cleanup restores from constants and works on every path, including a failure between the mutation and the variable the source read. `afterEach` undoes every change a test makes, not only what the source reset.
@@ -64,7 +64,7 @@ Against `playwright-practices.md`, changed files only.
 - [ ] Documented deviations preserved: tags inside the title, explicit `Timeouts.X` where needed.
 - [ ] No `I.*` calls remain; changed-file ESLint and `tsc --noEmit` introduce zero new failures.
 
-### MCP locator verification
+### Live locator verification (`playwright-cli`)
 
 - [ ] Every new, changed, or ambiguous reused locator verified: match count over the fully rendered DOM (`loadAllPanels()` or full scroll on a dashboard, `locator-fix.md` Lazy rendering), element identity, iframe boundary. Both numbers stated: sections rendered and matches per locator.
 
