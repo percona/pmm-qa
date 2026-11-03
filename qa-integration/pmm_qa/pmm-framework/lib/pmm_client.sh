@@ -46,30 +46,12 @@ pmm_client_channel() {
 }
 
 # Install PMM Client in NODE: from TARBALL (a host path) when given, otherwise
-# the CLIENT package -- a channel name or an exact 3.x.y release. A release gone
-# from a Debian node's apt index installs from its downloads.percona.com tarball.
+# the CLIENT package -- a channel name or an exact 3.x.y release.
 install_pmm_client() {
-  local node=$1 client=$2 tarball=${3:-} deb install='' channel='' version='' codename
+  local node=$1 client=$2 tarball=${3:-} install channel='' version=''
   if [[ -z $tarball ]]; then
     channel=$(pmm_client_channel "$client") || return 1
     [[ $client != 3.*.* ]] || version=$client
-  fi
-  if [[ -z $tarball ]] && docker exec "$node" test -f /etc/debian_version; then
-    # shellcheck disable=SC2016 # expanded by the container's shell
-    codename=$(docker exec "$node" sh -c '. /etc/os-release; echo "$VERSION_CODENAME"') ||
-      die "Could not read the release codename of $node."
-    # The fetcher's verifying cache waits out repo.percona.com's publishing race.
-    if deb=$("$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh" "${channel/release/main}" "$codename" /tmp/pmm-client-cache 1800 "$version"); then
-      must docker cp "$deb" "$node:/tmp/pmm-client.deb"
-      install='apt-get install -y /tmp/pmm-client.deb'
-    elif [[ -n $version ]]; then
-      # Each codename's apt index keeps only the last five releases; every release keeps its tarball.
-      log_warn "pmm-client $version could not be fetched from the $codename index; installing its release tarball on $node."
-      tarball=$(fetch_client_tarball "https://downloads.percona.com/downloads/pmm3/$version/binary/tarball/pmm-client-$version-$(uname -m).tar.gz") ||
-        die "Could not fetch the PMM Client $version tarball for $node."
-    else
-      die "Could not fetch the PMM Client package for $node."
-    fi
   fi
   if [[ -n $tarball ]]; then
     must docker cp "$tarball" "$node:/tmp/pmm-client.tar.gz"
@@ -78,19 +60,15 @@ install_pmm_client() {
       tar -xzf /tmp/pmm-client.tar.gz -C /tmp/pmm-client
       cd "$(dirname "$(find /tmp/pmm-client -type f -name install_tarball -print -quit)")"
       bash ./install_tarball'
-  elif [[ -z $install ]]; then
-    # Upstream mysql images ship neither percona-release nor, on 5.7, microdnf,
-    # and PXC 5.7's is too old to know the pmm3-client repo, so it is always
-    # brought to the latest. mysql:5.7 is EL7, where yum would quietly install a
-    # PMM 2 client instead.
+  else
+    # EL7 (mysql:5.7) has no PMM 3 package; percona-release is refreshed so it knows pmm3-client.
     # shellcheck disable=SC2016 # expanded by the container's shell
     install='case $(. /etc/os-release; echo "$VERSION_ID") in
         7*) echo "PMM 3 Client packages are not published for EL7; use a tarball CLIENT_VERSION." >&2; exit 3 ;;
       esac
-      pkg=yum; command -v microdnf >/dev/null && pkg=microdnf
       rpm -Uvh --replacepkgs https://repo.percona.com/yum/percona-release-latest.noarch.rpm
       '
-    install+="percona-release enable-only pmm3-client $channel && \$pkg install -y pmm-client${version:+-$version}"
+    install+="percona-release enable-only pmm3-client $channel && dnf install -y pmm-client${version:+-$version}"
   fi
   retry_on "$PMM_REPO_ERRORS" 3 "PMM Client install on $node" \
     docker exec --user root "$node" sh -ceu "$install
@@ -99,9 +77,10 @@ install_pmm_client() {
     pmm-admin --version" >/dev/null
 }
 
-# Registers NODE and starts pmm-agent without systemd, logging to LOG for the
-# tests. A separate AGENT_NODE sharing NODE's network keeps Nomad out of the
-# database container.
+# Registers NODE and starts pmm-agent, logging to LOG for the tests: as the
+# pmm-agent unit where systemd runs, so a package upgrade's restart reaches it,
+# else detached. A separate AGENT_NODE sharing NODE's network keeps Nomad out
+# of the database container.
 # Usage: setup_pmm_agent NODE ENCRYPTED [LOG] [NODE_NAME] [AGENT_NODE]
 setup_pmm_agent() {
   local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log} node_name=${4:-$1} agent_node=${5:-$1}
@@ -129,7 +108,19 @@ setup_pmm_agent() {
   fi
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
     docker exec --user root "$agent_node" pmm-agent setup "${setup[@]}" "$node" container "$node_name" >/dev/null
-  must docker exec --detach --user root "$agent_node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
+  if docker exec "$agent_node" test -d /run/systemd/system; then
+    # /etc overrides the package's own unit, keeping LOG across its upgrades.
+    must docker exec --user root "$agent_node" sh -ceu "
+      printf '%s\n' '[Unit]' 'After=network.target' '[Service]' \
+        'ExecStart=/usr/local/percona/pmm/bin/pmm-agent ${start[*]}' 'Restart=on-failure' \
+        'StandardOutput=append:$log' 'StandardError=append:$log' '[Install]' 'WantedBy=multi-user.target' \
+        >/etc/systemd/system/pmm-agent.service
+      systemctl daemon-reload
+      systemctl enable -q pmm-agent
+      systemctl restart pmm-agent"
+  else
+    must docker exec --detach --user root "$agent_node" sh -c "exec pmm-agent ${start[*]} >>'$log' 2>&1"
+  fi
 }
 
 pmm_agent_connected() {
