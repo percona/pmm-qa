@@ -80,7 +80,7 @@ pmmTest.describe('Advisor insights', () => {
       });
 
       await pmmTest.step('Filter by the run ID of an insight', async () => {
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await advisorInsightsPage.buttons.filterByRunId.click();
         await expect(page).toHaveURL(new RegExp(`runId=${run.id}`));
         await expect(advisorInsightsPage.elements.rows).toHaveCount(run.findings_count);
@@ -195,7 +195,7 @@ pmmTest.describe('Advisor insights', () => {
 
         const [insight] = insights.filter(({ check_name }) => check_name === failing.name);
 
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await advisorInsightsPage.buttons.filterByCheckName.click();
         await expect(page).toHaveURL(new RegExp(`check=${failing.name}`));
         await expect(advisorInsightsPage.elements.rows).toHaveCount(failingCount);
@@ -228,7 +228,7 @@ pmmTest.describe('Advisor insights', () => {
       await advisorInsightsPage.selectFilter('status', 'Failed');
 
       await pmmTest.step('Copy as text describes the insight', async () => {
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await advisorInsightsPage.buttons.copyAsText.click();
         await expect(advisorInsightsPage.messages.insightCopied).toBeVisible();
 
@@ -248,7 +248,7 @@ pmmTest.describe('Advisor insights', () => {
       });
 
       const url = await pmmTest.step('Copy URL keeps the filters and names the insight', async () => {
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await advisorInsightsPage.buttons.copyUrl.click();
         await expect(advisorInsightsPage.messages.insightUrlCopied).toBeVisible();
 
@@ -294,7 +294,7 @@ pmmTest.describe('Advisor insights', () => {
       expect(insight, 'No MySQL service is monitored').toBeDefined();
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
       await page.goto(advisorInsightsPage.runUrl(run.id));
-      await advisorInsightsPage.openActions(insight.id);
+      await advisorInsightsPage.builders.actionsButton(insight.id).click();
       await advisorInsightsPage.buttons.rerunNow.click();
       await expect(
         advisorInsightsPage.messages.rerunStarted(check.summary, insight.service_name),
@@ -331,7 +331,7 @@ pmmTest.describe('Advisor insights', () => {
       await page.goto(advisorInsightsPage.runUrl(run.id));
 
       await pmmTest.step('Disable the check for the service', async () => {
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await expect(toggle).toHaveText('Disable check for service');
         await toggle.click();
         await expect(
@@ -344,7 +344,7 @@ pmmTest.describe('Advisor insights', () => {
       });
 
       await pmmTest.step('The menu offers to enable it and no longer re-runs it', async () => {
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await expect(toggle).toHaveText('Enable check for service');
         await expect(advisorInsightsPage.buttons.rerunNow).toBeDisabled();
         await page.keyboard.press('Escape');
@@ -358,7 +358,7 @@ pmmTest.describe('Advisor insights', () => {
 
       await pmmTest.step('Enable the check for the service again', async () => {
         await page.goto(advisorInsightsPage.runUrl(run.id));
-        await advisorInsightsPage.openActions(insight.id);
+        await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await toggle.click();
         await expect(
           advisorInsightsPage.messages.checkEnabledForService(check.summary, insight.service_name),

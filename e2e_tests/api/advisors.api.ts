@@ -116,7 +116,8 @@ export default class AdvisorsApi {
 
     expect(check, 'No built-in advisor check found').toBeDefined();
 
-    return check as AdvisorCheck;
+    // The list leaves out the script and queries of built-in checks.
+    return (await this.findCheck((check as AdvisorCheck).name)) as AdvisorCheck;
   };
 
   getMysqlService = async (): Promise<AdvisorTargetService> => {
@@ -270,7 +271,8 @@ export default class AdvisorsApi {
     enabled: true,
     name: AdvisorsApi.scheduleName(),
     service_ids: [],
-    time_of_day: '10:00',
+    // Twelve hours away, so a schedule does not fall due while the tests that create it run.
+    time_of_day: `${new Date(Date.now() + 12 * 60 * Timeouts.ONE_MINUTE).toISOString().slice(11, 13)}:00`,
     ...overrides,
   });
 

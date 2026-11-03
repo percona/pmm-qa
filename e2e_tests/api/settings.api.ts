@@ -46,6 +46,17 @@ export default class SettingsApi {
     await this.updateSettings({ enable_backup_management: true });
   };
 
+  /** The Advisor notification settings, shaped to be put back with updateSettings. */
+  getAdvisorNotifications = async (): Promise<Record<string, unknown>> => {
+    const { settings } = await this.getSettings();
+
+    return {
+      advisor_notification_email_addresses: { values: settings.advisor_notification_email_addresses },
+      advisor_notification_severities: settings.advisor_notification_severities,
+      enable_advisor_notifications: settings.advisor_notifications_enabled,
+    };
+  };
+
   getSettings = async () => {
     const response = await this.request.get(apiEndpoints.server.settings, {
       headers: GrafanaHelper.getAuthHeader(),

@@ -99,6 +99,8 @@ pmmTest.describe('Advisor check form', () => {
         await expect(advisorsCatalogPage.messages.checkCreated(name)).toBeVisible();
         expect(await api.advisorsApi.findCheck(name)).toMatchObject({
           category: builtinCheck.category,
+          queries: builtinCheck.queries,
+          script: builtinCheck.script,
           summary: builtinCheck.summary,
           technology: builtinCheck.technology,
           user_defined: true,

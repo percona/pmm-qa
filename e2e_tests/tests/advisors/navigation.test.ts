@@ -90,7 +90,7 @@ pmmTest.describe('Advisors navigation and settings', () => {
           await page.goto(advisorSchedulerPage.detailsUrl(scheduleId));
           await expect(advisorSchedulerPage.elements.detailsPane).toContainText(schedule.name);
           await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText(
-            'Mon–Fri at 10:00 UTC',
+            `Mon–Fri at ${schedule.time_of_day} UTC`,
           );
           await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText('1 selected');
 

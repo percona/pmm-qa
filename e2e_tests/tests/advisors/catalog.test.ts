@@ -282,6 +282,7 @@ pmmTest.describe('Advisors catalog', () => {
       const category = `QA run ${Date.now()}`;
       const enabled = await api.advisorsApi.createCustomCheck({ category });
       const disabled = await api.advisorsApi.createCustomCheck({ category });
+      const otherCategory = await api.advisorsApi.createCustomCheck();
 
       const startedRun = async (start: () => Promise<void>) => {
         const response = page.waitForResponse((r) => r.url().includes(apiEndpoints.advisors.start) && r.ok());
@@ -297,7 +298,7 @@ pmmTest.describe('Advisors catalog', () => {
         };
       };
 
-      createdChecks.push(enabled.name, disabled.name);
+      createdChecks.push(enabled.name, disabled.name, otherCategory.name);
       await api.advisorsApi.changeCheck(disabled.name, { enable: false });
       await page.goto(advisorsCatalogPage.url);
 
@@ -330,6 +331,7 @@ pmmTest.describe('Advisors catalog', () => {
 
         expect(names).toEqual([]);
         expect(checkNames).toContain(enabled.name);
+        expect(checkNames).toContain(otherCategory.name);
         expect(checkNames).not.toContain(disabled.name);
       });
     },

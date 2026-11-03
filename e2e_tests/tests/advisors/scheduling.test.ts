@@ -15,7 +15,6 @@ import {
 } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
-const defaultSeverities = ['SEVERITY_CRITICAL', 'SEVERITY_ERROR'];
 const emailTo = (recipient: string): Partial<AdvisorScheduleInput> => ({
   email_addresses: [recipient],
   email_mode: AdvisorScheduleEmailMode.custom,
@@ -26,6 +25,7 @@ const minutesLate = (run: AdvisorRun) =>
   Math.round((Date.parse(run.started_at) - Date.parse(run.scheduled_for as string)) / Timeouts.ONE_MINUTE);
 const createdChecks: string[] = [];
 const createdSchedules: string[] = [];
+let notifications: Record<string, unknown>;
 
 const createSchedule = async (api: Api, overrides: Partial<AdvisorScheduleInput>) => {
   const schedule = await api.advisorsApi.createSchedule(overrides);
@@ -35,8 +35,19 @@ const createSchedule = async (api: Api, overrides: Partial<AdvisorScheduleInput>
   return schedule;
 };
 
-const createDueSchedule = async (api: Api, time: string, overrides: Partial<AdvisorScheduleInput>) =>
-  await createSchedule(api, { days_of_week: [0, 1, 2, 3, 4, 5, 6], time_of_day: time, ...overrides });
+const createDueSchedule = async (api: Api, at: Date, overrides: Partial<AdvisorScheduleInput>) => {
+  const schedule = await createSchedule(api, {
+    days_of_week: [0, 1, 2, 3, 4, 5, 6],
+    time_of_day: utcTime(at.toISOString()),
+    ...overrides,
+  });
+
+  expect(Date.parse(schedule.next_run_at as string), 'The schedule was saved after it fell due').toEqual(
+    at.getTime(),
+  );
+
+  return schedule;
+};
 
 const enableNotifications = async (api: Api) => {
   const response = await api.settingsApi.putSettings({
@@ -50,7 +61,8 @@ const enableNotifications = async (api: Api) => {
 const supervisorctl = (cliHelper: CliHelper, action: 'restart' | 'start' | 'stop') =>
   cliHelper.execute(`docker exec pmm-server supervisorctl ${action} pmm-managed`).assertSuccess();
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+  notifications = await api.settingsApi.getAdvisorNotifications();
   await grafanaHelper.authorize();
 });
 
@@ -62,13 +74,7 @@ pmmTest.afterEach(async ({ api }) => {
 
   for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
 
-  const response = await api.settingsApi.putSettings({
-    advisor_notification_email_addresses: { values: [] },
-    advisor_notification_severities: defaultSeverities,
-    enable_advisor_notifications: false,
-  });
-
-  expect(response.status(), await response.text()).toEqual(200);
+  await api.settingsApi.updateSettings(notifications);
 });
 
 pmmTest.describe('Advisor schedules falling due', () => {
@@ -82,7 +88,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
 
       createdChecks.push(check.name);
 
-      const schedule = await createDueSchedule(api, due.time, {
+      const schedule = await createDueSchedule(api, due.at, {
         check_names: [check.name],
         service_ids: [service.service_id],
         ...emailTo(recipient),
@@ -158,13 +164,13 @@ pmmTest.describe('Advisor schedules falling due', () => {
 
       // Created in reverse, since schedules due in the same minute start by name.
       const [second, first] = [
-        await createDueSchedule(api, due.time, {
+        await createDueSchedule(api, due.at, {
           check_names: [check.name],
           name: `${base} B`,
           service_ids: [service.service_id],
           ...emailTo(recipients[1]),
         }),
-        await createDueSchedule(api, due.time, {
+        await createDueSchedule(api, due.at, {
           check_names: [check.name],
           name: `${base} A`,
           service_ids: [service.service_id],
@@ -248,12 +254,12 @@ pmmTest.describe('Advisor schedules falling due', () => {
         const base = AdvisorsApi.scheduleName();
         const due = AdvisorsApi.nextDueMinute();
         // Due in the same minute, the empty schedule starts first and the control one after it.
-        const empty = await createDueSchedule(api, due.time, {
+        const empty = await createDueSchedule(api, due.at, {
           check_names: [check.name],
           name: `${base} A`,
           service_ids: [removed.service_id],
         });
-        const control = await createDueSchedule(api, due.time, {
+        const control = await createDueSchedule(api, due.at, {
           check_names: [check.name],
           name: `${base} B`,
           service_ids: [service.service_id],
@@ -407,12 +413,12 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
 
       createdChecks.push(check.name);
 
-      const missed = await createDueSchedule(api, due.time, {
+      const missed = await createDueSchedule(api, due.at, {
         check_names: [check.name],
         name: `${base} missed`,
         service_ids: [service.service_id],
       });
-      const control = await createDueSchedule(api, utcTime(new Date(controlDueAt).toISOString()), {
+      const control = await createDueSchedule(api, new Date(controlDueAt), {
         check_names: [check.name],
         name: `${base} control`,
         service_ids: [service.service_id],

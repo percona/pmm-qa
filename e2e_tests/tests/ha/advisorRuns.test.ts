@@ -12,7 +12,7 @@ const createdSchedules: string[] = [];
 const leaderPollInterval = Timeouts.ONE_MINUTE;
 
 // Each check runs for about 4 s, until the CPU limit of pmm-managed-starlark stops it.
-const createSlowChecks = async (api: Api, count: number): Promise<string[]> => {
+const createSlowChecks = async (api: Api, count: number) => {
   const [service] = await api.advisorsApi.listServices();
 
   expect(service, 'PMM HA monitors no service to run checks on').toBeDefined();
@@ -29,7 +29,7 @@ const createSlowChecks = async (api: Api, count: number): Promise<string[]> => {
     createdChecks.push(name);
   }
 
-  return names;
+  return { names, serviceId: service.service_id };
 };
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
@@ -48,20 +48,23 @@ pmmTest.afterEach(async ({ api }) => {
 pmmTest(
   'PMM-Txxxx - Verify the HA leader runs a run requested on a follower and allows one run at a time @pmm-ha',
   async ({ api, haClusterHelper }) => {
-    const names = await createSlowChecks(api, 16);
+    const { names, serviceId } = await createSlowChecks(api, 16);
     const leader = haClusterHelper.leaderFromPods();
     const follower = haClusterHelper.podNames().find((podName) => podName !== leader) as string;
     const queued = haClusterHelper.requestFromPod(follower, 'POST', apiEndpoints.advisors.start, {
       names,
-      service_ids: [],
+      service_ids: [serviceId],
     });
 
     expect(queued.status, queued.body).toEqual(200);
 
     const { run_id: runId } = JSON.parse(queued.body) as { run_id: string };
 
-    await pmmTest.step('The leader refuses another run while the first waits for it', async () => {
-      expect((await api.advisorsApi.getRun(runId))?.status).toEqual(AdvisorRunStatus.queued);
+    await pmmTest.step('The leader refuses another run while the first is queued or running', async () => {
+      // The leader may have picked the run up at a poll already.
+      expect([AdvisorRunStatus.queued, AdvisorRunStatus.running]).toContain(
+        (await api.advisorsApi.getRun(runId))?.status,
+      );
 
       const refused = await api.advisorsApi.requestStartChecks(names);
 
@@ -78,7 +81,10 @@ pmmTest(
 pmmTest(
   'PMM-Txxxx - Verify the HA leader runs a schedule created on a follower when it falls due @pmm-ha',
   async ({ api, haClusterHelper }) => {
-    const [check] = await createSlowChecks(api, 1);
+    const {
+      names: [check],
+      serviceId,
+    } = await createSlowChecks(api, 1);
     const due = AdvisorsApi.nextDueMinute();
     const follower = haClusterHelper
       .podNames()
@@ -90,6 +96,7 @@ pmmTest(
       AdvisorsApi.scheduleInput({
         check_names: [check],
         days_of_week: [0, 1, 2, 3, 4, 5, 6],
+        service_ids: [serviceId],
         time_of_day: due.time,
       }),
     );
@@ -99,6 +106,9 @@ pmmTest(
     const { schedule } = JSON.parse(created.body) as { schedule: AdvisorSchedule };
 
     createdSchedules.push(schedule.schedule_id);
+    expect(Date.parse(schedule.next_run_at as string), 'The schedule was saved after it fell due').toEqual(
+      due.at.getTime(),
+    );
 
     const run = await api.advisorsApi.waitForScheduledRun(
       schedule.schedule_id,
@@ -114,7 +124,7 @@ pmmTest(
   async ({ api, haClusterHelper }) => {
     pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
 
-    const runId = await api.advisorsApi.startChecks(await createSlowChecks(api, 40));
+    const runId = await api.advisorsApi.startChecks((await createSlowChecks(api, 40)).names);
 
     await expect
       .poll(async () => (await api.advisorsApi.getRun(runId))?.status, {

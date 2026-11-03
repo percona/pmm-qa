@@ -66,10 +66,6 @@ export default class AdvisorInsightsPage extends BasePage {
     await expect(this.page).toHaveURL(new RegExp(`runId=${runId}`));
   };
 
-  openActions = async (insightId: string) => {
-    await this.builders.actionsButton(insightId).click();
-  };
-
   runUrl = (runId: string) => `${this.url}?runId=${encodeURIComponent(runId)}`;
 
   // A click fired while the options menu is still closing is swallowed by its backdrop.

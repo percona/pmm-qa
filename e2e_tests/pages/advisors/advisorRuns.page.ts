@@ -48,7 +48,7 @@ export default class AdvisorRunsPage extends BasePage {
   };
 
   exportInsights = async (runId: string, scope: 'all' | 'failed'): Promise<Download> => {
-    await this.openActions(runId);
+    await this.builders.actionsButton(runId).click();
 
     const download = this.page.waitForEvent('download');
 
@@ -61,10 +61,6 @@ export default class AdvisorRunsPage extends BasePage {
     await this.inputs.runId.fill(runId);
     await this.inputs.runId.press('Enter');
     await expect(this.page).toHaveURL(new RegExp(`runId=${runId}`));
-  };
-
-  openActions = async (runId: string) => {
-    await this.builders.actionsButton(runId).click();
   };
 
   selectRowsPerPage = async (size: number) => {

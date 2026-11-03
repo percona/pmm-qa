@@ -70,8 +70,8 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   });
 
   pmmTest.afterEach(async ({ api, cliHelper }) => {
-    for (const nodeId of nodeIds.splice(0)) await api.inventoryApi.deleteNode(nodeId, true);
     for (const container of containers.splice(0)) cliHelper.removeContainer(container);
+    for (const nodeId of nodeIds.splice(0)) await api.inventoryApi.deleteNode(nodeId, true);
   });
 
   pmmTest(

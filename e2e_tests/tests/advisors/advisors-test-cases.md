@@ -7,7 +7,7 @@ the upgrade and HA tests linked from the last sections, for the new Advisors pag
 Run them with:
 
 ```bash
-cd e2e_tests && npx playwright test --grep @advisors
+cd e2e_tests && npx playwright test --grep "@advisors|@advisor-scheduling|@advisor-databases"
 ```
 
 ## Common preconditions
@@ -361,7 +361,7 @@ Spec: [navigation.test.ts:130](navigation.test.ts#L130)
 
 ## Permissions
 
-Precondition for both cases: Grafana users `advisors_viewer` (Viewer) and `advisors_editor` (Editor) exist. The suite creates them if they are missing and deletes the ones it created.
+Precondition for both cases: Grafana users `advisors_viewer` (Viewer) and `advisors_editor` (Editor) exist. The suite creates them with a unique suffix and deletes them afterwards.
 
 ### TC-26 · PMM-Txxxx - Verify a viewer has no access to Advisors
 

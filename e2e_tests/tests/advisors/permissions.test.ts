@@ -9,21 +9,21 @@ import { expect } from '@playwright/test';
 pmmTest.describe.configure({ mode: 'default' });
 
 const password = 'password';
-const users = { editor: 'advisors_editor', viewer: 'advisors_viewer' } as const;
+const suffix = Date.now();
+const users = { editor: `advisors_editor_${suffix}`, viewer: `advisors_viewer_${suffix}` } as const;
 const noAccess = 'Insufficient access permissions.';
 const createdUserIds: number[] = [];
 
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   const grafanaHelper = new GrafanaHelper(page);
-  const viewer = await grafanaHelper.findOrCreateUser(users.viewer, password);
-  const editor = await grafanaHelper.findOrCreateUser(users.editor, password);
 
-  for (const { created, id } of [viewer, editor]) {
-    if (created) createdUserIds.push(id);
-  }
+  createdUserIds.push(await grafanaHelper.createUser(users.viewer, password));
 
-  await grafanaHelper.promoteToEditor(editor.id);
+  const editorId = await grafanaHelper.createUser(users.editor, password);
+
+  createdUserIds.push(editorId);
+  await grafanaHelper.promoteToEditor(editorId);
   await page.close();
 });
 

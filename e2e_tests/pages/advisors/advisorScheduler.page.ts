@@ -1,3 +1,4 @@
+import pmmTest from '@fixtures/pmmTest';
 import BasePage from '@pages/base.page';
 import ScheduleEditorComponent from '@components/advisors/scheduleEditor.component';
 
@@ -84,7 +85,9 @@ export default class AdvisorSchedulerPage extends BasePage {
     scheduleId: string,
     action: 'delete' | 'duplicate' | 'edit' | 'runNow' | 'viewRuns',
   ) => {
-    await this.builders.actionsButton(scheduleId).click();
-    await this.buttons[action].click();
+    await pmmTest.step(`Open the ${action} action of schedule ${scheduleId}`, async () => {
+      await this.builders.actionsButton(scheduleId).click();
+      await this.buttons[action].click();
+    });
   };
 }

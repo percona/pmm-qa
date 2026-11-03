@@ -48,7 +48,7 @@ pmmTest.describe('Advisor runs', () => {
       });
 
       await pmmTest.step('Open the insights of the run', async () => {
-        await advisorRunsPage.openActions(runId);
+        await advisorRunsPage.builders.actionsButton(runId).click();
         await advisorRunsPage.buttons.viewInsights.click();
         await expect(page).toHaveURL(advisorInsightsPage.runUrl(runId));
         await expect(advisorInsightsPage.builders.rowsWithText('Finding')).not.toHaveCount(0);
@@ -157,10 +157,10 @@ pmmTest.describe('Advisor runs', () => {
 
       await pmmTest.step('A run without insights has nothing to export', async () => {
         await advisorRunsPage.filterByRunId(idleRun.id);
-        await advisorRunsPage.openActions(idleRun.id);
+        await advisorRunsPage.builders.actionsButton(idleRun.id).click();
         await advisorRunsPage.buttons.exportAllInsights.click();
         await expect(advisorRunsPage.messages.noInsightsToExport).toBeVisible();
-        await advisorRunsPage.openActions(idleRun.id);
+        await advisorRunsPage.builders.actionsButton(idleRun.id).click();
         await advisorRunsPage.buttons.exportFailedInsights.click();
         await expect(advisorRunsPage.messages.noFailedInsightsToExport).toBeVisible();
       });
@@ -181,7 +181,7 @@ pmmTest.describe('Advisor runs', () => {
       await advisorRunsPage.filterByRunId(run.id);
 
       await pmmTest.step('Copy run ID', async () => {
-        await advisorRunsPage.openActions(run.id);
+        await advisorRunsPage.builders.actionsButton(run.id).click();
         await advisorRunsPage.buttons.copyRunId.click();
         await expect(advisorRunsPage.messages.runIdCopied).toBeVisible();
         expect(await page.evaluate(() => navigator.clipboard.readText())).toEqual(run.id);
@@ -192,7 +192,7 @@ pmmTest.describe('Advisor runs', () => {
           (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
         );
 
-        await advisorRunsPage.openActions(run.id);
+        await advisorRunsPage.builders.actionsButton(run.id).click();
         await advisorRunsPage.buttons.runAgain.click();
         await expect(advisorRunsPage.messages.checksStarted).toBeVisible();
 
@@ -207,7 +207,11 @@ pmmTest.describe('Advisor runs', () => {
       await pmmTest.step('The list follows a run in progress without Refresh', async () => {
         const names = (await api.advisorsApi.listChecks())
           .filter(
-            ({ technology, user_defined }) => technology === AdvisorCheckTechnology.mysql && !user_defined,
+            ({ disabled_service_ids, enabled, technology, user_defined }) =>
+              technology === AdvisorCheckTechnology.mysql &&
+              !user_defined &&
+              enabled &&
+              !disabled_service_ids.length,
           )
           .slice(0, 20)
           .map(({ name }) => name);

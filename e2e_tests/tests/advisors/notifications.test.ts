@@ -5,20 +5,16 @@ import { AdvisorScheduleEmailMode, AdvisorScheduleInput } from '@interfaces/advi
 import { expect } from '@playwright/test';
 
 const defaultSeverities = ['SEVERITY_CRITICAL', 'SEVERITY_ERROR'];
+let notifications: Record<string, unknown>;
 
 pmmTest.describe('Advisor notifications', () => {
-  pmmTest.beforeEach(async ({ grafanaHelper }) => {
+  pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+    notifications = await api.settingsApi.getAdvisorNotifications();
     await grafanaHelper.authorize();
   });
 
   pmmTest.afterEach(async ({ api }) => {
-    const response = await api.settingsApi.putSettings({
-      advisor_notification_email_addresses: { values: [] },
-      advisor_notification_severities: defaultSeverities,
-      enable_advisor_notifications: false,
-    });
-
-    expect(response.status(), await response.text()).toEqual(200);
+    await api.settingsApi.updateSettings(notifications);
   });
 
   pmmTest(

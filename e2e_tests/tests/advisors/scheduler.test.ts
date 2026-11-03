@@ -477,10 +477,21 @@ pmmTest.describe('Advisor scheduler', () => {
     'PMM-Txxxx - Verify a second run cannot start while one is active @advisors',
     async ({ advisorsCatalogPage, advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.createSchedule();
+      const slowChecks: string[] = [];
 
       createdSchedules.push(schedule.schedule_id);
 
-      const runId = await api.advisorsApi.startChecks();
+      // Each runs for about 4 s, until the CPU limit of pmm-managed-starlark stops it, so the run outlasts the test.
+      for (let i = 0; i < 8; i++) {
+        const { name } = await api.advisorsApi.createCustomCheck({
+          script: api.advisorsApi.endlessCheckScript,
+        });
+
+        slowChecks.push(name);
+        createdChecks.push(name);
+      }
+
+      const runId = await api.advisorsApi.startChecks(slowChecks);
 
       await pmmTest.step('The API refuses to start another run', async () => {
         for (const response of [
@@ -653,6 +664,10 @@ pmmTest.describe('Advisor schedule editor in another time zone', () => {
       });
 
       await pmmTest.step('A check with no service of its technology is flagged', async () => {
+        expect(
+          (await api.advisorsApi.listServices()).map(({ technology }) => technology),
+          'PMM Server must monitor no PostgreSQL service',
+        ).not.toContain(AdvisorCheckTechnology.postgresql);
         await editor.fill({ checkNames: [mysqlCheck.name, postgresqlCheck.name] });
         await expect(editor.elements.coverageIdle).toHaveText(
           "1 PostgreSQL check won't run: there is no PostgreSQL service in Inventory.",
