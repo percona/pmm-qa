@@ -58,7 +58,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByRole('columnheader', { name: /Elapsed time/ })
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
-    noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert'),
+    // peak-ui <1.0.30 wraps the empty row in an info alert, >=1.0.30 in an EmptyState (PMM-15002).
+    noQueriesAvailable: this.builders.rowByIndex('1').getByText(/^(No queries available|No data found)$/),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Query text', { exact: true }),
