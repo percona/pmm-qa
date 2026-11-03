@@ -10,8 +10,9 @@
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
+# MONGOT=true runs Percona Search for MongoDB beside rs101-rs103.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio tarball='' suffix
+  local version ol client setup_type profile gssapi minio mongot mongot_version storage tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -20,12 +21,19 @@ setup_psmdb() {
   profile=$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)
   gssapi=$(resolve_value PSMDB GSSAPI DB_CONFIG)
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
+  mongot=$(bool_string "$(resolve_value PSMDB MONGOT DB_CONFIG)")
+  mongot_version=$(resolve_value PSMDB MONGOT_VERSION DB_CONFIG)
+  storage=$(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG)
+  storage=${storage,,}
   suffix=$RANDOM
 
   case $setup_type in
     pss | psa | shards | sharding) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
   esac
+  if [[ $mongot == true ]] && ! psmdb_mongot_supported; then
+    die 'MONGOT needs PSMDB 8.3 or newer and a pss or psa replica set on wiredTiger.'
+  fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -44,6 +52,7 @@ setup_psmdb() {
 readonly PSMDB_NETWORKS=(pmm-qa qa-integration pmm-ui-tests_pmm-network pmm2-upgrade-tests_pmm-network pmm2-ui-tests_pmm-network)
 readonly PSMDB_CONTAINERS=(rs101 rs102 rs103 rs201 rs202 rs203 rscfg01 rscfg02 rscfg03 mongos chunk-churn kerberos)
 readonly PSMDB_ROOT_URI=mongodb://root:root@127.0.0.1:27017/admin
+readonly PSMDB_MONGOT_IMAGE=percona/percona-search-mongodb
 
 # Usage: psmdb_start COMPOSE_FILE
 psmdb_start() {
@@ -51,6 +60,8 @@ psmdb_start() {
   for network in "${PSMDB_NETWORKS[@]}"; do
     docker network inspect "$network" >/dev/null 2>&1 || must docker network create "$network" >/dev/null
   done
+  # A mongot from an earlier run lives in its member's network namespace: remove it first.
+  fresh_containers mongot1 mongot2 mongot3
   must docker compose -f "$1" down -v --remove-orphans
   docker rm -fv "${PSMDB_CONTAINERS[@]}" >/dev/null 2>&1 || true
   if [[ $minio == true ]]; then
@@ -193,8 +204,10 @@ psmdb_replica_set() {
     name_part=_gssapi
   fi
   export COMPOSE_PROJECT_NAME=psmdb_pss COMPOSE_PROFILES=$profile
-  if [[ $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY] ]]; then
+  if [[ $storage == inmemory ]]; then
     export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-inmemory
+  elif [[ $mongot == true ]]; then
+    export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-mongot
   fi
 
   step 'Prepare image pmm-qa/kerberos:latest' ensure_image kerberos latest
@@ -207,6 +220,19 @@ psmdb_replica_set() {
   step 'Initiate replica set rs' psmdb_replset rs "$arbiter" "$external" rs101 rs102 rs103
   if [[ $profile == extra ]]; then
     step 'Initiate the extra replica set' psmdb_replset rs "${arbiter/103/203}" "$external" rs201 rs202 rs203
+  fi
+  # An arbiter holds no data to index.
+  local -a mongots=()
+  if [[ $mongot == true ]]; then
+    for node in rs101 rs102 rs103; do
+      if [[ $node != "$arbiter" ]]; then
+        mongots+=("$node")
+      fi
+    done
+    step 'Create the mongot user' psmdb_mongot_user
+    step "Pull $PSMDB_MONGOT_IMAGE:$mongot_version" retry_on "$PMM_TRANSIENT_ERRORS" 5 'pulling mongot' \
+      docker pull "$PSMDB_MONGOT_IMAGE:$mongot_version"
+    step 'Start mongot' each_node mongots psmdb_mongot_start
   fi
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node nodes psmdb_client
@@ -241,10 +267,71 @@ psmdb_replica_set() {
         "--host=$node" --port=27017
     fi
   done
+  # The same labels as the member, which the MongoDB Search dashboards filter by.
+  for node in "${mongots[@]}"; do
+    pmm_register "$node" pmm-admin add external --listen-port=9946 "--service-name=mongot${node: -1}_$suffix" \
+      --environment=psmdb-dev --cluster=replicaset --replication-set=rs
+  done
   step 'Wait for exporters' each_node nodes wait_exporters /var/log/pmm-agent.log mongodb_exporter
 
   step 'Load data' psmdb_rs_data
+  if [[ $mongot == true ]]; then
+    step 'Create search indexes' psmdb_search_data
+  fi
   report_agent_status "${nodes[@]}"
+}
+
+psmdb_mongot_supported() {
+  [[ $setup_type == ps? && $storage != inmemory && $(printf '%s\n' 8.3 "$version" | sort -V | head -n 1) == 8.3 ]]
+}
+
+psmdb_mongot_user() {
+  psmdb_js rs101 "$PSMDB_ROOT_URI" 'db.getSiblingDB("admin").createUser({ user: "mongotUser", pwd: "mongotpass", roles: [{ role: "searchCoordinator", db: "admin" }] })' >/dev/null ||
+    die 'Creating the mongotUser failed.'
+}
+
+# Run mongot in NODE's network namespace, where its mongod reaches it on
+# localhost:27028 and its pmm-agent scrapes :9946. mongot refuses a password
+# file others can read, and the bind-mounted file would be owned by the host
+# user, so it is written inside the container at each start.
+# Usage: psmdb_mongot_start NODE  (rs10N runs mongotN)
+psmdb_mongot_start() {
+  local name=mongot${1: -1}
+  # shellcheck disable=SC2016 # expanded by the container's shell
+  must docker run --detach --name "$name" --label pmm-qa.engine=psmdb --network "container:$1" \
+    --volume "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup/conf/mongot/mongot.yml:/etc/mongot/mongot.yml:ro" \
+    --env MONGOT_PASSWORD=mongotpass --entrypoint sh "$PSMDB_MONGOT_IMAGE:$mongot_version" -c '
+      rm -f /etc/mongot/secrets/passwordFile
+      (umask 0377 && printf %s "$MONGOT_PASSWORD" >/etc/mongot/secrets/passwordFile)
+      exec /entrypoint.sh mongot --config /etc/mongot/mongot.yml' >/dev/null
+  retry 120 "$name to serve" docker exec "$1" curl -fsS http://127.0.0.1:8080/health >/dev/null
+}
+
+# One full-text and one vector index on search.movies, each proven with a query.
+psmdb_search_data() {
+  # shellcheck disable=SC2016 # $search and friends are MongoDB's
+  psmdb_js rs101 "$PSMDB_ROOT_URI" '
+    const movies = db.getSiblingDB("search").movies;
+    movies.insertMany([
+      { title: "Apollo 13", plot: "Astronauts fight to return to Earth after an explosion in space.", embedding: [0.9, 0.1, 0.1] },
+      { title: "Jaws", plot: "A great white shark terrorises a seaside town.", embedding: [0.1, 0.9, 0.1] },
+      { title: "Alien", plot: "The crew of a spaceship meets a deadly creature in deep space.", embedding: [0.8, 0.2, 0.3] },
+      { title: "Heat", plot: "A detective hunts a crew of professional thieves in Los Angeles.", embedding: [0.1, 0.1, 0.9] }]);
+    db.getSiblingDB("search").runCommand({ createSearchIndexes: "movies", indexes: [
+      { name: "default", definition: { mappings: { dynamic: true } } },
+      { name: "vector_index", type: "vectorSearch",
+        definition: { fields: [{ type: "vector", path: "embedding", numDimensions: 3, similarity: "cosine" }] } }] });' >/dev/null ||
+    die 'Creating the search indexes failed.'
+  # shellcheck disable=SC2016
+  retry 180 'the search indexes to become queryable' psmdb_true rs101 "$PSMDB_ROOT_URI" \
+    'db.getSiblingDB("search").movies.aggregate([{ $listSearchIndexes: {} }]).toArray().filter(i => i.queryable).length == 2'
+  # shellcheck disable=SC2016
+  psmdb_true rs101 "$PSMDB_ROOT_URI" '
+    const movies = db.getSiblingDB("search").movies;
+    movies.aggregate([{ $search: { index: "default", text: { query: "space", path: "plot" } } }]).toArray().length > 0 &&
+      movies.aggregate([{ $vectorSearch: { index: "vector_index", path: "embedding", queryVector: [1, 0, 0],
+        numCandidates: 4, limit: 2 } }]).toArray().length > 0' ||
+    die 'A $search or $vectorSearch query on search.movies returned nothing.'
 }
 
 psmdb_rs_data() {
