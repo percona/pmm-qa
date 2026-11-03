@@ -25,6 +25,16 @@ const postgresqlRule = {
   templateName: 'pmm_postgresql_too_many_connections',
   threshold: 0.01,
 };
+const severityBands: Record<AlertSeverity, string> = {
+  [AlertSeverity.Alert]: 'Critical',
+  [AlertSeverity.Critical]: 'Critical',
+  [AlertSeverity.Debug]: 'Info',
+  [AlertSeverity.Emergency]: 'Critical',
+  [AlertSeverity.Error]: 'Error',
+  [AlertSeverity.Info]: 'Info',
+  [AlertSeverity.Notice]: 'Info',
+  [AlertSeverity.Warning]: 'Warning',
+};
 const viewer = { password: 'password', username: 'test_viewer' };
 const editor = { password: 'password', username: 'test_editor' };
 const createdUserIds: number[] = [];
@@ -235,12 +245,14 @@ pmmTest('PMM-T564 - Verify fired alert severity colors @ia', async ({ alertingPa
     .toBeGreaterThanOrEqual(severities.length);
   await page.goto(alertingPage.url);
 
-  for (const [label, severity] of severities) {
+  for (const [, severity] of severities) {
+    const band = severityBands[severity];
+
     await expect(alertingPage.builders.alertRow(severity)).toBeVisible({ timeout: Timeouts.TWENTY_SECONDS });
     await expect(alertingPage.builders.stateCell(severity)).toContainText('Firing', {
       timeout: Timeouts.TEN_SECONDS,
     });
-    await expect(alertingPage.builders.severityCell(severity)).toContainText(label);
+    await expect(alertingPage.builders.severityBadge(severity, band)).toHaveText(band);
   }
 });
 

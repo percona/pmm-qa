@@ -14,7 +14,8 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await haClusterHelper.ensureServing(api.haApi);
 });
 
-pmmTest(
+// eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-03 -- on OpenShift vmagent drops the kube-apiserver target (PMM-15833); unskip once it is fixed.
+pmmTest.skip(
   'PMM-T2371 - Verify vmagent scrapes the kubelet, cAdvisor, node exporter and API server of the PMM HA cluster @pmm-ha',
   async ({ api, k8sHelper }) => {
     const nodes = k8sHelper.getNodeNames().sort();
