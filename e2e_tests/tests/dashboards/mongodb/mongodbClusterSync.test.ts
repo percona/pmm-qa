@@ -41,7 +41,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   });
 
   pmmTest(
-    'Verify the MongoDB ClusterSync Details dashboard opens from the MongoDB menu and is listed in the MongoDB folder @pmm-pcsm-psmdb-integration',
+    'PMM-T2474 - Verify the MongoDB ClusterSync Details dashboard opens from the MongoDB menu and is listed in the MongoDB folder @pmm-pcsm-psmdb-integration',
     async ({ dashboard, leftNavigation, page, searchDashboardsPage }) => {
       await page.goto('');
 
@@ -81,7 +81,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify the ClusterSync dashboard filters list the source, target and PCSM instances only @pmm-pcsm-psmdb-integration',
+    'PMM-T2475 - Verify the ClusterSync dashboard filters list the source, target and PCSM instances only @pmm-pcsm-psmdb-integration',
     async ({ dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
 
@@ -130,7 +130,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-psmdb-integration',
+    'PMM-T2476 - Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-psmdb-integration',
     async ({ api, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const active: string = (await api.prometheusApi.getActiveClusterSyncInstance()).metric.service_name;
@@ -221,7 +221,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify the ClusterSync dashboard reports the PCSM group down when every instance stops @pmm-pcsm-psmdb-integration',
+    'PMM-T2477 - Verify the ClusterSync dashboard reports the PCSM group down when every instance stops @pmm-pcsm-psmdb-integration',
     async ({ cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(dashboard.mongo.clusterSyncDetails.url, {
@@ -276,7 +276,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   );
 
   pmmTest(
-    'Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
+    'PMM-T2478 - Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
       const url = urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-15m' });
