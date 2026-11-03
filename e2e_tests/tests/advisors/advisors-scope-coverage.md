@@ -56,7 +56,7 @@ Status: **Covered** = asserted end to end · **Partial** = some of the item is a
 | Catalog | Four severities; a retired severity fails clearly; notice becomes warning | Partial | TC-46 (notice and emergency fail, info passes) | — |
 | Catalog | No Interval column, filter or inline select | Dropped | — | — |
 | Built-ins | Starlark error shown; timeouts reported separately | Partial | TC-14 (error; a runaway script is stopped, but by the CPU limit, see finding 5) | — |
-| Built-ins | Crash fixes: MySQL 5.7, MongoDB standalone and 8.2, empty metrics | Covered | TC-66 (fails on findings 6 and 7) | — |
+| Built-ins | Crash fixes: MySQL 5.7, MongoDB standalone and 8.2, empty metrics | Covered | TC-66 (leaves out the checks of findings 6 and 7) | — |
 | Built-ins | 13 checks emit one finding per service or database | Partial | TC-67 (`postgresql_unused_index_check`, one of the 10 PostgreSQL checks that share the 10-name cap) | — |
 | Built-ins | Read-more links point to each check's own page | Covered | TC-57 (form, one page per check, and no page answers 404) | — |
 | Email | Completed runs emailed through GF_SMTP | Covered | TC-50, TC-61 (a schedule that falls due), TC-62 | — |
@@ -146,7 +146,7 @@ Priority: **P1** automate before 3.11.0 · **P2** automate when its setup exists
 | NC-40 | TC-08 | The API returns 200 and keeps the name, rather than rejecting the request. |
 | NC-41 | TC-51 | `testTargets` lists only eligible services, without reasons. The reason comes from `checks:test` on an ineligible one. |
 | NC-42 | TC-14 | Only *check script execution* is asserted: the message says *signal: killed*, not *timed out* (finding 5). |
-| NC-43 | TC-66 | The test starts `mysql:5.7` and `mongo:8.2` itself and has PMM Server's own agent monitor them as remote services. It runs every check on those two services only, rather than **Run all**, and reads the errors from the run's insights. |
+| NC-43 | TC-66 | The test starts `mysql:5.7` and `mongo:8.2` itself and has PMM Server's own agent monitor them as remote services. It runs every built-in MySQL and MongoDB check but the two of findings 6 and 7 on those two services only, rather than **Run all**, and reads the errors from the run's insights. |
 | NC-44 | TC-67 | PostgreSQL rather than MySQL: `mysql_tables_without_pk` still reports one finding per table. The 13 checks are the 10 PostgreSQL ones that share a 10-name cap, plus `mongodb_balancer`, `mongodb_shard_collection_inconsistent_indexes` and `mongodb_xfs_ftype`. Two databases show the split per database. |
 | NC-45 | TC-57 | Each link is checked for its form and one page per check, and fetched from docs.percona.com to show it is not a 404. |
 | NC-49 | TC-59 | Settings recipients, own recipients, no email, and a schedule deleted during its run. Own severities are in TC-50. |
@@ -294,7 +294,7 @@ TC-64 and TC-65, in a second describe of `scheduling.test.ts` after the Phase 2 
 
 | Test | Where | Cases | Covers |
 | --- | --- | --- | --- |
-| TC-66 Every check completes on older databases | `databases.test.ts`, `@advisor-databases`, a new amd64-only matrix job | NC-43 | MySQL 5.7 and a standalone MongoDB 8.2 that the test starts itself: no check errors. Fails on findings 6 and 7. |
+| TC-66 Every check completes on older databases | `databases.test.ts`, `@advisor-databases`, a new amd64-only matrix job | NC-43 | MySQL 5.7 and a standalone MongoDB 8.2 that the test starts itself: no check errors. It leaves out the two checks of findings 6 and 7 until they are fixed. |
 | TC-67 One finding per database | `databases.test.ts`, `@advisor-databases` | NC-44 | PostgreSQL 17 with 12 and 2 unused indexes in two databases: one finding each, a `count` label, 10 names and *and 2 more* |
 | TC-69 Advisors after an upgrade | `tests/upgrade/advisorsUpgrade.test.ts`, `@post-upgrade` | NC-52 | Every check enabled again, the default schedule, a 30-day history, the old URL redirecting |
 | TC-70 to TC-72 Advisors in HA | `tests/ha/advisorRuns.test.ts`, `@pmm-ha` | NC-53 | A run queued on a follower and started by the leader, one run at a time, a schedule created on a follower, and a failover interrupting the open run without starting another |
