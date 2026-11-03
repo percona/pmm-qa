@@ -1,7 +1,7 @@
 # Advisors UI test cases (PMM-14109)
 
 Test cases automated by the `@advisors`, `@advisor-scheduling` and `@advisor-databases` Playwright suites in this folder, and by
-the upgrade, Home dashboard and HA tests linked from the last sections, for the new Advisors pages served by PMM UI
+the upgrade and HA tests linked from the last sections, for the new Advisors pages served by PMM UI
 (percona/pmm#5656, percona/grafana#930). Every case still carries the `PMM-Txxxx` placeholder until its Zephyr case is created.
 
 Run them with:
@@ -688,7 +688,7 @@ Precondition: a QA custom check whose script returns three findings per service,
 
 ---
 
-## Details panes, deep links and the removed panel
+## Details panes and deep links
 
 ### TC-51 · PMM-Txxxx - Verify testing a check from its details pane and the services it can target
 
@@ -800,7 +800,7 @@ Precondition: a MySQL service added as in TC-55, with environment `qa-environmen
 
 ---
 
-## Email modes and the settings API
+## Email modes
 
 ### TC-59 · PMM-Txxxx - Verify each schedule emails as it is set to
 
