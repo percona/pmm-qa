@@ -113,6 +113,11 @@ variable. `shards`/`sharding` are aliases for PSMDB, and `sentinel`/`sentinels`
 for Valkey. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
+On the PSMDB sharded cluster, `HOT_SHARD=rs1` (or `rs2`) adds a write-only
+load that only that shard takes, on top of the cluster-wide workload, for the
+per-shard panels of MongoDB Sharded Cluster Summary:
+`--database psmdb,SETUP_TYPE=sharding,HOT_SHARD=rs1`.
+
 Configuration precedence is:
 
 1. Global `--client-version` flag (for `CLIENT_VERSION`)

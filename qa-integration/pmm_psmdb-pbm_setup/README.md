@@ -17,5 +17,9 @@ with PMM.
   baked into the `psmdb` image, which builds with this folder as its context.
 - `generate_opcountersrepl_traffic.sh`: replication traffic for the sharded
   cluster, run by the framework after setup.
+- `generate_shard_write_traffic.sh`: a write-only load that lands on one shard
+  (`TARGET_SHARD=rs1` or `rs2`), for the per-shard panels of MongoDB Sharded
+  Cluster Summary. The framework runs it for `HOT_SHARD=rs1`/`rs2` on a
+  sharding setup; a test can also run it from this folder.
 
 The tests for this stack are in [`psmdb_pbm_auth_tests`](../../psmdb_pbm_auth_tests/README.md).
