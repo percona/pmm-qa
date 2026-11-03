@@ -136,6 +136,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-replica-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-psmdb-sharding-integration`
+- `@pmm-pxc-integration`
 - `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`

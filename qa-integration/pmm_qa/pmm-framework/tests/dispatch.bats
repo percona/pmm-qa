@@ -216,6 +216,22 @@ stub_prebaked_docker() {
   [[ $output == *'after 3 attempt(s); last output: flaky'* ]]
 }
 
+@test "pmm_register retries a connection check that times out while the database starts" {
+  DOCKER_CALLS=$BATS_TEST_TMPDIR/docker.calls
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    (($(wc -l <"$DOCKER_CALLS") > 1)) && return 0
+    echo 'Connection check failed: read tcp 127.0.0.1:41806->127.0.0.1:5432: i/o timeout.' >&2
+    return 1
+  }
+  run pmm_register pgsql_pgss_pmm_17 pmm-admin add postgresql pgsql_pgss_pmm_17_service_1
+  [[ $status -eq 0 ]]
+  [[ $(grep -c '^exec pgsql_pgss_pmm_17 pmm-admin add postgresql' "$DOCKER_CALLS") -eq 2 ]]
+}
+
 @test "ensure_image pulls the published image before building one" {
   stub_prebaked_docker
   # shellcheck disable=SC2329,SC2317
