@@ -267,7 +267,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
-      arch: ${{ inputs.arch }}
+      arch: amd64
       # the tests start their own databases
       setup_services: '-h'
       pmm_test_flag: '@advisor-databases'
