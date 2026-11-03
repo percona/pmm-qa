@@ -19,9 +19,11 @@ export default class ServicesPage extends BasePage {
     serviceDetailsToggle: (serviceName: string) =>
       this.builders.serviceRow(serviceName).getByRole('button', { exact: true, name: 'Expand' }),
     serviceNameCell: (serviceName: string) =>
-      this.elements.serviceRows.getByRole('cell', { exact: true, name: serviceName }),
+      this.builders.serviceRow(serviceName).locator('td:nth-child(4)'),
     serviceRow: (serviceName: string) =>
-      this.elements.serviceRows.filter({ has: this.page.getByText(serviceName, { exact: true }) }),
+      this.elements.serviceRows.filter({
+        has: this.page.locator('td:nth-child(4)').getByText(serviceName, { exact: true }),
+      }),
     serviceRowActions: (serviceName: string) =>
       this.builders.serviceRow(serviceName).getByRole('button', { name: 'Row Actions' }),
     statusByServiceName: (serviceName: string) =>
