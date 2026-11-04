@@ -71,6 +71,27 @@ export default class AddInstancePage extends BasePage {
     maxQueryLengthError: this.grafanaIframe().getByTestId('maxQueryLength-field-error-message'),
   };
 
+  addRemoteTlsMysql = async (
+    serviceName: string,
+    host: string,
+    certificates: { ca: string; cert: string; key: string },
+  ) => {
+    await this.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.selectNode('pmm-server');
+    await this.fillRemoteFields({
+      cluster: 'mysql_remote_cluster',
+      environment: 'mysql_remote_cluster',
+      host,
+      password: 'pmm',
+      port: '3306',
+      serviceName,
+      username: 'pmm',
+    });
+    await this.verifyTlsFieldsHidden();
+    await this.fillTlsCertificates(certificates);
+    await this.configureRemoteInstance('mysql');
+  };
+
   addService = async () => {
     const [response] = await Promise.all([
       this.page.waitForResponse(

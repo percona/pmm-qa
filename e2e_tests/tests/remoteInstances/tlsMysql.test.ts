@@ -57,20 +57,11 @@ pmmTest(
 
     await pmmTest.step('Add the SSL MySQL server as a remote instance with TLS certificates', async () => {
       await page.goto(addInstancePage.url);
-      await addInstancePage.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
-      await addInstancePage.selectNode('pmm-server');
-      await addInstancePage.fillRemoteFields({
-        cluster: 'mysql_remote_cluster',
-        environment: 'mysql_remote_cluster',
-        host: container,
-        password: 'pmm',
-        port: '3306',
-        serviceName: remoteServiceName,
-        username: 'pmm',
-      });
-      await addInstancePage.verifyTlsFieldsHidden();
-      await addInstancePage.fillTlsCertificates(cliHelper.readMysqlTlsCertificates(container));
-      await addInstancePage.configureRemoteInstance('mysql');
+      await addInstancePage.addRemoteTlsMysql(
+        remoteServiceName,
+        container,
+        cliHelper.readMysqlTlsCertificates(container),
+      );
       expect((await addInstancePage.addService()).status()).toEqual(200);
     });
 
@@ -216,20 +207,11 @@ for (const maxQueryLength of maxQueryLengths) {
 
       await pmmTest.step('Add the SSL MySQL server remotely with the Max Query Length', async () => {
         await page.goto(addInstancePage.url);
-        await addInstancePage.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
-        await addInstancePage.selectNode('pmm-server');
-        await addInstancePage.fillRemoteFields({
-          cluster: 'mysql_remote_cluster',
-          environment: 'mysql_remote_cluster',
-          host: container,
-          password: 'pmm',
-          port: '3306',
-          serviceName: remoteServiceName,
-          username: 'pmm',
-        });
-        await addInstancePage.verifyTlsFieldsHidden();
-        await addInstancePage.fillTlsCertificates(cliHelper.readMysqlTlsCertificates(container));
-        await addInstancePage.configureRemoteInstance('mysql');
+        await addInstancePage.addRemoteTlsMysql(
+          remoteServiceName,
+          container,
+          cliHelper.readMysqlTlsCertificates(container),
+        );
         await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength);
         expect((await addInstancePage.addService()).status()).toEqual(200);
       });
