@@ -23,14 +23,24 @@ const remoteNodeNames = [
   rdsMysql57.serviceName,
   auroraInstanceId,
 ];
+type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
+const qanRemoteDatabases = remoteDatabases.filter(
+  (database): database is QanRemoteDatabase => database.type === 'mysql' || database.type === 'mongodb',
+);
 const qanFilters = [
-  ...remoteDatabases
-    .filter(({ type }) => type === 'mysql' || type === 'mongodb')
-    .map(({ environment }) => environment),
+  ...qanRemoteDatabases.map(({ environment }) => environment),
   ...azureDatabases.map(({ environment }) => environment),
 ];
 
 pmmTest.describe.configure({ mode: 'default' });
+
+// The CodeceptJS @instances stage of the same Jenkins job leaves some of these nodes registered.
+pmmTest.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage();
+
+  await new Api(page, page.request).inventoryApi.removeNodesByName(remoteNodeNames);
+  await page.close();
+});
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -39,11 +49,8 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   const api = new Api(page, page.request);
-  const nodes = await api.inventoryApi.getAllNodes();
 
-  for (const { node_id } of nodes.filter(({ node_name }) => remoteNodeNames.includes(node_name))) {
-    await api.inventoryApi.deleteNode(node_id, true);
-  }
+  await api.inventoryApi.removeNodesByName(remoteNodeNames);
 
   for (const { service_id } of (await api.inventoryApi.getServices()).services.filter(({ service_name }) =>
     remoteNodeNames.includes(service_name),
@@ -179,9 +186,22 @@ pmmTest(
 for (const filterName of qanFilters) {
   pmmTest(
     `PMM-T2340 - Verify QAN after remote instance is added @instances | ${filterName}`,
-    async ({ page, qanStoredMetrics, urlHelper }) => {
-      await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }));
-      await qanStoredMetrics.waitForLoad();
+    async ({ api, page, qanStoredMetrics, urlHelper }) => {
+      const database = qanRemoteDatabases.find(({ environment }) => environment === filterName);
+
+      if (database) await api.remoteInstanceApi.ensureRemoteService(database);
+
+      // A newly started QAN agent reports its first bucket at the next minute boundary.
+      await expect(async () => {
+        await page.goto(
+          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }),
+        );
+        await qanStoredMetrics.waitForLoad();
+        await qanStoredMetrics.inputs.filterBy.fill(filterName);
+        await expect(qanStoredMetrics.builders.filterCheckboxContaining(filterName)).toBeVisible({
+          timeout: Timeouts.FIVE_SECONDS,
+        });
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
       await qanStoredMetrics.selectFilterContaining(filterName);
       expect(
         await qanStoredMetrics.getQueryCount(),

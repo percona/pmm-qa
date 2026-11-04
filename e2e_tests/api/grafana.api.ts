@@ -155,11 +155,11 @@ export default class GrafanaApi {
     return uid as string;
   };
 
-  getMetric = async (metricName: string) => {
+  getMetric = async (metricName: string, from = 'now-1m') => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
     const requestBody = {
-      from: 'now-1m',
+      from,
       queries: [
         {
           datasource: { type: 'prometheus', uid: datasource.uid },
@@ -220,5 +220,14 @@ export default class GrafanaApi {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
       await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
     }
+  };
+
+  waitForMetricAbsent = async (metricName: string, from: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await expect
+      .poll(async () => (await this.getMetric(metricName, from)).results.A.frames[0].data.values.length, {
+        message: `Metric ${metricName} must have no data since ${from}`,
+        timeout,
+      })
+      .toBe(0);
   };
 }

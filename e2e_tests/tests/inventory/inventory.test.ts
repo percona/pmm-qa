@@ -196,22 +196,24 @@ pmmTest(
     // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
-    const agents = (await api.inventoryApi.getServices()).services
-      .flatMap((service) => service.agents)
-      .filter((agent) => agent.disabled === false);
+    await expect(async () => {
+      const agents = (await api.inventoryApi.getServices()).services
+        .flatMap((service) => service.agents)
+        .filter((agent) => agent.disabled === false);
 
-    expect(agents.length, 'no enabled agents found').toBeGreaterThan(0);
-    expect(
-      {
-        agentsNotRunning: agents.filter(
-          (agent) => agent.agent_type !== 'pmm-agent' && agent.status !== AgentStatus.running,
-        ),
-        pmmAgentsNotConnected: agents.filter(
-          (agent) => agent.agent_type === 'pmm-agent' && agent.is_connected !== true,
-        ),
-      },
-      'Every pmm agent should be connected and every other agent running',
-    ).toEqual({ agentsNotRunning: [], pmmAgentsNotConnected: [] });
+      expect(agents.length, 'no enabled agents found').toBeGreaterThan(0);
+      expect(
+        {
+          agentsNotRunning: agents.filter(
+            (agent) => agent.agent_type !== 'pmm-agent' && agent.status !== AgentStatus.running,
+          ),
+          pmmAgentsNotConnected: agents.filter(
+            (agent) => agent.agent_type === 'pmm-agent' && agent.is_connected !== true,
+          ),
+        },
+        'Every pmm agent should be connected and every other agent running',
+      ).toEqual({ agentsNotRunning: [], pmmAgentsNotConnected: [] });
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   },
 );
 

@@ -147,7 +147,9 @@ export default class K8sHelper {
     return podList.items.map((item) => ({
       images: (item.spec?.containers ?? []).map((container) => container.image),
       name: item.metadata.name,
-      ready: item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
+      ready:
+        !item.metadata.deletionTimestamp &&
+        item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
       restarts: (item.status?.containerStatuses ?? []).reduce((sum, status) => sum + status.restartCount, 0),
     }));
   };
