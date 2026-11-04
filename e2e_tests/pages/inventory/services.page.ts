@@ -8,8 +8,6 @@ import { tableDataRows } from '@helpers/tableLocators';
 export default class ServicesPage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   readonly exportFileName = /^inventory_services_export_\d{8}_\d{6}\.csv$/;
-  // Rows per page reach the table through the URL; the dropdown offers no size below 10
-  readonly pageSizeParam = 'services.pageSize';
   readonly pagination = new InventoryPagination(this.page);
   builders = {
     addressByServiceName: (serviceName: string) =>
@@ -121,23 +119,6 @@ export default class ServicesPage extends BasePage {
   };
 
   getServiceNames = async () => (await this.elements.serviceNames.allTextContents()).toSorted();
-
-  // Pages forward from the first page until the row shows, since the table keeps a selection across pages
-  selectServiceRow = async (serviceName: string) => {
-    if (await this.pagination.previousPageButton.isEnabled()) await this.pagination.firstPageButton.click();
-
-    await expect(this.pagination.previousPageButton).toBeDisabled();
-
-    while (!(await this.builders.serviceRow(serviceName).isVisible())) {
-      const interval = await this.pagination.itemsInterval.textContent();
-
-      await expect(this.pagination.nextPageButton, `${serviceName} should be on a later page`).toBeEnabled();
-      await this.pagination.nextPageButton.click();
-      await expect(this.pagination.itemsInterval).not.toHaveText(interval ?? '');
-    }
-
-    await this.builders.selectServiceCheckbox(serviceName).check();
-  };
 
   verifyEditedServiceLabels = async (
     serviceName: string,
