@@ -155732,15 +155732,21 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-04T03:01:43Z",
         "suites": [
+          "Nightly",
+          "Nightly Compatibility",
           "E2E Tests"
-        ]
-      },
+        ],
+        "verdict": "test bug",
+        "summary": "pmm-qa#1668 (PMM-15595, merged Nov 3) expects the MongoDB ClusterSync Details dashboard and menu item, which ship only in the still-open percona/pmm#6020. PMM-T1086 failed in every nightly and compat lane (docker, arm64, ami, helm, ha, client 3.7.1-3.9.1) and PMM-T2202 in both New Navigation jobs. Reproduced on a CHAOS VM with 3-dev-latest; fixed in pmm-qa#1722. The PCSM UI suite (PMM-T2474) stays red until pmm#6020 merges.",
+        "link": "https://github.com/percona/pmm-qa/pull/1722",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:40:05Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-04T03:01:43Z",
@@ -155753,20 +155759,6 @@
         "at": "2026-11-04T03:01:43Z",
         "suites": [
           "Integrations"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-04T03:01:43Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-04T03:01:43Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       },
       {
