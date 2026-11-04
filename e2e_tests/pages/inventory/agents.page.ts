@@ -30,6 +30,11 @@ export default class AgentsPage extends BasePage {
         has: this.page.getByRole('cell', { exact: true, name: 'Real-Time Analytics MongoDB agent' }),
       })
       .getByTestId('agent-status-chip'),
+    runningStatuses: this.page
+      .locator(tableDataRows)
+      .filter({
+        has: this.page.getByRole('cell', { exact: true, name: 'Running' }),
+      })
   };
   inputs = {};
   messages = {};

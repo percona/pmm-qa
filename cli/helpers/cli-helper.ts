@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from 'node:perf_hooks';
@@ -131,4 +131,24 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     }
     return output.stdout;
   });
+}
+
+/**
+ * Assert a command failed and its stdout or stderr contains the expected message
+ *
+ * @param   output    result of the failed command
+ * @param   message   expected error message
+ */
+export async function expectFailure(output: ExecReturn, message: string) {
+  expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
+  expect(`${output.stdout}${output.stderr.text}`).toContain(message);
+}
+
+/**
+ * Quote a value as one shell word, so spaces, $, & or ' in it reach the command unchanged
+ *
+ * @param   value   value to quote
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
 }
