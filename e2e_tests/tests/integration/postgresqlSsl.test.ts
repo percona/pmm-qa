@@ -35,9 +35,6 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
-  // One worker, so beforeAll adds the shared services once.
-  pmmTest.describe.configure({ mode: 'default' });
-
   const removeServices = async (api: Api, cliHelper: CliHelper) => {
     await api.inventoryApi.removeNodesByName([remoteServiceName]);
     cliHelper.removeService(container, ServiceType.postgresql, noSslCheckServiceName);
