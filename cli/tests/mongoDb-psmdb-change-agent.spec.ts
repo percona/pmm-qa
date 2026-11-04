@@ -256,7 +256,7 @@ test.describe('PSMDB pmm-admin inventory change agent effects on mongodb_exporte
         expect(queryId, `No find query in QAN for ${serviceName}/${database}: ${JSON.stringify(queries)}`).toBeTruthy();
       }).toPass({ intervals: [15_000], timeout: 4 * 60_000 });
 
-      return { queryId, ...(await pmmApi.getQanExample(queryId, from)) };
+      return { queryId, ...(await pmmApi.getQanExample(serviceName, queryId, from)) };
     };
 
     const truncated = await runAndFindInQan('pmmQaFirstLongFieldName: 1, pmmQaSecondLongFieldName: 2', 40);
