@@ -155836,6 +155836,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-12069",
         "by": "Investigator routine",
         "at": "2026-11-04T03:59:19Z"
+      },
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility",
+          "E2E Tests"
+        ],
+        "verdict": "test bug",
+        "summary": "Update to the ClusterSync finding: at the reviewer's request, pmm-qa#1722 is closed. #1668 is reverted in pmm-qa#1724, which also takes the PCSM UI suite off main. The tests return in draft pmm-qa#1725, blocked on percona/pmm#6020.",
+        "link": "https://github.com/percona/pmm-qa/pull/1724",
+        "by": "Investigator routine",
+        "at": "2026-11-04T06:46:28Z"
       }
     ],
     "claims": []
