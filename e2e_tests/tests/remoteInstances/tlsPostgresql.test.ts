@@ -65,7 +65,7 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
   });
 
   pmmTest(
-    'PMM-T1859 - Verify adding PG with --tls-skip-verify option @ssl-postgres @not-ui-pipeline',
+    'PMM-T1859 - Verify adding PG with --tls-skip-verify option @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
     async ({ api }) => {
       await api.grafanaApi.waitForMetric(
         `pg_up{service_name="${noSslCheckServiceName}"}`,
@@ -75,18 +75,19 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
   );
 
   pmmTest(
-    'PMM-T2492 - Verify metrics from SSL instances on PMM-Server @ssl-postgres @not-ui-pipeline',
-    async ({ api }) => {
+    'PMM-T2492 - Verify metrics from SSL instances on PMM-Server @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
+    async ({ api, cliHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${localServicePrefix}`);
 
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${service_name}"}`);
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${remoteServiceName}"}`, Timeouts.TWO_MINUTES);
+      cliHelper.verifyPostgresqlConnectionsUseTls(container, 'pmm');
     },
   );
 
   for (const service of services) {
     pmmTest(
-      `PMM-T2493 - Verify dashboard after PGSQL SSL Instances are added @ssl-postgres @not-ui-pipeline | ${service}`,
+      `PMM-T2493 - Verify dashboard after PGSQL SSL Instances are added @ssl @ssl-postgres @ssl-remote @not-ui-pipeline | ${service}`,
       async ({ api, dashboard, page, urlHelper }) => {
         const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
         const overview = dashboard.postgresql.postgresqlInstancesOverview;
@@ -105,7 +106,7 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
 
   for (const service of services) {
     pmmTest(
-      `PMM-T2063 - Verify QAN after PGSQL SSL Instances is added @ssl-postgres @not-ui-pipeline | ${service}`,
+      `PMM-T2063 - Verify QAN after PGSQL SSL Instances is added @ssl @ssl-postgres @ssl-remote @not-ui-pipeline | ${service}`,
       async ({ api, qanStoredMetrics, urlHelper }) => {
         const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
 
@@ -131,7 +132,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
   });
 
   pmmTest(
-    'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl-postgres @not-ui-pipeline',
+    'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
     async ({ addInstancePage, api, cliHelper, page, servicesPage }) => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
         await page.goto(addInstancePage.url);
@@ -154,11 +155,12 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
         timeout: Timeouts.THIRTY_SECONDS,
       });
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${uiServiceName}"}`, Timeouts.TWO_MINUTES);
+      cliHelper.verifyPostgresqlConnectionsUseTls(container, 'pmm');
     },
   );
 
   pmmTest(
-    'PMM-T946 - Verify adding PostgreSQL with --tls flag and with missing TLS options @ssl-postgres @not-ui-pipeline',
+    'PMM-T946 - Verify adding PostgreSQL with --tls flag and with missing TLS options @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
     async ({ cliHelper }) => {
       const pmmAdminAddTls = (options: string, serviceName: string) =>
         `docker exec ${container} pmm-admin add postgresql --tls ${options} --query-source="pgstatements" --port=5432 --username=pmm --password=pmm --service-name=${serviceName}`;
@@ -197,7 +199,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
   );
 
   pmmTest(
-    'PMM-T1426 - Verify remote PostgreSQL can be added with specified Max Query Length @ssl-postgres @not-ui-pipeline',
+    'PMM-T1426 - Verify remote PostgreSQL can be added with specified Max Query Length @max-length @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
     async ({
       addInstancePage,
       agentsPage,
