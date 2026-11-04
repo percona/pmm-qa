@@ -38,6 +38,7 @@ export default class AddInstancePage extends BasePage {
     pgStatStatements: this.grafanaIframe().getByText('PG Stat Statements', { exact: true }),
     rds: this.grafanaIframe().getByTestId('rds-instance'),
     skipTlsVerify: this.grafanaIframe().getByTestId('tls_skip_verify-field-label'),
+    useTls: this.grafanaIframe().getByTestId('tls-field-label'),
   };
   elements = {
     nodes: this.grafanaIframe().getByTestId('nodes-selectbox'),
@@ -54,15 +55,21 @@ export default class AddInstancePage extends BasePage {
     cluster: this.grafanaIframe().getByTestId('cluster-text-input'),
     environment: this.grafanaIframe().getByTestId('environment-text-input'),
     host: this.grafanaIframe().getByTestId('address-text-input'),
+    maxQueryLength: this.grafanaIframe().getByTestId('maxQueryLength-text-input'),
     metricsPath: this.grafanaIframe().getByTestId('metrics_path-text-input'),
     password: this.grafanaIframe().getByTestId('password-password-input'),
     port: this.grafanaIframe().getByTestId('port-text-input'),
     replicationSet: this.grafanaIframe().getByTestId('replication_set-text-input'),
     secretKey: this.grafanaIframe().getByTestId('aws_secret_key-password-input'),
     serviceName: this.grafanaIframe().getByTestId('serviceName-text-input'),
+    tlsCa: this.grafanaIframe().getByTestId('tls_ca-textarea-input'),
+    tlsCert: this.grafanaIframe().getByTestId('tls_cert-textarea-input'),
+    tlsKey: this.grafanaIframe().getByTestId('tls_key-textarea-input'),
     username: this.grafanaIframe().getByTestId('username-text-input'),
   };
-  messages = {};
+  messages = {
+    maxQueryLengthError: this.grafanaIframe().getByTestId('maxQueryLength-field-error-message'),
+  };
 
   addService = async () => {
     const [response] = await Promise.all([
@@ -129,6 +136,13 @@ export default class AddInstancePage extends BasePage {
     if (fields.cluster) await this.inputs.cluster.fill(fields.cluster);
   };
 
+  fillTlsCertificates = async (certificates: { ca: string; cert: string; key: string }) => {
+    await this.buttons.useTls.check();
+    await this.inputs.tlsCa.fill(certificates.ca, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.tlsCert.fill(certificates.cert);
+    await this.inputs.tlsKey.fill(certificates.key);
+  };
+
   selectNode = async (nodeName: string) => {
     await this.elements.nodes.click({ timeout: Timeouts.ONE_MINUTE });
     await this.builders.nodeOption(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -137,5 +151,11 @@ export default class AddInstancePage extends BasePage {
   verifyPgStatMonitorIsDefault = async () => {
     await expect(this.elements.trackingState).toHaveAttribute('value', 'qan_postgresql_pgstatmonitor_agent');
     await expect(this.elements.pgStatMonitor).toBeChecked();
+  };
+
+  verifyTlsFieldsHidden = async () => {
+    for (const input of [this.inputs.tlsCa, this.inputs.tlsCert, this.inputs.tlsKey]) {
+      await expect(input).toBeHidden();
+    }
   };
 }

@@ -326,6 +326,13 @@ export default class StoredMetricsPage extends BasePage {
     await this.inputs.search.press('Enter');
   };
 
+  searchFilteredByService = async (url: string, serviceName: string, query: string) => {
+    await expect(async () => {
+      await this.openFilteredByService(url, serviceName);
+      await this.searchByQueryText(query);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
   selectFilter = async (value: string, checkbox: Locator) => {
     await this.inputs.filterBy.fill(value, { timeout: Timeouts.THIRTY_SECONDS });
     await checkbox.click({ timeout: Timeouts.THIRTY_SECONDS });

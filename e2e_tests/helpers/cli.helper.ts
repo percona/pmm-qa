@@ -151,6 +151,17 @@ export default class CliHelper {
     ).agents_info;
   };
 
+  readMysqlTlsCertificates = (container: string) => {
+    // mysqld's auto-generated PEM files end in a NUL byte.
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /var/lib/mysql/${file}`)
+        .assertSuccess()
+        .stdout.replace(/\0+$/, '')
+        .trim();
+
+    return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
+  };
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.
