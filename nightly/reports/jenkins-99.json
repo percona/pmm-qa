@@ -3778,6 +3778,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1722",
       "by": "Investigator routine",
       "at": "2026-11-04T03:59:02Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "test bug",
+      "summary": "ha backup-restore #35: PMM-T2107 read the standby pmm-ha-1 while it was still Terminating after PMM-T2136's leader failover; K8sHelper.getPods counts a terminating pod as Ready. #1710 skipping PMM-T2108 removed the 15 min that used to separate the two tests. Fix treats a pod with deletionTimestamp as not ready and polls the standby's agent for 2 min. Fix PR from a sibling investigator session, deduped and not re-reproduced here; its Jenkins verification #36 was still running at publish time.",
+      "link": "https://github.com/percona/pmm-qa/pull/1721",
+      "by": "Investigator routine",
+      "at": "2026-11-04T03:59:08Z"
     }
   ],
   "claims": []
