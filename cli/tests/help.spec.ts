@@ -41,7 +41,6 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/modb-tests.bats#L287
    */
   test('PMM-T925 Verify pmm-admin add mongodb --help has TLS-related flags', async ({}) => {
-    // Normalized: pmm-admin 3.11+ prints negatable flags as `--[no-]tls`, which shifts the help column.
     await addMongoHelp.outContainsNormalizedMany([
       'tls Use TLS to connect to the database',
       'tls-skip-verify Skip TLS certificate verification',
