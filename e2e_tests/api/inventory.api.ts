@@ -1,6 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetAgents, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -26,6 +26,19 @@ export default class InventoryApi {
       response.status(),
       `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
+  };
+
+  getAgents = async (): Promise<GetAgents> => {
+    const response = await this.request.get(apiEndpoints.inventory.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get agents API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()) as GetAgents;
   };
 
   getAllNodes = async (): Promise<GetNode[]> => {
@@ -81,6 +94,20 @@ export default class InventoryApi {
       serviceName: services[0].service_name,
     };
   };
+
+  getServiceAgent = async (serviceType: ServiceType, partialServiceName: string, agentType: string) => {
+    const { agents } = await this.getServiceDetailsByTypeAndPartialName(serviceType, partialServiceName);
+    const agent = agents.find((serviceAgent) => serviceAgent.agent_type === agentType);
+
+    if (!agent) throw new Error(`Agent ${agentType} of service ${partialServiceName} is not present`);
+
+    return agent;
+  };
+
+  getServiceAgents = async (serviceId: string) =>
+    Object.values(await this.getAgents())
+      .flat()
+      .filter((agent) => agent.service_id === serviceId);
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
@@ -165,6 +192,14 @@ export default class InventoryApi {
     expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
+  };
+
+  removeNodesByName = async (names: string[]): Promise<void> => {
+    for (const { node_id } of (await this.getAllNodes()).filter(({ node_name }) =>
+      names.includes(node_name),
+    )) {
+      await this.deleteNode(node_id, true);
+    }
   };
 
   verifyAgentsAreRunning = async (serviceName: string) =>

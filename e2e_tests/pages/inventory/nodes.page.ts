@@ -15,6 +15,8 @@ export default class NodesPage extends BasePage {
         .getByTestId('table-tbody-tr')
         .nth(index)
         .locator('xpath=td[5]//a'),
+    nodeCheckbox: (nodeName: string) =>
+      this.builders.nodeRow(nodeName).getByTestId('select-row').getByRole('checkbox'),
     nodeNameCell: (nodeName: string) => this.grafanaIframe().locator(`td[title="${nodeName}"]`),
     // The HA role label has no test id, only a generated emotion class.
     nodeRoleLabel: (nodeName: string) => this.builders.nodeNameCell(nodeName).locator('span + div'),
@@ -23,14 +25,19 @@ export default class NodesPage extends BasePage {
     nodeStatusCell: (nodeName: string) =>
       this.builders.nodeNameCell(nodeName).locator('xpath=../td[starts-with(@title, "STATUS_")]'),
     rowActions: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('dropdown-menu-toggle'),
+    selectNodeCheckbox: (nodeName: string) =>
+      this.builders.nodeRow(nodeName).getByTestId('select-row').locator('span'),
     showRowDetailsByIndex: (index: string) =>
       this.grafanaIframe().getByTestId('show-row-details').nth(Number(index)),
   };
   buttons = {
     delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
+    deleteNode: this.grafanaIframe().getByTestId('dropdown-button').filter({ hasText: 'Delete' }),
+    forceDelete: this.grafanaIframe().getByTestId('force-field-label'),
     overrideAlertThresholds: this.grafanaIframe()
       .getByTestId('dropdown-button')
       .filter({ hasText: 'Override alert thresholds' }),
+    proceed: this.grafanaIframe().getByRole('button', { name: 'Proceed' }),
   };
   elements = {
     detailsContent: this.grafanaIframe().getByTestId('details-row-content'),
@@ -41,6 +48,19 @@ export default class NodesPage extends BasePage {
   inputs = {};
   messages = {
     deleteConfirmation: this.grafanaIframe().getByRole('dialog').getByRole('heading', { level: 4 }),
+  };
+
+  deleteNode = async (nodeName: string) => {
+    await this.builders.selectNodeCheckbox(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.delete.click();
+    await this.buttons.forceDelete.click();
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes('/v1/inventory/nodes/') && response.request().method() === 'DELETE',
+      ),
+      this.buttons.proceed.click(),
+    ]);
   };
 
   openAlertThresholds = async (nodeName: string): Promise<void> => {

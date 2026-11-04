@@ -18,12 +18,13 @@ description: Steps to create POM
 - Locators MUST be class properties.
 - Methods MUST be arrow functions. Wrap critical actions in `pmmTest.step`.
 - Keep methods tightly scoped and logically named.
+- Group a page's actions into a method even with one caller; no method that wraps a single click.
+- Full rules: `e2e_tests/CONTRIBUTING.md`.
 
 # Template
 
 ```typescript
-import BasePage from "./base.page";
-import pmmTest from "@fixtures/pmmTest";
+import BasePage from "@pages/base.page";
 
 export default class TemplatePage extends BasePage {
   url = "";

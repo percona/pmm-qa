@@ -43,6 +43,7 @@ const apiEndpoints = {
     status: '/v1/ha/status',
   },
   inventory: {
+    agents: '/v1/inventory/agents',
     nodes: '/v1/inventory/nodes',
     services: '/v1/inventory/services',
   },
