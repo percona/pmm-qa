@@ -3766,6 +3766,18 @@
       "link": "https://github.com/percona/pmm-qa/pull/1721",
       "by": "Investigator routine",
       "at": "2026-11-04T03:54:19Z"
+    },
+    {
+      "suites": [
+        "Nightly",
+        "Nightly Compatibility",
+        "E2E Tests"
+      ],
+      "verdict": "test bug",
+      "summary": "All 10 nightly lanes (docker, docker arm64, ami, ha, helm, compat 3.7.1-3.9.1) failed only PMM-T1086, and both New Navigation jobs failed PMM-T2202: pmm-qa#1668 (merged 11-03) expects the MongoDB ClusterSync Details dashboard and menu item, which ship in the still-open percona/pmm#6020, so 3-dev-latest has neither. Fix (reproduced on a CHAOS VM) drops them from the generic folder/menu checks until pmm#6020 merges. The @pmm-pcsm-psmdb-integration lane (PMM-T2474) fails for the same reason and stays red until pmm#6020 lands.",
+      "link": "https://github.com/percona/pmm-qa/pull/1722",
+      "by": "Investigator routine",
+      "at": "2026-11-04T03:59:02Z"
     }
   ],
   "claims": []
