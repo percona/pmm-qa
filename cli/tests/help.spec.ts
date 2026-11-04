@@ -1,9 +1,12 @@
-import { test } from '@helpers/test';
+import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 
 let addMongoHelp: ExecReturn;
 let addPostgreSqlHelp: ExecReturn;
+
+const tlsFlag = /^\s+--(\[no-\])?tls +Use TLS to connect to the database$/m;
+const tlsSkipVerifyFlag = /^\s+--(\[no-\])?tls-skip-verify +Skip TLS certificate verification$/m;
 
 test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
   test.beforeAll(async ({}) => {
@@ -41,9 +44,9 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/modb-tests.bats#L287
    */
   test('PMM-T925 Verify pmm-admin add mongodb --help has TLS-related flags', async ({}) => {
+    expect(addMongoHelp.stdout).toMatch(tlsFlag);
+    expect(addMongoHelp.stdout).toMatch(tlsSkipVerifyFlag);
     await addMongoHelp.outContainsNormalizedMany([
-      'tls Use TLS to connect to the database',
-      'tls-skip-verify Skip TLS certificate verification',
       'tls-certificate-key-file=STRING',
       'tls-certificate-key-file-password=STRING',
       'tls-ca-file=STRING Path to certificate authority file',
@@ -111,9 +114,9 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pdpgsql-tests.bats#L333
    */
   test('PMM-T945 - Verify help for pmm-admin add postgresql has TLS-related flags', async ({}) => {
+    expect(addPostgreSqlHelp.stdout).toMatch(tlsFlag);
+    expect(addPostgreSqlHelp.stdout).toMatch(tlsSkipVerifyFlag);
     await addPostgreSqlHelp.outContainsNormalizedMany([
-      'tls Use TLS to connect to the database',
-      'tls-skip-verify Skip TLS certificate verification',
       'tls-cert-file=STRING TLS certificate file',
       'tls-key-file=STRING TLS certificate key file',
       'tls-ca-file=STRING TLS CA certificate file',
