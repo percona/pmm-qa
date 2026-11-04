@@ -187,16 +187,20 @@ stub_prebaked_docker() {
 @test "retry reruns any failure until the command succeeds" {
   # shellcheck disable=SC2329,SC2317
   sleep() { :; }
-  local attempts=$BATS_TEST_TMPDIR/attempts
-  # shellcheck disable=SC2016 # expanded by sh -c
-  run retry 5 'the probe' sh -c '
+  fails_twice() {
+    local n
     n=$(($(cat "$1" 2>/dev/null || echo 0) + 1))
     echo "$n" >"$1"
-    if [ "$n" -lt 3 ]; then echo "not ready yet"; exit 1; fi
-    echo ready' sh "$attempts"
+    if ((n < 3)); then
+      echo 'not ready yet'
+      return 1
+    fi
+    echo ready
+  }
+  run retry 5 'the probe' fails_twice "$BATS_TEST_TMPDIR/attempts"
   [[ $status -eq 0 ]]
   [[ $output == ready ]]
-  [[ $(cat "$attempts") -eq 3 ]]
+  [[ $(cat "$BATS_TEST_TMPDIR/attempts") -eq 3 ]]
 }
 
 @test "pmm_register retries a connection check that times out while the database starts" {
