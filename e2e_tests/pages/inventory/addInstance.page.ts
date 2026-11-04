@@ -17,58 +17,53 @@ export interface RemoteInstanceFields {
 }
 
 export default class AddInstancePage extends BasePage {
-  url = 'graph/add-instance?orgId=1';
+  url = 'pmm-ui/add-instance';
   builders = {
-    discoveredInstance: (instanceId: string) =>
-      this.grafanaIframe()
-        .getByRole('row')
-        .filter({ has: this.page.getByRole('cell', { exact: true, name: instanceId }) })
-        .getByRole('button'),
-    instanceType: (instanceType: RemoteInstanceType) =>
-      this.grafanaIframe().getByTestId(`${instanceType}-instance`),
-    nodeOption: (nodeName: string) =>
-      this.grafanaIframe().getByRole('option', { exact: true, name: nodeName }),
+    discoveredInstance: (instanceId: string) => this.page.getByTestId(`start-monitoring-${instanceId}`),
+    instanceType: (instanceType: RemoteInstanceType) => this.page.getByTestId(`${instanceType}-instance`),
+    nodeOption: (nodeName: string) => this.page.getByRole('option', { exact: true, name: nodeName }),
   };
   buttons = {
-    addService: this.grafanaIframe().getByRole('button', { name: 'Add service' }),
-    azure: this.grafanaIframe().getByTestId('azure-instance'),
-    discover: this.grafanaIframe().getByRole('button', { exact: true, name: 'Discover' }),
-    mongodbProfiler: this.grafanaIframe().getByTestId('qan_mongodb_profiler-field-label'),
-    mysql: this.grafanaIframe().getByTestId('mysql-instance'),
-    pgStatStatements: this.grafanaIframe().getByText('PG Stat Statements', { exact: true }),
-    rds: this.grafanaIframe().getByTestId('rds-instance'),
-    skipTlsVerify: this.grafanaIframe().getByTestId('tls_skip_verify-field-label'),
-    useTls: this.grafanaIframe().getByTestId('tls-field-label'),
+    addService: this.page.getByTestId('add-service-submit'),
+    azure: this.page.getByTestId('azure-instance'),
+    discover: this.page.getByTestId('add-service-submit'),
+    mongodbProfiler: this.page.getByTestId('switch-input-qan-mongodb-profiler').getByRole('switch'),
+    mysql: this.page.getByTestId('mysql-instance'),
+    pgStatStatements: this.page.getByRole('radio', { exact: true, name: 'PG Stat Statements' }),
+    rds: this.page.getByTestId('rds-instance'),
+    skipTlsVerify: this.page.getByTestId('switch-input-tls-skip-verify').getByRole('switch'),
+    useTls: this.page.getByTestId('switch-input-tls').getByRole('switch'),
   };
   elements = {
-    nodes: this.grafanaIframe().getByTestId('nodes-selectbox'),
-    pgStatMonitor: this.grafanaIframe().getByRole('radio', { name: 'PG Stat Monitor' }),
-    trackingState: this.grafanaIframe().getByTestId('tracking-radio-state'),
-    unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
+    nodes: this.page.getByTestId('select-node-id-button'),
+    pgStatMonitor: this.page.getByRole('radio', { exact: true, name: 'PG Stat Monitor' }),
+    unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
-    accessKey: this.grafanaIframe().getByTestId('aws_access_key-text-input'),
-    azureClientId: this.grafanaIframe().getByTestId('azure_client_id-text-input'),
-    azureClientSecret: this.grafanaIframe().getByTestId('azure_client_secret-password-input'),
-    azureSubscriptionId: this.grafanaIframe().getByTestId('azure_subscription_id-text-input'),
-    azureTenantId: this.grafanaIframe().getByTestId('azure_tenant_id-text-input'),
-    cluster: this.grafanaIframe().getByTestId('cluster-text-input'),
-    environment: this.grafanaIframe().getByTestId('environment-text-input'),
-    host: this.grafanaIframe().getByTestId('address-text-input'),
-    maxQueryLength: this.grafanaIframe().getByTestId('maxQueryLength-text-input'),
-    metricsPath: this.grafanaIframe().getByTestId('metrics_path-text-input'),
-    password: this.grafanaIframe().getByTestId('password-password-input'),
-    port: this.grafanaIframe().getByTestId('port-text-input'),
-    replicationSet: this.grafanaIframe().getByTestId('replication_set-text-input'),
-    secretKey: this.grafanaIframe().getByTestId('aws_secret_key-password-input'),
-    serviceName: this.grafanaIframe().getByTestId('serviceName-text-input'),
-    tlsCa: this.grafanaIframe().getByTestId('tls_ca-textarea-input'),
-    tlsCert: this.grafanaIframe().getByTestId('tls_cert-textarea-input'),
-    tlsKey: this.grafanaIframe().getByTestId('tls_key-textarea-input'),
-    username: this.grafanaIframe().getByTestId('username-text-input'),
+    accessKey: this.page.getByTestId('text-input-aws-access-key'),
+    azureClientId: this.page.getByTestId('text-input-azure-client-id'),
+    azureClientSecret: this.page.getByTestId('text-input-azure-client-secret'),
+    azureSubscriptionId: this.page.getByTestId('text-input-azure-subscription-id'),
+    azureTenantId: this.page.getByTestId('text-input-azure-tenant-id'),
+    cluster: this.page.getByTestId('text-input-cluster'),
+    environment: this.page.getByTestId('text-input-environment'),
+    host: this.page.getByTestId('text-input-address'),
+    maxQueryLength: this.page.getByTestId('text-input-max-query-length'),
+    metricsPath: this.page.getByTestId('text-input-metrics-path'),
+    password: this.page.getByTestId('text-input-password'),
+    port: this.page.getByTestId('text-input-port'),
+    replicationSet: this.page.getByTestId('text-input-replication-set'),
+    secretKey: this.page.getByTestId('text-input-aws-secret-key'),
+    serviceName: this.page.getByTestId('text-input-service-name'),
+    tlsCa: this.page.getByTestId('text-input-tls-ca'),
+    tlsCert: this.page.getByTestId('text-input-tls-cert'),
+    tlsKey: this.page.getByTestId('text-input-tls-key'),
+    username: this.page.getByTestId('text-input-username'),
   };
   messages = {
-    maxQueryLengthError: this.grafanaIframe().getByTestId('maxQueryLength-field-error-message'),
+    maxQueryLengthError: this.page
+      .locator('.MuiFormControl-root', { has: this.page.getByTestId('text-input-max-query-length') })
+      .locator('.MuiFormHelperText-root'),
   };
 
   addRemoteTlsMysql = async (
@@ -107,8 +102,8 @@ export default class AddInstancePage extends BasePage {
   configureRemoteInstance = async (instanceType: RemoteInstanceType) => {
     await this.buttons.skipTlsVerify.check({ timeout: Timeouts.THIRTY_SECONDS });
 
-    if (instanceType === 'mongodb') await this.buttons.mongodbProfiler.click();
-    if (instanceType === 'postgresql') await this.buttons.pgStatStatements.click();
+    if (instanceType === 'mongodb') await this.buttons.mongodbProfiler.check();
+    if (instanceType === 'postgresql') await this.buttons.pgStatStatements.check();
   };
 
   discoverAzure = async (credentials: {
@@ -170,7 +165,6 @@ export default class AddInstancePage extends BasePage {
   };
 
   verifyPgStatMonitorIsDefault = async () => {
-    await expect(this.elements.trackingState).toHaveAttribute('value', 'qan_postgresql_pgstatmonitor_agent');
     await expect(this.elements.pgStatMonitor).toBeChecked();
   };
 
