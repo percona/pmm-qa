@@ -9,12 +9,13 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
   test.beforeAll(async ({}) => {
     const result1 = await cli.exec('sudo pmm-admin status');
     await result1.outContains('Running', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');
+    // Captured here rather than in a test: a failed test restarts the worker, which would leave these unset.
+    addMongoHelp = await cli.execSilent('sudo pmm-admin add mongodb --help');
+    addPostgreSqlHelp = await cli.execSilent('sudo pmm-admin add postgresql --help');
   });
 
   test('pmm-admin mongodb --help check', async ({}) => {
-    addMongoHelp = await cli.execSilent('sudo pmm-admin add mongodb --help');
     await addMongoHelp.assertSuccess();
-    addPostgreSqlHelp = await cli.execSilent('sudo pmm-admin add postgresql --help');
     await addPostgreSqlHelp.assertSuccess();
   });
 
@@ -40,12 +41,13 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/modb-tests.bats#L287
    */
   test('PMM-T925 Verify pmm-admin add mongodb --help has TLS-related flags', async ({}) => {
-    await addMongoHelp.outContainsMany([
-      'tls                        Use TLS to connect to the database',
-      'tls-skip-verify            Skip TLS certificate verification',
+    // Normalized: pmm-admin 3.11+ prints negatable flags as `--[no-]tls`, which shifts the help column.
+    await addMongoHelp.outContainsNormalizedMany([
+      'tls Use TLS to connect to the database',
+      'tls-skip-verify Skip TLS certificate verification',
       'tls-certificate-key-file=STRING',
       'tls-certificate-key-file-password=STRING',
-      'tls-ca-file=STRING         Path to certificate authority file',
+      'tls-ca-file=STRING Path to certificate authority file',
       'authentication-mechanism=STRING',
       'authentication-database=STRING',
     ]);
@@ -110,12 +112,12 @@ test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pdpgsql-tests.bats#L333
    */
   test('PMM-T945 - Verify help for pmm-admin add postgresql has TLS-related flags', async ({}) => {
-    await addPostgreSqlHelp.outContainsMany([
-      'tls                        Use TLS to connect to the database',
-      'tls-skip-verify            Skip TLS certificate verification',
-      'tls-cert-file=STRING       TLS certificate file',
-      'tls-key-file=STRING        TLS certificate key file',
-      'tls-ca-file=STRING         TLS CA certificate file',
+    await addPostgreSqlHelp.outContainsNormalizedMany([
+      'tls Use TLS to connect to the database',
+      'tls-skip-verify Skip TLS certificate verification',
+      'tls-cert-file=STRING TLS certificate file',
+      'tls-key-file=STRING TLS certificate key file',
+      'tls-ca-file=STRING TLS CA certificate file',
     ]);
   });
 
