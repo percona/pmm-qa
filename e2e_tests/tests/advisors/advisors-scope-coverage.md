@@ -295,7 +295,7 @@ TC-64 and TC-65, in a second describe of `scheduling.test.ts` after the Phase 2 
 
 | Test | Where | Cases | Covers |
 | --- | --- | --- | --- |
-| TC-66 Every check completes on older databases | `databases.test.ts`, `@advisor-databases`, a new amd64-only matrix job | NC-43 | MySQL 5.7 and a standalone MongoDB 8.2 that the test starts itself: no check errors. It leaves out the two checks of findings 6 and 7 until they are fixed. |
+| TC-66 Every check completes on older databases | `databases.test.ts`, `@advisor-databases`, a new amd64-only matrix job | NC-43 | MySQL 5.7 and a standalone MongoDB 8.2 that the test starts itself: no check errors. It leaves out the two checks of findings 6 and 7 until PMM-15706 fixes them. |
 | TC-67 One finding per database | `databases.test.ts`, `@advisor-databases` | NC-44 | PostgreSQL 17 with 12 and 2 unused indexes in two databases: one finding each, a `count` label, 10 names and *and 2 more* |
 | TC-69 Advisors after an upgrade | `tests/upgrade/advisorsUpgrade.test.ts`, `@post-upgrade` | NC-52 | Every check enabled again, the default schedule, a 30-day history, the old URL redirecting |
 | TC-70 to TC-72 Advisors in HA | `tests/ha/advisorRuns.test.ts`, `@pmm-ha` | NC-53 | A run queued on a follower and started by the leader, one run at a time, a schedule created on a follower, and a failover interrupting the open run without starting another |
@@ -338,5 +338,5 @@ Product issues seen while automating, for PMM-14109:
 3. Turning Advisor notifications on with no recipients disables **Apply changes** without saying why; *Add at least one recipient…* appears only after the recipients field is edited.
 4. Settings keeps `QA@example.com` and `qa@example.com` as two recipients, while the schedule editor and the Email insights dialog merge addresses ignoring case.
 5. A check script that never ends fails with *check script execution failed: signal: killed*, in **Test** and in runs. The 4 s CPU limit of `pmm-managed-starlark` kills it before the 5 s timeout that would report *timed out after 5s*.
-6. `mongodb_multiple_services` errors with *key "cluster" not in dict* on a MongoDB service added without a cluster name.
-7. `mongodb_swap_allocation` errors with *local variable swap_alloc_GB referenced before assignment* when the node reports no swap metric (a remote node). With no swap and no replica set it would hit the same error on `state`.
+6. `mongodb_multiple_services` errors with *key "cluster" not in dict* on a MongoDB service added without a cluster name. To be fixed in [PMM-15706](https://perconadev.atlassian.net/browse/PMM-15706).
+7. `mongodb_swap_allocation` errors with *local variable swap_alloc_GB referenced before assignment* when the node reports no swap metric (a remote node). With no swap and no replica set it would hit the same error on `state`. To be fixed in [PMM-15706](https://perconadev.atlassian.net/browse/PMM-15706).

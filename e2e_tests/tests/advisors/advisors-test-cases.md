@@ -913,7 +913,7 @@ Precondition: `mysql:5.7` and `mongo:8.2` (no replica set, no authentication) mo
 | 2 | Read the insights of the run. | No insight has status Error, and every planned check completed. |
 | 3 | Open Run history for the run. | Checks reads *N/N*. |
 
-The test leaves out `mongodb_multiple_services` and `mongodb_swap_allocation`, which error on a standalone MongoDB ([findings](advisors-scope-coverage.md#findings) 6 and 7), until they are fixed.
+The test leaves out `mongodb_multiple_services` and `mongodb_swap_allocation`, which error on a standalone MongoDB ([findings](advisors-scope-coverage.md#findings) 6 and 7), until [PMM-15706](https://perconadev.atlassian.net/browse/PMM-15706) fixes them.
 
 ### TC-67 · PMM-Txxxx - Verify a check reports one finding per database, naming at most 10 relations
 

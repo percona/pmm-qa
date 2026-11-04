@@ -29,7 +29,7 @@ const databases = {
     type: 'postgresql',
   },
 } satisfies Record<string, Database>;
-// Both error on a standalone MongoDB on main as well, so the run leaves them out until they are fixed:
+// Both error on a standalone MongoDB on main as well, so the run leaves them out until PMM-15706 fixes them:
 // one expects a cluster name, the other a swap metric.
 const brokenChecks = ['mongodb_multiple_services', 'mongodb_swap_allocation'];
 const containers: string[] = [];
