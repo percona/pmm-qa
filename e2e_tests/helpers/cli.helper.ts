@@ -154,6 +154,17 @@ export default class CliHelper {
   readContainerFile = (container: string, path: string): string =>
     this.execSilent(`docker exec ${container} cat ${path}`).assertSuccess().stdout.trim();
 
+  readMysqlTlsCertificates = (container: string) => {
+    // mysqld's auto-generated PEM files end in a NUL byte.
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /var/lib/mysql/${file}`)
+        .assertSuccess()
+        .stdout.replace(/\0+$/, '')
+        .trim();
+
+    return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
+  };
+
   readTlsCertificates = (container: string) => ({
     ca: this.readContainerFile(container, 'certificates/ca.crt'),
     cert: this.readContainerFile(container, 'certificates/client.crt'),

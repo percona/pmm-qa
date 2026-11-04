@@ -67,7 +67,30 @@ export default class AddInstancePage extends BasePage {
     tlsKey: this.grafanaIframe().getByTestId('tls_key-textarea-input'),
     username: this.grafanaIframe().getByTestId('username-text-input'),
   };
-  messages = {};
+  messages = {
+    maxQueryLengthError: this.grafanaIframe().getByTestId('maxQueryLength-field-error-message'),
+  };
+
+  addRemoteTlsMysql = async (
+    serviceName: string,
+    host: string,
+    certificates: { ca: string; cert: string; key: string },
+  ) => {
+    await this.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.selectNode('pmm-server');
+    await this.fillRemoteFields({
+      cluster: 'mysql_remote_cluster',
+      environment: 'mysql_remote_cluster',
+      host,
+      password: 'pmm',
+      port: '3306',
+      serviceName,
+      username: 'pmm',
+    });
+    await this.verifyTlsFieldsHidden();
+    await this.fillTlsCertificates(certificates);
+    await this.configureRemoteInstance('mysql');
+  };
 
   addService = async () => {
     const [response] = await Promise.all([
@@ -154,6 +177,13 @@ export default class AddInstancePage extends BasePage {
     await this.buttons.pgStatStatements.click();
   };
 
+  fillTlsCertificates = async (certificates: { ca: string; cert: string; key: string }) => {
+    await this.buttons.useTls.check();
+    await this.inputs.tlsCa.fill(certificates.ca, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.tlsCert.fill(certificates.cert);
+    await this.inputs.tlsKey.fill(certificates.key);
+  };
+
   selectNode = async (nodeName: string) => {
     await this.elements.nodes.click({ timeout: Timeouts.ONE_MINUTE });
     await this.builders.nodeOption(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -162,5 +192,11 @@ export default class AddInstancePage extends BasePage {
   verifyPgStatMonitorIsDefault = async () => {
     await expect(this.elements.trackingState).toHaveAttribute('value', 'qan_postgresql_pgstatmonitor_agent');
     await expect(this.elements.pgStatMonitor).toBeChecked();
+  };
+
+  verifyTlsFieldsHidden = async () => {
+    for (const input of [this.inputs.tlsCa, this.inputs.tlsCert, this.inputs.tlsKey]) {
+      await expect(input).toBeHidden();
+    }
   };
 }
