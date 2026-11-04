@@ -155764,6 +155764,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15835",
         "by": "Investigator routine",
         "at": "2026-11-04T03:40:16Z"
+      },
+      {
+        "suites": [
+          "Integrations"
+        ],
+        "verdict": "test bug",
+        "summary": "PMM-T2456 (OL9 CLI lane, plus FB pmm-submodules#4676): getQanExample looks the example up by query ID only, so the framework's rs101 profiler on the same mongod can return its untruncated example. Both rows confirmed in ClickHouse on a CHAOS VM; fixed in pmm-qa#1723.",
+        "link": "https://github.com/percona/pmm-qa/pull/1723",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:40:21Z"
       }
     ],
     "claims": [
