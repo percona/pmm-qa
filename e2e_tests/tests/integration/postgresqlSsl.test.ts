@@ -3,7 +3,7 @@ import pmmTest from '@fixtures/pmmTest';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
-import { expect, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 const version = '16';
 const container = `pdpgsql_pgsm_ssl_${version}`;
@@ -11,6 +11,7 @@ const localServicePrefix = `${container}_ssl_service`;
 const remoteServiceName = `remote_pgsql_${version}_ssl_service`;
 const noSslCheckServiceName = 'pg_no_ssl_check';
 const services = [localServicePrefix, remoteServiceName, noSslCheckServiceName];
+const uiServiceName = `pgsql_${version}_ssl_ui_service`;
 const maxQueryLengthServiceName = `pgsql_${version}_ssl_max_query_length`;
 const tlsServiceName = 'PG_tls_1';
 const maxQueryLength = '7';
@@ -23,69 +24,73 @@ const remoteFields = {
   port: '5432',
   username: 'pmm',
 };
+const readCertificates = (cliHelper: CliHelper) => ({
+  ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
+  cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
+  key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
+});
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.describe('SSL PostgreSQL services added remotely and with --tls-skip-verify', () => {
-  pmmTest.describe.configure({ mode: 'serial' });
+pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
+  // One worker, so beforeAll adds the shared services once.
+  pmmTest.describe.configure({ mode: 'default' });
 
-  const removeServices = async (page: Page) => {
-    await new Api(page, page.request).inventoryApi.removeNodesByName([remoteServiceName]);
-    new CliHelper().removeService(container, ServiceType.postgresql, noSslCheckServiceName);
+  const removeServices = async (api: Api, cliHelper: CliHelper) => {
+    await api.inventoryApi.removeNodesByName([remoteServiceName]);
+    cliHelper.removeService(container, ServiceType.postgresql, noSslCheckServiceName);
   };
 
   pmmTest.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
+    const api = new Api(page, page.request);
+    const cliHelper = new CliHelper();
+    const { ca, cert, key } = readCertificates(cliHelper);
 
-    await removeServices(page);
+    await removeServices(api, cliHelper);
+    await cliHelper
+      .execSilent(
+        `docker exec ${container} pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls --tls-skip-verify ${noSslCheckServiceName}`,
+      )
+      .assertSuccess()
+      .outContains(serviceAdded);
+    await api.managementApi.addService({
+      postgresql: {
+        add_node: { node_name: remoteServiceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
+        address: container,
+        cluster: remoteFields.cluster,
+        environment: remoteFields.environment,
+        password: remoteFields.password,
+        pmm_agent_id: 'pmm-server',
+        port: 5_432,
+        qan_postgresql_pgstatements_agent: true,
+        service_name: remoteServiceName,
+        tls: true,
+        tls_ca: ca,
+        tls_cert: cert,
+        tls_key: key,
+        username: remoteFields.username,
+      },
+    });
     await page.close();
   });
 
   pmmTest.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
 
-    await removeServices(page);
+    await removeServices(new Api(page, page.request), new CliHelper());
     await page.close();
   });
 
   pmmTest(
-    'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl-postgres @not-ui-pipeline',
-    async ({ addInstancePage, api, cliHelper, servicesPage }) => {
-      await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
-        await addInstancePage.fillRemotePostgresqlWithTls(
-          { ...remoteFields, serviceName: remoteServiceName },
-          {
-            ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
-            cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
-            key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
-          },
-        );
-        expect((await addInstancePage.addService()).status()).toEqual(200);
-      });
-
-      await expect
-        .poll(() => api.inventoryApi.verifyAgentsAreRunning(remoteServiceName), {
-          message: `One or more agents are not running for ${remoteServiceName}`,
-          timeout: Timeouts.FIVE_MINUTES,
-        })
-        .toBe(true);
-      await expect(servicesPage.builders.serviceRow(remoteServiceName)).toBeVisible({
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
-    },
-  );
-
-  pmmTest(
     'PMM-T1859 - Verify adding PG with --tls-skip-verify option @ssl-postgres @not-ui-pipeline',
-    async ({ cliHelper }) => {
-      await cliHelper
-        .execSilent(
-          `docker exec ${container} pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls --tls-skip-verify ${noSslCheckServiceName}`,
-        )
-        .assertSuccess()
-        .outContains(serviceAdded);
+    async ({ api }) => {
+      await api.grafanaApi.waitForMetric(
+        `pg_up{service_name="${noSslCheckServiceName}"}`,
+        Timeouts.TWO_MINUTES,
+      );
     },
   );
 
@@ -95,7 +100,7 @@ pmmTest.describe('SSL PostgreSQL services added remotely and with --tls-skip-ver
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${localServicePrefix}`);
 
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${service_name}"}`);
-      await api.grafanaApi.waitForMetric(`pg_up{service_name="${remoteServiceName}"}`);
+      await api.grafanaApi.waitForMetric(`pg_up{service_name="${remoteServiceName}"}`, Timeouts.TWO_MINUTES);
     },
   );
 
@@ -142,8 +147,32 @@ pmmTest.describe('SSL PostgreSQL services added remotely and with --tls-skip-ver
 pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
   pmmTest.afterEach(async ({ api, cliHelper }) => {
     cliHelper.removeService(container, ServiceType.postgresql, tlsServiceName);
-    await api.inventoryApi.removeNodesByName([maxQueryLengthServiceName]);
+    await api.inventoryApi.removeNodesByName([uiServiceName, maxQueryLengthServiceName]);
   });
+
+  pmmTest(
+    'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl-postgres @not-ui-pipeline',
+    async ({ addInstancePage, api, cliHelper, servicesPage }) => {
+      await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
+        await addInstancePage.fillRemotePostgresqlWithTls(
+          { ...remoteFields, serviceName: uiServiceName },
+          readCertificates(cliHelper),
+        );
+        expect((await addInstancePage.addService()).status()).toEqual(200);
+      });
+
+      await expect
+        .poll(() => api.inventoryApi.verifyAgentsAreRunning(uiServiceName), {
+          message: `One or more agents are not running for ${uiServiceName}`,
+          timeout: Timeouts.FIVE_MINUTES,
+        })
+        .toBe(true);
+      await expect(servicesPage.builders.serviceRow(uiServiceName)).toBeVisible({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await api.grafanaApi.waitForMetric(`pg_up{service_name="${uiServiceName}"}`, Timeouts.TWO_MINUTES);
+    },
+  );
 
   pmmTest(
     'PMM-T946 - Verify adding PostgreSQL with --tls flag and with missing TLS options @ssl-postgres @not-ui-pipeline',
@@ -201,11 +230,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
         async () => {
           await addInstancePage.fillRemotePostgresqlWithTls(
             { ...remoteFields, serviceName: maxQueryLengthServiceName },
-            {
-              ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
-              cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
-              key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
-            },
+            readCertificates(cliHelper),
           );
           await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength);
           expect((await addInstancePage.addService()).status()).toEqual(200);
