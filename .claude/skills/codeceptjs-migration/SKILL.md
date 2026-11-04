@@ -105,7 +105,7 @@ One throwaway CHAOS VM per migration through `.claude/scripts/chaos-pmm.sh` (`or
 
 ## Reading files
 
-Read a file with the Read, Grep or Glob tool, never through Bash. The permission checker cannot always tell a shell read from a write: `sed`, `awk` or a `$(...)`-built command over a path under `.claude/` is treated as an edit of a sensitive file and stops the run for approval, even in auto mode. To read one function of a script, Grep its name with `-n`, then Read with `offset` and `limit`. The shell stays for output only a command produces (`git show`, `git diff`, `gh`, `chaos-pmm.sh ssh`, a test run).
+Read a file with the Read, Grep or Glob tool. To read one function of a script, Grep its name with `-n`, then Read with `offset` and `limit`. The shell stays for output only a command produces (`git show`, `git diff`, `gh`, `chaos-pmm.sh ssh`, a test run).
 
 ## Editing this skill
 
