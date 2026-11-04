@@ -32,7 +32,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
   pmmTest.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
-    const api = new Api(page, page.request);
+    const api = new Api(page.request);
     const cliHelper = new CliHelper();
     const { ca, cert, key } = cliHelper.readTlsCertificates(container);
 
@@ -68,7 +68,7 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
   pmmTest.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
 
-    await new Api(page, page.request).inventoryApi.removeNodesByName([remoteServiceName]);
+    await new Api(page.request).inventoryApi.removeNodesByName([remoteServiceName]);
     new CliHelper().removeService(container, ServiceType.postgresql, noSslCheckServiceName);
     await page.close();
   });

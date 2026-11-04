@@ -38,7 +38,7 @@ pmmTest.describe.configure({ mode: 'default' });
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
 
-  await new Api(page, page.request).inventoryApi.removeNodesByName(remoteNodeNames);
+  await new Api(page.request).inventoryApi.removeNodesByName(remoteNodeNames);
   await page.close();
 });
 
@@ -48,7 +48,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
-  const api = new Api(page, page.request);
+  const api = new Api(page.request);
 
   await api.inventoryApi.removeNodesByName(remoteNodeNames);
 

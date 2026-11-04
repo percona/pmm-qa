@@ -22,7 +22,7 @@ pmmTest.beforeEach(async ({ cliHelper, grafanaHelper }) => {
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
 
-  await new Api(page, page.request).inventoryApi.removeNodesByName([remoteServiceName]);
+  await new Api(page.request).inventoryApi.removeNodesByName([remoteServiceName]);
   await page.close();
 });
 

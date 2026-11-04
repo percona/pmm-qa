@@ -9,7 +9,7 @@ pmmTest.describe.configure({ mode: 'default' });
 
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
-  const api = new Api(page, page.request);
+  const api = new Api(page.request);
 
   for (let i = 1; i <= 26; i++) {
     await api.remoteInstanceApi.addRemoteInstance({
@@ -37,7 +37,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
-  const api = new Api(page, page.request);
+  const api = new Api(page.request);
   const nodes = await api.inventoryApi.getAllNodes();
 
   for (const { node_id } of nodes.filter(({ node_name }) => node_name.startsWith(serviceNamePrefix))) {
