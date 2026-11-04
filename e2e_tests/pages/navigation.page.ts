@@ -302,12 +302,12 @@ export default class LeftNavigation extends BasePage {
 
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
-  verifyAllMenuItems = async (): Promise<void> => {
+  verifyAllMenuItems = async (exclude: string[] = []): Promise<void> => {
     const paths: string[] = [];
 
     this.collectTraversePaths(this.buttons, '', paths);
 
-    for (const path of paths) {
+    for (const path of paths.filter((p) => !exclude.includes(p))) {
       await pmmTest.step(`Verify menu item: ${path}`, async () => {
         await this.selectMenuItem(path);
 

@@ -169,7 +169,8 @@ pmmTest(
   'PMM-T2202 Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ leftNavigation }) => {
     await pmmTest.step('Traverse menu items', async () => {
-      await leftNavigation.verifyAllMenuItems();
+      // MongoDB → ClusterSync ships with percona/pmm#6020 (PMM-15595); PMM-T2474 covers it until that merges.
+      await leftNavigation.verifyAllMenuItems(['mongodb.clusterSync']);
     });
   },
 );

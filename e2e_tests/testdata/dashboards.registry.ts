@@ -136,7 +136,6 @@ export const FOLDER_DASHBOARDS = [
   },
   {
     dashboards: [
-      'MongoDB ClusterSync Details',
       'MongoDB Collections Overview',
       'MongoDB InMemory Details',
       'MongoDB Instance Summary',
