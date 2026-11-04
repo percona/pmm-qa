@@ -147,6 +147,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@rta`
 - `@service-account`
 - `@settings`
+- `@ssl-postgres`
 - `@standalone`
 - `@user-password`
 
