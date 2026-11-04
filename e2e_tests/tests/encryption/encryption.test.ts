@@ -152,6 +152,7 @@ pmmTest(
       )
       .assertSuccess();
 
+    const { ca, cert, key } = cliHelper.readMysqlTlsCertificates(mysqlContainer);
     const { mysql } = await api.managementApi.addService({
       mysql: {
         add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
@@ -163,18 +164,9 @@ pmmTest(
         qan_mysql_perfschema: true,
         service_name: serviceName,
         tls: true,
-        tls_ca: cliHelper
-          .execute(`docker exec ${mysqlContainer} cat /var/lib/mysql/ca.pem`)
-          .assertSuccess()
-          .stdout.trim(),
-        tls_cert: cliHelper
-          .execute(`docker exec ${mysqlContainer} cat /var/lib/mysql/client-cert.pem`)
-          .assertSuccess()
-          .stdout.trim(),
-        tls_key: cliHelper
-          .execute(`docker exec ${mysqlContainer} cat /var/lib/mysql/client-key.pem`)
-          .assertSuccess()
-          .stdout.trim(),
+        tls_ca: ca,
+        tls_cert: cert,
+        tls_key: key,
         tls_skip_verify: true,
         username: dbUser,
       },

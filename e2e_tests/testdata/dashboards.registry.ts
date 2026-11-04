@@ -15,7 +15,6 @@ export const DASHBOARDS: DashboardEntry[] = [
   { folder: 'Insight', url: 'graph/d/vmagent/victoriametrics-agents-overview' },
 
   { folder: 'MongoDB', url: 'graph/d/mongodb-backup-details/mongodb-backup-details' },
-  { folder: 'MongoDB', url: 'graph/d/mongodb-clustersync-details/mongodb-clustersync-details' },
   {
     cluster: 'replicaset',
     folder: 'MongoDB',
@@ -136,7 +135,6 @@ export const FOLDER_DASHBOARDS = [
   },
   {
     dashboards: [
-      'MongoDB ClusterSync Details',
       'MongoDB Collections Overview',
       'MongoDB InMemory Details',
       'MongoDB Instance Summary',

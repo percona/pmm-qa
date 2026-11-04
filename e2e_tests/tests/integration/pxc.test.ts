@@ -1,4 +1,3 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
@@ -19,11 +18,8 @@ pmmTest.beforeEach(async ({ cliHelper, grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterAll(async ({ browser }) => {
-  const page = await browser.newPage();
-
-  await new Api(page, page.request).inventoryApi.removeNodesByName([remoteServiceName]);
-  await page.close();
+pmmTest.afterAll(async ({ api }) => {
+  await api.inventoryApi.removeNodesByName([remoteServiceName]);
 });
 
 pmmTest(

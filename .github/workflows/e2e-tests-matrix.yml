@@ -82,17 +82,18 @@ jobs:
 
   ssl_mysql:
     name: MySQL SSL tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
-      setup_services: '--database ssl_mysql'
-      tags_for_tests: '@ssl-mysql'
       arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
+      setup_services: '--database ssl_mysql'
+      pmm_test_flag: '@ssl-mysql'
 
   ssl_mongo:
     name: MongoDB SSL tests
@@ -110,16 +111,17 @@ jobs:
 
   ssl_postgres:
     name: PDPGSQL SSL tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
       setup_services: '--database ssl_pdpgsql=16'
-      tags_for_tests: '@ssl-postgres'
+      pmm_test_flag: '@ssl-postgres'
       arch: ${{ inputs.arch || github.event.inputs.arch || 'amd64' }}
 
   ssl_postgres_playwright:

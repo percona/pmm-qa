@@ -70,7 +70,6 @@ case $engine in
     ;;
   kerberos) hub library/alpine "$tag" ;;
   external) echo "$tag" ;;
-  pcsm) hub percona/percona-clustersync-mongodb "$tag" ;;
   psmdb)
     version=${tag%-ol*}
     newest "https://repo.percona.com/psmdb-${version/./}/yum/release/${tag##*-ol}/RPMS/x86_64/" \
