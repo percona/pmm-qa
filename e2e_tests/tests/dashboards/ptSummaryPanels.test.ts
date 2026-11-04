@@ -84,3 +84,75 @@ pmmTest(
     await expect(dashboard.elements.summaryFingerprint).toContainText('Detected PostgreSQL version:');
   },
 );
+
+pmmTest.describe('PostgreSQL that accepts only SSL connections', () => {
+  let container: string;
+  let hbaFile: string;
+
+  // pmm-framework's ssl_pdpgsql also trusts plain TCP connections, so drop its host lines to require SSL.
+  pmmTest.beforeEach(async ({ cliHelper }) => {
+    container = cliHelper
+      .execSilent("docker ps --filter 'name=^pdpgsql_pgsm_ssl_' --format '{{.Names}}'")
+      .assertSuccess()
+      .getStdOutLines()[0];
+
+    expect(container, 'pdpgsql_pgsm_ssl docker container should exist').toMatch(/^pdpgsql_pgsm_ssl_\d+$/);
+    hbaFile = cliHelper
+      .execSilent(`docker exec -u postgres ${container} psql -tAc 'SHOW hba_file'`)
+      .assertSuccess()
+      .stdout.trim();
+    cliHelper.execute(`docker exec ${container} cp -p ${hbaFile} ${hbaFile}.pmm-t2488`).assertSuccess();
+    cliHelper.execute(`docker exec ${container} sed -i -E '/^host[[:space:]]/d' ${hbaFile}`).assertSuccess();
+    cliHelper
+      .execute(`docker exec -u postgres ${container} psql -c 'SELECT pg_reload_conf()'`)
+      .assertSuccess();
+    await expect(() =>
+      cliHelper
+        .execSilent(
+          `docker exec ${container} psql 'host=127.0.0.1 user=pmm password=pmm dbname=postgres sslmode=disable' -c 'SELECT 1'`,
+        )
+        .assertFailure('no encryption'),
+    ).toPass({ timeout: Timeouts.TEN_SECONDS });
+  });
+
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    cliHelper.execute(`docker exec ${container} mv -f ${hbaFile}.pmm-t2488 ${hbaFile}`).assertSuccess();
+    cliHelper
+      .execute(`docker exec -u postgres ${container} psql -c 'SELECT pg_reload_conf()'`)
+      .assertSuccess();
+  });
+
+  pmmTest(
+    'PMM-T2488 - Verify Service Summary shows the PostgreSQL report when the database accepts only SSL connections @dashboards @ssl-postgres',
+    async ({ api, dashboard, page, urlHelper }) => {
+      const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${container}_ssl_service`);
+      const summary = dashboard.postgresql.postgresqlInstanceSummary;
+
+      await pmmTest.step('Open PostgreSQL Instance Summary for the SSL service', async () => {
+        await page.goto(
+          urlHelper.buildUrlWithParameters(summary.url, {
+            from: 'now-15m',
+            serviceName: service_name,
+            to: 'now',
+          }),
+        );
+        await dashboard.waitForDashboardToLoad();
+        await expect(dashboard.builders.selectedVariableValues('Service Name')).toHaveText(service_name);
+      });
+
+      await pmmTest.step('Expand the Service Summary row and wait for the report', async () => {
+        await dashboard.expandRow('Service Summary');
+        await expect(dashboard.elements.summaryFingerprint).toContainText(
+          summary.serviceSummaryReport.portAndDataDirectoryHeading,
+          { timeout: Timeouts.TWO_MINUTES },
+        );
+      });
+
+      for (const database of ['sbtest1', 'sbtest2']) {
+        await expect(dashboard.elements.summaryFingerprint).toContainText(
+          summary.serviceSummaryReport.databaseRow(database),
+        );
+      }
+    },
+  );
+});
