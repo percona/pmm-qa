@@ -155826,6 +155826,16 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1467/",
         "by": "Investigator routine",
         "at": "2026-11-04T03:59:14Z"
+      },
+      {
+        "suites": [
+          "E2E Tests"
+        ],
+        "verdict": "product bug",
+        "summary": "@ssl-mysql (amd64): PMM-T1403/T1404/T1426/T1431 saw QAN Explain show 'Error 1064 (42000): You have an error in your SQL syntax' for the remote SSL MySQL service (14 passed, 1 failed). Same signature as nights 92 and 97: the open PMM-12069 (QAN runs EXPLAIN on the fingerprint). Deduped, not re-reproduced.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:59:19Z"
       }
     ],
     "claims": []
