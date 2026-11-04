@@ -155816,6 +155816,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1721",
         "by": "Investigator routine",
         "at": "2026-11-04T03:59:08Z"
+      },
+      {
+        "suites": [
+          "Upgrade AMI"
+        ],
+        "verdict": "unstable",
+        "summary": "ami 3.7.1 (pmm3-upgrade-ami-test-runner #1461) died in Prepare on 'git clone https://github.com/percona/pmm-qa.git: Failed to connect to github.com port 443: Connection timed out' before any test ran; the other four AMI lanes passed. Re-run #1467 with identical parameters passed every stage.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1467/",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:59:14Z"
       }
     ],
     "claims": []
