@@ -101,7 +101,7 @@ pmmTest.describe('SSL PostgreSQL services added remotely and with --tls-skip-ver
 
   for (const service of services) {
     pmmTest(
-      `PMM-T2049 - Verify dashboard after PGSQL SSL Instances are added @ssl-postgres @not-ui-pipeline | ${service}`,
+      `Verify dashboard after PGSQL SSL Instances are added @ssl-postgres @not-ui-pipeline | ${service}`,
       async ({ api, dashboard, page, urlHelper }) => {
         const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
         const overview = dashboard.postgresql.postgresqlInstancesOverview;
