@@ -3716,6 +3716,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1722",
       "by": "Investigator routine",
       "at": "2026-11-04T03:40:05Z"
+    },
+    {
+      "suites": [
+        "Upgrade AMI"
+      ],
+      "verdict": "unstable",
+      "summary": "ami 3.7.1: Prepare's git clone of pmm-qa hit 'Failed to connect to github.com port 443: Connection timed out' one second after a successful fetch on the same agent. The re-run #1466 with identical parameters passed.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1466/",
+      "by": "Investigator routine",
+      "at": "2026-11-04T03:40:11Z"
     }
   ],
   "claims": [
@@ -3731,13 +3741,6 @@
       "at": "2026-11-04T03:01:43Z",
       "suites": [
         "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-04T03:01:43Z",
-      "suites": [
-        "Upgrade AMI"
       ]
     }
   ]
