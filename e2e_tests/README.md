@@ -118,6 +118,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@inventory-fb`
 - `@LBAC`
+- `@max-length`
 - `@menu`
 - `@mongodb-exporter`
 - `@new-navigation`
@@ -147,6 +148,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@rta`
 - `@service-account`
 - `@settings`
+- `@ssl`
+- `@ssl-mysql`
+- `@ssl-remote`
 - `@standalone`
 - `@user-password`
 
