@@ -1,6 +1,4 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
@@ -30,10 +28,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
-  pmmTest.beforeAll(async ({ browser }) => {
-    const page = await browser.newPage();
-    const api = new Api(page.request);
-    const cliHelper = new CliHelper();
+  pmmTest.beforeAll(async ({ api, cliHelper }) => {
     const { ca, cert, key } = cliHelper.readTlsCertificates(container);
 
     await api.inventoryApi.removeNodesByName([remoteServiceName]);
@@ -62,15 +57,11 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
         username: remoteFields.username,
       },
     });
-    await page.close();
   });
 
-  pmmTest.afterAll(async ({ browser }) => {
-    const page = await browser.newPage();
-
-    await new Api(page.request).inventoryApi.removeNodesByName([remoteServiceName]);
-    new CliHelper().removeService(container, ServiceType.postgresql, noSslCheckServiceName);
-    await page.close();
+  pmmTest.afterAll(async ({ api, cliHelper }) => {
+    await api.inventoryApi.removeNodesByName([remoteServiceName]);
+    cliHelper.removeService(container, ServiceType.postgresql, noSslCheckServiceName);
   });
 
   pmmTest(

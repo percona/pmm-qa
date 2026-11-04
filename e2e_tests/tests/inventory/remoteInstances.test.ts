@@ -1,4 +1,3 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
@@ -35,21 +34,15 @@ const qanFilters = [
 pmmTest.describe.configure({ mode: 'default' });
 
 // The CodeceptJS @instances stage of the same Jenkins job leaves some of these nodes registered.
-pmmTest.beforeAll(async ({ browser }) => {
-  const page = await browser.newPage();
-
-  await new Api(page.request).inventoryApi.removeNodesByName(remoteNodeNames);
-  await page.close();
+pmmTest.beforeAll(async ({ api }) => {
+  await api.inventoryApi.removeNodesByName(remoteNodeNames);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterAll(async ({ browser }) => {
-  const page = await browser.newPage();
-  const api = new Api(page.request);
-
+pmmTest.afterAll(async ({ api }) => {
   await api.inventoryApi.removeNodesByName(remoteNodeNames);
 
   for (const { service_id } of (await api.inventoryApi.getServices()).services.filter(({ service_name }) =>
@@ -59,7 +52,6 @@ pmmTest.afterAll(async ({ browser }) => {
   }
 
   await api.settingsApi.changeSettings({ enable_azurediscover: false });
-  await page.close();
 });
 
 for (const database of remoteDatabases) {

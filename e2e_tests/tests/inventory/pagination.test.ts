@@ -1,4 +1,3 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
@@ -7,10 +6,7 @@ const serviceNamePrefix = 'pg-pagination-';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-pmmTest.beforeAll(async ({ browser }) => {
-  const page = await browser.newPage();
-  const api = new Api(page.request);
-
+pmmTest.beforeAll(async ({ api }) => {
   for (let i = 1; i <= 26; i++) {
     await api.remoteInstanceApi.addRemoteInstance({
       postgresql: {
@@ -27,24 +23,18 @@ pmmTest.beforeAll(async ({ browser }) => {
       },
     });
   }
-
-  await page.close();
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterAll(async ({ browser }) => {
-  const page = await browser.newPage();
-  const api = new Api(page.request);
+pmmTest.afterAll(async ({ api }) => {
   const nodes = await api.inventoryApi.getAllNodes();
 
   for (const { node_id } of nodes.filter(({ node_name }) => node_name.startsWith(serviceNamePrefix))) {
     await api.inventoryApi.deleteNode(node_id, true);
   }
-
-  await page.close();
 });
 
 for (const subPage of ['services', 'nodes'] as const) {
