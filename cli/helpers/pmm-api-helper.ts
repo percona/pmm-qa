@@ -66,17 +66,21 @@ export async function getQanQueries(serviceName: string, database: string, from:
 }
 
 /**
- * Latest QAN example of a query class since a point in time
+ * Latest QAN example of a query class on a service since a point in time.
+ * A query ID is shared by every service that recorded the query, so another service's example
+ * comes back unless the service is filtered.
  *
+ * @param   serviceName     service the example was recorded for
  * @param   queryId         QAN query ID
  * @param   from            start of the period
  */
-export async function getQanExample(queryId: string, from: Date): Promise<{ example: string, isTruncated: boolean }> {
+export async function getQanExample(serviceName: string, queryId: string, from: Date): Promise<{ example: string, isTruncated: boolean }> {
   const response = await pmmServerApi('POST', '/v1/qan/query:getExample', {
     period_start_from: from.toISOString(),
     period_start_to: new Date(Date.now() + 60_000).toISOString(),
     filter_by: queryId,
     group_by: 'queryid',
+    labels: [{ key: 'service_name', value: [serviceName] }],
     limit: 1,
   }) as { query_examples?: { example?: string, is_truncated?: number }[] };
   const [example] = response.query_examples ?? [];

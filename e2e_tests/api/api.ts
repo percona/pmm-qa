@@ -1,5 +1,5 @@
 import InventoryApi from './inventory.api';
-import { APIRequestContext, Page } from '@playwright/test';
+import { APIRequestContext } from '@playwright/test';
 import BackupsApi from '@api/backups.api';
 import GrafanaApi from '@api/grafana.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
@@ -36,7 +36,7 @@ export default class Api {
   readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
 
-  constructor(page: Page, request: APIRequestContext) {
+  constructor(request: APIRequestContext) {
     this.accessControlApi = new AccessControlApi(request);
     this.advisorsApi = new AdvisorsApi(request);
     this.alertingApi = new AlertingApi(request);
@@ -49,7 +49,7 @@ export default class Api {
     this.mailpitApi = new MailpitApi(request);
     this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
-    this.grafanaApi = new GrafanaApi(page, request);
+    this.grafanaApi = new GrafanaApi(request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);
