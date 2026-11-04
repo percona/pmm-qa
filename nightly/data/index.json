@@ -155784,16 +155784,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-12069",
         "by": "Investigator routine",
         "at": "2026-11-04T03:40:26Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-04T03:01:43Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "test bug",
+        "summary": "ha backup-restore #35: PMM-T2107 checked pmm-ha-1 while it was still Terminating after PMM-T2136's leader failover. getPods counts a terminating pod as Ready, and the agent check had no retry. It surfaced once pmm-qa#1710 skipped PMM-T2108, which used to fill that gap. Fixed in pmm-qa#1721; the same job on the fix branch, #36, passed 23/0/2.",
+        "link": "https://github.com/percona/pmm-qa/pull/1721",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:54:19Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
