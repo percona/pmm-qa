@@ -3820,6 +3820,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1724",
       "by": "Investigator routine",
       "at": "2026-11-04T06:46:28Z"
+    },
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "test bug",
+      "summary": "@ssl-mysql follow-up: the Explain that failed ran on the digest 'SELECT COUNT ( * ) FROM ...' (PMM-12069), which MySQL can't parse. At the reviewer's request the test now uses SELECT *, whose digest explains cleanly (checked on MySQL 8.4), in pmm-qa#1726.",
+      "link": "https://github.com/percona/pmm-qa/pull/1726",
+      "by": "Investigator routine",
+      "at": "2026-11-04T06:54:02Z"
     }
   ],
   "claims": []
