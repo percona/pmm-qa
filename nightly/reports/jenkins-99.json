@@ -3746,6 +3746,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1723",
       "by": "Investigator routine",
       "at": "2026-11-04T03:40:21Z"
+    },
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "product bug",
+      "summary": "@ssl-mysql (ARM64): PMM-T1403/T1404/T1426/T1431 saw QAN Explain show 'Error 1064 (42000)' for the remote SSL MySQL service for 60 s. This is the open PMM-12069 (Explain runs on the fingerprint), the same as nights 92 and 97. Deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-12069",
+      "by": "Investigator routine",
+      "at": "2026-11-04T03:40:26Z"
     }
   ],
   "claims": [
