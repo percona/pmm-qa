@@ -151,6 +151,9 @@ export default class CliHelper {
     ).agents_info;
   };
 
+  readContainerFile = (container: string, path: string): string =>
+    this.execSilent(`docker exec ${container} cat ${path}`).assertSuccess().stdout.trim();
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.

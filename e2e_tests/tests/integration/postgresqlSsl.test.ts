@@ -3,7 +3,6 @@ import pmmTest from '@fixtures/pmmTest';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
-import AddInstancePage from '@pages/inventory/addInstance.page';
 import { expect, Page } from '@playwright/test';
 
 const version = '16';
@@ -16,45 +15,13 @@ const maxQueryLengthServiceName = `pgsql_${version}_ssl_max_query_length`;
 const tlsServiceName = 'PG_tls_1';
 const maxQueryLength = '7';
 const serviceAdded = 'PostgreSQL Service added.';
-const pmmAdminAddTls = (options: string, serviceName: string) =>
-  `docker exec ${container} pmm-admin add postgresql --tls ${options} --query-source="pgstatements" --port=5432 --username=pmm --password=pmm --service-name=${serviceName}`;
-
-const fillRemoteSslService = async (
-  addInstancePage: AddInstancePage,
-  cliHelper: CliHelper,
-  page: Page,
-  serviceName: string,
-) => {
-  const readCertificate = (file: string) =>
-    cliHelper.execSilent(`docker exec ${container} cat certificates/${file}`).assertSuccess().stdout.trim();
-
-  await page.goto(addInstancePage.url);
-  await addInstancePage.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
-  await addInstancePage.selectNode('pmm-server');
-  await addInstancePage.fillRemoteFields({
-    cluster: 'pgsql_remote_cluster',
-    environment: 'pgsql_remote_cluster',
-    host: container,
-    password: 'pmm',
-    port: '5432',
-    serviceName,
-    username: 'pmm',
-  });
-
-  for (const input of [
-    addInstancePage.inputs.tlsCa,
-    addInstancePage.inputs.tlsCert,
-    addInstancePage.inputs.tlsKey,
-  ]) {
-    await expect(input).toBeHidden();
-  }
-
-  await addInstancePage.fillTlsCertificates({
-    ca: readCertificate('ca.crt'),
-    cert: readCertificate('client.crt'),
-    key: readCertificate('client.pem'),
-  });
-  await addInstancePage.buttons.pgStatStatements.click();
+const remoteFields = {
+  cluster: 'pgsql_remote_cluster',
+  environment: 'pgsql_remote_cluster',
+  host: container,
+  password: 'pmm',
+  port: '5432',
+  username: 'pmm',
 };
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -85,9 +52,16 @@ pmmTest.describe('SSL PostgreSQL services added remotely and with --tls-skip-ver
 
   pmmTest(
     'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl-postgres @not-ui-pipeline',
-    async ({ addInstancePage, api, cliHelper, page, servicesPage }) => {
+    async ({ addInstancePage, api, cliHelper, servicesPage }) => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
-        await fillRemoteSslService(addInstancePage, cliHelper, page, remoteServiceName);
+        await addInstancePage.fillRemotePostgresqlWithTls(
+          { ...remoteFields, serviceName: remoteServiceName },
+          {
+            ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
+            cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
+            key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
+          },
+        );
         expect((await addInstancePage.addService()).status()).toEqual(200);
       });
 
@@ -174,6 +148,8 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
   pmmTest(
     'PMM-T946 - Verify adding PostgreSQL with --tls flag and with missing TLS options @ssl-postgres @not-ui-pipeline',
     async ({ cliHelper }) => {
+      const pmmAdminAddTls = (options: string, serviceName: string) =>
+        `docker exec ${container} pmm-admin add postgresql --tls ${options} --query-source="pgstatements" --port=5432 --username=pmm --password=pmm --service-name=${serviceName}`;
       const unknownAuthority = 'Connection check failed: x509: certificate signed by unknown authority.';
       const missingKey = cliHelper.execSilent(
         pmmAdminAddTls(
@@ -223,7 +199,14 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
       await pmmTest.step(
         `Add the SSL PostgreSQL server remotely with Max Query Length ${maxQueryLength}`,
         async () => {
-          await fillRemoteSslService(addInstancePage, cliHelper, page, maxQueryLengthServiceName);
+          await addInstancePage.fillRemotePostgresqlWithTls(
+            { ...remoteFields, serviceName: maxQueryLengthServiceName },
+            {
+              ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
+              cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
+              key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
+            },
+          );
           await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength);
           expect((await addInstancePage.addService()).status()).toEqual(200);
         },
