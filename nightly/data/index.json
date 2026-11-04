@@ -155754,6 +155754,16 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-upgrade-ami-test-runner/1466/",
         "by": "Investigator routine",
         "at": "2026-11-04T03:40:11Z"
+      },
+      {
+        "suites": [
+          "Integrations"
+        ],
+        "verdict": "product bug",
+        "summary": "PMM-T2435 (GSSAPI OL8+OL9 CLI lanes, which run plain SCRAM): after a ChangeAgent races the exporter's RUNNING status report, PMM Server keeps showing mongodb_exporter as Starting while pmm-agent runs it. Reproduced on a CHAOS VM under load (1/3). Known PMM-15835; evidence added there.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+        "by": "Investigator routine",
+        "at": "2026-11-04T03:40:16Z"
       }
     ],
     "claims": [
@@ -155762,13 +155772,6 @@
         "at": "2026-11-04T03:01:43Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-04T03:01:43Z",
-        "suites": [
-          "Integrations"
         ]
       }
     ]
