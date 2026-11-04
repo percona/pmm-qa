@@ -132,12 +132,15 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
 
   pmmTest(
     'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl-postgres @not-ui-pipeline',
-    async ({ addInstancePage, api, cliHelper, servicesPage }) => {
+    async ({ addInstancePage, api, cliHelper, page, servicesPage }) => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
-        await addInstancePage.fillRemotePostgresqlWithTls(
-          { ...remoteFields, serviceName: uiServiceName },
-          cliHelper.readTlsCertificates(container),
-        );
+        await page.goto(addInstancePage.url);
+        await addInstancePage.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
+        await addInstancePage.selectNode('pmm-server');
+        await addInstancePage.fillRemoteFields({ ...remoteFields, serviceName: uiServiceName });
+        await addInstancePage.verifyTlsFieldsHidden();
+        await addInstancePage.fillTlsCertificates(cliHelper.readTlsCertificates(container));
+        await addInstancePage.buttons.pgStatStatements.click();
         expect((await addInstancePage.addService()).status()).toEqual(200);
       });
 
@@ -208,10 +211,15 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
       await pmmTest.step(
         `Add the SSL PostgreSQL server remotely with Max Query Length ${maxQueryLength}`,
         async () => {
-          await addInstancePage.fillRemotePostgresqlWithTls(
-            { ...remoteFields, serviceName: maxQueryLengthServiceName },
-            cliHelper.readTlsCertificates(container),
-          );
+          await page.goto(addInstancePage.url);
+          await addInstancePage.builders
+            .instanceType('postgresql')
+            .click({ timeout: Timeouts.THIRTY_SECONDS });
+          await addInstancePage.selectNode('pmm-server');
+          await addInstancePage.fillRemoteFields({ ...remoteFields, serviceName: maxQueryLengthServiceName });
+          await addInstancePage.verifyTlsFieldsHidden();
+          await addInstancePage.fillTlsCertificates(cliHelper.readTlsCertificates(container));
+          await addInstancePage.buttons.pgStatStatements.click();
           await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength);
           expect((await addInstancePage.addService()).status()).toEqual(200);
         },

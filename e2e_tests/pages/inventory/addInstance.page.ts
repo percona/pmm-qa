@@ -157,19 +157,6 @@ export default class AddInstancePage extends BasePage {
     if (fields.cluster) await this.inputs.cluster.fill(fields.cluster);
   };
 
-  fillRemotePostgresqlWithTls = async (
-    fields: RemoteInstanceFields,
-    certificates: { ca: string; cert: string; key: string },
-  ) => {
-    await this.page.goto(this.url);
-    await this.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
-    await this.selectNode('pmm-server');
-    await this.fillRemoteFields(fields);
-    await this.verifyTlsFieldsHidden();
-    await this.fillTlsCertificates(certificates);
-    await this.buttons.pgStatStatements.click();
-  };
-
   fillTlsCertificates = async (certificates: { ca: string; cert: string; key: string }) => {
     await this.buttons.useTls.check();
     await this.inputs.tlsCa.fill(certificates.ca, { timeout: Timeouts.THIRTY_SECONDS });
