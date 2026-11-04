@@ -103,6 +103,10 @@ When a human reviewer names a concrete end state, ship it in this PR; do not off
 
 One throwaway CHAOS VM per migration through `.claude/scripts/chaos-pmm.sh` (`orchestration.md` steps 2a and 3): pmm-server from `e2e_tests/docker-compose.yml`, databases from `qa-integration/pmm_qa/pmm-framework` on the prebaked images CI pulls. Never Docker, PMM or a database on the runner host. Playwright runs on the VM (`chaos-pmm.sh test`), so a test's `docker exec` reaches the containers; `playwright-cli` and API checks run from the runner host against the VM's URL. Started in the background once the bucket is confirmed, reused through both reviews and execution, torn down with `chaos-pmm.sh down <run_id>`. No Linode provisioner.
 
+## Reading files
+
+Read a file with the Read, Grep or Glob tool, never through Bash. The permission checker cannot always tell a shell read from a write: `sed`, `awk` or a `$(...)`-built command over a path under `.claude/` is treated as an edit of a sensitive file and stops the run for approval, even in auto mode. To read one function of a script, Grep its name with `-n`, then Read with `offset` and `limit`. The shell stays for output only a command produces (`git show`, `git diff`, `gh`, `chaos-pmm.sh ssh`, a test run).
+
 ## Editing this skill
 
 Attended sessions only. An unattended run never edits these files or anything else under `.claude/`; it reports what it would change and ends (`orchestration.md` Environment and control).

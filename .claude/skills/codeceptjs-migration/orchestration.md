@@ -76,7 +76,7 @@ gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | s
 
 Then merge `origin/main` into control (`branch-workflow.md` Control branch preflight). If the merge stops with `fatal: refusing to merge unrelated histories`, the clone is shallow: confirm with `git rev-parse --is-shallow-repository`, repair with `git fetch --unshallow origin`, merge again. Never `--allow-unrelated-histories`.
 
-`migration/tracker.md` is tens of kilobytes; never read it whole. Select with a scoped `grep`/`head` over the status column and read only that row and the header section you need.
+`migration/tracker.md` is tens of kilobytes; never read it whole. Select with the Grep tool over the status column (`SKILL.md` Reading files) and read only that row and the header section you need.
 
 `migration.sh preflight` prints both drift counts; by hand:
 
