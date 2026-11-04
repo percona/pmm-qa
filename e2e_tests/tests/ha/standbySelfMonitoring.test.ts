@@ -27,7 +27,6 @@ pmmTest(
       await pmmTest.step(`Verify standby "${podName}" monitors itself`, async () => {
         let exporter: NodeAgent | undefined;
 
-        // An earlier test's failover may have just restarted this pod, so its pmm-agent can still be reconnecting.
         await expect(async () => {
           const node = (await api.inventoryApi.getAllNodes()).find((node) => node.node_name === podName);
 
