@@ -83,7 +83,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify an editor can use Advisors but not its admin settings @advisors',
+  'PMM-Txxxx - Verify an editor can run Advisors but not author checks or open its settings @advisors',
   async ({
     advisorInsightsPage,
     advisorRunsPage,
@@ -125,11 +125,42 @@ pmmTest(
         await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(scheduleId, editorAuth));
       });
 
+      await pmmTest.step('The API refuses to let the editor author or test a check', async () => {
+        const newName = AdvisorsApi.customCheckName();
+        const service = await api.advisorsApi.getMysqlService();
+        const statuses = [
+          await api.advisorsApi.requestCreateCheck({ name: newName }, editorAuth),
+          await api.advisorsApi.requestUpdateCheck(check.name, { ...check, summary: 'Changed' }, editorAuth),
+          await api.advisorsApi.requestDeleteCheck(check.name, editorAuth),
+          await api.advisorsApi.requestTestCheck(service.service_id, check, editorAuth),
+        ].map((response) => response.status());
+
+        expect(statuses).toEqual([403, 403, 403, 403]);
+        expect(await api.advisorsApi.findCheck(newName)).toBeUndefined();
+        expect((await api.advisorsApi.findCheck(check.name))?.summary).toEqual(check.summary);
+      });
+
       await grafanaHelper.authorize(users.editor, password);
+
+      await pmmTest.step('The catalog offers the editor no Add, Edit or Delete', async () => {
+        await page.goto(advisorsCatalogPage.url);
+        await advisorsCatalogPage.inputs.search.fill(check.summary);
+        await expect(advisorsCatalogPage.builders.runButton(check.name)).toBeVisible();
+        await expect(advisorsCatalogPage.buttons.addAdvisor).toBeHidden();
+        await expect(advisorsCatalogPage.builders.editButton(check.name)).toBeHidden();
+        await expect(advisorsCatalogPage.builders.deleteButton(check.name)).toBeHidden();
+      });
+
+      await pmmTest.step('The details pane shows the script but no Edit, Clone or Test', async () => {
+        await page.goto(advisorsCatalogPage.detailsUrl(check.name));
+        await expect(advisorsCatalogPage.elements.checkCode).toContainText('def check_context');
+        await expect(advisorsCatalogPage.buttons.editCheck).toBeHidden();
+        await expect(advisorsCatalogPage.buttons.cloneCheck).toBeHidden();
+        await expect(advisorsCatalogPage.checkForm.buttons.test).toBeHidden();
+      });
 
       await pmmTest.step('The editor runs a check from the catalog', async () => {
         await page.goto(advisorsCatalogPage.url);
-        await expect(advisorsCatalogPage.buttons.addAdvisor).toBeVisible();
         await advisorsCatalogPage.inputs.search.fill(check.summary);
 
         const runId = await advisorsCatalogPage.runCheck(check.name);

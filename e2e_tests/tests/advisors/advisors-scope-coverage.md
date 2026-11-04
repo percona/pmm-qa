@@ -47,6 +47,7 @@ Status: **Covered** = asserted end to end · **Partial** = some of the item is a
 | Custom checks | Form: script editor, parameters, category autocomplete, name validation | Covered | TC-05, TC-10, TC-11 | — |
 | Custom checks | Renaming rejected (name from the path only) | Covered | TC-08 (field locked in the UI, name in the body ignored) | — |
 | Custom checks | Test from form or details pane; `testTargets` explains exclusions | Covered | TC-14 (form), TC-51 (details pane, targets) | — |
+| Custom checks | Authoring and testing are Admin-only: an Editor gets `403` and no Add, Edit, Delete, Clone or Test controls | Covered | TC-27 | — |
 | Custom checks | Disable per service; badge | Covered | TC-17, TC-18 | — |
 | Custom checks | Global disable | Covered | TC-06 | — |
 | Custom checks | Old disabled list not migrated: all checks enabled after upgrade | Written | TC-69 | — |

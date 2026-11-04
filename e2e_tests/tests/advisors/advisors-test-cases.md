@@ -373,7 +373,7 @@ Spec: [permissions.test.ts:42](permissions.test.ts#L42)
 | 2 | Open the Catalog, Insights, Run history and Scheduler pages one by one. | Each page shows *Insufficient access permissions.* |
 | 3 | Call `GET /v1/advisors/checks` and `GET /v1/advisors/schedules` as the viewer. | `401` or `403` for each. |
 
-### TC-27 · PMM-Txxxx - Verify an editor can use Advisors but not its admin settings
+### TC-27 · PMM-Txxxx - Verify an editor can run Advisors but not author checks or open its settings
 
 Spec: [permissions.test.ts:86](permissions.test.ts#L86)
 
@@ -383,12 +383,14 @@ Precondition: the QA custom check exists.
 | --- | --- | --- |
 | 1 | As the editor, call `GET /v1/advisors/schedules`, `GET /v1/advisors/services` and `GET /v1/advisors/notificationSettings`. | `200` for each. |
 | 2 | As the editor, create a schedule for the check through `POST /v1/advisors/schedules` and run it with `POST /v1/advisors/schedules/<id>:run`. | Both return `200` and the run completes. |
-| 3 | Log in as `advisors_editor` and open the Catalog page. | **Add advisor** is shown. |
-| 4 | Search for the check and click its **Run** button. | A `Check "<summary>" started` notification appears. |
-| 5 | Open Insights, Run history and the Scheduler. | Each page shows its heading and no access error. |
-| 6 | Open `/pmm-ui/settings/advisors`. | *Insufficient access permissions.* is shown. |
-| 7 | Call `GET /v1/advisors/checks` as the editor. | `200`. |
-| 8 | Call `POST /v1/advisors/notifications:test` as the editor, first without a severity, then with *Critical*. | `400` *At least one severity is required.*, then `200`. |
+| 3 | As the editor, call `POST /v1/advisors/checks` for a new check, `PUT` and `DELETE /v1/advisors/checks/<check>`, and `POST /v1/advisors/checks:test` on the MySQL service. | `403` for each; the new check does not exist and the QA check keeps its summary. |
+| 4 | Log in as `advisors_editor`, open the Catalog page and search for the check. | The check's **Run** button is shown; **Add advisor** and the check's **Edit** and **Delete** buttons are not. |
+| 5 | Open the check's details pane. | The script is shown; **Edit**, **Clone** and **Test** are not. |
+| 6 | Click the check's **Run** button. | A `Check "<summary>" started` notification appears. |
+| 7 | Open Insights, Run history and the Scheduler. | Each page shows its heading and no access error. |
+| 8 | Open `/pmm-ui/settings/advisors`. | *Insufficient access permissions.* is shown. |
+| 9 | Call `GET /v1/advisors/checks` as the editor. | `200`. |
+| 10 | Call `POST /v1/advisors/notifications:test` as the editor, first without a severity, then with *Critical*. | `400` *At least one severity is required.*, then `200`. |
 
 ---
 

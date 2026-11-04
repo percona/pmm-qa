@@ -41,22 +41,7 @@ export default class AdvisorsApi {
   };
 
   createCustomCheck = async (overrides: Partial<AdvisorCheckDefinition> = {}): Promise<AdvisorCheck> => {
-    const name = overrides.name ?? AdvisorsApi.customCheckName();
-    const response = await this.request.post(apiEndpoints.advisors.checks, {
-      data: {
-        check: {
-          category: 'QA',
-          description: 'Created by a UI test.',
-          queries: [{ query: 'vector(1)', type: 'METRICS_INSTANT' }],
-          script: this.customCheckScript,
-          summary: `QA check ${name}`,
-          technology: AdvisorCheckTechnology.mysql,
-          ...overrides,
-          name,
-        },
-      },
-      headers: GrafanaHelper.getAuthHeader(),
-    });
+    const response = await this.requestCreateCheck(overrides);
 
     expect(response.status(), await response.text()).toEqual(200);
 
@@ -201,6 +186,29 @@ export default class AdvisorsApi {
     return { at, time: at.toISOString().slice(11, 16) };
   };
 
+  requestCreateCheck = async (
+    overrides: Partial<AdvisorCheckDefinition> = {},
+    headers = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> => {
+    const name = overrides.name ?? AdvisorsApi.customCheckName();
+
+    return await this.request.post(apiEndpoints.advisors.checks, {
+      data: {
+        check: {
+          category: 'QA',
+          description: 'Created by a UI test.',
+          queries: [{ query: 'vector(1)', type: 'METRICS_INSTANT' }],
+          script: this.customCheckScript,
+          summary: `QA check ${name}`,
+          technology: AdvisorCheckTechnology.mysql,
+          ...overrides,
+          name,
+        },
+      },
+      headers,
+    });
+  };
+
   requestCreateSchedule = async (
     schedule: Partial<AdvisorScheduleInput>,
     headers = GrafanaHelper.getAuthHeader(),
@@ -226,11 +234,12 @@ export default class AdvisorsApi {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-  requestTestCheck = async (serviceId: string, check: AdvisorCheckDefinition): Promise<APIResponse> =>
-    await this.request.post(apiEndpoints.advisors.test, {
-      data: { check, service_id: serviceId },
-      headers: GrafanaHelper.getAuthHeader(),
-    });
+  requestTestCheck = async (
+    serviceId: string,
+    check: AdvisorCheckDefinition,
+    headers = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> =>
+    await this.request.post(apiEndpoints.advisors.test, { data: { check, service_id: serviceId }, headers });
 
   requestTestNotification = async (
     emails: string[],
@@ -242,11 +251,12 @@ export default class AdvisorsApi {
       headers,
     });
 
-  requestUpdateCheck = async (name: string, check: Partial<AdvisorCheckDefinition>): Promise<APIResponse> =>
-    await this.request.put(`${apiEndpoints.advisors.checks}/${name}`, {
-      data: { check },
-      headers: GrafanaHelper.getAuthHeader(),
-    });
+  requestUpdateCheck = async (
+    name: string,
+    check: Partial<AdvisorCheckDefinition>,
+    headers = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> =>
+    await this.request.put(`${apiEndpoints.advisors.checks}/${name}`, { data: { check }, headers });
 
   runChecksAndWait = async (
     names: string[] = [],
