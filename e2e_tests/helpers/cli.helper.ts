@@ -154,6 +154,12 @@ export default class CliHelper {
   readContainerFile = (container: string, path: string): string =>
     this.execSilent(`docker exec ${container} cat ${path}`).assertSuccess().stdout.trim();
 
+  readTlsCertificates = (container: string) => ({
+    ca: this.readContainerFile(container, 'certificates/ca.crt'),
+    cert: this.readContainerFile(container, 'certificates/client.crt'),
+    key: this.readContainerFile(container, 'certificates/client.pem'),
+  });
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.

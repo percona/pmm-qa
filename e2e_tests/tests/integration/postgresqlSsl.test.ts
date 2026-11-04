@@ -24,29 +24,20 @@ const remoteFields = {
   port: '5432',
   username: 'pmm',
 };
-const readCertificates = (cliHelper: CliHelper) => ({
-  ca: cliHelper.readContainerFile(container, 'certificates/ca.crt'),
-  cert: cliHelper.readContainerFile(container, 'certificates/client.crt'),
-  key: cliHelper.readContainerFile(container, 'certificates/client.pem'),
-});
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
 pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
-  const removeServices = async (api: Api, cliHelper: CliHelper) => {
-    await api.inventoryApi.removeNodesByName([remoteServiceName]);
-    cliHelper.removeService(container, ServiceType.postgresql, noSslCheckServiceName);
-  };
-
   pmmTest.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
     const api = new Api(page, page.request);
     const cliHelper = new CliHelper();
-    const { ca, cert, key } = readCertificates(cliHelper);
+    const { ca, cert, key } = cliHelper.readTlsCertificates(container);
 
-    await removeServices(api, cliHelper);
+    await api.inventoryApi.removeNodesByName([remoteServiceName]);
+    cliHelper.removeService(container, ServiceType.postgresql, noSslCheckServiceName);
     await cliHelper
       .execSilent(
         `docker exec ${container} pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls --tls-skip-verify ${noSslCheckServiceName}`,
@@ -77,7 +68,8 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
   pmmTest.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
 
-    await removeServices(new Api(page, page.request), new CliHelper());
+    await new Api(page, page.request).inventoryApi.removeNodesByName([remoteServiceName]);
+    new CliHelper().removeService(container, ServiceType.postgresql, noSslCheckServiceName);
     await page.close();
   });
 
@@ -103,7 +95,7 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
 
   for (const service of services) {
     pmmTest(
-      `Verify dashboard after PGSQL SSL Instances are added @ssl-postgres @not-ui-pipeline | ${service}`,
+      `PMM-T2493 - Verify dashboard after PGSQL SSL Instances are added @ssl-postgres @not-ui-pipeline | ${service}`,
       async ({ api, dashboard, page, urlHelper }) => {
         const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${service}`);
         const overview = dashboard.postgresql.postgresqlInstancesOverview;
@@ -153,7 +145,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
         await addInstancePage.fillRemotePostgresqlWithTls(
           { ...remoteFields, serviceName: uiServiceName },
-          readCertificates(cliHelper),
+          cliHelper.readTlsCertificates(container),
         );
         expect((await addInstancePage.addService()).status()).toEqual(200);
       });
@@ -227,7 +219,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
         async () => {
           await addInstancePage.fillRemotePostgresqlWithTls(
             { ...remoteFields, serviceName: maxQueryLengthServiceName },
-            readCertificates(cliHelper),
+            cliHelper.readTlsCertificates(container),
           );
           await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength);
           expect((await addInstancePage.addService()).status()).toEqual(200);
