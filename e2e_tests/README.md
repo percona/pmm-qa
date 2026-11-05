@@ -150,6 +150,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@settings`
 - `@ssl`
 - `@ssl-mysql`
+- `@ssl-postgres`
 - `@ssl-remote`
 - `@standalone`
 - `@user-password`

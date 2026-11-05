@@ -162,6 +162,13 @@ export default class CliHelper {
     return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
   };
 
+  readTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat certificates/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca.crt'), cert: read('client.crt'), key: read('client.pem') };
+  };
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.
@@ -209,5 +216,16 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+  };
+
+  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
+  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
+    const allTls = this.execSilent(
+      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
+    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }

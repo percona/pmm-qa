@@ -1,4 +1,3 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
@@ -36,13 +35,10 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
   );
 });
 
-pmmTest.afterAll(async ({ browser }) => {
-  const page = await browser.newPage();
-  const { inventoryApi } = new Api(page, page.request);
-  const { service_name } = await inventoryApi.getServiceDetailsByRegex(clientServicePattern);
+pmmTest.afterAll(async ({ api }) => {
+  const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(clientServicePattern);
 
-  await inventoryApi.removeNodesByName([`remote_${service_name}_faker`]);
-  await page.close();
+  await api.inventoryApi.removeNodesByName([`remote_${service_name}_faker`]);
 });
 
 pmmTest(
