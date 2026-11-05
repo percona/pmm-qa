@@ -4,8 +4,19 @@ import { expect } from '@playwright/test';
 
 const refreshAnnotation = 'argocd.argoproj.io/refresh';
 
+export interface IgnoreDifference {
+  group?: string;
+  kind: string;
+  managedFieldsManagers?: string[];
+  name?: string;
+}
+
 interface ArgoCdApplication {
   metadata: { annotations?: Record<string, string> };
+  spec?: {
+    ignoreDifferences?: IgnoreDifference[];
+    syncPolicy?: { automated?: { prune?: boolean; selfHeal?: boolean } };
+  };
   status?: {
     conditions?: { message?: string; type: string }[];
     health?: { status?: string };
@@ -35,6 +46,10 @@ export default class ArgoCdHelper {
     return { deps, pmm };
   };
 
+  /** `undefined` when the Application syncs only by hand. */
+  automatedSyncPolicy = (app: string): { prune?: boolean; selfHeal?: boolean } | undefined =>
+    this.application(app).spec?.syncPolicy?.automated;
+
   hardRefresh = (app: string): void => {
     this.k8sHelper
       .exec(`annotate applications.argoproj.io ${app} ${refreshAnnotation}=hard --overwrite`)
@@ -42,6 +57,9 @@ export default class ArgoCdHelper {
   };
 
   healthStatus = (app: string): string => this.application(app).status?.health?.status ?? '';
+
+  ignoreDifferences = (app: string): IgnoreDifference[] =>
+    this.application(app).spec?.ignoreDifferences ?? [];
 
   lastOperationFinishedAt = (app: string): string =>
     this.application(app).status?.operationState?.finishedAt ?? '';

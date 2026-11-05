@@ -12,6 +12,8 @@ const backupJob = `pmm-e2e-argocd-backup-${run}`;
 const restoreJob = `pmm-e2e-argocd-restore-${run}`;
 const refreshInterval = Timeouts.THIRTY_SECONDS + Timeouts.TEN_SECONDS;
 const operators = ['victoria-metrics-operator', 'altinity-clickhouse-operator', 'pg-operator'];
+// PMM Server logs to files on its PVC, not to the container's stdout.
+const serverLogs = ['/srv/logs/pmm-managed.log', '/srv/logs/grafana.log'];
 
 interface OwnedPod {
   metadata: { name: string; ownerReferences?: { kind: string }[]; uid: string };
@@ -66,6 +68,40 @@ pmmTest(
       });
     }
 
+    for (const app of [deps, pmm]) {
+      await pmmTest.step(
+        `Verify Application "${app}" syncs automatically with prune and self-heal`,
+        async () => {
+          expect(
+            argoCdHelper.automatedSyncPolicy(app),
+            `spec.syncPolicy.automated of "${app}"`,
+          ).toMatchObject({
+            prune: true,
+            selfHeal: true,
+          });
+        },
+      );
+    }
+
+    await pmmTest.step(`Verify "${pmm}" ignores the replica counts a restore writes`, async () => {
+      expect(argoCdHelper.ignoreDifferences(pmm), `spec.ignoreDifferences of "${pmm}"`).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            group: 'apps',
+            kind: 'StatefulSet',
+            managedFieldsManagers: ['pmm-backup'],
+            name: pmm,
+          }),
+          expect.objectContaining({
+            group: 'operator.victoriametrics.com',
+            kind: 'VMCluster',
+            managedFieldsManagers: ['pmm-backup'],
+            name: `${pmm}-vmcluster`,
+          }),
+        ]),
+      );
+    });
+
     await pmmTest.step('Verify namespace default has no Role or RoleBinding of PMM', async () => {
       const names = new K8sHelper('default')
         .execSilent('get role,rolebinding --output=name')
@@ -105,10 +141,12 @@ pmmTest(
         await sleep(refreshInterval);
 
         for (const app of [deps, pmm]) {
-          expect(
-            argoCdHelper.refreshPending(app),
-            `Argo CD must have acted on the hard refresh of "${app}"`,
-          ).toBe(false);
+          await expect(async () => {
+            expect(
+              argoCdHelper.refreshPending(app),
+              `Argo CD must have acted on the hard refresh of "${app}"`,
+            ).toBe(false);
+          }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
           expect(argoCdHelper.syncStatus(app), `"${app}" must not drift after a re-render`).toEqual('Synced');
         }
       });
@@ -129,13 +167,19 @@ pmmTest(
   async ({ haClusterHelper, k8sHelper, request }) => {
     for (const podName of haClusterHelper.podNames()) {
       await pmmTest.step(`Verify "${podName}" logs no PostgreSQL authentication failure`, async () => {
-        const failures = k8sHelper
-          .execSilent(`logs ${podName} --all-containers`)
-          .assertSuccess()
-          .getStdOutLines()
-          .filter((line) => line.includes('password authentication failed'));
+        const result = k8sHelper.execInPod(
+          podName,
+          `grep -ah 'password authentication failed' ${serverLogs.join(' ')}`,
+          { silent: true },
+        );
+        // kubectl exits 1 on its own errors too; only grep's no-match is reported this way.
+        const noMatch = result.code === 1 && result.stderr.includes('command terminated with exit code 1');
 
-        expect(failures).toEqual([]);
+        if (result.code !== 0 && !noMatch) {
+          throw new Error(`Cannot read ${serverLogs.join(', ')} in "${podName}": ${result.stderr.trim()}`);
+        }
+
+        expect(result.getStdOutLines(), `${serverLogs.join(', ')} in "${podName}"`).toEqual([]);
       });
     }
 
@@ -177,9 +221,7 @@ pmmTest(
     const { pmm } = argoCdHelper.apps();
     const podNames = haClusterHelper.podNames();
 
-    await pmmTest.step(`Turn self-heal on for "${pmm}"`, async () => {
-      argoCdHelper.setSelfHeal(pmm, true);
-    });
+    expect(argoCdHelper.automatedSyncPolicy(pmm)?.selfHeal, `Self-heal must be on for "${pmm}"`).toBe(true);
 
     // Only the leader removes departing members from Raft, so it must survive the scale-down.
     await pmmTest.step(`Move leadership onto "${podNames[0]}"`, async () => {
@@ -216,16 +258,21 @@ pmmTest(
     pmmTest.setTimeout(Timeouts.SIXTY_MINUTES);
 
     const { deps, pmm } = argoCdHelper.apps();
-
-    argoCdHelper.setSelfHeal(pmm, true);
-
     const lastOperation = argoCdHelper.lastOperationFinishedAt(pmm);
+    const previousLatest = haBackupHelper.listBackups().find((backup) => backup.latest)?.id;
 
-    await pmmTest.step('Back up with a Job cloned from the backup CronJob', async () => {
+    expect(argoCdHelper.automatedSyncPolicy(pmm)?.selfHeal, `Self-heal must be on for "${pmm}"`).toBe(true);
+
+    const backupId = await pmmTest.step('Back up with a Job cloned from the backup CronJob', async () => {
       await haBackupHelper.runBackupJob(backupJob);
-    });
 
-    const backupId = haBackupHelper.latestBackup().id;
+      const latest = haBackupHelper.latestBackup();
+
+      expect(latest.id, 'A complete backup must move the latest pointer').not.toEqual(previousLatest);
+      expect(latest.status).toEqual('complete');
+
+      return latest.id;
+    });
 
     await pmmTest.step(`Restore ${backupId} in place with a Job`, async () => {
       await haBackupHelper.runRestoreJob(restoreJob, backupId);
