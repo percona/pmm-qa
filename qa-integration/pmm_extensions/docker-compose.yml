@@ -1,0 +1,59 @@
+# PMM Server with PMM Extensions and Operations for MongoDB, per
+# percona/pmm documentation/docs/apps/deploy-pmm-extensions.md and
+# documentation/docs/use/mongodb-operations.md. Started by setup.sh.
+
+name: pmm-extensions
+
+services:
+  pmm-server:
+    image: ${PMM_SERVER_IMAGE:-percona/pmm-server:${PMM_IMAGE_TAG:-3}}
+    container_name: pmm-server
+    restart: always
+    ports:
+      - "443:8443"
+      - "4647:4647"
+    environment:
+      PMM_ENABLE_EXTENSIONS: "1"
+      PMM_ENABLE_NOMAD: "1"
+      PMM_PUBLIC_ADDRESS: ${PMM_PUBLIC_ADDRESS:?set PMM_PUBLIC_ADDRESS}
+      # PMM-15772: without these, Operations for MongoDB cannot be turned on.
+      PMM_EXTENSIONS_URL: http://pmm-extensions:9000
+      PMM_EXTENSIONS_TOKEN: ${PMM_EXTENSIONS_TOKEN:?set PMM_EXTENSIONS_TOKEN}
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      PMM_ENABLE_TELEMETRY: "0"
+    volumes:
+      - pmm-data:/srv
+      - pmm-extensions:/srv/extensions
+    networks:
+      - pmm-qa
+
+  pmm-extensions:
+    image: ${PMM_EXTENSIONS_IMAGE:-percona/pmm-extensions:${PMM_IMAGE_TAG:-3}}
+    container_name: pmm-extensions
+    restart: always
+    group_add:
+      - "0"
+    environment:
+      SECRETS_DIR: /run/secrets/extensions
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      BASE_URL: https://${PMM_PUBLIC_ADDRESS}/extensions
+      EXTENSIONS_INTERNAL_TOKEN: ${PMM_EXTENSIONS_TOKEN}
+    volumes:
+      - pmm-extensions:/run/secrets/extensions:ro
+      - pmm-extensions-state:/home/extensions/state
+    depends_on:
+      - pmm-server
+    networks:
+      - pmm-qa
+
+volumes:
+  pmm-data:
+  pmm-extensions:
+  pmm-extensions-state:
+
+# pmm-framework discovers pmm-server on this network and starts the MongoDB
+# nodes on it, so PMM, the side-car and the nodes all resolve each other.
+networks:
+  pmm-qa:
+    external: true
