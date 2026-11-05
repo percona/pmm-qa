@@ -7,6 +7,7 @@ import { expect } from '@playwright/test';
 for (const {
   createUser,
   dropUser,
+  exporterAuth,
   exporterType,
   hasDatabase,
   name,
@@ -20,7 +21,7 @@ for (const {
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await api.inventoryApi.getNodeAddress(service.node_id);
+      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(service.node_id));
       cliHelper.execSilent(dropUser(container, credentials));
       cliHelper.execSilent(createUser(container, credentials)).assertSuccess();
     });
@@ -96,11 +97,15 @@ for (const {
             )
             .stdout.trim();
 
-        expect(metricsStatus(testUser.agentPassword), 'exporter accepts the new agent password').toEqual(
-          '200',
-        );
+        // The exporter picks up the new agent password only once pmm-agent has restarted it.
+        await expect
+          .poll(() => metricsStatus(testUser.agentPassword), {
+            message: 'exporter accepts the new agent password',
+            timeout: Timeouts.ONE_MINUTE,
+          })
+          .toEqual('200');
         expect(metricsStatus('wrong-agent-password'), 'exporter rejects another agent password').toEqual(
-          '401',
+          exporterAuth ? '401' : '200',
         );
 
         await editServicePage.open(service.service_id);

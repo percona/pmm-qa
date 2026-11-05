@@ -10,6 +10,8 @@ export const testDatabase = 'pmm_connection_test';
 export interface DatabaseConnection {
   createUser: (container: string, credentials: Credentials) => string;
   dropUser: (container: string, credentials: Credentials) => string;
+  // valkey_exporter has no basic auth on its metrics endpoint, so the agent password does not guard it.
+  exporterAuth: boolean;
   exporterType: string;
   hasDatabase?: boolean;
   name: string;
@@ -39,6 +41,7 @@ export const serviceConnections: DatabaseConnection[] = [
         `DROP DATABASE IF EXISTS ${testDatabase} WITH (FORCE)`,
         `DROP ROLE IF EXISTS ${testUser.username}`,
       ),
+    exporterAuth: true,
     exporterType: 'postgres_exporter',
     hasDatabase: true,
     name: 'pdpgsql',
@@ -54,6 +57,7 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       mysql(container, credentials, `DROP USER IF EXISTS '${testUser.username}'@'%';`),
+    exporterAuth: true,
     exporterType: 'mysqld_exporter',
     name: 'ps',
     original: ({ perconaServer }) => perconaServer.ps_84,
@@ -68,6 +72,7 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       mongo(container, credentials, `db.getSiblingDB("admin").dropUser("${testUser.username}")`),
+    exporterAuth: true,
     exporterType: 'mongodb_exporter',
     name: 'psmdb',
     original: ({ psmdb }) => psmdb,
@@ -82,6 +87,7 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       valkeyCli(container, credentials, `ACL DELUSER ${testUser.username}`),
+    exporterAuth: false,
     exporterType: 'valkey_exporter',
     name: 'valkey',
     original: ({ valkey }) => valkey,

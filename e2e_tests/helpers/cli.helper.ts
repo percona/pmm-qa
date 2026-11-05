@@ -63,6 +63,21 @@ export default class CliHelper {
     return new ExecReturn(command, code, stdout, stderr);
   };
 
+  // pmm-agent registers a node under its container name, or under its IP when set up with one.
+  getContainerByAddress = (address: string): string => {
+    const containers = this.execSilent(
+      "docker ps -q | xargs docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'",
+    )
+      .assertSuccess()
+      .getStdOutLines()
+      .map((line) => line.trim().replace(/^\//, '').split(/\s+/));
+    const container = containers.find(([name, ...ips]) => name === address || ips.includes(address));
+
+    if (!container) throw new Error(`No running container has name or IP ${address}`);
+
+    return container[0];
+  };
+
   /**
    * Scrape all metrics from exporter found by Service Name
    *
