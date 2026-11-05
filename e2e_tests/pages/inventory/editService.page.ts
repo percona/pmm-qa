@@ -1,4 +1,5 @@
 import BasePage from '../base.page';
+import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect, Response } from '@playwright/test';
 
@@ -14,6 +15,11 @@ export interface ServiceConnection {
   database?: string;
   password?: string;
   username: string;
+}
+
+export interface ServiceTlsSettings {
+  tls: boolean;
+  tlsSkipVerify: boolean;
 }
 
 export default class EditServicePage extends BasePage {
@@ -32,6 +38,7 @@ export default class EditServicePage extends BasePage {
     form: this.page.getByTestId('edit-service-form'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
+    tlsKeyStored: this.page.getByText('A key is stored. Leave blank to keep it.'),
   };
   inputs = {
     agentPassword: this.page.getByTestId('text-input-agent-password'),
@@ -41,6 +48,14 @@ export default class EditServicePage extends BasePage {
     environment: this.page.getByTestId('text-input-environment'),
     password: this.page.getByTestId('text-input-password'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
+    // The switches carry their test IDs on the MUI root, which wraps the checkbox input.
+    tls: this.page.getByTestId('switch-input-tls').locator('input'),
+    tlsCa: this.page.getByTestId('text-input-tls-ca'),
+    tlsCert: this.page.getByTestId('text-input-tls-cert'),
+    tlsCertificateKey: this.page.getByTestId('text-input-tls-certificate-key'),
+    tlsCertificateKeyFilePassword: this.page.getByTestId('text-input-tls-certificate-key-file-password'),
+    tlsKey: this.page.getByTestId('text-input-tls-key'),
+    tlsSkipVerify: this.page.getByTestId('switch-input-tls-skip-verify').locator('input'),
     username: this.page.getByTestId('text-input-username'),
   };
   messages = {};
@@ -70,6 +85,18 @@ export default class EditServicePage extends BasePage {
     await this.inputs.replicationSet.fill(replicationSet);
   };
 
+  editTls = async (
+    { tls, tlsSkipVerify }: ServiceTlsSettings,
+    certificates: Partial<Record<TlsCertificateField, string>> = {},
+  ) => {
+    await this.inputs.tls.setChecked(tls);
+    await this.inputs.tlsSkipVerify.setChecked(tlsSkipVerify);
+
+    for (const [field, value] of Object.entries(certificates)) {
+      await this.inputs[field as TlsCertificateField].fill(value);
+    }
+  };
+
   open = async (serviceId: string) => {
     await this.page.goto(`${this.url}/${serviceId}/edit`);
     await expect(this.elements.form).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -79,12 +106,15 @@ export default class EditServicePage extends BasePage {
     serviceId: string,
     clusterChanged: boolean,
     settingsChanged = false,
+    skipConnectionCheck = false,
   ): Promise<Response> => {
     await this.buttons.saveChanges.click();
     await expect(this.elements.confirmModal).toBeVisible();
     await expect(this.elements.clusterChangedWarning).toBeVisible({ visible: clusterChanged });
     await expect(this.elements.settingsChangedInfo).toBeVisible({ visible: settingsChanged });
     await expect(this.elements.skipConnectionCheck).toBeVisible({ visible: settingsChanged });
+
+    if (skipConnectionCheck) await this.elements.skipConnectionCheck.locator('input').check();
 
     const [response] = await Promise.all([
       this.page.waitForResponse(
@@ -122,5 +152,22 @@ export default class EditServicePage extends BasePage {
     await expect(this.inputs.cluster).toHaveValue(labels.cluster);
     await expect(this.inputs.replicationSet).toHaveValue(labels.replicationSet);
     await expect(this.inputs.customLabels).toHaveValue(this.toCustomLabelsText(labels.customLabels));
+  };
+
+  // Certificates are never sent to the UI, so the fields shown always open empty.
+  verifyTls = async (
+    { tls, tlsSkipVerify }: ServiceTlsSettings,
+    shownCertificates: TlsCertificateField[],
+  ) => {
+    await expect(this.inputs.tls).toBeChecked({ checked: tls });
+    await expect(this.inputs.tlsSkipVerify).toBeChecked({ checked: tlsSkipVerify });
+
+    for (const field of tlsCertificateFields) {
+      const shown = tls && shownCertificates.includes(field);
+
+      await expect(this.inputs[field], `${field} field shown`).toBeVisible({ visible: shown });
+
+      if (shown) await expect(this.inputs[field]).toHaveValue('');
+    }
   };
 }
