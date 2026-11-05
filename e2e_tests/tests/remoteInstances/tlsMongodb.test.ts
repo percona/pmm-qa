@@ -115,7 +115,6 @@ pmmTest(
         await qanStoredMetrics.openFilteredByService(
           urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
             from: 'now-5m',
-            refresh: '10s',
             to: 'now',
           }),
           serviceName,
