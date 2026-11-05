@@ -23,7 +23,6 @@ const remoteNodeNames = [
   rdsMysql57.serviceName,
   auroraInstanceId,
 ];
-const auroraOverviewUrl = 'graph/d/aurora-overview/amazon-aurora-overview';
 type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
 const qanRemoteDatabases = remoteDatabases.filter(
   (database): database is QanRemoteDatabase => database.type === 'mysql' || database.type === 'mongodb',
@@ -215,16 +214,16 @@ pmmTest(
     }
 
     await expect(async () => {
-      await page.goto(urlHelper.buildUrlWithParameters(auroraOverviewUrl, { from: 'now-15m' }));
+      await page.goto(
+        urlHelper.buildUrlWithParameters('graph/d/aurora-overview/amazon-aurora-overview', {
+          from: 'now-15m',
+        }),
+      );
       await dashboard.waitForDashboardToLoad();
 
-      const row = dashboard.builders.tableRowByText('Aurora instances', auroraInstanceId);
-
-      await expect(row).toBeVisible({ timeout: Timeouts.FIVE_SECONDS });
-      await expect(row).not.toContainText('AWS cluster unknown');
-      await expect(row.getByRole('gridcell', { exact: true, name: auroraClusterId })).toBeVisible({
-        timeout: Timeouts.FIVE_SECONDS,
-      });
+      await expect(
+        dashboard.builders.tableCellInRow('Aurora instances', auroraInstanceId, auroraClusterId),
+      ).toBeVisible({ timeout: Timeouts.FIVE_SECONDS });
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
   },
 );
