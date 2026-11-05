@@ -42,8 +42,12 @@ services:
     volumes:
       - pmm-extensions:/run/secrets/extensions:ro
       - pmm-extensions-state:/home/extensions/state
+    # The side-car mints its Grafana token once at start and gives up after 60s;
+    # started against a PMM still answering 503 it runs without one, and every
+    # Nomad call (Operations for MongoDB scans) fails with 401.
     depends_on:
-      - pmm-server
+      pmm-server:
+        condition: service_healthy
     networks:
       - pmm-qa
 
