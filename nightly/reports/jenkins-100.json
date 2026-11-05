@@ -3698,6 +3698,16 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15883",
       "by": "Investigator routine",
       "at": "2026-11-05T03:34:19Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "product bug",
+      "summary": "compat client 3.8.1: PMM-T1333 found 'Top 5 Hottest Collections by Read/Write (Rate)' empty on all 3 attempts, while the (Total) panels on the same dashboard had data. Those panels use rate(...[$__rate_interval]) over the topmetrics series, which is the open PMM-15714 (the window rarely holds a sample). Deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15714",
+      "by": "Investigator routine",
+      "at": "2026-11-05T03:34:25Z"
     }
   ],
   "claims": [
@@ -3706,13 +3716,6 @@
       "at": "2026-11-05T03:06:11Z",
       "suites": [
         "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-05T03:06:11Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     },
     {
