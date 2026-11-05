@@ -1,3 +1,5 @@
+import CliHelper from '@helpers/cli.helper';
+import Credentials from '@helpers/credentials.helper';
 import { GetService } from '@interfaces/inventory';
 
 type ServiceAgent = GetService['agents'][number];
@@ -75,5 +77,57 @@ export const serviceTlsSettings: ServiceTls[] = [
     name: 'valkey',
     secretFlags: [],
     serviceRegex: '^valkey-primary',
+  },
+];
+
+export interface TlsServer {
+  exporterType: string;
+  name: string;
+  // The update API settings that put the service back as it was found.
+  original: (cliHelper: CliHelper, container: string, exporter: ServiceAgent) => Record<string, unknown>;
+  serviceRegex: string;
+  // A command that fails unless the database serves TLS, for a service registered without it.
+  serverTlsCheck?: (container: string, credentials: Credentials) => string;
+  tag: string;
+}
+
+const certificatesFrom = ({ ca, cert, key }: { ca: string; cert: string; key: string }) => ({
+  tls_ca: ca,
+  tls_cert: cert,
+  tls_key: key,
+});
+
+export const tlsServers: TlsServer[] = [
+  {
+    exporterType: 'mysqld_exporter',
+    name: 'ps',
+    original: () => ({ tls: false, tls_ca: '', tls_cert: '', tls_key: '', tls_skip_verify: false }),
+    // Percona Server generates its own certificates and serves TLS unless told not to.
+    serverTlsCheck: (container, { perconaServer }) =>
+      `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -h127.0.0.1 --ssl-mode=REQUIRED -e "SELECT 1"`,
+    serviceRegex: '^ps_pmm',
+    tag: '@inventory',
+  },
+  {
+    exporterType: 'mysqld_exporter',
+    name: 'ssl_mysql',
+    original: (cliHelper, container, { tls_skip_verify }) => ({
+      tls: true,
+      tls_skip_verify: !!tls_skip_verify,
+      ...certificatesFrom(cliHelper.readMysqlTlsCertificates(container)),
+    }),
+    serviceRegex: '^mysql_ssl_8.4_ssl_service_',
+    tag: '@ssl-mysql',
+  },
+  {
+    exporterType: 'postgres_exporter',
+    name: 'ssl_pdpgsql',
+    original: (cliHelper, container, { tls_skip_verify }) => ({
+      tls: true,
+      tls_skip_verify: !!tls_skip_verify,
+      ...certificatesFrom(cliHelper.readTlsCertificates(container)),
+    }),
+    serviceRegex: '^pdpgsql_pgsm_ssl_16_ssl_service',
+    tag: '@ssl-postgres',
   },
 ];
