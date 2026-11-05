@@ -58,7 +58,7 @@ pmmTest.afterEach(async ({ haBackupHelper, k8sHelper }, testInfo) => {
 });
 
 pmmTest(
-  'PMM-TXXXX - Verify both Argo CD Applications are Synced and Healthy, leave no PMM Role in namespace default and apply the backup scripts ConfigMap server-side @ha-argocd',
+  'PMM-T2495 - Verify both Argo CD Applications are Synced and Healthy, leave no PMM Role in namespace default and apply the backup scripts ConfigMap server-side @ha-argocd',
   async ({ argoCdHelper }) => {
     const { deps, pmm } = argoCdHelper.apps();
 
@@ -121,7 +121,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify hard refreshes of both Argo CD Applications find no drift and restart no PMM HA pod @ha-argocd',
+  'PMM-T2496 - Verify hard refreshes of both Argo CD Applications find no drift and restart no PMM HA pod @ha-argocd',
   async ({ argoCdHelper, k8sHelper }) => {
     pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
 
@@ -163,7 +163,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify PMM Server authenticates to PostgreSQL and the Grafana ClickHouse data source works when deployed by Argo CD @ha-argocd',
+  'PMM-T2497 - Verify PMM Server authenticates to PostgreSQL and the Grafana ClickHouse data source works when deployed by Argo CD @ha-argocd',
   async ({ haClusterHelper, k8sHelper, request }) => {
     for (const podName of haClusterHelper.podNames()) {
       await pmmTest.step(`Verify "${podName}" logs no PostgreSQL authentication failure`, async () => {
@@ -214,7 +214,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify Argo CD self-heal brings the PMM HA StatefulSet back to its chart replica count @ha-argocd',
+  'PMM-T2498 - Verify Argo CD self-heal brings the PMM HA StatefulSet back to its chart replica count @ha-argocd',
   async ({ api, argoCdHelper, haClusterHelper, k8sHelper }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
 
@@ -253,7 +253,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify an in-place backup restore finishes under Argo CD self-heal without a sync of the PMM Application @ha-argocd',
+  'PMM-T2499 - Verify an in-place backup restore finishes under Argo CD self-heal without a sync of the PMM Application @ha-argocd',
   async ({ argoCdHelper, haBackupHelper }) => {
     pmmTest.setTimeout(Timeouts.SIXTY_MINUTES);
 
@@ -292,7 +292,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify pmm-ha-dependencies renders only the operators left enabled @ha-argocd',
+  'PMM-T2500 - Verify pmm-ha-dependencies renders only the operators left enabled @ha-argocd',
   async ({ cliHelper }) => {
     const chartDir = process.env.PMM_HA_DEPS_CHART_DIR ?? '';
 
