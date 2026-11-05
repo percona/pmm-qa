@@ -265,6 +265,16 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.codeBlock.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openFilteredByService = async (url: string, serviceName: string) => {
+    await this.page.goto(url);
+    await this.waitForLoad();
+    await this.selectFilter(serviceName, this.builders.filterCheckboxInGroup(serviceName, 'Service Name'));
+    await expect(this.page).toHaveURL((pageUrl) =>
+      pageUrl.searchParams.getAll('var-service_name').includes(serviceName),
+    );
+    await this.waitForLoad();
+  };
+
   openInNewTab = async (url: string) => {
     const page = await this.page.context().newPage();
     const storedMetrics = new StoredMetricsPage(page);
@@ -314,6 +324,13 @@ export default class StoredMetricsPage extends BasePage {
     await this.builders.queryRow(0).waitFor({ timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.search.fill(value, { timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.search.press('Enter');
+  };
+
+  searchFilteredByService = async (url: string, serviceName: string, query: string) => {
+    await expect(async () => {
+      await this.openFilteredByService(url, serviceName);
+      await this.searchByQueryText(query);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
   selectFilter = async (value: string, checkbox: Locator) => {

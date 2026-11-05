@@ -3,6 +3,7 @@ import MongodbBackupDetails from './mongodbBackupDetails';
 import MongodbCollectionsOverview from './mongodbCollectionsOverview';
 import MongodbInstanceSummary from './mongodbInstanceSummary';
 import MongodbInstancesCompare from './mongodbInstancesCompare';
+import MongodbOplogDetails from './mongodbOplogDetails';
 import MongodbUnusedIndexes from './mongodbUnusedIndexes';
 import MongodbRouterSummaryDashboard from '@pages/dashboards/mongo/mongodbRouterSummary';
 import MongodbShardedClusterSummary from '@pages/dashboards/mongo/mongodbShardedClusterSummary';
@@ -13,6 +14,7 @@ export const MongoDashboards = {
   collectionsOverview: new MongodbCollectionsOverview(),
   instancesCompare: new MongodbInstancesCompare(),
   instanceSummary: new MongodbInstanceSummary(),
+  oplogDetails: new MongodbOplogDetails(),
   replSetSummary: new MongodbReplSetSummary(),
   routerSummary: new MongodbRouterSummaryDashboard(),
   shardedClusterSummary: new MongodbShardedClusterSummary(),

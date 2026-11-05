@@ -203,6 +203,15 @@ export async function expectFailure(output: ExecReturn, message: string) {
 }
 
 /**
+ * Quote a value as one shell word, so spaces, $, & or ' in it reach the command unchanged
+ *
+ * @param   value   value to quote
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+/**
  * Read an agent from the PMM Server inventory API through the pmm-server container
  *
  * @param   agentId         ID of the agent

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # upstream_version -- print the upstream version a prebaked image would bake
-# today: the full Docker Hub tag of its base image, or the newest package in
-# its repository. The build workflow labels each image with it and rebuilds an
+# today: the newest package in its EL9 repository, or the full Docker Hub tag
+# of its base image. The build workflow labels each image with it and rebuilds an
 # engine when the label and this output differ.
 #
 #   ./upstream_version ps=8.4         # 8.4.11-11.1
@@ -29,12 +29,45 @@ newest() {
   curl -fsS "$1" | grep -oE "$2[-_][0-9][^\"<~]*$3" | sed -E "s/^$2[-_]//; s/$3\$//" | sort -uV | tail -1
 }
 
+# Stdout: the newest EL9 PACKAGE in Percona repository REPO.
+percona() {
+  newest "https://repo.percona.com/$1/yum/release/9/RPMS/x86_64/" "$2" '\.el9\.x86_64\.rpm'
+}
+
+# Stdout: Percona's repository for a 5.7, 8.0 or LTS series PREFIX-TAG.
+series() {
+  case $2 in
+    5.7 | 8.0) printf '%s-%s' "$1" "${2/./}" ;;
+    *) printf '%s-%s-lts' "$1" "${2/./}" ;;
+  esac
+}
+
 case $engine in
-  ps) hub percona/percona-server "$tag" ;;
-  mysql) hub library/mysql "$tag" ;;
-  pxc-proxysql) hub percona/percona-xtradb-cluster "$tag" ;;
+  ps)
+    if [[ $tag == 5.7 ]]; then
+      percona ps-57 Percona-Server-server-57
+    else
+      percona "$(series ps "$tag")" percona-server-server
+    fi
+    ;;
+  mysql)
+    if [[ $tag == 5.7 ]]; then
+      hub library/mysql "$tag"
+    else
+      newest "https://repo.mysql.com/yum/mysql-$tag-community/el/9/x86_64/" mysql-community-server '\.el9\.x86_64\.rpm'
+    fi
+    ;;
+  pxc-proxysql)
+    if [[ $tag == 5.7 ]]; then
+      percona pxc-57 Percona-XtraDB-Cluster-server-57
+    else
+      percona "$(series pxc "$tag")" percona-xtradb-cluster-server
+    fi
+    ;;
   valkey) hub valkey/valkey "$tag-bookworm" ;;
-  haproxy) hub library/haproxy "$tag" ;;
+  haproxy)
+    newest https://www.haproxy.com/download/haproxy/performance/rhel/ha34/el9/x86_64/ haproxy-awslc '\.el9_ha34\.x86_64\.rpm'
+    ;;
   kerberos) hub library/alpine "$tag" ;;
   external) echo "$tag" ;;
   psmdb)
@@ -42,8 +75,10 @@ case $engine in
     newest "https://repo.percona.com/psmdb-${version/./}/yum/release/${tag##*-ol}/RPMS/x86_64/" \
       percona-server-mongodb-server "\.el${tag##*-ol}\.x86_64\.rpm"
     ;;
-  pdpgsql) newest "https://repo.percona.com/ppg-$tag/apt/pool/main/p/percona-postgresql-$tag/" "percona-postgresql-$tag" '\.noble_amd64\.deb' ;;
-  ssl-pdpgsql) newest "https://repo.percona.com/ppg-$tag/apt/pool/main/p/percona-postgresql-$tag/" "percona-postgresql-$tag" '\.jammy_amd64\.deb' ;;
-  pgsql) newest "https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-$tag/" "postgresql-$tag" '\.pgdg22\.04[^"<]*_amd64\.deb' ;;
+  pdpgsql | ssl-pdpgsql) percona "ppg-$tag" "percona-postgresql$tag-server" ;;
+  pgsql)
+    newest "https://download.postgresql.org/pub/repos/yum/$tag/redhat/rhel-9-x86_64/" "postgresql$tag-server" \
+      'PGDG\.rhel9[^"<]*\.x86_64\.rpm'
+    ;;
   *) echo "No upstream for '$engine'." >&2; exit 2 ;;
 esac
