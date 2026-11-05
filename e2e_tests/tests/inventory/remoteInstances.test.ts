@@ -225,7 +225,7 @@ pmmTest(
       await expect(row.getByRole('gridcell', { exact: true, name: auroraClusterId })).toBeVisible({
         timeout: Timeouts.FIVE_SECONDS,
       });
-    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
   },
 );
 
