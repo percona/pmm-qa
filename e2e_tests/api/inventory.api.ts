@@ -19,10 +19,13 @@ export default class InventoryApi {
 
   changeServiceLabels = async (
     serviceId: string,
-    labels: Pick<GetService, 'cluster' | 'environment' | 'replication_set'>,
+    {
+      custom_labels,
+      ...labels
+    }: Pick<GetService, 'cluster' | 'custom_labels' | 'environment' | 'replication_set'>,
   ): Promise<void> => {
     const response = await this.request.put(`${apiEndpoints.inventory.services}/${serviceId}`, {
-      data: labels,
+      data: { ...labels, custom_labels: { values: custom_labels ?? {} } },
       headers: GrafanaHelper.getAuthHeader(),
     });
 

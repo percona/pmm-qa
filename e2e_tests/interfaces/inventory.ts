@@ -46,11 +46,7 @@ export interface GetService {
   environment: string;
   cluster: string;
   replication_set: string;
-  custom_labels: {
-    additionalProp1: string;
-    additionalProp2: string;
-    additionalProp3: string;
-  };
+  custom_labels?: Record<string, string>;
   external_group: string;
   address: string;
   port: 0;

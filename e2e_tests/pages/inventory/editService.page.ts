@@ -4,6 +4,7 @@ import { expect, Response } from '@playwright/test';
 
 export interface ServiceLabels {
   cluster: string;
+  customLabels: Record<string, string>;
   environment: string;
   replicationSet: string;
 }
@@ -26,6 +27,7 @@ export default class EditServicePage extends BasePage {
   };
   inputs = {
     cluster: this.page.getByTestId('text-input-cluster'),
+    customLabels: this.page.getByTestId('text-input-custom-labels'),
     environment: this.page.getByTestId('text-input-environment'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
   };
@@ -33,6 +35,10 @@ export default class EditServicePage extends BasePage {
 
   editCluster = async (cluster: string) => {
     await this.inputs.cluster.fill(cluster);
+  };
+
+  editCustomLabels = async (customLabels: Record<string, string>) => {
+    await this.inputs.customLabels.fill(this.toCustomLabelsText(customLabels));
   };
 
   editEnvironment = async (environment: string) => {
@@ -66,9 +72,17 @@ export default class EditServicePage extends BasePage {
     return response;
   };
 
+  // The form lists custom labels in the order the API returns them, which is sorted by name.
+  toCustomLabelsText = (customLabels: Record<string, string>) =>
+    Object.entries(customLabels)
+      .toSorted(([a], [b]) => a.localeCompare(b))
+      .map(([name, value]) => `${name}:${value}`)
+      .join('\n');
+
   verifyLabels = async (labels: ServiceLabels) => {
     await expect(this.inputs.environment).toHaveValue(labels.environment);
     await expect(this.inputs.cluster).toHaveValue(labels.cluster);
     await expect(this.inputs.replicationSet).toHaveValue(labels.replicationSet);
+    await expect(this.inputs.customLabels).toHaveValue(this.toCustomLabelsText(labels.customLabels));
   };
 }

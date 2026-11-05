@@ -12,11 +12,13 @@ const databases = [
 ];
 const labelEdits: ServiceLabels = {
   cluster: 'editCluster',
+  customLabels: { edited_label_a: 'editCustomLabelA', edited_label_b: 'editCustomLabelB' },
   environment: 'editEnvironment',
   replicationSet: 'editReplicationSet',
 };
-const toLabels = ({ cluster, environment, replication_set }: GetService): ServiceLabels => ({
+const toLabels = ({ cluster, custom_labels, environment, replication_set }: GetService): ServiceLabels => ({
   cluster: cluster ?? '',
+  customLabels: custom_labels ?? {},
   environment: environment ?? '',
   replicationSet: replication_set ?? '',
 });
@@ -31,10 +33,11 @@ for (const { name, serviceRegex } of databases) {
     });
 
     pmmTest.afterEach(async ({ api }) => {
-      const { cluster, environment, replicationSet } = toLabels(service);
+      const { cluster, customLabels, environment, replicationSet } = toLabels(service);
 
       await api.inventoryApi.changeServiceLabels(service.service_id, {
         cluster,
+        custom_labels: customLabels,
         environment,
         replication_set: replicationSet,
       });
@@ -51,6 +54,7 @@ for (const { name, serviceRegex } of databases) {
         await editServicePage.editCluster(labelEdits.cluster);
         await editServicePage.editEnvironment(labelEdits.environment);
         await editServicePage.editReplicationSet(labelEdits.replicationSet);
+        await editServicePage.editCustomLabels(labelEdits.customLabels);
 
         const response = await editServicePage.saveChanges(service.service_id, true);
 
