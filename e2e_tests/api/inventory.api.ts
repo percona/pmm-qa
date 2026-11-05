@@ -132,6 +132,14 @@ export default class InventoryApi {
       .flat()
       .filter((agent) => agent.service_id === serviceId);
 
+  getServiceById = async (serviceId: string): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ service_id }) => service_id === serviceId);
+
+    if (!service) throw new Error(`Service ${serviceId} is not present`);
+
+    return service;
+  };
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>
@@ -181,6 +189,16 @@ export default class InventoryApi {
     }
 
     return service;
+  };
+
+  getServiceExporter = async (serviceId: string, exporterType: string) => {
+    const exporter = (await this.getServiceById(serviceId)).agents.find(
+      ({ agent_type }) => agent_type === exporterType,
+    );
+
+    if (!exporter) throw new Error(`${exporterType} of service ${serviceId} is not present`);
+
+    return exporter;
   };
 
   getServices = async (): Promise<GetServices> => {

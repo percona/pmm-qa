@@ -1,123 +1,21 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import Credentials from '@helpers/credentials.helper';
+import { serviceConnections, testDatabase, testUser } from '@helpers/serviceConnection.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
-const testUser = {
-  agentPassword: 'Pmm9Agent_Test4',
-  password: 'Pmm9Conn_Test4',
-  username: 'pmm_connection_test',
-};
-const testDatabase = 'pmm_connection_test';
-
-interface DatabaseConnection {
-  createUser: (container: string, credentials: Credentials) => string;
-  dropUser: (container: string, credentials: Credentials) => string;
-  exporterType: string;
-  hasDatabase?: boolean;
-  name: string;
-  original: (credentials: Credentials) => { agentPassword?: string; password: string; username: string };
-  serviceRegex: string;
-}
-
-const psql = (container: string, ...statements: string[]) =>
-  `docker exec --user postgres ${container} psql -v ON_ERROR_STOP=1 ${statements.map((sql) => `-c "${sql}"`).join(' ')}`;
-const mysql = (container: string, { perconaServer }: Credentials, sql: string) =>
-  `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -e "${sql}"`;
-const mongo = (container: string, { psmdb }: Credentials, js: string) =>
-  `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
-const valkeyCli = (container: string, { valkey }: Credentials, command: string) =>
-  `docker exec ${container} valkey-cli -a '${valkey.password}' --no-auth-warning ${command}`;
-const databases: DatabaseConnection[] = [
-  {
-    createUser: (container) =>
-      psql(
-        container,
-        `CREATE ROLE ${testUser.username} LOGIN PASSWORD '${testUser.password}' IN ROLE pg_monitor`,
-        `CREATE DATABASE ${testDatabase}`,
-      ),
-    dropUser: (container) =>
-      psql(
-        container,
-        `DROP DATABASE IF EXISTS ${testDatabase} WITH (FORCE)`,
-        `DROP ROLE IF EXISTS ${testUser.username}`,
-      ),
-    exporterType: 'postgres_exporter',
-    hasDatabase: true,
-    name: 'pdpgsql',
-    original: ({ pdpgsql }) => pdpgsql,
-    serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
-  },
-  {
-    createUser: (container, credentials) =>
-      mysql(
-        container,
-        credentials,
-        `CREATE USER IF NOT EXISTS '${testUser.username}'@'%' IDENTIFIED BY '${testUser.password}'; GRANT SELECT, PROCESS, REPLICATION CLIENT, RELOAD, BACKUP_ADMIN ON *.* TO '${testUser.username}'@'%';`,
-      ),
-    dropUser: (container, credentials) =>
-      mysql(container, credentials, `DROP USER IF EXISTS '${testUser.username}'@'%';`),
-    exporterType: 'mysqld_exporter',
-    name: 'ps',
-    original: ({ perconaServer }) => perconaServer.ps_84,
-    serviceRegex: '^ps_pmm',
-  },
-  {
-    createUser: (container, credentials) =>
-      mongo(
-        container,
-        credentials,
-        `db.getSiblingDB("admin").createUser({ user: "${testUser.username}", pwd: "${testUser.password}", roles: [{ role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" }] })`,
-      ),
-    dropUser: (container, credentials) =>
-      mongo(container, credentials, `db.getSiblingDB("admin").dropUser("${testUser.username}")`),
-    exporterType: 'mongodb_exporter',
-    name: 'psmdb',
-    original: ({ psmdb }) => psmdb,
-    serviceRegex: '^rs101_',
-  },
-  {
-    createUser: (container, credentials) =>
-      valkeyCli(
-        container,
-        credentials,
-        `ACL SETUSER ${testUser.username} on '>${testUser.password}' '~*' '&*' '+@all'`,
-      ),
-    dropUser: (container, credentials) =>
-      valkeyCli(container, credentials, `ACL DELUSER ${testUser.username}`),
-    exporterType: 'valkey_exporter',
-    name: 'valkey',
-    original: ({ valkey }) => valkey,
-    serviceRegex: '^valkey-primary',
-  },
-];
-
-for (const { createUser, dropUser, exporterType, hasDatabase, name, original, serviceRegex } of databases) {
+for (const {
+  createUser,
+  dropUser,
+  exporterType,
+  hasDatabase,
+  name,
+  original,
+  serviceRegex,
+} of serviceConnections) {
   pmmTest.describe(`Edit service connection | ${name}`, () => {
     let service: GetService;
     let container: string;
-
-    const getCurrentService = async (api: Api) => {
-      const current = (await api.inventoryApi.getServices()).services.find(
-        ({ service_id }) => service_id === service.service_id,
-      );
-
-      if (!current) throw new Error(`${service.service_name} is not present`);
-
-      return current;
-    };
-
-    const getExporter = async (api: Api) => {
-      const exporter = (await getCurrentService(api)).agents.find(
-        ({ agent_type }) => agent_type === exporterType,
-      );
-
-      if (!exporter) throw new Error(`${exporterType} of ${service.service_name} is not present`);
-
-      return exporter;
-    };
 
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
       await grafanaHelper.authorize();
@@ -129,7 +27,7 @@ for (const { createUser, dropUser, exporterType, hasDatabase, name, original, se
 
     pmmTest.afterEach(async ({ api, cliHelper, credentials }) => {
       const { agentPassword, password, username } = original(credentials);
-      const exporter = await getExporter(api);
+      const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
       // Without a custom agent password the exporter's endpoint takes its agent ID.
       await api.inventoryApi.updateService(service.service_id, service.service_type, {
@@ -144,7 +42,7 @@ for (const { createUser, dropUser, exporterType, hasDatabase, name, original, se
     pmmTest(
       `PMM-15674 - Verify Connection section shows the current settings and hides passwords for ${name} service @inventory`,
       async ({ api, editServicePage }) => {
-        const exporter = await getExporter(api);
+        const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyConnection({
@@ -173,8 +71,11 @@ for (const { createUser, dropUser, exporterType, hasDatabase, name, original, se
         await expect
           .poll(
             async () => {
-              const { database_name } = await getCurrentService(api);
-              const { is_agent_password_set, status, username } = await getExporter(api);
+              const { database_name } = await api.inventoryApi.getServiceById(service.service_id);
+              const { is_agent_password_set, status, username } = await api.inventoryApi.getServiceExporter(
+                service.service_id,
+                exporterType,
+              );
 
               return { database_name, is_agent_password_set, status, username };
             },
@@ -187,7 +88,7 @@ for (const { createUser, dropUser, exporterType, hasDatabase, name, original, se
             username: testUser.username,
           });
 
-        const { listen_port } = await getExporter(api);
+        const { listen_port } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
         const metricsStatus = (agentPassword: string) =>
           cliHelper
             .execSilent(
@@ -219,7 +120,10 @@ for (const { createUser, dropUser, exporterType, hasDatabase, name, original, se
 
         expect(response.status(), 'connection check fails with a wrong password').not.toEqual(200);
         await expect(page).toHaveURL(new RegExp(`${service.service_id}/edit$`));
-        expect((await getExporter(api)).username, 'stored username is unchanged').toEqual(username);
+        expect(
+          (await api.inventoryApi.getServiceExporter(service.service_id, exporterType)).username,
+          'stored username is unchanged',
+        ).toEqual(username);
       },
     );
   });
