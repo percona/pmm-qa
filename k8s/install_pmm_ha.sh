@@ -55,6 +55,14 @@ CHART_DIR="${CHART_DIR:-}"
 # else is a percona-helm-charts branch to clone.
 CHART_BRANCH="${CHART_BRANCH:-${PMM_CHART_BRANCH:-latest}}"
 CHART_REPO="${CHART_REPO:-https://github.com/percona/percona-helm-charts.git}"
+# Empty means the pmm-ha branch; set after the flags are parsed.
+DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH:-}"
+# helm installs with `helm upgrade`; argocd hands both charts to Argo CD Applications.
+INSTALL_METHOD="${INSTALL_METHOD:-helm}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-v3.5.6}"
+# A directory to clone the chart branches into and keep, instead of temp dirs
+# removed on success.
+CLONE_PARENT="${CLONE_PARENT:-}"
 CHART_VERSION="${CHART_VERSION:-}"
 DEPS_CHART_VERSION="${DEPS_CHART_VERSION:-}"
 IMAGE="${PMM_IMAGE:-}"
@@ -110,6 +118,9 @@ usage() {
         --chart-branch BRANCH   install the pmm-ha chart from this percona-helm-charts
                                 branch, cloned into a temp dir (default: latest, which
                                 is the published chart); OWNER:BRANCH clones OWNER's fork
+        --deps-chart-branch BRANCH  install the pmm-ha-dependencies chart from this
+                                percona-helm-charts branch (default: --chart-branch);
+                                OWNER:BRANCH clones OWNER's fork
         --chart-dir DIR         install from a percona-helm-charts checkout you already
                                 have, instead of cloning or using the published repo
         --chart-version VER     published pmm-ha chart version (default: latest)
@@ -136,6 +147,14 @@ usage() {
         --pmm-secret-from NS    copy pmm-secret, and the $BACKUP_SECRET secret when
                                 backups are on, from namespace NS before installing, as a
                                 cross-namespace restore target needs the source's
+        --install-method METHOD helm or argocd (default: helm). argocd installs Argo CD
+                                and applies pmm-operators and pmm-ha Applications from
+                                the chart branches; eks only, and not with --charts,
+                                --chart-dir, --chart-version, --deps-chart-version,
+                                --pmm-secret-from or a latest chart branch
+        --argocd-version VER    Argo CD release to install (default: v3.5.6)
+        --clone-dir DIR         clone the chart branches under DIR and keep them,
+                                instead of a temp dir removed on success
         --charts WHICH          which charts to install or upgrade (default: all)
                                   all     pmm-ha-dependencies, then pmm-ha
                                   deps    pmm-ha-dependencies only
@@ -147,7 +166,7 @@ usage() {
         Every option also reads an env var: PLATFORM, NAMESPACE, RELEASE,
         DEPS_RELEASE, CHART_DIR, CHART_BRANCH (or PMM_CHART_BRANCH), CHART_REPO, CHART_VERSION, PMM_IMAGE (or
         DEPS_CHART_VERSION, PMM_IMAGE_REPOSITORY + PMM_IMAGE_TAG), PMM_ADMIN_PASSWORD,
-        EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
+        DEPS_CHART_BRANCH, INSTALL_METHOD, ARGOCD_VERSION, CLONE_PARENT, EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
         RELEASED_REPOSITORY, BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
         BACKUP_S3_PROVIDER, BACKUP_MINIO, PMM_SECRET_FROM.
         "
@@ -161,6 +180,7 @@ while [ $# -gt 0 ]; do
         --release)         RELEASE="$2"; shift 2 ;;
         --deps-release)    DEPS_RELEASE="$2"; shift 2 ;;
         --chart-branch)    CHART_BRANCH="$2"; shift 2 ;;
+        --deps-chart-branch) DEPS_CHART_BRANCH="$2"; shift 2 ;;
         --chart-dir)       CHART_DIR="$2"; shift 2 ;;
         --chart-version)   CHART_VERSION="$2"; shift 2 ;;
         --deps-chart-version) DEPS_CHART_VERSION="$2"; shift 2 ;;
@@ -174,6 +194,9 @@ while [ $# -gt 0 ]; do
         --backup-s3-provider) BACKUP_S3_PROVIDER="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-minio)    BACKUP_MINIO="true"; BACKUP_FROM_FLAG="true"; shift ;;
         --pmm-secret-from) PMM_SECRET_FROM="$2"; shift 2 ;;
+        --install-method)  INSTALL_METHOD="$2"; shift 2 ;;
+        --argocd-version)  ARGOCD_VERSION="$2"; shift 2 ;;
+        --clone-dir)       CLONE_PARENT="$2"; shift 2 ;;
         --charts)          CHARTS="$2"; shift 2 ;;
         --timeout)         TIMEOUT="$2"; shift 2 ;;
         --debug-dir)       DEBUG_DIR="$2"; shift 2 ;;
@@ -221,6 +244,46 @@ case "$PLATFORM" in
     "") fail "--platform is required (eks, openshift or lke)." ;;
     *)  fail "unknown platform '$PLATFORM'; expected eks, openshift or lke." ;;
 esac
+
+case "$INSTALL_METHOD" in
+    helm|argocd) ;;
+    *) fail "--install-method must be helm or argocd; got '$INSTALL_METHOD'." ;;
+esac
+
+# The unparsed specs stay: argocd builds its repo URLs from them.
+CHART_BRANCH_SPEC="$CHART_BRANCH"
+DEPS_CHART_BRANCH_SPEC="${DEPS_CHART_BRANCH:-$CHART_BRANCH_SPEC}"
+DEPS_CHART_BRANCH="$DEPS_CHART_BRANCH_SPEC"
+DEPS_CHART_REPO="$CHART_REPO"
+# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
+if [[ "$CHART_BRANCH" == *:* ]]; then
+    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
+    CHART_BRANCH="${CHART_BRANCH#*:}"
+fi
+if [[ "$DEPS_CHART_BRANCH" == *:* ]]; then
+    DEPS_CHART_REPO="https://github.com/${DEPS_CHART_BRANCH%%:*}/percona-helm-charts.git"
+    DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH#*:}"
+fi
+DEPS_SEPARATE="false"
+if [ "$DEPS_CHART_REPO" != "$CHART_REPO" ] || [ "$DEPS_CHART_BRANCH" != "$CHART_BRANCH" ]; then
+    DEPS_SEPARATE="true"
+fi
+
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    [ "$PLATFORM" = "eks" ] || fail "argocd install method supports --platform eks only."
+    [ "$CHARTS" = "all" ] || fail "--charts is not supported with --install-method argocd."
+    [ -z "$CHART_DIR" ] || fail "--chart-dir is not supported with --install-method argocd."
+    [ -z "$CHART_VERSION" ] || fail "--chart-version is not supported with --install-method argocd."
+    [ -z "$DEPS_CHART_VERSION" ] || fail "--deps-chart-version is not supported with --install-method argocd."
+    [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method argocd."
+    [ "$CHART_BRANCH" != "latest" ] || fail "--chart-branch latest is not supported with --install-method argocd; pass a branch."
+    [ "$DEPS_CHART_BRANCH" != "latest" ] || fail "--deps-chart-branch latest is not supported with --install-method argocd; pass a branch."
+fi
+if [ "$DEPS_SEPARATE" = "true" ]; then
+    [ -z "$CHART_DIR" ] || fail "--deps-chart-branch and --chart-dir both name a chart source; pass one."
+    { [ "$CHART_BRANCH" != "latest" ] && [ "$DEPS_CHART_BRANCH" != "latest" ]; } \
+        || fail "--deps-chart-branch differs from --chart-branch, so both must be branches, not latest."
+fi
 
 for cmd in kubectl helm openssl; do
     command -v "$cmd" >/dev/null 2>&1 || fail "'$cmd' is not installed."
@@ -271,11 +334,6 @@ if [ "$CHART_BRANCH" != "latest" ]; then
     [ -z "$CHART_DIR" ] || fail "--chart-branch and --chart-dir both name a chart source; pass one."
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --chart-branch '$CHART_BRANCH'."
 fi
-# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
-if [[ "$CHART_BRANCH" == *:* ]]; then
-    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
-    CHART_BRANCH="${CHART_BRANCH#*:}"
-fi
 if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
 fi
@@ -306,7 +364,8 @@ on_exit() {
     fi
 
     if [ "$rc" -eq 0 ]; then
-        rm -rf "${CLONE_DIR:-}" "${PATCH_DIR:-}"
+        [ -n "$CLONE_PARENT" ] || rm -rf "${CLONE_DIR:-}" "${DEPS_CLONE_DIR:-}"
+        rm -rf "${PATCH_DIR:-}"
     fi
 
     exit "$rc"
@@ -621,15 +680,40 @@ wait_for_statefulsets_rolled() {
     done
 }
 
+# Sets CLONED_DIR; under --clone-dir the clone is kept.
+clone_chart_branch() {
+    local repo="$1" branch="$2"
+
+    if [ -n "$CLONE_PARENT" ]; then
+        mkdir -p "$CLONE_PARENT"
+        CLONED_DIR="$(mktemp -d "$CLONE_PARENT/percona-helm-charts.XXXXXX")"
+    else
+        CLONED_DIR="$(mktemp -d)"
+    fi
+    log "Cloning $repo branch $branch into $CLONED_DIR"
+    git clone --branch "$branch" --depth 1 "$repo" "$CLONED_DIR" \
+        || fail "could not clone $repo branch '$branch'."
+}
+
 if [ "$CHART_BRANCH" != "latest" ]; then
-    CLONE_DIR="$(mktemp -d)"
-    log "Cloning $CHART_REPO branch $CHART_BRANCH into $CLONE_DIR"
-    git clone --branch "$CHART_BRANCH" --depth 1 "$CHART_REPO" "$CLONE_DIR" \
-        || fail "could not clone $CHART_REPO branch '$CHART_BRANCH'."
+    clone_chart_branch "$CHART_REPO" "$CHART_BRANCH"
+    CLONE_DIR="$CLONED_DIR"
 
     [ -d "$CLONE_DIR/charts/pmm-ha" ] \
         || fail "branch '$CHART_BRANCH' of $CHART_REPO has no charts/pmm-ha."
     CHART_DIR="$CLONE_DIR"
+fi
+
+# Where the dependencies chart is read from; empty when it is the published one.
+DEPS_CHART_PATH=""
+if [ "$DEPS_SEPARATE" = "true" ] && { [ "$INSTALL_DEPS" = "true" ] || [ "$INSTALL_METHOD" = "argocd" ]; }; then
+    clone_chart_branch "$DEPS_CHART_REPO" "$DEPS_CHART_BRANCH"
+    DEPS_CLONE_DIR="$CLONED_DIR"
+    DEPS_CHART_PATH="$DEPS_CLONE_DIR/charts/pmm-ha-dependencies"
+    [ -d "$DEPS_CHART_PATH" ] \
+        || fail "branch '$DEPS_CHART_BRANCH' of $DEPS_CHART_REPO has no charts/pmm-ha-dependencies."
+elif [ -n "$CHART_DIR" ]; then
+    DEPS_CHART_PATH="$CHART_DIR/charts/pmm-ha-dependencies"
 fi
 
 if [ "$INSTALL_PMM" = "true" ] && [ -z "$IMAGE" ]; then
@@ -637,10 +721,13 @@ if [ "$INSTALL_PMM" = "true" ] && [ -z "$IMAGE" ]; then
     log "No --image given, installing the latest released image: $IMAGE"
 fi
 
+[ "$INSTALL_METHOD" != "argocd" ] || fail "--install-method argocd is not implemented yet"
+
 DIAGNOSTICS_ENABLED="true"
 
 if [ -n "${CLONE_DIR:-}" ]; then
     CHART_SOURCE="branch:$CHART_BRANCH"
+    [ -z "${DEPS_CLONE_DIR:-}" ] || CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
 elif [ -n "$CHART_DIR" ]; then
     CHART_SOURCE="dir:$CHART_DIR"
 else
@@ -660,7 +747,7 @@ PMM_CHART_ARGS=()
 [ -n "$CHART_VERSION" ] && PMM_CHART_ARGS+=(--version "$CHART_VERSION")
 
 if [ -n "$CHART_DIR" ]; then
-    DEPS_CHART="$CHART_DIR/charts/pmm-ha-dependencies"
+    DEPS_CHART="$DEPS_CHART_PATH"
     PMM_CHART="$CHART_DIR/charts/pmm-ha"
     DEPS_CHART_ARGS=()   # a checkout carries its own version
     PMM_CHART_ARGS=()
