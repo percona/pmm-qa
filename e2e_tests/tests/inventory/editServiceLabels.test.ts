@@ -40,7 +40,7 @@ for (const { name, serviceRegex } of databases) {
       });
     });
 
-    for (const { edit, label } of labelEdits) {
+    for (const { label } of labelEdits) {
       pmmTest(
         `PMM-15674 - Verify changing ${label} of ${name} service in Inventory @inventory`,
         async ({ api, editServicePage, page }) => {
@@ -50,9 +50,24 @@ for (const { name, serviceRegex } of databases) {
           await editServicePage.open(service.service_id);
           await editServicePage.verifyLabels(original);
 
-          const response = await editServicePage[edit](service.service_id, expected[label]);
+          const clusterResponse = await editServicePage.editCluster(service.service_id, expected.cluster);
 
-          expect(response.status(), await response.text()).toEqual(200);
+          expect(clusterResponse.status(), await clusterResponse.text()).toEqual(200);
+
+          const environmentResponse = await editServicePage.editEnvironment(
+            service.service_id,
+            expected.environment,
+          );
+
+          expect(environmentResponse.status(), await environmentResponse.text()).toEqual(200);
+
+          const replicationSetResponse = await editServicePage.editReplicationSet(
+            service.service_id,
+            expected.replicationSet,
+          );
+
+          expect(replicationSetResponse.status(), await replicationSetResponse.text()).toEqual(200);
+
           await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
           await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
 
