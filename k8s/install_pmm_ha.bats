@@ -88,3 +88,87 @@ setup() {
     [ "$status" -eq 1 ]
     [[ "$output" == *"--deps-chart-branch and --chart-dir"* ]]
 }
+
+render() {
+    ARGOCD_PRINT_MANIFESTS=1 run "$SCRIPT" --platform eks --install-method argocd \
+        --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops \
+        --deps-chart-branch KrisBuytaert:PMM-15827-pmm-ha-dependencies-enabled \
+        --image perconalab/pmm-server:3-dev-latest --set-string pmmEnv.PMM_DEBUG=1 "$@"
+}
+
+@test "argocd print mode renders the repos, revisions and chart paths" {
+    render --external-access --backup-minio
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"repoURL: https://github.com/KrisBuytaert/percona-helm-charts.git"* ]]
+    [[ "$output" == *"targetRevision: PMM-15826-pmm-ha-gitops"* ]]
+    [[ "$output" == *"targetRevision: PMM-15827-pmm-ha-dependencies-enabled"* ]]
+    [[ "$output" == *"path: charts/pmm-ha"$'\n'* ]]
+    [[ "$output" == *"path: charts/pmm-ha-dependencies"* ]]
+    [[ "$output" == *"ServerSideApply=true"* ]]
+    [[ "$output" == *"CreateNamespace=true"* ]]
+    [[ "$output" == *"SkipDryRunOnMissingResource=true"* ]]
+    [[ "$output" == *"limit: 5"* ]]
+    [[ "$output" == *"selfHeal: true"* ]]
+    [[ "$output" == *"prune: true"* ]]
+    [[ "$output" == *"project: default"* ]]
+    [[ "$output" == *"project: pmm-ha"* ]]
+    [[ "$output" == *"managedFieldsManagers: [pmm-backup]"* ]]
+}
+
+@test "argocd print mode renders the helm values" {
+    render --external-access --backup-minio
+    [ "$status" -eq 0 ]
+    for kv in "gitops.enabled|true" "tls.secretFormat|kubernetes.io/tls" \
+        "victoriaMetrics.vmagent.scrapeApiserver|false" "secret.create|false" "secret.name|pmm-secret" \
+        "haproxy.service.type|LoadBalancer" "centralBackupStorage.enabled|true" \
+        "image.repository|perconalab/pmm-server" "image.tag|3-dev-latest" \
+        "victoria-metrics-operator.admissionWebhooks.enabled|false"; do
+        [[ "$output" == *"- name: '${kv%%|*}'"$'\n'"          value: '${kv#*|}'"* ]]
+    done
+    [[ "$output" == *"aws-load-balancer-type'"$'\n'"          value: 'nlb'"* ]]
+    [[ "$output" == *"aws-load-balancer-scheme'"$'\n'"          value: 'internet-facing'"* ]]
+}
+
+@test "argocd print mode without --external-access has no service type" {
+    render
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"haproxy.service"* ]]
+    [[ "$output" != *"centralBackupStorage"* ]]
+}
+
+@test "argocd print mode output parses as 3 documents with the expected structure" {
+    python3 -c 'import yaml' 2>/dev/null || skip "python3 PyYAML not available"
+    render --external-access --backup-minio --set pmmClient.image.tag=3
+    [ "$status" -eq 0 ]
+    printf '%s\n' "$output" > "$BATS_TEST_TMPDIR/out.yaml"
+    run python3 -I - "$BATS_TEST_TMPDIR/out.yaml" <<'PY'
+import sys, yaml
+docs = list(yaml.safe_load_all(open(sys.argv[1])))
+assert len(docs) == 3, len(docs)
+proj, deps, pmm = docs
+assert proj['kind'] == 'AppProject' and proj['metadata']['name'] == 'pmm-ha'
+assert proj['spec']['destinations'] == [{'server': 'https://kubernetes.default.svc', 'namespace': 'pmm'}]
+assert proj['spec']['clusterResourceWhitelist'] == [{'group': '*', 'kind': '*'}]
+assert deps['metadata']['name'] == 'pmm-operators' and pmm['metadata']['name'] == 'pmm-ha'
+params = {p['name']: p for p in pmm['spec']['source']['helm']['parameters']}
+nlb = params['haproxy.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type']
+assert nlb['value'] == 'nlb'
+assert params['pmmEnv.PMM_DEBUG']['forceString'] is True
+assert params['pmmClient.image.tag']['forceString'] is True
+assert params['image.tag']['forceString'] is True
+assert 'forceString' not in params['gitops.enabled']
+assert 'forceString' not in params['centralBackupStorage.enabled']
+assert pmm['spec']['syncPolicy']['retry']['backoff'] == {'duration': '10s', 'factor': 2, 'maxDuration': '3m'}
+assert [i['name'] for i in pmm['spec']['ignoreDifferences']] == ['pmm-ha', 'pmm-ha-vmcluster']
+assert deps['spec']['source']['helm']['parameters'] == [
+    {'name': 'victoria-metrics-operator.admissionWebhooks.enabled', 'value': 'false'}]
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "argocd print mode output validates with kubeconform" {
+    command -v kubeconform >/dev/null 2>&1 || skip "kubeconform not installed"
+    render --external-access
+    [ "$status" -eq 0 ]
+    printf '%s\n' "$output" | kubeconform -ignore-missing-schemas -strict -summary
+}

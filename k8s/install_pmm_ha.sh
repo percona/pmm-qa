@@ -135,6 +135,7 @@ usage() {
         --external-access       expose HAProxy and wait for PMM to serve on it:
                                 an NLB on eks, a LoadBalancer on lke, a Route on openshift
         --set KEY=VALUE         extra --set for the pmm-ha chart; repeatable
+        --set-string KEY=VALUE  extra --set-string for the pmm-ha chart; repeatable
         --backup-s3-bucket B    enable backups (centralBackupStorage, s3 mode) into bucket
                                 B; its keys are read from BACKUP_S3_ACCESS_KEY and
                                 BACKUP_S3_SECRET_KEY into the $BACKUP_SECRET secret, or
@@ -188,6 +189,7 @@ while [ $# -gt 0 ]; do
         --admin-password)  ADMIN_PASSWORD="$2"; shift 2 ;;
         --external-access) EXTERNAL_ACCESS="true"; EXTERNAL_ACCESS_FROM_FLAG="true"; shift ;;
         --set)             EXTRA_SET+=(--set "$2"); shift 2 ;;
+        --set-string)      EXTRA_SET+=(--set-string "$2"); shift 2 ;;
         --backup-s3-bucket)   BACKUP_S3_BUCKET="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-s3-endpoint) BACKUP_S3_ENDPOINT="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-s3-region)   BACKUP_S3_REGION="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
@@ -336,6 +338,200 @@ if [ "$CHART_BRANCH" != "latest" ]; then
 fi
 if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
+fi
+
+# Built before any cluster access: argocd print mode renders them too.
+BACKUP_SET=()
+if [ "$BACKUP_ENABLED" = "true" ]; then
+    BACKUP_SET+=(
+        --set centralBackupStorage.enabled=true
+        --set centralBackupStorage.mode=s3
+        --set-string "centralBackupStorage.s3.bucket=$BACKUP_S3_BUCKET"
+        --set-string "centralBackupStorage.s3.region=$BACKUP_S3_REGION"
+        --set-string "centralBackupStorage.s3.provider=$BACKUP_S3_PROVIDER"
+        --set-string "centralBackupStorage.s3.existingSecret=$BACKUP_SECRET"
+    )
+    [ -z "$BACKUP_S3_ENDPOINT" ] || BACKUP_SET+=(--set-string "centralBackupStorage.s3.endpoint=$BACKUP_S3_ENDPOINT")
+fi
+
+# OpenShift already runs a node-exporter on host port 9100, so the bundled
+# DaemonSet stays Pending forever and --wait would never return. The chart's own
+# openshift mode scrapes the platform one instead. Placed before EXTRA_SET so
+# --set still wins.
+PLATFORM_SET=()
+if [ "$PLATFORM" = "openshift" ]; then
+    PLATFORM_SET+=(--set nodeExporter.mode=openshift --set prometheus-node-exporter.enabled=false)
+fi
+
+# Argo CD parameters are plain name/value pairs; a value that must stay a string
+# (--set-string, and the image tags, which can look numeric) gets forceString.
+yaml_quote() {
+    local s="$1"
+    printf "'%s'" "${s//\'/\'\'}"
+}
+
+argocd_repo_url() {
+    local spec="$1" default_repo="${2:-$CHART_REPO}"
+    if [[ "$spec" == *:* ]]; then
+        echo "https://github.com/${spec%%:*}/percona-helm-charts.git"
+    else
+        echo "$default_repo"
+    fi
+}
+
+argocd_revision() {
+    echo "${1#*:}"
+}
+
+argocd_param() {
+    local name="$1" value="$2" force="$3"
+    printf "        - name: %s\n          value: %s\n" "$(yaml_quote "$name")" "$(yaml_quote "$value")"
+    [ "$force" != "true" ] || printf "          forceString: true\n"
+}
+
+# Takes helm's own --set / --set-string argument list.
+argocd_params_from_args() {
+    local kind kv name force
+    while [ $# -gt 0 ]; do
+        kind="$1"; kv="$2"; shift 2
+        name="${kv%%=*}"
+        force="false"
+        case "$kind" in
+            --set-string) force="true" ;;
+            *) case "$name" in image.repository|image.tag|*.image.tag) force="true" ;; esac ;;
+        esac
+        argocd_param "$name" "${kv#*=}" "$force"
+    done
+}
+
+render_argocd_project() {
+    cat <<PROJECT_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: pmm-ha
+  namespace: argocd
+spec:
+  description: PMM HA
+  sourceRepos:
+    - $(yaml_quote "$(argocd_repo_url "$CHART_BRANCH_SPEC")")
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: $(yaml_quote "$NAMESPACE")
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+PROJECT_EOF
+}
+
+render_argocd_deps_app() {
+    cat <<DEPS_APP_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: $(yaml_quote "$DEPS_RELEASE")
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: $(argocd_repo_url "$DEPS_CHART_BRANCH_SPEC" "$DEPS_CHART_REPO")
+    targetRevision: $(argocd_revision "$DEPS_CHART_BRANCH_SPEC")
+    path: charts/pmm-ha-dependencies
+    helm:
+      releaseName: $(yaml_quote "$DEPS_RELEASE")
+      parameters:
+$(argocd_param victoria-metrics-operator.admissionWebhooks.enabled false false)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: $(yaml_quote "$NAMESPACE")
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+DEPS_APP_EOF
+}
+
+render_argocd_pmm_app() {
+    local params
+    params="$(
+        argocd_param gitops.enabled true false
+        argocd_param tls.secretFormat kubernetes.io/tls false
+        argocd_param victoriaMetrics.vmagent.scrapeApiserver false false
+        if [ "$EXTERNAL_ACCESS" = "true" ]; then
+            argocd_param haproxy.service.type LoadBalancer false
+            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-type' nlb false
+            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-scheme' internet-facing false
+        fi
+        argocd_params_from_args \
+            --set secret.create=false \
+            --set secret.name=pmm-secret \
+            --set "image.repository=${IMAGE%:*}" \
+            --set "image.tag=${IMAGE##*:}" \
+            --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
+            ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
+            ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+    )"
+    cat <<PMM_APP_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: $(yaml_quote "$RELEASE")
+  namespace: argocd
+spec:
+  project: pmm-ha
+  source:
+    repoURL: $(argocd_repo_url "$CHART_BRANCH_SPEC")
+    targetRevision: $(argocd_revision "$CHART_BRANCH_SPEC")
+    path: charts/pmm-ha
+    helm:
+      releaseName: $(yaml_quote "$RELEASE")
+      parameters:
+$params
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: $(yaml_quote "$NAMESPACE")
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: $(yaml_quote "$RELEASE")
+      managedFieldsManagers: [pmm-backup]
+    - group: operator.victoriametrics.com
+      kind: VMCluster
+      name: $(yaml_quote "${RELEASE}-vmcluster")
+      managedFieldsManagers: [pmm-backup]
+PMM_APP_EOF
+}
+
+# all: the AppProject, the dependencies Application and the pmm-ha Application;
+# deps: the dependencies Application; pmm: the AppProject and the pmm-ha Application.
+render_argocd_manifests() {
+    case "${1:-all}" in
+        all)  render_argocd_project; echo "---"; render_argocd_deps_app; echo "---"; render_argocd_pmm_app ;;
+        deps) render_argocd_deps_app ;;
+        pmm)  render_argocd_project; echo "---"; render_argocd_pmm_app ;;
+        *) fail "render_argocd_manifests takes all, deps or pmm; got '$1'." ;;
+    esac
+}
+
+if [ "$INSTALL_METHOD" = "argocd" ] && [ "${ARGOCD_PRINT_MANIFESTS:-}" = "1" ]; then
+    [ -n "$IMAGE" ] || fail "ARGOCD_PRINT_MANIFESTS needs --image."
+    render_argocd_manifests all
+    exit 0
 fi
 
 kubectl version -o json >/dev/null 2>&1 || fail "kubectl cannot reach a cluster; check KUBECONFIG."
@@ -911,29 +1107,9 @@ else
     log "Created pmm-secret in $NAMESPACE"
 fi
 
-BACKUP_SET=()
 if [ "$BACKUP_ENABLED" = "true" ]; then
     ensure_backup_secret
     [ "$BACKUP_MINIO" = "false" ] || deploy_minio
-
-    BACKUP_SET+=(
-        --set centralBackupStorage.enabled=true
-        --set centralBackupStorage.mode=s3
-        --set-string "centralBackupStorage.s3.bucket=$BACKUP_S3_BUCKET"
-        --set-string "centralBackupStorage.s3.region=$BACKUP_S3_REGION"
-        --set-string "centralBackupStorage.s3.provider=$BACKUP_S3_PROVIDER"
-        --set-string "centralBackupStorage.s3.existingSecret=$BACKUP_SECRET"
-    )
-    [ -z "$BACKUP_S3_ENDPOINT" ] || BACKUP_SET+=(--set-string "centralBackupStorage.s3.endpoint=$BACKUP_S3_ENDPOINT")
-fi
-
-# OpenShift already runs a node-exporter on host port 9100, so the bundled
-# DaemonSet stays Pending forever and --wait would never return. The chart's own
-# openshift mode scrapes the platform one instead. Placed before EXTRA_SET so
-# --set still wins.
-PLATFORM_SET=()
-if [ "$PLATFORM" = "openshift" ]; then
-    PLATFORM_SET+=(--set nodeExporter.mode=openshift --set prometheus-node-exporter.enabled=false)
 fi
 
 log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
