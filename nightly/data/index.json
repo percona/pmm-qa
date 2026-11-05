@@ -159552,20 +159552,24 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly"
+        ],
+        "verdict": "product bug",
+        "summary": "helm: PMM-T1061 opened the Plan tab of 'CREATE DATABASE school' instead of the pgsm_t1 query. The Playwright trace shows the 'Last 12 hours' getReport (search \"\") returned 1130 ms after it was sent, which was after the newer 'pgsm_t1 t1' search response, and replaced it in the table. QAN's useOverviewTable has no guard against stale responses. Reproduced 3/3 on a CHAOS VM (3-dev-latest), control clean. Filed PMM-15883.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15883",
+        "by": "Investigator routine",
+        "at": "2026-11-05T03:34:19Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-05T03:06:11Z",
         "suites": [
           "CLI Integration"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-05T03:06:11Z",
-        "suites": [
-          "Nightly"
         ]
       },
       {
