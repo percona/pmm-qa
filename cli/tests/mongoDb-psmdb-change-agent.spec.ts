@@ -600,7 +600,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2435 - Verify Change agent skip connection check for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
-    // skip-until: 2026-12-03 -- the password restore races the agents' status reports and is reverted (PMM-15835); unskip once it is fixed.
+    // skip-until: 2026-12-03
     test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15835');
 
     for (const command of pmmAdmin.changeMongoAgents(containerName, exporterId, profilerId, '--password=invalid_skip_check_password --skip-connection-check')) {
