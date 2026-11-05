@@ -153,7 +153,7 @@ module.exports = {
       users: menuOption(co, 'Users', '/graph/org/users'),
       pmmSettings: menuOption(co, 'Settings', '/pmm-ui/settings'),
       pmmInventory: menuOption(co, 'Inventory', '/graph/inventory/services'),
-      addInstance: menuOption(co, 'Add Service', '/graph/add-instance'),
+      addInstance: menuOption(co, 'Add Service', '/pmm-ui/add-instance'),
     },
   ),
   serverAdmin: new LeftMenu(

@@ -1,10 +1,10 @@
 const { I } = inject();
 
 module.exports = {
-  url: 'graph/add-instance',
-  addMySQLRemoteURL: 'graph/add-instance?instance_type=mysql',
+  url: 'pmm-ui/add-instance',
+  addMySQLRemoteURL: 'pmm-ui/add-instance/mysql',
   fields: {
-    breadcrumbs: locate('.page-toolbar').withText('Inventory / Add service / Step 1 of 2'),
+    breadcrumbs: locate('h2').withText('Select service type'),
     addAmazonRDSbtn: '$rds-instance',
   },
 

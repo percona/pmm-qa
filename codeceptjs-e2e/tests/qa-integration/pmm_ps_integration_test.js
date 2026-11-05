@@ -35,7 +35,7 @@ Scenario(
     remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mysql');
     I.waitForElement(remoteInstancesPage.fields.hostName, 30);
-    remoteInstancesPage.selectDropdownOption('$nodes-selectbox', 'pmm-server');
+    remoteInstancesPage.selectDropdownOption('$select-node-id-button', 'pmm-server');
     I.fillField(remoteInstancesPage.fields.hostName, details.host);
     I.clearField(remoteInstancesPage.fields.portNumber);
     I.fillField(remoteInstancesPage.fields.portNumber, details.port);
