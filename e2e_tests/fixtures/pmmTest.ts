@@ -5,6 +5,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
@@ -56,6 +57,7 @@ const pmmTest = base.extend<{
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
+  argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
   clickHouseHelper: ClickHouseHelper;
@@ -105,6 +107,7 @@ const pmmTest = base.extend<{
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
+  argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
