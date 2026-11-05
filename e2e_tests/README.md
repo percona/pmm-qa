@@ -118,6 +118,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@inventory-fb`
 - `@LBAC`
+- `@max-length`
 - `@menu`
 - `@mongodb-exporter`
 - `@new-navigation`
@@ -130,7 +131,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
 - `@pmm-helm-pre-upgrade`
-- `@pmm-pcsm-psmdb-integration`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-ps-replica-integration`
@@ -148,6 +148,10 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@rta`
 - `@service-account`
 - `@settings`
+- `@ssl`
+- `@ssl-mysql`
+- `@ssl-postgres`
+- `@ssl-remote`
 - `@standalone`
 - `@user-password`
 

@@ -156,6 +156,8 @@ dist
 !.claude/skill-lessons-migration/
 .cursor
 .cursorrules
+.migration-observations/
+.playwright-cli/
 
 # Terraform (Linode ephemeral test runner) -- module + lock file are
 # committed; only per-run/generated state and secrets are ignored.
