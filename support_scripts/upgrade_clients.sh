@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Upgrades pmm-client in every client container in parallel and verifies each one
+# Upgrades pmm-client in every client container, a few at a time, and verifies each one
 # reports the expected version. Logs are printed only for containers that fail.
 #
 # Usage: upgrade_clients.sh <expected-version>
 # Env:   CLIENT_UPGRADE_REPOSITORY  pmm3-client repository to upgrade from (optional)
 #        CLIENT_INSTALL_VERSION  without CLIENT_UPGRADE_REPOSITORY, pmm3-rc upgrades from experimental, anything else from testing
 #        CLIENT_TARBALL_UPGRADE  tarball URL to upgrade from instead of the repository (optional)
+#        UPGRADE_CLIENTS_PARALLEL  containers upgraded at once (default 3)
 set -uo pipefail
 
 want="${1:?usage: $0 <expected-version>}"
@@ -90,10 +91,16 @@ upgrade_client() {
   echo "== upgrade succeeded in $c =="
 }
 
+# A client installed from a tarball has no dnf cache, so its upgrade loads the Oracle Linux metadata
+# from scratch. Thirteen of those at once saturated a 4-vCPU runner for minutes, and PMM Server's
+# Grafana timed out on its own database.
+parallel=${UPGRADE_CLIENTS_PARALLEL:-3}
+
 # Each container writes its own output so per-container logs stay contiguous when printed.
 outdir=$(mktemp -d)
 pids=()
 for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
+  while [ "$(jobs -rp | wc -l)" -ge "$parallel" ]; do sleep 1; done
   upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
   pids+=("$!")
 done
