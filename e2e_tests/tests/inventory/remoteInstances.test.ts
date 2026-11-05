@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 import {
+  auroraClusterId,
   auroraInstanceId,
   auroraMysql,
   awsCredentials,
@@ -22,6 +23,7 @@ const remoteNodeNames = [
   rdsMysql57.serviceName,
   auroraInstanceId,
 ];
+const auroraOverviewUrl = 'graph/d/aurora-overview/amazon-aurora-overview';
 type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
 const qanRemoteDatabases = remoteDatabases.filter(
   (database): database is QanRemoteDatabase => database.type === 'mysql' || database.type === 'mongodb',
@@ -202,6 +204,30 @@ for (const filterName of qanFilters) {
     },
   );
 }
+
+pmmTest(
+  'PMM-T0000 - Verify Aurora overview lists the instance by cluster @instances',
+  async ({ api, dashboard, page, urlHelper }) => {
+    const { services } = await api.inventoryApi.getServices();
+
+    if (!services.some(({ service_name }) => service_name === auroraInstanceId)) {
+      await api.remoteInstanceApi.addRemoteInstance(auroraMysql);
+    }
+
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(auroraOverviewUrl, { from: 'now-15m' }));
+      await dashboard.waitForDashboardToLoad();
+
+      const row = dashboard.builders.tableRowByText('Aurora instances', auroraInstanceId);
+
+      await expect(row).toBeVisible({ timeout: Timeouts.FIVE_SECONDS });
+      await expect(row).not.toContainText('AWS cluster unknown');
+      await expect(row.getByRole('gridcell', { exact: true, name: auroraClusterId })).toBeVisible({
+        timeout: Timeouts.FIVE_SECONDS,
+      });
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  },
+);
 
 pmmTest(
   'PMM-T2340 - Verify QAN after Aurora instance is added and edited @instances',

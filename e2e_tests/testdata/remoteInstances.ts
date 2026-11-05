@@ -107,6 +107,7 @@ export const azureDatabases = [
 ] as const;
 
 export const auroraInstanceId = 'pmm-qa-aurora3-mysql-instance-1';
+export const auroraClusterId = 'pmm-qa-aurora3-mysql';
 
 export const auroraMysql: AddRemoteInstance = {
   rds: {

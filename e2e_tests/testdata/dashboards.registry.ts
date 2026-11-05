@@ -46,6 +46,7 @@ export const DASHBOARDS: DashboardEntry[] = [
   { folder: 'MongoDB', url: 'graph/d/mongodb-wiredtiger/mongodb-wiredtiger-details' },
 
   { folder: 'MySQL', url: 'graph/d/haproxy-instance-summary/haproxy-instance-summary' },
+  { folder: 'MySQL', url: 'graph/d/aurora-overview/amazon-aurora-overview' },
   { folder: 'MySQL', url: 'graph/d/mysql-amazonaurora/mysql-amazon-aurora-details' },
   { folder: 'MySQL', url: 'graph/d/mysql-commandhandler-compare/mysql-command-handler-counters-compare' },
   { folder: 'MySQL', url: 'graph/d/mysql-group-replicaset-summary/mysql-group-replication-summary' },
