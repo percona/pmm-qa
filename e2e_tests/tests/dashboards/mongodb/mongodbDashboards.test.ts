@@ -199,7 +199,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       await dashboard.verifyMetricsPresent(dashboard.mongo.collectionsOverview.metrics, undefined, true);
       await dashboard.verifyAllPanelsHaveData([
         ...dashboard.mongo.collectionsOverview.noDataMetrics,
-        // skip-until: 2026-12-03 -- their rate over $__rate_interval rarely holds a topmetrics sample, so they show No data on most refreshes (PMM-15714); check them again once it is fixed.
+        // skip-until: 2026-12-03 -- PMM-15714
         'Top 5 Hottest Collections by Read (Rate)',
         'Top 5 Hottest Collections by Write (Rate)',
       ]);
