@@ -100,8 +100,6 @@ export default class AddInstancePage extends BasePage {
   };
 
   configureRemoteInstance = async (instanceType: RemoteInstanceType) => {
-    await this.buttons.skipTlsVerify.check({ timeout: Timeouts.THIRTY_SECONDS });
-
     if (instanceType === 'mongodb') await this.buttons.mongodbProfiler.check();
     if (instanceType === 'postgresql') await this.buttons.pgStatStatements.check();
   };
@@ -154,6 +152,7 @@ export default class AddInstancePage extends BasePage {
 
   fillTlsCertificates = async (certificates: { ca: string; cert: string; key: string }) => {
     await this.buttons.useTls.check();
+    await this.buttons.skipTlsVerify.check({ timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.tlsCa.fill(certificates.ca, { timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.tlsCert.fill(certificates.cert);
     await this.inputs.tlsKey.fill(certificates.key);
