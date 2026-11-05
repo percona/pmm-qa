@@ -41,6 +41,9 @@
 #       --pmm-secret-from pmm --backup-s3-bucket pmm-backups --backup-s3-provider Minio \
 #       --backup-s3-endpoint http://pmm-backup-minio.pmm.svc.cluster.local:9000
 #
+# Through Argo CD instead of helm - eks and chart branches only:
+#   ./install_pmm_ha.sh --platform eks --install-method argocd --chart-branch main --external-access
+#
 # With no --image it installs the newest released percona/pmm-server tag, resolved
 # from Docker Hub.
 
@@ -160,7 +163,7 @@ usage() {
                                   all     pmm-ha-dependencies, then pmm-ha
                                   deps    pmm-ha-dependencies only
                                   pmm-ha  pmm-ha only, on operators already there
-        --timeout DURATION      helm and rollout timeout (default: 15m)
+        --timeout DURATION      helm, rollout and Argo CD Application timeout (default: 15m)
         --debug-dir DIR         diagnostics collected on failure (default: ./pmm-ha-debug)
         --summary-file PATH     credentials and URL (default: ./pmm-ha-summary.env)
 
@@ -280,6 +283,8 @@ if [ "$INSTALL_METHOD" = "argocd" ]; then
     [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method argocd."
     [ "$CHART_BRANCH" != "latest" ] || fail "--chart-branch latest is not supported with --install-method argocd; pass a branch."
     [ "$DEPS_CHART_BRANCH" != "latest" ] || fail "--deps-chart-branch latest is not supported with --install-method argocd; pass a branch."
+    # The Application waits count it down in seconds.
+    [[ "$TIMEOUT" =~ ^([0-9]+[hms])+$ ]] || fail "--timeout must be like 15m or 1h30m with --install-method argocd; got '$TIMEOUT'."
 fi
 if [ "$DEPS_SEPARATE" = "true" ]; then
     [ -z "$CHART_DIR" ] || fail "--deps-chart-branch and --chart-dir both name a chart source; pass one."
@@ -549,6 +554,12 @@ dump_diagnostics() {
             kubectl logs "$pod" -n "$NAMESPACE" -c "$container" --tail=200 >"$DEBUG_DIR/${pod}-${container}.log" 2>&1 || true
         done
     done
+
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        kubectl get applications,appprojects -n argocd -o yaml >"$DEBUG_DIR/argocd-applications.yaml" 2>&1 || true
+        kubectl logs statefulset/argocd-application-controller -n argocd --tail=500 >"$DEBUG_DIR/argocd-application-controller.log" 2>&1 || true
+        kubectl logs deploy/argocd-repo-server -n argocd --tail=500 >"$DEBUG_DIR/argocd-repo-server.log" 2>&1 || true
+    fi
 }
 DIAGNOSTICS_ENABLED="false"
 
@@ -590,6 +601,14 @@ release_chart() {
         | tr ',' '\n' | sed -n 's/.*"chart":"\([^"]*\)".*/\1/p'
 }
 
+# Argo CD keeps no Helm release; it renders the cloned branch, so its Chart.yaml says what runs.
+chart_yaml_version() {
+    local name version
+    name="$(sed -n 's/^name:[[:space:]]*//p' "$1/Chart.yaml" | tr -d "\"' ")"
+    version="$(sed -n 's/^version:[[:space:]]*//p' "$1/Chart.yaml" | tr -d "\"' ")"
+    echo "${name}-${version}"
+}
+
 write_summary() {
     {
         echo "platform=$PLATFORM"
@@ -599,7 +618,11 @@ write_summary() {
 
         if [ "$INSTALL_DEPS" = "true" ]; then
             echo "deps_release=$DEPS_RELEASE"
-            echo "deps_chart=$(release_chart "$DEPS_RELEASE")"
+            if [ "$INSTALL_METHOD" = "argocd" ]; then
+                echo "deps_chart=$(chart_yaml_version "$DEPS_CHART_PATH")"
+            else
+                echo "deps_chart=$(release_chart "$DEPS_RELEASE")"
+            fi
         fi
 
         if [ "$INSTALL_PMM" = "true" ]; then
@@ -617,13 +640,24 @@ write_summary() {
 
             if [ "$SECRET_CREATED" = "true" ]; then
                 echo "pmm_admin_password=$ADMIN_PASSWORD"
-                echo "postgres_password=$PG_PASSWORD"
-                echo "grafana_password=$GF_PASSWORD"
+                if [ "$INSTALL_METHOD" = "argocd" ]; then
+                    echo "clickhouse_datasource_password=$CH_DS_PASSWORD"
+                else
+                    echo "postgres_password=$PG_PASSWORD"
+                    echo "grafana_password=$GF_PASSWORD"
+                fi
                 echo "clickhouse_password=$CH_PASSWORD"
                 echo "victoriametrics_password=$VM_PASSWORD"
             else
                 echo "pmm_admin_password=<kept from the existing pmm-secret>"
             fi
+        fi
+
+        if [ "$INSTALL_METHOD" = "argocd" ]; then
+            echo "install_method=$INSTALL_METHOD"
+            echo "argocd_version=$ARGOCD_VERSION"
+            echo "argocd_apps=$DEPS_RELEASE,$RELEASE"
+            [ -z "$CLONE_PARENT" ] || echo "deps_chart_dir=$DEPS_CHART_PATH"
         fi
     } >"$SUMMARY_FILE"
     chmod 600 "$SUMMARY_FILE"
@@ -876,6 +910,136 @@ wait_for_statefulsets_rolled() {
     done
 }
 
+# Rotating these on an existing cluster would break PG, ClickHouse and VM, which
+# still hold the old ones - so an existing secret is kept, never overwritten.
+# With gitops.enabled the PostgreSQL operator generates the PG and Grafana passwords,
+# and the Grafana ClickHouse data source password is read from here instead.
+ensure_pmm_secret() {
+    local mode_keys=()
+
+    SECRET_CREATED="false"
+    if kubectl get secret pmm-secret -n "$NAMESPACE" >/dev/null 2>&1; then
+        log "Keeping the pmm-secret already in $NAMESPACE"
+        [ -n "$ADMIN_PASSWORD" ] && log "WARNING: --admin-password ignored, pmm-secret already exists"
+        ADMIN_PASSWORD=""
+        return 0
+    fi
+
+    [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(random_password)"
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        CH_DS_PASSWORD="$(random_password)"
+        mode_keys=(--from-literal=PMM_CLICKHOUSE_DATASOURCE_PASSWORD="$CH_DS_PASSWORD")
+    else
+        PG_PASSWORD="$(random_password)"
+        GF_PASSWORD="$(random_password)"
+        mode_keys=(--from-literal=PG_PASSWORD="$PG_PASSWORD" --from-literal=GF_PASSWORD="$GF_PASSWORD")
+    fi
+    CH_PASSWORD="$(random_password)"
+    VM_PASSWORD="$(random_password)"
+
+    kubectl create secret generic pmm-secret -n "$NAMESPACE" \
+        --from-literal=PMM_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        --from-literal=GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        "${mode_keys[@]}" \
+        --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
+        --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
+        --from-literal=PMM_HA_VM_USERNAME="victoriametrics_pmm" \
+        --from-literal=PMM_HA_VM_PASSWORD="$VM_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    SECRET_CREATED="true"
+    log "Created pmm-secret in $NAMESPACE"
+}
+
+# With gitops.enabled the chart generates no HAProxy certificate; tls.secretFormat
+# kubernetes.io/tls reads this one.
+ensure_haproxy_tls_secret() {
+    local tls_dir out
+
+    if kubectl get secret haproxy-tls-secret -n "$NAMESPACE" >/dev/null 2>&1; then
+        log "Keeping the haproxy-tls-secret already in $NAMESPACE"
+        return 0
+    fi
+
+    tls_dir="$(mktemp -d)"
+    out="$(openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=pmm-ha \
+        -keyout "$tls_dir/tls.key" -out "$tls_dir/tls.crt" 2>&1)" \
+        || { rm -rf "$tls_dir"; fail "could not generate the HAProxy certificate: $out"; }
+    kubectl create secret tls haproxy-tls-secret -n "$NAMESPACE" \
+        --cert="$tls_dir/tls.crt" --key="$tls_dir/tls.key" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    rm -rf "$tls_dir"
+    log "Created haproxy-tls-secret in $NAMESPACE"
+}
+
+# What the chart README asks for before the first sync.
+create_gitops_secrets() {
+    ensure_pmm_secret
+    ensure_haproxy_tls_secret
+    if [ "$BACKUP_ENABLED" = "true" ]; then
+        ensure_backup_secret
+        [ "$BACKUP_MINIO" = "false" ] || deploy_minio
+    fi
+}
+
+# --force-conflicts lets a re-run take back fields an earlier install owns.
+install_argocd() {
+    local url="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml" workload
+
+    log "Installing Argo CD $ARGOCD_VERSION"
+    kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+    retry kubectl apply -n argocd --server-side --force-conflicts -f "$url" \
+        || fail "could not apply $url."
+    retry kubectl wait --for=condition=established --timeout="$TIMEOUT" \
+        crd/applications.argoproj.io crd/appprojects.argoproj.io \
+        || fail "the Argo CD Application and AppProject CRDs were not established within $TIMEOUT."
+    for workload in deploy/argocd-repo-server statefulset/argocd-application-controller; do
+        retry kubectl -n argocd rollout status "$workload" --timeout="$TIMEOUT" \
+            || fail "Argo CD $workload did not roll out within $TIMEOUT."
+    done
+}
+
+duration_seconds() {
+    local rest="$1" total=0
+
+    while [[ "$rest" =~ ^([0-9]+)([hms])(.*)$ ]]; do
+        case "${BASH_REMATCH[2]}" in
+            h) total=$(( total + 10#${BASH_REMATCH[1]} * 3600 )) ;;
+            m) total=$(( total + 10#${BASH_REMATCH[1]} * 60 )) ;;
+            s) total=$(( total + 10#${BASH_REMATCH[1]} )) ;;
+        esac
+        rest="${BASH_REMATCH[3]}"
+    done
+    echo "$total"
+}
+
+# A kubectl error while polling (see retry) only means not yet.
+wait_for_application() {
+    local name="$1" timeout="$2" status="" logged="" out deadline
+    deadline=$(( $(date +%s) + $(duration_seconds "$timeout") ))
+
+    log "Waiting for Application $name to be Synced and Healthy"
+    while :; do
+        if out="$(kubectl -n argocd get application "$name" -o jsonpath='{.status.sync.status}/{.status.health.status}' 2>/dev/null)"; then
+            [ "$out" = "/" ] && status="" || status="$out"
+        fi
+        [ "$status" = "Synced/Healthy" ] && break
+        if [ "$status" != "$logged" ]; then
+            log "Application $name: ${status:-<no status yet>}"
+            logged="$status"
+        fi
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            {
+                echo "Application $name last status: ${status:-<none>}"
+                echo "Conditions: $(kubectl -n argocd get application "$name" -o jsonpath='{.status.conditions}' 2>&1 || true)"
+                echo "Last operation: $(kubectl -n argocd get application "$name" -o jsonpath='{.status.operationState.message}' 2>&1 || true)"
+            } >&2
+            fail "Application $name was not Synced and Healthy within $timeout (last status: ${status:-<none>})."
+        fi
+        sleep 10
+    done
+    log "Application $name is Synced and Healthy"
+}
+
 # Sets CLONED_DIR; under --clone-dir the clone is kept.
 clone_chart_branch() {
     local repo="$1" branch="$2"
@@ -916,8 +1080,6 @@ if [ "$INSTALL_PMM" = "true" ] && [ -z "$IMAGE" ]; then
     IMAGE="$(latest_released_image)"
     log "No --image given, installing the latest released image: $IMAGE"
 fi
-
-[ "$INSTALL_METHOD" != "argocd" ] || fail "--install-method argocd is not implemented yet"
 
 DIAGNOSTICS_ENABLED="true"
 
@@ -1033,13 +1195,24 @@ if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ] && [ "${#OPENSHI
     done
 fi
 
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    install_argocd
+    create_gitops_secrets
+fi
+
 if [ "$INSTALL_DEPS" = "true" ]; then
-    log "Installing $DEPS_CHART as $DEPS_RELEASE"
-    helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
-        --namespace "$NAMESPACE" \
-        --wait --timeout "$TIMEOUT" \
-        ${OPENSHIFT_DEPS_VALUES[@]+"${OPENSHIFT_DEPS_VALUES[@]}"} \
-        ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        log "Applying the $DEPS_RELEASE Application, branch $DEPS_CHART_BRANCH_SPEC"
+        render_argocd_manifests deps | kubectl apply -f -
+        wait_for_application "$DEPS_RELEASE" "$TIMEOUT"
+    else
+        log "Installing $DEPS_CHART as $DEPS_RELEASE"
+        helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
+            --namespace "$NAMESPACE" \
+            --wait --timeout "$TIMEOUT" \
+            ${OPENSHIFT_DEPS_VALUES[@]+"${OPENSHIFT_DEPS_VALUES[@]}"} \
+            ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
+    fi
 
     for operator in "${OPERATOR_NAMES[@]}"; do
         log "Waiting for operator $operator"
@@ -1079,51 +1252,31 @@ if [ -n "$PMM_SECRET_FROM" ]; then
     copy_source_secret pmm-secret || fail "no pmm-secret in namespace $PMM_SECRET_FROM to copy."
 fi
 
-# Rotating these on an existing cluster would break PG, ClickHouse and VM, which
-# still hold the old ones - so an existing secret is kept, never overwritten.
-SECRET_CREATED="false"
-if kubectl get secret pmm-secret -n "$NAMESPACE" >/dev/null 2>&1; then
-    log "Keeping the pmm-secret already in $NAMESPACE"
-    [ -n "$ADMIN_PASSWORD" ] && log "WARNING: --admin-password ignored, pmm-secret already exists"
-    ADMIN_PASSWORD=""
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    log "Applying the pmm-ha AppProject and the $RELEASE Application, branch $CHART_BRANCH_SPEC, image $IMAGE"
+    render_argocd_manifests pmm | kubectl apply -f -
+    wait_for_application "$RELEASE" "$TIMEOUT"
 else
-    [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(random_password)"
-    PG_PASSWORD="$(random_password)"
-    GF_PASSWORD="$(random_password)"
-    CH_PASSWORD="$(random_password)"
-    VM_PASSWORD="$(random_password)"
+    ensure_pmm_secret
 
-    kubectl create secret generic pmm-secret -n "$NAMESPACE" \
-        --from-literal=PMM_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-        --from-literal=GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-        --from-literal=PG_PASSWORD="$PG_PASSWORD" \
-        --from-literal=GF_PASSWORD="$GF_PASSWORD" \
-        --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
-        --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
-        --from-literal=PMM_HA_VM_USERNAME="victoriametrics_pmm" \
-        --from-literal=PMM_HA_VM_PASSWORD="$VM_PASSWORD" \
-        --dry-run=client -o yaml | kubectl apply -f -
-    SECRET_CREATED="true"
-    log "Created pmm-secret in $NAMESPACE"
+    if [ "$BACKUP_ENABLED" = "true" ]; then
+        ensure_backup_secret
+        [ "$BACKUP_MINIO" = "false" ] || deploy_minio
+    fi
+
+    log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
+    helm upgrade --install "$RELEASE" "$PMM_CHART" \
+        --namespace "$NAMESPACE" \
+        ${OPENSHIFT_PMM_VALUES[@]+"${OPENSHIFT_PMM_VALUES[@]}"} \
+        --set secret.create=false \
+        --set secret.name=pmm-secret \
+        --wait --timeout "$TIMEOUT" \
+        --set "image.repository=${IMAGE%:*}" \
+        --set "image.tag=${IMAGE##*:}" \
+        --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
+        ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
+        ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 fi
-
-if [ "$BACKUP_ENABLED" = "true" ]; then
-    ensure_backup_secret
-    [ "$BACKUP_MINIO" = "false" ] || deploy_minio
-fi
-
-log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
-helm upgrade --install "$RELEASE" "$PMM_CHART" \
-    --namespace "$NAMESPACE" \
-    ${OPENSHIFT_PMM_VALUES[@]+"${OPENSHIFT_PMM_VALUES[@]}"} \
-    --set secret.create=false \
-    --set secret.name=pmm-secret \
-    --wait --timeout "$TIMEOUT" \
-    --set "image.repository=${IMAGE%:*}" \
-    --set "image.tag=${IMAGE##*:}" \
-    --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
-    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
-    ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 
 # A chart from before PMM-13858 ignores centralBackupStorage without a word.
 if [ "$BACKUP_ENABLED" = "true" ] && ! kubectl get deployment "${RELEASE}-backup-tools" -n "$NAMESPACE" >/dev/null 2>&1; then
@@ -1153,7 +1306,8 @@ EXTERNAL_HOST=""
 if [ "$EXTERNAL_ACCESS" = "true" ]; then
     case "$PLATFORM" in
         eks)
-            kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
+            # Argo CD sets these from chart values, and self-heal would revert a patch.
+            [ "$INSTALL_METHOD" = "argocd" ] || kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
                 "metadata": {
                     "annotations": {
                         "service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
@@ -1225,7 +1379,11 @@ ROUTE_EOF
     log "PMM is serving on $PMM_URL"
 fi
 
-RELEASE_CHART="$(release_chart "$RELEASE")"
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    RELEASE_CHART="$(chart_yaml_version "$CHART_DIR/charts/pmm-ha")"
+else
+    RELEASE_CHART="$(release_chart "$RELEASE")"
+fi
 write_summary
 
 kubectl get pods -n "$NAMESPACE" -o wide
