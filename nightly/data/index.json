@@ -159552,6 +159552,36 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-05T03:06:11Z",
+        "suites": [
+          "CLI Integration"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-05T03:06:11Z",
+        "suites": [
+          "Nightly"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-05T03:06:11Z",
+        "suites": [
+          "Nightly Compatibility"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-05T03:06:11Z",
+        "suites": [
+          "Upgrade"
+        ]
+      }
+    ]
   }
 ]
