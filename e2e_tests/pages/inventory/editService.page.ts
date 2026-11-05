@@ -31,22 +31,16 @@ export default class EditServicePage extends BasePage {
   };
   messages = {};
 
-  editCluster = async (serviceId: string, cluster: string): Promise<Response> => {
+  editCluster = async (cluster: string) => {
     await this.inputs.cluster.fill(cluster);
-
-    return this.saveChanges(serviceId, true);
   };
 
-  editEnvironment = async (serviceId: string, environment: string): Promise<Response> => {
+  editEnvironment = async (environment: string) => {
     await this.inputs.environment.fill(environment);
-
-    return this.saveChanges(serviceId, false);
   };
 
-  editReplicationSet = async (serviceId: string, replicationSet: string): Promise<Response> => {
+  editReplicationSet = async (replicationSet: string) => {
     await this.inputs.replicationSet.fill(replicationSet);
-
-    return this.saveChanges(serviceId, false);
   };
 
   open = async (serviceId: string) => {

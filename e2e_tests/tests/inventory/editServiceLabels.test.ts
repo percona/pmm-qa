@@ -10,11 +10,11 @@ const databases = [
   { name: 'psmdb', serviceRegex: '^rs101_' },
   { name: 'valkey', serviceRegex: '^valkey-primary' },
 ];
-const labelEdits = [
-  { edit: 'editEnvironment', label: 'environment' },
-  { edit: 'editReplicationSet', label: 'replicationSet' },
-  { edit: 'editCluster', label: 'cluster' },
-] as const;
+const labelEdits: ServiceLabels = {
+  cluster: 'editCluster',
+  environment: 'editEnvironment',
+  replicationSet: 'editReplicationSet',
+};
 const toLabels = ({ cluster, environment, replication_set }: GetService): ServiceLabels => ({
   cluster: cluster ?? '',
   environment: environment ?? '',
@@ -40,54 +40,45 @@ for (const { name, serviceRegex } of databases) {
       });
     });
 
-    for (const { label } of labelEdits) {
-      pmmTest(
-        `PMM-15674 - Verify changing ${label} of ${name} service in Inventory @inventory`,
-        async ({ api, editServicePage, page }) => {
-          const original = toLabels(service);
-          const expected = { ...original, [label]: `${name}-edited-${label}` };
+    pmmTest(
+      `PMM-15674 - Verify changing labels of ${name} service in Inventory @inventory`,
+      async ({ api, editServicePage, page }) => {
+        const original = toLabels(service);
 
-          await editServicePage.open(service.service_id);
-          await editServicePage.verifyLabels(original);
+        await editServicePage.open(service.service_id);
+        await editServicePage.verifyLabels(original);
 
-          const clusterResponse = await editServicePage.editCluster(service.service_id, expected.cluster);
+        await editServicePage.editCluster(labelEdits.cluster);
+        await editServicePage.editEnvironment(labelEdits.environment);
+        await editServicePage.editReplicationSet(labelEdits.replicationSet);
 
-          expect(clusterResponse.status(), await clusterResponse.text()).toEqual(200);
+        const response = await editServicePage.saveChanges(service.service_id, true);
 
-          const environmentResponse = await editServicePage.editEnvironment(
-            service.service_id,
-            expected.environment,
-          );
+        expect(response.status(), await response.text()).toEqual(200);
 
-          expect(environmentResponse.status(), await environmentResponse.text()).toEqual(200);
+        await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
+        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
 
-          const replicationSetResponse = await editServicePage.editReplicationSet(
-            service.service_id,
-            expected.replicationSet,
-          );
+        await expect
+          .poll(
+            async () => {
+              const edited = (await api.inventoryApi.getServices()).services.find(
+                ({ service_id }) => service_id === service.service_id,
+              );
 
-          expect(replicationSetResponse.status(), await replicationSetResponse.text()).toEqual(200);
+              if (!edited) {
+                throw new Error(`Service ${service.service_id} not found.`);
+              }
 
-          await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
-          await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+              return toLabels(edited);
+            },
+            { message: `${service.service_name} labels after edit`, timeout: Timeouts.THIRTY_SECONDS },
+          )
+          .toEqual(labelEdits);
 
-          await expect
-            .poll(
-              async () => {
-                const edited = (await api.inventoryApi.getServices()).services.find(
-                  ({ service_id }) => service_id === service.service_id,
-                );
-
-                return edited && toLabels(edited);
-              },
-              { message: `${service.service_name} labels after edit`, timeout: Timeouts.THIRTY_SECONDS },
-            )
-            .toEqual(expected);
-
-          await editServicePage.open(service.service_id);
-          await editServicePage.verifyLabels(expected);
-        },
-      );
-    }
+        await editServicePage.open(service.service_id);
+        await editServicePage.verifyLabels(labelEdits);
+      },
+    );
   });
 }
