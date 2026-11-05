@@ -17,6 +17,18 @@ export default class InventoryApi {
     return ((await response.json()) as { generic: { node_id: string } }).generic.node_id;
   };
 
+  changeServiceLabels = async (
+    serviceId: string,
+    labels: Pick<GetService, 'environment' | 'replication_set'>,
+  ): Promise<void> => {
+    const response = await this.request.put(`${apiEndpoints.inventory.services}/${serviceId}`, {
+      data: labels,
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
     const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
       headers: GrafanaHelper.getAuthHeader(),
