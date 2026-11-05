@@ -92,6 +92,14 @@ export default class InventoryApi {
     return filteredServices;
   };
 
+  getNodeAddress = async (nodeId: string): Promise<string> => {
+    const node = (await this.getAllNodes()).find(({ node_id }) => node_id === nodeId);
+
+    if (!node?.address) throw new Error(`Node ${nodeId} has no address`);
+
+    return node.address;
+  };
+
   getNodeWithMysqlService = async (nodeName: string) => {
     const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
 
@@ -215,6 +223,15 @@ export default class InventoryApi {
     )) {
       await this.deleteNode(node_id, true);
     }
+  };
+
+  updateService = async (serviceId: string, serviceType: string, changes: Record<string, unknown>) => {
+    const response = await this.request.put(`${apiEndpoints.management.services}/${serviceId}`, {
+      data: { [serviceType]: changes },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
   };
 
   verifyAgentsAreRunning = async (serviceName: string) =>

@@ -14,6 +14,7 @@ export interface InventoryAgent {
 export type GetAgents = Record<string, InventoryAgent[]>;
 
 export interface GetNode {
+  address?: string;
   agents?: NodeAgent[];
   node_id: string;
   node_name: string;

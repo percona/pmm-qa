@@ -9,6 +9,13 @@ export interface ServiceLabels {
   replicationSet: string;
 }
 
+export interface ServiceConnection {
+  agentPassword?: string;
+  database?: string;
+  password?: string;
+  username: string;
+}
+
 export default class EditServicePage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   builders = {
@@ -24,17 +31,31 @@ export default class EditServicePage extends BasePage {
     confirmModal: this.page.getByTestId('confirm-changes-modal'),
     form: this.page.getByTestId('edit-service-form'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
+    skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
   };
   inputs = {
+    agentPassword: this.page.getByTestId('text-input-agent-password'),
     cluster: this.page.getByTestId('text-input-cluster'),
     customLabels: this.page.getByTestId('text-input-custom-labels'),
+    database: this.page.getByTestId('text-input-database'),
     environment: this.page.getByTestId('text-input-environment'),
+    password: this.page.getByTestId('text-input-password'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
+    username: this.page.getByTestId('text-input-username'),
   };
   messages = {};
 
   editCluster = async (cluster: string) => {
     await this.inputs.cluster.fill(cluster);
+  };
+
+  editConnection = async ({ agentPassword, database, password, username }: ServiceConnection) => {
+    if (database !== undefined) await this.inputs.database.fill(database);
+
+    await this.inputs.username.fill(username);
+
+    if (password !== undefined) await this.inputs.password.fill(password);
+    if (agentPassword !== undefined) await this.inputs.agentPassword.fill(agentPassword);
   };
 
   editCustomLabels = async (customLabels: Record<string, string>) => {
@@ -54,11 +75,16 @@ export default class EditServicePage extends BasePage {
     await expect(this.elements.form).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
-  saveChanges = async (serviceId: string, clusterChanged: boolean): Promise<Response> => {
+  saveChanges = async (
+    serviceId: string,
+    clusterChanged: boolean,
+    settingsChanged = false,
+  ): Promise<Response> => {
     await this.buttons.saveChanges.click();
     await expect(this.elements.confirmModal).toBeVisible();
     await expect(this.elements.clusterChangedWarning).toBeVisible({ visible: clusterChanged });
-    await expect(this.elements.settingsChangedInfo).toBeHidden();
+    await expect(this.elements.settingsChangedInfo).toBeVisible({ visible: settingsChanged });
+    await expect(this.elements.skipConnectionCheck).toBeVisible({ visible: settingsChanged });
 
     const [response] = await Promise.all([
       this.page.waitForResponse(
@@ -78,6 +104,18 @@ export default class EditServicePage extends BasePage {
       .toSorted(([a], [b]) => a.localeCompare(b))
       .map(([name, value]) => `${name}:${value}`)
       .join('\n');
+
+  // Passwords are never sent to the UI, so their fields always open empty.
+  verifyConnection = async ({ database, username }: ServiceConnection) => {
+    if (database !== undefined) await expect(this.inputs.database).toHaveValue(database);
+
+    await expect(this.inputs.username).toHaveValue(username);
+
+    for (const secret of [this.inputs.password, this.inputs.agentPassword]) {
+      await expect(secret).toHaveAttribute('type', 'password');
+      await expect(secret).toHaveValue('');
+    }
+  };
 
   verifyLabels = async (labels: ServiceLabels) => {
     await expect(this.inputs.environment).toHaveValue(labels.environment);
