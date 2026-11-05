@@ -19,7 +19,7 @@ export default class InventoryApi {
 
   changeServiceLabels = async (
     serviceId: string,
-    labels: Pick<GetService, 'environment' | 'replication_set'>,
+    labels: Pick<GetService, 'cluster' | 'environment' | 'replication_set'>,
   ): Promise<void> => {
     const response = await this.request.put(`${apiEndpoints.inventory.services}/${serviceId}`, {
       data: labels,

@@ -3,6 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 import { expect, Response } from '@playwright/test';
 
 export interface ServiceLabels {
+  cluster: string;
   environment: string;
   replicationSet: string;
 }
@@ -30,17 +31,33 @@ export default class EditServicePage extends BasePage {
   };
   messages = {};
 
+  editCluster = async (serviceId: string, cluster: string): Promise<Response> => {
+    await this.inputs.cluster.fill(cluster);
+
+    return this.saveChanges(serviceId, true);
+  };
+
+  editEnvironment = async (serviceId: string, environment: string): Promise<Response> => {
+    await this.inputs.environment.fill(environment);
+
+    return this.saveChanges(serviceId, false);
+  };
+
+  editReplicationSet = async (serviceId: string, replicationSet: string): Promise<Response> => {
+    await this.inputs.replicationSet.fill(replicationSet);
+
+    return this.saveChanges(serviceId, false);
+  };
+
   open = async (serviceId: string) => {
     await this.page.goto(`${this.url}/${serviceId}/edit`);
     await expect(this.elements.form).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
-  saveLabels = async (serviceId: string, labels: ServiceLabels): Promise<Response> => {
-    await this.inputs.environment.fill(labels.environment);
-    await this.inputs.replicationSet.fill(labels.replicationSet);
+  saveChanges = async (serviceId: string, clusterChanged: boolean): Promise<Response> => {
     await this.buttons.saveChanges.click();
     await expect(this.elements.confirmModal).toBeVisible();
-    await expect(this.elements.clusterChangedWarning).toBeHidden();
+    await expect(this.elements.clusterChangedWarning).toBeVisible({ visible: clusterChanged });
     await expect(this.elements.settingsChangedInfo).toBeHidden();
 
     const [response] = await Promise.all([
@@ -57,6 +74,7 @@ export default class EditServicePage extends BasePage {
 
   verifyLabels = async (labels: ServiceLabels) => {
     await expect(this.inputs.environment).toHaveValue(labels.environment);
+    await expect(this.inputs.cluster).toHaveValue(labels.cluster);
     await expect(this.inputs.replicationSet).toHaveValue(labels.replicationSet);
   };
 }
