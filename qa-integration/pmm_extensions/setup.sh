@@ -115,14 +115,63 @@ default_client_version() {
 
 # Scans need python3 with venv and iproute on the node, and log in to MongoDB
 # with the credentials in /root/.mongodb_uri; pmm/pmmpass has clusterMonitor.
+# They dial mongod by the PMM node name (rs101._<suffix>), which only Docker's
+# container name (rs101) resolves, so the node maps its own name to itself.
 prepare_scan_node() {
-  local node=$1
+  local node=$1 node_name
   log "Preparing $node for Operations for MongoDB scans"
-  docker exec --user root "$node" sh -ceu '
+  node_name=$(docker exec "$node" pmm-admin status | sed -n 's/^Node name *: *//p')
+  [[ -n $node_name ]] || die "Could not read the PMM node name of $node."
+  docker exec --user root "$node" sh -ceu "
     dnf install -y -q python3 iproute >/dev/null
+    grep -q ' $node_name\$' /etc/hosts || echo '127.0.0.1 $node_name' >>/etc/hosts
     umask 077
-    echo "mongodb://pmm:pmmpass@127.0.0.1:27017" >/root/.mongodb_uri
-    chown root:root /root/.mongodb_uri' || die "Preparing $node failed."
+    echo 'mongodb://pmm:pmmpass@127.0.0.1:27017' >/root/.mongodb_uri
+    chown root:root /root/.mongodb_uri" || die "Preparing $node failed."
+}
+
+# PMM Extensions imports PMM's inventory on its own schedule, so nodes added
+# after it started are missing from Operations until the next sync. Its API
+# takes only a Grafana bearer token, so a throwaway service account runs it.
+sync_extensions_inventory() {
+  local account token rc=0
+  log 'Syncing the PMM inventory into PMM Extensions'
+  account=$(pmm_api -X POST -H 'Content-Type: application/json' -d '{"name":"pmm-qa-setup-sync","role":"Admin"}' \
+    https://127.0.0.1:8443/graph/api/serviceaccounts | sed -n 's/.*"id":\([0-9]*\).*/\1/p')
+  [[ -n $account ]] || die 'Could not create a Grafana service account for the inventory sync.'
+  token=$(pmm_api -X POST -H 'Content-Type: application/json' -d '{"name":"sync"}' \
+    "https://127.0.0.1:8443/graph/api/serviceaccounts/$account/tokens" | sed -n 's/.*"key":"\([^"]*\)".*/\1/p')
+  if [[ -z $token ]] || [[ $(printf 'header = "Authorization: Bearer %s"\n' "$token" |
+    docker exec -i pmm-server curl -sk -K - -o /dev/null -w '%{http_code}' -X POST \
+      https://127.0.0.1:8443/extensions/api/apps/inventory/sync/) != 202 ]]; then
+    rc=1
+  fi
+  pmm_api -o /dev/null -X DELETE "https://127.0.0.1:8443/graph/api/serviceaccounts/$account" || true
+  ((rc == 0)) || die 'PMM Extensions did not accept the inventory sync.'
+}
+
+scan_status() {
+  pmm_api "https://127.0.0.1:8443/v1/om/inventory/runs/$1" | sed -n '/"status": *"RUN_STATUS_/{s/.*"status": *"\(RUN_STATUS_[A-Z]*\)".*/\1/p;q;}'
+}
+
+scan_finished() {
+  [[ $(scan_status "$1") != RUN_STATUS_RUNNING ]]
+}
+
+# The synced services can lag the sync's 202 by a few seconds; a scan that
+# starts before them finds only the PMM Server host.
+first_scan() {
+  local run status
+  sleep 15
+  log 'Running the first Operations for MongoDB scan'
+  run=$(pmm_api -X POST -H 'Content-Type: application/json' -d '{}' \
+    'https://127.0.0.1:8443/v1/om/inventory/runs:trigger' | sed -n '/"run_id": *"/{s/.*"run_id": *"\([^"]*\)".*/\1/p;q;}')
+  [[ -n $run ]] || die 'PMM did not start a scan.'
+  retry 60 5 "scan $run to finish" scan_finished "$run"
+  status=$(scan_status "$run")
+  log "Scan $run: $status"
+  [[ $status == RUN_STATUS_SUCCESS ]] ||
+    log "WARNING: see MongoDB > Operations > Automations > Scans for what $run could not collect."
 }
 
 setup_mongodb() {
@@ -134,6 +183,8 @@ setup_mongodb() {
   for node in "${PSMDB_NODES[@]}"; do
     prepare_scan_node "$node"
   done
+  sync_extensions_inventory
+  first_scan
 }
 
 teardown() {

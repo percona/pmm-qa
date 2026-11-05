@@ -25,8 +25,12 @@ What it does:
 3. Enables Operations for MongoDB through `PUT /v1/server/settings`, so the switch stays
    editable in **Configuration > Settings > Advanced Settings**.
 4. Runs `pmm-framework --database psmdb=<version>,SETUP_TYPE=pss` (rs101-rs103, PMM Client
-   from the RPM, as the scans require), installs `python3` and `iproute` on each node and
-   writes `/root/.mongodb_uri` with the `pmm` user, which has `clusterMonitor`.
+   from the RPM, as the scans require), installs `python3` and `iproute` on each node,
+   writes `/root/.mongodb_uri` with the `pmm` user, which has `clusterMonitor`, and maps
+   each node's PMM node name (`rs101._<suffix>`) in its `/etc/hosts`, because the scans
+   dial mongod by that name.
+5. Syncs PMM's inventory into PMM Extensions, so the new nodes appear in Operations
+   without waiting for its own schedule, and runs a first scan.
 
 `--public-address` defaults to this host's primary IP; the MongoDB nodes reach Nomad
 on port 4647 there, and browsers open `https://<address>`. Set `ADMIN_PASSWORD`,
