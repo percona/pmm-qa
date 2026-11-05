@@ -3718,16 +3718,19 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15835",
       "by": "Investigator routine",
       "at": "2026-11-05T03:34:30Z"
+    },
+    {
+      "suites": [
+        "Upgrade"
+      ],
+      "verdict": "unstable",
+      "summary": "docker upgrade 3.6.0: 'Verify grafana logs after upgrade' found Grafana 'failed to save dashboard: context deadline exceeded' on both attempts. Both errors fell inside the client-upgrade step (dnf in 13 tarball-installed containers at once), during which the whole server stalled. That step took 661s and 733s against 287-386s on earlier nights, while 3.7.0 was normal and 3.8+ took about 60s. The re-run linked here also failed and the slowdown's cause is not identified, so this is unstable for lack of a better verdict.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/41941569520/job/127024906471",
+      "by": "Investigator routine",
+      "at": "2026-11-05T09:25:20Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-05T03:06:11Z",
-      "suites": [
-        "Upgrade"
-      ]
-    },
     {
       "by": "yurkovychv",
       "at": "2026-11-05T09:20:15Z",
