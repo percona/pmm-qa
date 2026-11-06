@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -150,6 +151,31 @@ export default class CliHelper {
     ).agents_info;
   };
 
+  readMongodbTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca-certs.pem'), key: read('client.pem') };
+  };
+
+  readMysqlTlsCertificates = (container: string) => {
+    // mysqld's auto-generated PEM files end in a NUL byte.
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /var/lib/mysql/${file}`)
+        .assertSuccess()
+        .stdout.replace(/\0+$/, '')
+        .trim();
+
+    return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
+  };
+
+  readTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat certificates/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca.crt'), cert: read('client.crt'), key: read('client.pem') };
+  };
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.
@@ -164,6 +190,21 @@ export default class CliHelper {
     const removal = this.execSilent(`docker rm -f ${containerName}`);
 
     if (!removal.stderr.includes('No such container')) removal.assertSuccess();
+  };
+
+  /**
+   * Removes a service through a container's pmm-admin, ignoring one that is not registered.
+   *
+   * @param   container     container whose pmm-agent registered the service
+   * @param   serviceType   pmm-admin service type
+   * @param   serviceName   name of the service to remove
+   */
+  removeService = (container: string, serviceType: ServiceType, serviceName: string) => {
+    const removal = this.execSilent(
+      `docker exec ${container} pmm-admin remove ${serviceType} ${serviceName}`,
+    );
+
+    if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
@@ -182,5 +223,16 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+  };
+
+  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
+  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
+    const allTls = this.execSilent(
+      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
+    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }

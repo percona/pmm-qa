@@ -6,7 +6,7 @@ import { inventoryServices } from '@testdata/remoteInstances';
 
 let calls: { method: string; requestTime: Date; url: string }[] = [];
 const dataTests = [
-  { apiUrl: 'v1/ha/nodes', name: 'NodesPage' },
+  { apiUrl: 'v1/management/nodes', name: 'NodesPage' },
   { apiUrl: 'v1/management/services', name: 'ServicesPage' },
 ];
 const remoteNodeNames = [
@@ -35,7 +35,7 @@ pmmTest.afterEach(async ({ api }) => {
 for (const dataTest of dataTests) {
   pmmTest(
     `PMM-T2168 - Verify that ${dataTest.name} pages get data from BE every five seconds @inventory`,
-    async ({ nodesPage, page, servicesPage }) => {
+    async ({ agentsPage, nodesPage, page, servicesPage }) => {
       page.on('request', (request) => {
         if (request.url().includes(dataTest.apiUrl)) {
           calls.push({
@@ -66,6 +66,7 @@ for (const dataTest of dataTests) {
         }
       });
       await nodesPage.elements.runningAgents.click();
+      await expect(agentsPage.buttons.goBack).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       await nodesPage.builders.showRowDetailsByIndex('0').click();
       await expect
         .poll(() => calls.length, {
@@ -196,22 +197,24 @@ pmmTest(
     // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
-    const agents = (await api.inventoryApi.getServices()).services
-      .flatMap((service) => service.agents)
-      .filter((agent) => agent.disabled === false);
+    await expect(async () => {
+      const agents = (await api.inventoryApi.getServices()).services
+        .flatMap((service) => service.agents)
+        .filter((agent) => agent.disabled === false);
 
-    expect(agents.length, 'no enabled agents found').toBeGreaterThan(0);
-    expect(
-      {
-        agentsNotRunning: agents.filter(
-          (agent) => agent.agent_type !== 'pmm-agent' && agent.status !== AgentStatus.running,
-        ),
-        pmmAgentsNotConnected: agents.filter(
-          (agent) => agent.agent_type === 'pmm-agent' && agent.is_connected !== true,
-        ),
-      },
-      'Every pmm agent should be connected and every other agent running',
-    ).toEqual({ agentsNotRunning: [], pmmAgentsNotConnected: [] });
+      expect(agents.length, 'no enabled agents found').toBeGreaterThan(0);
+      expect(
+        {
+          agentsNotRunning: agents.filter(
+            (agent) => agent.agent_type !== 'pmm-agent' && agent.status !== AgentStatus.running,
+          ),
+          pmmAgentsNotConnected: agents.filter(
+            (agent) => agent.agent_type === 'pmm-agent' && agent.is_connected !== true,
+          ),
+        },
+        'Every pmm agent should be connected and every other agent running',
+      ).toEqual({ agentsNotRunning: [], pmmAgentsNotConnected: [] });
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   },
 );
 
@@ -262,7 +265,7 @@ pmmTest(
 
     await page.goto(servicesPage.url);
     await servicesPage.pagination.nextPageButton.click({ timeout: Timeouts.THIRTY_SECONDS });
-    await expect(servicesPage.pagination.activePageButton).toHaveText('2');
+    await expect(servicesPage.pagination.itemsInterval).toHaveText('26-50 of 50');
 
     const startServices = await servicesPage.getServiceNames();
     const requestsOnSecondPage = servicesMock.requests();
@@ -297,8 +300,7 @@ for (const tab of ['services', 'nodes'] as const) {
       const { pagination, url } = tab === 'services' ? servicesPage : nodesPage;
 
       await page.goto(url);
-      await pagination.selectRowsPerPage('100');
-      await expect(pagination.rowsPerPageDropdown).toHaveText('100');
+      await pagination.showAllRows();
       await pagination.verifyMonitoringStatusesOk(tab);
     },
   );

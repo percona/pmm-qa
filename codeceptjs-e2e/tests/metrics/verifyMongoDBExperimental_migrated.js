@@ -47,6 +47,18 @@ Scenario(
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbOplogDetails.clearUrl, { from: 'now-5m', service_name: mongodb_service_name_ac }));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbOplogDetails.metrics);
+
+    // The oplog panels stay empty for several minutes after pmm-framework setup.
+    let reloadsLeft = 10;
+
+    // eslint-disable-next-line no-await-in-loop
+    while (reloadsLeft > 0 && await I.grabNumberOfVisibleElements(dashboardPage.fields.reportTitleWithNA) > 2) {
+      I.wait(60);
+      I.refreshPage();
+      dashboardPage.waitForDashboardOpened();
+      reloadsLeft -= 1;
+    }
+
     await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
   },
 );

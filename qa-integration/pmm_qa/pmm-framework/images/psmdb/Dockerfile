@@ -1,3 +1,4 @@
+# check=skip=InvalidDefaultArgInFrom
 # Built with qa-integration/pmm_psmdb-pbm_setup as the context, for that stack's
 # compose files. Built by build_psmdb_image in lib/images.sh; the PMM Client is
 # left out: setup_psmdb installs it at run time.

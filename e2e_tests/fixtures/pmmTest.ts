@@ -16,6 +16,7 @@ import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
@@ -83,6 +84,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
+  pageNotFoundPage: PageNotFoundPage;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -102,11 +104,7 @@ const pmmTest = base.extend<{
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
-  api: async ({ page, request }, use) => {
-    const inventoryApi = new Api(page, request);
-
-    await use(inventoryApi);
-  },
+  api: async ({ request }, use) => await use(new Api(request)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
@@ -192,6 +190,7 @@ const pmmTest = base.extend<{
     await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 

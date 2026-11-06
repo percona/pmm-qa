@@ -67,7 +67,7 @@ pdpgsql_ready() {
 }
 
 pdpgsql_restart() {
-  must docker exec --user root "$1" systemctl restart "postgresql@$version-main"
+  must docker exec --user root "$1" systemctl restart postgresql
   pdpgsql_ready "$1"
 }
 
@@ -76,7 +76,7 @@ pdpgsql_append_conf() {
   local node=$1
   shift
   must docker exec --user postgres "$node" sh -c \
-    "printf '%s\n' \"\$@\" >>/etc/postgresql/$version/main/postgresql.conf" sh "$@"
+    "printf '%s\n' \"\$@\" >>/var/lib/pgsql/$version/data/postgresql.conf" sh "$@"
 }
 
 pdpgsql_start() {
@@ -88,11 +88,11 @@ pdpgsql_start() {
 
 pdpgsql_start_node() {
   must docker run --detach --name "$1" --restart=always --label pmm-qa.engine=pdpgsql --network pmm-qa \
-    "${NOMAD_CGROUPS[@]}" --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
+    "${SYSTEMD_RUN[@]}" --cap-add NET_ADMIN --publish "$((base_port + ${1##*_} - 1)):5432" "pmm-qa/pdpgsql:$version" >/dev/null
   pdpgsql_ready "$1"
   if [[ -n $pgsm_branch ]]; then
-    retry 3 "pg_stat_monitor build tools on $1" docker exec --user root "$1" sh -c "apt-get update &&
-      apt-get install -y git clang-18 llvm-18 build-essential percona-postgresql-server-dev-$version" >/dev/null
+    retry 3 "pg_stat_monitor build tools on $1" docker exec --user root "$1" dnf install -y \
+      --enablerepo=ol9_codeready_builder git gcc make redhat-rpm-config clang llvm "percona-postgresql$version-devel" >/dev/null
     must docker exec --user root "$1" sh -ceu "rm -rf /pg_stat_monitor
       git clone --branch '$pgsm_branch' https://github.com/percona/pg_stat_monitor.git /pg_stat_monitor
       cd /pg_stat_monitor
@@ -117,13 +117,13 @@ pdpgsql_replication() {
 
 # Usage: pdpgsql_replica NODE PRIMARY
 pdpgsql_replica() {
-  local data=/var/lib/postgresql/$version/main
+  local data=/var/lib/pgsql/$version/data
   must docker exec --user root "$1" systemctl stop postgresql
   must docker exec --user postgres "$1" rm -rf "$data"
   must docker exec --user postgres --env PGPASSWORD=GRgrO9301RuF "$1" timeout 120 \
     pg_basebackup "--pgdata=$data" -R -Fp -Xs --checkpoint=fast "--host=$2" --port=5432 -U repl_user
   pdpgsql_append_conf "$1" "${PDPGSQL_REPLICA_CONF[@]}"
-  must docker exec --user root "$1" systemctl start "postgresql@$version-main"
+  must docker exec --user root "$1" systemctl start postgresql
   pdpgsql_ready "$1"
 }
 
@@ -133,13 +133,13 @@ pdpgsql_streaming() {
 }
 
 pdpgsql_patroni() {
-  local primary=${names[0]} data=/var/lib/postgresql/$version/main subnet
+  local primary=${names[0]} data=/var/lib/pgsql/$version/data subnet
   local -a replicas=("${names[@]:1}")
   subnet=$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' pmm-qa) ||
     die 'Could not read the pmm-qa network subnet.'
   each_node names pdpgsql_etcd
   must docker exec --user postgres "$primary" sh -c \
-    "{ printf '%s\n' \"\$@\"; cat /etc/postgresql/$version/main/postgresql.conf; } >$data/postgresql.conf" \
+    "{ printf '%s\n' \"\$@\"; cat $data/postgresql.conf; } >/tmp/postgresql.conf && mv /tmp/postgresql.conf $data/postgresql.conf" \
     sh "${PDPGSQL_PRIMARY_CONF[@]}"
   pdpgsql_sql "$primary" "CREATE ROLE replicator WITH LOGIN REPLICATION PASSWORD 'replPasswd';"
   pdpgsql_sql "$primary" 'GRANT pg_monitor TO postgres;'
@@ -184,7 +184,7 @@ EOF
 # Fills images/pdpgsql/patroni.yaml for NODE and starts Patroni on it.
 # Usage: pdpgsql_patroni_start NODE SUBNET VERSION PRIMARY
 pdpgsql_patroni_start() {
-  local node=$1 version=$3 primary=$4 data=/var/lib/postgresql/$3/main yaml
+  local node=$1 version=$3 primary=$4 data=/var/lib/pgsql/$3/data yaml
   yaml=$(<"$FRAMEWORK_DIR/images/pdpgsql/patroni.yaml")
   yaml=${yaml//@NODE@/$node}
   yaml=${yaml//@PRIMARY@/$primary}
@@ -298,12 +298,12 @@ setup_ssl_pdpgsql() {
 }
 
 ssl_pdpgsql_start() {
-  local data=/var/lib/postgresql/$version/main
+  local data=/var/lib/pgsql/$version/data
   fresh_containers "$container"
   docker network rm "${container}_network" >/dev/null 2>&1 || true
   must docker network create "${container}_network" >/dev/null
   must docker run --detach --name "$container" --label pmm-qa.engine=ssl-pdpgsql --network "${container}_network" \
-    "pmm-qa/ssl-pdpgsql:$version" >/dev/null
+    "${SYSTEMD_RUN[@]}" "pmm-qa/ssl-pdpgsql:$version" >/dev/null
   must docker network connect pmm-qa "$container"
   # pmm-admin reads the certificates as ./certificates from the exec's working
   # directory, /.
