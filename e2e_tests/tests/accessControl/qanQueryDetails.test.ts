@@ -32,7 +32,7 @@ pmmTest.beforeEach(async ({ accessControlHelper, api, grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2422 - Verify a Viewer limited to MySQL sees no details for a PostgreSQL query opened from a copied link @LBAC',
+  'PMM-T2422 - Verify a Viewer limited to MySQL sees no details for a PostgreSQL query opened from a copied link @lbac',
   async ({ grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
     let queryUrl = '';
 
@@ -85,7 +85,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2423 - Verify Viewers limited by label still see the details, examples, explain and plan of their own queries @LBAC',
+  'PMM-T2423 - Verify Viewers limited by label still see the details, examples, explain and plan of their own queries @lbac',
   async ({ grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
     let mysqlValues: Record<string, string[]> = {};
     let mysqlQueryUrl = '';
@@ -153,7 +153,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2424 - Verify a Viewer limited to MySQL gets no PostgreSQL query details from the QAN API @LBAC',
+  'PMM-T2424 - Verify a Viewer limited to MySQL gets no PostgreSQL query details from the QAN API @lbac',
   async ({ api }) => {
     const qanApi = api.qanApi;
     const period = QanApi.period(timeRangeHours);

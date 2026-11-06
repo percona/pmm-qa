@@ -11,7 +11,7 @@ pmmTest.beforeEach(async ({ accessControlHelper, context, grafanaHelper, page })
 });
 
 pmmTest(
-  'PMM-T2041 - Verify LBAC for QAN and dashboards @LBAC',
+  'PMM-T2041 - Verify LBAC for QAN and dashboards @lbac',
   async ({ dashboard, grafanaHelper, leftNavigation, page, qanStoredMetrics, urlHelper }) => {
     for (const scenario of accessControlScenarios) {
       await pmmTest.step('Authorize as role', async () => {
