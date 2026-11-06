@@ -205,7 +205,7 @@ for (const filterName of qanFilters) {
 }
 
 pmmTest(
-  'PMM-T0000 - Verify Amazon RDS page lists the Aurora instance under its cluster @instances',
+  'PMM-T2504 - Verify Amazon RDS page lists the Aurora instance under its cluster @instances',
   async ({ amazonRdsPage, api, urlHelper }) => {
     const { services } = await api.inventoryApi.getServices();
 
@@ -216,13 +216,16 @@ pmmTest(
     await expect(async () => {
       await amazonRdsPage.openGroup(auroraClusterId);
       await expect(
-        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.auroraCluster),
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.auroraCluster),
       ).toBeVisible();
       await expect(
-        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.auroraMysql),
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.auroraMysql),
       ).toBeVisible();
       await expect(
-        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.oneInstanceConnected),
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.oneInstanceConnected),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.oneWriter),
       ).toBeVisible();
       await expect(
         amazonRdsPage.builders.instanceCell(auroraClusterId, auroraInstanceId, amazonRdsPage.texts.writer),

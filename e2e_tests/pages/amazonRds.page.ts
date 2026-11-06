@@ -8,6 +8,7 @@ export default class AmazonRdsPage extends BasePage {
     auroraCluster: 'Aurora cluster',
     auroraMysql: 'Aurora MySQL',
     oneInstanceConnected: '1 / 1',
+    oneWriter: '1 writer',
     up: 'Up',
     writer: 'writer',
   };
@@ -15,12 +16,13 @@ export default class AmazonRdsPage extends BasePage {
     expandGroupButton: (identifier: string) =>
       this.page.getByRole('button', { exact: true, name: `Expand ${identifier}` }),
     // An expanded group's detail row is named after the group too, through its nested table.
-    groupCell: (identifier: string, text: string) =>
+    // A group cell can hold two values (Type over Engine), so a value is matched by its own text.
+    groupValue: (identifier: string, text: string) =>
       this.page
         .getByRole('row')
         .filter({ has: this.page.getByRole('cell', { exact: true, name: identifier }) })
         .filter({ hasNot: this.page.getByRole('table') })
-        .getByRole('cell', { exact: true, name: text }),
+        .getByText(text, { exact: true }),
     instanceCell: (identifier: string, serviceName: string, text: string) =>
       this.builders
         .instancesTable(identifier)
