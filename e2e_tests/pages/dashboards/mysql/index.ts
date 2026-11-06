@@ -14,10 +14,12 @@ import HaproxyInstanceSummary from './haproxyInstanceSummary';
 import MysqlWaitEventAnalysesDetails from './mysqlWaitEventAnalysesDetails';
 import MysqlCommandHandlerCountersCompare from './mysqlCommandHandlerCountersCompare';
 import MysqlInnoDBCompressionDetails from './mysqlInnodbCompressionDetails';
+import MysqlAmazonAuroraDetails from './mysqlAmazonAuroraDetails';
 import DashboardInterface from '@interfaces/dashboard';
 
 export const MysqlDashboards = {
   haproxyInstanceSummary: new HaproxyInstanceSummary(),
+  mysqlAmazonAuroraDetails: new MysqlAmazonAuroraDetails(),
   mysqlCommandHandlerCountersCompare: new MysqlCommandHandlerCountersCompare(),
   mysqlGroupReplicationSummary: new MysqlGroupReplicationSummary(),
   mysqlInnodbCompressionDetails: new MysqlInnoDBCompressionDetails(),

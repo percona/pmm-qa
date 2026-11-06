@@ -249,6 +249,25 @@ pmmTest(
 );
 
 pmmTest(
+  'PMM-T2505 - Verify MySQL Amazon Aurora Details lists Aurora MySQL services without URL variables @instances',
+  async ({ dashboard, page, urlHelper }) => {
+    const auroraDetails = dashboard.mysql.mysqlAmazonAuroraDetails;
+
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(auroraDetails.url, { from: 'now-5m' }));
+
+      const serviceNames = await dashboard.getVariableValues('Service Name');
+
+      expect(serviceNames).toContain(auroraInstanceId);
+      expect(serviceNames).not.toContain(rdsMysql57.serviceName);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    await dashboard.selectVariableValue('Service Name', auroraInstanceId);
+    await dashboard.verifyMetricsPresent(auroraDetails.metrics);
+    await dashboard.verifyAllPanelsHaveData(auroraDetails.noDataMetrics, Timeouts.TWO_MINUTES);
+  },
+);
+
+pmmTest(
   'PMM-T2340 - Verify QAN after Aurora instance is added and edited @instances',
   async ({ leftNavigation, page, qanStoredMetrics, urlHelper }) => {
     await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }));

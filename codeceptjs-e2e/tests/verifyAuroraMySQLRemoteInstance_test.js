@@ -78,23 +78,6 @@ Data(instances).Scenario('PMM-T1295 - Verify MySQL Amazon Aurora Details @instan
   await dashboardPage.verifyThereAreNoGraphsWithoutData(0);
 }).retry(3);
 
-Data(instances).Scenario('PMM-T1295 - Verify MySQL Amazon Aurora Details without URL variables @instances', async ({ I, dashboardPage, current }) => {
-  const { instance_id } = remoteInstancesHelper.remote_instance.aws.aurora[current];
-
-  I.amOnPage(I.buildUrlWithParams(dashboardPage.mysqlAmazonAuroraDetails.url, { from: 'now-5m' }));
-  dashboardPage.waitForDashboardOpened();
-  dashboardPage.expandFilters('Service Name');
-  I.waitForElement(dashboardPage.fields.allFilterDropdownOptions, 30);
-  const options = await I.grabTextFromAll(dashboardPage.fields.allFilterDropdownOptions);
-
-  assert.ok(options.includes(instance_id), `Service Name dropdown has no option '${instance_id}', options are: ${options}`);
-
-  I.pressKey('Escape');
-  await dashboardPage.applyFilter('Service Name', instance_id);
-  dashboardPage.waitForDashboardOpened();
-  await dashboardPage.verifyThereAreNoGraphsWithoutData(0);
-}).retry(3);
-
 Data(instances).Scenario('PMM-T1295 - Verify dashboard after Aurora MySQL instance is added @instances', async ({
   I, dashboardPage, adminPage, current,
 }) => {
