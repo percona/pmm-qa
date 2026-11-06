@@ -48,6 +48,8 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    legendSeries: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('tbody').getByRole('button'),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -73,6 +75,17 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
+    tableCell: (panelName: string, rowText: string, columnIndex: number) =>
+      this.builders.tableRow(panelName, rowText).locator(`[aria-colindex="${columnIndex}"]`),
+    tableLink: (panelName: string, linkText: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
+    tableRow: (panelName: string, rowText: string) =>
+      this.builders.tableRows(panelName).filter({ hasText: rowText }),
+    tableRows: (panelName: string) =>
+      this.builders
+        .panelContentByExactName(panelName)
+        .getByRole('row')
+        .filter({ has: this.grafanaIframe().getByRole('gridcell') }),
     templateVariableCombobox: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -212,6 +225,24 @@ export default class Dashboards extends BasePage {
         .panelContentByExactName('Feature Compatibility Version')
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
+
+  /** The threshold color a stat panel in background color mode shows. */
+  getStatColor = async (panelName: string): Promise<'green' | 'orange' | 'red'> => {
+    const background = await this.builders
+      .panelContentByExactName(panelName)
+      .locator('[style*="background"]')
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
+    const color = /rgba?\((\d+), (\d+)/.exec(background);
+
+    if (!color) throw new Error(`${panelName} has no background color: ${background}`);
+
+    const [red, green] = [Number(color[1]), Number(color[2])];
+
+    if (green > red) return 'green';
+
+    return green >= 100 ? 'orange' : 'red';
+  };
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
