@@ -2,8 +2,10 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 import {
+  auroraClusterId,
   auroraInstanceId,
   auroraMysql,
+  auroraRegion,
   awsCredentials,
   azureCredentials,
   azureDatabases,
@@ -202,6 +204,68 @@ for (const filterName of qanFilters) {
     },
   );
 }
+
+pmmTest(
+  'PMM-T2504 - Verify Amazon RDS page lists the Aurora instance under its cluster @instances',
+  async ({ amazonRdsPage, api, urlHelper }) => {
+    const { services } = await api.inventoryApi.getServices();
+
+    if (!services.some(({ service_name }) => service_name === auroraInstanceId)) {
+      await api.remoteInstanceApi.addRemoteInstance(auroraMysql);
+    }
+
+    await expect(async () => {
+      await amazonRdsPage.openGroup(auroraClusterId);
+      await expect(amazonRdsPage.elements.groupCount).toHaveText(amazonRdsPage.texts.oneGroupShown);
+      await expect(amazonRdsPage.builders.groupValue(auroraClusterId, auroraRegion)).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.auroraCluster),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.auroraMysql),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.oneInstanceConnected),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.oneWriter),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.instanceCell(auroraClusterId, auroraInstanceId, amazonRdsPage.texts.writer),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.instanceCell(auroraClusterId, auroraInstanceId, amazonRdsPage.texts.up),
+      ).toBeVisible();
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await expect(amazonRdsPage.builders.serviceLink(auroraClusterId, auroraInstanceId)).toHaveAttribute(
+      'href',
+      urlHelper.buildUrlWithParameters(amazonRdsPage.auroraDetailsUrl, { serviceName: auroraInstanceId }),
+    );
+    await expect(amazonRdsPage.builders.serviceLink(auroraClusterId, auroraInstanceId)).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+  },
+);
+
+pmmTest(
+  'PMM-T2505 - Verify MySQL Amazon Aurora Details lists Aurora MySQL services without URL variables @instances',
+  async ({ dashboard, page, urlHelper }) => {
+    const auroraDetails = dashboard.mysql.mysqlAmazonAuroraDetails;
+
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(auroraDetails.url, { from: 'now-5m' }));
+
+      const serviceNames = await dashboard.getVariableValues('Service Name');
+
+      expect(serviceNames).toContain(auroraInstanceId);
+      expect(serviceNames).not.toContain(rdsMysql57.serviceName);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    await dashboard.selectVariableValue('Service Name', auroraInstanceId);
+    await dashboard.verifyMetricsPresent(auroraDetails.metrics);
+    await dashboard.verifyAllPanelsHaveData(auroraDetails.noDataMetrics, Timeouts.TWO_MINUTES);
+  },
+);
 
 pmmTest(
   'PMM-T2340 - Verify QAN after Aurora instance is added and edited @instances',
