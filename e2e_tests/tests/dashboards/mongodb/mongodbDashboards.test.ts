@@ -27,7 +27,7 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
     },
   );
 
-  // skip-until: 2026-11-06 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
+  // skip-until: 2026-12-03 -- Top Hottest Collections panels flap to No data at the 30s high resolution the upgrade suite sets (PMM-15714).
   // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15714, see the skip-until line above.
   pmmTest.skip(
     'PMM-T2012 - Verify MongoDB Sharded Cluster Summary @pmm-psmdb-sharding-integration @post-upgrade',
@@ -197,7 +197,12 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
       );
 
       await dashboard.verifyMetricsPresent(dashboard.mongo.collectionsOverview.metrics, undefined, true);
-      await dashboard.verifyAllPanelsHaveData(dashboard.mongo.collectionsOverview.noDataMetrics);
+      await dashboard.verifyAllPanelsHaveData([
+        ...dashboard.mongo.collectionsOverview.noDataMetrics,
+        // skip-until: 2026-12-03 -- PMM-15714
+        'Top 5 Hottest Collections by Read (Rate)',
+        'Top 5 Hottest Collections by Write (Rate)',
+      ]);
     },
   );
 
@@ -304,6 +309,72 @@ pmmTest.describe('PMM tests for mongodb dashboards', () => {
 
       await dashboard.selectVariableValue('Node', serviceNames[0]);
       await dashboard.verifyPanelsDisplayed([serviceInfoPanels[0]]);
+    },
+  );
+
+  pmmTest(
+    'PMM-T2461 - Verify a sharded cluster added without an environment is listed and shows data on MongoDB Sharded Cluster Summary when Environment is All @pmm-psmdb-sharding-integration',
+    async ({ api, cliHelper, dashboard, page, urlHelper }) => {
+      const noEnvCluster = 'no-env-cluster';
+      const noEnvService = 'rscfg01-no-env';
+      const shardedService = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+      const configServersPanel = dashboard.builders.panelContentByExactName('Config Servers');
+
+      cliHelper.execSilent(`docker exec rscfg01 pmm-admin remove mongodb ${noEnvService}`);
+      cliHelper
+        .execSilent(
+          `docker exec rscfg01 pmm-admin add mongodb --cluster=${noEnvCluster} --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg01 --port=27017 ${noEnvService}`,
+        )
+        .assertSuccess();
+
+      try {
+        await api.grafanaApi.waitForMetric(
+          `mongodb_rs_members_state{cluster="${noEnvCluster}"}`,
+          Timeouts.TWO_MINUTES,
+        );
+
+        await pmmTest.step('Open the dashboard with Environment set to All', async () => {
+          await page.goto(
+            urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
+              from: 'now-5m',
+              refresh: '5s',
+            }),
+          );
+          await dashboard.waitForDashboardToLoad();
+          await expect(page).toHaveURL(/[?&]var-environment=\$__all(&|$)/);
+        });
+
+        await pmmTest.step('Verify both clusters are listed in the Cluster drop-down', async () => {
+          await expect
+            .poll(() => dashboard.getVariableValues('Cluster'), { timeout: Timeouts.ONE_MINUTE })
+            .toEqual(expect.arrayContaining([shardedService.cluster, noEnvCluster]));
+        });
+
+        await pmmTest.step(
+          'Select the cluster without environment and verify Config Servers has data',
+          async () => {
+            await dashboard.selectVariableValue('Cluster', noEnvCluster);
+            await expect(page).toHaveURL(new RegExp(`[?&]var-cluster=${noEnvCluster}(&|$)`));
+            await dashboard.expandRow('Current Topology');
+            await expect(configServersPanel).toContainText('PRIMARY', { timeout: Timeouts.ONE_MINUTE });
+          },
+        );
+
+        await pmmTest.step(
+          'Select the sharded cluster environment and verify only its cluster is listed',
+          async () => {
+            await dashboard.selectVariableValue('Environment', shardedService.environment);
+            await expect(page).toHaveURL(
+              new RegExp(`[?&]var-environment=${shardedService.environment}(&|$)`),
+            );
+            await expect
+              .poll(() => dashboard.getVariableValues('Cluster'), { timeout: Timeouts.ONE_MINUTE })
+              .toEqual([shardedService.cluster]);
+          },
+        );
+      } finally {
+        cliHelper.execute(`docker exec rscfg01 pmm-admin remove mongodb ${noEnvService}`).assertSuccess();
+      }
     },
   );
 });

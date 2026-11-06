@@ -301,6 +301,7 @@ export default defineConfig([
             'waitForMetric',
             'verifyRowMetricsPresent',
             'verifyRowPanelsHaveData',
+            'verifyMonitoringStatusesOk',
           ],
         },
       ],
