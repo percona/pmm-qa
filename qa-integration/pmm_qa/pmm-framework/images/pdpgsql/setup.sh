@@ -277,7 +277,9 @@ pdpgsql_workload() {
 }
 
 # Certificates are made in the container and copied to
-# tls-ssl-setup/postgres/<version>/, where the tests read them.
+# tls-ssl-setup/postgres/<version>/, where the tests read them. The image's
+# plain host lines are dropped from pg_hba.conf, so every TCP connection needs
+# SSL; the local socket stays trusted for the setup's own psql calls.
 setup_ssl_pdpgsql() {
   local version client container tarball='' suffix=$((RANDOM % 10000))
   version=$(resolved_version PDPGSQL_VERSION SSL_PDPGSQL "$DB_VERSION")
@@ -313,6 +315,7 @@ ssl_pdpgsql_start() {
     cp -a /artifacts/certificates/. $data/
     chown -R postgres:postgres $data
     chmod -R 0700 $data
+    sed -i -E '/^host[[:space:]]/d' $data/pg_hba.conf
     service postgresql start" >/dev/null
   pdpgsql_ready "$container"
 }
