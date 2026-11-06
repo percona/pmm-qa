@@ -1,4 +1,5 @@
 import BasePage from '../base.page';
+import { QuerySource, querySources } from '@helpers/serviceQan.helper';
 import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect, Response } from '@playwright/test';
@@ -25,6 +26,8 @@ export interface ServiceTlsSettings {
 export default class EditServicePage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   builders = {
+    querySourceOption: (querySource: QuerySource) =>
+      this.elements.qanSection.getByTestId(`radio-option-${querySource}`),
     successMessage: (serviceName: string) =>
       this.page.getByText(`Service “${serviceName}” was changed. It is now ready to continue monitoring.`),
   };
@@ -36,6 +39,7 @@ export default class EditServicePage extends BasePage {
     clusterChangedWarning: this.page.getByTestId('cluster-changed-warning'),
     confirmModal: this.page.getByTestId('confirm-changes-modal'),
     form: this.page.getByTestId('edit-service-form'),
+    qanSection: this.page.getByTestId('query-analytics-settings'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
     tlsKeyStored: this.page.getByText('A key is stored. Leave blank to keep it.'),
@@ -79,6 +83,10 @@ export default class EditServicePage extends BasePage {
 
   editEnvironment = async (environment: string) => {
     await this.inputs.environment.fill(environment);
+  };
+
+  editQuerySource = async (querySource: QuerySource) => {
+    await this.builders.querySourceOption(querySource).check();
   };
 
   editReplicationSet = async (replicationSet: string) => {
@@ -152,6 +160,22 @@ export default class EditServicePage extends BasePage {
     await expect(this.inputs.cluster).toHaveValue(labels.cluster);
     await expect(this.inputs.replicationSet).toHaveValue(labels.replicationSet);
     await expect(this.inputs.customLabels).toHaveValue(this.toCustomLabelsText(labels.customLabels));
+  };
+
+  verifyQuerySource = async (querySource: QuerySource, offered: QuerySource[]) => {
+    for (const option of querySources) {
+      const shown = offered.includes(option);
+
+      await expect(this.builders.querySourceOption(option), `${option} offered`).toBeVisible({
+        visible: shown,
+      });
+
+      if (shown) {
+        await expect(this.builders.querySourceOption(option)).toBeChecked({
+          checked: option === querySource,
+        });
+      }
+    }
   };
 
   // Certificates are never sent to the UI, so the fields shown always open empty.
