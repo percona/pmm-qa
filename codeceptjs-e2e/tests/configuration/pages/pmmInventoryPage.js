@@ -4,75 +4,49 @@ const assert = require('assert');
 const paginationPart = require('./paginationFragment');
 const servicesTab = require('./servicesTab');
 const NodesTab = require('./nodesTab');
-const { AGENT_NAMES } = require('../../helper/constants');
+const { tableDataRows } = require('../../helper/locatorHelper');
 
-const service = (serviceName) => `//span[contains(text(),'${serviceName}')]`;
-const node = (nodeName) => `//td[@title='${nodeName}'][2]`;
+const rowByName = (name) => `${tableDataRows}[td[4]/div/span[text()="${name}"]]`;
+const agentRow = (agentType) => `${tableDataRows}[td[4][text()="${agentType}"]]`;
+const expandButton = '//button[@aria-label="Expand"]';
+const selectRowCheckbox = '//input[@aria-label="Toggle select row"]';
 
 module.exports = {
-  url: 'graph/inventory?orgId=1',
+  url: 'pmm-ui/inventory',
   fields: {
-    servicesLink: locate('[role="tablist"] a').withText('Services').withAttr({ 'aria-label': 'Tab Services' }),
-    serviceRow: (serviceName) => locate('tr').withChild(locate('td').withAttr({ title: serviceName })),
-    showServiceDetails: (serviceName) => `${service(serviceName)}//ancestor::tr//button[@data-testid="show-row-details"]`,
-    hideServiceDetails: (serviceName) => `${service(serviceName)}//ancestor::tr//button[@data-testid="hide-row-details"]`,
-    showNodeDetails: (nodeName) => `${node(nodeName)}//ancestor::tr//button[@data-testid="show-row-details"]`,
-    showAgentDetails: (agentName) => `//td[contains(text(), '${agentName}')]//ancestor::tr//button[@data-testid="show-row-details"]`,
-    showRowDetails: '//button[@data-testid="show-row-details"]',
-    agentStatus: locate('$details-row-content').find('a'),
-    backToServices: '//span[text()="Go back to services"]',
-    agentsLinkNew: '//div[contains(@data-testid,"status-badge")]',
-    detailsLabelByText: (label) => locate('[aria-label="Tags"]').find(`//li/span[contains(text(), "${label}")]`),
-    agentDetailsLabelByText: (label) => locate('$details-row-content').find('li').withText(label),
-    agentsLink: locate('[role="tablist"] a').withText('Agents').withAttr({ 'aria-label': 'Tab Agents' }),
-    agentsLinkOld: locate('a').withText('Agents'),
-    cluster: '$cluster-text-input',
-    deleteButton: locate('span').withText('Delete'),
-    environment: '$environment-text-input',
+    serviceRow: (serviceName) => rowByName(serviceName),
+    showServiceDetails: (serviceName) => `${rowByName(serviceName)}${expandButton}`,
+    hideServiceDetails: (serviceName) => `${rowByName(serviceName)}${expandButton}`,
+    showNodeDetails: (nodeName) => `${rowByName(nodeName)}${expandButton}`,
+    showAgentDetails: (agentName) => `${agentRow(agentName)}${expandButton}`,
+    showRowDetails: `//tbody${expandButton}`,
+    backToServices: '$agents-go-back',
+    agentsLinkNew: '//*[@data-testid="agents-status-chip"]//a',
+    detailsLabelByText: (label) => locate('$service-details').find('.MuiChip-label').withText(label),
+    agentDetailsLabelByText: (label) => locate('$agent-details').find('.MuiChip-label').withText(label),
+    deleteModal: '$inventory-delete-modal',
+    deleteButton: '[data-testid="delete-services-button"], [data-testid="delete-nodes-button"], [data-testid="delete-agents-button"]',
     externalExporter: locate('td').withText('External exporter'),
-    editButton: locate('span').withText('Edit'),
-    editText: locate('h3').withText('Editing'),
-    forceModeCheckbox: locate('$force-field-label'),
-    inventoryTable: locate('table'),
+    editButton: '//*[@role="menuitem"][normalize-space()="Edit"]',
+    editForm: '$edit-service-form',
+    editText: locate('h2').withText('Editing'),
+    forceModeCheckbox: '$inventory-delete-modal-force',
     inventoryTableColumn: locate('table').find('td'),
-    inventoryTableRows: locate('tr').after('table'),
-    inventoryTableRowCount: (count) => locate('span').withText(`${count}`),
-    kebabMenu: (serviceName) => `${service(serviceName)}//ancestor::tr//button[@data-testid="dropdown-menu-toggle"]`,
-    mongoServiceName: locate('td').withText('mongodb'),
-    mysqlServiceName: locate('td').withText('ms-single'),
-    // cannot be changed to locate because it's failing in I.waitForVisible()
-    nodesLink: locate('[role="tablist"] a').withText('Nodes').withAttr({ 'aria-label': 'Tab Nodes' }),
-    nodesLinkOld: locate('a').withText('Nodes'),
-    pdphsqlServiceName: locate('td').withText('PGSQL'),
-    pmmAgentLocator: locate('td').withText('PMM Agent'),
-    pmmServerPostgresLocator: locate('td').withText('pmm-server-postgresql'),
-    pmmServicesSelector: locate('[role="tablist"] a').withText('Services').withAttr({ 'aria-label': 'Tab Services' }),
-    postgresExporter: locate('td').withText(AGENT_NAMES.POSTGRESQL_EXPORTER),
-    postgresPgStatements: locate('td').withText('QAN PostgreSQL PgStatements'),
-    postgresPgstatmonitor: locate('td').withText('QAN PostgreSQL Pgstatmonitor'),
-    proceedButton: locate('span').withText('Proceed'),
-    runningStatus: locate('span').withText('RUNNING'),
-    rowsPerPage: locate('$pagination').find('div'),
-    serviceIdLocatorPrefix: '//table//tr/td[4][contains(text(),"',
-    nodeIdLocatorPrefix: '//table//tr[1]/td[4]/a[contains(text(),"',
-    tableCheckbox: locate('$select-row').find('span'),
+    kebabMenu: (serviceName) => `${rowByName(serviceName)}//button[@aria-label="Row Actions"]`,
+    nodesLink: '$inventory-tab-nodes',
+    pmmServicesSelector: '$inventory-tab-services',
+    proceedButton: '$inventory-delete-modal-confirm',
+    rowCheckbox: (name) => `${rowByName(name)}${selectRowCheckbox}`,
+    serviceIdValue: '//*[@data-testid="service-details"]//span[.//p[text()="Service ID"]]/following-sibling::div[1]',
     // cannot be changed to locate() because of method: getCellValue()
-    tableRow: '//tr[@data-testid="table-tbody-tr"]',
-    processExecPathExporters: '//td[contains(text(), "exporter")]//ancestor::tr[@data-testid="table-row"]//span[contains(text(), "process_exec_path")]',
-    nodeExporterStatus: '//td[contains(text(), "Node exporter")]//ancestor::tr[@data-testid="table-row"]//span[contains(text(), "status")]',
-    agentId: '//td[contains(text(), "agent_id") and not(following-sibling::td[text()="PMM Agent"])]',
-    selectAllCheckbox: locate('$select-all'),
-    selectRowCheckbox: locate('$select-row'),
-    removalDialogMessage: '//form/h4',
-    replicationSet: '$replication_set-text-input',
-    selectedCheckbox: '//div[descendant::input[@value="true"] and @data-testid="select-row"]',
-    saveButton: locate('button').withChild('div').withText('Save Changes'),
-    saveConfirmButton: locate('span').withText('Confirm and save changes'),
-    savePopupMessage: locate('p').withText('Changing existing labels can affect other parts of PMM dependent on it'),
-    runningStatusAgent: '//td/div[contains(text(), "Running")]',
-    serviceNames: locate('//tr[@role="row"]//td[3]//span'),
-    servicesMonitoringStatus: locate('//tbody//tr[@role="row"]//td[position()=5]'),
-    serviceNameByIndex: (index) => locate(`(//tbody//tr[@role="row"]//td[position()=3])[${index}]`),
+    tableRow: tableDataRows,
+    saveButton: '$edit-service-submit',
+    saveConfirmButton: '$confirm-changes-modal-confirm',
+    savePopupMessage: locate('$confirm-changes-modal').find('p').withText('Changing existing labels can affect other parts of PMM dependent on it'),
+    runningStatusAgent: '//*[@data-testid="agent-status-chip"][normalize-space()="Running"]',
+    serviceNames: `${tableDataRows}/td[4]/div/span`,
+    servicesMonitoringStatus: `${tableDataRows}//*[@data-testid="monitoring-status-link"]`,
+    serviceNameByIndex: (index) => `(${tableDataRows}/td[4]/div/span)[${index}]`,
   },
   servicesTab,
   nodesTab: NodesTab,
@@ -83,35 +57,17 @@ module.exports = {
     await I.waitForVisible(this.fields.nodesLink, 30);
   },
 
-  async openServices() {
-    await I.waitForVisible(this.fields.pmmServicesSelector, 20);
-    I.click(this.fields.pmmServicesSelector);
-    await this.changeRowsPerPage(100);
-    I.waitForElement(this.fields.inventoryTable, 60);
-    I.scrollPageToBottom();
-  },
-
   openAgents(serviceId) {
-    I.amOnPage(`graph/inventory/services/${serviceId}/agents`);
-    this.changeRowsPerPage(100);
+    I.amOnPage(`/pmm-ui/inventory/services/${serviceId}/agents`);
+    I.waitForVisible(this.fields.tableRow, 30);
   },
 
-  changeRowsPerPage(count) {
-    I.waitForElement(this.fields.rowsPerPage, 30);
-    I.scrollPageToBottom();
-    I.click(this.fields.rowsPerPage);
-    I.waitForElement(this.fields.inventoryTableRowCount(count), 30);
-    // Temp Hack for making 100 in the page count rows
-    I.pressKey('ArrowDown');
-    I.pressKey('ArrowDown');
-    I.pressKey('Enter');
-    I.wait(2);
+  async changeRowsPerPage(count) {
+    await this.pagination.selectRowsPerPage(count);
   },
 
   verifyRemoteServiceIsDisplayed(serviceName) {
-    I.waitForVisible(this.fields.inventoryTableColumn, 30);
-    I.scrollPageToBottom();
-    I.see(serviceName, this.fields.inventoryTableColumn);
+    I.waitForVisible(locate('td').withText(serviceName), 30);
   },
 
   async verifyAgentHasStatusRunning(service_name) {
@@ -119,10 +75,6 @@ module.exports = {
 
     await inventoryAPI.waitForRunningState(serviceId);
     this.openAgents(serviceId);
-    // I.waitForElement(this.fields.pmmAgentLocator, 60);
-    await this.changeRowsPerPage(100);
-    I.waitForElement(this.fields.inventoryTable, 60);
-    I.scrollPageToBottom();
 
     const numberOfAgents = await I.grabNumberOfVisibleElements(this.fields.runningStatusAgent);
 
@@ -147,38 +99,25 @@ module.exports = {
 
   async verifyNodeAgentHasRDSExporter(serviceName) {
     await this.changeRowsPerPage(100);
-    const nodeLink = await this.getNodeLink(serviceName);
+    const nodeLink = `${rowByName(serviceName)}/td[5]//a`;
+    const nodeUrl = await I.grabAttributeFrom(nodeLink, 'href');
+    const nodeName = await I.grabTextFrom(nodeLink);
 
-    I.amOnPage(nodeLink);
-    this.changeRowsPerPage(100);
-    await I.click(this.fields.showNodeDetails(serviceName));
-    await I.click(this.fields.agentsLinkNew);
-    const rdsAgentExporter = '//td[@title=\'rds_exporter\']';
-
-    I.waitNumberOfVisibleElements(rdsAgentExporter, 1, 30);
-  },
-
-  async getServiceIdWithStatus(status) {
-    const serviceIds = [];
-    const locator = locate('span')
-      .withText('service_id:')
-      .before(locate('span')
-        .withText(`status: ${status}`));
-
-    const strings = await I.grabTextFromAll(locator);
-
-    // we need to cut "service_id: " prefix from grabbed strings
-    strings.forEach((item) => serviceIds.push(item.split(': ')[1]));
-
-    return serviceIds;
+    I.amOnPage(nodeUrl);
+    I.waitForVisible(this.fields.showNodeDetails(nodeName), 30);
+    I.click(this.fields.showNodeDetails(nodeName));
+    I.click(this.fields.agentsLinkNew);
+    I.waitNumberOfVisibleElements(agentRow('RDS exporter'), 1, 30);
   },
 
   async checkAgentOtherDetailsSection(agentType, expectedResult, isDisplayed = true) {
+    I.waitForVisible(this.fields.showAgentDetails(agentType), 30);
     I.click(this.fields.showAgentDetails(agentType));
 
     if (isDisplayed) {
       I.waitForVisible(this.fields.agentDetailsLabelByText(expectedResult), 10);
     } else {
+      I.waitForVisible('$agent-details', 10);
       I.dontSeeElement(this.fields.agentDetailsLabelByText(expectedResult));
     }
   },
@@ -187,54 +126,12 @@ module.exports = {
     await I.waitForVisible(this.fields.agentDetailsLabelByText(expectedResult), 10);
   },
 
-  async checkAgentOtherDetailsMissing(detailsSection, serviceId) {
-    const locator = locate('span').withText(detailsSection).after(locate('span').withText(`service_id: ${serviceId}`));
-
-    I.dontSeeElement(locator);
-  },
-
-  async verifyMetricsFlags(serviceName) {
-    const servicesLink = this.fields.pmmServicesSelector;
-
-    I.waitForElement(servicesLink, 20);
-    I.click(servicesLink);
-    await this.changeRowsPerPage(100);
-    // const nodeId = await this.getNodeId(serviceName);
-
-    // await I.click(this.fields.showServiceDetails(serviceName));
-    // await I.click(this.fields.agentsLinkNew);
-    await this.changeRowsPerPage(100);
-
-    await I.click(this.fields.showServiceDetails(serviceName));
-    await I.click(this.fields.agentsLinkNew);
-    const rows = await I.grabNumberOfVisibleElements(this.fields.showRowDetails);
-
-    for (let i = 1; i <= rows; i++) {
-      await I.click(`(${this.fields.showRowDetails})[1]`);
-    }
-
-    const enhanceMetricsDisabled = '//span[contains(text(),"enhanced_metrics_disabled: true")]';
-
-    I.waitForElement(enhanceMetricsDisabled, 30);
-    I.seeElement(enhanceMetricsDisabled);
-    const basicMetricsDisabled = '//span[contains(text(),"basic_metrics_disabled: true")]';
-
-    I.seeElement(basicMetricsDisabled);
-  },
-
-  async getNodeLink(serviceName) {
-    const nodeIdLocator = `${this.fields.nodeIdLocatorPrefix + serviceName}")]`;
-
-    return await I.grabAttributeFrom(nodeIdLocator, 'href');
-  },
-
   async getServiceId(serviceName) {
     await I.waitForVisible(this.fields.showServiceDetails(serviceName), 60);
     await I.click(this.fields.showServiceDetails(serviceName));
-    const serviceIdLocator = '//span[text()="Service ID"]/following-sibling::div//span';
 
-    I.waitForVisible(serviceIdLocator, 30);
-    const matchedServices = await I.grabNumberOfVisibleElements(serviceIdLocator);
+    I.waitForVisible(this.fields.serviceIdValue, 30);
+    const matchedServices = await I.grabNumberOfVisibleElements(this.fields.serviceIdValue);
 
     await assert.equal(
       matchedServices,
@@ -242,7 +139,7 @@ module.exports = {
       `There must be only one entry for the newly added service with name ${serviceName}`,
     );
 
-    const serviceId = await I.grabTextFrom(serviceIdLocator);
+    const serviceId = await I.grabTextFrom(this.fields.serviceIdValue);
 
     await I.click(this.fields.hideServiceDetails(serviceName));
 
@@ -250,64 +147,40 @@ module.exports = {
   },
 
   selectService(serviceName) {
-    const serviceLocator = `${this.fields.serviceIdLocatorPrefix}${serviceName}")]/preceding-sibling::td/div[@data-testid="select-row"]`;
+    const serviceLocator = this.fields.rowCheckbox(serviceName);
 
     I.waitForVisible(serviceLocator, 30);
     I.click(serviceLocator);
   },
 
   serviceExists(serviceName, deleted) {
-    const serviceLocator = `${this.fields.serviceIdLocatorPrefix}${serviceName}")]`;
-
     if (deleted) {
-      I.waitForInvisible(serviceLocator, 30);
+      I.waitForInvisible(rowByName(serviceName), 30);
     } else {
-      I.waitForVisible(serviceLocator, 30);
+      I.waitForVisible(rowByName(serviceName), 30);
     }
   },
 
   checkNodeExists(serviceName) {
-    const nodeName = `${this.fields.serviceIdLocatorPrefix}${serviceName}")]`;
-
-    I.waitForVisible(nodeName, 20);
-  },
-
-  getServicesId(serviceName) {
-    return `${this.fields.serviceIdLocatorPrefix}${serviceName}")]/preceding-sibling::td[2]`;
+    I.waitForVisible(rowByName(serviceName), 20);
   },
 
   async getCountOfAgents(serviceId) {
-    const countOfAgents = await I.grabNumberOfVisibleElements(serviceId);
+    const { data } = await inventoryAPI.apiGetAgents();
+    const countOfAgents = Object.values(data).flat().filter((agent) => agent.service_id === serviceId).length;
 
     assert.equal(countOfAgents, 0, 'The agents should be removed!');
   },
 
-  async getCountOfRunningAgents() {
-    return await I.grabNumberOfVisibleElements(this.fields.runningStatus);
-  },
-
-  async getCountOfPMMAgents() {
-    return await I.grabNumberOfVisibleElements(this.fields.pmmAgentLocator);
-  },
-
   selectAgent(agentType) {
-    const agentLocator = `//table//tr/td[3][contains(text(),"${agentType}")]/preceding-sibling::td/div[@data-testid="select-row"]`;
+    const agentLocator = `${agentRow(agentType)}${selectRowCheckbox}`;
 
     I.waitForVisible(agentLocator, 30);
     I.click(agentLocator);
   },
 
-  async getAgentServiceID(agentType) {
-    const serviceIdLocator = `//table//tr/td[3][contains(text(),"${agentType}")]/following-sibling::td//span[contains(text(), 'service_id:')]`;
-
-    I.waitForVisible(serviceIdLocator, 30);
-    const serviceIDs = await I.grabTextFrom(serviceIdLocator);
-
-    return serviceIDs[0].slice(12, serviceIDs[0].lenght);
-  },
-
   async getAgentID(agentType) {
-    const agentIdLocator = `//table//tr/td[3][contains(text(),"${agentType}")]/preceding-sibling::td[1]`;
+    const agentIdLocator = `${agentRow(agentType)}/td[5]`;
 
     I.waitForVisible(agentIdLocator, 30);
 
@@ -315,9 +188,9 @@ module.exports = {
   },
 
   async getNodeCount() {
-    I.waitForVisible(this.fields.tableCheckbox);
+    I.waitForVisible(this.fields.tableRow, 30);
 
-    return await I.grabNumberOfVisibleElements(this.fields.tableCheckbox);
+    return await I.grabNumberOfVisibleElements(this.fields.tableRow);
   },
 
   verifyNodesCount(before, after) {
@@ -325,17 +198,17 @@ module.exports = {
   },
 
   existsByid(id, deleted) {
-    const agentIdLocator = `//table//tr/td[2][contains(text(),"${id}")]`;
+    const idLocator = `${tableDataRows}/td[contains(text(), "${id}")]`;
 
     if (deleted) {
-      I.waitForInvisible(agentIdLocator, 30);
+      I.waitForInvisible(idLocator, 30);
     } else {
-      I.waitForVisible(agentIdLocator, 30);
+      I.waitForVisible(idLocator, 30);
     }
   },
 
   selectAgentByID(id) {
-    const agentIdLocator = `//table//tr/td[2][contains(text(),"${id}")]/preceding-sibling::td/div[@data-testid="select-row"]`;
+    const agentIdLocator = `${tableDataRows}[td[contains(text(), "${id}")]]${selectRowCheckbox}`;
 
     I.waitForVisible(agentIdLocator, 30);
     I.click(agentIdLocator);
@@ -343,12 +216,14 @@ module.exports = {
 
   deleteWithForceOpt() {
     I.click(this.fields.deleteButton);
+    I.waitForVisible(this.fields.forceModeCheckbox, 10);
     I.click(this.fields.forceModeCheckbox);
     I.click(this.fields.proceedButton);
+    I.waitForInvisible(this.fields.deleteModal, 30);
   },
 
   async getCountOfItems() {
-    return await I.grabNumberOfVisibleElements('$select-row');
+    return await I.grabNumberOfVisibleElements(this.fields.tableRow);
   },
 
   async checkAllNotDeletedAgents(countBefore) {
@@ -398,6 +273,7 @@ module.exports = {
   },
 
   async checkExistingAgent(agent, serviceName) {
+    I.waitForVisible(this.fields.showServiceDetails(serviceName), 30);
     await I.click(this.fields.showServiceDetails(serviceName));
     I.click(this.fields.agentsLinkNew);
     await I.waitForVisible(agent, 30);
@@ -406,8 +282,9 @@ module.exports = {
 
   async saveAndConfirm() {
     I.click(this.fields.saveButton);
-    I.seeElement(this.fields.savePopupMessage);
+    I.waitForVisible(this.fields.savePopupMessage, 10);
     I.click(this.fields.saveConfirmButton);
+    I.waitForVisible(this.fields.tableRow, 30);
   },
 
   openEditServiceWizard(serviceName) {
@@ -417,13 +294,14 @@ module.exports = {
     I.click(this.fields.editButton);
     I.waitForElement(this.fields.editText, 30);
     I.seeElement(this.fields.editText);
+    I.waitForVisible(this.fields.editForm, 30);
   },
 
   updateServiceLabels(serviceParameters) {
     I.usePlaywrightTo('clear fields', async ({ page }) => {
-      await page.locator(I.useDataQA('environment-text-input')).fill(serviceParameters.environment);
-      await page.locator(I.useDataQA('replication_set-text-input')).fill(serviceParameters.replicationSet);
-      await page.locator(I.useDataQA('cluster-text-input')).fill(serviceParameters.cluster);
+      await page.locator('input[name="environment"]').fill(serviceParameters.environment);
+      await page.locator('input[name="replicationSet"]').fill(serviceParameters.replicationSet);
+      await page.locator('input[name="cluster"]').fill(serviceParameters.cluster);
     });
 
     this.saveAndConfirm();

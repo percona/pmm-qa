@@ -51,10 +51,12 @@ pmmTest(
   },
 );
 
+const grafanaPages = new Set(['addInstancePage']);
+
 for (const role of ['viewer', 'editor'] as const) {
   for (const target of ['addInstancePage', 'settingsPage', 'nodesPage', 'servicesPage'] as const) {
     pmmTest(
-      `PMM-T824 - Verify ${role} users do not see Inventory, Settings, Remote Instances Page @permissions-nightly @gssapi-nightly @grafana-pr | ${target}`,
+      `PMM-T824 - Verify ${role} users do not see Inventory, Settings, Remote Instances Page @permissions-nightly @gssapi-nightly${grafanaPages.has(target) ? ' @grafana-pr' : ''} | ${target}`,
       async ({ addInstancePage, grafanaHelper, nodesPage, page, servicesPage, settingsPage }) => {
         const { elements, url } = { addInstancePage, nodesPage, servicesPage, settingsPage }[target];
 

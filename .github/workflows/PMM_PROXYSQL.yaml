@@ -92,11 +92,11 @@ jobs:
             --database "PXC=${PXC_MAJOR}${PXC_TARBALL_PATH:+,TARBALL=$PXC_TARBALL_PATH}"
 
       - name: Install npx dependencies
-        working-directory: codeceptjs-e2e
-        run: npm ci && npx playwright install --with-deps && npx codeceptjs def pr.codecept.js
+        working-directory: e2e_tests
+        run: npm ci && npx playwright install --with-deps chromium
 
       - name: Run the Integration tests of PXC
-        working-directory: codeceptjs-e2e
-        run: |
-          export PMM_UI_URL="http://127.0.0.1:8081/"
-          npx codeceptjs run -c pr.codecept.js tests/qa-integration/pmm_pxc_integration_test.js
+        working-directory: e2e_tests
+        env:
+          PMM_UI_URL: 'http://127.0.0.1:8081/'
+        run: npx playwright test --grep '@pmm-pxc-integration'
