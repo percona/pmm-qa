@@ -227,7 +227,7 @@ export default class HaClusterHelper {
       })
       .map((service) => service.service_name);
     const reporting = (
-      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""}))', {
+      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""} == 1))', {
         nocache: '1',
       })
     )
