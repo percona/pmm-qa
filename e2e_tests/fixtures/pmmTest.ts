@@ -104,11 +104,7 @@ const pmmTest = base.extend<{
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
-  api: async ({ page, request }, use) => {
-    const inventoryApi = new Api(page, request);
-
-    await use(inventoryApi);
-  },
+  api: async ({ request }, use) => await use(new Api(request)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
