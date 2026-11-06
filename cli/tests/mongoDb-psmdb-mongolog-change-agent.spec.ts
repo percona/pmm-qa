@@ -26,6 +26,7 @@ let frameworkAgentIds: string[] = [];
 let agentPassword = 'mypass';
 let mongodTlsEnabled = false;
 let pmmAgentListenPortChanged = false;
+let serviceAdded = false;
 
 // User management must run on the primary. Talk to rs101 (the priority-2 primary) directly: from inside the container
 // replica-set discovery resolves the primary to loopback, and an election makes mongosh fail with ECONNREFUSED.
@@ -59,6 +60,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       .map((agent) => agent.agent_id);
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --query-source=mongolog --agent-password=${agentPassword} ${serviceName} ${replIpPort}`);
     await output.assertSuccess();
+    serviceAdded = true;
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
     expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
 
@@ -88,7 +90,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       }).toPass({ intervals: [2_000], timeout: 60_000 });
     }
 
-    if (exporterId) {
+    if (serviceAdded) {
       await removeMongoService(containerName, serviceName);
       await runOnPrimary(dropNewUser);
     }
@@ -184,12 +186,15 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2431 - Verify Change agent agent password for mongodb-exporter', async ({}) => {
-    const output = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, `--agent-password=${changedAgentPassword}`));
-    await output.assertSuccess();
-    await output.outContains('- updated agent password');
+    await cli.changeAgentsUntilPersisted(
+      [cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, `--agent-password=${changedAgentPassword}`)],
+      ['- updated agent password'],
+      async () => {
+        await cli.expectMongoUp(containerName, serviceName, changedAgentPassword, 30_000);
+      },
+      180_000,
+    );
     agentPassword = changedAgentPassword;
-
-    await cli.expectMongoUp(containerName, serviceName, agentPassword);
   });
 
   test('PMM-T2432 - Verify Change agent expose exporter for mongodb-exporter', async ({}) => {
@@ -402,7 +407,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2448 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+    const serverUrl = cli.shellQuote(`https://admin:${adminPassword}}@pmm-server:8443/`);
 
     for (const command of cli.changeMongoMongologAgents(containerName, exporterId, mongologId, `--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
       await cli.expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');

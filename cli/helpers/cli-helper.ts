@@ -219,7 +219,7 @@ export function shellQuote(value: string): string {
  * @return  the agent's fields, whatever its type
  */
 export async function getServerAgent(agentId: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, unknown>> {
-  const output = await exec(`docker exec pmm-server curl -sSf -u admin:${adminPassword} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
+  const output = await exec(`docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
   await output.assertSuccess();
   const response = JSON.parse(output.stdout) as Record<string, Record<string, unknown> | undefined>;
 
@@ -286,8 +286,8 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
   const localStatus = running ? 'Running' : 'not running';
 
   await expect(async () => {
-    const serverLines = (await exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines();
-    const localLines = (await exec(`docker exec ${containerName} pmm-admin status`)).getStdOutLines();
+    const serverLines = (await (await exec(`docker exec ${containerName} pmm-admin list`)).assertSuccess()).getStdOutLines();
+    const localLines = (await (await exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess()).getStdOutLines();
 
     for (const agentId of agentIds) {
       expect(serverLines.find((line) => line.includes(agentId)), `PMM Server should report ${agentId} as "${serverStatus}"`).toContain(serverStatus);

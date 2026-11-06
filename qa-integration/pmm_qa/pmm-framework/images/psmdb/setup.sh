@@ -158,7 +158,9 @@ psmdb_register() {
   local -a debug=() query=()
   shift 3
   if [[ $query_source != profiler ]]; then
-    query=("--query-source=$query_source")
+      if [[ $query_source != profiler && ! ( $setup_type == psa && $node == rs103 ) ]]; then
+        query=("--query-source=$query_source")
+      fi
   fi
   if [[ $(bool_string "$CLIENT_DEBUG") == true ]]; then
     debug=(--debug)
@@ -173,17 +175,24 @@ psmdb_register() {
   pmm_register "$node" pmm-admin add mongodb --enable-all-collectors "${query[@]}" --agent-password=mypass "$service" "$@"
 }
 
-# mongolog tails the file mongod or mongos reports as systemLog.path, and the shipped configs log to syslog. The copy
-# is bind-mounted for as long as the cluster runs, so the next run rewrites it in place instead of removing it.
-# Usage: psmdb_mongolog_config CONFIG_DIR CONFIG_FILE LOG_FILE  (prints the directory holding the copy)
+# mongolog tails the file mongod or mongos reports as systemLog.path.
+# Usage: psmdb_mongolog_config CONFIG_DIR CONFIG_FILE LOG_FILE
 psmdb_mongolog_config() {
-  local dir=${TMPDIR:-/tmp}/pmm-framework-psmdb-mongolog/${1##*/}
-  mkdir -p "$dir" || die "Creating $dir failed."
+  local dir
+
+  dir=$(mktemp -d "${TMPDIR:-/tmp}/pmm-framework-psmdb-mongolog.${1##*/}.XXXXXX") ||
+    die 'Creating a private mongolog config directory failed.'
+
   cp -R "$1/." "$dir" || die "Copying $1 failed."
+
+  [[ ! -L "$dir/$2" ]] || die "$dir/$2 must not be a symlink."
   sed "s#^  destination: syslog\$#  destination: file\n  path: $3\n  logAppend: true#" "$1/$2" >"$dir/$2" ||
     die "Copying $1/$2 failed."
-  grep -q "^  path: $3\$" "$dir/$2" || die "$1/$2 has no 'destination: syslog' line to point at a file."
-  printf '%s' "$dir"
+
+  grep -q "^  path: $3\$" "$dir/$2" ||
+    die "$1/$2 has no 'destination: syslog' line to point at a file."
+
+  printf '%s\n' "$dir"
 }
 
 # From 8.1 an arbiter added by hostname needs percona/pmm#6024 (PMM-15650, 3.11.0); older
