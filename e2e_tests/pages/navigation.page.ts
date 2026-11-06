@@ -163,7 +163,7 @@ export default class LeftNavigation extends BasePage {
     ),
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
-    dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
+    dumpLogs: this.page.getByTestId('help-card-pmm-dump'),
     homeMenuItem: this.page.getByTestId('navitem-home-page'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
