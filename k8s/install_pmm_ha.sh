@@ -41,6 +41,9 @@
 #       --pmm-secret-from pmm --backup-s3-bucket pmm-backups --backup-s3-provider Minio \
 #       --backup-s3-endpoint http://pmm-backup-minio.pmm.svc.cluster.local:9000
 #
+# Through Argo CD instead of helm - eks and chart branches only:
+#   ./install_pmm_ha.sh --platform eks --install-method argocd --chart-branch main --external-access
+#
 # With no --image it installs the newest released percona/pmm-server tag, resolved
 # from Docker Hub.
 
@@ -55,6 +58,14 @@ CHART_DIR="${CHART_DIR:-}"
 # else is a percona-helm-charts branch to clone.
 CHART_BRANCH="${CHART_BRANCH:-${PMM_CHART_BRANCH:-latest}}"
 CHART_REPO="${CHART_REPO:-https://github.com/percona/percona-helm-charts.git}"
+# Empty means the pmm-ha branch; set after the flags are parsed.
+DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH:-}"
+# helm installs with `helm upgrade`; argocd hands both charts to Argo CD Applications.
+INSTALL_METHOD="${INSTALL_METHOD:-helm}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-v3.5.6}"
+# A directory to clone the chart branches into and keep, instead of temp dirs
+# removed on success.
+CLONE_PARENT="${CLONE_PARENT:-}"
 CHART_VERSION="${CHART_VERSION:-}"
 DEPS_CHART_VERSION="${DEPS_CHART_VERSION:-}"
 IMAGE="${PMM_IMAGE:-}"
@@ -110,6 +121,9 @@ usage() {
         --chart-branch BRANCH   install the pmm-ha chart from this percona-helm-charts
                                 branch, cloned into a temp dir (default: latest, which
                                 is the published chart); OWNER:BRANCH clones OWNER's fork
+        --deps-chart-branch BRANCH  install the pmm-ha-dependencies chart from this
+                                percona-helm-charts branch (default: --chart-branch);
+                                OWNER:BRANCH clones OWNER's fork
         --chart-dir DIR         install from a percona-helm-charts checkout you already
                                 have, instead of cloning or using the published repo
         --chart-version VER     published pmm-ha chart version (default: latest)
@@ -124,6 +138,7 @@ usage() {
         --external-access       expose HAProxy and wait for PMM to serve on it:
                                 an NLB on eks, a LoadBalancer on lke, a Route on openshift
         --set KEY=VALUE         extra --set for the pmm-ha chart; repeatable
+        --set-string KEY=VALUE  extra --set-string for the pmm-ha chart; repeatable
         --backup-s3-bucket B    enable backups (centralBackupStorage, s3 mode) into bucket
                                 B; its keys are read from BACKUP_S3_ACCESS_KEY and
                                 BACKUP_S3_SECRET_KEY into the $BACKUP_SECRET secret, or
@@ -136,18 +151,26 @@ usage() {
         --pmm-secret-from NS    copy pmm-secret, and the $BACKUP_SECRET secret when
                                 backups are on, from namespace NS before installing, as a
                                 cross-namespace restore target needs the source's
+        --install-method METHOD helm or argocd (default: helm). argocd installs Argo CD
+                                and applies pmm-operators and pmm-ha Applications from
+                                the chart branches; eks only, and not with --charts,
+                                --chart-dir, --chart-version, --deps-chart-version,
+                                --pmm-secret-from or a latest chart branch
+        --argocd-version VER    Argo CD release to install (default: v3.5.6)
+        --clone-dir DIR         clone the chart branches under DIR and keep them,
+                                instead of a temp dir removed on success
         --charts WHICH          which charts to install or upgrade (default: all)
                                   all     pmm-ha-dependencies, then pmm-ha
                                   deps    pmm-ha-dependencies only
                                   pmm-ha  pmm-ha only, on operators already there
-        --timeout DURATION      helm and rollout timeout (default: 15m)
+        --timeout DURATION      helm, rollout and Argo CD Application timeout (default: 15m)
         --debug-dir DIR         diagnostics collected on failure (default: ./pmm-ha-debug)
         --summary-file PATH     credentials and URL (default: ./pmm-ha-summary.env)
 
         Every option also reads an env var: PLATFORM, NAMESPACE, RELEASE,
         DEPS_RELEASE, CHART_DIR, CHART_BRANCH (or PMM_CHART_BRANCH), CHART_REPO, CHART_VERSION, PMM_IMAGE (or
         DEPS_CHART_VERSION, PMM_IMAGE_REPOSITORY + PMM_IMAGE_TAG), PMM_ADMIN_PASSWORD,
-        EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
+        DEPS_CHART_BRANCH, INSTALL_METHOD, ARGOCD_VERSION, CLONE_PARENT, EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
         RELEASED_REPOSITORY, BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
         BACKUP_S3_PROVIDER, BACKUP_MINIO, PMM_SECRET_FROM.
         "
@@ -161,6 +184,7 @@ while [ $# -gt 0 ]; do
         --release)         RELEASE="$2"; shift 2 ;;
         --deps-release)    DEPS_RELEASE="$2"; shift 2 ;;
         --chart-branch)    CHART_BRANCH="$2"; shift 2 ;;
+        --deps-chart-branch) DEPS_CHART_BRANCH="$2"; shift 2 ;;
         --chart-dir)       CHART_DIR="$2"; shift 2 ;;
         --chart-version)   CHART_VERSION="$2"; shift 2 ;;
         --deps-chart-version) DEPS_CHART_VERSION="$2"; shift 2 ;;
@@ -168,12 +192,16 @@ while [ $# -gt 0 ]; do
         --admin-password)  ADMIN_PASSWORD="$2"; shift 2 ;;
         --external-access) EXTERNAL_ACCESS="true"; EXTERNAL_ACCESS_FROM_FLAG="true"; shift ;;
         --set)             EXTRA_SET+=(--set "$2"); shift 2 ;;
+        --set-string)      EXTRA_SET+=(--set-string "$2"); shift 2 ;;
         --backup-s3-bucket)   BACKUP_S3_BUCKET="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-s3-endpoint) BACKUP_S3_ENDPOINT="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-s3-region)   BACKUP_S3_REGION="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-s3-provider) BACKUP_S3_PROVIDER="$2"; BACKUP_FROM_FLAG="true"; shift 2 ;;
         --backup-minio)    BACKUP_MINIO="true"; BACKUP_FROM_FLAG="true"; shift ;;
         --pmm-secret-from) PMM_SECRET_FROM="$2"; shift 2 ;;
+        --install-method)  INSTALL_METHOD="$2"; shift 2 ;;
+        --argocd-version)  ARGOCD_VERSION="$2"; shift 2 ;;
+        --clone-dir)       CLONE_PARENT="$2"; shift 2 ;;
         --charts)          CHARTS="$2"; shift 2 ;;
         --timeout)         TIMEOUT="$2"; shift 2 ;;
         --debug-dir)       DEBUG_DIR="$2"; shift 2 ;;
@@ -221,6 +249,48 @@ case "$PLATFORM" in
     "") fail "--platform is required (eks, openshift or lke)." ;;
     *)  fail "unknown platform '$PLATFORM'; expected eks, openshift or lke." ;;
 esac
+
+case "$INSTALL_METHOD" in
+    helm|argocd) ;;
+    *) fail "--install-method must be helm or argocd; got '$INSTALL_METHOD'." ;;
+esac
+
+# The unparsed specs stay: argocd builds its repo URLs from them.
+CHART_BRANCH_SPEC="$CHART_BRANCH"
+DEPS_CHART_BRANCH_SPEC="${DEPS_CHART_BRANCH:-$CHART_BRANCH_SPEC}"
+DEPS_CHART_BRANCH="$DEPS_CHART_BRANCH_SPEC"
+DEPS_CHART_REPO="$CHART_REPO"
+# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
+if [[ "$CHART_BRANCH" == *:* ]]; then
+    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
+    CHART_BRANCH="${CHART_BRANCH#*:}"
+fi
+if [[ "$DEPS_CHART_BRANCH" == *:* ]]; then
+    DEPS_CHART_REPO="https://github.com/${DEPS_CHART_BRANCH%%:*}/percona-helm-charts.git"
+    DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH#*:}"
+fi
+DEPS_SEPARATE="false"
+if [ "$DEPS_CHART_REPO" != "$CHART_REPO" ] || [ "$DEPS_CHART_BRANCH" != "$CHART_BRANCH" ]; then
+    DEPS_SEPARATE="true"
+fi
+
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    [ "$PLATFORM" = "eks" ] || fail "argocd install method supports --platform eks only."
+    [ "$CHARTS" = "all" ] || fail "--charts is not supported with --install-method argocd."
+    [ -z "$CHART_DIR" ] || fail "--chart-dir is not supported with --install-method argocd."
+    [ -z "$CHART_VERSION" ] || fail "--chart-version is not supported with --install-method argocd."
+    [ -z "$DEPS_CHART_VERSION" ] || fail "--deps-chart-version is not supported with --install-method argocd."
+    [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method argocd."
+    [ "$CHART_BRANCH" != "latest" ] || fail "--chart-branch latest is not supported with --install-method argocd; pass a branch."
+    [ "$DEPS_CHART_BRANCH" != "latest" ] || fail "--deps-chart-branch latest is not supported with --install-method argocd; pass a branch."
+    # The Application waits count it down in seconds.
+    [[ "$TIMEOUT" =~ ^([0-9]+[hms])+$ ]] || fail "--timeout must be like 15m or 1h30m with --install-method argocd; got '$TIMEOUT'."
+fi
+if [ "$DEPS_SEPARATE" = "true" ]; then
+    [ -z "$CHART_DIR" ] || fail "--deps-chart-branch and --chart-dir both name a chart source; pass one."
+    { [ "$CHART_BRANCH" != "latest" ] && [ "$DEPS_CHART_BRANCH" != "latest" ]; } \
+        || fail "--deps-chart-branch differs from --chart-branch, so both must be branches, not latest."
+fi
 
 for cmd in kubectl helm openssl; do
     command -v "$cmd" >/dev/null 2>&1 || fail "'$cmd' is not installed."
@@ -271,13 +341,202 @@ if [ "$CHART_BRANCH" != "latest" ]; then
     [ -z "$CHART_DIR" ] || fail "--chart-branch and --chart-dir both name a chart source; pass one."
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --chart-branch '$CHART_BRANCH'."
 fi
-# GitHub labels a PR from a fork `owner:branch`, and that is what gets copied off the PR page.
-if [[ "$CHART_BRANCH" == *:* ]]; then
-    CHART_REPO="https://github.com/${CHART_BRANCH%%:*}/percona-helm-charts.git"
-    CHART_BRANCH="${CHART_BRANCH#*:}"
-fi
 if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
+fi
+
+# Built before any cluster access: argocd print mode renders them too.
+BACKUP_SET=()
+if [ "$BACKUP_ENABLED" = "true" ]; then
+    BACKUP_SET+=(
+        --set centralBackupStorage.enabled=true
+        --set centralBackupStorage.mode=s3
+        --set-string "centralBackupStorage.s3.bucket=$BACKUP_S3_BUCKET"
+        --set-string "centralBackupStorage.s3.region=$BACKUP_S3_REGION"
+        --set-string "centralBackupStorage.s3.provider=$BACKUP_S3_PROVIDER"
+        --set-string "centralBackupStorage.s3.existingSecret=$BACKUP_SECRET"
+    )
+    [ -z "$BACKUP_S3_ENDPOINT" ] || BACKUP_SET+=(--set-string "centralBackupStorage.s3.endpoint=$BACKUP_S3_ENDPOINT")
+fi
+
+# OpenShift already runs a node-exporter on host port 9100, so the bundled
+# DaemonSet stays Pending forever and --wait would never return. The chart's own
+# openshift mode scrapes the platform one instead. Placed before EXTRA_SET so
+# --set still wins.
+PLATFORM_SET=()
+if [ "$PLATFORM" = "openshift" ]; then
+    PLATFORM_SET+=(--set nodeExporter.mode=openshift --set prometheus-node-exporter.enabled=false)
+fi
+
+# Argo CD parameters are plain name/value pairs; a value that must stay a string
+# (--set-string, and the image tags, which can look numeric) gets forceString.
+yaml_quote() {
+    local s="$1"
+    printf "'%s'" "${s//\'/\'\'}"
+}
+
+argocd_repo_url() {
+    local spec="$1" default_repo="${2:-$CHART_REPO}"
+    if [[ "$spec" == *:* ]]; then
+        echo "https://github.com/${spec%%:*}/percona-helm-charts.git"
+    else
+        echo "$default_repo"
+    fi
+}
+
+argocd_revision() {
+    echo "${1#*:}"
+}
+
+argocd_param() {
+    local name="$1" value="$2" force="$3"
+    printf "        - name: %s\n          value: %s\n" "$(yaml_quote "$name")" "$(yaml_quote "$value")"
+    [ "$force" != "true" ] || printf "          forceString: true\n"
+}
+
+# Takes helm's own --set / --set-string argument list.
+argocd_params_from_args() {
+    local kind kv name force
+    while [ $# -gt 0 ]; do
+        kind="$1"; kv="$2"; shift 2
+        name="${kv%%=*}"
+        force="false"
+        case "$kind" in
+            --set-string) force="true" ;;
+            *) case "$name" in image.repository|image.tag|*.image.tag) force="true" ;; esac ;;
+        esac
+        argocd_param "$name" "${kv#*=}" "$force"
+    done
+}
+
+render_argocd_project() {
+    cat <<PROJECT_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: pmm-ha
+  namespace: argocd
+spec:
+  description: PMM HA
+  sourceRepos:
+    - $(yaml_quote "$(argocd_repo_url "$CHART_BRANCH_SPEC")")
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: $(yaml_quote "$NAMESPACE")
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+PROJECT_EOF
+}
+
+render_argocd_deps_app() {
+    cat <<DEPS_APP_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: $(yaml_quote "$DEPS_RELEASE")
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: $(argocd_repo_url "$DEPS_CHART_BRANCH_SPEC" "$DEPS_CHART_REPO")
+    targetRevision: $(argocd_revision "$DEPS_CHART_BRANCH_SPEC")
+    path: charts/pmm-ha-dependencies
+    helm:
+      releaseName: $(yaml_quote "$DEPS_RELEASE")
+      parameters:
+$(argocd_param victoria-metrics-operator.admissionWebhooks.enabled false false)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: $(yaml_quote "$NAMESPACE")
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+DEPS_APP_EOF
+}
+
+render_argocd_pmm_app() {
+    local params
+    params="$(
+        argocd_param gitops.enabled true false
+        argocd_param tls.secretFormat kubernetes.io/tls false
+        argocd_param victoriaMetrics.vmagent.scrapeApiserver false false
+        if [ "$EXTERNAL_ACCESS" = "true" ]; then
+            argocd_param haproxy.service.type LoadBalancer false
+            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-type' nlb false
+            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-scheme' internet-facing false
+        fi
+        argocd_params_from_args \
+            --set secret.create=false \
+            --set secret.name=pmm-secret \
+            --set "image.repository=${IMAGE%:*}" \
+            --set "image.tag=${IMAGE##*:}" \
+            --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
+            ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
+            ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+    )"
+    cat <<PMM_APP_EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: $(yaml_quote "$RELEASE")
+  namespace: argocd
+spec:
+  project: pmm-ha
+  source:
+    repoURL: $(argocd_repo_url "$CHART_BRANCH_SPEC")
+    targetRevision: $(argocd_revision "$CHART_BRANCH_SPEC")
+    path: charts/pmm-ha
+    helm:
+      releaseName: $(yaml_quote "$RELEASE")
+      parameters:
+$params
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: $(yaml_quote "$NAMESPACE")
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: $(yaml_quote "$RELEASE")
+      managedFieldsManagers: [pmm-backup]
+    - group: operator.victoriametrics.com
+      kind: VMCluster
+      name: $(yaml_quote "${RELEASE}-vmcluster")
+      managedFieldsManagers: [pmm-backup]
+PMM_APP_EOF
+}
+
+# all: the AppProject, the dependencies Application and the pmm-ha Application;
+# deps: the dependencies Application; pmm: the AppProject and the pmm-ha Application.
+render_argocd_manifests() {
+    case "${1:-all}" in
+        all)  render_argocd_project; echo "---"; render_argocd_deps_app; echo "---"; render_argocd_pmm_app ;;
+        deps) render_argocd_deps_app ;;
+        pmm)  render_argocd_project; echo "---"; render_argocd_pmm_app ;;
+        *) fail "render_argocd_manifests takes all, deps or pmm; got '$1'." ;;
+    esac
+}
+
+if [ "$INSTALL_METHOD" = "argocd" ] && [ "${ARGOCD_PRINT_MANIFESTS:-}" = "1" ]; then
+    [ -n "$IMAGE" ] || fail "ARGOCD_PRINT_MANIFESTS needs --image."
+    render_argocd_manifests all
+    exit 0
 fi
 
 kubectl version -o json >/dev/null 2>&1 || fail "kubectl cannot reach a cluster; check KUBECONFIG."
@@ -295,6 +554,12 @@ dump_diagnostics() {
             kubectl logs "$pod" -n "$NAMESPACE" -c "$container" --tail=200 >"$DEBUG_DIR/${pod}-${container}.log" 2>&1 || true
         done
     done
+
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        kubectl get applications,appprojects -n argocd -o yaml >"$DEBUG_DIR/argocd-applications.yaml" 2>&1 || true
+        kubectl logs statefulset/argocd-application-controller -n argocd --tail=500 >"$DEBUG_DIR/argocd-application-controller.log" 2>&1 || true
+        kubectl logs deploy/argocd-repo-server -n argocd --tail=500 >"$DEBUG_DIR/argocd-repo-server.log" 2>&1 || true
+    fi
 }
 DIAGNOSTICS_ENABLED="false"
 
@@ -306,7 +571,8 @@ on_exit() {
     fi
 
     if [ "$rc" -eq 0 ]; then
-        rm -rf "${CLONE_DIR:-}" "${PATCH_DIR:-}"
+        [ -n "$CLONE_PARENT" ] || rm -rf "${CLONE_DIR:-}" "${DEPS_CLONE_DIR:-}"
+        rm -rf "${PATCH_DIR:-}"
     fi
 
     exit "$rc"
@@ -335,6 +601,14 @@ release_chart() {
         | tr ',' '\n' | sed -n 's/.*"chart":"\([^"]*\)".*/\1/p'
 }
 
+# Argo CD keeps no Helm release; it renders the cloned branch, so its Chart.yaml says what runs.
+chart_yaml_version() {
+    local name version
+    name="$(sed -n 's/^name:[[:space:]]*//p' "$1/Chart.yaml" | tr -d "\"' ")"
+    version="$(sed -n 's/^version:[[:space:]]*//p' "$1/Chart.yaml" | tr -d "\"' ")"
+    echo "${name}-${version}"
+}
+
 write_summary() {
     {
         echo "platform=$PLATFORM"
@@ -344,7 +618,11 @@ write_summary() {
 
         if [ "$INSTALL_DEPS" = "true" ]; then
             echo "deps_release=$DEPS_RELEASE"
-            echo "deps_chart=$(release_chart "$DEPS_RELEASE")"
+            if [ "$INSTALL_METHOD" = "argocd" ]; then
+                echo "deps_chart=$(chart_yaml_version "$DEPS_CHART_PATH")"
+            else
+                echo "deps_chart=$(release_chart "$DEPS_RELEASE")"
+            fi
         fi
 
         if [ "$INSTALL_PMM" = "true" ]; then
@@ -362,13 +640,24 @@ write_summary() {
 
             if [ "$SECRET_CREATED" = "true" ]; then
                 echo "pmm_admin_password=$ADMIN_PASSWORD"
-                echo "postgres_password=$PG_PASSWORD"
-                echo "grafana_password=$GF_PASSWORD"
+                if [ "$INSTALL_METHOD" = "argocd" ]; then
+                    echo "clickhouse_datasource_password=$CH_DS_PASSWORD"
+                else
+                    echo "postgres_password=$PG_PASSWORD"
+                    echo "grafana_password=$GF_PASSWORD"
+                fi
                 echo "clickhouse_password=$CH_PASSWORD"
                 echo "victoriametrics_password=$VM_PASSWORD"
             else
                 echo "pmm_admin_password=<kept from the existing pmm-secret>"
             fi
+        fi
+
+        if [ "$INSTALL_METHOD" = "argocd" ]; then
+            echo "install_method=$INSTALL_METHOD"
+            echo "argocd_version=$ARGOCD_VERSION"
+            echo "argocd_apps=$DEPS_RELEASE,$RELEASE"
+            [ -z "$CLONE_PARENT" ] || echo "deps_chart_dir=$DEPS_CHART_PATH"
         fi
     } >"$SUMMARY_FILE"
     chmod 600 "$SUMMARY_FILE"
@@ -621,15 +910,170 @@ wait_for_statefulsets_rolled() {
     done
 }
 
+# Rotating these on an existing cluster would break PG, ClickHouse and VM, which
+# still hold the old ones - so an existing secret is kept, never overwritten.
+# With gitops.enabled the PostgreSQL operator generates the PG and Grafana passwords,
+# and the Grafana ClickHouse data source password is read from here instead.
+ensure_pmm_secret() {
+    local mode_keys=()
+
+    SECRET_CREATED="false"
+    if kubectl get secret pmm-secret -n "$NAMESPACE" >/dev/null 2>&1; then
+        log "Keeping the pmm-secret already in $NAMESPACE"
+        [ -n "$ADMIN_PASSWORD" ] && log "WARNING: --admin-password ignored, pmm-secret already exists"
+        ADMIN_PASSWORD=""
+        return 0
+    fi
+
+    [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(random_password)"
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        CH_DS_PASSWORD="$(random_password)"
+        mode_keys=(--from-literal=PMM_CLICKHOUSE_DATASOURCE_PASSWORD="$CH_DS_PASSWORD")
+    else
+        PG_PASSWORD="$(random_password)"
+        GF_PASSWORD="$(random_password)"
+        mode_keys=(--from-literal=PG_PASSWORD="$PG_PASSWORD" --from-literal=GF_PASSWORD="$GF_PASSWORD")
+    fi
+    CH_PASSWORD="$(random_password)"
+    VM_PASSWORD="$(random_password)"
+
+    kubectl create secret generic pmm-secret -n "$NAMESPACE" \
+        --from-literal=PMM_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        --from-literal=GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        "${mode_keys[@]}" \
+        --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
+        --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
+        --from-literal=PMM_HA_VM_USERNAME="victoriametrics_pmm" \
+        --from-literal=PMM_HA_VM_PASSWORD="$VM_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    SECRET_CREATED="true"
+    log "Created pmm-secret in $NAMESPACE"
+}
+
+# With gitops.enabled the chart generates no HAProxy certificate; tls.secretFormat
+# kubernetes.io/tls reads this one.
+ensure_haproxy_tls_secret() {
+    local tls_dir out
+
+    if kubectl get secret haproxy-tls-secret -n "$NAMESPACE" >/dev/null 2>&1; then
+        log "Keeping the haproxy-tls-secret already in $NAMESPACE"
+        return 0
+    fi
+
+    tls_dir="$(mktemp -d)"
+    out="$(openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=pmm-ha \
+        -keyout "$tls_dir/tls.key" -out "$tls_dir/tls.crt" 2>&1)" \
+        || { rm -rf "$tls_dir"; fail "could not generate the HAProxy certificate: $out"; }
+    kubectl create secret tls haproxy-tls-secret -n "$NAMESPACE" \
+        --cert="$tls_dir/tls.crt" --key="$tls_dir/tls.key" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    rm -rf "$tls_dir"
+    log "Created haproxy-tls-secret in $NAMESPACE"
+}
+
+# What the chart README asks for before the first sync.
+create_gitops_secrets() {
+    ensure_pmm_secret
+    ensure_haproxy_tls_secret
+    if [ "$BACKUP_ENABLED" = "true" ]; then
+        ensure_backup_secret
+        [ "$BACKUP_MINIO" = "false" ] || deploy_minio
+    fi
+}
+
+# --force-conflicts lets a re-run take back fields an earlier install owns.
+install_argocd() {
+    local url="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml" workload
+
+    log "Installing Argo CD $ARGOCD_VERSION"
+    kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+    retry kubectl apply -n argocd --server-side --force-conflicts -f "$url" \
+        || fail "could not apply $url."
+    retry kubectl wait --for=condition=established --timeout="$TIMEOUT" \
+        crd/applications.argoproj.io crd/appprojects.argoproj.io \
+        || fail "the Argo CD Application and AppProject CRDs were not established within $TIMEOUT."
+    for workload in deploy/argocd-repo-server statefulset/argocd-application-controller; do
+        retry kubectl -n argocd rollout status "$workload" --timeout="$TIMEOUT" \
+            || fail "Argo CD $workload did not roll out within $TIMEOUT."
+    done
+}
+
+duration_seconds() {
+    local rest="$1" total=0
+
+    while [[ "$rest" =~ ^([0-9]+)([hms])(.*)$ ]]; do
+        case "${BASH_REMATCH[2]}" in
+            h) total=$(( total + 10#${BASH_REMATCH[1]} * 3600 )) ;;
+            m) total=$(( total + 10#${BASH_REMATCH[1]} * 60 )) ;;
+            s) total=$(( total + 10#${BASH_REMATCH[1]} )) ;;
+        esac
+        rest="${BASH_REMATCH[3]}"
+    done
+    echo "$total"
+}
+
+# A kubectl error while polling (see retry) only means not yet.
+wait_for_application() {
+    local name="$1" timeout="$2" status="" logged="" out deadline
+    deadline=$(( $(date +%s) + $(duration_seconds "$timeout") ))
+
+    log "Waiting for Application $name to be Synced and Healthy"
+    while :; do
+        if out="$(kubectl -n argocd get application "$name" -o jsonpath='{.status.sync.status}/{.status.health.status}' 2>/dev/null)"; then
+            [ "$out" = "/" ] && status="" || status="$out"
+        fi
+        [ "$status" = "Synced/Healthy" ] && break
+        if [ "$status" != "$logged" ]; then
+            log "Application $name: ${status:-<no status yet>}"
+            logged="$status"
+        fi
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            {
+                echo "Application $name last status: ${status:-<none>}"
+                echo "Conditions: $(kubectl -n argocd get application "$name" -o jsonpath='{.status.conditions}' 2>&1 || true)"
+                echo "Last operation: $(kubectl -n argocd get application "$name" -o jsonpath='{.status.operationState.message}' 2>&1 || true)"
+            } >&2
+            fail "Application $name was not Synced and Healthy within $timeout (last status: ${status:-<none>})."
+        fi
+        sleep 10
+    done
+    log "Application $name is Synced and Healthy"
+}
+
+# Sets CLONED_DIR; under --clone-dir the clone is kept.
+clone_chart_branch() {
+    local repo="$1" branch="$2"
+
+    if [ -n "$CLONE_PARENT" ]; then
+        mkdir -p "$CLONE_PARENT"
+        CLONED_DIR="$(mktemp -d "$CLONE_PARENT/percona-helm-charts.XXXXXX")"
+    else
+        CLONED_DIR="$(mktemp -d)"
+    fi
+    log "Cloning $repo branch $branch into $CLONED_DIR"
+    git clone --branch "$branch" --depth 1 "$repo" "$CLONED_DIR" \
+        || fail "could not clone $repo branch '$branch'."
+}
+
 if [ "$CHART_BRANCH" != "latest" ]; then
-    CLONE_DIR="$(mktemp -d)"
-    log "Cloning $CHART_REPO branch $CHART_BRANCH into $CLONE_DIR"
-    git clone --branch "$CHART_BRANCH" --depth 1 "$CHART_REPO" "$CLONE_DIR" \
-        || fail "could not clone $CHART_REPO branch '$CHART_BRANCH'."
+    clone_chart_branch "$CHART_REPO" "$CHART_BRANCH"
+    CLONE_DIR="$CLONED_DIR"
 
     [ -d "$CLONE_DIR/charts/pmm-ha" ] \
         || fail "branch '$CHART_BRANCH' of $CHART_REPO has no charts/pmm-ha."
     CHART_DIR="$CLONE_DIR"
+fi
+
+# Where the dependencies chart is read from; empty when it is the published one.
+DEPS_CHART_PATH=""
+if [ "$DEPS_SEPARATE" = "true" ] && { [ "$INSTALL_DEPS" = "true" ] || [ "$INSTALL_METHOD" = "argocd" ]; }; then
+    clone_chart_branch "$DEPS_CHART_REPO" "$DEPS_CHART_BRANCH"
+    DEPS_CLONE_DIR="$CLONED_DIR"
+    DEPS_CHART_PATH="$DEPS_CLONE_DIR/charts/pmm-ha-dependencies"
+    [ -d "$DEPS_CHART_PATH" ] \
+        || fail "branch '$DEPS_CHART_BRANCH' of $DEPS_CHART_REPO has no charts/pmm-ha-dependencies."
+elif [ -n "$CHART_DIR" ]; then
+    DEPS_CHART_PATH="$CHART_DIR/charts/pmm-ha-dependencies"
 fi
 
 if [ "$INSTALL_PMM" = "true" ] && [ -z "$IMAGE" ]; then
@@ -641,6 +1085,7 @@ DIAGNOSTICS_ENABLED="true"
 
 if [ -n "${CLONE_DIR:-}" ]; then
     CHART_SOURCE="branch:$CHART_BRANCH"
+    [ -z "${DEPS_CLONE_DIR:-}" ] || CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
 elif [ -n "$CHART_DIR" ]; then
     CHART_SOURCE="dir:$CHART_DIR"
 else
@@ -660,7 +1105,7 @@ PMM_CHART_ARGS=()
 [ -n "$CHART_VERSION" ] && PMM_CHART_ARGS+=(--version "$CHART_VERSION")
 
 if [ -n "$CHART_DIR" ]; then
-    DEPS_CHART="$CHART_DIR/charts/pmm-ha-dependencies"
+    DEPS_CHART="$DEPS_CHART_PATH"
     PMM_CHART="$CHART_DIR/charts/pmm-ha"
     DEPS_CHART_ARGS=()   # a checkout carries its own version
     PMM_CHART_ARGS=()
@@ -750,13 +1195,24 @@ if [ "$PLATFORM" = "openshift" ] && [ "$INSTALL_PMM" = "true" ] && [ "${#OPENSHI
     done
 fi
 
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    install_argocd
+    create_gitops_secrets
+fi
+
 if [ "$INSTALL_DEPS" = "true" ]; then
-    log "Installing $DEPS_CHART as $DEPS_RELEASE"
-    helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
-        --namespace "$NAMESPACE" \
-        --wait --timeout "$TIMEOUT" \
-        ${OPENSHIFT_DEPS_VALUES[@]+"${OPENSHIFT_DEPS_VALUES[@]}"} \
-        ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
+    if [ "$INSTALL_METHOD" = "argocd" ]; then
+        log "Applying the $DEPS_RELEASE Application, branch $DEPS_CHART_BRANCH_SPEC"
+        render_argocd_manifests deps | kubectl apply -f -
+        wait_for_application "$DEPS_RELEASE" "$TIMEOUT"
+    else
+        log "Installing $DEPS_CHART as $DEPS_RELEASE"
+        helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
+            --namespace "$NAMESPACE" \
+            --wait --timeout "$TIMEOUT" \
+            ${OPENSHIFT_DEPS_VALUES[@]+"${OPENSHIFT_DEPS_VALUES[@]}"} \
+            ${DEPS_CHART_ARGS[@]+"${DEPS_CHART_ARGS[@]}"}
+    fi
 
     for operator in "${OPERATOR_NAMES[@]}"; do
         log "Waiting for operator $operator"
@@ -796,71 +1252,31 @@ if [ -n "$PMM_SECRET_FROM" ]; then
     copy_source_secret pmm-secret || fail "no pmm-secret in namespace $PMM_SECRET_FROM to copy."
 fi
 
-# Rotating these on an existing cluster would break PG, ClickHouse and VM, which
-# still hold the old ones - so an existing secret is kept, never overwritten.
-SECRET_CREATED="false"
-if kubectl get secret pmm-secret -n "$NAMESPACE" >/dev/null 2>&1; then
-    log "Keeping the pmm-secret already in $NAMESPACE"
-    [ -n "$ADMIN_PASSWORD" ] && log "WARNING: --admin-password ignored, pmm-secret already exists"
-    ADMIN_PASSWORD=""
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    log "Applying the pmm-ha AppProject and the $RELEASE Application, branch $CHART_BRANCH_SPEC, image $IMAGE"
+    render_argocd_manifests pmm | kubectl apply -f -
+    wait_for_application "$RELEASE" "$TIMEOUT"
 else
-    [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(random_password)"
-    PG_PASSWORD="$(random_password)"
-    GF_PASSWORD="$(random_password)"
-    CH_PASSWORD="$(random_password)"
-    VM_PASSWORD="$(random_password)"
+    ensure_pmm_secret
 
-    kubectl create secret generic pmm-secret -n "$NAMESPACE" \
-        --from-literal=PMM_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-        --from-literal=GF_SECURITY_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-        --from-literal=PG_PASSWORD="$PG_PASSWORD" \
-        --from-literal=GF_PASSWORD="$GF_PASSWORD" \
-        --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
-        --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PASSWORD" \
-        --from-literal=PMM_HA_VM_USERNAME="victoriametrics_pmm" \
-        --from-literal=PMM_HA_VM_PASSWORD="$VM_PASSWORD" \
-        --dry-run=client -o yaml | kubectl apply -f -
-    SECRET_CREATED="true"
-    log "Created pmm-secret in $NAMESPACE"
+    if [ "$BACKUP_ENABLED" = "true" ]; then
+        ensure_backup_secret
+        [ "$BACKUP_MINIO" = "false" ] || deploy_minio
+    fi
+
+    log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
+    helm upgrade --install "$RELEASE" "$PMM_CHART" \
+        --namespace "$NAMESPACE" \
+        ${OPENSHIFT_PMM_VALUES[@]+"${OPENSHIFT_PMM_VALUES[@]}"} \
+        --set secret.create=false \
+        --set secret.name=pmm-secret \
+        --wait --timeout "$TIMEOUT" \
+        --set "image.repository=${IMAGE%:*}" \
+        --set "image.tag=${IMAGE##*:}" \
+        --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
+        ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
+        ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 fi
-
-BACKUP_SET=()
-if [ "$BACKUP_ENABLED" = "true" ]; then
-    ensure_backup_secret
-    [ "$BACKUP_MINIO" = "false" ] || deploy_minio
-
-    BACKUP_SET+=(
-        --set centralBackupStorage.enabled=true
-        --set centralBackupStorage.mode=s3
-        --set-string "centralBackupStorage.s3.bucket=$BACKUP_S3_BUCKET"
-        --set-string "centralBackupStorage.s3.region=$BACKUP_S3_REGION"
-        --set-string "centralBackupStorage.s3.provider=$BACKUP_S3_PROVIDER"
-        --set-string "centralBackupStorage.s3.existingSecret=$BACKUP_SECRET"
-    )
-    [ -z "$BACKUP_S3_ENDPOINT" ] || BACKUP_SET+=(--set-string "centralBackupStorage.s3.endpoint=$BACKUP_S3_ENDPOINT")
-fi
-
-# OpenShift already runs a node-exporter on host port 9100, so the bundled
-# DaemonSet stays Pending forever and --wait would never return. The chart's own
-# openshift mode scrapes the platform one instead. Placed before EXTRA_SET so
-# --set still wins.
-PLATFORM_SET=()
-if [ "$PLATFORM" = "openshift" ]; then
-    PLATFORM_SET+=(--set nodeExporter.mode=openshift --set prometheus-node-exporter.enabled=false)
-fi
-
-log "Installing $PMM_CHART as $RELEASE on image $IMAGE"
-helm upgrade --install "$RELEASE" "$PMM_CHART" \
-    --namespace "$NAMESPACE" \
-    ${OPENSHIFT_PMM_VALUES[@]+"${OPENSHIFT_PMM_VALUES[@]}"} \
-    --set secret.create=false \
-    --set secret.name=pmm-secret \
-    --wait --timeout "$TIMEOUT" \
-    --set "image.repository=${IMAGE%:*}" \
-    --set "image.tag=${IMAGE##*:}" \
-    --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
-    ${PMM_CHART_ARGS[@]+"${PMM_CHART_ARGS[@]}"} ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
-    ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
 
 # A chart from before PMM-13858 ignores centralBackupStorage without a word.
 if [ "$BACKUP_ENABLED" = "true" ] && ! kubectl get deployment "${RELEASE}-backup-tools" -n "$NAMESPACE" >/dev/null 2>&1; then
@@ -890,7 +1306,8 @@ EXTERNAL_HOST=""
 if [ "$EXTERNAL_ACCESS" = "true" ]; then
     case "$PLATFORM" in
         eks)
-            kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
+            # Argo CD sets these from chart values, and self-heal would revert a patch.
+            [ "$INSTALL_METHOD" = "argocd" ] || kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
                 "metadata": {
                     "annotations": {
                         "service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
@@ -962,7 +1379,11 @@ ROUTE_EOF
     log "PMM is serving on $PMM_URL"
 fi
 
-RELEASE_CHART="$(release_chart "$RELEASE")"
+if [ "$INSTALL_METHOD" = "argocd" ]; then
+    RELEASE_CHART="$(chart_yaml_version "$CHART_DIR/charts/pmm-ha")"
+else
+    RELEASE_CHART="$(release_chart "$RELEASE")"
+fi
 write_summary
 
 kubectl get pods -n "$NAMESPACE" -o wide
