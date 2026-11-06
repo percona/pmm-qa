@@ -60,6 +60,15 @@ const apiEndpoints = {
     datasourceProxy: '/graph/api/datasources/proxy/uid',
     query: '/prometheus/api/v1/query',
   },
+  qan: {
+    explainFingerprint: '/v1/qan:explainFingerprint',
+    getExample: '/v1/qan/query:getExample',
+    getHistogram: '/v1/qan:getHistogram',
+    getLabels: '/v1/qan:getLabels',
+    getMetrics: '/v1/qan:getMetrics',
+    getReport: '/v1/qan/metrics:getReport',
+    query: '/v1/qan/query',
+  },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
     sessions: '/v1/realtimeanalytics/sessions',

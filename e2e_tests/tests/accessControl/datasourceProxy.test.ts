@@ -58,7 +58,7 @@ pmmTest.afterEach(async ({ accessControlHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2345 - Verify a Viewer with no access to any service gets no metrics through any address of the Metrics data source @LBAC',
+  'PMM-T2345 - Verify a Viewer with no access to any service gets no metrics through any address of the Metrics data source @lbac',
   async ({ accessControlHelper, api, dashboard, grafanaHelper, page, urlHelper }) => {
     const proxyApi = api.datasourceProxyApi;
     const copy = await proxyApi.createDataSource(`Metrics copy ${Date.now()}`, metricsDataSourceUrl);
@@ -116,7 +116,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2346 - Verify a Viewer with full access still gets every metric through each address of the Metrics data source @LBAC',
+  'PMM-T2346 - Verify a Viewer with full access still gets every metric through each address of the Metrics data source @lbac',
   async ({ accessControlHelper, api, dashboard, grafanaHelper, page, urlHelper }) => {
     const proxyApi = api.datasourceProxyApi;
 
@@ -162,7 +162,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2347 - Verify a Viewer cannot create metric snapshots or read server internals through the Metrics data source @LBAC',
+  'PMM-T2347 - Verify a Viewer cannot create metric snapshots or read server internals through the Metrics data source @lbac',
   async ({ accessControlHelper, api }) => {
     const proxyApi = api.datasourceProxyApi;
     const snapshotsBefore = accessControlHelper.countSnapshots();
@@ -203,7 +203,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2348 - Verify a Viewer cannot delete metrics through the Metrics data source @LBAC',
+  'PMM-T2348 - Verify a Viewer cannot delete metrics through the Metrics data source @lbac',
   async ({ accessControlHelper, api }) => {
     const proxyApi = api.datasourceProxyApi;
     const canaryQuery = `api/v1/query?query=${encodeURIComponent(`last_over_time(${canaryMetric}[1h])`)}`;
@@ -246,7 +246,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2349 - Verify Admin can still open the VictoriaMetrics targets and cardinality pages @LBAC',
+  'PMM-T2349 - Verify Admin can still open the VictoriaMetrics targets and cardinality pages @lbac',
   async ({ api }) => {
     const proxyApi = api.datasourceProxyApi;
 
@@ -292,7 +292,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2353 - Verify a disguised address cannot get round the Metrics data source checks @LBAC',
+  'PMM-T2353 - Verify a disguised address cannot get round the Metrics data source checks @lbac',
   async ({ accessControlHelper, api }) => {
     const proxyApi = api.datasourceProxyApi;
     const traversal = '/..'.repeat(6);
@@ -337,7 +337,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2350 - Verify dashboards, variables, Explore, QAN and alert rules keep working for every database type @LBAC',
+  'PMM-T2350 - Verify dashboards, variables, Explore, QAN and alert rules keep working for every database type @lbac',
   async ({
     accessControlHelper,
     api,
