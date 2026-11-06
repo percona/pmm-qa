@@ -51,7 +51,6 @@ pmmTest(
   },
 );
 
-// Grafana PRs (@grafana-pr) test the Grafana pages only: they run against a released PMM UI
 const grafanaPages = new Set(['addInstancePage']);
 
 for (const role of ['viewer', 'editor'] as const) {

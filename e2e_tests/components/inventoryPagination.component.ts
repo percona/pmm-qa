@@ -16,7 +16,6 @@ export default class InventoryPagination {
   readonly selectRowCheckboxes: Locator;
 
   constructor(readonly page: Page) {
-    // Material React Table's pagination, e.g. "1-25 of 30"
     this.itemsInterval = page.getByText(/^\d+-\d+ of \d+$/);
     this.monitoringNotOkRows = page.locator(tableDataRows).filter({
       hasNot: page.getByTestId('monitoring-status-link').filter({ hasText: /^OK$/ }),
