@@ -71,6 +71,7 @@ export default class LeftNavigation extends BasePage {
     },
     mongodb: {
       backupStatus: { locator: this.page.getByTestId('navitem-mongo-backup-details-list-item') },
+      clusterSync: { locator: this.page.getByTestId('navitem-mongo-clustersync-details') },
       collections: { locator: this.page.getByTestId('navitem-mongo-collections-overview') },
       ha: {
         cluster: { locator: this.page.getByTestId('navitem-mongo-cluster-summary') },

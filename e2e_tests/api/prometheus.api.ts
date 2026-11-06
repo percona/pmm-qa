@@ -17,6 +17,17 @@ export default class PrometheusApi {
 
   constructor(private request: APIRequestContext) {}
 
+  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> => {
+    const active = await this.getActiveClusterSyncInstances();
+
+    expect(active, 'Exactly one PCSM instance must hold the HA lease').toHaveLength(1);
+
+    return active[0];
+  };
+
+  getActiveClusterSyncInstances = async (): Promise<PrometheusSample[]> =>
+    await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`);
+
   /** Looked up rather than hardcoded - the UID is generated per deployment. */
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
