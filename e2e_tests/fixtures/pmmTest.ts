@@ -47,6 +47,7 @@ import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
+import AmazonRdsPage from '@pages/amazonRds.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
@@ -55,6 +56,7 @@ const pmmTest = base.extend<{
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
+  amazonRdsPage: AmazonRdsPage;
   agentsPage: AgentsPage;
   alertingPage: AlertingPage;
   changePasswordPage: ChangePasswordPage;
@@ -104,6 +106,7 @@ const pmmTest = base.extend<{
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
+  amazonRdsPage: async ({ page }, use) => await use(new AmazonRdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),

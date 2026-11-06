@@ -73,12 +73,6 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
-    tableCellInRow: (panelName: string, rowText: string, cellText: string) =>
-      this.builders
-        .panelContentByExactName(panelName)
-        .getByRole('row')
-        .filter({ hasText: rowText })
-        .getByRole('gridcell', { exact: true, name: cellText }),
     templateVariableCombobox: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')

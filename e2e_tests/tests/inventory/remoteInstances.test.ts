@@ -205,8 +205,8 @@ for (const filterName of qanFilters) {
 }
 
 pmmTest(
-  'PMM-T0000 - Verify Aurora overview lists the instance by cluster @instances',
-  async ({ api, dashboard, page, urlHelper }) => {
+  'PMM-T0000 - Verify Amazon RDS page lists the Aurora instance under its cluster @instances',
+  async ({ amazonRdsPage, api, urlHelper }) => {
     const { services } = await api.inventoryApi.getServices();
 
     if (!services.some(({ service_name }) => service_name === auroraInstanceId)) {
@@ -214,17 +214,31 @@ pmmTest(
     }
 
     await expect(async () => {
-      await page.goto(
-        urlHelper.buildUrlWithParameters('graph/d/aurora-overview/amazon-aurora-overview', {
-          from: 'now-15m',
-        }),
-      );
-      await dashboard.waitForDashboardToLoad();
-
+      await amazonRdsPage.openGroup(auroraClusterId);
       await expect(
-        dashboard.builders.tableCellInRow('Aurora instances', auroraInstanceId, auroraClusterId),
-      ).toBeVisible({ timeout: Timeouts.FIVE_SECONDS });
+        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.auroraCluster),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.auroraMysql),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.groupCell(auroraClusterId, amazonRdsPage.texts.oneInstanceConnected),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.instanceCell(auroraClusterId, auroraInstanceId, amazonRdsPage.texts.writer),
+      ).toBeVisible();
+      await expect(
+        amazonRdsPage.builders.instanceCell(auroraClusterId, auroraInstanceId, amazonRdsPage.texts.up),
+      ).toBeVisible();
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await expect(amazonRdsPage.builders.serviceLink(auroraClusterId, auroraInstanceId)).toHaveAttribute(
+      'href',
+      urlHelper.buildUrlWithParameters(amazonRdsPage.auroraDetailsUrl, { serviceName: auroraInstanceId }),
+    );
+    await expect(amazonRdsPage.builders.serviceLink(auroraClusterId, auroraInstanceId)).toHaveAttribute(
+      'target',
+      '_blank',
+    );
   },
 );
 
