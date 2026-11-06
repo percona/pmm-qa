@@ -57,6 +57,8 @@ export default class AddInstancePage extends BasePage {
     serviceName: this.page.getByTestId('text-input-service-name'),
     tlsCa: this.page.getByTestId('text-input-tls-ca'),
     tlsCert: this.page.getByTestId('text-input-tls-cert'),
+    tlsCertificateFilePassword: this.page.getByTestId('text-input-tls-certificate-key-file-password'),
+    tlsCertificateKey: this.page.getByTestId('text-input-tls-certificate-key'),
     tlsKey: this.page.getByTestId('text-input-tls-key'),
     username: this.page.getByTestId('text-input-username'),
   };
@@ -64,6 +66,31 @@ export default class AddInstancePage extends BasePage {
     maxQueryLengthError: this.page
       .locator('.MuiFormControl-root', { has: this.page.getByTestId('text-input-max-query-length') })
       .locator('.MuiFormHelperText-root'),
+  };
+
+  addRemoteTlsMongodb = async (
+    serviceName: string,
+    host: string,
+    certificates: { ca: string; key: string },
+  ) => {
+    await this.builders.instanceType('mongodb').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.selectNode('pmm-server');
+    await this.fillRemoteFields({
+      cluster: 'mongodb_remote_cluster',
+      environment: 'mongodb_remote_cluster',
+      host,
+      port: '27017',
+      serviceName,
+    });
+    await this.verifyTlsFieldsHidden([
+      this.inputs.tlsCa,
+      this.inputs.tlsCertificateFilePassword,
+      this.inputs.tlsCertificateKey,
+    ]);
+    await this.buttons.useTls.check();
+    await this.inputs.tlsCa.fill(certificates.ca, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.tlsCertificateKey.fill(certificates.key);
+    await this.configureRemoteInstance('mongodb');
   };
 
   addRemoteTlsMysql = async (
@@ -167,8 +194,8 @@ export default class AddInstancePage extends BasePage {
     await expect(this.elements.pgStatMonitor).toBeChecked();
   };
 
-  verifyTlsFieldsHidden = async () => {
-    for (const input of [this.inputs.tlsCa, this.inputs.tlsCert, this.inputs.tlsKey]) {
+  verifyTlsFieldsHidden = async (inputs = [this.inputs.tlsCa, this.inputs.tlsCert, this.inputs.tlsKey]) => {
+    for (const input of inputs) {
       await expect(input).toBeHidden();
     }
   };
