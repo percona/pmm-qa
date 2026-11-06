@@ -10,9 +10,10 @@
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster, where
-# HOT_SHARD=rs1 or rs2 adds a write load that only that shard takes.
+# HOT_SHARD=rs1 or rs2 adds a write load that only that shard takes, and
+# SCAN_SHARD=rs1 or rs2 a load of queries that examine many documents per one returned.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio hot_shard tarball='' suffix
+  local version ol client setup_type profile gssapi minio hot_shard scan_shard option tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -23,17 +24,21 @@ setup_psmdb() {
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
   hot_shard=$(resolve_value PSMDB HOT_SHARD DB_CONFIG)
   hot_shard=${hot_shard,,}
+  scan_shard=$(resolve_value PSMDB SCAN_SHARD DB_CONFIG)
+  scan_shard=${scan_shard,,}
   suffix=$RANDOM
 
   case $setup_type in
     pss | psa | shards | sharding) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
   esac
-  case $hot_shard:$setup_type in
-    :* | rs[12]:shards | rs[12]:sharding) ;;
-    *:shards | *:sharding) die "PSMDB HOT_SHARD must be rs1 or rs2, got '$hot_shard'." ;;
-    *) die "PSMDB HOT_SHARD needs SETUP_TYPE=sharding, got '$setup_type'." ;;
-  esac
+  for option in "HOT_SHARD=$hot_shard" "SCAN_SHARD=$scan_shard"; do
+    case ${option#*=}:$setup_type in
+      :* | rs[12]:shards | rs[12]:sharding) ;;
+      *:shards | *:sharding) die "PSMDB ${option%%=*} must be rs1 or rs2, got '${option#*=}'." ;;
+      *) die "PSMDB ${option%%=*} needs SETUP_TYPE=sharding, got '$setup_type'." ;;
+    esac
+  done
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -322,6 +327,9 @@ psmdb_sharded() {
   if [[ -n $hot_shard ]]; then
     step "Start the write load on shard $hot_shard" psmdb_hot_shard_traffic
   fi
+  if [[ -n $scan_shard ]]; then
+    step "Start the scan load on shard $scan_shard" psmdb_scan_shard_traffic
+  fi
   report_agent_status "${clients[@]}"
 }
 
@@ -331,6 +339,10 @@ psmdb_traffic() {
 
 psmdb_hot_shard_traffic() {
   TARGET_SHARD=$hot_shard must bash ./generate_shard_write_traffic.sh >/dev/null
+}
+
+psmdb_scan_shard_traffic() {
+  TARGET_SHARD=$scan_shard LOAD=scan must bash ./generate_shard_write_traffic.sh >/dev/null
 }
 
 # TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack. A throwaway compose override disables the stack's own pmm-server and kerberos

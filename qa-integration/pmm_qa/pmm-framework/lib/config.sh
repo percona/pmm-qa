@@ -86,10 +86,10 @@ list_databases() {
 
 register_database PSMDB \
   '6.0 7.0 8.0 8.3' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO HOT_SHARD' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO HOT_SHARD SCAN_SHARD' \
   'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
-  'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true' 'HOT_SHARD='
+  'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true' 'HOT_SHARD=' 'SCAN_SHARD='
 
 # Runs on the psmdb image, so it offers the same versions.
 register_database SSL_PSMDB \

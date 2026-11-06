@@ -114,9 +114,11 @@ for Valkey. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
 On the PSMDB sharded cluster, `HOT_SHARD=rs1` (or `rs2`) adds a write-only
-load that only that shard takes, on top of the cluster-wide workload, for the
-per-shard panels of MongoDB Sharded Cluster Summary:
-`--database psmdb,SETUP_TYPE=sharding,HOT_SHARD=rs1`.
+load that only that shard takes, and `SCAN_SHARD=rs1` (or `rs2`) a load of
+queries on an unindexed field, each examining 20,000 documents to return one.
+Both run on top of the cluster-wide workload, for the per-shard panels of
+MongoDB Sharded Cluster Summary:
+`--database psmdb,SETUP_TYPE=sharding,HOT_SHARD=rs1,SCAN_SHARD=rs2`.
 
 Configuration precedence is:
 
