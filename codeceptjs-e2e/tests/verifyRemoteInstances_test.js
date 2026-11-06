@@ -129,7 +129,7 @@ Scenario('PMM-T590 - Verify parsing URL on adding External service page @instanc
   I.seeAttributesOnElements(remoteInstancesPage.fields.metricsPath, { value: metricsPath });
   I.seeAttributesOnElements(remoteInstancesPage.fields.portNumber, { value: process.env.EXTERNAL_EXPORTER_PORT });
   I.seeAttributesOnElements(remoteInstancesPage.fields.userName, { value: credentials });
-  I.seeAttributesOnElements(locate('$schema-radio-state'), { value: 'https' });
+  I.seeCheckboxIsChecked(remoteInstancesPage.fields.schemeRadioHttps);
 });
 
 Scenario(
@@ -265,8 +265,6 @@ Data(remotePostgreSQL).Scenario(
     remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('postgresql');
     await remoteInstancesPage.fillRemoteFields(current.instanceName);
-    I.waitForVisible(remoteInstancesPage.fields.skipTLSL, 30);
-    I.click(remoteInstancesPage.fields.skipTLSL);
     I.click(current.trackingOption);
     await remoteInstancesPage.clickAddInstanceAndWaitForSuccess();
     pmmInventoryPage.verifyRemoteServiceIsDisplayed(current.instanceName);

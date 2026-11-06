@@ -2,7 +2,15 @@ const {
   I, adminPage, pmmInventoryPage, codeceptjsConfig, remoteInstancesHelper,
 } = inject();
 const assert = require('assert');
-const { locateOption } = require('../helper/locatorHelper');
+
+// The Add Service forms render MUI fields; their label, helper text and radio inputs carry no test id.
+const formControl = (inputTestId) => locate('.MuiFormControl-root').withDescendant(`[data-testid="${inputTestId}"]`);
+const fieldLabel = (inputTestId) => formControl(inputTestId).find('label');
+const fieldHelperText = (inputTestId) => formControl(inputTestId).find('p');
+const fieldError = (inputTestId) => formControl(inputTestId).find('//p[contains(@class, "Mui-error")]');
+// Radio test ids repeat across groups (e.g. two "enabled"), so a radio is found by its group's input name.
+const radioInput = (group, value) => `input[name="radio-group-${group}"][value="${value}"]`;
+const radioLabel = (group, value) => locate('label').withDescendant(radioInput(group, value));
 
 const url = new URL(codeceptjsConfig.config.helpers.Playwright.url);
 
@@ -120,8 +128,8 @@ module.exports = {
     cluster: 'rdsPostgres16-cluster',
     replicationSet: 'rdsPostgres16-replication',
   },
-  url: 'graph/add-instance?orgId=1',
-  addMySQLRemoteURL: 'graph/add-instance?instance_type=mysql',
+  url: 'pmm-ui/add-instance',
+  addMySQLRemoteURL: 'pmm-ui/add-instance/mysql',
   mysql84rds: {
     'Service Name': 'pmm-qa-rds-mysql-8-4',
     Environment: 'RDS MySQL 8.4',
@@ -171,87 +179,87 @@ module.exports = {
     Cluster: 'rds56-cluster',
   },
   elements: {
-    noData: '$table-no-data',
+    noData: locate('$discovered-instances').withText('No instances found'),
+    serverDiscoveryFailed: '$rds-server-discovery-failed',
   },
   fields: {
-    accessKeyInput: '$aws_access_key-text-input',
+    accessKeyInput: '$text-input-aws-access-key',
     addAWSRDSMySQLbtn: '$rds-instance',
     addAzureMySQLPostgreSQL: '$azure-instance',
     addExternalServiceRemote: '$external-instance',
     addHAProxy: '$haproxy-instance',
-    addInstanceDiv: '//div[@class="view"]',
-    addInstancesList: '//nav[@class="navigation"]',
+    addInstanceDiv: '$add-service-form',
+    addInstancesList: '$mysql-instance',
     addMongoDBRemote: '$mongodb-instance',
     addMySqlRemote: '$mysql-instance',
     addPostgreSQLRemote: '$postgresql-instance',
     addProxySQLRemote: '$proxysql-instance',
-    addService: '//div[contains(text(),\'Add service\')]',
-    availabilityZone: '$az-text-input',
-    clientID: '$azure_client_id-text-input',
-    clientSecret: '$azure_client_secret-password-input',
-    cluster: '$cluster-text-input',
-    customLabels: '$custom_labels-textarea-input',
-    database: '$database-text-input',
-    disableCollectors: '[data-testid*="disable_collectors-text-input"]',
-    disableCollectorsDescription: '[data-testid*="disable_collectors-field-label"] > span:nth-child(1)',
-    disableCollectorsError: '[data-testid*="disable_collectors-field-error-message"]',
-    disableCollectorsLabel: '[data-testid*="disable_collectors-field-label"] > span:first-child',
-    disableQueryExamples: '$disable_query_examples-field-label',
-    disableBasicMetrics: '//input[@id="input-disable_basic_metrics-id"]/following-sibling::*[2]',
-    disableEnhancedMetrics: '//input[@id="input-disable_enhanced_metrics-id"]/following-sibling::*[2]',
-    discoverBtn: '//div[contains(text(),\'Discover\')]',
-    discoveryResults: 'tbody[role="rowgroup"]',
-    doNotTrack: locate('label').withText('Don\'t track'),
-    environment: '$environment-text-input',
-    hostName: '$address-text-input',
-    iframe: '//div[@class="panel-content"]//iframe',
-    metricsPath: '$metrics_path-text-input',
-    noCredentialsError: '//div[text()="No credentials provided and IAM role is not defined"]',
-    pageHeaderText: 'PMM Add Instance',
-    parseFromURLRadioButton: locate('label').withText('Parse from URL string'),
-    password: '$password-password-input',
-    portNumber: '$port-text-input',
-    region: '$region-text-input',
-    maxQueryLength: '$maxQueryLength-text-input',
-    maxQueryLengthError: '$maxQueryLength-field-error-message',
-    remoteInstanceTitle: 'Add instance',
-    remoteInstanceTitleLocator: '//section/h3',
-    replicationSet: '$replication_set-text-input',
-    secretKeyInput: '$aws_secret_key-password-input',
-    serviceName: '$serviceName-text-input',
-    setManualy: locate('label').withText('Set manually'),
-    skipConnectionCheck: '//input[@data-testid="skip_connection_check-checkbox-input"]/following-sibling::*[2]',
-    skipTLS: '//input[@name="tls_skip_verify"]',
-    skipTLSL: locate('$tls_skip_verify-field-container').find('span'),
-    startMonitoring: '/following-sibling::td/a',
-    subscriptionID: '$azure_subscription_id-text-input',
-    tableStatsGroupTableLimit: '$tablestats_group_table_limit-number-input',
-    tenantID: '$azure_tenant_id-text-input',
-    tlscaInput: locate('$tls_ca-textarea-input'),
-    tlsCertificateInput: locate('$tls_cert-textarea-input'),
-    tlsCertificateKeyInput: locate('$tls_key-textarea-input'),
-    tlsCertificateFilePasswordInput: '$tls_certificate_file_password-password-input',
-    tlsCertificateKey: '$tls_certificate_key-textarea-input',
-    usePerformanceSchema2: '$qan_mysql_perfschema-field-container',
-    usePgStatMonitor: '//label[text()="PG Stat Monitor"]',
-    usePgStatStatements: '//label[text()="PG Stat Statements"]',
-    useQANMongoDBProfiler: '$qan_mongodb_profiler-field-label',
-    trackingRadioStateInput: '$tracking-radio-state',
-    useTLS: '$tls-field-label',
-    userName: '$username-text-input',
-    urlInput: '$url-text-input',
-    returnToMenuButton: locate('span').withText('Return to menu'),
-    requiredFieldHostname: locate('$address-field-error-message'),
-    requiredFieldPort: locate('$port-field-error-message'),
-    dontTrackingRadio: locate('label').withAttr({ for: 'radio-btn-1' }).withText('Don\'t track'),
-    pgStatStatementsRadio: locate('label').withAttr({ for: 'radio-btn-2' }).withText('PG Stat Statements'),
-    pgStatMonitorRadio: locate('label').withAttr({ for: 'radio-btn-3' }).withText('PG Stat Monitor'),
-    pgStatMonitorRadioInput: locate('#radio-btn-3'),
-    customAutoDiscoveryButton: locate('//div[input[@data-testid="autoDiscoveryOptions-radio-button"]]')
-      .find('label')
-      .withText('Custom'),
-    customAutoDiscoveryfield: '$autoDiscoveryLimit-number-input',
-    dropdownOption: (text) => locateOption(text),
+    // CSS, since clickAddInstanceAndWaitForSuccess hands it to Playwright directly
+    addService: '[data-testid="add-service-submit"]',
+    availabilityZone: '$text-input-az',
+    clientID: '$text-input-azure-client-id',
+    clientSecret: '$text-input-azure-client-secret',
+    cluster: '$text-input-cluster',
+    customLabels: '$text-input-custom-labels',
+    database: '$text-input-database',
+    disableCollectors: '$text-input-disable-collectors',
+    disableCollectorsDescription: fieldHelperText('text-input-disable-collectors'),
+    disableCollectorsError: fieldError('text-input-disable-collectors'),
+    disableCollectorsLabel: fieldLabel('text-input-disable-collectors'),
+    disableQueryExamples: '$switch-input-disable-query-examples-label',
+    disableBasicMetrics: '$switch-input-disable-basic-metrics-label',
+    disableEnhancedMetrics: '$switch-input-disable-enhanced-metrics-label',
+    discoverBtn: '$add-service-submit',
+    discoveryResults: locate('[data-testid^="start-monitoring-"]'),
+    doNotTrack: radioLabel('tracking', 'none'),
+    environment: '$text-input-environment',
+    hostName: '$text-input-address',
+    iframe: '#grafana-iframe',
+    metricsPath: '$text-input-metrics-path',
+    noCredentialsError: locate('#notistack-snackbar').withText('No credentials provided and IAM role is not defined'),
+    pageHeaderText: 'Select service type',
+    parseFromURLRadioButton: radioLabel('metricsParameters', 'parsed'),
+    password: '$text-input-password',
+    portNumber: '$text-input-port',
+    region: '$text-input-region',
+    maxQueryLength: '$text-input-max-query-length',
+    maxQueryLengthError: fieldHelperText('text-input-max-query-length'),
+    remoteInstanceTitle: 'Select service type',
+    remoteInstanceTitleLocator: '//h2',
+    replicationSet: '$text-input-replication-set',
+    secretKeyInput: '$text-input-aws-secret-key',
+    serviceName: '$text-input-service-name',
+    setManualy: radioLabel('metricsParameters', 'manually'),
+    skipConnectionCheck: '$switch-input-skip-connection-check-label',
+    skipTLS: 'input[name="tlsSkipVerify"]',
+    skipTLSL: '$switch-input-tls-skip-verify-label',
+    startMonitoring: '[data-testid^="start-monitoring-"]',
+    subscriptionID: '$text-input-azure-subscription-id',
+    tableStatsGroupTableLimit: '$text-input-tablestats-group-table-limit',
+    tenantID: '$text-input-azure-tenant-id',
+    tlscaInput: locate('$text-input-tls-ca'),
+    tlsCertificateInput: locate('$text-input-tls-cert'),
+    tlsCertificateKeyInput: locate('$text-input-tls-key'),
+    tlsCertificateFilePasswordInput: '$text-input-tls-certificate-key-file-password',
+    tlsCertificateKey: '$text-input-tls-certificate-key',
+    usePerformanceSchema2: '$switch-input-qan-mysql-perfschema-label',
+    usePgStatMonitor: radioLabel('tracking', 'pgMonitor'),
+    usePgStatStatements: radioLabel('tracking', 'pgStatements'),
+    useQANMongoDBProfiler: '$switch-input-qan-mongodb-profiler-label',
+    schemeRadioHttps: 'input[name="radio-group-scheme"][value="https"]',
+    useTLS: '$switch-input-tls-label',
+    userName: '$text-input-username',
+    urlInput: '$text-input-url',
+    returnToMenuButton: '$add-service-back',
+    requiredFieldHostname: fieldHelperText('text-input-address').withText('Required field'),
+    requiredFieldPort: fieldHelperText('text-input-port').withText('Required field'),
+    dontTrackingRadio: radioLabel('tracking', 'none'),
+    pgStatStatementsRadio: radioLabel('tracking', 'pgStatements'),
+    pgStatMonitorRadio: radioLabel('tracking', 'pgMonitor'),
+    pgStatMonitorRadioInput: radioInput('tracking', 'pgMonitor'),
+    customAutoDiscoveryButton: radioLabel('autoDiscoveryOptions', 'custom'),
+    customAutoDiscoveryfield: '$text-input-auto-discovery-limit',
+    dropdownOption: (text) => locate('li[role="option"]').withText(text),
   },
 
   async getFileContent(filePath) {
@@ -274,7 +282,7 @@ module.exports = {
   },
 
   tableStatsLimitRadioButtonLocator(limit) {
-    return locate('label').withText(limit);
+    return radioLabel('tablestatOptions', limit.toLowerCase());
   },
 
   async getTableLimitFieldValue() {
@@ -282,7 +290,7 @@ module.exports = {
   },
 
   rdsInstanceIdLocator(instance) {
-    return `//tr/td[text()="${instance}"]/following-sibling::td/div/button`;
+    return `$start-monitoring-${instance}`;
   },
 
   waitUntilRemoteInstancesPageLoaded() {
@@ -332,7 +340,7 @@ module.exports = {
 
   async addRemoteDetails(details, skipUserNamePassword = false) {
     I.waitForElement(this.fields.hostName, 30);
-    this.selectDropdownOption('$nodes-selectbox', 'pmm-server');
+    this.selectDropdownOption('$select-node-id-button', 'pmm-server');
     I.fillField(this.fields.hostName, details.host);
     if (!skipUserNamePassword) {
       I.fillField(this.fields.userName, details.username);
@@ -396,9 +404,9 @@ module.exports = {
   selectNodeForRemoteInstance(nodeName = 'pmm-server') {
     I.waitForElement(this.fields.hostName, 30);
     if (nodeName === 'pmm-server') {
-      this.selectDropdownOption('$nodes-selectbox', 'pmm-server');
+      this.selectDropdownOption('$select-node-id-button', 'pmm-server');
     } else {
-      this.selectDropdownOption('$nodes-selectbox', 'client_container');
+      this.selectDropdownOption('$select-node-id-button', 'client_container');
     }
   },
 
@@ -618,8 +626,13 @@ module.exports = {
   },
 
   async createRemoteInstance(serviceName, options = {}) {
-    I.waitForVisible(this.fields.skipTLSL, 30);
-    I.checkOption(this.fields.skipTLSL);
+    I.waitForVisible(this.fields.addService, 30);
+
+    // Skipping TLS verification is offered only once TLS is on.
+    if (await I.grabNumberOfVisibleElements(this.fields.skipTLSL)) {
+      I.checkOption(this.fields.skipTLSL);
+    }
+
     // eslint-disable-next-line default-case
     switch (serviceName) {
       case remoteInstancesHelper.services.mongodb:
@@ -627,7 +640,6 @@ module.exports = {
         I.click(this.fields.useQANMongoDBProfiler);
         break;
       case remoteInstancesHelper.services.postgresql:
-        I.seeAttributesOnElements(this.fields.trackingRadioStateInput, { value: 'qan_postgresql_pgstatmonitor_agent' });
         I.seeCheckboxIsChecked(this.fields.pgStatMonitorRadioInput);
         I.click(this.fields.pgStatStatementsRadio);
         break;
@@ -681,6 +693,10 @@ module.exports = {
         args.page.locator(this.fields.addService).click(),
       ]);
     });
+
+    // A successful add opens the inventory, which is a Grafana page in the iframe.
+    I.waitForElement(this.fields.iframe, 30);
+    I.switchTo(this.fields.iframe);
   },
 
   openAddAzure() {
@@ -712,7 +728,7 @@ module.exports = {
   },
 
   discoverRDSWithoutCredentials() {
-    I.waitForVisible(this.elements.noData, 30);
+    I.waitForVisible(this.elements.serverDiscoveryFailed, 60);
     I.click(this.fields.discoverBtn);
     I.waitForVisible(this.fields.noCredentialsError, 30);
   },
@@ -846,18 +862,17 @@ module.exports = {
     const grabbedMetricPath = await I.grabValueFrom(this.fields.metricsPath);
     const grabbedPort = await I.grabValueFrom(this.fields.portNumber);
     const grabbedCredentials = await I.grabValueFrom(this.fields.userName);
-    const protocol = locate('$schema-radio-state');
 
     assert.ok(grabbedHostname === process.env.MONITORING_HOST, `Hostname is not parsed correctly: ${grabbedHostname}`);
     assert.ok(grabbedMetricPath === metricsPath, `Metrics path is not parsed correctly: ${grabbedMetricPath}`);
     assert.ok(grabbedPort === process.env.EXTERNAL_EXPORTER_PORT, `Port is not parsed correctly: ${grabbedPort}`);
     assert.ok(grabbedCredentials === credentials, `Username is not parsed correctly: ${grabbedCredentials}`);
     assert.ok(grabbedCredentials === credentials, `Password is not parsed correctly: ${grabbedCredentials}`);
-    I.seeAttributesOnElements(protocol, { value: 'https' });
+    I.seeCheckboxIsChecked(this.fields.schemeRadioHttps);
   },
 
+  // The port is prefilled with the service type's default, so only the hostname is reported.
   checkRequiredField() {
     I.waitForVisible(this.fields.requiredFieldHostname, 30);
-    I.waitForVisible(this.fields.requiredFieldPort, 30);
   },
 };
