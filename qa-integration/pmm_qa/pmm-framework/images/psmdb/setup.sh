@@ -192,6 +192,8 @@ psmdb_mongolog_config() {
   grep -q "^  path: $3\$" "$dir/$2" ||
     die "$1/$2 has no 'destination: syslog' line to point at a file."
 
+  chmod 755 "$dir" || die "Making $dir accessible to MongoDB failed."
+
   printf '%s\n' "$dir"
 }
 
