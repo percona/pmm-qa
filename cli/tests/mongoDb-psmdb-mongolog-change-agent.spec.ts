@@ -407,7 +407,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2448 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    const serverUrl = cli.shellQuote(`https://admin:${adminPassword}}@pmm-server:8443/`);
+    const serverUrl = cli.shellQuote(`https://admin:${adminPassword}@pmm-server:8443/`);
 
     for (const command of cli.changeMongoMongologAgents(containerName, exporterId, mongologId, `--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
       await cli.expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');
