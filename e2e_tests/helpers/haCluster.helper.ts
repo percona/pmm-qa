@@ -227,7 +227,7 @@ export default class HaClusterHelper {
       })
       .map((service) => service.service_name);
     const reporting = (
-      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""}))', {
+      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""} == 1))', {
         nocache: '1',
       })
     )
@@ -255,6 +255,20 @@ export default class HaClusterHelper {
   verifyHaEnabled = async (haApi: HaApi): Promise<void> =>
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await haApi.getStatus()).toEqual('Enabled');
+    });
+
+  verifyServicesReportAgain = async (api: Api, services: string[]): Promise<void> =>
+    await pmmTest.step(`Verify the ${services.length} monitored services run and report again`, async () => {
+      const since = await api.prometheusApi.waitForServerTime();
+
+      await expect(async () => {
+        const reporting = await this.servicesRunningAndReporting(api, since);
+
+        expect(
+          services.filter((serviceName) => !reporting.includes(serviceName)),
+          'Every service that reported before must run and report again',
+        ).toEqual([]);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     });
 
   /**
