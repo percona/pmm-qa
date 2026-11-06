@@ -25,11 +25,22 @@ services:
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
       - PMM_ENABLE_NOMAD=${PMM_ENABLE_NOMAD:-0}
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=mailpit:1025
+      - GF_SMTP_FROM_ADDRESS=pmm@example.com
     volumes:
       - pmm-volume:/srv
     networks:
       - pmm-network
       - pmm-qa
+
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    container_name: mailpit
+    ports:
+      - "8025:8025"
+    networks:
+      - pmm-network
 
   renderer:
     image: grafana/grafana-image-renderer:latest
