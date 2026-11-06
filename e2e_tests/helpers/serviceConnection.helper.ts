@@ -19,11 +19,11 @@ export interface DatabaseConnection {
   serviceRegex: string;
 }
 
-const psql = (container: string, ...statements: string[]) =>
+export const psql = (container: string, ...statements: string[]) =>
   `docker exec --user postgres ${container} psql -v ON_ERROR_STOP=1 ${statements.map((sql) => `-c "${sql}"`).join(' ')}`;
-const mysql = (container: string, { perconaServer }: Credentials, sql: string) =>
+export const mysql = (container: string, { perconaServer }: Credentials, sql: string) =>
   `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -e "${sql}"`;
-const mongo = (container: string, { psmdb }: Credentials, js: string) =>
+export const mongo = (container: string, { psmdb }: Credentials, js: string) =>
   `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
 const valkeyCli = (container: string, { valkey }: Credentials, command: string) =>
   `docker exec ${container} valkey-cli -a '${valkey.password}' --no-auth-warning ${command}`;

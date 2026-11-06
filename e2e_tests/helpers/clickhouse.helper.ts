@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import CliHelper from '@helpers/cli.helper';
+import { Timeouts } from '@helpers/timeouts';
 
 export type ClickHouseProfile = 'default' | 'low-memory';
 
@@ -108,5 +109,29 @@ export default class ClickHouseHelper {
         ).toEqual(Object.fromEntries(Object.keys(lowMemoryQuerySettings).map((name) => [name, 0])));
       }
     });
+  };
+
+  // QAN rows carry the ID of the QAN agent that sent them, so only that agent can satisfy this.
+  // The workload runs before every check, so the agent always has fresh queries to report.
+  waitForQanRowsByAgent = async (containerName: string, agentId: string, workload: () => void) => {
+    await expect
+      .poll(
+        () => {
+          workload();
+
+          return Number(
+            this.query(
+              containerName,
+              `SELECT count() FROM pmm.metrics WHERE agent_id = '${agentId}'`,
+            ).stdout.trim(),
+          );
+        },
+        {
+          intervals: [Timeouts.FIFTEEN_SECONDS],
+          message: `QAN rows from agent ${agentId}`,
+          timeout: Timeouts.FIVE_MINUTES,
+        },
+      )
+      .toBeGreaterThan(0);
   };
 }
