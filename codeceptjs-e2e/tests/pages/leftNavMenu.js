@@ -142,7 +142,7 @@ module.exports = {
   ),
   configuration: new LeftMenu(
     'Configuration',
-    '/graph/inventory/services',
+    '/pmm-ui/inventory/services',
     {
       serviceAccounts: menuOption(co, 'Service accounts', '/graph/org/serviceaccounts'),
       apiKeys: menuOption(co, 'API keys', '/graph/org/apikeys'),
@@ -152,7 +152,7 @@ module.exports = {
       dataSources: menuOption(co, 'Data sources', '/graph/datasources'),
       users: menuOption(co, 'Users', '/graph/org/users'),
       pmmSettings: menuOption(co, 'Settings', '/pmm-ui/settings'),
-      pmmInventory: menuOption(co, 'Inventory', '/graph/inventory/services'),
+      pmmInventory: menuOption(co, 'Inventory', '/pmm-ui/inventory/services'),
       addInstance: menuOption(co, 'Add Service', '/graph/add-instance'),
     },
   ),

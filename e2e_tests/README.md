@@ -149,6 +149,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@service-account`
 - `@settings`
 - `@ssl`
+- `@ssl-mongo`
 - `@ssl-mysql`
 - `@ssl-postgres`
 - `@ssl-remote`
