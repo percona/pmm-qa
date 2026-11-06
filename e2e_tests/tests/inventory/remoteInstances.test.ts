@@ -5,6 +5,7 @@ import {
   auroraClusterId,
   auroraInstanceId,
   auroraMysql,
+  auroraRegion,
   awsCredentials,
   azureCredentials,
   azureDatabases,
@@ -215,6 +216,8 @@ pmmTest(
 
     await expect(async () => {
       await amazonRdsPage.openGroup(auroraClusterId);
+      await expect(amazonRdsPage.elements.groupCount).toHaveText(amazonRdsPage.texts.oneGroupShown);
+      await expect(amazonRdsPage.builders.groupValue(auroraClusterId, auroraRegion)).toBeVisible();
       await expect(
         amazonRdsPage.builders.groupValue(auroraClusterId, amazonRdsPage.texts.auroraCluster),
       ).toBeVisible();

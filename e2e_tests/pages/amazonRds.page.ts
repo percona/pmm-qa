@@ -7,6 +7,7 @@ export default class AmazonRdsPage extends BasePage {
   texts = {
     auroraCluster: 'Aurora cluster',
     auroraMysql: 'Aurora MySQL',
+    oneGroupShown: /^1 of \d+ groups$/,
     oneInstanceConnected: '1 / 1',
     oneWriter: '1 writer',
     up: 'Up',
@@ -34,7 +35,9 @@ export default class AmazonRdsPage extends BasePage {
       this.builders.instancesTable(identifier).getByRole('link', { exact: true, name: serviceName }),
   };
   buttons = {};
-  elements = {};
+  elements = {
+    groupCount: this.page.getByText(/^\d+ of \d+ groups$/),
+  };
   inputs = {};
   messages = {};
 

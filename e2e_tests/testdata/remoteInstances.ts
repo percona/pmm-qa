@@ -108,6 +108,7 @@ export const azureDatabases = [
 
 export const auroraInstanceId = 'pmm-qa-aurora3-mysql-instance-1';
 export const auroraClusterId = 'pmm-qa-aurora3-mysql';
+export const auroraRegion = 'us-east-2';
 
 export const auroraMysql: AddRemoteInstance = {
   rds: {
@@ -127,7 +128,7 @@ export const auroraMysql: AddRemoteInstance = {
     port: '42001',
     qan_mysql_perfschema: true,
     rds_exporter: true,
-    region: 'us-east-2',
+    region: auroraRegion,
     replication_set: 'rds_mysql_repl',
     service_name: auroraInstanceId,
     tls_skip_verify: true,
