@@ -484,8 +484,9 @@ stub_prebaked_docker() {
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
   stub_prebaked_docker
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { printf 'traffic\n' >>"$DOCKER_CALLS"; }
+  record_compose_config_dirs
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards'
   dispatch_setup
 
@@ -501,6 +502,90 @@ stub_prebaked_docker() {
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
   [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]
   grep -q '^traffic$' "$DOCKER_CALLS"
+  grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
+  ! grep -q -- '--query-source' "$DOCKER_CALLS" || false
+  grep -Fq 'diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data"' "$DOCKER_CALLS"
+}
+
+# The stub logs arguments only, and compose reads the config directories it mounts from the environment.
+record_compose_config_dirs() {
+  eval "stubbed_$(declare -f docker)"
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    if [[ $1 == compose && $* == *' up -d' ]]; then
+      printf 'config rs=%s rs1=%s rs2=%s cfg=%s mongos=%s\n' "${MONGOD_RS_CONFIG_DIR:-}" "${MONGOD_RS1_CONFIG_DIR:-}" \
+        "${MONGOD_RS2_CONFIG_DIR:-}" "${MONGOD_CFG_CONFIG_DIR:-}" "${MONGOS_CONFIG_DIR:-}" >>"$DOCKER_CALLS"
+    fi
+    stubbed_docker "$@"
+  }
+}
+
+# Usage: assert_file_log FILE LOG_PATH
+assert_file_log() {
+  grep -q '^  destination: file$' "$1"
+  grep -q "^  path: $2$" "$1"
+  grep -q '^  logAppend: true$' "$1"
+  ! grep -q syslog "$1" || false
+}
+
+@test "PSMDB QUERY_SOURCE=mongolog gives the replica set a file log and registers its members with mongolog" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,MINIO=false'
+  dispatch_setup
+
+  local dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog/mongod-rs
+  grep -q "^config rs=$dir rs1= rs2= cfg= mongos=$" "$DOCKER_CALLS"
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+  grep -q '^  replSetName: "rs"$' "$dir/mongod.conf"
+  for node in rs101 rs102 rs103; do
+    grep -Eq "^exec $node pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ${node}_[0-9]+ " "$DOCKER_CALLS"
+  done
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,STORAGE_ENGINE=inmemory,MINIO=false'
+  dispatch_setup
+  dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog/mongod-rs-inmemory
+  grep -q "^config rs=$dir " "$DOCKER_CALLS"
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+}
+
+@test "PSMDB sharding with QUERY_SOURCE=mongolog gives every mongod and mongos a file log" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  # shellcheck disable=SC2329
+  psmdb_traffic() { :; }
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
+  dispatch_setup
+
+  local dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog
+  grep -q "^config rs= rs1=$dir/mongod-rs1 rs2=$dir/mongod-rs2 cfg=$dir/mongod-cfg mongos=$dir/mongos$" "$DOCKER_CALLS"
+  for set in rs1 rs2 cfg; do
+    assert_file_log "$dir/mongod-$set/mongod.conf" /var/log/mongo/mongod.log
+  done
+  grep -q '^  clusterRole: configsvr$' "$dir/mongod-cfg/mongod.conf"
+  assert_file_log "$dir/mongos/mongos.conf" /var/log/mongo/mongos.log
+  [[ -f $dir/mongos/mongos.service ]]
+  [[ $(grep -Ec '^exec (rs[12]0[123]|rscfg0[123]|mongos) pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ' "$DOCKER_CALLS") -eq 10 ]]
+  ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=none,MINIO=false'
+  dispatch_setup
+  grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec rs10[123] pmm-admin add mongodb --enable-all-collectors --query-source=none ' "$DOCKER_CALLS") -eq 3 ]]
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=slowlog'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *"Unsupported PSMDB QUERY_SOURCE 'slowlog'."* ]]
+  ! grep -q '^compose ' "$DOCKER_CALLS" || false
 }
 
 @test "SSL PSMDB runs the TLS stack on the prebaked image without writing the password to disk" {
