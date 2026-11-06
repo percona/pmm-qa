@@ -5,6 +5,8 @@ import {
   auroraClusterId,
   auroraInstanceId,
   auroraMysql,
+  auroraPostgresql,
+  auroraPostgresqlInstanceId,
   auroraRegion,
   awsCredentials,
   azureCredentials,
@@ -23,6 +25,7 @@ const remoteNodeNames = [
   haproxy.serviceName,
   rdsMysql57.serviceName,
   auroraInstanceId,
+  auroraPostgresqlInstanceId,
 ];
 type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
 const qanRemoteDatabases = remoteDatabases.filter(
@@ -262,6 +265,30 @@ pmmTest(
       expect(serviceNames).not.toContain(rdsMysql57.serviceName);
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
     await dashboard.selectVariableValue('Service Name', auroraInstanceId);
+    await dashboard.verifyMetricsPresent(auroraDetails.metrics);
+    await dashboard.verifyAllPanelsHaveData(auroraDetails.noDataMetrics, Timeouts.TWO_MINUTES);
+  },
+);
+
+pmmTest(
+  'PMM-T2506 - Verify PostgreSQL Amazon Aurora Details lists Aurora PostgreSQL services and shows data @instances',
+  async ({ api, dashboard, page, urlHelper }) => {
+    const auroraDetails = dashboard.postgresql.postgresqlAmazonAuroraDetails;
+    const { services } = await api.inventoryApi.getServices();
+
+    if (!services.some(({ service_name }) => service_name === auroraPostgresqlInstanceId)) {
+      await api.remoteInstanceApi.addRemoteInstance(auroraPostgresql);
+    }
+
+    await expect(async () => {
+      await page.goto(urlHelper.buildUrlWithParameters(auroraDetails.url, { from: 'now-5m' }));
+
+      const serviceNames = await dashboard.getVariableValues('Service Name');
+
+      expect(serviceNames).toContain(auroraPostgresqlInstanceId);
+      expect(serviceNames).not.toContain('pmm-server-postgresql');
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    await dashboard.selectVariableValue('Service Name', auroraPostgresqlInstanceId);
     await dashboard.verifyMetricsPresent(auroraDetails.metrics);
     await dashboard.verifyAllPanelsHaveData(auroraDetails.noDataMetrics, Timeouts.TWO_MINUTES);
   },
