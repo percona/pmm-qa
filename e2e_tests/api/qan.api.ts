@@ -51,17 +51,24 @@ export default class QanApi {
 
   /** Query ids of a service whose fingerprint contains the search text, read as Admin. */
   getQueryIds = async (serviceName: string, search: string, period: QanPeriod): Promise<string[]> => {
-    const { body } = await this.send<QanReportBody>('POST', apiEndpoints.qan.getReport, undefined, {
-      ...period,
-      columns: ['load', 'num_queries'],
-      group_by: 'queryid',
-      labels: [{ key: 'service_name', value: [serviceName] }],
-      limit: 25,
-      main_metric: 'load',
-      offset: 0,
-      order_by: '-load',
-      search,
-    });
+    const { body, status, text } = await this.send<QanReportBody>(
+      'POST',
+      apiEndpoints.qan.getReport,
+      undefined,
+      {
+        ...period,
+        columns: ['load', 'num_queries'],
+        group_by: 'queryid',
+        labels: [{ key: 'service_name', value: [serviceName] }],
+        limit: 25,
+        main_metric: 'load',
+        offset: 0,
+        order_by: '-load',
+        search,
+      },
+    );
+
+    if (status !== 200) throw new Error(`QAN report for ${serviceName} failed with ${status}: ${text}`);
 
     return (body.rows ?? []).flatMap(({ dimension }) => (dimension ? [dimension] : []));
   };

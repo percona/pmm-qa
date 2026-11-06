@@ -2,24 +2,12 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import QanApi from '@api/qan.api';
 import { Timeouts } from '@helpers/timeouts';
-import { AccessServiceType, AccessUserScenario } from '@interfaces/accessControl';
 import { GetService } from '@interfaces/inventory';
 import { admin } from '@testdata/datasourceProxy';
-import { accessControlScenarios } from './accessControl.constants';
+import { mysqlScenario as mysqlUser, postgresScenario as postgresUser } from './accessControl.constants';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-const scenarioFor = (serviceType: AccessServiceType): AccessUserScenario => {
-  const scenario = accessControlScenarios.find((candidate) => candidate.serviceType === serviceType);
-
-  if (!scenario) throw new Error(`No access control scenario for ${serviceType}`);
-
-  return scenario;
-};
-
-const mysqlUser = scenarioFor('mysql');
-const postgresUser = scenarioFor('postgresql');
-// mysqld_exporter runs this query on every scrape, and its example has no placeholder that would break Explain.
 const mysqlQueryText = 'SELECT * FROM `information_schema` . `client_statistics`';
 const postgresQueryText = 'SELECT s.first_name';
 const timeRangeHours = 6;
@@ -84,7 +72,6 @@ pmmTest(
       await qanStoredMetrics.builders.tab('Examples').click({ timeout: Timeouts.THIRTY_SECONDS });
       await qanStoredMetrics.waitForLoad();
       await expect(qanStoredMetrics.elements.noExamples).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      // The Plan tab belongs to PostgreSQL queries, and none is visible to this user.
       await expect(qanStoredMetrics.builders.tab('Plan')).toBeHidden();
     });
 
@@ -229,6 +216,12 @@ pmmTest(
         body: missing.body,
         status: missing.status,
       });
+    });
+
+    await pmmTest.step('Admin gets the explain fingerprint of the same query', async () => {
+      const fingerprint = await qanApi.explainFingerprint(admin, postgresService.service_id, queryId);
+
+      expect(fingerprint.status, fingerprint.text).toEqual(200);
     });
 
     await pmmTest.step('Admin gets metrics, labels, an example, the plan and histogram items', async () => {
