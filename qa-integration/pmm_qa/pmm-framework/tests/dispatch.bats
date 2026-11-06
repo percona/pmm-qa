@@ -475,15 +475,17 @@ stub_prebaked_docker() {
   # shellcheck disable=SC2329,SC2317,SC2154 # hot_shard is setup_psmdb's local
   psmdb_hot_shard_traffic() { printf 'hot %s\n' "$hot_shard" >>"$DOCKER_CALLS"; }
   # shellcheck disable=SC2329,SC2317,SC2154 # scan_shard is setup_psmdb's local
-  psmdb_scan_shard_traffic() { printf 'scan %s\n' "$scan_shard" >>"$DOCKER_CALLS"; }
+  psmdb_scan_shard_traffic() { printf 'scan %s %s\n' "$scan_shard" "${1:-start}" >>"$DOCKER_CALLS"; }
   parse_database_spec 'psmdb,SETUP_TYPE=sharding,HOT_SHARD=RS2,SCAN_SHARD=rs1'
   dispatch_setup
-  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'traffic hot rs2 scan rs1' ]]
+  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'scan rs1 yes traffic hot rs2 scan rs1 start' ]]
+  # The seed lands before any service is added, so PMM never sees its inserts as writes.
+  (($(grep -n '^scan rs1 yes$' "$DOCKER_CALLS" | cut -d: -f1) < $(grep -n 'pmm-admin add mongodb' "$DOCKER_CALLS" | head -1 | cut -d: -f1)))
 
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb,SETUP_TYPE=sharding,SCAN_SHARD=rs2'
   dispatch_setup
-  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'traffic scan rs2' ]]
+  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'scan rs2 yes traffic scan rs2 start' ]]
 
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb,SETUP_TYPE=sharding'
@@ -532,7 +534,7 @@ STUB
   grep -Fq "const shard = 'rs1', name = 'hot_rs1'" "$CALLS"
   grep -Fq 'db.adminCommand({ movePrimary: name, to: shard })' "$CALLS"
   grep -Fq 'exec -i mongos sh -c cat >/tmp/shard_write_traffic_rs1.js' "$CALLS"
-  grep -Fq 'var LOAD = "write", CONTINUOUS = true, DURATION_MS = 300000, INTERVAL_MS = 5, DATABASE = "hot_rs1", SCAN_DOCS = 20000;' "$CALLS"
+  grep -Fq 'var LOAD = "write", CONTINUOUS = true, DURATION_MS = 300000, INTERVAL_MS = 20, DATABASE = "hot_rs1", SCAN_DOCS = 20000;' "$CALLS"
   grep -Fq 'writes.insertOne({ _id: id, seq: i, ts: new Date(), payload: "w".repeat(256) }, W1);' "$CALLS"
   ! grep -Fq 'scans.find(' "$CALLS" || false
   grep -Fxq "exec -d mongos sh -c mongosh 'mongodb://root:root@localhost' --quiet /tmp/shard_write_traffic_rs1.js >>/tmp/shard_write_traffic_rs1.log 2>&1" "$CALLS"
@@ -552,6 +554,12 @@ STUB
   grep -Fq 'scans.find({ seq: SCAN_DOCS - 1 }).itcount();' "$CALLS"
   ! grep -Fq 'writes.insertOne' "$CALLS" || false
   grep -Fxq "exec -d mongos sh -c mongosh 'mongodb://root:root@localhost' --quiet /tmp/shard_scan_traffic_rs2.js >>/tmp/shard_scan_traffic_rs2.log 2>&1" "$CALLS"
+
+  : >"$CALLS"
+  TARGET_SHARD=rs2 LOAD=scan PREPARE_ONLY=yes run bash "$script"
+  [[ $status -eq 0 ]]
+  grep -Fq 'scans.insertMany(' "$CALLS"
+  ! grep -Eq 'cat >|^exec -d' "$CALLS" || false
 
   : >"$CALLS"
   TARGET_SHARD='rs1; rm -rf /' run bash "$script"
