@@ -3,8 +3,10 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { GetService } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
+import { s3StorageConnection } from '@testdata/backupLocations';
 
 interface BackupArtifact {
+  artifact_id: string;
   name: string;
   service_name: string;
   status: string;
@@ -42,6 +44,17 @@ const LOCAL_STORAGE_CONFIG = { path: '/tmp/backup_data' };
 export default class BackupsApi {
   constructor(private request: APIRequestContext) {}
 
+  addS3Location = async (name: string, description: string) => {
+    const response = await this.request.post(apiEndpoints.backups.locations, {
+      data: { description, name, s3_config: s3StorageConnection },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { location_id: string }).location_id;
+  };
+
   ensureMongoBackupData = async (service: GetService, mode: BackupMode = 'BACKUP_MODE_SNAPSHOT') => {
     const locationId = await this.ensureLocalStorageLocation();
     const scheduleName = `${BACKUP_NAME_PREFIX}_${mode}`;
@@ -65,6 +78,16 @@ export default class BackupsApi {
       .toBe(true);
   };
 
+  getArtifacts = async () => {
+    const response = await this.request.get(apiEndpoints.backups.artifacts, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    return ((await response.json()) as BackupArtifactsResponse).artifacts ?? [];
+  };
+
   getLocations = async () => {
     const response = await this.request.get(apiEndpoints.backups.locations, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -83,6 +106,34 @@ export default class BackupsApi {
     expect(response.status(), response.statusText()).toEqual(200);
 
     return ((await response.json()) as ScheduledBackupsResponse).scheduled_backups ?? [];
+  };
+
+  removeAllLocations = async () => {
+    for (const { location_id } of await this.getLocations()) {
+      const response = await this.request.delete(`${apiEndpoints.backups.locations}/${location_id}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+        params: { force: true },
+      });
+
+      expect(response.status(), response.statusText()).toEqual(200);
+    }
+  };
+
+  startBackup = async (name: string, serviceId: string, locationId: string) => {
+    const response = await this.request.post(apiEndpoints.backups.startBackup, {
+      data: {
+        data_model: 'DATA_MODEL_LOGICAL',
+        description: '',
+        location_id: locationId,
+        name,
+        service_id: serviceId,
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { artifact_id: string }).artifact_id;
   };
 
   private ensureLocalStorageLocation = async () => {
@@ -133,15 +184,5 @@ export default class BackupsApi {
     });
 
     expect(response.status(), response.statusText()).toEqual(200);
-  };
-
-  private getArtifacts = async () => {
-    const response = await this.request.get(apiEndpoints.backups.artifacts, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status(), response.statusText()).toEqual(200);
-
-    return ((await response.json()) as BackupArtifactsResponse).artifacts ?? [];
   };
 }
