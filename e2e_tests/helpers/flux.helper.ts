@@ -23,6 +23,15 @@ export interface DriftIgnore {
   target?: { kind?: string; name?: string };
 }
 
+interface FluxEvent {
+  count?: number;
+  message?: string;
+  reason?: string;
+}
+
+const isDrift = (event: FluxEvent): boolean =>
+  /drift/i.test(event.reason ?? '') || /drift/i.test(event.message ?? '');
+
 interface FluxObject {
   metadata?: { annotations?: Record<string, string> };
   spec?: {
@@ -48,17 +57,23 @@ export default class FluxHelper {
   driftDetection = (name: string): { ignore?: DriftIgnore[]; mode?: string } =>
     this.release(name).spec?.driftDetection ?? {};
 
+  /** Repeats of an event are aggregated into its `count`, so this grows where the list may not. */
+  driftEventCount = (name: string): number =>
+    this.events(name)
+      .filter(isDrift)
+      .reduce((sum, event) => sum + (event.count ?? 1), 0);
+
   driftEvents = (name: string): string[] =>
     this.events(name)
-      .filter((event) => /drift/i.test(event.reason ?? '') || /drift/i.test(event.message ?? ''))
+      .filter(isDrift)
       .map((event) => event.message ?? '');
 
-  events = (name: string): { message?: string; reason?: string }[] => {
+  events = (name: string): FluxEvent[] => {
     const selector = `involvedObject.kind=HelmRelease,involvedObject.name=${name}`;
     const events = JSON.parse(
       this.k8sHelper.execSilent(`get events --field-selector=${selector} --output=json`).assertSuccess()
         .stdout,
-    ) as { items?: { message?: string; reason?: string }[] };
+    ) as { items?: FluxEvent[] };
 
     return events.items ?? [];
   };

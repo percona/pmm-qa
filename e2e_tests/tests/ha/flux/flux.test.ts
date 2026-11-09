@@ -12,7 +12,7 @@ const backupJob = `pmm-e2e-flux-backup-${run}`;
 const restoreJob = `pmm-e2e-flux-restore-${run}`;
 // The chart pins it through haproxy.fullnameOverride, whatever the release is called.
 const haproxyDeployment = 'pmm-ha-haproxy';
-// pmm-secret and the PostgreSQL operator's per-user secrets of pg-db.pmmUserName and pg-db.grafanaUserName.
+// pmm-secret and the chart's per-user PostgreSQL secrets of pg-db.pmmUserName and pg-db.grafanaUserName.
 const credentialSecrets = ['pmm-secret', 'pmmuser-credentials', 'gfuser-credentials'];
 const upgradeValue = 'pmmEnv.PMM_E2E_FLUX_UPGRADE';
 // PMM Server logs to files on its PVC, not to the container's stdout.
@@ -33,6 +33,7 @@ const controllerPodUids = (k8sHelper: K8sHelper): Record<string, string> =>
       .filter((pod) => ['ReplicaSet', 'StatefulSet'].includes(pod.metadata.ownerReferences?.[0]?.kind ?? ''))
       .map((pod) => [pod.metadata.name, pod.metadata.uid]),
   );
+const sleep = async (ms: number): Promise<void> => await new Promise((resolve) => setTimeout(resolve, ms));
 const secretDigests = (k8sHelper: K8sHelper): Record<string, string> =>
   Object.fromEntries(
     credentialSecrets.map((name) => [
@@ -233,6 +234,7 @@ pmmTest(
     const { pmm } = fluxHelper.releases();
     const replicas = k8sHelper.getDeploymentReplicas(haproxyDeployment);
     const revision = fluxHelper.releaseRevision(pmm);
+    const driftEventCount = fluxHelper.driftEventCount(pmm);
 
     expect(replicas, `Deployment "${haproxyDeployment}" must run more than 1 replica`).toBeGreaterThan(1);
 
@@ -257,7 +259,12 @@ pmmTest(
 
       await pmmTest.step(`Verify Flux corrected the drift without an upgrade of "${pmm}"`, async () => {
         expect(fluxHelper.releaseRevision(pmm), `Helm release revision of "${pmm}"`).toEqual(revision);
-        expect(fluxHelper.driftEvents(pmm).length, `Drift events on "${pmm}"`).toBeGreaterThan(0);
+        await expect(async () => {
+          expect(
+            fluxHelper.driftEventCount(pmm),
+            `Drift events on "${pmm}", repeats included`,
+          ).toBeGreaterThan(driftEventCount);
+        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.ONE_MINUTE });
       });
     } finally {
       if (k8sHelper.getDeploymentReplicas(haproxyDeployment) !== replicas) {
@@ -291,33 +298,56 @@ pmmTest(
       await pmmTest.step(
         `Restore ${backupId} in place with a Job while Flux reconciles "${pmm}"`,
         async () => {
-          const restore = haBackupHelper.runRestoreJob(restoreJob, backupId);
-
-          // Awaited below; this only keeps an early failure from being an unhandled rejection meanwhile.
-          restore.catch(() => undefined);
-
-          await expect(async () => {
-            expect(
-              k8sHelper.getStatefulSetReplicas(pmm),
-              `StatefulSet "${pmm}" scaled down by the restore`,
-            ).toEqual(0);
-          }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TEN_MINUTES });
-
-          const requestedAt = fluxHelper.requestReconcile(pmm);
-
-          await expect(async () => {
-            expect(
-              fluxHelper.reconcileHandled(pmm, requestedAt),
-              `Flux must have handled the reconcile of "${pmm}" requested at ${requestedAt}`,
-            ).toBe(true);
-          }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-
-          // The ignore rule on /spec/replicas keeps drift correction from scaling it back mid-restore.
-          expect(k8sHelper.getStatefulSetReplicas(pmm), `StatefulSet "${pmm}" after the reconcile`).toEqual(
-            0,
+          let restoreError: Error | undefined;
+          let restoreSettled = false;
+          // Never rejects, so the restore is always settled before the step ends and afterEach reads full logs.
+          const restore = haBackupHelper.runRestoreJob(restoreJob, backupId).then(
+            () => {
+              restoreSettled = true;
+            },
+            (error: Error) => {
+              restoreSettled = true;
+              restoreError = error;
+            },
           );
 
-          await restore;
+          try {
+            const deadline = Date.now() + Timeouts.TEN_MINUTES;
+
+            while (k8sHelper.getStatefulSetReplicas(pmm) !== 0) {
+              if (restoreSettled) {
+                throw (
+                  restoreError ??
+                  new Error(
+                    `Restore Job "${restoreJob}" finished before StatefulSet "${pmm}" was seen at 0 replicas`,
+                  )
+                );
+              }
+              if (Date.now() > deadline) {
+                throw new Error(`The restore did not scale StatefulSet "${pmm}" to 0 within 10 minutes`);
+              }
+
+              await sleep(Timeouts.FIVE_SECONDS);
+            }
+
+            const requestedAt = fluxHelper.requestReconcile(pmm);
+
+            await expect(async () => {
+              expect(
+                fluxHelper.reconcileHandled(pmm, requestedAt),
+                `Flux must have handled the reconcile of "${pmm}" requested at ${requestedAt}`,
+              ).toBe(true);
+            }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+            // The ignore rule on /spec/replicas keeps drift correction from scaling it back mid-restore.
+            expect(k8sHelper.getStatefulSetReplicas(pmm), `StatefulSet "${pmm}" after the reconcile`).toEqual(
+              0,
+            );
+          } finally {
+            await restore;
+          }
+
+          if (restoreError) throw restoreError;
         },
       );
 
@@ -382,6 +412,7 @@ pmmTest(
         expect(Object.keys(replaced), 'PMM Server pods after the upgrade').toEqual(Object.keys(podUids));
 
         for (const [name, uid] of Object.entries(replaced)) {
+          expect(podUids[name], `UID of "${name}" before the upgrade`).toBeDefined();
           expect(uid, `UID of "${name}" after the upgrade`).not.toEqual(podUids[name]);
         }
 
