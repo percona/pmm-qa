@@ -862,6 +862,16 @@ dump_diagnostics() {
         kubectl logs statefulset/argocd-application-controller -n argocd --tail=500 >"$DEBUG_DIR/argocd-application-controller.log" 2>&1 || true
         kubectl logs deploy/argocd-repo-server -n argocd --tail=500 >"$DEBUG_DIR/argocd-repo-server.log" 2>&1 || true
     fi
+    if [ "$INSTALL_METHOD" = "flux" ]; then
+        kubectl get helmreleases -n "$NAMESPACE" -o yaml >"$DEBUG_DIR/flux-helmreleases.yaml" 2>&1 || true
+        kubectl get gitrepositories,helmrepositories,helmcharts -n "$NAMESPACE" -o yaml >"$DEBUG_DIR/flux-sources.yaml" 2>&1 || true
+        for kind in HelmRelease HelmChart GitRepository HelmRepository; do
+            kubectl get events -n "$NAMESPACE" --field-selector "involvedObject.kind=$kind" \
+                --sort-by=.metadata.creationTimestamp 2>&1 || true
+        done >"$DEBUG_DIR/flux-events.txt"
+        kubectl logs deploy/helm-controller -n flux-system --tail=500 >"$DEBUG_DIR/helm-controller.log" 2>&1 || true
+        kubectl logs deploy/source-controller -n flux-system --tail=500 >"$DEBUG_DIR/source-controller.log" 2>&1 || true
+    fi
 }
 DIAGNOSTICS_ENABLED="false"
 
@@ -903,7 +913,8 @@ release_chart() {
         | tr ',' '\n' | sed -n 's/.*"chart":"\([^"]*\)".*/\1/p'
 }
 
-# Argo CD keeps no Helm release; it renders the cloned branch, so its Chart.yaml says what runs.
+# Argo CD keeps no Helm release; both GitOps modes pin the released version or render the
+# cloned branch, so the pin or its Chart.yaml says what runs.
 chart_yaml_version() {
     local name version
     name="$(sed -n 's/^name:[[:space:]]*//p' "$1/Chart.yaml" | tr -d "\"' ")"
@@ -920,9 +931,9 @@ write_summary() {
 
         if [ "$INSTALL_DEPS" = "true" ]; then
             echo "deps_release=$DEPS_RELEASE"
-            if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; then
+            if is_gitops && [ "$DEPS_CHART_SOURCE" = "released" ]; then
                 echo "deps_chart=pmm-ha-dependencies-$DEPS_CHART_RESOLVED_VERSION"
-            elif [ "$INSTALL_METHOD" = "argocd" ]; then
+            elif is_gitops; then
                 echo "deps_chart=$(chart_yaml_version "$DEPS_CHART_PATH")"
             else
                 echo "deps_chart=$(release_chart "$DEPS_RELEASE")"
@@ -944,7 +955,7 @@ write_summary() {
 
             if [ "$SECRET_CREATED" = "true" ]; then
                 echo "pmm_admin_password=$ADMIN_PASSWORD"
-                if [ "$INSTALL_METHOD" = "argocd" ]; then
+                if is_gitops; then
                     echo "clickhouse_datasource_password=$CH_DS_PASSWORD"
                 else
                     echo "postgres_password=$PG_PASSWORD"
@@ -957,10 +968,16 @@ write_summary() {
             fi
         fi
 
-        if [ "$INSTALL_METHOD" = "argocd" ]; then
+        if is_gitops; then
             echo "install_method=$INSTALL_METHOD"
-            echo "argocd_version=$ARGOCD_VERSION"
-            echo "argocd_apps=$DEPS_RELEASE,$RELEASE"
+            if [ "$INSTALL_METHOD" = "argocd" ]; then
+                echo "argocd_version=$ARGOCD_VERSION"
+                echo "argocd_apps=$DEPS_RELEASE,$RELEASE"
+            else
+                echo "flux_version=$FLUX_VERSION"
+                echo "flux_releases=$DEPS_RELEASE,$RELEASE"
+                echo "flux_sources=$(flux_source_list)"
+            fi
             echo "chart_version=$PMM_CHART_RESOLVED_VERSION"
             echo "deps_chart_source=$DEPS_CHART_SOURCE"
             echo "deps_chart_version=$DEPS_CHART_RESOLVED_VERSION"
@@ -1233,7 +1250,7 @@ ensure_pmm_secret() {
     fi
 
     [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(random_password)"
-    if [ "$INSTALL_METHOD" = "argocd" ]; then
+    if is_gitops; then
         CH_DS_PASSWORD="$(random_password)"
         mode_keys=(--from-literal=PMM_CLICKHOUSE_DATASOURCE_PASSWORD="$CH_DS_PASSWORD")
     else
@@ -1305,6 +1322,34 @@ install_argocd() {
     done
 }
 
+install_flux() {
+    local url="https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/install.yaml" controller
+
+    log "Installing Flux $FLUX_VERSION"
+    retry kubectl apply --server-side -f "$url" \
+        || fail "could not apply $url."
+    retry kubectl wait --for=condition=established --timeout="$TIMEOUT" \
+        crd/gitrepositories.source.toolkit.fluxcd.io crd/helmrepositories.source.toolkit.fluxcd.io \
+        crd/helmreleases.helm.toolkit.fluxcd.io \
+        || fail "the Flux source and HelmRelease CRDs were not established within $TIMEOUT."
+    for controller in source-controller helm-controller; do
+        retry kubectl -n flux-system rollout status deploy/"$controller" --timeout="$TIMEOUT" \
+            || fail "Flux $controller did not roll out within $TIMEOUT."
+    done
+}
+
+# Matches what render_flux_sources all renders, as <Kind>/<name>[,<Kind>/<name>].
+flux_source_list() {
+    local list ref
+    ref="$(flux_source_ref "$DEPS_CHART_SOURCE" "$DEPS_RELEASE")"
+    list="${ref% *}/${ref#* }"
+    if [ "$PMM_CHART_SOURCE" != "released" ] || [ "$DEPS_CHART_SOURCE" != "released" ]; then
+        ref="$(flux_source_ref "$PMM_CHART_SOURCE" "$RELEASE")"
+        list="$list,${ref% *}/${ref#* }"
+    fi
+    echo "$list"
+}
+
 duration_seconds() {
     local rest="$1" total=0
 
@@ -1345,6 +1390,37 @@ wait_for_application() {
         sleep 10
     done
     log "Application $name is Synced and Healthy"
+}
+
+# The Ready condition of a release whose source is not ready carries the source's message,
+# so a broken GitRepository surfaces here too. Stalled means helm-controller gave up.
+wait_for_helmrelease() {
+    local name="$1" status="" logged="" out stalled="" now deadline
+    deadline=$(( $(date +%s) + $(duration_seconds "$TIMEOUT") ))
+
+    log "Waiting for HelmRelease $name to be Ready"
+    while :; do
+        if out="$(kubectl -n "$NAMESPACE" get helmrelease "$name" \
+            -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}/{.status.conditions[?(@.type=="Ready")].reason}' 2>/dev/null)"; then
+            [ "$out" = "/" ] && status="" || status="$out"
+        fi
+        [ "${status%%/*}" = "True" ] && break
+        if [ "$status" != "$logged" ]; then
+            log "HelmRelease $name: ${status:-<no status yet>}"
+            logged="$status"
+        fi
+        stalled="$(kubectl -n "$NAMESPACE" get helmrelease "$name" \
+            -o jsonpath='{.status.conditions[?(@.type=="Stalled")].status}' 2>/dev/null || true)"
+        now="$(date +%s)"
+        if [ "$stalled" = "True" ] || [ "$now" -ge "$deadline" ]; then
+            echo "HelmRelease $name: ${status#*/}: $(kubectl -n "$NAMESPACE" get helmrelease "$name" \
+                -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}' 2>&1 || true)" >&2
+            [ "$stalled" != "True" ] || fail "HelmRelease $name is stalled."
+            fail "HelmRelease $name was not Ready within $TIMEOUT."
+        fi
+        sleep $(( deadline - now < 10 ? deadline - now : 10 ))
+    done
+    log "HelmRelease $name is Ready"
 }
 
 # Sets CLONED_DIR; under --clone-dir the clone is kept.
@@ -1449,7 +1525,7 @@ else
     helm repo add percona https://percona.github.io/percona-helm-charts/ --force-update
     helm repo update
 
-    if [ "$INSTALL_PMM" = "true" ] && [ -z "$CHART_VERSION" ] && [ "$INSTALL_METHOD" != "argocd" ]; then
+    if [ "$INSTALL_PMM" = "true" ] && [ -z "$CHART_VERSION" ] && ! is_gitops; then
         log "WARNING: no --chart-version, installing the latest published $PMM_CHART"
         helm search repo "$PMM_CHART" || true
     fi
@@ -1523,6 +1599,9 @@ fi
 if [ "$INSTALL_METHOD" = "argocd" ]; then
     install_argocd
     create_gitops_secrets
+elif [ "$INSTALL_METHOD" = "flux" ]; then
+    install_flux
+    create_gitops_secrets
 fi
 
 if [ "$INSTALL_DEPS" = "true" ]; then
@@ -1530,6 +1609,10 @@ if [ "$INSTALL_DEPS" = "true" ]; then
         log "Applying the $DEPS_RELEASE Application, $(argocd_source_label "$DEPS_CHART_SOURCE" "$DEPS_CHART_RESOLVED_VERSION" "$DEPS_CHART_BRANCH_SPEC")"
         render_argocd_manifests deps | kubectl apply -f -
         wait_for_application "$DEPS_RELEASE" "$TIMEOUT"
+    elif [ "$INSTALL_METHOD" = "flux" ]; then
+        log "Applying the $DEPS_RELEASE source and HelmRelease, $(argocd_source_label "$DEPS_CHART_SOURCE" "$DEPS_CHART_RESOLVED_VERSION" "$DEPS_CHART_BRANCH_SPEC")"
+        render_flux_manifests deps | kubectl apply -f -
+        wait_for_helmrelease "$DEPS_RELEASE"
     else
         log "Installing $DEPS_CHART as $DEPS_RELEASE"
         helm upgrade --install "$DEPS_RELEASE" "$DEPS_CHART" \
@@ -1581,6 +1664,10 @@ if [ "$INSTALL_METHOD" = "argocd" ]; then
     log "Applying the pmm-ha AppProject and the $RELEASE Application, $(argocd_source_label "$PMM_CHART_SOURCE" "$PMM_CHART_RESOLVED_VERSION" "$CHART_BRANCH_SPEC"), image $IMAGE"
     render_argocd_manifests pmm | kubectl apply -f -
     wait_for_application "$RELEASE" "$TIMEOUT"
+elif [ "$INSTALL_METHOD" = "flux" ]; then
+    log "Applying the $RELEASE source and HelmRelease, $(argocd_source_label "$PMM_CHART_SOURCE" "$PMM_CHART_RESOLVED_VERSION" "$CHART_BRANCH_SPEC"), image $IMAGE"
+    render_flux_manifests pmm | kubectl apply -f -
+    wait_for_helmrelease "$RELEASE"
 else
     ensure_pmm_secret
 
@@ -1631,8 +1718,8 @@ EXTERNAL_HOST=""
 if [ "$EXTERNAL_ACCESS" = "true" ]; then
     case "$PLATFORM" in
         eks)
-            # Argo CD sets these from chart values, and self-heal would revert a patch.
-            [ "$INSTALL_METHOD" = "argocd" ] || kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
+            # GitOps sets these from chart values, and self-heal or drift detection would revert a patch.
+            is_gitops || kubectl patch svc "$HAPROXY_SERVICE" -n "$NAMESPACE" --type=merge -p '{
                 "metadata": {
                     "annotations": {
                         "service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
@@ -1704,9 +1791,9 @@ ROUTE_EOF
     log "PMM is serving on $PMM_URL"
 fi
 
-if [ "$INSTALL_METHOD" = "argocd" ] && [ "$PMM_CHART_SOURCE" = "released" ]; then
+if is_gitops && [ "$PMM_CHART_SOURCE" = "released" ]; then
     RELEASE_CHART="pmm-ha-$PMM_CHART_RESOLVED_VERSION"
-elif [ "$INSTALL_METHOD" = "argocd" ]; then
+elif is_gitops; then
     RELEASE_CHART="$(chart_yaml_version "$CHART_DIR/charts/pmm-ha")"
 else
     RELEASE_CHART="$(release_chart "$RELEASE")"

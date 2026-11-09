@@ -176,6 +176,9 @@ case "$*" in
     *"get application "*conditions*) echo '[{"type":"ComparisonError","message":"fake comparison error"}]' ;;
     *"get application "*operationState*) echo "fake operation message" ;;
     *"get application "*) echo "${FAKE_APP_STATUS:-Synced/Healthy}" ;;
+    *"get helmrelease "*Stalled*) echo "${FAKE_HR_STALLED:-}" ;;
+    *"get helmrelease "*message*) echo "fake helm error" ;;
+    *"get helmrelease "*) echo "${FAKE_HR_STATUS:-True/InstallSucceeded}" ;;
     *"get secret "*) exit 1 ;;
     *"get pod -l "*) echo "pod-0 1/1 Running" ;;
     *"get statefulset -n "*"-l "*) echo "statefulset.apps/pmm-ha" ;;
@@ -642,4 +645,111 @@ PY
     flux_fork_render --set pmmEnv=x
     [ "$status" -eq 1 ]
     [[ "$output" == *"the helm values give pmmEnv both a value and keys under it"* ]]
+}
+
+flux_install() {
+    run "$SCRIPT" --platform eks --install-method flux \
+        --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops \
+        --deps-chart-branch KrisBuytaert:PMM-15827-pmm-ha-dependencies-enabled \
+        --image perconalab/pmm-server:3-dev-latest --external-access \
+        --clone-dir "$BATS_TEST_TMPDIR/clones" "$@"
+}
+
+@test "flux install applies Flux, the secrets, then the dependencies release alone, then pmm-ha" {
+    fake_cluster
+    flux_install
+    echo "$output"
+    [ "$status" -eq 0 ]
+
+    flux_line="$(call_line "kubectl apply --server-side -f https://github.com/fluxcd/flux2/releases/download/v2.10.0/install.yaml")"
+    helm_ctl_line="$(call_line "kubectl -n flux-system rollout status deploy/helm-controller")"
+    secret_line="$(call_line "kubectl create secret generic pmm-secret")"
+    tls_line="$(call_line "kubectl create secret tls haproxy-tls-secret")"
+    deps_line="$(call_line "kubectl -n pmm get helmrelease pmm-operators")"
+    operator_line="$(call_line "app.kubernetes.io/name=pg-operator")"
+    pmm_line="$(call_line "kubectl -n pmm get helmrelease pmm-ha")"
+    [ "$flux_line" -lt "$helm_ctl_line" ]
+    [ "$helm_ctl_line" -lt "$secret_line" ]
+    [ "$secret_line" -lt "$tls_line" ]
+    [ "$tls_line" -lt "$deps_line" ]
+    [ "$deps_line" -lt "$operator_line" ]
+    [ "$operator_line" -lt "$pmm_line" ]
+
+    releases="$(grep -l '^kind: HelmRelease$' "$FAKE"/apply.*.yaml)"
+    [ "$(echo "$releases" | wc -l)" -eq 2 ]
+    deps_file="$(echo "$releases" | head -1)"
+    pmm_file="$(echo "$releases" | tail -1)"
+    [ "$(grep -c '^kind: HelmRelease$' "$deps_file")" -eq 1 ]
+    grep -q "^  name: 'pmm-operators'$" "$deps_file"
+    grep -q "^  name: 'pmm-operators-chart'$" "$deps_file"
+    [ "$(grep -c '^kind: HelmRelease$' "$pmm_file")" -eq 1 ]
+    grep -q "^  name: 'pmm-ha'$" "$pmm_file"
+    refute grep -q "^  name: 'pmm-operators'$" "$pmm_file"
+
+    refute grep -q "^helm upgrade" "$FAKE/calls"
+    refute grep -q "argocd" "$FAKE/calls"
+    grep -q "PMM_CLICKHOUSE_DATASOURCE_PASSWORD=" "$FAKE/calls"
+    refute grep -q "PG_PASSWORD=\|GF_PASSWORD=" "$FAKE/calls"
+    grep -q "^curl .*https://nlb.example.com/v1/readyz" "$FAKE/calls"
+}
+
+@test "flux install writes the flux summary keys" {
+    fake_cluster
+    flux_install
+    [ "$status" -eq 0 ]
+
+    deps_clone="$(sed -n 's/^git clone .*PMM-15827-pmm-ha-dependencies-enabled .* //p' "$FAKE/calls")"
+    [ -n "$deps_clone" ]
+    grep -qx "install_method=flux" "$SUMMARY_FILE"
+    grep -qx "flux_version=v2.10.0" "$SUMMARY_FILE"
+    grep -qx "flux_releases=pmm-operators,pmm-ha" "$SUMMARY_FILE"
+    grep -qx "flux_sources=GitRepository/pmm-operators-chart,GitRepository/pmm-ha-chart" "$SUMMARY_FILE"
+    grep -qxF "deps_chart_dir=$deps_clone/charts/pmm-ha-dependencies" "$SUMMARY_FILE"
+    grep -qx "deps_chart=pmm-ha-dependencies-1.3.0" "$SUMMARY_FILE"
+    grep -qx "chart=pmm-ha-1.9.0" "$SUMMARY_FILE"
+    grep -qx "url=https://nlb.example.com" "$SUMMARY_FILE"
+    grep -q "^clickhouse_datasource_password=." "$SUMMARY_FILE"
+    refute grep -q "^postgres_password=\|^grafana_password=\|^argocd" "$SUMMARY_FILE"
+
+    run "$SCRIPT" --platform eks --install-method flux --image perconalab/pmm-server:3-dev-latest \
+        --clone-dir "$BATS_TEST_TMPDIR/clones"
+    [ "$status" -eq 0 ]
+    grep -qx "flux_sources=HelmRepository/percona-charts" "$SUMMARY_FILE"
+    grep -qx "chart_source=released" "$SUMMARY_FILE"
+    grep -qx "chart_version=1.8.0" "$SUMMARY_FILE"
+    grep -qx "deps_chart_source=released" "$SUMMARY_FILE"
+    grep -qx "deps_chart_version=1.2.0" "$SUMMARY_FILE"
+    grep -qx "chart=pmm-ha-1.8.0" "$SUMMARY_FILE"
+    grep -qx "deps_chart=pmm-ha-dependencies-1.2.0" "$SUMMARY_FILE"
+}
+
+@test "flux install reports the HelmRelease Ready condition when it never gets ready" {
+    fake_cluster
+    FAKE_HR_STATUS="False/InstallFailed" flux_install --timeout 1s
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"HelmRelease pmm-operators: InstallFailed: fake helm error"* ]]
+    [[ "$output" == *"HelmRelease pmm-operators was not Ready within 1s"* ]]
+    grep -q "^kubectl get helmreleases -n pmm -o yaml" "$FAKE/calls"
+    for f in flux-helmreleases.yaml flux-sources.yaml flux-events.txt helm-controller.log source-controller.log; do
+        [ -e "$DEBUG_DIR/$f" ]
+    done
+    refute grep -q "get helmrelease pmm-ha" "$FAKE/calls"
+}
+
+@test "flux install fails at once on a stalled HelmRelease" {
+    fake_cluster
+    FAKE_HR_STATUS="False/InstallFailed" FAKE_HR_STALLED="True" flux_install --timeout 1h
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"HelmRelease pmm-operators: InstallFailed: fake helm error"* ]]
+    [[ "$output" == *"HelmRelease pmm-operators is stalled"* ]]
+    refute grep -q "get helmrelease pmm-ha" "$FAKE/calls"
+}
+
+@test "flux install exposes HAProxy through values, not kubectl patch" {
+    fake_cluster
+    flux_install
+    [ "$status" -eq 0 ]
+    refute grep -q "^kubectl patch" "$FAKE/calls"
+    pmm_file="$(grep -l "^  name: 'pmm-ha'$" "$FAKE"/apply.*.yaml)"
+    grep -q '^        type: "LoadBalancer"$' "$pmm_file"
 }
