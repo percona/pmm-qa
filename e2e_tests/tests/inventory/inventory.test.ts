@@ -6,7 +6,7 @@ import { inventoryServices } from '@testdata/remoteInstances';
 
 let calls: { method: string; requestTime: Date; url: string }[] = [];
 const dataTests = [
-  { apiUrl: 'v1/ha/nodes', name: 'NodesPage' },
+  { apiUrl: 'v1/management/nodes', name: 'NodesPage' },
   { apiUrl: 'v1/management/services', name: 'ServicesPage' },
 ];
 const remoteNodeNames = [
@@ -35,7 +35,7 @@ pmmTest.afterEach(async ({ api }) => {
 for (const dataTest of dataTests) {
   pmmTest(
     `PMM-T2168 - Verify that ${dataTest.name} pages get data from BE every five seconds @inventory`,
-    async ({ nodesPage, page, servicesPage }) => {
+    async ({ agentsPage, nodesPage, page, servicesPage }) => {
       page.on('request', (request) => {
         if (request.url().includes(dataTest.apiUrl)) {
           calls.push({
@@ -66,6 +66,7 @@ for (const dataTest of dataTests) {
         }
       });
       await nodesPage.elements.runningAgents.click();
+      await expect(agentsPage.buttons.goBack).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       await nodesPage.builders.showRowDetailsByIndex('0').click();
       await expect
         .poll(() => calls.length, {
@@ -264,7 +265,7 @@ pmmTest(
 
     await page.goto(servicesPage.url);
     await servicesPage.pagination.nextPageButton.click({ timeout: Timeouts.THIRTY_SECONDS });
-    await expect(servicesPage.pagination.activePageButton).toHaveText('2');
+    await expect(servicesPage.pagination.itemsInterval).toHaveText('26-50 of 50');
 
     const startServices = await servicesPage.getServiceNames();
     const requestsOnSecondPage = servicesMock.requests();
@@ -299,8 +300,7 @@ for (const tab of ['services', 'nodes'] as const) {
       const { pagination, url } = tab === 'services' ? servicesPage : nodesPage;
 
       await page.goto(url);
-      await pagination.selectRowsPerPage('100');
-      await expect(pagination.rowsPerPageDropdown).toHaveText('100');
+      await pagination.showAllRows();
       await pagination.verifyMonitoringStatusesOk(tab);
     },
   );

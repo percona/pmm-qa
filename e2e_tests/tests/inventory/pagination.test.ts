@@ -65,7 +65,7 @@ for (const subPage of ['services', 'nodes'] as const) {
 
       await inventoryPage.buttons.delete.click();
       await expect(inventoryPage.messages.deleteConfirmation).toHaveText(
-        `Are you sure that you want to permanently delete ${selected} ${subPage}`,
+        `Are you sure that you want to permanently delete ${selected} ${subPage}?`,
       );
     },
   );
