@@ -357,11 +357,13 @@ export default class Dashboards extends BasePage {
 
   // Grafana pins a graph tooltip only on a click right at a series point (closestSeriesIdx in
   // TooltipPlugin2): hover up the plot until uPlot draws the point, then click on the point.
-  // Columns go right to left: a series that started minutes ago has points only at the right edge.
+  // A series that started minutes ago has points only near the right edge, where a point at zero can
+  // sit under an annotation marker that takes the click, so each column is tried until the tooltip pins.
   pinGraphTooltip = async (panelName: string) => {
     await pmmTest.step(`Pin the ${panelName} graph tooltip`, async () => {
       const plot = this.builders.panelPlotByName(panelName);
       const focusedPoint = this.builders.panelFocusedPointByName(panelName);
+      const closeButton = this.builders.graphTooltipButton('Close');
 
       await plot.scrollIntoViewIfNeeded();
 
@@ -369,23 +371,35 @@ export default class Dashboards extends BasePage {
 
       if (!plotBox) throw new Error(`${panelName} graph is not rendered`);
 
-      for (const column of [0.98, 0.9, 0.75, 0.5]) {
+      for (const column of [0.9, 0.98, 0.75, 0.5]) {
+        await this.page.mouse.move(0, 0);
+
         for (let y = plotBox.height - 1; y > 0 && !(await focusedPoint.isVisible()); y -= 5) {
           await plot.hover({ position: { x: plotBox.width * column, y } });
         }
+
+        const pointBox = (await focusedPoint.isVisible()) ? await focusedPoint.boundingBox() : null;
+
+        if (!pointBox) continue;
+
+        // A point at zero is centred on the plot's bottom edge, where the x axis would take the click.
+        await plot.click({
+          position: {
+            x: pointBox.x + pointBox.width / 2 - plotBox.x,
+            y: Math.min(pointBox.y + pointBox.height / 2 - plotBox.y, plotBox.height - 1),
+          },
+        });
+
+        try {
+          await closeButton.waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+
+          return;
+        } catch {
+          await this.page.keyboard.press('Escape');
+        }
       }
 
-      const pointBox = (await focusedPoint.isVisible()) ? await focusedPoint.boundingBox() : null;
-
-      if (!pointBox) throw new Error(`${panelName} graph has no series point to pin`);
-
-      // A point at zero is centred on the plot's bottom edge, where the x axis would take the click.
-      await plot.click({
-        position: {
-          x: pointBox.x + pointBox.width / 2 - plotBox.x,
-          y: Math.min(pointBox.y + pointBox.height / 2 - plotBox.y, plotBox.height - 1),
-        },
-      });
+      throw new Error(`${panelName} graph tooltip did not pin at any series point`);
     });
   };
 
