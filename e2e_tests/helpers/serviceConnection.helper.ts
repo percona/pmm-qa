@@ -25,6 +25,10 @@ export const mysql = (container: string, { perconaServer }: Credentials, sql: st
   `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -e "${sql}"`;
 export const mongo = (container: string, { psmdb }: Credentials, js: string) =>
   `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
+// ProxySQL keeps its admin users in one variable, which SQLite-backed admin SQL edits in place.
+const proxysqlAdmin = (container: string, { proxysql }: Credentials, sql: string) =>
+  `docker exec -e MYSQL_PWD='${proxysql.password}' ${container} mysql -u${proxysql.username} -h127.0.0.1 -P6032 -e "UPDATE global_variables SET ${sql} WHERE variable_name = 'admin-admin_credentials'; LOAD ADMIN VARIABLES TO RUNTIME;"`;
+const proxysqlTestUser = `;${testUser.username}:${testUser.password}`;
 const valkeyCli = (container: string, { valkey }: Credentials, command: string) =>
   `docker exec ${container} valkey-cli -a '${valkey.password}' --no-auth-warning ${command}`;
 export const serviceConnections: DatabaseConnection[] = [
@@ -92,5 +96,20 @@ export const serviceConnections: DatabaseConnection[] = [
     name: 'valkey',
     original: ({ valkey }) => valkey,
     serviceRegex: '^valkey-primary',
+  },
+  {
+    createUser: (container, credentials) =>
+      proxysqlAdmin(container, credentials, `variable_value = variable_value || '${proxysqlTestUser}'`),
+    dropUser: (container, credentials) =>
+      proxysqlAdmin(
+        container,
+        credentials,
+        `variable_value = replace(variable_value, '${proxysqlTestUser}', '')`,
+      ),
+    exporterAuth: true,
+    exporterType: 'proxysql_exporter',
+    name: 'proxysql',
+    original: ({ proxysql }) => proxysql,
+    serviceRegex: '^my-new-proxysql_',
   },
 ];

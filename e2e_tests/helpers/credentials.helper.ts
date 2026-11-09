@@ -19,6 +19,10 @@ export default class Credentials {
     password: 'pmm-^*&@agent-password',
     username: 'postgres',
   };
+  proxysql = {
+    password: 'admin',
+    username: 'admin',
+  };
   psmdb = {
     agentPassword: 'mypass',
     password: 'pmmpass',

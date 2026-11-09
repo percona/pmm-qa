@@ -78,6 +78,14 @@ export const serviceTlsSettings: ServiceTls[] = [
     secretFlags: [],
     serviceRegex: '^valkey-primary',
   },
+  {
+    apiCertificates: [],
+    certificateFields: [],
+    exporterType: 'proxysql_exporter',
+    name: 'proxysql',
+    secretFlags: [],
+    serviceRegex: '^my-new-proxysql_',
+  },
 ];
 
 export interface TlsServer {

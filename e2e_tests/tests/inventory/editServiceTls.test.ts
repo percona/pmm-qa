@@ -52,12 +52,16 @@ for (const settings of serviceTlsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify enabling TLS with an untrusted CA is rejected by the connection check for ${name} service @inventory`,
+      `PMM-15674 - Verify enabling TLS is rejected by the connection check when the ${name} server cannot be verified @inventory`,
       async ({ api, cliHelper, editServicePage, page }) => {
         const { cert } = cliHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);
-        await editServicePage.editTls({ tls: true, tlsSkipVerify: false }, { tlsCa: cert });
+        // Without a CA field the system roots are used, so a server without TLS or with its own certificate fails either way.
+        await editServicePage.editTls(
+          { tls: true, tlsSkipVerify: false },
+          certificateFields.includes('tlsCa') ? { tlsCa: cert } : {},
+        );
 
         const response = await editServicePage.saveChanges(service.service_id, false, true);
 
@@ -76,7 +80,7 @@ for (const settings of serviceTlsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify enabling TLS with certificates and skipped verification of ${name} service @inventory`,
+      `PMM-15674 - Verify enabling TLS with skipped verification and the ${name} certificates @inventory`,
       async ({ api, cliHelper, editServicePage, page }) => {
         const { cert, key } = cliHelper.generateSelfSignedCertificate();
         const certificates = {
@@ -94,7 +98,7 @@ for (const settings of serviceTlsSettings) {
           Object.fromEntries(certificateFields.map((field) => [field, certificates[field]])),
         );
 
-        // The service itself has no TLS, so the connection check would refuse the change.
+        // The service is monitored without TLS, so the connection check could refuse the change.
         const response = await editServicePage.saveChanges(service.service_id, false, true, true);
 
         expect(response.status(), await response.text()).toEqual(200);

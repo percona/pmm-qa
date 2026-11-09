@@ -9,6 +9,7 @@ const databases = [
   { name: 'ps', serviceRegex: '^ps_pmm' },
   { name: 'psmdb', serviceRegex: '^rs101_' },
   { name: 'valkey', serviceRegex: '^valkey-primary' },
+  { name: 'proxysql', serviceRegex: '^my-new-proxysql_' },
 ];
 const labelEdits: ServiceLabels = {
   cluster: 'editCluster',

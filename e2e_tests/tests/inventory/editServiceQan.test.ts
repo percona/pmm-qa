@@ -111,14 +111,19 @@ for (const serviceQan of serviceQanSources) {
   });
 }
 
-pmmTest(
-  'PMM-15674 - Verify Query Analytics section is not shown for valkey service @inventory',
-  async ({ api, editServicePage, grafanaHelper }) => {
-    await grafanaHelper.authorize();
+for (const { name, serviceRegex } of [
+  { name: 'valkey', serviceRegex: '^valkey-primary' },
+  { name: 'proxysql', serviceRegex: '^my-new-proxysql_' },
+]) {
+  pmmTest(
+    `PMM-15674 - Verify Query Analytics section is not shown for ${name} service @inventory`,
+    async ({ api, editServicePage, grafanaHelper }) => {
+      await grafanaHelper.authorize();
 
-    const service = await api.inventoryApi.getServiceDetailsByRegex('^valkey-primary');
+      const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
 
-    await editServicePage.open(service.service_id);
-    await expect(editServicePage.elements.qanSection).toBeHidden();
-  },
-);
+      await editServicePage.open(service.service_id);
+      await expect(editServicePage.elements.qanSection).toBeHidden();
+    },
+  );
+}
