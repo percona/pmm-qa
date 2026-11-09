@@ -65,7 +65,7 @@ pmmTest.afterEach(async ({ haBackupHelper, k8sHelper }, testInfo) => {
 });
 
 pmmTest(
-  'PMM-TXXXX - Verify both Flux HelmReleases are Ready with the recommended settings and leave no PMM Role in namespace default @ha-flux',
+  'PMM-T2508 - Verify both Flux HelmReleases are Ready with the recommended settings and leave no PMM Role in namespace default @ha-flux',
   async ({ fluxHelper }) => {
     const { deps, pmm } = fluxHelper.releases();
     const sources = fluxHelper.sources();
@@ -133,7 +133,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify requested reconciles of both Flux HelmReleases find no drift and restart no PMM HA pod @ha-flux',
+  'PMM-T2509 - Verify requested reconciles of both Flux HelmReleases find no drift and restart no PMM HA pod @ha-flux',
   async ({ fluxHelper, k8sHelper }) => {
     pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
 
@@ -176,7 +176,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify PMM Server authenticates to PostgreSQL and the Grafana ClickHouse data source works when deployed by Flux @ha-flux',
+  'PMM-T2510 - Verify PMM Server authenticates to PostgreSQL and the Grafana ClickHouse data source works when deployed by Flux @ha-flux',
   async ({ haClusterHelper, k8sHelper, request }) => {
     for (const podName of haClusterHelper.podNames()) {
       await pmmTest.step(`Verify "${podName}" logs no PostgreSQL authentication failure`, async () => {
@@ -227,7 +227,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify Flux drift detection restores a changed HAProxy Deployment @ha-flux',
+  'PMM-T2511 - Verify Flux drift detection restores a changed HAProxy Deployment @ha-flux',
   async ({ fluxHelper, k8sHelper }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 
@@ -275,7 +275,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify an in-place backup restore finishes under Flux drift detection without an upgrade or rollback of the PMM release @ha-flux',
+  'PMM-T2512 - Verify an in-place backup restore finishes under Flux drift detection without an upgrade or rollback of the PMM release @ha-flux',
   async ({ fluxHelper, haBackupHelper, k8sHelper }, testInfo) => {
     pmmTest.setTimeout(Timeouts.SIXTY_MINUTES);
 
@@ -376,7 +376,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-TXXXX - Verify a values change in the Flux HelmRelease upgrades PMM HA in place and keeps its credentials @ha-flux',
+  'PMM-T2513 - Verify a values change in the Flux HelmRelease upgrades PMM HA in place and keeps its credentials @ha-flux',
   async ({ api, fluxHelper, haClusterHelper, k8sHelper }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES + Timeouts.FIFTEEN_MINUTES);
 
