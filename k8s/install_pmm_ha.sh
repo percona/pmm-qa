@@ -172,7 +172,7 @@ usage() {
                                   all     pmm-ha-dependencies, then pmm-ha
                                   deps    pmm-ha-dependencies only
                                   pmm-ha  pmm-ha only, on operators already there
-        --timeout DURATION      helm, rollout and Argo CD Application timeout (default: 15m)
+        --timeout DURATION      helm, rollout, Argo CD Application and Flux HelmRelease wait timeout (default: 15m)
         --debug-dir DIR         diagnostics collected on failure (default: ./pmm-ha-debug)
         --summary-file PATH     credentials and URL (default: ./pmm-ha-summary.env)
 

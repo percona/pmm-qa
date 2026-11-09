@@ -123,10 +123,6 @@ export default class FluxHelper {
     return requestedAt;
   };
 
-  setSuspend = (name: string, on: boolean): void => {
-    this.patch(name, { spec: { suspend: on } });
-  };
-
   /** A dotted `path` such as `pmmEnv.KEY` merges into `spec.values`; `null` removes the key. */
   setValue = (name: string, path: string, value: string | null): void => {
     const nested = path.split('.').reduceRight<unknown>((inner, key) => ({ [key]: inner }), value);
