@@ -34,7 +34,7 @@ interface FluxObject {
   };
   status?: {
     conditions?: FluxCondition[];
-    history?: { version: number }[];
+    history?: { chartVersion?: string; version: number }[];
     lastHandledReconcileAt?: string;
   };
 }
@@ -43,19 +43,24 @@ interface FluxObject {
 export default class FluxHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper('pmm')) {}
 
+  chartVersion = (name: string): string => this.release(name).status?.history?.[0]?.chartVersion ?? '';
+
   driftDetection = (name: string): { ignore?: DriftIgnore[]; mode?: string } =>
     this.release(name).spec?.driftDetection ?? {};
 
-  driftEvents = (name: string): string[] => {
+  driftEvents = (name: string): string[] =>
+    this.events(name)
+      .filter((event) => /drift/i.test(event.reason ?? '') || /drift/i.test(event.message ?? ''))
+      .map((event) => event.message ?? '');
+
+  events = (name: string): { message?: string; reason?: string }[] => {
     const selector = `involvedObject.kind=HelmRelease,involvedObject.name=${name}`;
     const events = JSON.parse(
       this.k8sHelper.execSilent(`get events --field-selector=${selector} --output=json`).assertSuccess()
         .stdout,
     ) as { items?: { message?: string; reason?: string }[] };
 
-    return (events.items ?? [])
-      .filter((event) => /drift/i.test(event.reason ?? '') || /drift/i.test(event.message ?? ''))
-      .map((event) => event.message ?? '');
+    return events.items ?? [];
   };
 
   ready = (name: string): { message: string; reason: string; status: string } => {

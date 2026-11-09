@@ -101,6 +101,13 @@ export default class K8sHelper {
     return this.getVolumeUsage(pod, dir, container);
   };
 
+  getDeploymentReplicas = (name: string): number =>
+    Number(
+      this.execSilent(`get deployment ${name} --output=jsonpath={.spec.replicas}`)
+        .assertSuccess()
+        .stdout.trim(),
+    );
+
   getEventMessages = (objectName: string): string[] =>
     (
       JSON.parse(
@@ -190,6 +197,9 @@ export default class K8sHelper {
 
     return { availableMb, percentFull: 100 * (1 - availableMb / sizeMb), sizeMb, usedMb };
   };
+
+  scaleDeployment = (name: string, replicas: number): ExecReturn =>
+    this.exec(`scale deployment ${name} --replicas=${replicas}`);
 
   scaleStatefulSet = (name: string, replicas: number): ExecReturn =>
     this.exec(`scale statefulset ${name} --replicas=${replicas}`);
