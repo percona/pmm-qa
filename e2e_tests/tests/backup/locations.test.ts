@@ -356,7 +356,7 @@ pmmTest(
             (await api.backupsApi.getRestores()).find(({ restore_id }) => restore_id === id)?.status,
           { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES },
         )
-        .toMatch(/^RESTORE_STATUS_(?!IN_PROGRESS$)/);
+        .toBe('RESTORE_STATUS_SUCCESS');
 
       return id;
     });

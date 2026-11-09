@@ -128,6 +128,21 @@ export default class BackupsApi {
   };
 
   removeAllLocations = async () => {
+    // A force delete while PBM is still writing leaves backup files with no PMM artifact.
+    await expect
+      .poll(
+        async () =>
+          (await this.getArtifacts())
+            .filter(({ status }) => /^BACKUP_STATUS_(PENDING|IN_PROGRESS)$/.test(status))
+            .map(({ artifact_id }) => artifact_id),
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: 'Running backups should finish before their locations are force deleted',
+          timeout: Timeouts.FIVE_MINUTES,
+        },
+      )
+      .toEqual([]);
+
     for (const { location_id } of await this.getLocations()) {
       const response = await this.request.delete(`${apiEndpoints.backups.locations}/${location_id}`, {
         headers: GrafanaHelper.getAuthHeader(),
