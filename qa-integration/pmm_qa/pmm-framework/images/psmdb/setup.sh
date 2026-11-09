@@ -301,9 +301,13 @@ psmdb_sharded() {
   for shard in 'rs1/rs101:27017,rs102:27017,rs103:27017' 'rs2/rs201:27017,rs202:27017,rs203:27017'; do
     step "Add shard ${shard%%/*}" psmdb_add_shard "$shard"
   done
-  # Seeded before any member is added to PMM, so its inserts never show as writes on the per-shard panels.
+  # Started before any member is added to PMM, so every sample PMM records already carries them,
+  # and the scan collection's seed inserts are never scraped as writes.
+  if [[ -n $hot_shard ]]; then
+    step "Start the write load on shard $hot_shard" psmdb_hot_shard_traffic
+  fi
   if [[ -n $scan_shard ]]; then
-    step "Seed the scan collection on shard $scan_shard" psmdb_scan_shard_traffic yes
+    step "Start the scan load on shard $scan_shard" psmdb_scan_shard_traffic
   fi
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node clients psmdb_client
@@ -328,12 +332,6 @@ psmdb_sharded() {
   step 'Load data' psmdb_sharded_data
   # Chunk moves and splits come from the compose file's chunk-churn service.
   step 'Start the workload' psmdb_traffic
-  if [[ -n $hot_shard ]]; then
-    step "Start the write load on shard $hot_shard" psmdb_hot_shard_traffic
-  fi
-  if [[ -n $scan_shard ]]; then
-    step "Start the scan load on shard $scan_shard" psmdb_scan_shard_traffic
-  fi
   report_agent_status "${clients[@]}"
 }
 
@@ -345,9 +343,8 @@ psmdb_hot_shard_traffic() {
   TARGET_SHARD=$hot_shard must bash ./generate_shard_write_traffic.sh >/dev/null
 }
 
-# Usage: psmdb_scan_shard_traffic [yes]  (yes only seeds the collection)
 psmdb_scan_shard_traffic() {
-  TARGET_SHARD=$scan_shard LOAD=scan PREPARE_ONLY=${1:-no} must bash ./generate_shard_write_traffic.sh >/dev/null
+  TARGET_SHARD=$scan_shard LOAD=scan must bash ./generate_shard_write_traffic.sh >/dev/null
 }
 
 # TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack. A throwaway compose override disables the stack's own pmm-server and kerberos

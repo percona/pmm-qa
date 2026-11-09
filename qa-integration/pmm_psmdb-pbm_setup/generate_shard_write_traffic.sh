@@ -19,7 +19,6 @@
 #   MONGO_URI         mongodb://root:root@localhost
 #   CONTINUOUS        yes; no stops after DURATION_SECONDS (300)
 #   BACKGROUND        yes detaches the loop inside the container; no blocks
-#   PREPARE_ONLY      no; yes pins the database and seeds the scans, and starts no loop
 #   INTERVAL_MS       delay between cycles: 20 for write, 50 for scan
 #
 # A second background run adds a second loop. Stop it first:
@@ -34,7 +33,6 @@ MONGO_CONTAINER=${MONGO_CONTAINER:-mongos}
 MONGO_URI=${MONGO_URI:-mongodb://root:root@localhost}
 CONTINUOUS=${CONTINUOUS:-yes}
 BACKGROUND=${BACKGROUND:-yes}
-PREPARE_ONLY=${PREPARE_ONLY:-no}
 DURATION_SECONDS=${DURATION_SECONDS:-300}
 
 if [[ ! $TARGET_SHARD =~ ^[A-Za-z0-9_-]+$ ]]; then
@@ -92,7 +90,6 @@ docker exec "$MONGO_CONTAINER" mongosh "$MONGO_URI" --quiet --eval "
     }
     print(name + '.scans: ' + scans.countDocuments({}) + ' documents');
   }"
-[[ $PREPARE_ONLY == yes ]] && exit 0
 
 {
   printf 'var LOAD = "%s", CONTINUOUS = %s, DURATION_MS = %d, INTERVAL_MS = %d, DATABASE = "%s", SCAN_DOCS = %d;\n' \
