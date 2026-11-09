@@ -8,7 +8,7 @@ setup() {
         DEPS_CHART_BRANCH INSTALL_METHOD ARGOCD_VERSION CLONE_PARENT CHARTS PMM_SECRET_FROM \
         NAMESPACE RELEASE DEPS_RELEASE CHART_REPO TIMEOUT EXTERNAL_ACCESS PMM_ADMIN_PASSWORD \
         PMM_IMAGE PMM_IMAGE_REPOSITORY PMM_IMAGE_TAG BACKUP_MINIO BACKUP_S3_BUCKET BACKUP_S3_ENDPOINT \
-        WEBHOOK_SETTLE_SECONDS ARGOCD_PRINT_MANIFESTS
+        WEBHOOK_SETTLE_SECONDS ARGOCD_PRINT_MANIFESTS FLUX_VERSION FLUX_PRINT_MANIFESTS
 }
 
 @test "--help lists the install-method, deps-chart-branch, argocd-version and clone-dir options" {
@@ -20,10 +20,10 @@ setup() {
     [[ "$output" == *"--clone-dir"* ]]
 }
 
-@test "--install-method rejects anything but helm or argocd" {
+@test "--install-method rejects anything but helm, argocd or flux" {
     run "$SCRIPT" --platform eks --install-method bogus
     [ "$status" -eq 1 ]
-    [[ "$output" == *"--install-method must be helm or argocd"* ]]
+    [[ "$output" == *"--install-method must be helm, argocd or flux"* ]]
 }
 
 @test "argocd refuses a platform other than eks" {
@@ -417,4 +417,229 @@ released_render() {
     grep -qx "deps_chart_source=released" "$SUMMARY_FILE"
     grep -qx "deps_chart_version=1.2.0" "$SUMMARY_FILE"
     refute grep -q "^git clone .* latest " "$FAKE/calls"
+}
+
+@test "--help lists the flux-version option" {
+    run "$SCRIPT" --help
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--flux-version"* ]]
+    [[ "$output" == *"helm, argocd or flux"* ]]
+}
+
+@test "flux refuses a platform other than eks" {
+    run "$SCRIPT" --install-method flux --platform openshift --chart-branch main
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"flux install method supports --platform eks only"* ]]
+}
+
+@test "flux refuses --charts" {
+    run "$SCRIPT" --install-method flux --platform eks --chart-branch main --charts deps
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--charts is not supported with --install-method flux"* ]]
+}
+
+@test "flux refuses --chart-dir" {
+    run "$SCRIPT" --install-method flux --platform eks --chart-dir /tmp
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--chart-dir is not supported with --install-method flux"* ]]
+}
+
+@test "flux refuses --pmm-secret-from" {
+    run "$SCRIPT" --install-method flux --platform eks --chart-branch main --pmm-secret-from pmm
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--pmm-secret-from is not supported with --install-method flux"* ]]
+}
+
+@test "flux refuses a chart version with a chart branch" {
+    run "$SCRIPT" --install-method flux --platform eks --chart-branch main --chart-version 1.8.0
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--chart-version applies to the released chart only"* ]]
+}
+
+@test "flux fails an unpublished chart version before any cluster change" {
+    fake_cluster
+    run "$SCRIPT" --platform eks --install-method flux --image perconalab/pmm-server:3-dev-latest \
+        --chart-version 9.9.9
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"pmm-ha 9.9.9 is not published"* ]]
+    refute grep -q "^kubectl" "$FAKE/calls"
+}
+
+flux_render() {
+    fake_cluster
+    FLUX_PRINT_MANIFESTS=1 run "$SCRIPT" --platform eks --install-method flux \
+        --image perconalab/pmm-server:3-dev-latest "$@"
+}
+
+flux_fork_render() {
+    flux_render --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops \
+        --deps-chart-branch KrisBuytaert:PMM-15827-pmm-ha-dependencies-enabled "$@"
+}
+
+@test "flux print mode renders released charts from a HelmRepository" {
+    flux_render
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^kind: HelmRepository$' <<<"$output")" -eq 1 ]
+    refute grep -q '^kind: GitRepository$' <<<"$output"
+    [[ "$output" == *"  url: https://percona.github.io/percona-helm-charts/"$'\n'* ]]
+    [[ "$output" == *"      chart: pmm-ha"$'\n'"      version: \"1.8.0\""$'\n'"      sourceRef:"$'\n'"        kind: HelmRepository"$'\n'"        name: 'percona-charts'"* ]]
+    [[ "$output" == *"      chart: pmm-ha-dependencies"$'\n'"      version: \"1.2.0\""$'\n'"      sourceRef:"$'\n'"        kind: HelmRepository"* ]]
+}
+
+@test "flux print mode pins --chart-version" {
+    flux_render --chart-version 1.6.1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"version: \"1.6.1\""* ]]
+    [[ "$output" == *"version: \"1.2.0\""* ]]
+}
+
+@test "flux print mode renders fork branches from GitRepositories" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^kind: GitRepository$' <<<"$output")" -eq 2 ]
+    refute grep -q '^kind: HelmRepository$' <<<"$output"
+    [ "$(grep -c '^  url: https://github.com/KrisBuytaert/percona-helm-charts.git$' <<<"$output")" -eq 2 ]
+    [[ "$output" == *"  name: 'pmm-ha-chart'"* ]]
+    [[ "$output" == *"  name: 'pmm-operators-chart'"* ]]
+    [[ "$output" == *"    branch: 'PMM-15826-pmm-ha-gitops'"$'\n'* ]]
+    [[ "$output" == *"    branch: 'PMM-15827-pmm-ha-dependencies-enabled'"$'\n'* ]]
+    [[ "$output" == *"      chart: ./charts/pmm-ha"$'\n'"      sourceRef:"$'\n'"        kind: GitRepository"$'\n'"        name: 'pmm-ha-chart'"* ]]
+    [[ "$output" == *"      chart: ./charts/pmm-ha-dependencies"$'\n'"      sourceRef:"$'\n'"        kind: GitRepository"$'\n'"        name: 'pmm-operators-chart'"* ]]
+    refute grep -q 'version:' <<<"$output"
+}
+
+@test "flux print mode with mixed sources renders a HelmRepository and a GitRepository" {
+    flux_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^kind: HelmRepository$' <<<"$output")" -eq 1 ]
+    [ "$(grep -c '^kind: GitRepository$' <<<"$output")" -eq 1 ]
+    [[ "$output" == *"      chart: pmm-ha-dependencies"$'\n'"      version: \"1.2.0\""$'\n'"      sourceRef:"$'\n'"        kind: HelmRepository"* ]]
+    [[ "$output" == *"      chart: ./charts/pmm-ha"$'\n'"      sourceRef:"$'\n'"        kind: GitRepository"$'\n'"        name: 'pmm-ha-chart'"* ]]
+}
+
+@test "flux print mode renders the recommended settings" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^kind: HelmRelease$' <<<"$output")" -eq 2 ]
+    [ "$(grep -c '^  interval: 30m$' <<<"$output")" -eq 2 ]
+    [ "$(grep -c '^  timeout: 15m$' <<<"$output")" -eq 2 ]
+    [ "$(grep -c '^    mode: enabled$' <<<"$output")" -eq 2 ]
+    [ "$(grep -c '^      name: RetryOnFailure$' <<<"$output")" -eq 4 ]
+    [ "$(grep -c '^      retryInterval: 5m$' <<<"$output")" -eq 4 ]
+    [ "$(grep -c '^    crds: CreateReplace$' <<<"$output")" -eq 2 ]
+}
+
+@test "flux print mode ignores the restore's replica counts on pmm-ha only" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^    ignore:$' <<<"$output")" -eq 1 ]
+    [[ "$output" == *"      - paths: [\"/spec/replicas\"]"$'\n'"        target:"$'\n'"          kind: StatefulSet"$'\n'"          name: 'pmm-ha'"$'\n'* ]]
+    [[ "$output" == *"      - paths: [\"/spec/replicas\"]"$'\n'"        target:"$'\n'"          kind: VMCluster"$'\n'"          name: 'pmm-ha-vmcluster'"$'\n'* ]]
+    hr() { awk -v name="$1" 'BEGIN { RS = "---\n" } /kind: HelmRelease/ && index($0, "\n  name: \x27" name "\x27\n")' <<<"$output"; }
+    [[ "$(hr pmm-ha)" == *"ignore:"* ]]
+    [ -n "$(hr pmm-operators)" ]
+    [[ "$(hr pmm-operators)" != *"ignore:"* ]]
+}
+
+@test "flux print mode orders pmm-ha after the dependencies" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^  dependsOn:$' <<<"$output")" -eq 1 ]
+    [[ "$output" == *"  dependsOn:"$'\n'"    - name: 'pmm-operators'"$'\n'* ]]
+}
+
+@test "flux print mode renders the helm values" {
+    flux_fork_render --external-access --backup-minio
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"    gitops:"$'\n'"      enabled: true"$'\n'* ]]
+    [[ "$output" == *"    tls:"$'\n'"      secretFormat: \"kubernetes.io/tls\""$'\n'* ]]
+    [[ "$output" == *"      vmagent:"$'\n'"        scrapeApiserver: false"$'\n'* ]]
+    [[ "$output" == *"    secret:"$'\n'"      create: false"$'\n'"      name: \"pmm-secret\""$'\n'* ]]
+    [[ "$output" == *"    image:"$'\n'"      repository: \"perconalab/pmm-server\""$'\n'"      tag: \"3-dev-latest\""$'\n'* ]]
+    [[ "$output" == *"    pmmEnv:"$'\n'"      PMM_DEV_TELEMETRY_DISABLE_SEND: \"1\""$'\n'* ]]
+    [[ "$output" == *"    centralBackupStorage:"$'\n'"      enabled: true"$'\n'* ]]
+    [[ "$output" == *"    haproxy:"$'\n'"      service:"$'\n'"        type: \"LoadBalancer\""$'\n'"        annotations:"$'\n'"          \"service.beta.kubernetes.io/aws-load-balancer-type\": \"nlb\""$'\n'"          \"service.beta.kubernetes.io/aws-load-balancer-scheme\": \"internet-facing\""$'\n'* ]]
+    [[ "$output" == *"    victoria-metrics-operator:"$'\n'"      admissionWebhooks:"$'\n'"        enabled: false"$'\n'* ]]
+}
+
+@test "flux print mode without --external-access has no service type" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"haproxy:"* ]]
+    [[ "$output" != *"centralBackupStorage"* ]]
+}
+
+@test "flux print mode output parses as YAML documents with the expected kinds" {
+    python3 -c 'import yaml' 2>/dev/null || skip "python3 PyYAML not available"
+    flux_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops \
+        --external-access --backup-minio --set pmmClient.image.tag=3 --set-string pmmEnv.PMM_DEBUG=true \
+        --set replicas=3 --set image.pullPolicy=Always
+    [ "$status" -eq 0 ]
+    printf '%s\n' "$output" > "$BATS_TEST_TMPDIR/out.yaml"
+    run python3 -I - "$BATS_TEST_TMPDIR/out.yaml" <<'PY'
+import sys, yaml
+docs = list(yaml.safe_load_all(open(sys.argv[1])))
+assert [d['kind'] for d in docs] == ['HelmRepository', 'GitRepository', 'HelmRelease', 'HelmRelease'], docs
+helmrepo, gitrepo, deps, pmm = docs
+assert all(d['metadata']['namespace'] == 'pmm' for d in docs)
+assert helmrepo['apiVersion'] == gitrepo['apiVersion'] == 'source.toolkit.fluxcd.io/v1'
+assert deps['apiVersion'] == pmm['apiVersion'] == 'helm.toolkit.fluxcd.io/v2'
+assert helmrepo['metadata']['name'] == 'percona-charts'
+assert helmrepo['spec'] == {'interval': '1h', 'url': 'https://percona.github.io/percona-helm-charts/'}
+assert gitrepo['metadata']['name'] == 'pmm-ha-chart'
+assert gitrepo['spec'] == {'interval': '5m', 'url': 'https://github.com/KrisBuytaert/percona-helm-charts.git',
+                           'ref': {'branch': 'PMM-15826-pmm-ha-gitops'}}
+assert deps['metadata']['name'] == 'pmm-operators' and pmm['metadata']['name'] == 'pmm-ha'
+assert deps['spec']['chart']['spec'] == {'chart': 'pmm-ha-dependencies', 'version': '1.2.0',
+    'sourceRef': {'kind': 'HelmRepository', 'name': 'percona-charts', 'namespace': 'pmm'}}
+assert pmm['spec']['chart']['spec'] == {'chart': './charts/pmm-ha',
+    'sourceRef': {'kind': 'GitRepository', 'name': 'pmm-ha-chart', 'namespace': 'pmm'}}
+strategy = {'name': 'RetryOnFailure', 'retryInterval': '5m'}
+for hr in (deps, pmm):
+    s = hr['spec']
+    assert s['interval'] == '30m' and s['timeout'] == '15m'
+    assert s['install'] == {'strategy': strategy}
+    assert s['upgrade'] == {'crds': 'CreateReplace', 'strategy': strategy}
+assert deps['spec']['releaseName'] == 'pmm-operators' and pmm['spec']['releaseName'] == 'pmm-ha'
+assert deps['spec']['driftDetection'] == {'mode': 'enabled'}
+assert pmm['spec']['driftDetection'] == {'mode': 'enabled', 'ignore': [
+    {'paths': ['/spec/replicas'], 'target': {'kind': 'StatefulSet', 'name': 'pmm-ha'}},
+    {'paths': ['/spec/replicas'], 'target': {'kind': 'VMCluster', 'name': 'pmm-ha-vmcluster'}}]}
+assert 'dependsOn' not in deps['spec']
+assert pmm['spec']['dependsOn'] == [{'name': 'pmm-operators'}]
+assert deps['spec']['values'] == {'victoria-metrics-operator': {'admissionWebhooks': {'enabled': False}}}
+v = pmm['spec']['values']
+assert v['gitops'] == {'enabled': True}
+assert v['image'] == {'repository': 'perconalab/pmm-server', 'tag': '3-dev-latest', 'pullPolicy': 'Always'}
+assert v['pmmClient']['image']['tag'] == '3'
+assert v['pmmEnv'] == {'PMM_DEV_TELEMETRY_DISABLE_SEND': '1', 'PMM_DEBUG': 'true'}
+assert v['replicas'] == 3
+assert v['centralBackupStorage']['enabled'] is True
+assert v['centralBackupStorage']['s3']['bucket'] == 'pmm-backups'
+assert v['haproxy']['service']['annotations'] == {
+    'service.beta.kubernetes.io/aws-load-balancer-type': 'nlb',
+    'service.beta.kubernetes.io/aws-load-balancer-scheme': 'internet-facing'}
+PY
+    echo "$output"
+    [ "$status" -eq 0 ]
+}
+
+@test "flux print mode output validates with kubeconform" {
+    command -v kubeconform >/dev/null 2>&1 || skip "kubeconform not installed"
+    flux_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops --external-access
+    [ "$status" -eq 0 ]
+    printf '%s\n' "$output" | kubeconform -strict -summary -schema-location default \
+        -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+}
+
+@test "flux print mode exits before any kubectl call" {
+    flux_fork_render
+    [ "$status" -eq 0 ]
+    refute grep -q "^kubectl" "$FAKE/calls"
+}
+
+@test "flux print mode refuses a key set both to a value and to keys under it" {
+    flux_fork_render --set pmmEnv=x
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"the helm values give pmmEnv both a value and keys under it"* ]]
 }

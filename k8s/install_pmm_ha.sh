@@ -43,6 +43,8 @@
 #
 # Through Argo CD instead of helm - eks and chart branches only:
 #   ./install_pmm_ha.sh --platform eks --install-method argocd --chart-branch main --external-access
+# or through Flux, the same way:
+#   ./install_pmm_ha.sh --platform eks --install-method flux --chart-branch main --external-access
 #
 # With no --image it installs the newest released percona/pmm-server tag, resolved
 # from Docker Hub.
@@ -60,9 +62,11 @@ CHART_BRANCH="${CHART_BRANCH:-${PMM_CHART_BRANCH:-latest}}"
 CHART_REPO="${CHART_REPO:-https://github.com/percona/percona-helm-charts.git}"
 # Empty means the pmm-ha branch; set after the flags are parsed.
 DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH:-}"
-# helm installs with `helm upgrade`; argocd hands both charts to Argo CD Applications.
+# helm installs with `helm upgrade`; argocd hands both charts to Argo CD Applications,
+# flux to Flux HelmReleases.
 INSTALL_METHOD="${INSTALL_METHOD:-helm}"
 ARGOCD_VERSION="${ARGOCD_VERSION:-v3.5.6}"
+FLUX_VERSION="${FLUX_VERSION:-v2.10.0}"
 # A directory to clone the chart branches into and keep, instead of temp dirs
 # removed on success.
 CLONE_PARENT="${CLONE_PARENT:-}"
@@ -127,10 +131,10 @@ usage() {
         --chart-dir DIR         install from a percona-helm-charts checkout you already
                                 have, instead of cloning or using the published repo
         --chart-version VER     published pmm-ha chart version (default: latest); with
-                                --install-method argocd, only without a chart branch
+                                --install-method argocd or flux, only without a chart branch
         --deps-chart-version VER published pmm-ha-dependencies chart version (default:
-                                latest; argocd: only without a dependencies chart
-                                branch). The two charts are versioned separately -
+                                latest; argocd and flux: only without a dependencies
+                                chart branch). The two charts are versioned separately -
                                 pmm-ha is on 1.6.x while the dependencies chart is
                                 on 1.0.0 - so one version cannot pin both.
         --image REPO:TAG        PMM Server image; defaults to the newest released
@@ -153,13 +157,15 @@ usage() {
         --pmm-secret-from NS    copy pmm-secret, and the $BACKUP_SECRET secret when
                                 backups are on, from namespace NS before installing, as a
                                 cross-namespace restore target needs the source's
-        --install-method METHOD helm or argocd (default: helm). argocd installs Argo CD
+        --install-method METHOD helm, argocd or flux (default: helm). argocd installs Argo CD
                                 and applies pmm-operators and pmm-ha Applications from
-                                the charts: --chart-branch latest (the default) is the
-                                published chart at --chart-version, a branch is cloned
-                                from Git; eks only, and not with --charts, --chart-dir
-                                or --pmm-secret-from
+                                the charts, flux installs Flux and applies HelmReleases:
+                                --chart-branch latest (the default) is the published
+                                chart at --chart-version, a branch is read from Git;
+                                eks only, and not with --charts, --chart-dir or
+                                --pmm-secret-from
         --argocd-version VER    Argo CD release to install (default: v3.5.6)
+        --flux-version VER      Flux release to install (default: v2.10.0)
         --clone-dir DIR         clone the chart branches under DIR and keep them,
                                 instead of a temp dir removed on success
         --charts WHICH          which charts to install or upgrade (default: all)
@@ -173,7 +179,7 @@ usage() {
         Every option also reads an env var: PLATFORM, NAMESPACE, RELEASE,
         DEPS_RELEASE, CHART_DIR, CHART_BRANCH (or PMM_CHART_BRANCH), CHART_REPO, CHART_VERSION, PMM_IMAGE (or
         DEPS_CHART_VERSION, PMM_IMAGE_REPOSITORY + PMM_IMAGE_TAG), PMM_ADMIN_PASSWORD,
-        DEPS_CHART_BRANCH, INSTALL_METHOD, ARGOCD_VERSION, CLONE_PARENT, EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
+        DEPS_CHART_BRANCH, INSTALL_METHOD, ARGOCD_VERSION, FLUX_VERSION, CLONE_PARENT, EXTERNAL_ACCESS, CHARTS, TIMEOUT, DEBUG_DIR, SUMMARY_FILE,
         RELEASED_REPOSITORY, BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
         BACKUP_S3_PROVIDER, BACKUP_MINIO, PMM_SECRET_FROM.
         "
@@ -204,6 +210,7 @@ while [ $# -gt 0 ]; do
         --pmm-secret-from) PMM_SECRET_FROM="$2"; shift 2 ;;
         --install-method)  INSTALL_METHOD="$2"; shift 2 ;;
         --argocd-version)  ARGOCD_VERSION="$2"; shift 2 ;;
+        --flux-version)    FLUX_VERSION="$2"; shift 2 ;;
         --clone-dir)       CLONE_PARENT="$2"; shift 2 ;;
         --charts)          CHARTS="$2"; shift 2 ;;
         --timeout)         TIMEOUT="$2"; shift 2 ;;
@@ -254,11 +261,15 @@ case "$PLATFORM" in
 esac
 
 case "$INSTALL_METHOD" in
-    helm|argocd) ;;
-    *) fail "--install-method must be helm or argocd; got '$INSTALL_METHOD'." ;;
+    helm|argocd|flux) ;;
+    *) fail "--install-method must be helm, argocd or flux; got '$INSTALL_METHOD'." ;;
 esac
 
-# The unparsed specs stay: argocd builds its repo URLs from them.
+is_gitops() {
+    [ "$INSTALL_METHOD" = "argocd" ] || [ "$INSTALL_METHOD" = "flux" ]
+}
+
+# The unparsed specs stay: argocd and flux build their repo URLs from them.
 CHART_BRANCH_SPEC="$CHART_BRANCH"
 DEPS_CHART_BRANCH_SPEC="${DEPS_CHART_BRANCH:-$CHART_BRANCH_SPEC}"
 DEPS_CHART_BRANCH="$DEPS_CHART_BRANCH_SPEC"
@@ -295,21 +306,21 @@ resolve_chart_version() {
     echo "$found"
 }
 
-if [ "$INSTALL_METHOD" = "argocd" ]; then
-    [ "$PLATFORM" = "eks" ] || fail "argocd install method supports --platform eks only."
-    [ "$CHARTS" = "all" ] || fail "--charts is not supported with --install-method argocd."
-    [ -z "$CHART_DIR" ] || fail "--chart-dir is not supported with --install-method argocd."
-    [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method argocd."
+if is_gitops; then
+    [ "$PLATFORM" = "eks" ] || fail "$INSTALL_METHOD install method supports --platform eks only."
+    [ "$CHARTS" = "all" ] || fail "--charts is not supported with --install-method $INSTALL_METHOD."
+    [ -z "$CHART_DIR" ] || fail "--chart-dir is not supported with --install-method $INSTALL_METHOD."
+    [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method $INSTALL_METHOD."
     chart_is_released "$CHART_BRANCH" || [ -z "$CHART_VERSION" ] \
         || fail "--chart-version applies to the released chart only; --chart-branch is '$CHART_BRANCH_SPEC'."
     chart_is_released "$DEPS_CHART_BRANCH" || [ -z "$DEPS_CHART_VERSION" ] \
         || fail "--deps-chart-version applies to the released chart only; --deps-chart-branch is '$DEPS_CHART_BRANCH_SPEC'."
-    # The Application waits count it down in seconds.
-    [[ "$TIMEOUT" =~ ^([0-9]+[hms])+$ ]] || fail "--timeout must be like 15m or 1h30m with --install-method argocd; got '$TIMEOUT'."
+    # The Application and HelmRelease waits count it down in seconds.
+    [[ "$TIMEOUT" =~ ^([0-9]+[hms])+$ ]] || fail "--timeout must be like 15m or 1h30m with --install-method $INSTALL_METHOD; got '$TIMEOUT'."
 fi
 if [ "$DEPS_SEPARATE" = "true" ]; then
     [ -z "$CHART_DIR" ] || fail "--deps-chart-branch and --chart-dir both name a chart source; pass one."
-    [ "$INSTALL_METHOD" = "argocd" ] || { [ "$CHART_BRANCH" != "latest" ] && [ "$DEPS_CHART_BRANCH" != "latest" ]; } \
+    is_gitops || { [ "$CHART_BRANCH" != "latest" ] && [ "$DEPS_CHART_BRANCH" != "latest" ]; } \
         || fail "--deps-chart-branch differs from --chart-branch, so both must be branches, not latest."
 fi
 
@@ -362,7 +373,7 @@ if [ "$CHART_BRANCH" != "latest" ]; then
     [ -z "$CHART_DIR" ] || fail "--chart-branch and --chart-dir both name a chart source; pass one."
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --chart-branch '$CHART_BRANCH'."
 fi
-if [ "$INSTALL_METHOD" = "argocd" ] && ! chart_is_released "$DEPS_CHART_BRANCH"; then
+if is_gitops && ! chart_is_released "$DEPS_CHART_BRANCH"; then
     command -v git >/dev/null 2>&1 || fail "'git' is not installed, needed to clone --deps-chart-branch '$DEPS_CHART_BRANCH'."
 fi
 
@@ -372,7 +383,7 @@ DEPS_CHART_SOURCE="git"
 chart_is_released "$DEPS_CHART_BRANCH" && DEPS_CHART_SOURCE="released"
 PMM_CHART_RESOLVED_VERSION=""
 DEPS_CHART_RESOLVED_VERSION=""
-if [ "$INSTALL_METHOD" = "argocd" ] && { [ "$PMM_CHART_SOURCE" = "released" ] || [ "$DEPS_CHART_SOURCE" = "released" ]; }; then
+if is_gitops && { [ "$PMM_CHART_SOURCE" = "released" ] || [ "$DEPS_CHART_SOURCE" = "released" ]; }; then
     command -v jq >/dev/null 2>&1 || fail "'jq' is not installed, needed to resolve the released chart versions."
     helm repo add percona "$CHART_HELM_REPO" --force-update >/dev/null \
         || fail "could not add the Helm repository $CHART_HELM_REPO."
@@ -387,7 +398,7 @@ if [ -z "$WEBHOOK_SETTLE_SECONDS" ]; then
     [ "$PLATFORM" = "openshift" ] && WEBHOOK_SETTLE_SECONDS=60 || WEBHOOK_SETTLE_SECONDS=0
 fi
 
-# Built before any cluster access: argocd print mode renders them too.
+# Built before any cluster access: the argocd and flux print modes render them too.
 BACKUP_SET=()
 if [ "$BACKUP_ENABLED" = "true" ]; then
     BACKUP_SET+=(
@@ -454,19 +465,47 @@ argocd_param() {
     [ "$force" != "true" ] || printf "          forceString: true\n"
 }
 
+# <--set|--set-string> <key>: prints true when the value must stay a string.
+gitops_force_string() {
+    case "$1" in
+        --set-string) echo "true" ;;
+        *) case "$2" in image.repository|image.tag|*.image.tag) echo "true" ;; *) echo "false" ;; esac ;;
+    esac
+}
+
 # Takes helm's own --set / --set-string argument list.
 argocd_params_from_args() {
-    local kind kv name force
+    local kind kv name
     while [ $# -gt 0 ]; do
         kind="$1"; kv="$2"; shift 2
         name="${kv%%=*}"
-        force="false"
-        case "$kind" in
-            --set-string) force="true" ;;
-            *) case "$name" in image.repository|image.tag|*.image.tag) force="true" ;; esac ;;
-        esac
-        argocd_param "$name" "${kv#*=}" "$force"
+        argocd_param "$name" "${kv#*=}" "$(gitops_force_string "$kind" "$name")"
     done
+}
+
+# The pmm-ha values both GitOps modes pass, as helm's --set / --set-string list.
+pmm_gitops_set_args() {
+    PMM_GITOPS_SET=(
+        --set gitops.enabled=true
+        --set tls.secretFormat=kubernetes.io/tls
+        --set victoriaMetrics.vmagent.scrapeApiserver=false
+    )
+    if [ "$EXTERNAL_ACCESS" = "true" ]; then
+        PMM_GITOPS_SET+=(
+            --set haproxy.service.type=LoadBalancer
+            --set 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-type=nlb'
+            --set 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-scheme=internet-facing'
+        )
+    fi
+    PMM_GITOPS_SET+=(
+        --set secret.create=false
+        --set secret.name=pmm-secret
+        --set "image.repository=${IMAGE%:*}"
+        --set "image.tag=${IMAGE##*:}"
+        --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1
+        ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"}
+        ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
+    )
 }
 
 render_argocd_project() {
@@ -526,24 +565,8 @@ DEPS_APP_EOF
 
 render_argocd_pmm_app() {
     local params
-    params="$(
-        argocd_param gitops.enabled true false
-        argocd_param tls.secretFormat kubernetes.io/tls false
-        argocd_param victoriaMetrics.vmagent.scrapeApiserver false false
-        if [ "$EXTERNAL_ACCESS" = "true" ]; then
-            argocd_param haproxy.service.type LoadBalancer false
-            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-type' nlb false
-            argocd_param 'haproxy.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-scheme' internet-facing false
-        fi
-        argocd_params_from_args \
-            --set secret.create=false \
-            --set secret.name=pmm-secret \
-            --set "image.repository=${IMAGE%:*}" \
-            --set "image.tag=${IMAGE##*:}" \
-            --set-string pmmEnv.PMM_DEV_TELEMETRY_DISABLE_SEND=1 \
-            ${PLATFORM_SET[@]+"${PLATFORM_SET[@]}"} \
-            ${BACKUP_SET[@]+"${BACKUP_SET[@]}"} ${EXTRA_SET[@]+"${EXTRA_SET[@]}"}
-    )"
+    pmm_gitops_set_args
+    params="$(argocd_params_from_args "${PMM_GITOPS_SET[@]}")"
     cat <<PMM_APP_EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -596,9 +619,225 @@ render_argocd_manifests() {
     esac
 }
 
+# A --set value helm would type stays plain; anything else is a double-quoted string.
+flux_yaml_value() {
+    local force="$1" s="$2"
+    if [ "$force" = "false" ] && [[ "$s" =~ ^(true|false|null|0|-?[1-9][0-9]*)$ ]]; then
+        echo "$s"
+    else
+        s="${s//\\/\\\\}"
+        printf '"%s"\n' "${s//\"/\\\"}"
+    fi
+}
+
+flux_yaml_key() {
+    local k="$1"
+    case "${k,,}" in
+        y|n|yes|no|on|off|true|false|null) ;;
+        *) if [[ "$k" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]; then echo "$k"; return; fi ;;
+    esac
+    k="${k//\\/\\\\}"
+    printf '"%s"\n' "${k//\"/\\\"}"
+}
+
+# Reads flux_paths and flux_vals from flux_values_from_args; <prefix> <indent>.
+flux_values_tree() {
+    local prefix="$1" indent="$2" p rest child
+    local -a children=()
+    local -A listed=()
+    for p in "${flux_paths[@]}"; do
+        [[ "$p" == "$prefix"* ]] || continue
+        rest="${p#"$prefix"}"
+        child="${rest%%$'\x1f'*}"
+        [ -z "${listed[$child]+x}" ] || continue
+        listed[$child]=1
+        children+=("$child")
+    done
+    for child in "${children[@]}"; do
+        if [ -n "${flux_vals[$prefix$child]+x}" ]; then
+            for p in "${flux_paths[@]}"; do
+                [[ "$p" != "$prefix$child"$'\x1f'* ]] \
+                    || fail "the helm values give ${prefix//$'\x1f'/.}$child both a value and keys under it."
+            done
+            printf '%*s%s: %s\n' "$indent" "" "$(flux_yaml_key "$child")" "${flux_vals[$prefix$child]}"
+        else
+            printf '%*s%s:\n' "$indent" "" "$(flux_yaml_key "$child")"
+            flux_values_tree "$prefix$child"$'\x1f' $((indent + 2))
+        fi
+    done
+}
+
+# Takes helm's own --set / --set-string argument list and prints it as the YAML under
+# a HelmRelease's spec.values, indented to fit there. A later key wins, as in helm.
+flux_values_from_args() {
+    local kind kv key path seg c i
+    local -a flux_paths=()
+    local -A flux_vals=()
+    while [ $# -gt 0 ]; do
+        kind="$1"; kv="$2"; shift 2
+        key="${kv%%=*}"
+        path=""; seg=""
+        for ((i = 0; i < ${#key}; i++)); do
+            c="${key:i:1}"
+            if [ "$c" = "\\" ] && [ "${key:i+1:1}" = "." ]; then
+                seg+="."; i=$((i + 1))
+            elif [ "$c" = "." ]; then
+                path+="$seg"$'\x1f'; seg=""
+            else
+                seg+="$c"
+            fi
+        done
+        path+="$seg"
+        [ -n "${flux_vals[$path]+x}" ] || flux_paths+=("$path")
+        flux_vals[$path]="$(flux_yaml_value "$(gitops_force_string "$kind" "$key")" "${kv#*=}")"
+    done
+    flux_values_tree "" 4
+}
+
+# <source> <release>
+flux_source_ref() {
+    if [ "$1" = "released" ]; then
+        printf "HelmRepository %s" "percona-charts"
+    else
+        printf "GitRepository %s" "$2-chart"
+    fi
+}
+
+# <source> <release> <branch spec> <default repo>
+render_flux_source() {
+    local ref
+    ref="$(flux_source_ref "$1" "$2")"
+    if [ "$1" = "released" ]; then
+        cat <<HELM_REPO_EOF
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: $(yaml_quote "${ref#* }")
+  namespace: $(yaml_quote "$NAMESPACE")
+spec:
+  interval: 1h
+  url: $CHART_HELM_REPO
+HELM_REPO_EOF
+    else
+        cat <<GIT_REPO_EOF
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: $(yaml_quote "${ref#* }")
+  namespace: $(yaml_quote "$NAMESPACE")
+spec:
+  interval: 5m
+  url: $(argocd_repo_url "$3" "$4")
+  ref:
+    branch: $(yaml_quote "$(argocd_revision "$3")")
+GIT_REPO_EOF
+    fi
+}
+
+# all: one source per chart, a single HelmRepository when both are released.
+render_flux_sources() {
+    case "${1:-all}" in
+        deps) render_flux_source "$DEPS_CHART_SOURCE" "$DEPS_RELEASE" "$DEPS_CHART_BRANCH_SPEC" "$DEPS_CHART_REPO" ;;
+        pmm)  render_flux_source "$PMM_CHART_SOURCE" "$RELEASE" "$CHART_BRANCH_SPEC" "$CHART_REPO" ;;
+        all)
+            render_flux_sources deps
+            if [ "$PMM_CHART_SOURCE" != "released" ] || [ "$DEPS_CHART_SOURCE" != "released" ]; then
+                echo "---"
+                render_flux_sources pmm
+            fi
+            ;;
+        *) fail "render_flux_sources takes all, deps or pmm; got '$1'." ;;
+    esac
+}
+
+# <release> <source> <chart> <resolved version> <extra spec> <values>
+render_flux_release() {
+    local ref chart
+    ref="$(flux_source_ref "$2" "$1")"
+    if [ "$2" = "released" ]; then
+        chart="      chart: $3"$'\n'"      version: \"$4\""
+    else
+        chart="      chart: ./charts/$3"
+    fi
+    cat <<RELEASE_EOF
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: $(yaml_quote "$1")
+  namespace: $(yaml_quote "$NAMESPACE")
+spec:
+  releaseName: $(yaml_quote "$1")
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+$chart
+      sourceRef:
+        kind: ${ref% *}
+        name: $(yaml_quote "${ref#* }")
+        namespace: $(yaml_quote "$NAMESPACE")
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  upgrade:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+$5
+  values:
+$6
+RELEASE_EOF
+}
+
+render_flux_deps_release() {
+    local values
+    values="$(flux_values_from_args --set victoria-metrics-operator.admissionWebhooks.enabled=false)"
+    render_flux_release "$DEPS_RELEASE" "$DEPS_CHART_SOURCE" pmm-ha-dependencies "$DEPS_CHART_RESOLVED_VERSION" \
+        "  driftDetection:
+    mode: enabled" "$values"
+}
+
+# The restore scales pmm-ha's StatefulSet and VMCluster down and back; drift correction must not fight it.
+render_flux_pmm_release() {
+    local values
+    pmm_gitops_set_args
+    values="$(flux_values_from_args "${PMM_GITOPS_SET[@]}")"
+    render_flux_release "$RELEASE" "$PMM_CHART_SOURCE" pmm-ha "$PMM_CHART_RESOLVED_VERSION" \
+        "  dependsOn:
+    - name: $(yaml_quote "$DEPS_RELEASE")
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths: [\"/spec/replicas\"]
+        target:
+          kind: StatefulSet
+          name: $(yaml_quote "$RELEASE")
+      - paths: [\"/spec/replicas\"]
+        target:
+          kind: VMCluster
+          name: $(yaml_quote "${RELEASE}-vmcluster")" "$values"
+}
+
+# all: the sources and both HelmReleases; deps or pmm: that chart's source and HelmRelease.
+render_flux_manifests() {
+    case "${1:-all}" in
+        all)  render_flux_sources all; echo "---"; render_flux_deps_release; echo "---"; render_flux_pmm_release ;;
+        deps) render_flux_sources deps; echo "---"; render_flux_deps_release ;;
+        pmm)  render_flux_sources pmm; echo "---"; render_flux_pmm_release ;;
+        *) fail "render_flux_manifests takes all, deps or pmm; got '$1'." ;;
+    esac
+}
+
 if [ "$INSTALL_METHOD" = "argocd" ] && [ "${ARGOCD_PRINT_MANIFESTS:-}" = "1" ]; then
     [ -n "$IMAGE" ] || fail "ARGOCD_PRINT_MANIFESTS needs --image."
     render_argocd_manifests all
+    exit 0
+fi
+if [ "$INSTALL_METHOD" = "flux" ] && [ "${FLUX_PRINT_MANIFESTS:-}" = "1" ]; then
+    [ -n "$IMAGE" ] || fail "FLUX_PRINT_MANIFESTS needs --image."
+    render_flux_manifests all
     exit 0
 fi
 
@@ -1134,7 +1373,7 @@ fi
 
 # Where the dependencies chart is read from; empty when it is the published one.
 DEPS_CHART_PATH=""
-if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; then
+if is_gitops && [ "$DEPS_CHART_SOURCE" = "released" ]; then
     if [ -n "$CLONE_PARENT" ]; then
         mkdir -p "$CLONE_PARENT"
         DEPS_CLONE_DIR="$(mktemp -d "$CLONE_PARENT/percona-helm-charts.XXXXXX")"
@@ -1145,7 +1384,7 @@ if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; th
     helm pull percona/pmm-ha-dependencies --version "$DEPS_CHART_RESOLVED_VERSION" --untar --untardir "$DEPS_CLONE_DIR" \
         || fail "could not pull pmm-ha-dependencies $DEPS_CHART_RESOLVED_VERSION from $CHART_HELM_REPO."
     DEPS_CHART_PATH="$DEPS_CLONE_DIR/pmm-ha-dependencies"
-elif [ "$DEPS_SEPARATE" = "true" ] && { [ "$INSTALL_DEPS" = "true" ] || [ "$INSTALL_METHOD" = "argocd" ]; }; then
+elif [ "$DEPS_SEPARATE" = "true" ] && { [ "$INSTALL_DEPS" = "true" ] || is_gitops; }; then
     clone_chart_branch "$DEPS_CHART_REPO" "$DEPS_CHART_BRANCH"
     DEPS_CLONE_DIR="$CLONED_DIR"
     DEPS_CHART_PATH="$DEPS_CLONE_DIR/charts/pmm-ha-dependencies"
@@ -1162,12 +1401,12 @@ fi
 
 DIAGNOSTICS_ENABLED="true"
 
-if [ "$INSTALL_METHOD" = "argocd" ] && [ "$PMM_CHART_SOURCE" = "released" ]; then
+if is_gitops && [ "$PMM_CHART_SOURCE" = "released" ]; then
     CHART_SOURCE="released"
     [ "$DEPS_CHART_SOURCE" = "released" ] || CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
 elif [ -n "${CLONE_DIR:-}" ]; then
     CHART_SOURCE="branch:$CHART_BRANCH"
-    if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; then
+    if is_gitops && [ "$DEPS_CHART_SOURCE" = "released" ]; then
         CHART_SOURCE="$CHART_SOURCE, dependencies released $DEPS_CHART_RESOLVED_VERSION"
     elif [ -n "${DEPS_CLONE_DIR:-}" ]; then
         CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
