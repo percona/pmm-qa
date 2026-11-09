@@ -10,9 +10,12 @@ export default class StorageLocationsPage extends BasePage {
   requiredFields: LocationInput[] = ['name', 'endpoint', 'bucketName', 'accessKey', 'secretKey'];
   builders = {
     actionsToggle: (name: string) => this.builders.row(name).getByTestId('dropdown-menu-toggle'),
+    cell: (name: string, text: string) =>
+      this.builders.row(name).getByRole('cell', { exact: true, name: text }),
     deleteButton: (name: string) => this.builders.row(name).getByTestId('delete-storage-location-button'),
+    detailsBucket: (bucket: string) =>
+      this.grafanaIframe().getByTestId('storage-location-bucket').getByText(bucket, { exact: true }),
     editButton: (name: string) => this.builders.row(name).getByTestId('edit-storage-location-button'),
-    endpointCell: (name: string) => this.builders.row(name).getByRole('cell').nth(2),
     fieldError: (field: LocationInput) => this.grafanaIframe().getByTestId(`${field}-field-error-message`),
     fieldLabel: (field: LocationInput | 'description' | 'type') =>
       this.grafanaIframe().getByTestId(`${field}-field-label`),
@@ -23,7 +26,6 @@ export default class StorageLocationsPage extends BasePage {
         .filter({ has: this.page.getByRole('cell', { exact: true, name }) }),
     showDetails: (name: string) => this.builders.row(name).getByTestId('show-row-details'),
     textInput: (field: LocationInput) => this.grafanaIframe().getByTestId(`${field}-text-input`),
-    typeCell: (name: string) => this.builders.row(name).getByRole('cell').nth(1),
     typeRadio: (type: 'Local Client' | 'S3') =>
       this.grafanaIframe().getByRole('radio', { exact: true, name: type }),
   };
@@ -44,7 +46,6 @@ export default class StorageLocationsPage extends BasePage {
     deleteMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     deleteWarning: this.grafanaIframe().getByTestId('warning-block'),
     detailsAccessKey: this.grafanaIframe().getByTestId('access-key'),
-    detailsBucket: this.grafanaIframe().getByTestId('storage-location-bucket').locator('span').nth(1),
     detailsDescription: this.grafanaIframe().getByTestId('storage-location-description').locator('pre'),
     detailsSecretKey: this.grafanaIframe().getByTestId('small-secret-holder'),
     detailsWrapper: this.grafanaIframe().getByTestId('storage-location-wrapper'),

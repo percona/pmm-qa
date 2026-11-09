@@ -1,17 +1,18 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import apiEndpoints from '@helpers/apiEndpoints';
-import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
 import { s3StorageConnection } from '@testdata/backupLocations';
 
 const location = { description: 'test description', name: 's3_location' };
 const mongoServiceName = 'mongo-backup-locations';
+let backupManagementEnabled: boolean;
 
 pmmTest.describe.configure({ mode: 'default' });
 
-pmmTest.beforeAll(async ({ cliHelper }) => {
+pmmTest.beforeAll(async ({ api, cliHelper }) => {
+  backupManagementEnabled = (await api.settingsApi.getSettings()).settings.backup_management_enabled;
+  await api.settingsApi.enableBackupManagement();
   cliHelper.removeService('rs101', ServiceType.mongodb, mongoServiceName);
   cliHelper
     .execute(
@@ -22,7 +23,6 @@ pmmTest.beforeAll(async ({ cliHelper }) => {
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, storageLocationsPage }) => {
   await grafanaHelper.authorize();
-  await api.settingsApi.enableBackupManagement();
   await api.backupsApi.removeAllLocations();
   await storageLocationsPage.open();
 });
@@ -31,7 +31,8 @@ pmmTest.afterEach(async ({ api }) => {
   await api.backupsApi.removeAllLocations();
 });
 
-pmmTest.afterAll(async ({ cliHelper }) => {
+pmmTest.afterAll(async ({ api, cliHelper }) => {
+  await api.settingsApi.updateSettings({ enable_backup_management: backupManagementEnabled });
   cliHelper.removeService('rs101', ServiceType.mongodb, mongoServiceName);
 });
 
@@ -159,10 +160,10 @@ pmmTest(
       await storageLocationsPage.builders.actionsToggle(location.name).click();
       await expect(storageLocationsPage.builders.deleteButton(location.name)).toBeVisible();
       await expect(storageLocationsPage.builders.editButton(location.name)).toBeVisible();
-      await expect(storageLocationsPage.builders.typeCell(location.name)).toHaveText('S3');
-      await expect(storageLocationsPage.builders.endpointCell(location.name)).toHaveText(
-        s3StorageConnection.endpoint,
-      );
+      await expect(storageLocationsPage.builders.cell(location.name, 'S3')).toBeVisible();
+      await expect(
+        storageLocationsPage.builders.cell(location.name, s3StorageConnection.endpoint),
+      ).toBeVisible();
     });
   },
 );
@@ -224,7 +225,9 @@ pmmTest(
     );
     const locationId = await api.backupsApi.addS3Location(location.name, location.description);
 
-    await api.backupsApi.startBackup('delete_location', service_id, locationId);
+    await api.backupsApi.verifyBackupSuccess(
+      await api.backupsApi.startBackup('delete_location', service_id, locationId),
+    );
     await storageLocationsPage.open();
     await storageLocationsPage.openDeleteModal(location.name);
     await storageLocationsPage.buttons.confirmDelete.click();
@@ -244,8 +247,9 @@ pmmTest(
       mongoServiceName,
     );
     const locationId = await api.backupsApi.addS3Location(location.name, location.description);
+    const artifactId = await api.backupsApi.startBackup(backupName, service_id, locationId);
 
-    await api.backupsApi.startBackup(backupName, service_id, locationId);
+    await api.backupsApi.verifyBackupSuccess(artifactId);
     await storageLocationsPage.open();
 
     await pmmTest.step('Force delete the storage location', async () => {
@@ -259,8 +263,13 @@ pmmTest(
       await expect(storageLocationsPage.builders.row(location.name)).toBeHidden();
     });
 
-    await backupInventoryPage.open();
-    await expect(backupInventoryPage.builders.artifactRow(backupName)).toBeHidden();
+    await pmmTest.step('Verify the backup is gone', async () => {
+      expect((await api.backupsApi.getArtifacts()).map(({ artifact_id }) => artifact_id)).not.toContain(
+        artifactId,
+      );
+      await backupInventoryPage.open();
+      await expect(backupInventoryPage.builders.artifactRow(backupName)).toBeHidden();
+    });
   },
 );
 
@@ -305,7 +314,9 @@ pmmTest(
     await pmmTest.step('Open the details row and verify the storage location details', async () => {
       await storageLocationsPage.builders.showDetails(location.name).click();
       await expect(storageLocationsPage.elements.detailsDescription).toHaveText(location.description);
-      await expect(storageLocationsPage.elements.detailsBucket).toHaveText(s3StorageConnection.bucket_name);
+      await expect(
+        storageLocationsPage.builders.detailsBucket(s3StorageConnection.bucket_name),
+      ).toBeVisible();
       await expect(storageLocationsPage.elements.detailsAccessKey).toContainText(
         s3StorageConnection.access_key,
       );
@@ -323,7 +334,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T896 - Verify user is able to force delete location after MongoDB restore @bm-locations',
-  async ({ api, backupInventoryPage, page, request, storageLocationsPage }) => {
+  async ({ api, backupInventoryPage, page, storageLocationsPage }) => {
     const backupName = 'mongo_force_delete_locations_test';
     const mongoLocationName = 'mongoL';
     const locationId = await api.backupsApi.addS3Location(mongoLocationName, location.description);
@@ -331,46 +342,23 @@ pmmTest(
       ServiceType.mongodb,
       mongoServiceName,
     );
+    const artifactId = await api.backupsApi.startBackup(backupName, service_id, locationId);
 
-    await pmmTest.step('Back up the MongoDB service and restore it', async () => {
-      const artifactId = await api.backupsApi.startBackup(backupName, service_id, locationId);
+    await api.backupsApi.verifyBackupSuccess(artifactId);
 
+    const restoreId = await pmmTest.step('Restore the backup', async () => {
+      const id = await api.backupsApi.startRestore(artifactId, service_id);
+
+      expect(id, 'The restore must return its id').toMatch(/\S/);
       await expect
         .poll(
           async () =>
-            (await api.backupsApi.getArtifacts()).find(({ artifact_id }) => artifact_id === artifactId)
-              ?.status,
-          { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES },
-        )
-        .toMatch(/^BACKUP_STATUS_(SUCCESS|ERROR)$/);
-
-      const restoreResponse = await request.post(apiEndpoints.backups.startRestore, {
-        data: { artifact_id: artifactId, service_id },
-        headers: GrafanaHelper.getAuthHeader(),
-      });
-
-      expect(restoreResponse.status(), await restoreResponse.text()).toEqual(200);
-
-      const { restore_id } = (await restoreResponse.json()) as { restore_id: string };
-
-      expect(restore_id, 'The restore must return its id').toMatch(/\S/);
-
-      await expect
-        .poll(
-          async () => {
-            const response = await request.get(apiEndpoints.backups.restores, {
-              headers: GrafanaHelper.getAuthHeader(),
-            });
-
-            expect(response.status(), response.statusText()).toEqual(200);
-
-            return (
-              (await response.json()) as { items?: { restore_id: string; status: string }[] }
-            ).items?.find((item) => item.restore_id === restore_id)?.status;
-          },
+            (await api.backupsApi.getRestores()).find(({ restore_id }) => restore_id === id)?.status,
           { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES },
         )
         .toMatch(/^RESTORE_STATUS_(?!IN_PROGRESS$)/);
+
+      return id;
     });
 
     await pmmTest.step('Verify the location with artifacts cannot be deleted without force', async () => {
@@ -399,6 +387,12 @@ pmmTest(
     });
 
     await pmmTest.step('Verify the backup and its restore are gone', async () => {
+      expect((await api.backupsApi.getRestores()).map(({ restore_id }) => restore_id)).not.toContain(
+        restoreId,
+      );
+      expect((await api.backupsApi.getArtifacts()).map(({ artifact_id }) => artifact_id)).not.toContain(
+        artifactId,
+      );
       await backupInventoryPage.open(backupInventoryPage.urls.restoreHistory);
       await expect(backupInventoryPage.builders.artifactRow(backupName)).toBeHidden();
       await backupInventoryPage.open();

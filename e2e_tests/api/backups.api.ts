@@ -25,6 +25,15 @@ interface BackupLocationsResponse {
   locations?: BackupLocation[];
 }
 
+interface Restore {
+  restore_id: string;
+  status: string;
+}
+
+interface RestoresResponse {
+  items?: Restore[];
+}
+
 interface ScheduledBackup {
   name: string;
   scheduled_backup_id: string;
@@ -98,6 +107,16 @@ export default class BackupsApi {
     return ((await response.json()) as BackupLocationsResponse).locations ?? [];
   };
 
+  getRestores = async () => {
+    const response = await this.request.get(apiEndpoints.backups.restores, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    return ((await response.json()) as RestoresResponse).items ?? [];
+  };
+
   getScheduledBackups = async () => {
     const response = await this.request.get(apiEndpoints.backups.scheduled, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -134,6 +153,30 @@ export default class BackupsApi {
     expect(response.status(), await response.text()).toEqual(200);
 
     return ((await response.json()) as { artifact_id: string }).artifact_id;
+  };
+
+  startRestore = async (artifactId: string, serviceId: string) => {
+    const response = await this.request.post(apiEndpoints.backups.startRestore, {
+      data: { artifact_id: artifactId, service_id: serviceId },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { restore_id: string }).restore_id;
+  };
+
+  verifyBackupSuccess = async (artifactId: string) => {
+    await expect
+      .poll(
+        async () => (await this.getArtifacts()).find(({ artifact_id }) => artifact_id === artifactId)?.status,
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: `Backup artifact ${artifactId} should succeed`,
+          timeout: Timeouts.FIVE_MINUTES,
+        },
+      )
+      .toBe('BACKUP_STATUS_SUCCESS');
   };
 
   private ensureLocalStorageLocation = async () => {
