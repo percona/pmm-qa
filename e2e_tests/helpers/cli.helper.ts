@@ -274,4 +274,25 @@ export default class CliHelper {
 
     expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
+
+  // A restarting exporter has no process for a moment, which counts as not yet rather than as a flag gone.
+  waitForExporterCommandLine = async (
+    container: string,
+    listenPort: number,
+    { matches, pattern }: { matches: boolean; pattern: RegExp },
+  ) => {
+    await expect
+      .poll(
+        () => {
+          const commandLine = this.getProcessCommandLine(container, 'listen-address=', `:${listenPort}`);
+
+          return commandLine !== undefined && pattern.test(commandLine) === matches;
+        },
+        {
+          message: `exporter on port ${listenPort} ${matches ? 'runs with' : 'runs without'} ${pattern}`,
+          timeout: Timeouts.ONE_MINUTE,
+        },
+      )
+      .toBe(true);
+  };
 }

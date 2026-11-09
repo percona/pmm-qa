@@ -75,7 +75,7 @@ export interface GetService {
         additionalProp3: string;
       };
       disabled: boolean;
-      disabled_collectors: [string];
+      disabled_collectors: string[];
       listen_port: 0;
       log_level: string;
       max_query_length: 0;
@@ -87,17 +87,14 @@ export interface GetService {
         is_tls_certificate_key_file_password_set: true;
         authentication_mechanism: string;
         authentication_database: string;
-        stats_collections: [string];
+        stats_collections: string[];
         collections_limit: 0;
         enable_all_collectors: true;
+        enable_diagnostic_data_histograms?: boolean;
       };
       mysql_options: {
         is_tls_key_set: true;
-        extra_dsn_params: {
-          additionalProp1: string;
-          additionalProp2: string;
-          additionalProp3: string;
-        };
+        extra_dsn_params: Record<string, string>;
       };
       node_id: string;
       is_password_set: true;

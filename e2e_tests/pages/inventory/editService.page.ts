@@ -5,6 +5,7 @@ import {
   MetricsMode,
   ServiceMetricsSettings,
 } from '@helpers/serviceMetrics.helper';
+import { OptionField } from '@helpers/serviceOptions.helper';
 import { QuerySource, querySources } from '@helpers/serviceQan.helper';
 import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -59,19 +60,36 @@ export default class EditServicePage extends BasePage {
   };
   inputs = {
     agentPassword: this.page.getByTestId('text-input-agent-password'),
+    authenticationDatabase: this.page.getByTestId('text-input-authentication-database'),
+    authenticationMechanism: this.page.getByTestId('text-input-authentication-mechanism'),
+    autoDiscoveryLimit: this.page.getByTestId('text-input-auto-discovery-limit'),
     cluster: this.page.getByTestId('text-input-cluster'),
+    collectionsLimit: this.page.getByTestId('text-input-collections-limit'),
     // Its own htmlInput props replace the ones peak-ui puts the test ID in, so the field has none.
     connectionTimeout: this.page.getByRole('spinbutton', { name: 'Connection timeout (seconds)' }),
     customLabels: this.page.getByTestId('text-input-custom-labels'),
     database: this.page.getByTestId('text-input-database'),
+    disableCollectors: this.page.getByTestId('text-input-disable-collectors'),
+    // The switches carry their test IDs on the MUI root, which wraps the checkbox input.
+    disableCommentsParsing: this.page.getByTestId('switch-input-disable-comments-parsing').locator('input'),
+    disableQueryExamples: this.page.getByTestId('switch-input-disable-query-examples').locator('input'),
+    enableAllCollectors: this.page.getByTestId('switch-input-enable-all-collectors').locator('input'),
+    enableDiagnosticDataHistograms: this.page
+      .getByTestId('switch-input-enable-diagnostic-data-histograms')
+      .locator('input'),
     environment: this.page.getByTestId('text-input-environment'),
     exposeExporter: this.page.getByTestId('switch-input-expose-exporter').locator('input'),
+    extraDsnParams: this.page.getByTestId('text-input-extra-dsn-params'),
     // The select opens from its button; its hidden input holds the chosen value.
     logLevel: this.page.getByTestId('select-log-level-button'),
     logLevelValue: this.page.getByTestId('select-input-log-level'),
+    maxExporterConnections: this.page.getByTestId('text-input-max-exporter-connections'),
+    maxQueryLength: this.page.getByTestId('text-input-max-query-length'),
+    maxSlowlogFileSize: this.page.getByTestId('text-input-max-slowlog-file-size'),
     password: this.page.getByTestId('text-input-password'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
-    // The switches carry their test IDs on the MUI root, which wraps the checkbox input.
+    statsCollections: this.page.getByTestId('text-input-stats-collections'),
+    tablestatsGroupTableLimit: this.page.getByTestId('text-input-tablestats-group-table-limit'),
     tls: this.page.getByTestId('switch-input-tls').locator('input'),
     tlsCa: this.page.getByTestId('text-input-tls-ca'),
     tlsCert: this.page.getByTestId('text-input-tls-cert'),
@@ -117,6 +135,13 @@ export default class EditServicePage extends BasePage {
     }
     if (exposeExporter !== undefined) await this.inputs.exposeExporter.setChecked(exposeExporter);
     if (connectionTimeout !== undefined) await this.inputs.connectionTimeout.fill(connectionTimeout);
+  };
+
+  // A switch takes a boolean; any other field takes the text the form shows.
+  editOption = async (field: OptionField, value: boolean | string) => {
+    await (typeof value === 'boolean'
+      ? this.inputs[field].setChecked(value)
+      : this.inputs[field].fill(value));
   };
 
   editQuerySource = async (querySource: QuerySource) => {
@@ -216,6 +241,12 @@ export default class EditServicePage extends BasePage {
     await expect(this.inputs.logLevelValue).toHaveValue(logLevel);
     await expect(this.inputs.exposeExporter).toBeChecked({ checked: exposeExporter });
     await expect(this.inputs.connectionTimeout).toHaveValue(connectionTimeout);
+  };
+
+  verifyOption = async (field: OptionField, value: boolean | string) => {
+    await (typeof value === 'boolean'
+      ? expect(this.inputs[field]).toBeChecked({ checked: value })
+      : expect(this.inputs[field]).toHaveValue(value));
   };
 
   verifyQuerySource = async (querySource: QuerySource, offered: QuerySource[]) => {
