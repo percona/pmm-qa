@@ -72,6 +72,7 @@ flowchart TB
 | `kerberos/` | — (Dockerfile only) | `pmm-qa/kerberos`, the KDC both PSMDB compose stacks run |
 | `pgsql/` | `PGSQL` | `pmm-qa/pgsql`, for both topologies |
 | `haproxy/`, `external/`, `valkey/` | `HAPROXY`, `EXTERNAL`, `VALKEY` | one image each |
+| `empty/` | `EMPTY` | `pmm-qa/empty`: PMM Client and no database |
 
 Source order matters only because `lib/config.sh` runs `register_database`
 calls at source time, and they validate themselves with `lib/common.sh`'s
@@ -98,12 +99,13 @@ why:
 | `mysql:5.7` | `mysql:5.7` (EL7) | Oracle publishes no EL9 MySQL 5.7; PMM 3 Client installs there only from a tarball |
 | `psmdb` | `oraclelinux:$OL_VERSION` (8 or 9) | GSSAPI tests the OS-specific dynamic client |
 | `kerberos` | `alpine` | A KDC; nothing is installed into it |
+| `empty` | `rockylinux/rockylinux:9` | Operations for MongoDB installs MongoDB only onto Ubuntu or Rocky Linux |
 | `valkey` | `$BASE_OS` plus Valkey's own binaries from `valkey/valkey:<v>-bookworm` | Valkey's own releases; AppStream has only an older 8.0 and no 7 |
 
 Setups start containers with `SYSTEMD_RUN` (`lib/run_helpers.sh`): systemd
 runs unprivileged with the host cgroup namespace, `/sys/fs/cgroup` mounted
 read-write and `/run` on tmpfs; a private cgroup namespace does not boot.
-HAProxy and External add `--privileged` for the Nomad agent their `pmm-agent`
+HAProxy, External and Empty add `--privileged` for the Nomad agent their `pmm-agent`
 runs. `mysqld`, `postgresql` and `valkey` run as units, and so does
 `pmm-agent`, from `/etc/systemd/system/pmm-agent.service`, so a package
 upgrade's own `systemctl restart pmm-agent` reaches the running agent; PXC

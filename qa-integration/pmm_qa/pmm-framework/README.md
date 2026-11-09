@@ -98,12 +98,22 @@ PDPGSQL patroni with PGSQL replication. Provision those on separate machines.
 NAME[=VERSION][,OPTION=VALUE...]
 ```
 
+Start three Install MongoDB targets, `empty-pmm-1` to `empty-pmm-3`, each
+registered in PMM under its container name:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database empty,NODES_COUNT=3
+```
+
 Names and option keys are case-insensitive. Supported setup keys are:
 
 - `PS`, `MYSQL`, `SSL_MYSQL`, `PXC`
 - `PGSQL`, `PDPGSQL`, `SSL_PDPGSQL`
 - `PSMDB`, `SSL_PSMDB`
 - `HAPROXY`, `EXTERNAL`, `VALKEY`
+- `EMPTY`: Rocky Linux nodes with PMM Client and no database, for Operations
+  for MongoDB to scan and install MongoDB onto
 
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `pmm-framework --list-databases` prints each
