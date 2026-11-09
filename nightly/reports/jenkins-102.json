@@ -3708,6 +3708,16 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/42540208244/job/128955123921",
       "by": "Investigator routine",
       "at": "2026-11-09T03:38:52Z"
+    },
+    {
+      "suites": [
+        "Upgrade"
+      ],
+      "verdict": "setup bug",
+      "summary": "upgrade 3.7.0 (UI): 'Verify grafana logs after upgrade' found 'failed to save dashboard ... Memory_Details.json error=context deadline exceeded' at 01:00:47, on all 3 attempts. It was logged during upgrade_clients.sh, which upgrades every client container at once and took 411 s here; the re-run took 341 s and passed. This is the same signature as night 100 (3.6.0, 661/733 s), so it recurs: the client-upgrade step stalls the server long enough for Grafana's dashboard provisioning to time out. No fix yet; the step's duration regression still needs root-causing.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/42540208244/job/128955130467",
+      "by": "Investigator routine",
+      "at": "2026-11-09T03:38:57Z"
     }
   ],
   "claims": [
@@ -3716,13 +3726,6 @@
       "at": "2026-11-09T02:54:48Z",
       "suites": [
         "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-09T02:54:48Z",
-      "suites": [
-        "Upgrade"
       ]
     }
   ]
