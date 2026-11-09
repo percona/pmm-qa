@@ -167016,16 +167016,18 @@
         "link": "https://github.com/percona/pmm-qa/actions/runs/42540208244/job/128955130467",
         "by": "Investigator routine",
         "at": "2026-11-09T03:38:57Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-09T02:54:48Z",
         "suites": [
           "Nightly"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "nightly ha (pmm3-ui-tests-nightly-gha #1363): PMM-T1226 (empty process_exec_path) and PMM-T2007 (9 PostgreSQL services in inventory, 8 on the home panel) have one cause. The postgres_exporter of the internal HA instance pmm-pmm-ha-pg-db-instance1-cjcg-0 stayed AGENT_STATUS_UNKNOWN for 45 min, with no exec path, while its pmm-agent and QAN agent were connected and running. pmm-managed logged 'dial tcp 10.100.84.160:5432: connection refused' 3 times on that agent's Connect stream at 00:56:05-06, which drops its status writes. This is the open PMM-15716. Deduped from the run's artifacts, not re-reproduced; the panel undercount also suggests that exporter sent no metrics.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15716",
+        "by": "Investigator routine",
+        "at": "2026-11-09T03:39:03Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
