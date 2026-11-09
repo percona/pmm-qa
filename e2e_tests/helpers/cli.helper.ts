@@ -95,6 +95,12 @@ export default class CliHelper {
     return container[0];
   };
 
+  // 000 when nothing answers on the address, as for an exporter listening only on its own host's 127.0.0.1.
+  getHttpStatus = (container: string, url: string) =>
+    this.execSilent(
+      `docker exec ${container} curl -s -o /dev/null --max-time 5 -w '%{http_code}' ${url}`,
+    ).stdout.trim();
+
   /**
    * Scrape all metrics from exporter found by Service Name
    *
@@ -168,6 +174,14 @@ export default class CliHelper {
       this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
       field,
     );
+
+  // Read from /proc, as not every database image has ps; processes that exit meanwhile are skipped.
+  getProcessCommandLine = (container: string, ...matches: string[]) =>
+    this.execSilent(
+      `docker exec ${container} sh -c 'for f in /proc/[0-9]*/cmdline; do tr "\\000" " " < "$f" 2>/dev/null; echo; done'`,
+    )
+      .getStdOutLines()
+      .find((line) => matches.every((match) => line.includes(match)));
 
   getSummaryAgentsInfo = (container: string, archivePath: string) => {
     const archive = this.execute(`docker exec ${container} pmm-admin summary`)

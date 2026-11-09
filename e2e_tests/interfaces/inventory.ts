@@ -111,6 +111,7 @@ export interface GetService {
       push_metrics: true;
       query_examples_disabled: true;
       comments_parsing_disabled: true;
+      connection_timeout?: string | null;
       rds_basic_metrics_disabled: true;
       rds_enhanced_metrics_disabled: true;
       runs_on_node_id: string;

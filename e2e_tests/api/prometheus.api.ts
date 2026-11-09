@@ -124,6 +124,17 @@ export default class PrometheusApi {
       .toBeGreaterThan(0);
   };
 
+  /** For a series that already exists, waits for a sample newer than `since`, from `waitForServerTime`. */
+  waitForSampleAfter = async (selector: string, since: number, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    await expect
+      .poll(async () => (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0, {
+        intervals: [Timeouts.FIVE_SECONDS],
+        message: `${selector} has no sample after ${since}`,
+        timeout,
+      })
+      .toBeGreaterThan(since);
+  };
+
   /**
    * Panels pinned to a 5m step show "No data" for a series until it has a sample
    * before the last 5-minute boundary, e.g. MongoDB Router Summary Uptime.

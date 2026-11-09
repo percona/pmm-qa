@@ -1,4 +1,10 @@
 import BasePage from '../base.page';
+import {
+  LogLevel,
+  logLevelLabels,
+  MetricsMode,
+  ServiceMetricsSettings,
+} from '@helpers/serviceMetrics.helper';
 import { QuerySource, querySources } from '@helpers/serviceQan.helper';
 import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -26,6 +32,10 @@ export interface ServiceTlsSettings {
 export default class EditServicePage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   builders = {
+    logLevelOption: (logLevel: LogLevel) =>
+      this.page.getByRole('listbox').getByRole('option', { exact: true, name: logLevelLabels[logLevel] }),
+    metricsModeOption: (metricsMode: MetricsMode) =>
+      this.elements.metricsSection.getByTestId(`radio-option-${metricsMode}`),
     querySourceOption: (querySource: QuerySource) =>
       this.elements.qanSection.getByTestId(`radio-option-${querySource}`),
     successMessage: (serviceName: string) =>
@@ -38,7 +48,10 @@ export default class EditServicePage extends BasePage {
   elements = {
     clusterChangedWarning: this.page.getByTestId('cluster-changed-warning'),
     confirmModal: this.page.getByTestId('confirm-changes-modal'),
+    connectionTimeoutError: this.page.getByText('Enter a number of seconds, or leave blank'),
     form: this.page.getByTestId('edit-service-form'),
+    logLevelOptions: this.page.getByRole('listbox').getByRole('option'),
+    metricsSection: this.page.getByTestId('metrics-settings'),
     qanSection: this.page.getByTestId('query-analytics-settings'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
@@ -47,9 +60,14 @@ export default class EditServicePage extends BasePage {
   inputs = {
     agentPassword: this.page.getByTestId('text-input-agent-password'),
     cluster: this.page.getByTestId('text-input-cluster'),
+    connectionTimeout: this.page.getByTestId('text-input-connection-timeout'),
     customLabels: this.page.getByTestId('text-input-custom-labels'),
     database: this.page.getByTestId('text-input-database'),
     environment: this.page.getByTestId('text-input-environment'),
+    exposeExporter: this.page.getByTestId('switch-input-expose-exporter').locator('input'),
+    // The select opens from its button; its hidden input holds the chosen value.
+    logLevel: this.page.getByTestId('select-log-level-button'),
+    logLevelValue: this.page.getByTestId('select-input-log-level'),
     password: this.page.getByTestId('text-input-password'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
     // The switches carry their test IDs on the MUI root, which wraps the checkbox input.
@@ -83,6 +101,21 @@ export default class EditServicePage extends BasePage {
 
   editEnvironment = async (environment: string) => {
     await this.inputs.environment.fill(environment);
+  };
+
+  editMetrics = async ({
+    connectionTimeout,
+    exposeExporter,
+    logLevel,
+    metricsMode,
+  }: Partial<ServiceMetricsSettings>) => {
+    if (metricsMode) await this.builders.metricsModeOption(metricsMode).check();
+    if (logLevel) {
+      await this.inputs.logLevel.click();
+      await this.builders.logLevelOption(logLevel).click();
+    }
+    if (exposeExporter !== undefined) await this.inputs.exposeExporter.setChecked(exposeExporter);
+    if (connectionTimeout !== undefined) await this.inputs.connectionTimeout.fill(connectionTimeout);
   };
 
   editQuerySource = async (querySource: QuerySource) => {
@@ -162,6 +195,26 @@ export default class EditServicePage extends BasePage {
     await expect(this.inputs.cluster).toHaveValue(labels.cluster);
     await expect(this.inputs.replicationSet).toHaveValue(labels.replicationSet);
     await expect(this.inputs.customLabels).toHaveValue(this.toCustomLabelsText(labels.customLabels));
+  };
+
+  verifyLogLevelOptions = async (offered: LogLevel[]) => {
+    await this.inputs.logLevel.click();
+    await expect(this.elements.logLevelOptions).toHaveText(
+      offered.map((logLevel) => logLevelLabels[logLevel]),
+    );
+    await this.page.keyboard.press('Escape');
+  };
+
+  verifyMetrics = async ({
+    connectionTimeout,
+    exposeExporter,
+    logLevel,
+    metricsMode,
+  }: ServiceMetricsSettings) => {
+    await expect(this.builders.metricsModeOption(metricsMode)).toBeChecked();
+    await expect(this.inputs.logLevelValue).toHaveValue(logLevel);
+    await expect(this.inputs.exposeExporter).toBeChecked({ checked: exposeExporter });
+    await expect(this.inputs.connectionTimeout).toHaveValue(connectionTimeout);
   };
 
   verifyQuerySource = async (querySource: QuerySource, offered: QuerySource[]) => {
