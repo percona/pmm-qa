@@ -1,7 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { ChangeAgentType } from '@helpers/cli-helper';
-import { addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, removeMongoService } from '@root/helpers/pmm-admin';
+import { ChangeAgentType, addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, inventoryChangeAgent, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
 
@@ -141,7 +140,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   test('PMM-T2325 - Verify --agent-env-vars can be changed on an existing mongodb_exporter with pmm-admin inventory change agent', async ({}) => {
     const serviceName = `mongo_change_env_vars_${faker.number.int(100)}`;
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
-    const changeAgent = (flags: string) => cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId, flags);
+    const changeAgent = (flags: string) => inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId, flags);
 
     let output = await cli.exec(changeAgent('--agent-env-vars=KRB5_CLIENT_KTNAME,DOES_NOT_EXIST_VAR'));
     await output.assertSuccess();
@@ -178,7 +177,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   test('PMM-T2326 - Verify validation of --agent-env-vars for pmm-admin inventory change agent mongodb-exporter', async ({}) => {
     const serviceName = `mongo_change_env_vars_validation_${faker.number.int(100)}`;
     const agentId = await addMongoServiceAndGetExporterId(containerName, serviceName, replIpPort, () => servicesToRemove.push(serviceName));
-    const changeAgent = (flags: string) => cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId, flags);
+    const changeAgent = (flags: string) => inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId, flags);
 
     let output = await cli.exec(changeAgent('--agent-env-vars=VALID_VAR'));
     await output.assertSuccess();
@@ -320,7 +319,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mongodb_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId.stdout, '--connection-timeout=4s'));
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId.stdout, '--connection-timeout=4s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log | grep MONGODB_URI | grep ${agentId.stdout.trim()} | grep connectTimeoutMS=4000`);
@@ -333,7 +332,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mongodb_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId.stdout, '--connection-timeout=0s'));
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, agentId.stdout, '--connection-timeout=0s'));
     await chaneAgent.exitCodeEquals(0);
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log | grep MONGODB_URI | grep ${agentId.stdout.trim()} | grep connectTimeoutMS=2000`);
     await dataSourceName.assertSuccess();

@@ -158,7 +158,7 @@ export function shellQuote(value: string): string {
  * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
  * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
  * so a change that succeeded can be silently reverted (PMM-15835).
- * The assertion must read stored state (the inventory API), not runtime state: each retry restarts the agent.
+ * Each retry restarts the agent, so an assertion on runtime state must wait for the restart within itself.
  *
  * @param   commands          change agent commands to run
  * @param   expectedOutput    strings every command's output must contain

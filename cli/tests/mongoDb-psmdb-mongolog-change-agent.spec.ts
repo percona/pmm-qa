@@ -3,6 +3,7 @@ import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as mongo from '@helpers/mongo';
 import * as api from '@helpers/pmm-api-helper';
+import * as pmmCli from '@helpers/pmm-cli-helper';
 import { getPmmAdminVersion, removeMongoService } from '@helpers/pmm-admin';
 import { clientCredentialsFlags, gssapi } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
@@ -29,14 +30,6 @@ let agentPassword = 'mypass';
 let mongodTlsEnabled = false;
 let pmmAgentListenPortChanged = false;
 let serviceAdded = false;
-
-// User management must run on the primary. Talk to rs101 (the priority-2 primary) directly: from inside the container
-// replica-set discovery resolves the primary to loopback, and an election makes mongosh fail with ECONNREFUSED.
-const runOnPrimary = async (js: string) => {
-  await expect(async () => {
-    await (await cli.exec(mongo.mongoEval(containerName, mongoUri, `if (!db.hello().isWritablePrimary) throw new Error("rs101 is not primary yet"); ${js}`))).assertSuccess();
-  }).toPass({ intervals: [5_000], timeout: 120_000 });
-};
 
 const dropNewUser = `if (db.getSiblingDB("admin").getUser("${newUsername}")) db.getSiblingDB("admin").dropUser("${newUsername}");`;
 
@@ -94,7 +87,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
 
     if (serviceAdded) {
       await removeMongoService(containerName, serviceName);
-      await runOnPrimary(dropNewUser);
+      await mongo.runOnPrimary(containerName, mongoUri, dropNewUser);
     }
 
     await pmmAdmin.expectAgentsRunning(containerName, frameworkAgentIds, true);
@@ -103,13 +96,13 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   test('PMM-T2439 - Verify Change agent username and password for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
     const monitoringRoles = '[ { role: "explainRole", db: "admin" }, { role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" } ]';
 
-    await runOnPrimary(`${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
+    await mongo.runOnPrimary(containerName, mongoUri, `${dropNewUser} db.getSiblingDB("admin").createUser({ user: "${newUsername}", pwd: "${newPassword}-wrong", roles: ${monitoringRoles} })`);
 
     for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, `--username=${newUsername} --password=${newPassword}`)) {
       await cli.expectFailure(await cli.exec(command), 'Authentication failed');
     }
 
-    await runOnPrimary(`db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
+    await mongo.runOnPrimary(containerName, mongoUri, `db.getSiblingDB("admin").changeUserPassword("${newUsername}", "${newPassword}")`);
 
     await cli.execUntilPersisted(
       mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, `--username=${newUsername} --password=${newPassword}`),
@@ -205,7 +198,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     });
 
     await expect(async () => {
-      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await pmmAdmin.getAgentPort(containerName, exporterId)}/metrics`);
+      const metrics = await pmmCli.scrapeExporterFromPmmServer(containerName, exporterId, agentPassword);
       await metrics.assertSuccess();
       await metrics.outContains('mongodb_up');
     }).toPass({ intervals: [5_000], timeout: 90_000 });
@@ -217,7 +210,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     });
 
     await expect(async () => {
-      const metrics = await cli.exec(`docker exec pmm-server curl -sS -u pmm:${agentPassword} http://${containerName}:${await pmmAdmin.getAgentPort(containerName, exporterId)}/metrics`);
+      const metrics = await pmmCli.scrapeExporterFromPmmServer(containerName, exporterId, agentPassword);
       await metrics.assertSuccess();
       await metrics.outContains('mongodb_up');
       const exporterLine = (await cli.exec(`docker exec ${containerName} pmm-admin list`)).getStdOutLines().find((line) => line.includes(exporterId));

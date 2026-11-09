@@ -1,7 +1,6 @@
 import { expect, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { ChangeAgentType } from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
+import { ChangeAgentType, getPmmAdminMinorVersion, inventoryChangeAgent } from '@helpers/pmm-admin';
 
 const containerName = 'valkey-primary-1';
 let adminVersion: number;
@@ -38,7 +37,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, () => {
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.ValkeyExporter, agentId.stdout, '--connection-timeout=4s'));
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.ValkeyExporter, agentId.stdout, '--connection-timeout=4s'));
     await chaneAgent.exitCodeEquals(0);
   });
 
@@ -48,7 +47,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, () => {
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(cli.inventoryChangeAgent(containerName, ChangeAgentType.ValkeyExporter, agentId.stdout, '--connection-timeout=0s'));
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.ValkeyExporter, agentId.stdout, '--connection-timeout=0s'));
     await chaneAgent.exitCodeEquals(0);
   });
 

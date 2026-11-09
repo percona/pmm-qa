@@ -44,6 +44,22 @@ export function mongoEval(containerName: string, mongoUri: string, js: string): 
 }
 
 /**
+ * Run JavaScript with the mongo shell once the container's mongod is a writable primary.
+ * Connect with directConnection: replica-set discovery from inside the container resolves the primary to loopback,
+ * so an election makes mongosh fail with ECONNREFUSED.
+ *
+ * @param   containerName   docker container running mongod
+ * @param   mongoUri        connection string with directConnection=true
+ * @param   js              JavaScript to evaluate; must not contain single quotes
+ */
+export async function runOnPrimary(containerName: string, mongoUri: string, js: string) {
+  await expect(async () => {
+    const isPrimary = `if (!db.hello().isWritablePrimary) throw new Error("${containerName} is not primary yet");`;
+    await (await cli.exec(mongoEval(containerName, mongoUri, `${isPrimary} ${js}`))).assertSuccess();
+  }).toPass({ intervals: [5_000], timeout: 120_000 });
+}
+
+/**
  * Wait until the service's mongodb_exporter reports mongodb_up 1
  *
  * @param   containerName   docker container running pmm-agent
