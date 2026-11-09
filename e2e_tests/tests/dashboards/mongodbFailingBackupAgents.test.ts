@@ -3,6 +3,8 @@ import { expect } from '@playwright/test';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 
+pmmTest.describe.configure({ mode: 'default' });
+
 // Runs on the host of `pmm-framework --database psmdb,SETUP_TYPE=psa`: the tests stop pbm-agent
 // and MinIO in its containers. rs101 is the primary, rs102 a secondary and rs103 the arbiter.
 const environment = 'psmdb-dev';

@@ -1,6 +1,7 @@
 import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage, { DropdownName } from '@pages/base.page';
@@ -233,7 +234,15 @@ export default class Dashboards extends BasePage {
 
   // Each data row as { column header: cell text }, read after a dashboard refresh.
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
+    // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
+    const queried = this.page.waitForResponse(
+      (response) =>
+        response.url().includes(apiEndpoints.grafana.dsQuery) && response.request().method() === 'POST',
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+
     await this.elements.refreshButton.click();
+    await queried;
     await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.THIRTY_SECONDS });
 
     const headers = await this.builders
