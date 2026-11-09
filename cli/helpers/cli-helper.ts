@@ -165,7 +165,7 @@ export function shellQuote(value: string): string {
  * @param   persisted         assertion on the stored state; throws while the change is missing
  * @param   timeout           milliseconds to keep re-applying
  */
-export async function changeAgentsUntilPersisted(
+export async function execUntilPersisted(
   commands: string[],
   expectedOutput: string[],
   persisted: () => Promise<void>,
