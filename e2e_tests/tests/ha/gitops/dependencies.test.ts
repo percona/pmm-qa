@@ -13,7 +13,7 @@ pmmTest(
   async ({ cliHelper }) => {
     const chartDir = process.env.PMM_HA_DEPS_CHART_DIR ?? '';
 
-    // eslint-disable-next-line playwright/no-skipped-test -- the chart checkout comes from the Argo CD pipeline.
+    // eslint-disable-next-line playwright/no-skipped-test -- the chart directory comes from the GitOps pipelines.
     pmmTest.skip(
       !chartDir,
       'PMM_HA_DEPS_CHART_DIR is not set, so there is no pmm-ha-dependencies chart to render',
