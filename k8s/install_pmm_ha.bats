@@ -190,9 +190,9 @@ echo "helm $*" >> "$FAKE/calls"
 if [ "$1 $2" = "search repo" ]; then
     case "$*" in
         *"--version 9.9.9"*) echo '[]' ;;
-        *"--version "*) all="$*"; v="${all#*--version }"; echo "[{\"name\":\"$3\",\"version\":\"${v%% *}\"}]" ;;
-        *"percona/pmm-ha-dependencies"*) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0"}]' ;;
-        *) echo '[{"name":"percona/pmm-ha","version":"1.8.0"},{"name":"percona/pmm-ha-dependencies","version":"1.2.0"}]' ;;
+        *"--version "*) all="$*"; v="${all#*--version }"; echo "[{\"name\":\"$3\",\"version\":\"${v%% *}\",\"app_version\":\"3.0\",\"description\":\"a, b {c}\"}]" ;;
+        *"percona/pmm-ha-dependencies"*) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0","app_version":"3.0","description":"a, b {c}"}]' ;;
+        *) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0","app_version":"3.0","description":"x, {y}"},{"name":"percona/pmm-ha","version":"1.8.0","app_version":"3.0","description":"a, b {c}"}]' ;;
     esac
 fi
 exit 0
@@ -385,6 +385,7 @@ released_render() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"sourceRepos:"$'\n'"    - 'https://percona.github.io/percona-helm-charts/'"$'\n'"  destinations:"* ]]
     released_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops
+    [ "$status" -eq 0 ]
     [[ "$output" == *"    - 'https://github.com/KrisBuytaert/percona-helm-charts.git'"$'\n'"    - 'https://percona.github.io/percona-helm-charts/'"$'\n'"  destinations:"* ]]
 }
 
@@ -392,7 +393,6 @@ released_render() {
     fake_cluster
     run "$SCRIPT" --platform eks --install-method argocd --image perconalab/pmm-server:3-dev-latest \
         --clone-dir "$BATS_TEST_TMPDIR/clones"
-    echo "$output"
     [ "$status" -eq 0 ]
     call_line "helm pull percona/pmm-ha-dependencies --version 1.2.0 --untar"
     grep -qx "chart_source=released" "$SUMMARY_FILE"
@@ -403,4 +403,18 @@ released_render() {
     [ -n "$pulled" ]
     grep -qxF "deps_chart_dir=$pulled/pmm-ha-dependencies" "$SUMMARY_FILE"
     refute grep -q "^git clone" "$FAKE/calls"
+}
+
+@test "argocd install with a Git pmm-ha and released dependencies says so in the summary" {
+    fake_cluster
+    run "$SCRIPT" --platform eks --install-method argocd --image perconalab/pmm-server:3-dev-latest \
+        --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops --deps-chart-branch latest \
+        --clone-dir "$BATS_TEST_TMPDIR/clones"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"chart source branch:PMM-15826-pmm-ha-gitops, dependencies released 1.2.0"* ]]
+    [[ "$output" != *"branch:latest"* ]]
+    grep -qx "chart_source=branch:PMM-15826-pmm-ha-gitops, dependencies released 1.2.0" "$SUMMARY_FILE"
+    grep -qx "deps_chart_source=released" "$SUMMARY_FILE"
+    grep -qx "deps_chart_version=1.2.0" "$SUMMARY_FILE"
+    refute grep -q "^git clone .* latest " "$FAKE/calls"
 }

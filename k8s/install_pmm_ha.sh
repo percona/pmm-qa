@@ -289,7 +289,8 @@ resolve_chart_version() {
     found="$(helm search repo "percona/$chart" ${version:+--version "$version"} -o json)" \
         || fail "could not search $CHART_HELM_REPO for $chart."
     # A search for pmm-ha also matches pmm-ha-dependencies, so the name is compared whole.
-    found="$(printf '%s' "$found" | tr '{' '\n' | sed -n "s|.*\"name\":\"percona/$chart\",\"version\":\"\([^\"]*\)\".*|\1|p;T;q")"
+    found="$(printf '%s' "$found" | jq -r --arg n "percona/$chart" '[.[] | select(.name == $n) | .version][0] // empty')" \
+        || fail "could not read the search result for $chart."
     [ -n "$found" ] || fail "$chart ${version:-latest} is not published in $CHART_HELM_REPO"
     echo "$found"
 }
@@ -372,6 +373,7 @@ chart_is_released "$DEPS_CHART_BRANCH" && DEPS_CHART_SOURCE="released"
 PMM_CHART_RESOLVED_VERSION=""
 DEPS_CHART_RESOLVED_VERSION=""
 if [ "$INSTALL_METHOD" = "argocd" ] && { [ "$PMM_CHART_SOURCE" = "released" ] || [ "$DEPS_CHART_SOURCE" = "released" ]; }; then
+    command -v jq >/dev/null 2>&1 || fail "'jq' is not installed, needed to resolve the released chart versions."
     helm repo add percona "$CHART_HELM_REPO" --force-update >/dev/null \
         || fail "could not add the Helm repository $CHART_HELM_REPO."
     if [ "$PMM_CHART_SOURCE" = "released" ]; then
@@ -435,6 +437,14 @@ argocd_chart_source() {
     else
         printf "    repoURL: %s\n    targetRevision: %s\n    path: charts/%s" \
             "$(argocd_repo_url "$4" "$5")" "$(argocd_revision "$4")" "$2"
+    fi
+}
+
+argocd_source_label() {
+    if [ "$1" = "released" ]; then
+        echo "released $2"
+    else
+        echo "branch $3"
     fi
 }
 
@@ -1157,7 +1167,11 @@ if [ "$INSTALL_METHOD" = "argocd" ] && [ "$PMM_CHART_SOURCE" = "released" ]; the
     [ "$DEPS_CHART_SOURCE" = "released" ] || CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
 elif [ -n "${CLONE_DIR:-}" ]; then
     CHART_SOURCE="branch:$CHART_BRANCH"
-    [ -z "${DEPS_CLONE_DIR:-}" ] || CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
+    if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; then
+        CHART_SOURCE="$CHART_SOURCE, dependencies released $DEPS_CHART_RESOLVED_VERSION"
+    elif [ -n "${DEPS_CLONE_DIR:-}" ]; then
+        CHART_SOURCE="$CHART_SOURCE, dependencies from branch:$DEPS_CHART_BRANCH"
+    fi
 elif [ -n "$CHART_DIR" ]; then
     CHART_SOURCE="dir:$CHART_DIR"
 else
@@ -1196,7 +1210,7 @@ else
     helm repo add percona https://percona.github.io/percona-helm-charts/ --force-update
     helm repo update
 
-    if [ "$INSTALL_PMM" = "true" ] && [ -z "$CHART_VERSION" ]; then
+    if [ "$INSTALL_PMM" = "true" ] && [ -z "$CHART_VERSION" ] && [ "$INSTALL_METHOD" != "argocd" ]; then
         log "WARNING: no --chart-version, installing the latest published $PMM_CHART"
         helm search repo "$PMM_CHART" || true
     fi
@@ -1274,7 +1288,7 @@ fi
 
 if [ "$INSTALL_DEPS" = "true" ]; then
     if [ "$INSTALL_METHOD" = "argocd" ]; then
-        log "Applying the $DEPS_RELEASE Application, branch $DEPS_CHART_BRANCH_SPEC"
+        log "Applying the $DEPS_RELEASE Application, $(argocd_source_label "$DEPS_CHART_SOURCE" "$DEPS_CHART_RESOLVED_VERSION" "$DEPS_CHART_BRANCH_SPEC")"
         render_argocd_manifests deps | kubectl apply -f -
         wait_for_application "$DEPS_RELEASE" "$TIMEOUT"
     else
@@ -1325,7 +1339,7 @@ if [ -n "$PMM_SECRET_FROM" ]; then
 fi
 
 if [ "$INSTALL_METHOD" = "argocd" ]; then
-    log "Applying the pmm-ha AppProject and the $RELEASE Application, branch $CHART_BRANCH_SPEC, image $IMAGE"
+    log "Applying the pmm-ha AppProject and the $RELEASE Application, $(argocd_source_label "$PMM_CHART_SOURCE" "$PMM_CHART_RESOLVED_VERSION" "$CHART_BRANCH_SPEC"), image $IMAGE"
     render_argocd_manifests pmm | kubectl apply -f -
     wait_for_application "$RELEASE" "$TIMEOUT"
 else
