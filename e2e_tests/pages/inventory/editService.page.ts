@@ -60,7 +60,8 @@ export default class EditServicePage extends BasePage {
   inputs = {
     agentPassword: this.page.getByTestId('text-input-agent-password'),
     cluster: this.page.getByTestId('text-input-cluster'),
-    connectionTimeout: this.page.getByTestId('text-input-connection-timeout'),
+    // Its own htmlInput props replace the ones peak-ui puts the test ID in, so the field has none.
+    connectionTimeout: this.page.getByRole('spinbutton', { name: 'Connection timeout (seconds)' }),
     customLabels: this.page.getByTestId('text-input-custom-labels'),
     database: this.page.getByTestId('text-input-database'),
     environment: this.page.getByTestId('text-input-environment'),
