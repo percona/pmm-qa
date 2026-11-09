@@ -357,6 +357,7 @@ export default class Dashboards extends BasePage {
 
   // Grafana pins a graph tooltip only on a click right at a series point (closestSeriesIdx in
   // TooltipPlugin2): hover up the plot until uPlot draws the point, then click on the point.
+  // Columns go right to left: a series that started minutes ago has points only at the right edge.
   pinGraphTooltip = async (panelName: string) => {
     await pmmTest.step(`Pin the ${panelName} graph tooltip`, async () => {
       const plot = this.builders.panelPlotByName(panelName);
@@ -368,8 +369,10 @@ export default class Dashboards extends BasePage {
 
       if (!plotBox) throw new Error(`${panelName} graph is not rendered`);
 
-      for (let y = plotBox.height - 1; y > 0 && !(await focusedPoint.isVisible()); y -= 5) {
-        await plot.hover({ position: { x: plotBox.width * 0.75, y } });
+      for (const column of [0.98, 0.9, 0.75, 0.5]) {
+        for (let y = plotBox.height - 1; y > 0 && !(await focusedPoint.isVisible()); y -= 5) {
+          await plot.hover({ position: { x: plotBox.width * column, y } });
+        }
       }
 
       const pointBox = (await focusedPoint.isVisible()) ? await focusedPoint.boundingBox() : null;
@@ -458,8 +461,10 @@ export default class Dashboards extends BasePage {
     );
   };
 
-  // Legend rows follow the Mean sort, so compare the series as a set.
+  // Legend rows follow the Mean sort, so compare the series as a set. Grafana re-queries only panels
+  // in view after a variable change, so a panel scrolled away keeps its old legend.
   verifyLegendSeries = async (panelName: string, expectedSeries: string[]) => {
+    await this.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
     await expect
       .poll(
         async () =>
