@@ -80,7 +80,7 @@ install_pmm_client() {
 # Registers NODE and starts pmm-agent, logging to LOG for the tests: as the
 # pmm-agent unit where systemd runs, so a package upgrade's restart reaches it,
 # else detached. A separate AGENT_NODE sharing NODE's network keeps Nomad out
-# of the database container.
+# of the database container, which then runs no pmm-agent of its own.
 # Usage: setup_pmm_agent NODE ENCRYPTED [LOG] [NODE_NAME] [AGENT_NODE]
 setup_pmm_agent() {
   local node=$1 encrypted=$2 log=${3:-/var/log/pmm-agent.log} node_name=${4:-$1} agent_node=${5:-$1}
@@ -95,6 +95,13 @@ setup_pmm_agent() {
   ) start=("--config-file=$PMM_AGENT_CONFIG")
   if [[ $(bool_string "$CLIENT_DEBUG") == true ]]; then
     setup+=(--debug)
+  fi
+  # The pmm-client package starts its own pmm-agent unit in NODE. Left running, it
+  # holds 127.0.0.1:7777, AGENT_NODE's agent exits on the bind, and Nomad runs in
+  # NODE without the privileges its task directories need.
+  if [[ $agent_node != "$node" ]]; then
+    must docker exec --user root "$node" sh -c \
+      'if systemctl cat pmm-agent >/dev/null 2>&1; then systemctl disable -q --now pmm-agent; fi'
   fi
   # Every container of an image inherits the image's /etc/machine-id, which
   # pmm-agent reports as the node's machine_id, so nodes must not share one.

@@ -125,9 +125,13 @@ must not contain `ps` or `mysql`: tests find the database container by grepping
 container names for those. The companion shares the database container's
 network and PID namespaces plus its PMM, data and `/tmp` volumes. `pmm-agent`
 and Nomad run in the companion; `pmm-admin` remains available in the database
-container through the shared PMM installation and local network. This preserves
-the CLI suite's container contract without exposing mysqld to writable host
-cgroups.
+container through the shared PMM installation and local network. The
+`pmm-client` package starts its own `pmm-agent` unit in the database container,
+so `setup_pmm_agent` disables that unit first: left running, it holds
+`127.0.0.1:7777`, the companion's agent exits on the bind, and Nomad runs in the
+unprivileged container, where it cannot mount its task directories. This
+preserves the CLI suite's container contract without exposing mysqld to
+writable host cgroups.
 
 ---
 

@@ -81,6 +81,9 @@ stub_prebaked_docker() {
   [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
   [[ $(grep -Fc 'enable-only pmm3-client experimental && dnf install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
   grep -q -- '^exec --user root nomad_agent_[0-9]* pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2 container ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --user root ps_pmm_gr_8_4_[123] sh -c if systemctl cat pmm-agent >/dev/null 2>&1; then systemctl disable -q --now pmm-agent; fi$' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -n '^exec --user root ps_pmm_gr_8_4_2 sh -c .*systemctl disable' "$DOCKER_CALLS" | cut -d: -f1) -lt \
+    $(grep -n ' pmm-agent setup .* ps_pmm_gr_8_4_2 container ' "$DOCKER_CALLS" | cut -d: -f1) ]]
   [[ $(grep -c '^exec --user root nomad_agent_[0-9]* sh -c tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id$' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
   [[ $(grep -c '^exec --detach --user root nomad_agent_[0-9]* sh -c' "$DOCKER_CALLS") -eq 3 ]]
@@ -137,6 +140,7 @@ stub_prebaked_docker() {
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
   [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
+  [[ $(grep -c 'systemctl disable' "$DOCKER_CALLS") -eq 0 ]]
   grep -Fq "'ExecStart=/usr/local/percona/pmm/bin/pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml' 'Restart=on-failure'" "$DOCKER_CALLS"
   grep -q "'StandardOutput=append:/tmp/pmm-agent.log'" "$DOCKER_CALLS"
   [[ $(grep -c '^exec --detach --user root ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS") -eq 0 ]]
