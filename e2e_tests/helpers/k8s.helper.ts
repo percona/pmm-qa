@@ -11,6 +11,7 @@ import {
   KubernetesPod,
   KubernetesPodResource,
   KubernetesResourceList,
+  VolumeUsage,
 } from '@interfaces/kubernetes';
 
 // A `kubectl exec` into a pod being deleted can stall for good, and the call is
@@ -82,6 +83,24 @@ export default class K8sHelper {
   execSilent = (args: string): ExecReturn =>
     this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`, kubectlTimeout);
 
+  /** Writes a zero file named `fileName` into `dir` until its volume is `percent` full. */
+  fillVolume = (
+    pod: string,
+    dir: string,
+    percent: number,
+    fileName: string,
+    container?: string,
+  ): VolumeUsage => {
+    const before = this.getVolumeUsage(pod, dir, container);
+    const fillMb = Math.floor((before.sizeMb * percent) / 100 - before.usedMb);
+
+    this.execInPod(pod, `dd if=/dev/zero of=${dir}/${fileName} bs=1M count=${fillMb}`, {
+      container,
+    }).assertSuccess();
+
+    return this.getVolumeUsage(pod, dir, container);
+  };
+
   getEventMessages = (objectName: string): string[] =>
     (
       JSON.parse(
@@ -128,7 +147,9 @@ export default class K8sHelper {
     return podList.items.map((item) => ({
       images: (item.spec?.containers ?? []).map((container) => container.image),
       name: item.metadata.name,
-      ready: item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
+      ready:
+        !item.metadata.deletionTimestamp &&
+        item.status?.conditions?.find((condition) => condition.type === 'Ready')?.status === 'True',
       restarts: (item.status?.containerStatuses ?? []).reduce((sum, status) => sum + status.restartCount, 0),
     }));
   };
@@ -155,6 +176,20 @@ export default class K8sHelper {
         .assertSuccess()
         .stdout.trim(),
     );
+
+  getVolumeUsage = (pod: string, dir: string, container?: string): VolumeUsage => {
+    const result = this.execInPod(pod, `df -Pm ${dir}`, { container, silent: true }).assertSuccess();
+    const [, sizeMb, usedMb, availableMb] = (result.getStdOutLines()[1] ?? '')
+      .trim()
+      .split(/\s+/)
+      .map(Number);
+
+    if (![sizeMb, usedMb, availableMb].every(Number.isFinite)) {
+      throw new Error(`Cannot parse "df -Pm ${dir}" in pod ${pod}:\n${result.stdout}`);
+    }
+
+    return { availableMb, percentFull: 100 * (1 - availableMb / sizeMb), sizeMb, usedMb };
+  };
 
   scaleStatefulSet = (name: string, replicas: number): ExecReturn =>
     this.exec(`scale statefulset ${name} --replicas=${replicas}`);

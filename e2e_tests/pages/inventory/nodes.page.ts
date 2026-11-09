@@ -2,45 +2,58 @@ import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { tableDataRows } from '@helpers/tableLocators';
 import { expect } from '@playwright/test';
 
 export default class NodesPage extends BasePage {
-  readonly url = 'graph/inventory/nodes';
+  readonly url = 'pmm-ui/inventory/nodes';
   readonly apiUrl = '';
-  readonly pagination = new InventoryPagination(this.grafanaIframe());
+  readonly pagination = new InventoryPagination(this.page);
   builders = {
     monitoringLinkByIndex: (index: number) =>
-      this.grafanaIframe()
-        .locator('tbody')
-        .getByTestId('table-tbody-tr')
-        .nth(index)
-        .locator('xpath=td[5]//a'),
-    nodeNameCell: (nodeName: string) => this.grafanaIframe().locator(`td[title="${nodeName}"]`),
-    // The HA role label has no test id, only a generated emotion class.
-    nodeRoleLabel: (nodeName: string) => this.builders.nodeNameCell(nodeName).locator('span + div'),
+      this.elements.nodeRows.nth(index).getByTestId('monitoring-status-link'),
+    nodeCheckbox: (nodeName: string) =>
+      this.builders.nodeRow(nodeName).getByRole('checkbox', { name: 'Toggle select row' }),
+    nodeRoleLabel: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('ha-role-chip'),
     nodeRow: (nodeName: string) =>
-      this.elements.nodeRows.filter({ has: this.builders.nodeNameCell(nodeName) }),
-    nodeStatusCell: (nodeName: string) =>
-      this.builders.nodeNameCell(nodeName).locator('xpath=../td[starts-with(@title, "STATUS_")]'),
-    rowActions: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('dropdown-menu-toggle'),
+      this.elements.nodeRows.filter({ has: this.page.getByText(nodeName, { exact: true }) }),
+    nodeStatusCell: (nodeName: string) => this.builders.nodeRow(nodeName).getByTestId('status-chip'),
+    rowActions: (nodeName: string) =>
+      this.builders.nodeRow(nodeName).getByRole('button', { name: 'Row Actions' }),
     showRowDetailsByIndex: (index: string) =>
-      this.grafanaIframe().getByTestId('show-row-details').nth(Number(index)),
+      this.page.getByRole('button', { exact: true, name: 'Expand' }).nth(Number(index)),
   };
   buttons = {
-    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
-    overrideAlertThresholds: this.grafanaIframe()
-      .getByTestId('dropdown-button')
-      .filter({ hasText: 'Override alert thresholds' }),
+    confirmDelete: this.page.getByTestId('inventory-delete-modal-confirm'),
+    delete: this.page.getByTestId('delete-nodes-button'),
+    deleteNode: this.page.getByRole('menuitem', { name: 'Delete' }),
+    forceDelete: this.page.getByRole('checkbox', { name: 'Force mode' }),
+    overrideAlertThresholds: this.page.getByRole('menuitem', { name: 'Override alert thresholds' }),
   };
   elements = {
-    detailsContent: this.grafanaIframe().getByTestId('details-row-content'),
-    nodeRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
-    runningAgents: this.grafanaIframe().locator('[data-testid^="status-badge"]'),
-    unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
+    detailsContent: this.page.locator(
+      '[data-testid="node-details"], [data-testid="service-details"], [data-testid="agent-details"]',
+    ),
+    nodeRows: this.page.locator(tableDataRows),
+    runningAgents: this.page.getByTestId('agents-status-chip').getByRole('link'),
+    unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {};
   messages = {
-    deleteConfirmation: this.grafanaIframe().getByRole('dialog').getByRole('heading', { level: 4 }),
+    deleteConfirmation: this.page.getByTestId('inventory-delete-modal-message'),
+  };
+
+  deleteNode = async (nodeName: string) => {
+    await this.builders.nodeCheckbox(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.delete.click();
+    await this.buttons.forceDelete.check();
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes('/v1/inventory/nodes/') && response.request().method() === 'DELETE',
+      ),
+      this.buttons.confirmDelete.click(),
+    ]);
   };
 
   openAlertThresholds = async (nodeName: string): Promise<void> => {
@@ -71,5 +84,10 @@ export default class NodesPage extends BasePage {
         ).toHaveText(expectedRole, { timeout: Timeouts.THIRTY_SECONDS });
       });
     }
+  };
+
+  verifyNodeListedOnce = async (nodeName: string): Promise<void> => {
+    await this.page.goto(this.url);
+    await expect(this.builders.nodeRow(nodeName)).toHaveCount(1, { timeout: Timeouts.THIRTY_SECONDS });
   };
 }

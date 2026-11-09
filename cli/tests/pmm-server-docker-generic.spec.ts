@@ -32,7 +32,7 @@ test.describe('PMM Server Configuration impacts on client tests', { tag: '@serve
     await cli.exec('docker network create -d bridge scrape-interval');
 
     await (await cli.exec(`docker run -d --restart always -p 279:8080 -p 2444:8443 --name ${serverContainer}
-      -e PMM_DEBUG=1 -e PMM_PROMSCRAPE_MAX_SCRAPE_SIZE=${customScrapeSize}MiB
+      -e PMM_DEBUG=1 -e PMM_ENABLE_TELEMETRY=0 -e PMM_PROMSCRAPE_MAX_SCRAPE_SIZE=${customScrapeSize}MiB
       --network scrape-interval ${DOCKER_IMAGE}`)).assertSuccess();
     stopList.push(serverContainer);
     removeList.push(serverContainer);
@@ -73,7 +73,7 @@ test.describe('PMM Server Configuration impacts on client tests', { tag: '@serve
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const search_maxSamplesPerQuery = '1500000000';
     const serverContainer = 'PMM-T1861';
-    await (await cli.exec(`docker run -d --restart always -p 290:8080 -p 2443:8443 --name ${serverContainer} 
+    await (await cli.exec(`docker run -d --restart always -p 290:8080 -p 2443:8443 --name ${serverContainer} -e PMM_ENABLE_TELEMETRY=0 
     -e VM_search_maxQueryLen=${search_maxQueryLen}MB 
     -e VM_search_maxQueryDuration=${search_maxQueryDuration}s 
     -e VM_search_latencyOffset=${search_latencyOffset}s 

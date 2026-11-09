@@ -1,14 +1,11 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
 
 export default class GrafanaApi {
-  constructor(
-    private readonly page: Page,
-    private request: APIRequestContext,
-  ) {}
+  constructor(private request: APIRequestContext) {}
 
   changePassword = async (currentPassword: string, newPassword: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken('admin', currentPassword)}` };
@@ -83,6 +80,31 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  enableServiceAccount = async (name: string): Promise<void> => {
+    const headers = GrafanaHelper.getAuthHeader();
+    const search = await this.request.get(apiEndpoints.grafana.serviceAccountsSearch, {
+      headers,
+      params: { query: name },
+    });
+
+    expect(search.status(), await search.text()).toEqual(200);
+
+    const account = (
+      (await search.json()) as { serviceAccounts: { id: number; isDisabled: boolean; name: string }[] }
+    ).serviceAccounts.find((serviceAccount) => serviceAccount.name === name);
+
+    expect(account, `Service account ${name} must exist`).toBeDefined();
+
+    if (!account?.isDisabled) return;
+
+    const response = await this.request.patch(`${apiEndpoints.grafana.serviceAccounts}/${account.id}`, {
+      data: { isDisabled: false },
+      headers,
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   getActiveTargetByExternalGroup = async (externalGroup: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
@@ -130,11 +152,11 @@ export default class GrafanaApi {
     return uid as string;
   };
 
-  getMetric = async (metricName: string) => {
+  getMetric = async (metricName: string, from = 'now-1m') => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
     const requestBody = {
-      from: 'now-1m',
+      from,
       queries: [
         {
           datasource: { type: 'prometheus', uid: datasource.uid },
@@ -177,23 +199,20 @@ export default class GrafanaApi {
   };
 
   waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    const deadline = Date.now() + timeout;
+    await expect
+      .poll(async () => (await this.getMetric(metricName)).results.A.frames[0].data.values.length, {
+        message: `Timed out waiting for metric data for metric: ${metricName}`,
+        timeout,
+      })
+      .not.toBe(0);
+  };
 
-    while (true) {
-      const metric = await this.getMetric(metricName);
-
-      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
-
-      // Against the wall clock, not a count of sleeps, which leaves the time spent in
-      // getMetric outside the budget.
-      const remaining = deadline - Date.now();
-
-      if (remaining <= 0) {
-        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-      }
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
-      await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
-    }
+  waitForMetricAbsent = async (metricName: string, from: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await expect
+      .poll(async () => (await this.getMetric(metricName, from)).results.A.frames[0].data.values.length, {
+        message: `Metric ${metricName} must have no data since ${from}`,
+        timeout,
+      })
+      .toBe(0);
   };
 }
