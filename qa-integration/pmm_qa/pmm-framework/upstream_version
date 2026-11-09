@@ -69,6 +69,7 @@ case $engine in
     newest https://www.haproxy.com/download/haproxy/performance/rhel/ha34/el9/x86_64/ haproxy-awslc '\.el9_ha34\.x86_64\.rpm'
     ;;
   kerberos) hub library/alpine "$tag" ;;
+  empty) hub rockylinux/rockylinux 9 ;;
   external) echo "$tag" ;;
   psmdb)
     version=${tag%-ol*}

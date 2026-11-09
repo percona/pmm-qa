@@ -147,6 +147,7 @@ register_database PXC \
 # '' = versionless: `--database haproxy=1` is refused.
 register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
 register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=latest-tarball'
+register_database EMPTY '' 'CLIENT_VERSION NODES_COUNT' 'CLIENT_VERSION=latest-tarball' 'NODES_COUNT=1'
 
 register_database VALKEY \
   '7 8' \

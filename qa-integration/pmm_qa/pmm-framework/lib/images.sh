@@ -11,8 +11,10 @@ readonly PREBAKED_SOURCE_LABEL=org.opencontainers.image.source=https://github.co
 readonly SYSBENCH_VERSION=1.0.20
 readonly PBM_VERSION=2.9.1-1
 readonly MGODATAGEN_VERSION=0.11.2
-# Base of every systemd image except MySQL 5.7, PSMDB and the KDC; Oracle Linux 9 only (ARCHITECTURE.md).
+# Base of every systemd image except MySQL 5.7, PSMDB, the KDC and EMPTY; Oracle Linux 9 only (ARCHITECTURE.md).
 readonly BASE_OS=${BASE_OS:-oraclelinux:9}
+# Operations for MongoDB installs only onto Ubuntu or Rocky Linux nodes.
+readonly ROCKY_IMAGE=rockylinux/rockylinux:9
 
 # DIR is images/<DIR> unless absolute.
 # Usage: build_image NAME:TAG DIR [DOCKER_BUILD_ARGS...]
@@ -74,6 +76,11 @@ build_haproxy_image() {
   build_image haproxy:latest haproxy --build-arg "BASE_OS=$BASE_OS"
 }
 
+build_empty_image() {
+  [[ $1 == latest ]] || die "EMPTY has no prebaked image '$1'; use latest."
+  build_image empty:latest empty --build-arg "ROCKY_IMAGE=$ROCKY_IMAGE"
+}
+
 # The KDC the PSMDB replica set compose file runs as kerberos/local.
 build_kerberos_image() {
   [[ $1 == latest ]] || die "Kerberos has no prebaked image '$1'; use latest."
@@ -123,7 +130,7 @@ image_tags() {
       done
       return
       ;;
-    haproxy | kerberos) echo latest; return ;;
+    haproxy | kerberos | empty) echo latest; return ;;
     external) echo "$EXTERNAL_TAG"; return ;;
     *) die "No prebaked image for '$1'." ;;
   esac

@@ -272,7 +272,7 @@ stub_prebaked_docker() {
 @test "every build passes every ARG its Dockerfile declares, for every published tag" {
   local engine tag call dockerfile arg
   stub_prebaked_docker
-  for engine in ps mysql pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql; do
+  for engine in ps mysql pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql empty; do
     for tag in $(image_tags "$engine"); do
       : >"$DOCKER_CALLS"
       "build_${engine//-/_}_image" "$tag"
@@ -674,4 +674,24 @@ stub_prebaked_docker() {
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
   grep -Eq '^exec haproxy_pmm pmm-admin add haproxy --listen-port=42100 --environment=haproxy haproxy_pmm_service_[0-9]+$' "$DOCKER_CALLS"
   grep -q '^exec --detach haproxy_pmm sh -c while true; do curl -s http://127.0.0.1:42100/' "$DOCKER_CALLS"
+}
+
+@test "EMPTY starts privileged Rocky Linux nodes, each named in PMM as it resolves on pmm-qa" {
+  stub_prebaked_docker
+  SHARD_NAME=extra-shard
+  parse_database_spec 'empty,NODES_COUNT=3'
+  dispatch_setup
+
+  [[ $(grep -c '^run --detach --name empty-pmm-[123] ' "$DOCKER_CALLS") -eq 3 ]]
+  grep -q -- '^run --detach --name empty-pmm-2 --hostname empty-pmm-2 --label pmm-qa.engine=empty --network pmm-qa --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --privileged pmm-qa/empty:latest$' "$DOCKER_CALLS"
+  grep -q -- 'pmm-agent setup .* empty-pmm-3 container empty-pmm-3$' "$DOCKER_CALLS"
+  [[ $(grep -c 'pmm-admin add' "$DOCKER_CALLS") -eq 0 ]]
+}
+
+@test "EMPTY refuses a NODES_COUNT that is not a positive integer" {
+  stub_prebaked_docker
+  parse_database_spec 'empty,NODES_COUNT=0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"EMPTY NODES_COUNT must be a positive integer (got '0')."* ]]
+  [[ $(grep -c '^run ' "$DOCKER_CALLS") -eq 0 ]]
 }
