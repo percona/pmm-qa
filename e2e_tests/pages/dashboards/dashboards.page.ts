@@ -48,6 +48,9 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    graphTooltipButton: (buttonName: string) =>
+      this.elements.graphTooltip.getByRole('button', { name: buttonName }),
+    graphTooltipLink: (linkName: string) => this.elements.graphTooltip.getByRole('link', { name: linkName }),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -58,11 +61,23 @@ export default class Dashboards extends BasePage {
       this.builders.panelContentByExactName(panelName).locator('canvas'),
     panelContentByExactName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
+    panelFocusedPointByName: (panelName: string) =>
+      this.builders.panelPlotByName(panelName).locator('.u-cursor-pt:not(.u-off)').first(),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelLegendHeaders: (panelName: string) => this.builders.panelByExactName(panelName).locator('table th'),
+    panelLegendRow: (panelName: string, seriesName: string) =>
+      this.builders
+        .panelByExactName(panelName)
+        .getByTitle(seriesName, { exact: true })
+        .locator('xpath=ancestor::tr'),
+    panelLegendSeriesNames: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator('table tbody tr td:first-child'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    panelPlotByName: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('.u-over'),
     removeSelectedVariableValue: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -89,6 +104,7 @@ export default class Dashboards extends BasePage {
     annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
     collapseRow: this.grafanaIframe().getByLabel('Collapse row'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
+    graphTooltip: this.grafanaIframe().locator('div:has(> [data-testid="data-testid viz-tooltip-wrapper"])'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     imageRendererPluginInfo: this.grafanaIframe().getByTestId('data-testid Alert info'),
     imageRendererPluginLink: this.grafanaIframe().getByTestId('data-testid Alert info').getByRole('link'),
@@ -103,11 +119,13 @@ export default class Dashboards extends BasePage {
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
+    rowTitles: this.grafanaIframe().locator('[data-testid^="data-testid dashboard-row-title-"]'),
     slowQueriesCount: this.builders.panelContentByExactName('Slow queries').getByText(/^\d+$/),
     summaryFingerprint: this.grafanaIframe().getByTestId('pt-summary-fingerprint'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+    timePickerOpenButton: this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
     variableOptions: this.grafanaIframe().getByTestId('data-testid Select option'),
   };
   inputs = {};
@@ -213,6 +231,27 @@ export default class Dashboards extends BasePage {
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
 
+  // Reads a legend calc such as "2.18K ops/s" as a number, scaled by its SI prefix.
+  getLegendCalc = async (panelName: string, seriesName: string, calc = 'Mean'): Promise<number> => {
+    const headers = (await this.builders.panelLegendHeaders(panelName).allTextContents()).map((text) =>
+      text.trim(),
+    );
+    const column = headers.indexOf(calc);
+
+    if (column < 0) throw new Error(`${panelName} legend has no ${calc} column: ${headers.join(', ')}`);
+
+    const text =
+      (await this.builders.panelLegendRow(panelName, seriesName).locator('td').nth(column).textContent()) ??
+      '';
+    const [, value, prefix = ''] = /([\d.]+)\s*([KMBT]?)/.exec(text) ?? [];
+
+    if (value === undefined) throw new Error(`${panelName} ${seriesName} ${calc} is not a number: "${text}"`);
+
+    return (
+      parseFloat(value) * { '': 1, B: 1e9, K: 1e3, M: 1e6, T: 1e12 }[prefix as '' | 'B' | 'K' | 'M' | 'T']
+    );
+  };
+
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
     // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
@@ -281,6 +320,24 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  // The data link opens a new tab, but this page object drives `page`, so the tab's URL is reopened there.
+  openGraphTooltipLink = async (linkName: string, expectedUrl: RegExp) => {
+    await pmmTest.step(`Open ${linkName} from the graph tooltip`, async () => {
+      const popupPromise = this.page.waitForEvent('popup');
+
+      await this.builders.graphTooltipLink(linkName).click();
+
+      const popup = await popupPromise;
+
+      await expect(popup).toHaveURL(expectedUrl, { timeout: Timeouts.THIRTY_SECONDS });
+
+      const url = popup.url();
+
+      await popup.close();
+      await this.page.goto(url);
+    });
+  };
+
   openPanelMenu = async (panelName: string) => {
     await pmmTest.step(`Open ${panelName} panel menu`, async () => {
       await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
@@ -295,6 +352,37 @@ export default class Dashboards extends BasePage {
     await pmmTest.step(`Hover over Share and click on Share link menu item`, async () => {
       await this.builders.panelMenuItemByName('Share').hover();
       await this.builders.panelMenuItemByName('Share link').click();
+    });
+  };
+
+  // Grafana pins a graph tooltip only on a click right at a series point (closestSeriesIdx in
+  // TooltipPlugin2): hover up the plot until uPlot draws the point, then click on the point.
+  pinGraphTooltip = async (panelName: string) => {
+    await pmmTest.step(`Pin the ${panelName} graph tooltip`, async () => {
+      const plot = this.builders.panelPlotByName(panelName);
+      const focusedPoint = this.builders.panelFocusedPointByName(panelName);
+
+      await plot.scrollIntoViewIfNeeded();
+
+      const plotBox = await plot.boundingBox();
+
+      if (!plotBox) throw new Error(`${panelName} graph is not rendered`);
+
+      for (let y = plotBox.height - 1; y > 0 && !(await focusedPoint.isVisible()); y -= 5) {
+        await plot.hover({ position: { x: plotBox.width * 0.75, y } });
+      }
+
+      const pointBox = (await focusedPoint.isVisible()) ? await focusedPoint.boundingBox() : null;
+
+      if (!pointBox) throw new Error(`${panelName} graph has no series point to pin`);
+
+      // A point at zero is centred on the plot's bottom edge, where the x axis would take the click.
+      await plot.click({
+        position: {
+          x: pointBox.x + pointBox.width / 2 - plotBox.x,
+          y: Math.min(pointBox.y + pointBox.height / 2 - plotBox.y, plotBox.height - 1),
+        },
+      });
     });
   };
 
@@ -340,6 +428,47 @@ export default class Dashboards extends BasePage {
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
+  };
+
+  verifyLegendCalcIsSum = async (
+    panelName: string,
+    addendPanelNames: string[],
+    seriesName: string,
+    tolerance = 0.05,
+    calc = 'Mean',
+  ) => {
+    await pmmTest.step(
+      `Verify the ${panelName} ${calc} of ${seriesName} is about ${addendPanelNames.join(' plus ')}`,
+      async () => {
+        const total = await this.getLegendCalc(panelName, seriesName, calc);
+        const addends: number[] = [];
+
+        for (const addendPanelName of addendPanelNames) {
+          addends.push(await this.getLegendCalc(addendPanelName, seriesName, calc));
+        }
+
+        const sum = addends.reduce((accumulator, addend) => accumulator + addend, 0);
+
+        expect(total, `${panelName} ${calc} of ${seriesName}`).toBeGreaterThan(0);
+        expect(
+          Math.abs(total - sum),
+          `${panelName} ${calc} ${total} vs ${addendPanelNames.map((name, i) => `${name} ${addends[i]}`).join(' + ')}`,
+        ).toBeLessThanOrEqual(total * tolerance);
+      },
+    );
+  };
+
+  // Legend rows follow the Mean sort, so compare the series as a set.
+  verifyLegendSeries = async (panelName: string, expectedSeries: string[]) => {
+    await expect
+      .poll(
+        async () =>
+          (await this.builders.panelLegendSeriesNames(panelName).allTextContents())
+            .map((text) => text.trim())
+            .sort(),
+        { message: `${panelName} legend series`, timeout: Timeouts.THIRTY_SECONDS },
+      )
+      .toEqual([...expectedSeries].sort());
   };
 
   verifyMetricsPresent = async (
@@ -482,6 +611,23 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPinnedGraphTooltip = async (expectedTexts: (RegExp | string)[], linkNames: string[] = []) => {
+    await pmmTest.step('Verify the pinned graph tooltip', async () => {
+      await expect(this.elements.graphTooltip).toBeVisible();
+
+      for (const text of expectedTexts) {
+        await expect(this.elements.graphTooltip).toContainText(text);
+      }
+
+      for (const linkName of linkNames) {
+        await expect(this.builders.graphTooltipLink(linkName)).toBeVisible();
+      }
+
+      await expect(this.builders.graphTooltipButton('Add annotation')).toBeVisible();
+      await expect(this.builders.graphTooltipButton('Close')).toBeVisible();
+    });
+  };
+
   verifyRowMetricsPresent = async (
     rowName: string,
     expectedMetrics: GrafanaPanel[],
@@ -525,6 +671,17 @@ export default class Dashboards extends BasePage {
     expect
       .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
       .toHaveLength(0);
+  };
+
+  // Rows mount one by one after the dashboard loads.
+  verifyRowTitles = async (titlePattern: RegExp, expectedTitles: string[]) => {
+    await expect
+      .poll(
+        async () =>
+          (await this.elements.rowTitles.filter({ hasText: titlePattern }).allTextContents()).sort(),
+        { timeout: Timeouts.THIRTY_SECONDS },
+      )
+      .toEqual([...expectedTitles].sort());
   };
 
   verifySlowQueriesPanel = async (timeFrame: string) => {

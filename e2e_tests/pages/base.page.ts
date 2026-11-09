@@ -10,7 +10,8 @@ export type DropdownName =
   | 'Node Namegroup'
   | 'Cluster'
   | 'Node'
-  | 'Replication Set';
+  | 'Replication Set'
+  | 'Shard / Replica Set';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;

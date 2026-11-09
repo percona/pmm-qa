@@ -1,8 +1,17 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import { DropdownName } from '@pages/base.page';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MongodbShardedClusterSummary implements DashboardInterface {
   url = 'graph/d/mongodb-cluster-summary/mongodb-sharded-cluster-summary';
+  perShardMetrics: GrafanaPanel[] = [
+    { name: 'Operations Per Shard', type: 'timeSeries' },
+    { name: 'Reads Per Shard', type: 'timeSeries' },
+    { name: 'Writes Per Shard', type: 'timeSeries' },
+    { name: 'Documents Scanned Per Shard', type: 'timeSeries' },
+    { name: 'Query Targeting Per Shard', type: 'timeSeries' },
+  ];
+  shardFilter: DropdownName = 'Shard / Replica Set';
 
   metrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): GrafanaPanel[] => [
     { name: 'Config Servers', type: 'polyStat' },
@@ -53,4 +62,6 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
   noDataMetrics = (serviceNames: string[]): string[] => [
     ...serviceNames.map((name): string => `Oplog GB/Hour - ${name}`),
   ];
+
+  replSetSummaryLinkName = (shardName: string) => `MongoDB ReplSet Summary - ${shardName}`;
 }
