@@ -3698,16 +3698,19 @@
       "link": "https://github.com/percona/pmm-qa/pull/1744",
       "by": "Investigator routine",
       "at": "2026-11-09T03:38:37Z"
+    },
+    {
+      "suites": [
+        "E2E Tests"
+      ],
+      "verdict": "unstable",
+      "summary": "@pmm-psmdb-sharding-integration (amd64): pmm-framework setup died after 17 s with 'createbucket Error unauthorized: authentication required' while pulling the minio images, before any test ran. Both images (pgsty/minio:RELEASE.2026-08-04T00-00-00Z and pgsty/mc:RELEASE.2026-09-16T00-00-00Z) are public and still on Docker Hub, and the ARM64 shard pulled them fine the same night, so this was a transient registry-auth error. The in-place re-run set up cleanly and passed 3 tests.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/42540208244/job/128955123921",
+      "by": "Investigator routine",
+      "at": "2026-11-09T03:38:52Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-09T02:54:48Z",
-      "suites": [
-        "E2E Tests"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-11-09T02:54:48Z",
