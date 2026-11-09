@@ -3,6 +3,7 @@ import {
   currentQuerySource,
   QuerySource,
   qanAgentTypes,
+  qanInstances,
   querySourceChanges,
   serviceQanSources,
 } from '@helpers/serviceQan.helper';
@@ -11,24 +12,31 @@ import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 for (const serviceQan of serviceQanSources) {
-  const { cleanup, name, serviceRegex, sources } = serviceQan;
+  const { cleanup, name, restoreState, saveState, serviceRegex, sources } = serviceQan;
   const offered: QuerySource[] = ['none', ...sources.map(({ value }) => value)];
 
   pmmTest.describe(`Edit service query source | ${name}`, () => {
     let service: GetService;
     let original: QuerySource;
     let container: string;
+    let savedState: string | undefined;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = currentQuerySource(serviceQan, service);
       container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(service.node_id));
+      savedState =
+        saveState &&
+        cliHelper.execSilent(saveState(container, credentials)).assertSuccess().getStdOutLines().at(-1);
     });
 
     // A recreated QAN agent starts with the server's default QAN settings.
     pmmTest.afterEach(async ({ api, cliHelper, credentials }) => {
       if (cleanup) cliHelper.execSilent(cleanup(container, credentials)).assertSuccess();
+      if (restoreState && savedState) {
+        cliHelper.execSilent(restoreState(container, credentials, savedState)).assertSuccess();
+      }
 
       const current = currentQuerySource(
         serviceQan,
@@ -126,4 +134,60 @@ for (const { name, serviceRegex } of [
       await expect(editServicePage.elements.qanSection).toBeHidden();
     },
   );
+}
+
+for (const instance of qanInstances) {
+  const { agentType, hostServiceRegex, name, querySource, serviceName, serviceType } = instance;
+
+  pmmTest.describe(`Edit service query source on a database of its own | ${name}`, () => {
+    let container: string;
+
+    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+      await grafanaHelper.authorize();
+
+      const host = await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex);
+
+      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(host.node_id));
+      cliHelper.removeService(container, serviceType, serviceName);
+      cliHelper.execSilent(instance.stop(container));
+      cliHelper.execSilent(instance.start(container)).assertSuccess();
+      cliHelper.execSilent(instance.register(container)).assertSuccess();
+    });
+
+    pmmTest.afterEach(async ({ cliHelper }) => {
+      cliHelper.removeService(container, serviceType, serviceName);
+      cliHelper.execSilent(instance.stop(container)).assertSuccess();
+    });
+
+    pmmTest(
+      `PMM-15674 - Verify QAN data reaches PMM Server after switching ${name} to ${querySource} @inventory`,
+      async ({ api, clickHouseHelper, cliHelper, editServicePage, page }) => {
+        const service = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
+
+        await editServicePage.open(service.service_id);
+        await expect(editServicePage.builders.querySourceOption('none')).toBeChecked();
+        await editServicePage.editQuerySource(querySource);
+
+        const response = await editServicePage.saveChanges(service.service_id, false, true);
+
+        expect(response.status(), await response.text()).toEqual(200);
+        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+        await expect
+          .poll(
+            async () =>
+              (await api.inventoryApi.getServiceById(service.service_id)).agents.some(
+                ({ agent_type }) => agent_type === agentType,
+              ),
+            { message: `${serviceName} has a ${agentType}`, timeout: Timeouts.THIRTY_SECONDS },
+          )
+          .toBe(true);
+
+        const { agent_id } = await api.inventoryApi.getServiceExporter(service.service_id, agentType);
+
+        await clickHouseHelper.waitForQanRowsByAgent('pmm-server', agent_id, () =>
+          cliHelper.execSilent(instance.workload(container)).assertSuccess(),
+        );
+      },
+    );
+  });
 }

@@ -237,7 +237,8 @@ export const serviceOptionsSettings: ServiceOptions[] = [
       {
         agentTypes: ['mongodb_exporter'],
         change: 'authentication_mechanism',
-        edit: (original) => (original === 'SCRAM-SHA-256' ? 'SCRAM-SHA-1' : 'SCRAM-SHA-256'),
+        // pmm-framework's mongod allows only SCRAM-SHA-1 and GSSAPI, so the switch is to and from the default.
+        edit: (original) => (original === 'SCRAM-SHA-1' ? '' : 'SCRAM-SHA-1'),
         field: 'authenticationMechanism',
         label: 'authentication mechanism',
         read: ({ mongo_db_options }) => mongo_db_options?.authentication_mechanism ?? '',
