@@ -78,7 +78,7 @@ case $engine in
     # What Operations for MongoDB checks a node for before it scans or installs.
     boot --privileged
     docker exec probe sh -ceu '. /etc/os-release; [ "$ID" = rocky ]
-      python3 -m venv /tmp/venv && ss -V && sudo -V >/dev/null && ! command -v mongod'
+      python3 -m venv /tmp/venv && ss -V && sudo -n true && ! command -v mongod'
     ;;
   kerberos)
     docker run --rm --entrypoint sh "$image" -c 'command -v krb5kdc && command -v kadmin.local && command -v kdb5_util'

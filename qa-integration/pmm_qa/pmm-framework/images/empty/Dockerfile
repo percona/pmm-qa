@@ -15,6 +15,14 @@ RUN set -eux; \
     python3 -m venv /tmp/venv-check; \
     rm -rf /tmp/venv-check
 
+# Install MongoDB runs every step as `sudo bash`. On an AppArmor host such as
+# Ubuntu 24.04, the host's unix-chkpwd profile also confines the container's
+# unix_chkpwd, which then cannot read /etc/shadow, so PAM's account check fails
+# sudo even for root. Root needs no password, so skip that check.
+RUN printf 'Defaults !pam_acct_mgmt\n' >/etc/sudoers.d/pmm-qa; \
+    chmod 0440 /etc/sudoers.d/pmm-qa; \
+    visudo -cq
+
 # --privileged shows the host's ttys, where getty can fail and fail the boot.
 RUN systemctl mask getty.target
 
