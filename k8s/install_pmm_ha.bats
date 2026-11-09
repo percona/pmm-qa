@@ -44,40 +44,10 @@ setup() {
     [[ "$output" == *"--chart-dir is not supported with --install-method argocd"* ]]
 }
 
-@test "argocd refuses --chart-version" {
-    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --chart-version 1.8.0
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"--chart-version is not supported with --install-method argocd"* ]]
-}
-
-@test "argocd refuses --deps-chart-version" {
-    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --deps-chart-version 1.2.0
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"--deps-chart-version is not supported with --install-method argocd"* ]]
-}
-
 @test "argocd refuses --pmm-secret-from" {
     run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --pmm-secret-from pmm
     [ "$status" -eq 1 ]
     [[ "$output" == *"--pmm-secret-from is not supported with --install-method argocd"* ]]
-}
-
-@test "argocd refuses a missing --chart-branch" {
-    run "$SCRIPT" --install-method argocd --platform eks
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"--chart-branch latest is not supported with --install-method argocd"* ]]
-}
-
-@test "argocd refuses --chart-branch latest" {
-    run "$SCRIPT" --install-method argocd --platform eks --chart-branch latest
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"--chart-branch latest is not supported with --install-method argocd"* ]]
-}
-
-@test "argocd refuses --deps-chart-branch latest" {
-    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --deps-chart-branch latest
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"--deps-chart-branch latest is not supported with --install-method argocd"* ]]
 }
 
 @test "a different --deps-chart-branch needs a --chart-branch that is a branch" {
@@ -217,6 +187,14 @@ EOF
 #!/bin/bash
 echo "helm $*" >> "$FAKE/calls"
 [ "$1" != "list" ] || echo '[{"name":"x","chart":"from-helm-list-1.0.0"}]'
+if [ "$1 $2" = "search repo" ]; then
+    case "$*" in
+        *"--version 9.9.9"*) echo '[]' ;;
+        *"--version "*) all="$*"; v="${all#*--version }"; echo "[{\"name\":\"$3\",\"version\":\"${v%% *}\"}]" ;;
+        *"percona/pmm-ha-dependencies"*) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0"}]' ;;
+        *) echo '[{"name":"percona/pmm-ha","version":"1.8.0"},{"name":"percona/pmm-ha-dependencies","version":"1.2.0"}]' ;;
+    esac
+fi
 exit 0
 EOF
     cat > "$FAKE/bin/git" <<'EOF'
@@ -350,4 +328,79 @@ argocd_install() {
     refute grep -q "^install_method=\|^argocd" "$SUMMARY_FILE"
     grep -q "^postgres_password=." "$SUMMARY_FILE"
     grep -qx "chart=from-helm-list-1.0.0" "$SUMMARY_FILE"
+}
+
+released_render() {
+    fake_cluster
+    ARGOCD_PRINT_MANIFESTS=1 run "$SCRIPT" --platform eks --install-method argocd \
+        --image perconalab/pmm-server:3-dev-latest "$@"
+}
+
+@test "argocd print mode with no chart branch renders the released charts" {
+    released_render
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"repoURL: https://percona.github.io/percona-helm-charts/"* ]]
+    [[ "$output" == *"chart: pmm-ha"$'\n'"    targetRevision: 1.8.0"* ]]
+    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: 1.2.0"* ]]
+    [[ "$output" != *"path: charts/"* ]]
+}
+
+@test "argocd print mode pins --chart-version" {
+    released_render --chart-version 1.6.1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"targetRevision: 1.6.1"* ]]
+    [[ "$output" == *"targetRevision: 1.2.0"* ]]
+}
+
+@test "a chart version is refused with a chart branch" {
+    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --chart-version 1.8.0
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--chart-version applies to the released chart only"* ]]
+}
+
+@test "a deps chart version is refused with a deps chart branch" {
+    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --deps-chart-version 1.2.0
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--deps-chart-version applies to the released chart only"* ]]
+}
+
+@test "an unpublished chart version fails before any cluster change" {
+    fake_cluster
+    run "$SCRIPT" --platform eks --install-method argocd --image perconalab/pmm-server:3-dev-latest \
+        --chart-version 9.9.9
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"pmm-ha 9.9.9 is not published"* ]]
+    refute grep -q "apply" "$FAKE/calls"
+}
+
+@test "argocd print mode with mixed sources renders a Helm repository and a Git source" {
+    released_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: 1.2.0"* ]]
+    [[ "$output" == *"repoURL: https://github.com/KrisBuytaert/percona-helm-charts.git"$'\n'"    targetRevision: PMM-15826-pmm-ha-gitops"$'\n'"    path: charts/pmm-ha"$'\n'* ]]
+}
+
+@test "argocd print mode allows the Helm repository in the AppProject" {
+    released_render
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"sourceRepos:"$'\n'"    - 'https://percona.github.io/percona-helm-charts/'"$'\n'"  destinations:"* ]]
+    released_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops
+    [[ "$output" == *"    - 'https://github.com/KrisBuytaert/percona-helm-charts.git'"$'\n'"    - 'https://percona.github.io/percona-helm-charts/'"$'\n'"  destinations:"* ]]
+}
+
+@test "argocd install writes the chart source keys" {
+    fake_cluster
+    run "$SCRIPT" --platform eks --install-method argocd --image perconalab/pmm-server:3-dev-latest \
+        --clone-dir "$BATS_TEST_TMPDIR/clones"
+    echo "$output"
+    [ "$status" -eq 0 ]
+    call_line "helm pull percona/pmm-ha-dependencies --version 1.2.0 --untar"
+    grep -qx "chart_source=released" "$SUMMARY_FILE"
+    grep -qx "chart_version=1.8.0" "$SUMMARY_FILE"
+    grep -qx "deps_chart_source=released" "$SUMMARY_FILE"
+    grep -qx "deps_chart_version=1.2.0" "$SUMMARY_FILE"
+    pulled="$(sed -n 's/^helm pull .* --untardir //p' "$FAKE/calls")"
+    [ -n "$pulled" ]
+    grep -qxF "deps_chart_dir=$pulled/pmm-ha-dependencies" "$SUMMARY_FILE"
+    refute grep -q "^git clone" "$FAKE/calls"
 }
