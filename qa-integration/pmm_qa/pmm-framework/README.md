@@ -106,6 +106,10 @@ qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database empty,NODES_COUNT=3
 ```
 
+Rerunning it on the same PMM Server replaces the nodes. PMM Extensions keeps the
+replaced ones for two inventory syncs, and until then Install MongoDB can
+register its services against them, so wait for those syncs before installing.
+
 Names and option keys are case-insensitive. Supported setup keys are:
 
 - `PS`, `MYSQL`, `SSL_MYSQL`, `PXC`
