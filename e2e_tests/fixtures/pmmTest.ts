@@ -191,15 +191,13 @@ const pmmTest = base.extend<{
 
     await use(mongoDbHelper);
   },
-  mySqlDbHelper: async ({}, use) => {
-    // Defaults match the QA framework ps setup (host port 3317 -> sandbox 3307,
-    // dbdeployer msandbox credentials); override via env for local environments.
+  mySqlDbHelper: async ({ credentials }, use) => {
     const mySqlDbHelper = new MySQLHelper({
-      database: process.env.MYSQL_DATABASE || 'test',
-      host: process.env.MYSQL_HOST || '127.0.0.1',
-      password: process.env.MYSQL_PASSWORD || 'msandbox',
-      port: Number(process.env.MYSQL_PORT) || 3_317,
-      username: process.env.MYSQL_USER || 'msandbox',
+      database: 'mysql',
+      host: '127.0.0.1',
+      password: credentials.perconaServer.password,
+      port: 3_306,
+      username: credentials.perconaServer.username,
     });
 
     await use(mySqlDbHelper);

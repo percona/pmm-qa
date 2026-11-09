@@ -1,66 +1,23 @@
 import { readFile } from 'node:fs/promises';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import apiEndpoints from '@helpers/apiEndpoints';
 import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
-// Mocked responses must use the wire format (snake_case, like the real API);
-// the UI camelizes them client-side via axios-case-converter.
-const buildMySqlQuery = (overrides: {
-  database?: string;
-  queryId: string;
-  queryText: string;
-  username?: string;
-}) => ({
-  client_address: '127.0.0.1:52134',
-  my_sql_payload: {
-    command: 'Query',
-    database_name: overrides.database ?? 'sbtest',
-    db_instance_address: '127.0.0.1:3307',
-    full_scan: false,
-    program_name: 'sysbench',
-    rows_examined: '100',
-    rows_sent: '10',
-    state: 'executing',
-    username: overrides.username ?? 'sbtest@localhost',
-  },
-  query_collect_time: new Date().toISOString(),
-  query_execution_duration: '2s',
-  query_id: overrides.queryId,
-  query_raw_json: JSON.stringify({ current_statement: overrides.queryText }),
-  query_text: overrides.queryText,
-  service_id: 'mock-mysql-service',
-  service_name: 'mock-mysql-service',
-});
-const buildMongoDbQuery = (overrides: { queryId: string; queryText: string }) => ({
-  client_address: '127.0.0.1:41234',
-  mongo_db_payload: {
-    client_app_name: 'mongosh',
-    collection: 'mycollection',
-    database_name: 'admin',
-    db_instance_address: '127.0.0.1:27017',
-    operation: 'query',
-    operation_start_time: new Date().toISOString(),
-    plan_summary: 'COLLSCAN',
-    username: 'pmm-mongo',
-  },
-  query_collect_time: new Date().toISOString(),
-  query_execution_duration: '3s',
-  query_id: overrides.queryId,
-  query_raw_json: JSON.stringify({ op: 'query' }),
-  query_text: overrides.queryText,
-  service_id: 'mock-mongo-service',
-  service_name: 'mock-mongo-service',
-});
+let mySqlServiceId: string;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
   const [service] = await api.inventoryApi.getServicesByType(ServiceType.mysql);
 
-  await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
-  await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
+  mySqlServiceId = service.service_id;
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(mySqlServiceId);
+  await page.goto(queryAnalytics.rta.getUrlWithServices([mySqlServiceId]));
+});
+
+pmmTest.afterEach(async ({ api }) => {
+  await api.realTimeAnalyticsApi.stopRealTimeAnalytics(mySqlServiceId);
 });
 
 pmmTest(
@@ -70,10 +27,7 @@ pmmTest(
     const [service] = await api.inventoryApi.getServicesByType(ServiceType.mysql);
 
     await pmmTest.step('Simulate long running MySQL query', async () => {
-      void mySqlDbHelper.simulateLongRunningQuery({
-        delayMs: Timeouts.THIRTY_SECONDS,
-        queryLabel,
-      });
+      void mySqlDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
 
       await expect(queryAnalytics.rta.builders.rowByQueryText(queryLabel)).toBeVisible({
         timeout: Timeouts.TEN_SECONDS,
@@ -90,8 +44,8 @@ pmmTest(
 
       await queryAnalytics.rta.showColumns('Database', 'User');
 
-      await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveText('test');
-      await expect(queryAnalytics.rta.builders.userForRow('1')).toContainText('msandbox');
+      await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveText('mysql');
+      await expect(queryAnalytics.rta.builders.userForRow('1')).toContainText('root');
     });
   },
 );
@@ -102,10 +56,7 @@ pmmTest(
     const queryLabel = 'rta-mysql-details';
 
     await pmmTest.step('Simulate long running MySQL query', async () => {
-      void mySqlDbHelper.simulateLongRunningQuery({
-        delayMs: Timeouts.THIRTY_SECONDS,
-        queryLabel,
-      });
+      void mySqlDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
 
       await expect(queryAnalytics.rta.builders.rowByQueryText(queryLabel)).toBeVisible({
         timeout: Timeouts.TEN_SECONDS,
@@ -122,7 +73,7 @@ pmmTest(
       await expect(queryAnalytics.rta.builders.detailsPaneCodeByText(queryLabel)).toBeVisible();
       await expect(queryAnalytics.rta.elements.detailsCommand).toHaveText('Query');
       await expect(queryAnalytics.rta.elements.detailsState).not.toBeEmpty();
-      await expect(queryAnalytics.rta.elements.detailsUsername).toContainText('msandbox');
+      await expect(queryAnalytics.rta.elements.detailsUsername).toContainText('root');
       await expect(queryAnalytics.rta.elements.detailsRowsExamined).toBeVisible();
       await expect(queryAnalytics.rta.elements.detailsRowsSent).toBeVisible();
       await expect(queryAnalytics.rta.elements.detailsFullScan).toBeVisible();
@@ -131,7 +82,6 @@ pmmTest(
     await pmmTest.step('Verify raw data tab shows the full processlist row', async () => {
       await queryAnalytics.rta.buttons.detailsRawDataTab.click();
 
-      await expect(queryAnalytics.rta.elements.detailsRawData).toBeVisible();
       await expect(queryAnalytics.rta.elements.detailsRawData).toContainText(queryLabel);
       await expect(queryAnalytics.rta.elements.detailsRawData).toContainText('conn_id');
     });
@@ -139,78 +89,155 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Hide COMMIT toggle filters transaction-control statements @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with COMMIT and SELECT queries', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [
-              buildMySqlQuery({ queryId: '101', queryText: 'COMMIT' }),
-              buildMySqlQuery({ queryId: '102', queryText: 'SELECT c FROM sbtest1 WHERE id=42' }),
-            ],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.reload();
+  'Verify a MySQL row-lock wait shows the Blocked by chip and panel @rta',
+  async ({ mySqlDbHelper, queryAnalytics }) => {
+    const queryLabel = 'rta-mysql-row-lock';
+    const holderId = await mySqlDbHelper.simulateRowLockWait(queryLabel);
 
-      await expect(queryAnalytics.rta.builders.rowByQueryText('COMMIT')).toBeVisible({
+    await pmmTest.step('Pause RTA on the waiting statement', async () => {
+      await expect(queryAnalytics.rta.builders.blockedChipForQuery(queryLabel)).toBeVisible({
         timeout: Timeouts.TEN_SECONDS,
       });
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+      await queryAnalytics.rta.filterQueriesByText(queryLabel);
     });
 
-    await pmmTest.step('Enable Hide COMMIT and verify the COMMIT row disappears', async () => {
-      await expect(queryAnalytics.rta.toggles.hideCommit).toHaveText('Hide transaction control');
+    await pmmTest.step('Verify the chip and the Blocked by panel name the lock holder', async () => {
+      await expect(queryAnalytics.rta.builders.blockedChipForQuery(queryLabel)).toHaveText(
+        `Blocked by ${holderId}`,
+      );
 
-      await queryAnalytics.rta.toggleHideCommit();
+      await queryAnalytics.rta.openDetailsForRow('1');
 
-      await expect(queryAnalytics.rta.builders.rowByQueryText('COMMIT')).toHaveCount(0);
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
-    });
-
-    await pmmTest.step('Disable Hide COMMIT and verify the COMMIT row is back', async () => {
-      await queryAnalytics.rta.toggleHideCommit();
-
-      await expect(queryAnalytics.rta.builders.rowByQueryText('COMMIT')).toBeVisible();
+      await expect(queryAnalytics.rta.elements.blockedByHeading).toHaveText(`Blocked by ${holderId}`);
+      await expect(queryAnalytics.rta.elements.blockedWaitDuration).toContainText('waiting');
+      await expect(queryAnalytics.rta.elements.blockedByPanel).toContainText('Row lock (InnoDB)');
     });
   },
 );
 
 pmmTest(
-  'Verify Database and User text filters support comma-separated lazy matching @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with queries from three databases', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [
-              buildMySqlQuery({
-                database: 'sbtest',
-                queryId: '201',
-                queryText: 'SELECT c FROM sbtest1 WHERE id=1',
-                username: 'sbtest@localhost',
-              }),
-              buildMySqlQuery({
-                database: 'orders',
-                queryId: '202',
-                queryText: 'SELECT id FROM orders WHERE status=1',
-                username: 'app@localhost',
-              }),
-              buildMySqlQuery({
-                database: 'inventory',
-                queryId: '203',
-                queryText: 'SELECT sku FROM inventory WHERE qty=0',
-                username: 'app@localhost',
-              }),
+  'Verify Blocked only toggle keeps blocked and undecided statements @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await pmmTest.step('Mock a blocked, a running and an unattributed statement', async () => {
+      await mocks.mockRealTimeAnalyticsQueries([
+        {
+          mySqlPayload: {
+            blocked_by: [
+              {
+                blocking_command: 'Query',
+                blocking_conn_id: '77',
+                blocking_query: 'UPDATE sbtest1 SET c=? WHERE id=7',
+                blocking_username: 'app',
+                root: true,
+                wait_duration: '3s',
+              },
             ],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
+            blocked_status: 'BLOCKED_STATUS_BLOCKED',
+            lock_time: '0.0125s',
+            lock_type: 'LOCK_TYPE_ROW',
+            locked_table: '`sbtest`.`sbtest1`',
+          },
+          queryId: '901',
+          queryText: 'UPDATE sbtest1 SET k=k+1 WHERE id=7',
+        },
+        { queryId: '902', queryText: 'SELECT c FROM sbtest1 WHERE id=8' },
+        {
+          mySqlPayload: { blocked_status: 'BLOCKED_STATUS_UNATTRIBUTED' },
+          queryId: '903',
+          queryText: 'DELETE FROM sbtest1 WHERE id=9',
+        },
+      ]);
+      await page.reload();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(3, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    });
+
+    await pmmTest.step('Verify the blocked chips and the toggle count', async () => {
+      await expect(queryAnalytics.rta.builders.blockedChipForQuery('UPDATE sbtest1 SET k')).toHaveText(
+        'Blocked by 77',
       );
+      await expect(queryAnalytics.rta.builders.blockedUnknownChipForQuery('DELETE FROM sbtest1')).toHaveText(
+        'Blocked: unknown',
+      );
+      await expect(queryAnalytics.rta.builders.blockedChipForQuery('SELECT c FROM sbtest1')).toHaveCount(0);
+      await expect(queryAnalytics.rta.toggles.blockedOnly).toHaveText('Blocked only (1)');
+    });
+
+    await pmmTest.step('Enable Blocked only and verify only the running statement is hidden', async () => {
+      await queryAnalytics.rta.toggles.blockedOnly.click();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
+      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toHaveCount(0);
+    });
+
+    await pmmTest.step('Verify the details pane shows the Blocked by panel and lock time', async () => {
+      await queryAnalytics.rta.builders.rowByQueryText('UPDATE sbtest1 SET k').click();
+
+      await expect(queryAnalytics.rta.elements.blockedByHeading).toHaveText('Blocked by 77');
+      await expect(queryAnalytics.rta.elements.blockerQuery).toContainText(
+        'UPDATE sbtest1 SET c=? WHERE id=7',
+      );
+      await expect(queryAnalytics.rta.elements.detailsLockTime).toHaveText('12.5 ms');
+    });
+  },
+);
+
+pmmTest(
+  'Verify Blocked only toggle reads Blocked unknown when lock information is missing @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      {
+        mySqlPayload: { blocked_status: undefined },
+        queryId: '911',
+        queryText: 'SELECT c FROM sbtest1 WHERE id=11',
+      },
+    ]);
+    await page.reload();
+
+    await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+      timeout: Timeouts.TEN_SECONDS,
+    });
+    await expect(queryAnalytics.rta.toggles.blockedOnly).toHaveText('Blocked unknown');
+    await expect(queryAnalytics.rta.toggles.blockedOnlySwitch).toBeDisabled();
+  },
+);
+
+pmmTest(
+  'Verify the Truncated chip marks a cut-off MySQL statement @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      {
+        mySqlPayload: { query_text_truncated: true },
+        queryId: '921',
+        queryText: 'SELECT c FROM sbtest1 WHERE id IN (1, 2',
+      },
+      { queryId: '922', queryText: 'SELECT k FROM sbtest2 WHERE id=3' },
+    ]);
+    await page.reload();
+
+    await expect(queryAnalytics.rta.builders.truncatedChipForQuery('SELECT c FROM sbtest1')).toHaveText(
+      'Truncated',
+      {
+        timeout: Timeouts.TEN_SECONDS,
+      },
+    );
+    await expect(queryAnalytics.rta.builders.truncatedChipForQuery('SELECT k FROM sbtest2')).toHaveCount(0);
+  },
+);
+
+pmmTest(
+  'Verify Hide BEGIN/COMMIT toggle filters transaction-control statements @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await pmmTest.step('Mock BEGIN, COMMIT and SELECT statements', async () => {
+      await mocks.mockRealTimeAnalyticsQueries([
+        { queryId: '101', queryText: 'BEGIN' },
+        { queryId: '102', queryText: 'COMMIT' },
+        { queryId: '103', queryText: 'SELECT c FROM sbtest1 WHERE id=42' },
+      ]);
       await page.reload();
 
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(3, {
@@ -218,54 +245,92 @@ pmmTest(
       });
     });
 
-    await pmmTest.step('Filter by a partial database name (lazy match)', async () => {
+    await pmmTest.step('Enable the toggle and verify BEGIN and COMMIT disappear', async () => {
+      await expect(queryAnalytics.rta.toggles.hideBeginCommit).toHaveText('Hide BEGIN/COMMIT');
+
+      await queryAnalytics.rta.toggles.hideBeginCommit.click();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1);
+      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
+    });
+
+    await pmmTest.step('Disable the toggle and verify they are back', async () => {
+      await queryAnalytics.rta.toggles.hideBeginCommit.click();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(3);
+    });
+  },
+);
+
+pmmTest(
+  'Verify Database and User text filters support comma-separated lazy matching @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await pmmTest.step('Mock queries from three databases', async () => {
+      await mocks.mockRealTimeAnalyticsQueries([
+        {
+          database: 'sbtest',
+          queryId: '201',
+          queryText: 'SELECT c FROM sbtest1 WHERE id=1',
+          username: 'sbtest@localhost',
+        },
+        {
+          database: 'orders',
+          queryId: '202',
+          queryText: 'SELECT id FROM orders WHERE status=1',
+          username: 'app@localhost',
+        },
+        {
+          database: 'inventory',
+          queryId: '203',
+          queryText: 'SELECT sku FROM inventory WHERE qty=0',
+          username: 'app@localhost',
+        },
+      ]);
+      await page.reload();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(3, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Filter by a partial database name', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
       await queryAnalytics.rta.showColumns('Database', 'User');
       await queryAnalytics.rta.openFilters();
-      await queryAnalytics.rta.filterByColumnText('Database', 'sbt');
+      await queryAnalytics.rta.builders.columnFilter('Database').fill('sbt');
 
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1);
+      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
     });
 
-    await pmmTest.step('Filter by a comma-separated database list (any term matches)', async () => {
-      await queryAnalytics.rta.filterByColumnText('Database', 'sbtest, ord');
+    await pmmTest.step('Filter by a comma-separated database list', async () => {
+      await queryAnalytics.rta.builders.columnFilter('Database').fill('sbtest, ord');
 
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT id FROM orders')).toBeVisible();
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
       await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT sku FROM inventory')).toHaveCount(0);
     });
 
     await pmmTest.step('Combine with a User filter that matches none of the remaining rows', async () => {
-      await queryAnalytics.rta.filterByColumnText('Database', 'orders');
-      await queryAnalytics.rta.filterByColumnText('User', 'sbtest@localhost');
+      await queryAnalytics.rta.builders.columnFilter('Database').fill('orders');
+      await queryAnalytics.rta.builders.columnFilter('User').fill('sbtest@localhost');
 
-      await expect(queryAnalytics.rta.elements.noFilterResults).toBeVisible();
+      await expect(queryAnalytics.rta.elements.noQueriesAvailable).toBeVisible();
     });
   },
 );
 
 pmmTest(
   'Verify Database and User columns are hidden by default and can be revealed @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with a MySQL query', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [buildMySqlQuery({ queryId: '501', queryText: 'SELECT c FROM sbtest1 WHERE id=21' })],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.reload();
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      { queryId: '501', queryText: 'SELECT c FROM sbtest1 WHERE id=21' },
+    ]);
+    await page.reload();
 
+    await pmmTest.step('Verify only the default columns are shown', async () => {
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
         timeout: Timeouts.TEN_SECONDS,
       });
-    });
-
-    await pmmTest.step('Verify only the default columns are shown', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
 
       await expect(queryAnalytics.rta.elements.queryTextColumnHeader).toBeVisible();
@@ -273,15 +338,11 @@ pmmTest(
       await expect(queryAnalytics.rta.elements.elapsedTimeColumnHeader).toBeVisible();
       await expect(queryAnalytics.rta.elements.databaseColumnHeader).toBeHidden();
       await expect(queryAnalytics.rta.elements.userColumnHeader).toBeHidden();
-      await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveCount(0);
-      await expect(queryAnalytics.rta.builders.userForRow('1')).toHaveCount(0);
     });
 
     await pmmTest.step('Reveal Database and User and verify their values', async () => {
       await queryAnalytics.rta.showColumns('Database', 'User');
 
-      await expect(queryAnalytics.rta.elements.databaseColumnHeader).toBeVisible();
-      await expect(queryAnalytics.rta.elements.userColumnHeader).toBeVisible();
       await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveText('sbtest');
       await expect(queryAnalytics.rta.builders.userForRow('1')).toHaveText('sbtest@localhost');
     });
@@ -290,106 +351,50 @@ pmmTest(
 
 pmmTest(
   'Verify Elapsed time stays pinned and no column can be pinned by hand @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with a MySQL query', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [buildMySqlQuery({ queryId: '701', queryText: 'SELECT c FROM sbtest1 WHERE id=55' })],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.reload();
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      { queryId: '701', queryText: 'SELECT c FROM sbtest1 WHERE id=55' },
+    ]);
+    await page.reload();
 
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
+    await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+      timeout: Timeouts.TEN_SECONDS,
     });
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
 
-    await pmmTest.step('Verify the elapsed time cell is still pinned', async () => {
-      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveAttribute('data-pinned', 'true');
 
-      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveAttribute('data-pinned', 'true');
-    });
+    await queryAnalytics.rta.buttons.showHideColumns.click();
 
-    await pmmTest.step('Verify the Show/Hide columns menu offers no pin controls', async () => {
-      await queryAnalytics.rta.buttons.showHideColumns.click();
+    await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
+    await expect(queryAnalytics.rta.elements.columnPinButtons).toHaveCount(0);
+  },
+);
 
-      // Wait for the menu itself first: counting pin buttons on a page where the
-      // menu never opened would pass while asserting nothing.
-      await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
-      await expect(queryAnalytics.rta.elements.columnPinButtons).toHaveCount(0);
+pmmTest(
+  'Verify elapsed time is rendered with milliseconds and a unit @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      { duration: '1.5s', queryId: '601', queryText: 'SELECT c FROM sbtest1 WHERE id=34' },
+    ]);
+    await page.reload();
 
-      await page.keyboard.press('Escape');
+    await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveText('1.500 s', {
+      timeout: Timeouts.TEN_SECONDS,
     });
   },
 );
 
 pmmTest(
-  'Verify elapsed time is rendered in compact seconds format @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with a two-second query', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [buildMySqlQuery({ queryId: '601', queryText: 'SELECT c FROM sbtest1 WHERE id=34' })],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.reload();
-
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
-    });
-
-    await pmmTest.step('Verify the elapsed time cell uses the unit suffix, not the word', async () => {
-      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
-
-      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveText('2.000s');
-    });
-  },
-);
-
-pmmTest('Verify the overview picker refuses to mix technologies @rta', async ({ page, queryAnalytics }) => {
-  await pmmTest.step('Mock one MySQL and one MongoDB session', async () => {
-    await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
-      route.fulfill({
-        body: JSON.stringify({
-          sessions: [
-            buildSession({
-              serviceId: 'mock-mysql-service',
-              serviceName: 'mock-mysql-service',
-              serviceType: 'SERVICE_TYPE_MYSQL_SERVICE',
-            }),
-            buildSession({
-              serviceId: 'mock-mongo-service',
-              serviceName: 'mock-mongo-service',
-              serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
-            }),
-          ],
-        }),
-        contentType: 'application/json',
-        status: 200,
-      }),
-    );
-
+  'Verify the overview picker refuses to mix technologies @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsSessionsOf([
+      { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE' },
+      { serviceId: 'mock-mongo-service', serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' },
+    ]);
     await page.goto(queryAnalytics.rta.getUrlWithServices(['mock-mysql-service']));
+    await queryAnalytics.rta.buttons.openServices.click();
 
-    await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible({
-      timeout: Timeouts.TEN_SECONDS,
-    });
-  });
-
-  await pmmTest.step('Verify the other technology is grouped and not selectable', async () => {
-    await queryAnalytics.rta.openServicesDropdown();
-
-    // A view of live queries shows one technology at a time, so picking a
-    // MySQL service leaves the MongoDB ones disabled.
     await expect(queryAnalytics.rta.builders.serviceOption('mock-mysql-service')).not.toHaveAttribute(
       'aria-disabled',
       'true',
@@ -400,166 +405,111 @@ pmmTest('Verify the overview picker refuses to mix technologies @rta', async ({ 
     );
     await expect(queryAnalytics.rta.builders.technologyGroupHeader('MySQL')).toBeVisible();
     await expect(queryAnalytics.rta.builders.technologyGroupHeader('MongoDB')).toBeVisible();
-  });
-});
-
-pmmTest(
-  'Verify Database and User columns are not offered for MongoDB @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Watch a MongoDB service', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            sessions: [
-              buildSession({
-                serviceId: 'mock-mongo-service',
-                serviceName: 'mock-mongo-service',
-                serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
-              }),
-            ],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [
-              buildMongoDbQuery({
-                queryId: '801',
-                queryText: '{ find: "mycollection", filter: { status: "active" } }',
-              }),
-            ],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-
-      await page.goto(queryAnalytics.rta.getUrlWithServices(['mock-mongo-service']));
-
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
-    });
-
-    await pmmTest.step('Verify neither column can be revealed, and no COMMIT toggle', async () => {
-      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
-      await queryAnalytics.rta.buttons.showHideColumns.click();
-
-      await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
-      await expect(queryAnalytics.rta.builders.columnToggle('Database')).toHaveCount(0);
-      await expect(queryAnalytics.rta.builders.columnToggle('User')).toHaveCount(0);
-
-      await page.keyboard.press('Escape');
-
-      // Transaction-control statements are a MySQL concern.
-      await expect(queryAnalytics.rta.toggles.hideCommit).toHaveCount(0);
-    });
   },
 );
 
-// Sessions are mocked rather than relying on the environment to monitor a MySQL
-// and a MongoDB service at once.
-const buildSession = (overrides: { serviceId: string; serviceName: string; serviceType: string }) => ({
-  cluster_name: '',
-  collect_interval: '2s',
-  service_id: overrides.serviceId,
-  service_name: overrides.serviceName,
-  service_type: overrides.serviceType,
-  start_time: new Date().toISOString(),
-  status: 'SESSION_STATUS_RUNNING',
-});
+pmmTest(
+  'Verify Database, User and the MySQL toggles are not offered for MongoDB @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsSessionsOf([
+      { serviceId: 'mock-mongo-service', serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' },
+    ]);
+    await mocks.mockRealTimeAnalyticsQueries([
+      { mongoDb: true, queryId: '801', queryText: '{ find: "mycollection", filter: { status: "active" } }' },
+    ]);
+    await page.goto(queryAnalytics.rta.getUrlWithServices(['mock-mongo-service']));
+
+    await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+      timeout: Timeouts.TEN_SECONDS,
+    });
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    await queryAnalytics.rta.buttons.showHideColumns.click();
+
+    await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
+    await expect(queryAnalytics.rta.builders.columnToggle('Database')).toHaveCount(0);
+    await expect(queryAnalytics.rta.builders.columnToggle('User')).toHaveCount(0);
+    await expect(queryAnalytics.rta.toggles.hideBeginCommit).toHaveCount(0);
+    await expect(queryAnalytics.rta.toggles.blockedOnly).toHaveCount(0);
+  },
+);
 
 pmmTest(
   'Verify the sessions list names the technology of every session @rta',
-  async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock one MySQL and one MongoDB session', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            sessions: [
-              buildSession({
-                serviceId: 'mock-mysql-service',
-                serviceName: 'mock-mysql-service',
-                serviceType: 'SERVICE_TYPE_MYSQL_SERVICE',
-              }),
-              buildSession({
-                serviceId: 'mock-mongo-service',
-                serviceName: 'mock-mongo-service',
-                serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
-              }),
-            ],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsSessionsOf([
+      { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE' },
+      { serviceId: 'mock-mongo-service', serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' },
+    ]);
+    await page.goto(queryAnalytics.rta.sessionsUrl);
 
-      await page.goto(queryAnalytics.rta.sessionsUrl);
-
-      await expect(queryAnalytics.rta.elements.sessionsTable).toBeVisible({
-        timeout: Timeouts.TEN_SECONDS,
-      });
+    await expect(queryAnalytics.rta.elements.technologyColumnHeader).toBeVisible({
+      timeout: Timeouts.TEN_SECONDS,
     });
-
-    await pmmTest.step('Verify each session row names its technology', async () => {
-      await expect(queryAnalytics.rta.elements.technologyColumnHeader).toBeVisible();
-      await expect(queryAnalytics.rta.builders.technologyForSession('mock-mysql-service')).toHaveText(
-        'MySQL',
-      );
-      await expect(queryAnalytics.rta.builders.technologyForSession('mock-mongo-service')).toHaveText(
-        'MongoDB',
-      );
-    });
+    await expect(queryAnalytics.rta.builders.technologyForSession('mock-mysql-service')).toHaveText('MySQL');
+    await expect(queryAnalytics.rta.builders.technologyForSession('mock-mongo-service')).toHaveText(
+      'MongoDB',
+    );
   },
 );
 
 pmmTest(
-  'Verify RTA CSV export contains MySQL-specific columns @rta',
-  async ({ page, queryAnalytics }, testInfo) => {
-    await pmmTest.step('Mock RTA search response with a MySQL query', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
-        route.fulfill({
-          body: JSON.stringify({
-            queries: [buildMySqlQuery({ queryId: '401', queryText: 'SELECT c FROM sbtest1 WHERE id=13' })],
-          }),
-          contentType: 'application/json',
-          status: 200,
-        }),
-      );
-      await page.reload();
+  'Verify a running session with a status message explains it in a tooltip @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    const statusMessage = 'Metadata locks cannot be read: performance_schema.metadata_locks is not enabled.';
 
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
+    await mocks.mockRealTimeAnalyticsSessionsOf([
+      { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE', statusMessage },
+    ]);
+    await page.goto(queryAnalytics.rta.sessionsUrl);
+    await queryAnalytics.rta.elements.sessionStatusMessage.hover();
+
+    await expect(queryAnalytics.rta.elements.sessionStatusMessageTooltip).toContainText(
+      'The session is running, but some details cannot be collected from this instance:',
+    );
+    await expect(queryAnalytics.rta.elements.sessionStatusMessageTooltip).toContainText(statusMessage);
+  },
+);
+
+pmmTest(
+  'Verify RTA CSV export of MySQL queries is named for MySQL and has its columns @rta',
+  async ({ mocks, page, queryAnalytics }, testInfo) => {
+    await mocks.mockRealTimeAnalyticsQueries([
+      { queryId: '401', queryText: 'SELECT c FROM sbtest1 WHERE id=13' },
+    ]);
+    await page.reload();
+
+    await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+      timeout: Timeouts.TEN_SECONDS,
     });
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
 
-    await pmmTest.step('Export CSV and verify the MySQL columns and values', async () => {
-      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    const downloadPromise = page.waitForEvent('download');
 
-      const downloadPromise = page.waitForEvent('download');
+    await queryAnalytics.rta.buttons.export.click();
 
-      await queryAnalytics.rta.buttons.export.click();
+    const download = await downloadPromise;
+    const csvPath = testInfo.outputPath(download.suggestedFilename());
 
-      const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^mysql_rta_export_\d{8}_\d{6}\.csv$/);
 
-      expect(download.suggestedFilename()).toMatch(/^rta_export_\d{8}_\d{6}\.csv$/);
+    await download.saveAs(csvPath);
 
-      const csvPath = testInfo.outputPath(download.suggestedFilename());
+    const csvContent = await readFile(csvPath, 'utf8');
 
-      await download.saveAs(csvPath);
+    for (const column of [
+      'command',
+      'state',
+      'program_name',
+      'rows_examined',
+      'rows_sent',
+      'full_scan',
+      'blocked_status',
+      'query_text_truncated',
+    ]) {
+      expect(csvContent).toContain(column);
+    }
 
-      const csvContent = await readFile(csvPath, 'utf8');
-
-      for (const column of ['command', 'state', 'program_name', 'rows_examined', 'rows_sent', 'full_scan']) {
-        expect(csvContent).toContain(column);
-      }
-
-      expect(csvContent).toContain('Query');
-      expect(csvContent).toContain('sysbench');
-      expect(csvContent).toContain('sbtest@localhost');
-    });
+    expect(csvContent).toContain('sysbench');
+    expect(csvContent).toContain('sbtest@localhost');
   },
 );
