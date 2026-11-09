@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 const { I } = inject();
 
 class ExplorePage {
@@ -10,6 +12,7 @@ class ExplorePage {
       sqlBuilder: locate('//textarea'),
       runQueryButton: locate('//span[text()="Run Query"]//parent::button'),
       resultRow: locate('//div[@role="row"]'),
+      sqlEditorContent: locate('//div[contains(@class, "view-lines")]'),
 
     };
     this.messages = {
@@ -26,6 +29,26 @@ class ExplorePage {
     I.waitForVisible(this.elements.dataSourcePicker);
     I.fillField(this.elements.dataSourcePicker, dataSourceName);
     I.pressKey('Enter');
+  }
+
+  // Monaco's textarea holds only the slice of the document around the cursor, so
+  // clearField empties the slice and fillField splices into the datasource default.
+  async setSqlQuery(query) {
+    I.waitForVisible(this.elements.sqlBuilder, 30);
+    I.wait(2);
+    I.appendField(this.elements.sqlBuilder, '');
+    I.pressKey(['Control', 'a']);
+    I.pressKey('Backspace');
+    I.type(query);
+    I.pressKey('Escape');
+
+    const [editorContent = ''] = await I.grabTextFromAll(this.elements.sqlEditorContent);
+
+    assert.strictEqual(
+      editorContent.replace(/\s+/g, ' ').trim(),
+      query,
+      'The SQL editor does not hold the query under test',
+    );
   }
 }
 

@@ -3,11 +3,23 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-if (!process.env.PMM_SERVER_LATEST?.trim()) {
-  throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
-}
+// Resolved per test rather than at module scope: Playwright imports every spec
+// during collection, so a top-level throw here fails unrelated --grep runs too.
+const getExpectedVersion = () => {
+  const version = process.env.PMM_SERVER_LATEST?.trim();
 
-const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
+  if (!version) {
+    throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
+  }
+
+  return version;
+};
+
+let expectedVersion: string;
+
+pmmTest.beforeAll(async () => {
+  expectedVersion = getExpectedVersion();
+});
 
 pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);

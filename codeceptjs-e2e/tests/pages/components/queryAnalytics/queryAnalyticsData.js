@@ -150,11 +150,20 @@ class QueryAnalyticsData {
     return await I.grabAttributeFrom(this.buttons.lastPage, 'title');
   }
 
+  // QAN searches as you type on a ~300ms debounce
+  // Remove when bug is addressed: https://perconadev.atlassian.net/browse/PMM-15336
+  waitForSearchReload() {
+    I.wait(1);
+    queryAnalyticsPage.waitForLoaded();
+    I.waitForVisible(this.fields.searchBy, 30);
+  }
+
   searchByValue(value, refresh = false) {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
     I.clearField(this.fields.searchBy);
+    this.waitForSearchReload();
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
     I.pressKey('Enter');
@@ -165,6 +174,7 @@ class QueryAnalyticsData {
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
     I.clearField(this.fields.searchBy);
+    this.waitForSearchReload();
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
   }

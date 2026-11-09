@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 import { waitForApiReady, waitForPmmServerToBeReady } from '@helpers/custom-assertions';
@@ -12,7 +12,7 @@ const removeList: string[] = [];
 test.describe(
   'PMM Server CLI tests for Docker Environment Variables',
   { tag: '@server-only' },
-  async () => {
+  () => {
     test.afterEach(async () => {
       while (stopList.length > 0) {
         await (
@@ -31,7 +31,7 @@ test.describe(
      */
     test('PMM-T224 run docker container with a invalid value for a environment variable PMM_DATA_RETENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 81:8080 -p 446:8443 --name PMM-T224 -e PMM_DATA_RETENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -57,7 +57,7 @@ test.describe(
      */
     test('PMM-T225 run docker container with a unexpected environment variable PMM_DATA_TENTION=48', async ({}) => {
       await cli.exec(
-        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 ${DOCKER_IMAGE}`,
+        `docker run -d -p 82:80 -p 447:8443 --name PMM-T225 -e PMM_DATA_TENTION=48 -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       let out: ExecReturn;
 
@@ -118,10 +118,11 @@ test.describe(
      * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats#L53
      */
     test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy', async ({}) => {
+      test.setTimeout(300_000);
       const containerName = 'PMM-T526';
       const httpPort = 84;
       await cli.exec(
-        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} ${DOCKER_IMAGE}`,
+        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} -e PMM_ENABLE_TELEMETRY=0 ${DOCKER_IMAGE}`,
       );
       stopList.push(containerName);
       removeList.push(containerName);
@@ -133,12 +134,101 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
+      // The image's healthcheck grace is 90s plus 3 failed 4s probes (PMM-15361).
+      await test.step(`Waiting for ${containerName} to be unhealthy(150 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 45_000 });
+        }).toPass({ intervals: [2_000], timeout: 150_000 });
+      });
+    });
+
+    test.describe('PMM_ENABLE_NOMAD without PMM_PUBLIC_ADDRESS warning', () => {
+      test.describe.configure({ timeout: 180_000 });
+
+      const nomadWarning = 'PMM_ENABLE_NOMAD is set but PMM_PUBLIC_ADDRESS is not; '
+        + 'Nomad will not start unless a public address is configured in PMM settings';
+
+      const startPmmServer = async (containerName: string, envFlags: string) => {
+        await (
+          await cli.exec(`docker run -d --name ${containerName} ${envFlags} ${DOCKER_IMAGE}`)
+        ).assertSuccess();
+        stopList.push(containerName);
+        removeList.push(containerName);
+        // pmm-managed logs "Setup completed." after UpdateSettingsFromEnv, so both warning channels are final by then.
+        await expect(async () => {
+          await (
+            await cli.exec(`docker exec ${containerName} grep -q "Setup completed." /srv/logs/pmm-managed.log`)
+          ).assertSuccess();
+        }).toPass({ intervals: [2_000], timeout: 120_000 });
+      };
+
+      const nomadServerStatus = async (containerName: string) => (
+        await cli.exec(`docker exec ${containerName} supervisorctl status nomad-server 2>&1`)
+      ).stdout;
+
+      const verifyNoNomadWarning = async (containerName: string) => {
+        await (
+          await cli.exec(`docker logs ${containerName} 2>&1 | grep -F "${nomadWarning}"`)
+        ).exitCodeEquals(1);
+        await (
+          await cli.exec(`docker exec ${containerName} grep -F "${nomadWarning}" /srv/logs/pmm-managed.log`)
+        ).exitCodeEquals(1);
+      };
+
+      test('PMM-T2328 - Verify warning is logged when PMM_ENABLE_NOMAD is set without PMM_PUBLIC_ADDRESS', async () => {
+        const containerName = 'pmm-nomad-without-public-address';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1');
+
+        const initWarning = await cli.exec(
+          `docker logs ${containerName} 2>&1 | grep -F "Configuration warning: ${nomadWarning}"`,
+        );
+
+        await initWarning.assertSuccess();
+        expect(initWarning.getStdOutLines(), 'Verify pmm-managed-init logs the warning once').toHaveLength(1);
+        await (
+          await cli.exec(
+            `docker exec ${containerName} grep -F 'level=warning msg="${nomadWarning}"' /srv/logs/pmm-managed.log`,
+          )
+        ).assertSuccess();
+
+        await expect.poll(
+          async () => (await cli.exec(`docker inspect -f '{{.State.Health.Status}}' ${containerName}`)).stdout.trim(),
+          {
+            message: 'Verify PMM Server still becomes healthy',
+            intervals: [2_000],
+            timeout: 60_000,
+          },
+        ).toBe('healthy');
+
+        const nomadStatus = await nomadServerStatus(containerName);
+
+        expect(nomadStatus, 'Verify supervisorctl reported nomad-server status').toContain('nomad-server');
+        expect(nomadStatus, 'Verify Nomad server is not running').not.toContain('RUNNING');
+      });
+
+      test('PMM-T2329 - Verify no warning and Nomad is running when PMM_ENABLE_NOMAD and PMM_PUBLIC_ADDRESS are set', async () => {
+        const containerName = 'pmm-nomad-with-public-address';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=1 -e PMM_PUBLIC_ADDRESS=1.2.3.4:8443');
+        await verifyNoNomadWarning(containerName);
+        await expect.poll(
+          async () => nomadServerStatus(containerName),
+          {
+            message: 'Verify Nomad server is running',
+            intervals: [2_000],
+            timeout: 30_000,
+          },
+        ).toContain('RUNNING');
+      });
+
+      test('PMM-T2330 - Verify no warning when PMM_ENABLE_NOMAD is explicitly disabled', async () => {
+        const containerName = 'pmm-nomad-disabled';
+
+        await startPmmServer(containerName, '-e PMM_ENABLE_NOMAD=0');
+        await verifyNoNomadWarning(containerName);
       });
     });
 
@@ -245,7 +335,7 @@ test.describe(
 
       await expect(async () => {
         const output = await cli.exec(
-          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database='system' AND name LIKE '%log%';"`,
+          'docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database=\'system\' AND name LIKE \'%log%\';"',
         );
         await output.assertSuccess();
         expect(

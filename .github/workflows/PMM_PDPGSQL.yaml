@@ -20,7 +20,7 @@ on:
         type: string
       pmm_client_version:
         description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         required: false
         type: string
 
@@ -47,25 +47,26 @@ jobs:
       ADMIN_PASSWORD: 'admin'
       PDPGSQL_VERSION: ${{ inputs.pdpgsql_version || '17' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
     steps:
       - name: Run the PMM Server container
-        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
+        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server -e PMM_ENABLE_TELEMETRY=0 ${{ env.PMM_SERVER_IMAGE }}
 
       - name: Checkout pmm-qa
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pmm_qa_branch || 'main' }}
 
       - name: Export path to qa-integration tree
         working-directory: qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
 
       - name: Setup npm modules for CodeceptJS

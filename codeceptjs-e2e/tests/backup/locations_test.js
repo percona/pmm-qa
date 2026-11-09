@@ -1,4 +1,4 @@
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const { SERVICE_TYPE } = require('../helper/constants');
 
 const { locationsPage, locationsAPI } = inject();

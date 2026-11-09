@@ -7,7 +7,6 @@ require('dotenv').config();
 const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 
 process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 exports.config = {
   output: 'tests/output',
@@ -74,18 +73,15 @@ exports.config = {
     REST: {
       endpoint: process.env.PMM_UI_URL || pmmUrl,
       timeout: 60000,
-      httpsAgent: new Agent({
-        rejectUnauthorized: false,
-      }),
+      onRequest: (request) => {
+        request.httpsAgent = new Agent({ rejectUnauthorized: false, keepAlive: false });
+      },
     },
     Mailosaur: {
       require: 'codeceptjs-mailosaurhelper',
       apiKey: process.env.MAILOSAUR_API_KEY || 'key',
       serverId: process.env.MAILOSAUR_SERVER_ID || 'id',
       timeout: 15000,
-    },
-    DbHelper: {
-      require: 'codeceptjs-dbhelper',
     },
     ChaiWrapper: {
       require: 'codeceptjs-chai',
@@ -117,13 +113,10 @@ exports.config = {
       attribute: 'data-testid',
       showActual: false,
     },
-    tryTo: {
-      enabled: true,
-    },
   },
   mocha: {
     reporterOptions: {
-      'codeceptjs-cli-reporter': {
+      './cli-reporter.cjs': {
         stdout: '-',
         options: {
           verbose: false,

@@ -2,17 +2,17 @@
 
 - This repo has a `.agents` folder which contains workflows and context rules for the LLM to work better with in `pmm-qa` repository.
 - The folder contains:
-    - `workflows/`: Contains workflows for the agent to use.
-    - `mcp.json`: Contains MCP server configurations for the agent.
-    - `README.md`: Contains information about the agent workflows, MCP configurations and how to use them.
+  - `workflows/`: Contains workflows for the agent to use.
+  - `mcp.json`: Contains MCP server configurations for the agent.
+  - `README.md`: Contains information about the agent workflows, MCP configurations and how to use them.
 
 ## Supported Workflows and How to Use Them
 
 - There are 7 workflows in the `workflows/` folder.
 - Each workflow gives LLM a specific set of instructions for a specific task.
 - You can call them directly into the chat using the following commands:
-    - `/` + `workflow name` in antigravity chat (e.g. `/apiIndex`)
-    - `#` + `workflow name` in vscode chat (e.g. `#apiIndex`)
+  - `/` + `workflow name` in antigravity chat (e.g. `/apiIndex`)
+  - `#` + `workflow name` in vscode chat (e.g. `#apiIndex`)
 
 ### List of available workflows
 
@@ -49,6 +49,8 @@
   }
 }
 ```
+
 ## Suggestions
+
 - Use the workflows defined in the `workflows/` folder.
 - Either call individual workflows or use `/workflowIndex` to let the agent pick the right workflow.

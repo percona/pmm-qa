@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "CommonJS",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "outDir": "dist",
     "rootDir": ".",
     "strict": true,
@@ -34,12 +35,21 @@
       "@api/*": [
         "./api/*"
       ],
+      "@testdata/*": [
+        "./testdata/*"
+      ],
       "@valkey": [
         "./pages/dashboards/valkey/index.ts"
       ]
     }
   },
   "include": [
+    "api/**/*.ts",
+    "components/**/*.ts",
+    "fixtures/**/*.ts",
+    "helpers/**/*.ts",
+    "interfaces/**/*.ts",
+    "pages/**/*.ts",
     "tests/**/*.ts",
     "playwright.config.ts"
   ]

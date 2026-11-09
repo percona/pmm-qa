@@ -16,7 +16,7 @@ if (!targetTag) {
 
 const testPattern = 'tests/**/*.{test,spec}.{ts,js}';
 
-function findTestsWithTag(tagExpression) {
+function findTestsWithTag (tagExpression) {
   // Find all test files using glob pattern
   const allTestFiles = glob.sync(testPattern, {
     cwd: process.cwd(),
@@ -34,7 +34,8 @@ function findTestsWithTag(tagExpression) {
     try {
       // Treat as regex pattern
       regex = new RegExp(tagExpression);
-    } catch (err) {
+    }
+    catch (err) {
       console.warn(`Invalid regex pattern "${tagExpression}": ${err.message}`);
       console.warn('Falling back to simple string match');
       regex = null;
@@ -51,7 +52,8 @@ function findTestsWithTag(tagExpression) {
       }
 
       return content.includes(tagExpression);
-    } catch (err) {
+    }
+    catch (err) {
       console.warn(`Could not read test file: ${testFile}`);
 
       return false;
@@ -61,19 +63,20 @@ function findTestsWithTag(tagExpression) {
   return matchingFiles;
 }
 
-function writeToSubsetFile(files) {
+function writeToSubsetFile (files) {
   const relativeFiles = files.map((file) => path.relative(process.cwd(), file));
   const content = relativeFiles.join('\n');
 
   try {
     fs.writeFileSync('test_list.txt', content, 'utf8');
     console.log(`\nResults written to test_list.txt (${files.length} files)`);
-  } catch (err) {
+  }
+  catch (err) {
     console.error('Error writing to test_list.txt:', err.message);
   }
 }
 
-function main() {
+function main () {
   console.log(`Searching for tests with tag: ${targetTag}`);
 
   const matchingFiles = findTestsWithTag(targetTag);
@@ -82,7 +85,8 @@ function main() {
     console.log(`No test files found containing tag: ${targetTag}`);
     // Write empty file
     writeToSubsetFile([]);
-  } else {
+  }
+  else {
     console.log(`Found ${matchingFiles.length} test file(s) with tag "${targetTag}":`);
     matchingFiles.forEach((file) => {
       console.log(`  ${path.relative(process.cwd(), file)}`);

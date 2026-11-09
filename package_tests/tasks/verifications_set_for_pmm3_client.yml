@@ -23,7 +23,7 @@
 
 - name: "Validate 'postgresql_pgstatements_agent' is Running"
   when: '"pg-" in enabled_db | join("") and (mongodb_connection_type | default("")) != "gssapi"'
-  include_tasks: ./verify_exporter_status.yml
+  include_tasks: ./wait_exporter_is_running.yml
   vars:
     process_name: "postgresql_pgstatements_agent"
 

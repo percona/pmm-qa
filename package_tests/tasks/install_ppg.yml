@@ -1,0 +1,103 @@
+- name: Set Facts.
+  set_fact:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"
+    cacheable: true
+
+- debug:
+    msg: "Value of PERCONA_TELEMETRY_URL is : {{ PERCONA_TELEMETRY_URL }}"
+
+- name: Clean dnf
+  become: true
+  command: dnf clean all -y
+  when: ansible_os_family == "RedHat"
+
+- name: Disable dnf postgresql for RHEL8
+  become: true
+  command: dnf module disable postgresql -y
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "8"
+
+- name: install Percona Platform for PostgreSQL deb packages
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: latest
+  vars:
+    v: "{{ pg_version_to_install }}"
+    packages:
+    - percona-postgresql
+    - percona-postgresql-{{ v }}
+    - percona-postgresql-all
+    - percona-postgresql-client
+    - percona-postgresql-client-{{ v }}
+    - percona-postgresql-common
+    - percona-postgresql-contrib
+    - percona-postgresql-doc
+    - percona-postgresql-doc-{{ v }}
+    - percona-postgresql-plperl-{{ v }}
+    - percona-postgresql-plpython3-{{ v }}
+    - percona-postgresql-pltcl-{{ v }}
+    - percona-postgresql-server-dev-{{ v }}
+    - percona-postgresql-server-dev-all
+    - percona-postgresql-{{ v }}-dbgsym
+    - percona-postgresql-client-{{ v }}-dbgsym
+    - percona-postgresql-plperl-{{ v }}-dbgsym
+    - percona-postgresql-plpython3-{{ v }}-dbgsym
+    - percona-postgresql-pltcl-{{ v }}-dbgsym
+    - postgresql-client-common
+    - postgresql-common
+  when: ansible_os_family == "Debian"
+  environment:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"
+
+- name: install Percona Platform for PostgreSQL rpm packages for RHEL
+  yum:
+    name: "{{ packages + (['percona-postgresql-common-dev'] if v == '18' else []) }}"
+    state: latest
+    update_cache: yes
+  vars:
+    v: "{{ pg_version_to_install | string }}"
+    packages:
+      - percona-postgresql-client-common
+      - percona-postgresql-common
+      - percona-postgresql{{ v }}
+      - percona-postgresql{{ v }}-contrib
+      - percona-postgresql{{ v }}-debuginfo
+      - percona-postgresql{{ v }}-devel
+      - percona-postgresql{{ v }}-docs
+      - percona-postgresql{{ v }}-libs
+      - percona-postgresql{{ v }}-llvmjit
+      - percona-postgresql{{ v }}-plpython3
+      - percona-postgresql{{ v }}-plperl
+      - percona-postgresql{{ v }}-pltcl
+      - percona-postgresql{{ v }}-server
+      - percona-postgresql{{ v }}-test
+      - percona-postgresql{{ v }}-contrib-debuginfo
+      - percona-postgresql{{ v }}-debuginfo
+      - percona-postgresql{{ v }}-debugsource
+      - percona-postgresql{{ v }}-devel-debuginfo
+      - percona-postgresql{{ v }}-libs-debuginfo
+      - percona-postgresql{{ v }}-plperl-debuginfo
+      - percona-postgresql{{ v }}-pltcl-debuginfo
+      - percona-postgresql{{ v }}-plpython3-debuginfo
+      - percona-postgresql{{ v }}-server-debuginfo
+  when: ansible_os_family == "RedHat"
+  environment:
+    PERCONA_TELEMETRY_URL: "https://check-dev.percona.com/v1/telemetry/GenericReport"
+
+# Last minor that still shipped server-dev-all; 18 gets common-dev above.
+- name: Determine required PostgreSQL dev package for RHEL
+  set_fact:
+    pg_dev_package: >-
+      {{ 'percona-postgresql-server-dev-all'
+        if (pg_version_to_install | string is version(dev_all_until[pg_version_to_install | string], '<=', strict=True))
+        else 'percona-postgresql-common-dev' }}
+  vars:
+    dev_all_until: {'14': '14.17', '15': '15.12', '16': '16.8', '17': '17.4'}
+  when: ansible_os_family == "RedHat" and pg_version_to_install | string != '18'
+
+- name: Install PostgreSQL dev package on RHEL
+  yum:
+    name: "{{ pg_dev_package }}"
+    state: latest
+    update_cache: yes
+  when: ansible_os_family == "RedHat" and pg_version_to_install | string != '18'

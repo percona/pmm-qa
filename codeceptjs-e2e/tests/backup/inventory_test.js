@@ -1,6 +1,6 @@
 const assert = require('assert');
 const moment = require('moment/moment');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const {
   SERVICE_TYPE,
   gssapi, isOvFAmiJenkinsJob,
@@ -27,6 +27,8 @@ const mongoExtraServiceName2 = 'mongo-extra-2';
 const mongoExtraServiceName3 = 'mongo-extra-3';
 
 let mongoClient;
+
+const replicaSetMembers = ['rs101', 'rs102', 'rs103'];
 
 const mongoConnection = {
   username: 'pmm',
@@ -74,8 +76,6 @@ BeforeSuite(async ({
 
   I.say(`using flags: ${clientCredentialsFlags}`);
 
-
-
   I.say(await I.verifyCommand(`docker exec rs101 pmm-admin add mongodb ${clientCredentialsFlags} --host=${isOvFAmiJenkinsJob ? '127.0.0.1' : 'rs101'} --port=27017 --service-name=${mongoServiceName} --replication-set=rs --cluster=rs`));
   I.say(await I.verifyCommand(`docker exec rs102 pmm-admin add mongodb ${clientCredentialsFlags} --host=${isOvFAmiJenkinsJob ? '127.0.0.1' : 'rs102'} --port=27017 --service-name=${mongoServiceName2} --replication-set=rs --cluster=rs`));
   I.say(await I.verifyCommand(`docker exec rs103 pmm-admin add mongodb ${clientCredentialsFlags} --host=${isOvFAmiJenkinsJob ? '127.0.0.1' : 'rs103'} --port=27017 --service-name=${mongoServiceName3} --replication-set=rs --cluster=rs`));
@@ -93,11 +93,42 @@ Before(async ({
 
   serviceId = service_id;
 
-  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await Promise.all(replicaSetMembers.map(
+    (member) => I.verifyCommand(`docker exec ${member} systemctl start mongod`),
+  ));
 
-  const c = await I.mongoGetCollection('test', 'test');
+  // mongod can take minutes to accept connections again after a restart, and a
+  // client that was connected before it never recovers on its own.
+  /* eslint-disable no-await-in-loop */
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    try {
+      await I.mongoDisconnect();
+      await I.mongoConnect(mongoConnection);
+      const c = await I.mongoGetCollection('test', 'test');
 
-  await c.deleteMany({ number: 2 });
+      await c.deleteMany({ number: 2 });
+      break;
+    } catch (error) {
+      if (attempt === 10) {
+        const logs = await Promise.all(replicaSetMembers.map(async (member) => {
+          const log = await I.verifyCommand(
+            `docker exec ${member} sh -c "`
+            + 'systemctl --no-pager -l status mongod 2>&1 | tail -n 20; '
+            + 'journalctl --no-pager -u mongod -n 40 2>&1; '
+            + 'tail -n 40 /var/log/mongo/mongod.stdout /var/log/mongo/mongod.stderr 2>&1'
+            + `"; docker logs --tail 40 ${member} 2>&1; exit 0`,
+          );
+
+          return `Last 40 lines of ${member} mongod log:\n${log}`;
+        }));
+
+        throw new Error(`${error.message}\n${logs.join('\n')}`);
+      }
+
+      await I.wait(10);
+    }
+  }
+  /* eslint-enable no-await-in-loop */
 
   await I.Authorize();
   await settingsAPI.changeSettings({ backup: true });
@@ -110,7 +141,9 @@ After(async ({ I }) => {
     await mongoClient.close();
   }
 
-  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await Promise.all(replicaSetMembers.map(
+    (member) => I.verifyCommand(`docker exec ${member} systemctl start mongod`),
+  ));
 });
 
 AfterSuite(async ({ I }) => {
@@ -219,6 +252,14 @@ Data(restoreFromDifferentStorageLocationsTests).Scenario(
     const isLogical = current.backupType === 'LOGICAL';
 
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, mongoServiceName);
+
+    const { version: agentVersion } = await inventoryAPI.apiGetPMMAgentInfoByServiceId(service_id);
+
+    if (!isLogical && agentVersion === '3.8.1') {
+      I.say(`Skipping physical restore: pmm-agent ${agentVersion} cannot restart mongod after it (PMM-15163)`);
+
+      return;
+    }
 
     const artifactId = await backupAPI.startBackup(backupName, service_id, currentLocationId, false, isLogical);
 
@@ -414,7 +455,7 @@ Scenario(
     I, backupInventoryPage, backupAPI, inventoryAPI,
   }) => {
     const backupName = 'service_remove_backup';
-    const serviceName = `mongo-service-to-delete-${faker.datatype.number(2)}`;
+    const serviceName = `mongo-service-to-delete-${faker.number.int(2)}`;
 
     I.say(await I.verifyCommand(`docker exec rs101 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs101 --port=27017 --service-name=${serviceName} --replication-set=rs --cluster=rs`));
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, serviceName);
@@ -527,7 +568,7 @@ Scenario(
   async ({
     I, backupInventoryPage, addInstanceAPI,
   }) => {
-    const serviceName = `mongo-binary-test-${faker.datatype.number(2)}`;
+    const serviceName = `mongo-binary-test-${faker.number.int(2)}`;
 
     await addInstanceAPI.addMongodb(serviceName, {
       host: 'rs101',

@@ -4,12 +4,12 @@ import DashboardInterface from '@interfaces/dashboard';
 export default class ValkeyReplicationDashboard implements DashboardInterface {
   url = 'graph/d/valkey-replication/valkey-redis-replication';
   metrics: GrafanaPanel[] = [
-    { name: 'valkey-primary-1-svc-*', type: 'unknown' },
-    { name: 'valkey-primary-2-svc-*', type: 'unknown' },
-    { name: 'valkey-primary-3-svc-*', type: 'unknown' },
-    { name: 'valkey-replica-4-svc-*', type: 'unknown' },
-    { name: 'valkey-replica-5-svc-*', type: 'unknown' },
-    { name: 'valkey-replica-6-svc-*', type: 'unknown' },
+    { name: 'valkey-primary-1-svc', type: 'unknown' },
+    { name: 'valkey-primary-2-svc', type: 'unknown' },
+    { name: 'valkey-primary-3-svc', type: 'unknown' },
+    { name: 'valkey-replica-4-svc', type: 'unknown' },
+    { name: 'valkey-replica-5-svc', type: 'unknown' },
+    { name: 'valkey-replica-6-svc', type: 'unknown' },
     { name: 'All - Replica vs Primary offsets', type: 'unknown' },
     { name: 'Replicas', type: 'unknown' },
     { name: 'Connected Replicas', type: 'unknown' },

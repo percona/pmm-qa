@@ -50,8 +50,17 @@ Scenario('PMM-T1584 - Verify assigning Access role to user @rbac', async ({ I, u
 Scenario(
   'PMM-T1899 - Access Role based on Labels and Check Filtering of Metrics on Dashboard @rbac',
   async ({
-    I, dashboardPage, accessRolesPage, rolesApi,
+    I, dashboardPage, accessRolesPage, rolesApi, grafanaAPI,
   }) => {
+    // The MySQL and PostgreSQL dashboards below carry panels that pin `interval: 5m`,
+    // so on a now-5m range they are only evaluated at 300s wall-clock boundaries. A
+    // service whose first sample landed after the newest boundary renders "No data"
+    // on them until the next one passes, no matter how many samples arrived since.
+    // Wait the metrics out before asserting on what the panels render.
+    await grafanaAPI.waitForMetricAtDashboardStep('min(mysql_global_status_uptime)');
+    await grafanaAPI.waitForMetricAtDashboardStep('sum(mysql_global_variables_innodb_buffer_pool_size)');
+    await grafanaAPI.waitForMetricAtDashboardStep('avg by (node_name) (node_memory_MemTotal_bytes)');
+
     await rolesApi.createRole(psRole);
     await rolesApi.createRole(pgRole);
 
@@ -68,13 +77,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(5);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(5);
 
@@ -84,13 +89,9 @@ Scenario(
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(2);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(3);
 
@@ -113,8 +114,6 @@ Scenario(
       environment: psRole.value,
       from: 'now-1m',
     }));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },

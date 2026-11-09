@@ -1,0 +1,24 @@
+extends: relaxed
+
+rules:
+  # Every line in this repo that runs past 200 is a shell command --
+  # `shell:`/`command:` in a playbook, or a line inside a `run: |` block.
+  # 200 caps the runaway ones without demanding that provisioning commands be
+  # rewrapped; tightening it means reflowing command text, not YAML.
+  line-length:
+    max: 200
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  # Mapping indentation is enforced; sequence style is left to the file,
+  # because the Ansible playbooks put `- name:` at the same level as `tasks:`
+  # and normalising that would reindent every task block in the repo.
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+    check-multi-line-strings: false
+  trailing-spaces: disable
+
+ignore: |
+  node_modules/
+  # Deliberately malformed fixture for the pmm-admin config-file tests.
+  cli/test-data/broken_prometheus.base.yml

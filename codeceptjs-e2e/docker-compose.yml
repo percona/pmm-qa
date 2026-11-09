@@ -18,7 +18,6 @@ services:
   pmm-server:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server
-    platform: linux/amd64
     ports:
       - "80:8080"
       - "443:8443"
@@ -129,8 +128,9 @@ services:
   # it needs for deleting postgres db for test T1087
   postgresremovedefaultdb:
     image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15}
-    command: >
-      psql -Utest -hpostgresnodb -dnot_default_db -c 'DROP DATABASE postgres WITH (FORCE);'
+    entrypoint: ["bash", "/scripts/drop_default_db.sh"]
+    volumes:
+      - ./testdata/docker-db-setup-scripts/drop_default_db.sh:/scripts/drop_default_db.sh:ro
     depends_on:
       postgresnodb:
         condition: service_healthy

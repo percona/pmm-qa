@@ -1,11 +1,11 @@
-import { test } from '@playwright/test';
+import { test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 
 let addMongoHelp: ExecReturn;
 let addPostgreSqlHelp: ExecReturn;
 
-test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, async () => {
+test.describe('PMM Client "--help" validation', { tag: '@help-cli' }, () => {
   test.beforeAll(async ({}) => {
     const result1 = await cli.exec('sudo pmm-admin status');
     await result1.outContains('Running', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');

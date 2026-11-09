@@ -13,6 +13,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 | `templates/` | Jinja templates used by package test tasks. |
 | `scripts/` | Shell scripts used by package and tarball install flows. |
 | `support-files/` | Static support files used by package test tasks. |
+| `docker/` | systemd-capable OS images the GitHub Actions matrix runs the playbooks in, with the databases `docker/database-versions` lists per OS preinstalled from Percona's repositories. |
 
 ## Typical Flow
 
@@ -24,6 +25,7 @@ These tests validate the real PMM Client user path: enable Percona repositories,
 - Install Ansible and make sure `ansible-playbook` is available.
 - Make sure the target host is reachable through your Ansible inventory.
 - Make sure the target PMM Server is available.
+- Install the databases `docker/database-versions` lists for the target's OS: the playbooks expect them, check their versions, start them and add them to PMM, and fail where one is missing or at another version. `docker/install-databases.sh` installs them the way the CI images get them; an OS the file does not list expects none.
 - Set environment variables required by the selected playbook.
 
 Create or export variables before running a playbook:
@@ -38,8 +40,6 @@ Create or export variables before running a playbook:
 | `METRICS_MODE` | `auto` | Metrics mode used by `pmm-admin config`. |
 | `TARBALL_LINK` | unset | PMM Client tarball URL for tarball scenarios. |
 | `OLD_TARBALL_LINK` | unset | Previous tarball URL for tarball upgrade scenarios. |
-| `PS_REPOSITORY` | `release` | Percona Server repository channel. |
-| `PSMDB_REPOSITORY` | `release` | PSMDB repository channel. |
 
 ## Running Tests
 
@@ -108,7 +108,9 @@ yamllint <path>
 
 ## CI Usage
 
-GitHub Actions package workflows call these playbooks through `../.github/workflows/runner-package-test.yml`.
+Every container in these workflows runs on podman; none uses Docker. `pmm3-client_integration_tarball_gssapi` runs in the same matrix, on `ol8` and `ol9` only (it sets up Kerberos with dnf), and `../.github/workflows/gssapi-psmdb-tests-matrix.yml` calls it there. Its mongod authorizes against an LDAP directory at `127.0.0.1:1389`, which the cell starts beside the client, in the client's network namespace; on any other host, provide one there.
+
+`../.github/workflows/pmm3-package-tests-matrix.yml` runs eight playbooks across eight operating systems on amd64, arm64 (the `arch` input) or both, each in a systemd container next to its own PMM Server. arm64 needs a pmm-server image built for arm64, such as `perconalab/pmm-server:3-dev-latest`. The images come from `docker/` and are published to `ghcr.io/percona/pmm-qa/package_tests`, one tag per OS (`package_tests:ol8`, `package_tests:debian13`, ...), by `../.github/workflows/build-package-test-images.yml`: daily, on a push to `main` that changes `docker/`, and whenever it is run by hand. Each OS tag is a multi-arch image built natively for amd64 and arm64, and those tags are the only ones. To test a `docker/` change before it merges, run that workflow by hand on its branch, then the matrix; the next daily build puts `main`'s images back. A failed cell is retried from scratch on a fresh client and PMM Server (the `attempts` input, default 2), so a run reports a failure only when every attempt failed; `../.github/scripts/package-test-cell.sh` runs each attempt. Other workflows can call the matrix with `workflow_call` and the same inputs; the calling job grants `contents: read` and `packages: read`, and a caller outside pmm-qa passes `pmm_qa_ref`, the pmm-qa ref it calls the workflow at.
 
 ## Related Workspaces
 

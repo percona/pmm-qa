@@ -1,5 +1,5 @@
 const { I } = inject();
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const { locateOption } = require('../../helper/locatorHelper');
 
 const artifactCell = (name) => `//tr[td[contains(text(), '${name}')]]`;
@@ -124,7 +124,7 @@ module.exports = {
   },
 
   inputRandomBackupName(length = 10) {
-    const backupName = faker.random.alpha(length);
+    const backupName = faker.string.alpha(length);
 
     I.clearField(this.elements.backupNameInput);
     I.fillField(this.elements.backupNameInput, backupName);

@@ -18,7 +18,7 @@ class MongodbInstancesCompareDashboard {
       'Replica Set',
       'ReplSet State',
       'Connections',
-      'Cursors ',
+      'Cursors',
       'Latency',
       'Scan Ratios',
       'Index Filtering Effectiveness',

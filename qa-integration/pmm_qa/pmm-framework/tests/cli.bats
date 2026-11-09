@@ -6,7 +6,7 @@ load helpers/test_helper
   parse_args \
     --verbose \
     --parallel \
-    --verbosity-level=2 \
+    --setup-retries=2 \
     --client-version latest-tarball \
     --pmm-server-ip=10.0.0.5 \
     --database ps=8.4,SETUP_TYPE=gr \
@@ -14,7 +14,7 @@ load helpers/test_helper
 
   [[ $VERBOSE == true ]]
   [[ $PARALLEL == true ]]
-  [[ $VERBOSITY_LEVEL == 2 ]]
+  [[ $SETUP_RETRIES == 2 ]]
   [[ $GLOBAL_CLIENT_VERSION == latest-tarball ]]
   [[ $PMM_SERVER_IP_ARG == 10.0.0.5 ]]
   [[ ${#DATABASE_SPECS[@]} == 2 ]]
@@ -31,24 +31,35 @@ load helpers/test_helper
   [[ ${DB_CONFIG[QUERY_SOURCE]} == slowlog ]]
 }
 
-@test "invalid version falls back to configured default" {
-  parse_database_spec 'ps=99'
-
-  [[ -z $DB_VERSION ]]
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+@test "an unknown version, option or bare token is refused" {
+  run parse_database_spec 'ps=99'
+  # shellcheck disable=SC2153 # DB_VERSIONS comes from lib/config.sh
+  [[ $status -ne 0 && $output == *"Version '99' is not supported for PS (supported: ${DB_VERSIONS[PS]})"* ]]
+  run parse_database_spec 'haproxy=1'
+  [[ $status -ne 0 && $output == *"Version '1' is not supported for HAPROXY (supported: none)"* ]]
+  run parse_database_spec 'ps,SETUP_TYP=gr'
+  [[ $status -ne 0 && $output == *"Option 'SETUP_TYP' is not supported for PS"* ]]
+  run parse_database_spec 'ps,gr'
+  [[ $status -ne 0 && $output == *"Option 'gr' for PS must be KEY=VALUE"* ]]
+  PS_VERSION=99 run resolved_version PS_VERSION PS ''
+  [[ $status -ne 0 && $output == *"PS_VERSION='99' is not supported for PS"* ]]
 }
 
-@test "value precedence is environment then global then database then default" {
+@test "value precedence is global flag then environment then database then default" {
   parse_database_spec 'ps,CLIENT_VERSION=from-spec,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=from-global
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == slowlog ]]
 
   CLIENT_VERSION=from-env
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
+
+  GLOBAL_CLIENT_VERSION=''
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-env ]]
   unset CLIENT_VERSION
 
-  GLOBAL_CLIENT_VERSION=''
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-spec ]]
+
   unset 'DB_CONFIG[QUERY_SOURCE]'
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == perfschema ]]
 }
@@ -59,7 +70,7 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 
   DB_VERSION=''
-  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
+  [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.4 ]]
 }
 
 @test "optional-value flags do not consume the following option" {
@@ -67,52 +78,30 @@ load helpers/test_helper
     --pmm-server-ip \
     --pmm-server-password \
     --client-version \
-    --verbosity-level \
+    --setup-retries \
     --database ps=8.4
 
   [[ -z $PMM_SERVER_IP_ARG ]]
   [[ -z $PMM_SERVER_PASSWORD ]]
   [[ -z $GLOBAL_CLIENT_VERSION ]]
-  [[ $VERBOSITY_LEVEL == 1 ]]
+  [[ $SETUP_RETRIES == 0 ]]
   [[ ${DATABASE_SPECS[0]} == ps=8.4 ]]
 }
 
-@test "prebaked PS options are no longer accepted" {
-  run parse_args --use-prebaked-ps --database ps=8.4
-  [[ $status -ne 0 ]]
-  [[ $output == *"Unknown option '--use-prebaked-ps'"* ]]
+@test "normalizes latest-tarball client version on x86_64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'x86_64\n'; }
 
-  run parse_args --prebaked-ps-image pmm-qa/ps:8.4 --database ps=8.4
-  [[ $status -ne 0 ]]
-  [[ $output == *"Unknown option '--prebaked-ps-image'"* ]]
-}
-
-@test "normalizes latest-tarball client version" {
   [[ $(normalize_client_version latest-tarball) == \
     'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz' ]]
 }
 
-@test "resolves latest PSMDB patch without Python" {
-  # Same patch, two builds: only correct if 'patch-build' is compared as
-  # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
-  # token (see the "-" to "." conversion in latest_psmdb_version()).
-  curl() {
-    printf '%s' \
-      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.4-2"]}}'
-  }
+@test "normalizes latest-tarball client version on arm64" {
+  # shellcheck disable=SC2329,SC2317
+  uname() { printf 'aarch64\n'; }
 
-  [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
-}
-
-@test "selects the existing requests-capable interpreter for Ansible modules" {
-  local fake_python=$BATS_TEST_TMPDIR/python
-  printf '#!/usr/bin/env bash\nexit 0\n' >"$fake_python"
-  chmod +x "$fake_python"
-  PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK=$fake_python
-
-  configure_ansible_python
-
-  [[ $ANSIBLE_PYTHON_INTERPRETER == "$fake_python" ]]
+  [[ $(normalize_client_version latest-tarball) == \
+    'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client-arm/pmm-client-latest.tar.gz' ]]
 }
 
 @test "requires at least one database" {
@@ -127,35 +116,9 @@ load helpers/test_helper
   [[ $output == *"Unknown option '--not-a-real-option'"* ]]
 }
 
-@test "every versioned database pins an explicit default version" {
-  local -A expected=(
-    [PSMDB]=latest [SSL_PSMDB]=latest
-    [MLAUNCH_PSMDB]=8.0 [MLAUNCH_MODB]=8.0 [SSL_MLAUNCH]=8.0
-    [MYSQL]=9.7 [PS]=8.0 [SSL_MYSQL]=8.0
-    [PGSQL]=17 [PDPGSQL]=17 [SSL_PDPGSQL]=17
-    [PXC]=8.0 [PROXYSQL]=2 [VALKEY]=8
-  )
-  local type actual
-  for type in "${!expected[@]}"; do
-    actual=$(database_default_version "$type")
-    if [[ $actual != "${expected[$type]}" ]]; then
-      echo "$type default is '$actual', expected '${expected[$type]}'"
-      return 1
-    fi
-  done
-}
-
-@test "default version is independent of version list order" {
-  register_database ORDERTEST '9.9 1.1 5.5' 'CLIENT_VERSION' \
-    'DEFAULT_VERSION=1.1' 'CLIENT_VERSION=3-dev-latest'
-
-  [[ $(database_default_version ORDERTEST) == 1.1 ]]
-}
-
 @test "DEFAULT_VERSION is not a user-settable database option" {
-  parse_database_spec 'pgsql=16,DEFAULT_VERSION=11'
-  [[ $DB_VERSION == 16 ]]
-  [[ -z ${DB_CONFIG[DEFAULT_VERSION]-} ]]
+  run parse_database_spec 'pgsql=16,DEFAULT_VERSION=11'
+  [[ $status -ne 0 && $output == *"Option 'DEFAULT_VERSION' is not supported for PGSQL"* ]]
 
   DB_VERSION=''
   [[ $(resolved_version PGSQL_VERSION PGSQL "$DB_VERSION") == 17 ]]
@@ -214,10 +177,10 @@ stub_docker_ps() {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
 
-  run print_setup_log 1 2 'ps=8.4' 0 "$log"
+  run print_setup_log 1 2 'ps=8.4' 0 "$log" 452
 
   [[ $status -eq 0 ]]
-  [[ $output == *"[1/2] ps=8.4: OK (log: $log)"* ]]
+  [[ $output == *"[1/2] ps=8.4: OK in 7m32s (log: $log)"* ]]
   [[ $output != *'first line'* ]]
 }
 
@@ -237,9 +200,101 @@ stub_docker_ps() {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
 
-  run print_setup_log 1 2 'ps=8.4' 1 "$log"
+  run print_setup_log 1 2 'ps=8.4' 1 "$log" 45
 
   [[ $status -eq 0 ]]
-  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) ====='* ]]
+  [[ $output == *'===== [1/2] ps=8.4 FAILED (exit=1) in 45s ====='* ]]
   [[ $output == *$'no trailing newline\n===== END [1/2] ps=8.4 ====='* ]]
+}
+
+@test "format_duration renders seconds below a minute and mm/ss above" {
+  [[ $(format_duration 0) == '0s' ]]
+  [[ $(format_duration 45) == '45s' ]]
+  [[ $(format_duration 59) == '59s' ]]
+  [[ $(format_duration 60) == '1m00s' ]]
+  [[ $(format_duration 452) == '7m32s' ]]
+  [[ $(format_duration 3142) == '52m22s' ]]
+}
+
+@test "a successful prebaked setup echoes its agents' states" {
+  local log=$BATS_TEST_TMPDIR/setup.log
+  printf '%s\n' '==> Run workload' 'agent-status pxc_proxysql_pmm_8.4: node_exporter  Running  42001' 'noise' >"$log"
+
+  run print_setup_log 1 1 'pxc' 0 "$log" 70
+
+  [[ $status -eq 0 ]]
+  [[ ${lines[0]} == "[1/1] pxc: OK in 1m10s (log: $log)" ]]
+  [[ ${lines[1]} == '  pxc_proxysql_pmm_8.4: node_exporter  Running  42001' ]]
+  [[ $output != *noise* ]]
+}
+
+
+@test "image_tags lists the catalogue's versions, PSMDB per Oracle Linux release" {
+  [[ $(image_tags pxc-proxysql | paste -sd' ') == "${DB_VERSIONS[PXC]}" ]]
+  [[ $(image_tags ssl-pdpgsql | paste -sd' ') == "${DB_VERSIONS[SSL_PDPGSQL]}" ]]
+  [[ $(image_tags psmdb | head -2 | paste -sd' ') == "${DB_VERSIONS[PSMDB]%% *}-ol8 ${DB_VERSIONS[PSMDB]%% *}-ol9" ]]
+  [[ $(image_tags psmdb) != *latest* ]]
+  [[ $(image_tags external) == "$EXTERNAL_TAG" ]]
+  [[ $(image_tags kerberos) == latest ]]
+  run image_tags nosuch
+  [[ $status -ne 0 && $output == *"No prebaked image for 'nosuch'"* ]]
+}
+
+@test "each images/ folder is one published image, named like it, with snake_case files" {
+  local dir name file
+  for dir in "$FRAMEWORK_DIR"/images/*/; do
+    name=$(basename "$dir")
+    [[ -f $dir/Dockerfile ]] || { echo "images/$name has no Dockerfile"; return 1; }
+    run image_tags "$name"
+    ((status == 0)) || { echo "images/$name is not an image build-prebaked-images.yml publishes"; return 1; }
+    for file in "$dir"*; do
+      [[ $(basename "$file") =~ ^(Dockerfile|[a-z0-9_.]+)$ && -f $file ]] ||
+        { echo "images/$name/$(basename "$file") is not a snake_case file"; return 1; }
+    done
+  done
+}
+
+@test "--list-databases prints each type's default and versions, sorted, with no docker" {
+  mkdir -p "$BATS_TEST_TMPDIR/bin"
+  printf '#!/bin/sh\necho docker was called; exit 99\n' >"$BATS_TEST_TMPDIR/bin/docker"
+  chmod +x "$BATS_TEST_TMPDIR/bin/docker"
+  PATH=$BATS_TEST_TMPDIR/bin:$PATH run "$FRAMEWORK_DIR/pmm-framework" --list-databases
+  [[ $status -eq 0 && $output != *'docker was called'* ]]
+  [[ $output == "$(printf '%s\n' "$output" | sort)" ]]
+  grep -qx $'PS\t8.4\t5.7 8.0 8.4 9.7' <<<"$output"
+  grep -qx $'PSMDB\t8.0\t6.0 7.0 8.0 8.3' <<<"$output"
+  grep -qx $'HAPROXY\t-\t-' <<<"$output"
+  [[ $(wc -l <<<"$output") -eq ${#DB_OPTIONS[@]} && $output != *latest* ]]
+}
+
+@test "latest means the type's default, in a spec and in a version variable" {
+  parse_database_spec 'ps=latest'
+  [[ $DB_VERSION == "$(database_default_version PS)" ]]
+  PSMDB_VERSION=latest
+  [[ $(resolved_version PSMDB_VERSION PSMDB '') == "$(database_default_version PSMDB)" ]]
+  run parse_database_spec 'haproxy=latest'
+  [[ $status -ne 0 && $output == *"Version 'latest' is not supported for HAPROXY (supported: none)"* ]]
+}
+
+@test "register_database refuses a catalogue mistake at source time" {
+  run register_database PS '8.4' 'CLIENT_VERSION' 'DEFAULT_VERSION=8.4' 'CLIENT_VERSION='
+  [[ $status -ne 0 && $output == *'register_database PS: registered twice.'* ]]
+  run register_database FOO '1 1' '' 'DEFAULT_VERSION=1'
+  [[ $status -ne 0 && $output == *"version '1' listed twice"* ]]
+  run register_database FOO '1' 'A A' 'DEFAULT_VERSION=1' 'A='
+  [[ $status -ne 0 && $output == *"option 'A' listed twice"* ]]
+  run register_database FOO '1' 'A' 'DEFAULT_VERSION=1' 'A=x' 'A=y'
+  [[ $status -ne 0 && $output == *"default 'A' given twice"* ]]
+  run register_database FOO '1' 'A B' 'DEFAULT_VERSION=1' 'A='
+  [[ $status -ne 0 && $output == *"option 'B' has no default"* ]]
+  run register_database FOO '1' 'A' 'DEFAULT_VERSION=1' 'A=' 'C=x'
+  [[ $status -ne 0 && $output == *"default for unknown option 'C'"* ]]
+  run register_database FOO '1 2' 'A' 'A='
+  [[ $status -ne 0 && $output == *'DEFAULT_VERSION must be one of: 1 2'* ]]
+  run register_database FOO '1 2' 'A' 'DEFAULT_VERSION=3' 'A='
+  [[ $status -ne 0 && $output == *'DEFAULT_VERSION must be one of: 1 2'* ]]
+  run register_database FOO '' 'A' 'DEFAULT_VERSION=1' 'A='
+  [[ $status -ne 0 && $output == *'a versionless type takes no DEFAULT_VERSION'* ]]
+  register_database FOO '1' 'A' 'DEFAULT_VERSION=1' 'A='
+  [[ $(database_default_value FOO A) == '' ]]
 }

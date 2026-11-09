@@ -10,6 +10,7 @@ export type GrafanaPanelType =
   | 'custom'
   | 'barTime'
   | 'stateTime'
+  | 'singleStateTime'
   | 'summary'
   | 'unknown'
   | 'empty';

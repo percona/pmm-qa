@@ -1,4 +1,4 @@
-
+#!/usr/bin/env bash
 load "./lib/bats-support/load"  # Load BATS support libraries
 load "./lib/bats-assert/load"   # Load BATS assertions
 
@@ -7,6 +7,7 @@ PMM_CHART_BRANCH=${PMM_CHART_BRANCH:-"latest"}
 PMM_HELM_CHARTS_REPO="https://github.com/percona/percona-helm-charts.git"
 # Default to a unique temp directory; allow override via env.
 PMM_HELM_CHARTS_DIR="${PMM_HELM_CHARTS_DIR:-$(mktemp -d -t percona-helm-charts.XXXXXX)}"
+PMM_TELEMETRY_VALUES="$(dirname "${BASH_SOURCE[0]}")/telemetry-off.values.yaml"
 get_pmm_addr(){
     local node_port=8443
     local node_ip=127.0.0.1
@@ -49,30 +50,32 @@ get_pmm_chart_path() {
 install_pmm_chart() {
     local instance_name="$1"
     shift  # Remove first argument, keep the rest
-    local additional_args="$@"
+    local additional_args=("$@")
 
     setup_pmm_chart_source
-    local chart_path=$(get_pmm_chart_path)
+    local chart_path
+    chart_path=$(get_pmm_chart_path)
 
     echo "Installing PMM chart from: $chart_path"
-    echo "Additional args: $additional_args"
+    echo "Additional args: ${additional_args[*]}"
 
-    helm install "$instance_name" $additional_args "$chart_path"
+    helm install "$instance_name" "${additional_args[@]}" -f "$PMM_TELEMETRY_VALUES" "$chart_path"
 }
 
 # Function to upgrade PMM helm chart with branch support
 upgrade_pmm_chart() {
     local instance_name="$1"
     shift  # Remove first argument, keep the rest
-    local additional_args="$@"
+    local additional_args=("$@")
 
     setup_pmm_chart_source
-    local chart_path=$(get_pmm_chart_path)
+    local chart_path
+    chart_path=$(get_pmm_chart_path)
 
     echo "Upgrading PMM chart from: $chart_path"
-    echo "Additional args: $additional_args"
+    echo "Additional args: ${additional_args[*]}"
 
-    helm upgrade "$instance_name" $additional_args "$chart_path"
+    helm upgrade "$instance_name" "${additional_args[@]}" -f "$PMM_TELEMETRY_VALUES" "$chart_path"
 }
 
 # Function to show PMM chart values with branch support
@@ -80,7 +83,8 @@ show_pmm_chart_values() {
     local additional_args=("$@")
 
     >&2 setup_pmm_chart_source
-    local chart_path=$(get_pmm_chart_path)
+    local chart_path
+    chart_path=$(get_pmm_chart_path)
 
     >&2 echo "Showing values for PMM chart from: $chart_path"
 
@@ -106,7 +110,7 @@ get_pmm_version() {
     # encode pass, as it can have special characters
     encoded_u_p=$(echo -n admin:${admin_pass} | base64)
 
-    echo "curl -k -H 'Authorization: Basic ...' https://"${pmm_address}"/v1/version"
+    echo "curl -k -H 'Authorization: Basic ...' https://${pmm_address}/v1/version"
     # echo admin pass in case there are some issues with it
     echo "pass:${admin_pass}"
 

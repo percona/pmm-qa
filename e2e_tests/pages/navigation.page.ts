@@ -4,7 +4,12 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class LeftNavigation extends BasePage {
-  builders = {};
+  builders = {
+    selectedTimeZone: (timeZone: string): Locator =>
+      this.grafanaIframe().getByRole('region', { name: 'Time zone selection' }).getByText(timeZone),
+    timeZoneOption: (timeZone: string): Locator =>
+      this.grafanaIframe().getByTestId('data-testid Select option').filter({ hasText: timeZone }),
+  };
   buttons: NestedLocatorMap = {
     accounts: {
       changePassword: { locator: this.page.getByTestId('navitem-password-change') },
@@ -115,14 +120,6 @@ export default class LeftNavigation extends BasePage {
       temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
-    perconaadvisors: {
-      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
-      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
-      locator: this.page.getByTestId('navitem-advisors'),
-      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
-      query: { locator: this.page.getByTestId('navitem-advisors-query') },
-      security: { locator: this.page.getByTestId('navitem-advisors-security') },
-    },
     postgresql: {
       ha: {
         patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
@@ -160,10 +157,16 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
+    changeTimeSettingsButton: this.grafanaIframe().getByTestId(
+      'data-testid Time zone picker Change time settings button',
+    ),
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
+    homeMenuItem: this.page.getByTestId('navitem-home-page'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
@@ -173,7 +176,11 @@ export default class LeftNavigation extends BasePage {
     tourMask: this.page.locator('.reactour__mask'),
     tourPopover: this.page.locator('.reactour__popover'),
   };
-  inputs = {};
+  inputs = {
+    timeRangeFrom: this.grafanaIframe().getByTestId('data-testid Time Range from field'),
+    timeRangeTo: this.grafanaIframe().getByTestId('data-testid Time Range to field'),
+    timeZonePicker: this.grafanaIframe().getByRole('combobox', { name: 'Time zone picker' }),
+  };
   messages = {};
 
   getBackgroundColor = (): Promise<string> =>
@@ -198,6 +205,7 @@ export default class LeftNavigation extends BasePage {
     await pmmTest.step(`Select menu item: ${path}`, async () => {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
+      let expandButton: Locator | undefined;
 
       for (const [index, part] of parts.entries()) {
         const item = node[part];
@@ -206,12 +214,13 @@ export default class LeftNavigation extends BasePage {
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
+          expandButton = this.getLocator(item as NestedLocator)
+            ?.locator('xpath=..')
+            .getByRole('button')
+            .first();
+
           if (childLocator && !(await childLocator.isVisible())) {
-            await this.getLocator(item as NestedLocator)
-              ?.locator('xpath=..')
-              .getByRole('button')
-              .first()
-              .click({ timeout: Timeouts.TEN_SECONDS });
+            await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
             await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           }
         }
@@ -233,14 +242,36 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-
       const currentUrl = this.page.url();
+      const href = await locator.getAttribute('href', { timeout: Timeouts.TEN_SECONDS }).catch(() => null);
+      const targetPath = href ? new URL(href, currentUrl).pathname : undefined;
 
-      await locator.click({ timeout: Timeouts.TEN_SECONDS });
-      await this.page
-        .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
-        .catch(Boolean);
+      // The left-nav auto-collapses a submenu after a route change, hiding a
+      // just-verified nested item before the click lands (PMM-T2202 flake).
+      await expect(async () => {
+        if (!(await locator.isVisible())) await expandButton?.click({ timeout: Timeouts.TEN_SECONDS });
+
+        await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
+
+      // A dashboard rewrites its own var-* query params, so "URL changed" alone
+      // can fire before navigation to the clicked link happens.
+      // A prefix link such as home (/graph/) resolves to a canonical /graph/d/
+      // path, so the path must also move off the page that was already open.
+      const currentPath = new URL(currentUrl).pathname;
+
+      await (
+        targetPath
+          ? this.page.waitForURL(
+              (url) =>
+                url.pathname.startsWith(targetPath) &&
+                (url.pathname !== currentPath || currentPath === targetPath),
+              { timeout: Timeouts.TEN_SECONDS },
+            )
+          : this.page.waitForFunction((url) => window.location.href !== url, currentUrl, {
+              timeout: Timeouts.TEN_SECONDS,
+            })
+      ).catch(Boolean);
       await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
 
       if (this.isDashboardPage()) {
@@ -250,6 +281,22 @@ export default class LeftNavigation extends BasePage {
         await this.elements.timePickerOpenButton.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
       }
     });
+  };
+
+  selectTimeZone = async (timeZone: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click();
+    await this.elements.changeTimeSettingsButton.click();
+    await this.inputs.timeZonePicker.fill(timeZone);
+    await this.builders.timeZoneOption(timeZone).click();
+    await this.elements.timePickerOpenButton.click();
+  };
+
+  setAbsoluteTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeFrom.fill(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.timeRangeTo.fill(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
   };
 
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
@@ -275,6 +322,25 @@ export default class LeftNavigation extends BasePage {
       });
     }
   };
+
+  verifySelectedTimeRange = async (from: string, to: string): Promise<void> => {
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeFrom).toHaveValue(from, { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.inputs.timeRangeTo).toHaveValue(to);
+    await this.elements.applyTimeRangeButton.click();
+    await this.elements.applyTimeRangeButton.waitFor({ state: 'hidden', timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  /** The PMM shell at `url`: sidebar up, and the home dashboard rendering in it. */
+  verifyUiRenders = async (url: string): Promise<void> =>
+    await pmmTest.step(`Verify the PMM UI renders at "${url}"`, async () => {
+      await this.page.goto(url, { timeout: Timeouts.TWO_MINUTES });
+      await expect(this.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
+      await this.selectMenuItem('home');
+      await expect(this.elements.iframe, 'The home dashboard must render').toBeVisible({
+        timeout: Timeouts.TWO_MINUTES,
+      });
+    });
 
   dashboardsToVerifyTimeRange(): string[] {
     const dashboards: string[] = [];

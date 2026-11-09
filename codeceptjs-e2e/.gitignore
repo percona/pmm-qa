@@ -115,3 +115,6 @@ dist
 
 # Config for Local developmnent
 /local.config.js
+
+# Written by the duplicate-dashboards upgrade scenario at runtime
+dashboard.json

@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # Create the client-side certificates
 
 OPENSSL_CLIENT=$1

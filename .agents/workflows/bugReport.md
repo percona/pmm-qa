@@ -7,6 +7,7 @@ description: Evidence-first workflow for turning logs, screenshots, and brief co
 Use this workflow to convert bug evidence into a compact report.
 
 Allowed input:
+
 - user context
 - screenshots
 - logs
@@ -16,6 +17,7 @@ Allowed input:
 - directly relevant code references
 
 Reporting only:
+
 - Do not propose fixes or a test plan.
 - Do not invent root cause, environment, or steps.
 
@@ -78,6 +80,7 @@ Default to `Medium` if impact is unclear.
 - Do not include root-cause guesses.
 
 Examples:
+
 - `[Dashboards] Filter panel stays blank after reload`
 - `[Backup] Restore action returns 500`
 
@@ -102,6 +105,7 @@ Provide exactly these sections:
 Keep `Evidence` compact.
 
 Examples:
+
 - `Screenshot: settings-page-error.png shows "Failed to load user"`
 - `Log: pmm-managed timeout waiting for inventory sync`
 - `API: GET /v1/inventory/nodes returned 500`

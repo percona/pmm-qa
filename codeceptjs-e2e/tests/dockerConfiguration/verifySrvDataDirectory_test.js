@@ -9,7 +9,7 @@ const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev
 const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('mkdir $HOME/srvPasswordUpgrade || true');
   await I.verifyCommand('chmod -R 777 $HOME/srvPasswordUpgrade/ || true');
-  await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${dockerVersion}`);
+  await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${dockerVersion}`);
   I.wait(30);
   await I.verifyCommand('docker exec pmm-server-password-upgrade yum update -y percona-release');
   await I.verifyCommand('docker exec pmm-server-password-upgrade sed -i\'\' -e \'s^/release/^/experimental/^\' /etc/yum.repos.d/pmm3-server.repo');
@@ -19,7 +19,7 @@ const runContainerWithPasswordVariableUpgrade = async (I) => {
 };
 
 const runContainerWithDataContainer = async (I) => {
-  await I.verifyCommand(`docker run -e PMM_ENABLE_INTERNAL_PG_QAN=1 -v srvFolder:/srv -d --restart always --publish 8083:8080 --name pmm-server-empty-data-container ${dockerVersion}`);
+  await I.verifyCommand(`docker run -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_ENABLE_TELEMETRY=0 -v srvFolder:/srv -d --restart always --publish 8083:8080 --name pmm-server-empty-data-container ${dockerVersion}`);
 };
 
 const stopAndRemoveContainerWithDataContainer = async (I) => {
@@ -53,7 +53,8 @@ Scenario(
 
     assert.ok(qanRows > 0, 'Query Analytics are empty');
     await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
-    await dashboardPage.waitForAllGraphsToHaveData(300);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.waitForGraphsToHaveData(0, 300);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
 
     await stopAndRemoveContainerWithDataContainer(I);
@@ -72,7 +73,8 @@ Scenario(
     assert.ok(qanRowsAfterRestart > 0, 'Query Analytics are empty after restart of docker container');
 
     await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
-    await dashboardPage.waitForAllGraphsToHaveData(180);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.waitForGraphsToHaveData(0, 180);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
     I.say(await I.verifyCommand('docker logs pmm-server-empty-data-container'));
   },

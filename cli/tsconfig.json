@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "module": "esnext",
     "lib": [
       "esnext",
@@ -29,7 +30,7 @@
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
-    "target": "es5"
+    "target": "esnext"
   },
   "include": ["./"]
 }

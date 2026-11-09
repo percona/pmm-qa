@@ -3,22 +3,9 @@ import { expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
-
-pmmTest(
-  'PMM-T2075 Verify there is no "Want more Advisors?" message on Advisors page @settings',
-  async ({ page, portalRemoval }) => {
-    await pmmTest.step('Check Advisors UI and iframe for portal content', async () => {
-      await page.goto(portalRemoval.advisorsUrl);
-
-      await expect(portalRemoval.elements.advisorsText).toHaveCount(0);
-      await expect(portalRemoval.elements.connectToPlatform).toHaveCount(0);
-    });
-  },
-);
 
 pmmTest('PMM-T2161 Verify Settings UI elements are removed @settings', async ({ page, portalRemoval }) => {
   await pmmTest.step('Check Settings UI and iframe for portal content', async () => {

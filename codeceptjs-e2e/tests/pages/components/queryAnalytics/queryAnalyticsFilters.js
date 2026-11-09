@@ -17,7 +17,7 @@ class QueryAnalyticsFilters {
       filterLinkByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('a'),
       filterPercentageByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('//span').at(3),
       filterName: locate('//span[@class="checkbox-container__label-text"]'),
-      checkedFilters: () => this.fields.filterCheckboxes.find('//input[@type="checkbox" and @checked]//following-sibling::span[@class="checkbox-container__label-text"]'),
+      checkedFilters: () => locate('div[data-testid^="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text'),
       groupElementsCount: (groupName) => `//span[contains(text(), '${groupName}')]/following-sibling::span[contains(text(), 'Show all')]`,
     };
     this.buttons = {
@@ -54,6 +54,13 @@ class QueryAnalyticsFilters {
     });
   }
 
+  // fill, not fillField: a keystroke that lands outside the search field triggers a Grafana shortcut ('i' opens Inspect over the filters).
+  searchFilters(text) {
+    I.usePlaywrightTo('Search QAN Filters', async ({ page }) => {
+      await page.locator(this.fields.filterBy.value).fill(text);
+    });
+  }
+
   selectFilter(filterName, timeout = 30000) {
     I.waitForVisible(this.fields.filterBy, 30);
     I.usePlaywrightTo('Search and select QAN Filter', async ({ page }) => {
@@ -87,7 +94,7 @@ class QueryAnalyticsFilters {
     }
 
     I.waitForVisible(this.fields.filterBy, 10);
-    I.fillField(this.fields.filterBy, filterName);
+    this.searchFilters(filterName);
     I.usePlaywrightTo('Select QAN Filter', async ({ page }) => {
       const locator = await page.locator(this.fields.filterByNameAndGroup(selectedFilter, groupName).value);
 
@@ -111,7 +118,7 @@ class QueryAnalyticsFilters {
 
   selectContainFilter(filterName) {
     I.waitForVisible(this.fields.groupHeaders, 30);
-    I.fillField(this.fields.filterBy, filterName);
+    this.searchFilters(filterName);
     I.waitForVisible(this.fields.filterByName(filterName));
     I.click(this.fields.filterByName(filterName));
     queryAnalyticsPage.waitForLoaded();
@@ -239,7 +246,7 @@ class QueryAnalyticsFilters {
 
   checkFilterExistInSection(section, filter) {
     I.waitForVisible(this.fields.filterBy, 30);
-    I.fillField(this.fields.filterBy, filter);
+    this.searchFilters(filter);
     I.waitForVisible(this.fields.filterByNameAndGroup(filter, section), 20);
     I.seeElement(this.fields.filterByNameAndGroup(filter, section));
   }

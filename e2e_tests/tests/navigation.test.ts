@@ -99,6 +99,26 @@ pmmTest(
   },
 );
 
+pmmTest(
+  'PMM-T2394 - Verify an absolute time range stays when switching dashboards from the left menu @new-navigation',
+  async ({ leftNavigation, page }) => {
+    const date = new Date(Date.now() - 24 * 60 * 60 * 1_000).toLocaleDateString('sv-SE');
+    const from = `${date} 10:00:00`;
+    const to = `${date} 10:30:00`;
+
+    await leftNavigation.selectMenuItem('mysql.innodbDetails');
+    await leftNavigation.setAbsoluteTimeRange(from, to);
+    await page.reload();
+    // The sidebar re-expands MySQL on reload; clicking its toggle before that collapses it again.
+    await leftNavigation.menuItemLocator('mysql.innodbDetails').waitFor();
+    await leftNavigation.selectMenuItem('mysql.summary');
+    await expect(page).toHaveURL(/mysql-instance-summary/);
+    await expect(leftNavigation.elements.timePickerOpenButton).toContainText(`${from} to ${to}`, {
+      timeout: Timeouts.TEN_SECONDS,
+    });
+  },
+);
+
 pmmTest('PMM-T2200 verify service persistence @new-navigation', async ({ leftNavigation, page }) => {
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
     await leftNavigation.selectMenuItem('mysql');

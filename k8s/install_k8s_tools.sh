@@ -14,7 +14,7 @@ INSTALL_KIND=${INSTALL_KIND:-"false"}
 INSTALL_HELM=${INSTALL_HELM:-"false"}
 
 runAsRoot() {
-  if [ $EUID -ne 0 -a "$USE_SUDO" = "true" ]; then
+  if [ "$EUID" -ne 0 ] && [ "$USE_SUDO" = "true" ]; then
     sudo "${@}"
   else
     "${@}"
@@ -155,7 +155,7 @@ install_minikube()
 
     install_bin minikube
 
-    rm minikube 2>&1 1>/dev/null || true
+    rm minikube >/dev/null 2>&1 || true
 
     echo "minikube version"
     minikube version
@@ -163,7 +163,8 @@ install_minikube()
 
 install_kind()
 {
-    local release=$(curl --silent "https://api.github.com/repos/kubernetes-sigs/kind/releases/latest" | # Get latest release from GitHub api
+    local release
+    release=$(curl --silent "https://api.github.com/repos/kubernetes-sigs/kind/releases/latest" | # Get latest release from GitHub api
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/')
 
@@ -172,7 +173,7 @@ install_kind()
 
     install_bin kind
 
-    rm kind 2>&1 1>/dev/null || true
+    rm kind >/dev/null 2>&1 || true
 
     echo "kind version"
     kind version

@@ -1,18 +1,19 @@
-import { test } from '@playwright/test';
+import { test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 
-test.describe('HAProxy service CLI tests', { tag: '@haproxy' }, async () => {
+test.describe('HAProxy service CLI tests', { tag: '@haproxy' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep haproxy_pmm | awk \'{print $NF}\'');
     await result.outContains('haproxy_pmm', 'HAPROXY docker container should exist. please run pmm-framework with --database haproxy');
     const result1 = await cli.exec('sudo pmm-admin status');
     await result1.outContains('Running', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');
   });
+
   /**
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/haproxy-tests.bats#L5
    */
   test('PMM-T655 - Verify adding HAProxy as service', async ({}) => {
-    let output = (await cli.exec('sudo pmm-admin add haproxy --listen-port=42100 haproxyServiceCLI1'));
+    let output = (await cli.exec('sudo pmm-admin add haproxy --listen-port=8404 haproxyServiceCLI1'));
     await output.assertSuccess();
     await output.outContains('HAProxy Service added.');
 

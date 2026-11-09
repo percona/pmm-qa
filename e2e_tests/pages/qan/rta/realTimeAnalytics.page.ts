@@ -9,6 +9,7 @@ const sessionsTableTestId = 'rta-sessions';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
+  readonly durationFilterParameter = 'overview.f.queryExecutionDurationMs';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   readonly sessionsUrl = 'pmm-ui/rta/sessions';
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
@@ -45,6 +46,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    rowsPerPageOption: (pageSize: string) => this.page.getByRole('option', { exact: true, name: pageSize }),
     serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
     technologyForSession: (sessionName: string) =>
       this.page
@@ -87,17 +89,26 @@ export default class RealTimeAnalyticsPage extends BasePage {
     detailsRowsSent: this.page.getByTestId('rows-sent-value'),
     detailsState: this.page.getByTestId('state-value'),
     detailsUsername: this.page.getByTestId('username-value'),
+    durationCells: this.page.getByTestId(realTimeTableTestId).locator('tbody tr td:nth-child(4)'),
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
+      .getByRole('columnheader', { name: /Elapsed time/ }),
+    elapsedTimeColumnHeaderLabel: this.page
+      .getByTestId(realTimeTableTestId)
+      .getByRole('columnheader', { name: /Elapsed time/ })
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
     noFilterResults: this.builders.rowByIndex('1').getByRole('alert').filter({ hasText: 'No data found' }),
-    noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
+    // peak-ui <1.0.30 wraps the empty row in an info alert, >=1.0.30 in an EmptyState (PMM-15002).
+    noQueriesAvailable: this.builders.rowByIndex('1').getByText(/^(No queries available|No data found)$/),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
+    selectedSessionRows: this.page.locator('tbody input[aria-label="Toggle select row"]:checked'),
+    sessionRows: this.page.locator('tbody > tr'),
+    sessionRowSelectionCheckboxes: this.page.locator('tbody input[aria-label="Toggle select row"]'),
     sessionsTable: this.page.getByTestId(sessionsTableTestId),
     technologyColumnHeader: this.page
       .getByTestId(sessionsTableTestId)
@@ -106,13 +117,17 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
+    filterByHost: this.page.getByTitle('Filter by Host'),
     filterByQueryText: this.page.getByTitle('Filter by Query text'),
+    maximumDuration: this.page.getByRole('textbox', { name: 'Max' }),
+    minimumDuration: this.page.getByRole('textbox', { name: 'Min' }),
     realTimeServiceInput: this.page.getByTestId('realtime-service-input'),
+    rowsLimit: this.page.getByRole('combobox', { name: 'Rows per page' }),
   };
   messages = {};
 
   clickElapsedTimeHeader = async () => {
-    await this.elements.elapsedTimeColumnHeader.click();
+    await this.elements.elapsedTimeColumnHeaderLabel.click();
   };
 
   clickHostHeader = async () => {
@@ -139,7 +154,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await pmmTest.step(`Filter queries by text: ${queryText}`, async () => {
       await this.builders.rowByIndex('1').waitFor({ state: 'visible' });
       await this.elements.noQueriesAvailable.waitFor({ state: 'hidden' });
-      await this.openFilters();
+      await this.openFiltersIfHidden();
       await this.inputs.filterByQueryText.fill(queryText);
 
       await expect(this.builders.queryByRowIndex('1')).toContainText(queryText);
@@ -162,6 +177,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
     return count;
   };
+
+  getDurationFilter = () => new URL(this.page.url()).searchParams.get(this.durationFilterParameter);
+
+  getDurations = async () => (await this.elements.durationCells.allTextContents()).map(Number.parseFloat);
 
   getElapsedTimeForQueryByRow = async (rowIndex: string) => {
     await this.builders.elapsedTimeForRow(rowIndex).waitFor({ state: 'visible' });
@@ -202,6 +221,16 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   openFilters = async () => {
     await this.buttons.filters.click();
+  };
+
+  openFiltersIfHidden = async () => {
+    await expect(async () => {
+      if (!(await this.inputs.filterByQueryText.isVisible())) {
+        await this.openFilters();
+      }
+
+      await expect(this.inputs.filterByQueryText).toBeVisible({ timeout: Timeouts.TWO_SECONDS });
+    }).toPass({ timeout: Timeouts.TEN_SECONDS });
   };
 
   // Opens the Cluster/Service picker of the overview.
