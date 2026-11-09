@@ -166986,15 +166986,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-09T02:54:48Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
+        ],
+        "verdict": "test bug",
+        "summary": "compat client 3.8.0, PSMDB Replica 6.x: PMM-T2438 went red in the change-agent describe's afterAll. After moving pmm-agent back to port 7777, the hook waited only for 'pmm-admin status' to exit 0, and that exits 0 while it prints 'Connected : false'. 'pmm-admin remove' then failed with 'pmm-agent is not connected to PMM Server'. 1 failure in 24 runs over nights 99-102. On a CHAOS VM (client 3.8.0, psmdb 6.0 pss), status exited 0 while disconnected on 1 of 5 restarts. The spec passed on the fix branch (23 passed). The in-place re-run also passed.",
+        "link": "https://github.com/percona/pmm-qa/pull/1744",
+        "by": "Investigator routine",
+        "at": "2026-11-09T03:38:37Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-09T02:54:48Z",
