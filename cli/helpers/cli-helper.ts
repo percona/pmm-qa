@@ -112,56 +112,6 @@ export async function getMetrics(
 }
 
 /**
- * Agent subcommands of "pmm-admin inventory change agent"
- */
-export enum ChangeAgentType {
-  NodeExporter = 'node-exporter',
-  MysqldExporter = 'mysqld-exporter',
-  MongodbExporter = 'mongodb-exporter',
-  PostgresExporter = 'postgres-exporter',
-  ProxysqlExporter = 'proxysql-exporter',
-  ExternalExporter = 'external-exporter',
-  RdsExporter = 'rds-exporter',
-  AzureDatabaseExporter = 'azure-database-exporter',
-  ValkeyExporter = 'valkey-exporter',
-  NomadAgent = 'nomad-agent',
-  QanMysqlPerfschemaAgent = 'qan-mysql-perfschema-agent',
-  QanMysqlSlowlogAgent = 'qan-mysql-slowlog-agent',
-  QanMongodbProfilerAgent = 'qan-mongodb-profiler-agent',
-  QanMongodbMongologAgent = 'qan-mongodb-mongolog-agent',
-  QanPostgresqlPgstatementsAgent = 'qan-postgresql-pgstatements-agent',
-  QanPostgresqlPgstatmonitorAgent = 'qan-postgresql-pgstatmonitor-agent',
-  RtaMongodbAgent = 'rta-mongodb-agent',
-}
-
-/**
- * Build a "pmm-admin inventory change agent" command
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentType       agent or exporter to change
- * @param   agentId         ID of the agent
- * @param   flags           flags to change
- */
-export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
-}
-
-/**
- * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN mongolog agent
- *
- * @param   containerName   docker container running pmm-agent
- * @param   exporterId      mongodb_exporter agent ID
- * @param   mongologId      mongodb_mongolog_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoMongologAgents(containerName: string, exporterId: string, mongologId: string, flags: string): string[] {
-  return [
-    inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, flags),
-    inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbMongologAgent, mongologId, flags),
-  ];
-}
-
-/**
  * Execute command and verify output contains expected content
  * Wrapper around {@link execute} that automatically asserts success and optionally verifies output
  *
@@ -184,13 +134,6 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
   });
 }
 
-export interface ListAgent {
-  agent_id: string;
-  agent_type: string;
-  service_id: string;
-  port?: number;
-}
-
 /**
  * Assert a command failed and its stdout or stderr contains the expected message
  *
@@ -209,124 +152,6 @@ export async function expectFailure(output: ExecReturn, message: string) {
  */
 export function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
-/**
- * Read an agent from the PMM Server inventory API through the pmm-server container
- *
- * @param   agentId         ID of the agent
- * @param   adminPassword   PMM Server admin password
- * @return  the agent's fields, whatever its type
- */
-export async function getServerAgent(agentId: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin'): Promise<Record<string, unknown>> {
-  const output = await exec(`docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} http://127.0.0.1:8080/v1/inventory/agents/${agentId}`);
-  await output.assertSuccess();
-  const response = JSON.parse(output.stdout) as Record<string, Record<string, unknown> | undefined>;
-
-  return Object.values(response)[0] ?? {};
-}
-
-/**
- * List agents from "pmm-admin list --json" in a client container
- *
- * @param   containerName   docker container running pmm-agent
- */
-export async function listAgents(containerName: string): Promise<ListAgent[]> {
-  return (JSON.parse((await exec(`docker exec ${containerName} pmm-admin list --json`)).stdout) as { agent: ListAgent[] }).agent;
-}
-
-/**
- * Listen port of an agent from "pmm-admin list --json" in a client container
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentId         ID of the agent
- */
-export async function getAgentPort(containerName: string, agentId: string): Promise<number | undefined> {
-  return (await listAgents(containerName)).find((agent) => agent.agent_id === agentId)?.port;
-}
-
-/**
- * Build a command that runs JavaScript with the mongo shell in a container
- *
- * @param   containerName   docker container running mongod
- * @param   mongoUri        connection string
- * @param   js              JavaScript to evaluate; must not contain single quotes
- */
-export function mongoEval(containerName: string, mongoUri: string, js: string): string {
-  return `docker exec ${containerName} mongo "${mongoUri}" --quiet --eval '${js}'`;
-}
-
-/**
- * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN profiler agent
- *
- * @param   containerName   docker container running pmm-agent
- * @param   exporterId      mongodb_exporter agent ID
- * @param   profilerId      mongodb_profiler_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoAgents(containerName: string, exporterId: string, profilerId: string, flags: string): string[] {
-  return [
-    inventoryChangeAgent(containerName, ChangeAgentType.MongodbExporter, exporterId, flags),
-    inventoryChangeAgent(containerName, ChangeAgentType.QanMongodbProfilerAgent, profilerId, flags),
-  ];
-}
-
-/**
- * Wait until agents are running, or disabled, as seen by both PMM Server and pmm-agent.
- * PMM Server marks a disabled agent "Done" as soon as it is changed, before pmm-agent gets the new state,
- * so also wait for pmm-agent's own view: a disable and enable that reach it together never stop the process.
- *
- * @param   containerName   docker container running pmm-agent
- * @param   agentIds        IDs of the agents to check
- * @param   running         true to wait for Running, false for disabled
- * @param   timeout         milliseconds to wait
- */
-export async function expectAgentsRunning(containerName: string, agentIds: string[], running: boolean, timeout = 60_000) {
-  const serverStatus = running ? 'Running' : 'Done (disabled)';
-  const localStatus = running ? 'Running' : 'not running';
-
-  await expect(async () => {
-    const serverLines = (await (await exec(`docker exec ${containerName} pmm-admin list`)).assertSuccess()).getStdOutLines();
-    const localLines = (await (await exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess()).getStdOutLines();
-
-    for (const agentId of agentIds) {
-      expect(serverLines.find((line) => line.includes(agentId)), `PMM Server should report ${agentId} as "${serverStatus}"`).toContain(serverStatus);
-      expect(localLines.find((line) => line.includes(agentId)) ?? 'not running', `pmm-agent should report ${agentId} as "${localStatus}"`)
-        .toContain(localStatus);
-    }
-  }).toPass({ intervals: [5_000], timeout });
-}
-
-/**
- * Wait until the service's mongodb_exporter reports mongodb_up 1
- *
- * @param   containerName   docker container running pmm-agent
- * @param   serviceName     name of the MongoDB service
- * @param   agentPassword   password of the exporter's /metrics endpoint
- * @param   timeout         milliseconds to wait
- */
-export async function expectMongoUp(containerName: string, serviceName: string, agentPassword: string, timeout = 120_000) {
-  await expect(async () => {
-    const metrics = await getMetrics(serviceName, 'pmm', agentPassword, containerName);
-
-    expect(metrics).toMatch(/^mongodb_up(\{[^}]*\})? 1$/m);
-  }).toPass({ intervals: [5_000], timeout });
-}
-
-/**
- * Wait until a mongo shell probe succeeds, reporting mongod's journal while it fails
- *
- * @param   containerName   docker container running mongod
- * @param   probe           command that exits 0 once mongod serves
- * @param   timeout         milliseconds to wait
- */
-export async function waitForMongod(containerName: string, probe: string, timeout = 120_000) {
-  await expect(async () => {
-    const output = await exec(probe);
-    const journal = output.code === 0 ? '' : (await exec(`docker exec ${containerName} journalctl -u mongod --no-pager -n 20`)).stdout;
-
-    expect(output.code, `mongod is not serving. mongod journal:\n${journal}`).toEqual(0);
-  }).toPass({ intervals: [5_000], timeout });
 }
 
 /**

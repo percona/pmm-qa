@@ -2,6 +2,29 @@ import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import { clientCredentialsFlags } from '@helpers/constants';
 
+/**
+ * Agent subcommands of "pmm-admin inventory change agent"
+ */
+export enum ChangeAgentType {
+  NodeExporter = 'node-exporter',
+  MysqldExporter = 'mysqld-exporter',
+  MongodbExporter = 'mongodb-exporter',
+  PostgresExporter = 'postgres-exporter',
+  ProxysqlExporter = 'proxysql-exporter',
+  ExternalExporter = 'external-exporter',
+  RdsExporter = 'rds-exporter',
+  AzureDatabaseExporter = 'azure-database-exporter',
+  ValkeyExporter = 'valkey-exporter',
+  NomadAgent = 'nomad-agent',
+  QanMysqlPerfschemaAgent = 'qan-mysql-perfschema-agent',
+  QanMysqlSlowlogAgent = 'qan-mysql-slowlog-agent',
+  QanMongodbProfilerAgent = 'qan-mongodb-profiler-agent',
+  QanMongodbMongologAgent = 'qan-mongodb-mongolog-agent',
+  QanPostgresqlPgstatementsAgent = 'qan-postgresql-pgstatements-agent',
+  QanPostgresqlPgstatmonitorAgent = 'qan-postgresql-pgstatmonitor-agent',
+  RtaMongodbAgent = 'rta-mongodb-agent',
+}
+
 export const removePGService = async (containerName: string, serviceName: string) => {
   await test.step(`remove postgresql "${serviceName}" service`, async () => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin remove postgresql ${serviceName}`);
@@ -198,4 +221,16 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
         .toContain(localStatus);
     }
   }).toPass({ intervals: [5_000], timeout });
+}
+
+/**
+ * Build a "pmm-admin inventory change agent" command
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentType       agent or exporter to change
+ * @param   agentId         ID of the agent
+ * @param   flags           flags to change
+ */
+export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
+  return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
 }
