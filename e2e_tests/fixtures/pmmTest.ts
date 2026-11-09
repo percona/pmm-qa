@@ -6,6 +6,7 @@ import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ArgoCdHelper from '@helpers/argocd.helper';
+import FluxHelper from '@helpers/flux.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
@@ -68,6 +69,7 @@ const pmmTest = base.extend<{
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
   externalPostgresHelper: ExternalPostgresHelper;
+  fluxHelper: FluxHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
   haClusterHelper: HaClusterHelper;
@@ -156,6 +158,7 @@ const pmmTest = base.extend<{
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
+  fluxHelper: async ({}, use) => await use(new FluxHelper()),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
