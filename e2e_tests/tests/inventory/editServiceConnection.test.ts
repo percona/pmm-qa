@@ -97,16 +97,20 @@ for (const {
             )
             .stdout.trim();
 
-        // The exporter picks up the new agent password only once pmm-agent has restarted it.
+        // The exporter picks up the new agent password only once pmm-agent has restarted it. One without
+        // basic auth answers 200 before the restart too, so the next request can still find its port closed.
         await expect
           .poll(() => metricsStatus(testUser.agentPassword), {
             message: 'exporter accepts the new agent password',
             timeout: Timeouts.ONE_MINUTE,
           })
           .toEqual('200');
-        expect(metricsStatus('wrong-agent-password'), 'exporter rejects another agent password').toEqual(
-          exporterAuth ? '401' : '200',
-        );
+        await expect
+          .poll(() => metricsStatus('wrong-agent-password'), {
+            message: 'exporter rejects another agent password',
+            timeout: Timeouts.ONE_MINUTE,
+          })
+          .toEqual(exporterAuth ? '401' : '200');
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyConnection(connection);
