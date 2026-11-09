@@ -42,13 +42,13 @@ export const serviceQanSources: ServiceQan[] = [
     serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
     sources: [
       {
-        agentType: 'qan_postgresql_pgstatements_agent',
+        agentType: 'qan-postgresql-pgstatements-agent',
         change: 'qan_postgresql_pgstatements_agent',
         noData: 'pg_stat_statements is not in shared_preload_libraries',
         value: 'pgstatements',
       },
       {
-        agentType: 'qan_postgresql_pgstatmonitor_agent',
+        agentType: 'qan-postgresql-pgstatmonitor-agent',
         change: 'qan_postgresql_pgstatmonitor_agent',
         value: 'pgstatmonitor',
         workload: (container) => psql(container, 'SELECT 1 AS pmm_qan_check'),
@@ -60,13 +60,13 @@ export const serviceQanSources: ServiceQan[] = [
     serviceRegex: '^ps_pmm',
     sources: [
       {
-        agentType: 'qan_mysql_perfschema_agent',
+        agentType: 'qan-mysql-perfschema-agent',
         change: 'qan_mysql_perfschema',
         value: 'perfschema',
         workload: (container, credentials) => mysql(container, credentials, 'SELECT 1 AS pmm_qan_check'),
       },
       {
-        agentType: 'qan_mysql_slowlog_agent',
+        agentType: 'qan-mysql-slowlog-agent',
         change: 'qan_mysql_slowlog',
         noData: 'the slow query log is off unless pmm-framework set the server up for slowlog',
         value: 'slowlog',
@@ -80,7 +80,7 @@ export const serviceQanSources: ServiceQan[] = [
     serviceRegex: '^rs101_',
     sources: [
       {
-        agentType: 'qan_mongodb_profiler_agent',
+        agentType: 'qan-mongodb-profiler-agent',
         change: 'qan_mongodb_profiler',
         value: 'profiler',
         // Profiling is turned on only for a database of the test's own, which cleanup drops.
@@ -92,7 +92,7 @@ export const serviceQanSources: ServiceQan[] = [
           ),
       },
       {
-        agentType: 'qan_mongodb_mongolog_agent',
+        agentType: 'qan-mongodb-mongolog-agent',
         change: 'qan_mongodb_mongolog',
         noData: 'mongod is not set up to log slow operations to a file the agent reads',
         value: 'mongolog',

@@ -125,10 +125,12 @@ export default class EditServicePage extends BasePage {
     if (skipConnectionCheck) await this.elements.skipConnectionCheck.locator('input').check();
 
     const [response] = await Promise.all([
+      // A connection check that cannot reach the database waits out its own 10 s timeout before the server answers.
       this.page.waitForResponse(
         (response) =>
           response.url().includes(`/v1/management/services/${serviceId}`) &&
           response.request().method() === 'PUT',
+        { timeout: Timeouts.THIRTY_SECONDS },
       ),
       this.buttons.confirmChanges.click(),
     ]);

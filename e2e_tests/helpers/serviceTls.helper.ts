@@ -88,15 +88,16 @@ export const serviceTlsSettings: ServiceTls[] = [
   },
 ];
 
+export type TlsServerName = 'ps' | 'ssl_mysql' | 'ssl_pdpgsql';
+
 export interface TlsServer {
   exporterType: string;
-  name: string;
+  name: TlsServerName;
   // The update API settings that put the service back as it was found.
   original: (cliHelper: CliHelper, container: string, exporter: ServiceAgent) => Record<string, unknown>;
   serviceRegex: string;
   // A command that fails unless the database serves TLS, for a service registered without it.
   serverTlsCheck?: (container: string, credentials: Credentials) => string;
-  tag: string;
 }
 
 const certificatesFrom = ({ ca, cert, key }: { ca: string; cert: string; key: string }) => ({
@@ -114,7 +115,6 @@ export const tlsServers: TlsServer[] = [
     serverTlsCheck: (container, { perconaServer }) =>
       `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -h127.0.0.1 --ssl-mode=REQUIRED -e "SELECT 1"`,
     serviceRegex: '^ps_pmm',
-    tag: '@inventory',
   },
   {
     exporterType: 'mysqld_exporter',
@@ -125,7 +125,6 @@ export const tlsServers: TlsServer[] = [
       ...certificatesFrom(cliHelper.readMysqlTlsCertificates(container)),
     }),
     serviceRegex: '^mysql_ssl_8.4_ssl_service_',
-    tag: '@ssl-mysql',
   },
   {
     exporterType: 'postgres_exporter',
@@ -136,6 +135,5 @@ export const tlsServers: TlsServer[] = [
       ...certificatesFrom(cliHelper.readTlsCertificates(container)),
     }),
     serviceRegex: '^pdpgsql_pgsm_ssl_16_ssl_service',
-    tag: '@ssl-postgres',
   },
 ];

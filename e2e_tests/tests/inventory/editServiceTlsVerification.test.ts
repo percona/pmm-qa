@@ -1,11 +1,20 @@
 import pmmTest from '@fixtures/pmmTest';
-import { tlsServers } from '@helpers/serviceTls.helper';
+import { TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
+// CI picks the test files to run by searching their text for the job's tag, so every tag has to be written here.
+const tags: Record<TlsServerName, string> = {
+  ps: '@inventory',
+  ssl_mysql: '@ssl-mysql',
+  ssl_pdpgsql: '@ssl-postgres',
+};
+
 // Each server presents a certificate this CA did not sign, so only skipping verification lets the exporter connect.
-for (const { exporterType, name, original, serverTlsCheck, serviceRegex, tag } of tlsServers) {
+for (const { exporterType, name, original, serverTlsCheck, serviceRegex } of tlsServers) {
+  const tag = tags[name];
+
   pmmTest.describe(`Edit service TLS verification | ${name}`, () => {
     let service: GetService;
     let container: string;
