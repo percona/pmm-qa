@@ -3700,6 +3700,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1740",
       "by": "Investigator routine",
       "at": "2026-11-10T03:16:15Z"
+    },
+    {
+      "suites": [
+        "Upgrade"
+      ],
+      "verdict": "setup bug",
+      "summary": "upgrade 3.7.0 (UI + Docker): PMM-T2385 found ReplSet Summary 'State'/'Version' empty for rs102/rscfg01 (UI) and rs202 (Docker), and the UI leg's 'Verify grafana logs after upgrade' found 'failed to save dashboard' (the nights 100/102 signature). Same cause as those nights, now worse: upgrade_clients.sh dnf-installs pmm-client in 13 containers at once, only on 3.6.0/3.7.0 (tarball-installed because not in apt), and took 720/794 s vs 409/410 s last night and ~60 s on 3.7.1+. In that window the Docker leg's pmm-managed logged 320 'GET :3000/api/auth/serviceaccount: context deadline exceeded' on the /victoriametrics auth path (01:00-01:07), Grafana's PG statements were cancelled, and pings failed to every pmm-agent, so the exporters' remote writes were refused. The re-run (attempt 2) passed both legs: UI with a 395 s upgrade, Docker with 797 s, so the stall is intermittent in effect and was reproduced in duration. No fix yet: the step's slowness still needs root-causing on a CHAOS VM (per-container dnf logs are discarded on success). PMM-T2185 (RTA sort) was flaky on retry in both attempts.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/42728384722/job/129606578671",
+      "by": "Investigator routine",
+      "at": "2026-11-10T03:56:40Z"
     }
   ],
   "claims": [
@@ -3708,13 +3718,6 @@
       "at": "2026-11-10T03:09:14Z",
       "suites": [
         "UI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-10T03:09:14Z",
-      "suites": [
-        "Upgrade"
       ]
     }
   ]
