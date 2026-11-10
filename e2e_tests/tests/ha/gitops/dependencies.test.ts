@@ -9,11 +9,11 @@ const deploymentNames = (manifests: string): string[] =>
     .map((manifest) => /^metadata:\n(?:^ {2,}.*\n)*?^ {2}name: *["']?([^"'\s]+)/m.exec(manifest)?.[1] ?? '');
 
 pmmTest(
-  'PMM-T2500 - Verify pmm-ha-dependencies renders only the operators left enabled @ha-argocd @ha-flux',
+  'PMM-T2500 - Verify pmm-ha-dependencies renders only the operators left enabled @ha-argocd',
   async ({ cliHelper }) => {
     const chartDir = process.env.PMM_HA_DEPS_CHART_DIR ?? '';
 
-    // eslint-disable-next-line playwright/no-skipped-test -- the chart directory comes from the GitOps pipelines.
+    // eslint-disable-next-line playwright/no-skipped-test -- the chart directory comes from the Argo CD pipeline.
     pmmTest.skip(
       !chartDir,
       'PMM_HA_DEPS_CHART_DIR is not set, so there is no pmm-ha-dependencies chart to render',
