@@ -2,19 +2,55 @@ import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 
 export default class TourPage extends BasePage {
-  readonly alertingTips: { menuItem: string; text?: string; title: string }[] = [
-    { menuItem: 'navitem-alerts-rules-list-item', title: 'Alert rules' },
+  readonly alertingTips: { highlighted: string; navItem: string; text: string; title: string }[] = [
     {
-      menuItem: 'navitem-alerts-status-list-item',
+      highlighted: 'navitem-alerts-rules-list-item',
+      navItem: 'alerts.alertRules',
+      text: 'Alert rules specify the conditions for firing alerts.',
+      title: 'Alert rules',
+    },
+    {
+      highlighted: 'navitem-alerts-status-list-item',
+      navItem: 'alerts.alertStatus',
       text: 'every alert that is currently firing',
       title: 'Status',
     },
-    { menuItem: 'navitem-alerts-templates-list-item', title: 'Templates' },
-    { menuItem: 'navitem-alerts-silences-list-item', text: 'shown on the Status page', title: 'Silences' },
-    { menuItem: 'navitem-alerts-groups-list-item', title: 'Alert groups' },
-    { menuItem: 'navitem-alerts-settings-list-item', title: 'Alert settings' },
-    { menuItem: 'navitem-alerts-contact-points-list-item', title: 'Contact points' },
-    { menuItem: 'navitem-alerts-policies-list-item', title: 'Notification policies' },
+    {
+      highlighted: 'navitem-alerts-templates-list-item',
+      navItem: 'alerts.perconaAlertTemplates',
+      text: 'Templates help you create complex alert rules effortlessly.',
+      title: 'Templates',
+    },
+    {
+      highlighted: 'navitem-alerts-silences-list-item',
+      navItem: 'alerts.silences',
+      text: 'shown on the Status page',
+      title: 'Silences',
+    },
+    {
+      highlighted: 'navitem-alerts-groups-list-item',
+      navItem: 'alerts.alertGroups',
+      text: 'Alert groups show grouped alerts.',
+      title: 'Alert groups',
+    },
+    {
+      highlighted: 'navitem-alerts-settings-list-item',
+      navItem: 'alerts.alertSettings',
+      text: 'Use this to configure Alertmanagers in raw JSON format.',
+      title: 'Alert settings',
+    },
+    {
+      highlighted: 'navitem-alerts-contact-points-list-item',
+      navItem: 'alerts.contactPoints',
+      text: 'Define how your contacts are notified when an alert fires.',
+      title: 'Contact points',
+    },
+    {
+      highlighted: 'navitem-alerts-policies-list-item',
+      navItem: 'alerts.notificationPolicies',
+      text: 'Set where, when, and how the alerts get routed.',
+      title: 'Notification policies',
+    },
   ];
   readonly removedAlertingTip = 'Fired alerts';
   readonly titles = [
@@ -28,7 +64,6 @@ export default class TourPage extends BasePage {
     'Help Center',
   ];
   builders = {
-    alertingMenuItem: (testId: string) => this.page.getByTestId(testId),
     counter: (step: number, total: number) =>
       this.page.getByTestId('tour-counter').getByText(`Tip ${step} of ${total}`, { exact: true }),
   };
@@ -40,7 +75,6 @@ export default class TourPage extends BasePage {
     startTour: this.page.getByTestId('tips-card-start-product-tour-button'),
   };
   elements = {
-    popover: this.page.locator('.reactour__popover'),
     stepBody: this.page.getByTestId('tour-step-body'),
     stepTitle: this.page.getByTestId('tour-step-title'),
   };

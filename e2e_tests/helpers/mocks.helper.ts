@@ -4,32 +4,17 @@ import apiEndpoints from '@helpers/apiEndpoints';
 export default class mocksHelper {
   constructor(public page: Page) {}
 
-  // mock alerting tour not completed until the UI completes it
-  mockAlertingTourNotCompleted = async (): Promise<{ completed: () => boolean }> => {
+  // mock alerting tour not completed until the UI saves it as completed
+  mockAlertingTourNotCompleted = async (): Promise<void> => {
     let alertingTourCompleted = false;
 
-    await this.page.route(apiEndpoints.users.me, (route: Route) => {
-      const method = route.request().method();
+    await this.page.route(apiEndpoints.users.me, async (route: Route) => {
+      if (route.request().method() !== 'GET') alertingTourCompleted = true;
 
-      if (method === 'PATCH' || method === 'PUT') {
-        const body = route.request().postDataJSON() as { alerting_tour_completed?: boolean };
-
-        alertingTourCompleted = body.alerting_tour_completed ?? alertingTourCompleted;
-      }
-
-      return route.fulfill({
-        body: JSON.stringify({
-          alerting_tour_completed: alertingTourCompleted,
-          product_tour_completed: true,
-          snoozed_pmm_version: '',
-          user_id: 1,
-        }),
-        contentType: 'application/json',
-        status: 200,
+      await route.fulfill({
+        json: { alerting_tour_completed: alertingTourCompleted, product_tour_completed: true, user_id: 1 },
       });
     });
-
-    return { completed: () => alertingTourCompleted };
   };
 
   // mock api for fresh install
