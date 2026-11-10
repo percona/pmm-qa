@@ -223,10 +223,15 @@ export default class EditServicePage extends BasePage {
   recordApiWrites = () => {
     const writes: string[] = [];
 
+    // After any inventory change the UI refetches services:getTypes, a read the API takes as a POST.
     this.page.on('request', (request) => {
       const { pathname } = new URL(request.url());
 
-      if (request.method() !== 'GET' && /^\/v1\/(management|inventory)\//.test(pathname)) {
+      if (
+        request.method() !== 'GET' &&
+        /^\/v1\/(management|inventory)\//.test(pathname) &&
+        !pathname.endsWith(':getTypes')
+      ) {
         writes.push(`${request.method()} ${pathname}`);
       }
     });
