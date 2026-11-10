@@ -3,15 +3,17 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
+pmmTest.beforeEach(async ({ grafanaHelper, mocks, page, tour }) => {
+  await mocks.mockAlertingTourNotCompleted();
+  await grafanaHelper.authorize();
+  await page.goto('pmm-ui/help');
+  await expect(tour.buttons.startTour).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+});
+
 pmmTest(
   'PMM-T2514 - Verify the Alerting tour for Admin shows one tip per Alerts menu item, in menu order, each highlighting its item @fb-alerting',
-  async ({ grafanaHelper, leftNavigation, mocks, page, tour }) => {
+  async ({ leftNavigation, page, tour }) => {
     const tips = tour.alertingTips;
-
-    await mocks.mockAlertingTourNotCompleted();
-    await grafanaHelper.authorize();
-    await page.goto('pmm-ui/help');
-    await expect(tour.buttons.startTour).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
     await pmmTest.step('Open Alerts and verify the menu and the first tip', async () => {
       await leftNavigation.menuItemLocator('alerts').click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -31,9 +33,10 @@ pmmTest(
         await expect(tour.builders.counter(index + 1, tips.length)).toBeVisible();
         await expect(tour.elements.stepTitle).toHaveText(tip.title);
         await expect
-          .poll(tour.getHighlightedMenuItem, { message: `"${tip.title}" highlights its item` })
-          .toBe(tip.highlighted);
-
+          .poll(() => tour.isHighlighted(leftNavigation.menuItemLocator(tip.navItem)), {
+            message: `"${tip.title}" highlights its menu item`,
+          })
+          .toBe(true);
         await expect(tour.elements.stepBody).toContainText(tip.text);
       }
 
@@ -47,25 +50,25 @@ pmmTest(
 
         await expect(tour.elements.stepTitle).toHaveText(tips[index].title);
         await expect(leftNavigation.elements.tourPopover).not.toContainText(tour.removedAlertingTip);
-        await expect.poll(tour.getHighlightedMenuItem).toBe(tips[index].highlighted);
+        await expect
+          .poll(() => tour.isHighlighted(leftNavigation.menuItemLocator(tips[index].navItem)), {
+            message: `"${tips[index].title}" highlights its menu item`,
+          })
+          .toBe(true);
       }
 
       await expect(tour.buttons.previousTip).toBeHidden();
     });
 
     await pmmTest.step('Close the tour and verify it does not reopen after a reload', async () => {
-      const completionSaved = page.waitForRequest(
-        (request) => request.url().endsWith('/v1/users/me') && request.method() !== 'GET',
-      );
-
-      await tour.buttons.close.click();
-      await completionSaved;
+      await Promise.all([
+        page.waitForRequest(
+          (request) => request.url().endsWith('/v1/users/me') && request.method() === 'PUT',
+        ),
+        tour.buttons.close.click(),
+      ]);
       await expect(leftNavigation.elements.tourPopover).toBeHidden();
-
-      const userLoaded = page.waitForResponse(apiEndpoints.users.me);
-
-      await page.reload();
-      await userLoaded;
+      await Promise.all([page.waitForResponse(apiEndpoints.users.me), page.reload()]);
       await expect(leftNavigation.menuItemLocator('alerts.alertRules')).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
