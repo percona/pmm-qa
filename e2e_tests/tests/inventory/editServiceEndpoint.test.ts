@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import {
   basicAuth,
-  endpointChanges,
   endpointExporterType,
   EndpointSettings,
   readEndpoint,
@@ -14,15 +13,7 @@ import { expect } from '@playwright/test';
 const unreachablePort = '59999';
 const missingPath = '/pmm-missing-metrics';
 
-for (const {
-  create,
-  hasGroup,
-  hostServiceRegex,
-  name,
-  serviceName,
-  serviceRegex,
-  serviceType,
-} of serviceEndpoints) {
+for (const { create, hasGroup, hostServiceRegex, name, serviceName, serviceType } of serviceEndpoints) {
   pmmTest.describe(`Edit service metrics endpoint | ${name}`, () => {
     let service: GetService;
     let original: EndpointSettings;
@@ -36,33 +27,22 @@ for (const {
 
       container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(host.node_id));
 
-      if (create && serviceName) {
-        cliHelper.removeService(container, serviceType, serviceName);
-        cliHelper.execSilent(create(container)).assertSuccess();
-      }
+      cliHelper.removeService(container, serviceType, serviceName);
+      cliHelper.execSilent(create(container)).assertSuccess();
 
-      service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      // The External service is added again under the same name for every test, and the series of the one
-      // removed before it can still be in the query window, so only the service ID tells them apart.
+      service = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
+      // The service is added again under the same name for every test, and the series of the one removed
+      // before it can still be in the query window, so only the service ID tells them apart.
       up = `up{service_id="${service.service_id}"}`;
 
       const { passwordSet, ...settings } = await readEndpoint(api, service.service_id, hasGroup);
 
+      expect(passwordSet, `${serviceName} starts without a basic auth password`).toBe(false);
       original = settings;
-      // The API never returns a stored password, so only a service without one can be put back as it was.
-      expect(passwordSet, `${service.service_name} must have no basic auth password`).toBe(false);
     });
 
-    pmmTest.afterEach(async ({ api, cliHelper }) => {
-      if (create && serviceName) {
-        cliHelper.removeService(container, serviceType, serviceName);
-      } else {
-        await api.inventoryApi.updateService(
-          service.service_id,
-          service.service_type,
-          endpointChanges(original),
-        );
-      }
+    pmmTest.afterEach(async ({ cliHelper }) => {
+      cliHelper.removeService(container, serviceType, serviceName);
     });
 
     pmmTest(

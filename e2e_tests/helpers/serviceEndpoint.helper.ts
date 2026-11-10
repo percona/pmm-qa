@@ -15,29 +15,32 @@ export interface EndpointSettings {
   username: string;
 }
 
+// Each test registers a service of its own and removes it afterwards: the update API refuses an empty
+// username or password, so basic auth, once set, cannot be taken off a framework service again.
 export interface ServiceEndpoint {
-  // Registers a service of the test's own when pmm-framework gives the job none of this type.
-  create?: (container: string) => string;
+  create: (container: string) => string;
   hasGroup: boolean;
   // The framework service whose container serves the endpoint and runs the pmm-agent that scrapes it.
   hostServiceRegex: string;
   name: string;
-  serviceName?: string;
-  serviceRegex: string;
+  serviceName: string;
   serviceType: ServiceType;
 }
 
 export const endpointExporterType = 'external-exporter';
 export const basicAuth = { password: 'Pmm9Scrape_Test4', username: 'pmm_scrape' };
 
+const haproxyServiceName = 'pmm_edit_haproxy_check';
 const externalServiceName = 'pmm_edit_external_check';
 
 export const serviceEndpoints: ServiceEndpoint[] = [
   {
+    create: (container) =>
+      `docker exec ${container} pmm-admin add haproxy --listen-port=42100 ${haproxyServiceName}`,
     hasGroup: false,
     hostServiceRegex: '^haproxy_pmm_service_',
     name: 'haproxy',
-    serviceRegex: '^haproxy_pmm_service_',
+    serviceName: haproxyServiceName,
     serviceType: ServiceType.haproxy,
   },
   {
@@ -48,7 +51,6 @@ export const serviceEndpoints: ServiceEndpoint[] = [
     hostServiceRegex: '^haproxy_pmm_service_',
     name: 'external',
     serviceName: externalServiceName,
-    serviceRegex: `^${externalServiceName}$`,
     serviceType: ServiceType.external,
   },
 ];
@@ -64,24 +66,6 @@ export const toEndpointSettings = (
   scheme: (metrics_scheme || 'http') as MetricsScheme,
   tlsSkipVerify: !!tls_skip_verify,
   username: username ?? '',
-});
-
-// An empty password removes the stored one; the services start without one.
-export const endpointChanges = ({
-  group,
-  listenPort,
-  metricsPath,
-  scheme,
-  tlsSkipVerify,
-  username,
-}: EndpointSettings) => ({
-  ...(group !== undefined && { group }),
-  listen_port: Number(listenPort),
-  metrics_path: metricsPath,
-  password: '',
-  scheme,
-  tls_skip_verify: tlsSkipVerify,
-  username,
 });
 
 export const readEndpoint = async (api: Api, serviceId: string, hasGroup: boolean) => {
