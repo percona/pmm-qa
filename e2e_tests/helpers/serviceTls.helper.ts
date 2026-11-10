@@ -1,8 +1,8 @@
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
-import { GetService } from '@interfaces/inventory';
+import { GetService, ServiceType } from '@interfaces/inventory';
 
-type ServiceAgent = GetService['agents'][number];
+export type ServiceAgent = GetService['agents'][number];
 
 export type TlsCertificateField =
   'tlsCa' | 'tlsCert' | 'tlsCertificateKey' | 'tlsCertificateKeyFilePassword' | 'tlsKey';
@@ -88,16 +88,28 @@ export const serviceTlsSettings: ServiceTls[] = [
   },
 ];
 
-export type TlsServerName = 'ps' | 'ssl_mysql' | 'ssl_pdpgsql';
+export type TlsServerName = 'ps' | 'psmdb' | 'ssl_mysql' | 'ssl_pdpgsql' | 'valkey';
+
+export interface TlsInstance {
+  // Registers the instance over TLS without verification, so the edit starts from a working exporter.
+  register: (container: string) => string;
+  serviceName: string;
+  serviceType: ServiceType;
+  start: (container: string) => string;
+  stop: (container: string) => string;
+}
 
 export interface TlsServer {
   exporterType: string;
+  // A TLS-only server the test starts itself, for a type whose framework setup in this job has no TLS.
+  instance?: TlsInstance;
   name: TlsServerName;
-  // The update API settings that put the service back as it was found.
-  original: (cliHelper: CliHelper, container: string, exporter: ServiceAgent) => Record<string, unknown>;
-  serviceRegex: string;
+  // The update API settings that put a framework service back as it was found.
+  original?: (cliHelper: CliHelper, container: string, exporter: ServiceAgent) => Record<string, unknown>;
   // A command that fails unless the database serves TLS, for a service registered without it.
   serverTlsCheck?: (container: string, credentials: Credentials) => string;
+  // The service under test, or the framework service whose container runs the test's own instance.
+  serviceRegex: string;
 }
 
 const certificatesFrom = ({ ca, cert, key }: { ca: string; cert: string; key: string }) => ({
@@ -105,6 +117,13 @@ const certificatesFrom = ({ ca, cert, key }: { ca: string; cert: string; key: st
   tls_cert: cert,
   tls_key: key,
 });
+// The address in the certificate lets hostname verification pass, so only the CA decides whether it is trusted.
+const serverCertificate = (dir: string) =>
+  `openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pmm-tls-server -addext subjectAltName=IP:127.0.0.1 -keyout ${dir}/server.key -out ${dir}/server.crt 2>/dev/null`;
+const mongodbTlsDir = '/tmp/pmm_tls_mongodb';
+const mongodbTlsPort = 27_098;
+const valkeyTlsDir = '/tmp/pmm_tls_valkey';
+const valkeyTlsPort = 6_390;
 
 export const tlsServers: TlsServer[] = [
   {
@@ -135,5 +154,36 @@ export const tlsServers: TlsServer[] = [
       ...certificatesFrom(cliHelper.readTlsCertificates(container)),
     }),
     serviceRegex: '^pdpgsql_pgsm_ssl_16_ssl_service',
+  },
+  {
+    exporterType: 'mongodb_exporter',
+    instance: {
+      register: (container) =>
+        `docker exec ${container} pmm-admin add mongodb --host=127.0.0.1 --port=${mongodbTlsPort} --query-source=none --tls --tls-skip-verify pmm_tls_mongodb_check`,
+      serviceName: 'pmm_tls_mongodb_check',
+      serviceType: ServiceType.mongodb,
+      start: (container) =>
+        `docker exec ${container} sh -c 'rm -rf ${mongodbTlsDir} && mkdir -p ${mongodbTlsDir} && ${serverCertificate(mongodbTlsDir)} && cat ${mongodbTlsDir}/server.key ${mongodbTlsDir}/server.crt > ${mongodbTlsDir}/server.pem && mongod --port ${mongodbTlsPort} --bind_ip 127.0.0.1 --dbpath ${mongodbTlsDir} --logpath ${mongodbTlsDir}/mongod.log --fork --tlsMode requireTLS --tlsCertificateKeyFile ${mongodbTlsDir}/server.pem --tlsCAFile ${mongodbTlsDir}/server.crt --tlsAllowConnectionsWithoutCertificates >/dev/null'`,
+      stop: (container) =>
+        `docker exec ${container} sh -c 'mongod --dbpath ${mongodbTlsDir} --shutdown >/dev/null 2>&1; rm -rf ${mongodbTlsDir}'`,
+    },
+    name: 'psmdb',
+    serviceRegex: '^rs101_',
+  },
+  {
+    exporterType: 'valkey_exporter',
+    instance: {
+      register: (container) =>
+        `docker exec ${container} pmm-admin add valkey --host=127.0.0.1 --port=${valkeyTlsPort} --tls --tls-skip-verify pmm_tls_valkey_check`,
+      serviceName: 'pmm_tls_valkey_check',
+      serviceType: ServiceType.valkey,
+      // valkey-server forks before it listens, so the command waits for the TLS port to answer.
+      start: (container) =>
+        `docker exec ${container} sh -c 'rm -rf ${valkeyTlsDir} && mkdir -p ${valkeyTlsDir} && ${serverCertificate(valkeyTlsDir)} && valkey-server --port 0 --tls-port ${valkeyTlsPort} --bind 127.0.0.1 --tls-cert-file ${valkeyTlsDir}/server.crt --tls-key-file ${valkeyTlsDir}/server.key --tls-ca-cert-file ${valkeyTlsDir}/server.crt --tls-auth-clients no --dir ${valkeyTlsDir} --save "" --pidfile ${valkeyTlsDir}/valkey.pid --logfile ${valkeyTlsDir}/valkey.log --daemonize yes && timeout 30 sh -c "until valkey-cli --tls --insecure -p ${valkeyTlsPort} ping >/dev/null 2>&1; do sleep 1; done"'`,
+      stop: (container) =>
+        `docker exec ${container} sh -c 'pid=$(cat ${valkeyTlsDir}/valkey.pid 2>/dev/null) && kill $pid && while kill -0 $pid 2>/dev/null; do sleep 1; done; rm -rf ${valkeyTlsDir}'`,
+    },
+    name: 'valkey',
+    serviceRegex: '^valkey-primary',
   },
 ];

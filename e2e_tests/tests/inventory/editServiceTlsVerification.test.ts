@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
+import { ServiceAgent, TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
@@ -7,18 +7,21 @@ import { expect } from '@playwright/test';
 // CI picks the test files to run by searching their text for the job's tag, so every tag has to be written here.
 const tags: Record<TlsServerName, string> = {
   ps: '@inventory',
+  psmdb: '@inventory',
   ssl_mysql: '@ssl-mysql',
   ssl_pdpgsql: '@ssl-postgres',
+  valkey: '@inventory',
 };
 
 // Each server presents a certificate this CA did not sign, so only skipping verification lets the exporter connect.
-for (const { exporterType, name, original, serverTlsCheck, serviceRegex } of tlsServers) {
+for (const { exporterType, instance, name, original, serverTlsCheck, serviceRegex } of tlsServers) {
   const tag = tags[name];
 
   pmmTest.describe(`Edit service TLS verification | ${name}`, () => {
     let service: GetService;
     let container: string;
-    let originalTls: Record<string, unknown>;
+    let exporter: ServiceAgent;
+    let originalTls: Record<string, unknown> | undefined;
 
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
       await grafanaHelper.authorize();
@@ -31,16 +34,26 @@ for (const { exporterType, name, original, serverTlsCheck, serviceRegex } of tls
           `${container} must serve TLS`,
         ).toEqual(0);
       }
+      if (instance) {
+        cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+        cliHelper.execSilent(instance.stop(container));
+        cliHelper.execSilent(instance.start(container)).assertSuccess();
+        cliHelper.execSilent(instance.register(container)).assertSuccess();
+        service = await api.inventoryApi.getServiceDetailsByRegex(`^${instance.serviceName}$`);
+      }
 
-      originalTls = original(
-        cliHelper,
-        container,
-        await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-      );
+      exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
+      originalTls = original?.(cliHelper, container, exporter);
     });
 
-    pmmTest.afterEach(async ({ api }) => {
-      await api.inventoryApi.updateService(service.service_id, service.service_type, originalTls);
+    pmmTest.afterEach(async ({ api, cliHelper }) => {
+      if (originalTls) {
+        await api.inventoryApi.updateService(service.service_id, service.service_type, originalTls);
+      }
+      if (instance) {
+        cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+        cliHelper.execSilent(instance.stop(container)).assertSuccess();
+      }
     });
 
     pmmTest(
@@ -69,8 +82,8 @@ for (const { exporterType, name, original, serverTlsCheck, serviceRegex } of tls
           'stored TLS settings are unchanged',
         ).toEqual({
           status: AgentStatus.running,
-          tls: originalTls.tls,
-          tls_skip_verify: originalTls.tls_skip_verify,
+          tls: !!exporter.tls,
+          tls_skip_verify: !!exporter.tls_skip_verify,
         });
       },
     );
