@@ -1,5 +1,6 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
+import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import DockerHelper from '@helpers/docker.helper';
 import {
   exporterMetricsState,
@@ -24,13 +25,14 @@ for (const serviceMetrics of serviceMetricsSettings) {
   pmmTest.describe(`Edit service metrics | ${name}`, () => {
     let service: GetService;
     let original: ServiceMetricsSettings;
-    let address: string;
     let container: string;
     const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
+    // pmm-framework joins some containers, such as psmdb's, to networks PMM Server is not on, and their node
+    // can be registered under an address on one of those. The container name resolves on the network both share.
     const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) =>
       dockerHelper.getHttpStatus(
         serverContainer,
-        `http://${address}:${(await exporter(api)).listen_port}/metrics`,
+        `http://${container}:${(await exporter(api)).listen_port}/metrics`,
       );
 
     // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
@@ -59,8 +61,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = toMetricsSettings(await exporter(api));
-      address = await api.inventoryApi.getNodeAddress(service.node_id);
-      container = dockerHelper.getContainerByAddress(address);
+      container = await getServiceContainer(api, dockerHelper, service);
     });
 
     pmmTest.afterEach(async ({ api }) => {
