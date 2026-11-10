@@ -24,7 +24,7 @@ export default class DataSourcesPage extends BasePage {
   elements = {
     exploreQueryEditorModeToggle: this.grafanaIframe().getByTestId('QueryEditorModeToggle'),
     // Explore-only control, so it doubles as proof the iframe actually navigated there.
-    exploreRunQuery: this.grafanaIframe().getByRole('button', { name: 'Run query' }),
+    exploreRunQuery: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
     testResult: this.grafanaIframe().getByTestId('data-testid Data source settings page Alert'),
   };
   inputs = {
