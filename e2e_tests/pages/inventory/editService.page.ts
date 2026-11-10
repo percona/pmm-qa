@@ -34,18 +34,30 @@ export interface ServiceTlsSettings {
 export default class EditServicePage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   builders = {
+    fieldError: (message: string) => this.elements.form.getByText(message, { exact: true }),
     logLevelOption: (logLevel: LogLevel) =>
       this.page.getByRole('listbox').getByRole('option', { exact: true, name: logLevelLabels[logLevel] }),
     metricsModeOption: (metricsMode: MetricsMode) =>
       this.elements.metricsSection.getByTestId(`radio-option-${metricsMode}`),
     querySourceOption: (querySource: QuerySource) =>
       this.elements.qanSection.getByTestId(`radio-option-${querySource}`),
+    // Material React Table names each row's menu button "Row Actions".
+    rowActions: (serviceName: string) =>
+      this.page
+        .getByRole('row')
+        .filter({ hasText: serviceName })
+        .getByRole('button', { name: 'Row Actions' }),
+    rowMenuItem: (name: string) => this.page.getByRole('menuitem', { exact: true, name }),
     schemeOption: (scheme: MetricsScheme) =>
       this.elements.connectionSection.getByTestId(`radio-option-${scheme}`),
     successMessage: (serviceName: string) =>
       this.page.getByText(`Service “${serviceName}” was changed. It is now ready to continue monitoring.`),
+    text: (text: string) => this.page.getByText(text, { exact: true }),
+    title: (serviceName: string) =>
+      this.page.getByRole('heading', { name: `Editing “${serviceName}” service` }),
   };
   buttons = {
+    cancel: this.page.getByTestId('edit-service-cancel'),
     confirmChanges: this.page.getByTestId('confirm-changes-modal-confirm'),
     saveChanges: this.page.getByTestId('edit-service-submit'),
   };
@@ -57,14 +69,17 @@ export default class EditServicePage extends BasePage {
     form: this.page.getByTestId('edit-service-form'),
     logLevelOptions: this.page.getByRole('listbox').getByRole('option'),
     metricsSection: this.page.getByTestId('metrics-settings'),
+    notFound: this.page.getByText('This service no longer exists.', { exact: true }),
     passwordKeptHint: this.page
       .getByTestId('connection-settings')
       .getByText('Leave blank to keep the current one'),
     qanSection: this.page.getByTestId('query-analytics-settings'),
     querySourceRestriction: this.page.getByTestId('query-source-restriction'),
+    serviceDetails: this.page.getByTestId('edit-service-form').getByTestId('service-details'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
     tlsKeyStored: this.page.getByText('A key is stored. Leave blank to keep it.'),
+    unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
     agentPassword: this.page.getByTestId('text-input-agent-password'),
@@ -196,6 +211,27 @@ export default class EditServicePage extends BasePage {
   open = async (serviceId: string) => {
     await this.page.goto(`${this.url}/${serviceId}/edit`);
     await expect(this.elements.form).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openFromServicesList = async (serviceName: string) => {
+    await this.page.goto(`${this.url}?services.q=${encodeURIComponent(serviceName)}`);
+    await this.builders.rowActions(serviceName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders.rowMenuItem('Edit').click();
+  };
+
+  // The page's write calls to the PMM API from now on, as "METHOD /path".
+  recordApiWrites = () => {
+    const writes: string[] = [];
+
+    this.page.on('request', (request) => {
+      const { pathname } = new URL(request.url());
+
+      if (request.method() !== 'GET' && /^\/v1\/(management|inventory)\//.test(pathname)) {
+        writes.push(`${request.method()} ${pathname}`);
+      }
+    });
+
+    return writes;
   };
 
   saveChanges = async (
