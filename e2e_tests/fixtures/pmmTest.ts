@@ -44,6 +44,8 @@ import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
 import AddInstancePage from '@pages/inventory/addInstance.page';
 import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
+import StorageLocationsPage from '@pages/backup/storageLocations.page';
+import BackupInventoryPage from '@pages/backup/backupInventory.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
@@ -59,6 +61,7 @@ const pmmTest = base.extend<{
   agentsPage: AgentsPage;
   argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
+  backupInventoryPage: BackupInventoryPage;
   changePasswordPage: ChangePasswordPage;
   clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
@@ -93,6 +96,7 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
+  storageLocationsPage: StorageLocationsPage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -108,6 +112,7 @@ const pmmTest = base.extend<{
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
   argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
+  backupInventoryPage: async ({ page }, use) => await use(new BackupInventoryPage(page)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
@@ -217,6 +222,7 @@ const pmmTest = base.extend<{
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
+  storageLocationsPage: async ({ page }, use) => await use(new StorageLocationsPage(page)),
   testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
