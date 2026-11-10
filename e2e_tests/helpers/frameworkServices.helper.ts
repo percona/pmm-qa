@@ -1,5 +1,6 @@
 import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import { GetService, ServiceType } from '@interfaces/inventory';
 
 export interface FrameworkService {
@@ -30,8 +31,8 @@ export const databaseServices: FrameworkService[] = [
   frameworkServices.proxysql,
 ];
 
-export const getServiceContainer = async (api: Api, cliHelper: CliHelper, { node_id }: GetService) =>
-  cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
+export const getServiceContainer = async (api: Api, dockerHelper: DockerHelper, { node_id }: GetService) =>
+  dockerHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
 
 // A service the test registers itself in a framework service's container, and removes afterwards.
 export interface OwnService {

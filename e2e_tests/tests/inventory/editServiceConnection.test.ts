@@ -19,26 +19,30 @@ for (const {
     let service: GetService;
     let container: string;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, credentials, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, cliHelper, service);
+      container = await getServiceContainer(api, dockerHelper, service);
       cliHelper.execSilent(dropUser(container, credentials));
       cliHelper.execSilent(createUser(container, credentials)).assertSuccess();
     });
 
     pmmTest.afterEach(async ({ api, cliHelper, credentials }) => {
       const { agentPassword, password, username } = original(credentials);
-      const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
-      // Without a custom agent password the exporter's endpoint takes its agent ID.
-      await api.inventoryApi.updateService(service.service_id, service.service_type, {
-        agent_password: agentPassword ?? exporter.agent_id,
-        password,
-        username,
-        ...(hasDatabase && { database: service.database_name }),
-      });
-      cliHelper.execSilent(dropUser(container, credentials)).assertSuccess();
+      try {
+        const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
+
+        // Without a custom agent password the exporter's endpoint takes its agent ID.
+        await api.inventoryApi.updateService(service.service_id, service.service_type, {
+          agent_password: agentPassword ?? exporter.agent_id,
+          password,
+          username,
+          ...(hasDatabase && { database: service.database_name }),
+        });
+      } finally {
+        cliHelper.execSilent(dropUser(container, credentials)).assertSuccess();
+      }
     });
 
     pmmTest(
@@ -58,7 +62,7 @@ for (const {
 
     pmmTest(
       `PMM-15674 - Verify changing database, username, password and agent password of ${name} service @inventory`,
-      async ({ api, cliHelper, editServicePage }) => {
+      async ({ api, dockerHelper, editServicePage }) => {
         const connection = { ...testUser, database: hasDatabase ? testDatabase : undefined };
 
         await editServicePage.open(service.service_id);
@@ -91,7 +95,10 @@ for (const {
 
         const { listen_port } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
         const metricsStatus = (agentPassword: string) =>
-          cliHelper.getHttpStatus(container, `http://pmm:${agentPassword}@127.0.0.1:${listen_port}/metrics`);
+          dockerHelper.getHttpStatus(
+            container,
+            `http://pmm:${agentPassword}@127.0.0.1:${listen_port}/metrics`,
+          );
 
         // The exporter picks up the new agent password only once pmm-agent has restarted it. One without
         // basic auth answers 200 before the restart too, so the next request can still find its port closed.

@@ -29,11 +29,11 @@ for (const serviceQan of Object.values(serviceQanSources)) {
     let container: string;
     let savedState: string | undefined;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, credentials, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = currentQuerySource(serviceQan, service);
-      container = await getServiceContainer(api, cliHelper, service);
+      container = await getServiceContainer(api, dockerHelper, service);
       savedState =
         saveState &&
         cliHelper.execSilent(saveState(container, credentials)).assertSuccess().getStdOutLines().at(-1);
@@ -170,12 +170,12 @@ for (const instance of qanInstances) {
     let container: string;
     let service: GetService;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
       container = await getServiceContainer(
         api,
-        cliHelper,
+        dockerHelper,
         await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex),
       );
       service = await addOwnService(api, cliHelper, container, instance);

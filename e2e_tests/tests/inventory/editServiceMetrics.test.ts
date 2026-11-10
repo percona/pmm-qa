@@ -1,6 +1,6 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import {
   exporterMetricsState,
   LogLevel,
@@ -27,8 +27,8 @@ for (const serviceMetrics of serviceMetricsSettings) {
     let address: string;
     let container: string;
     const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-    const exporterHttpStatus = async (api: Api, cliHelper: CliHelper) =>
-      cliHelper.getHttpStatus(
+    const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) =>
+      dockerHelper.getHttpStatus(
         serverContainer,
         `http://${address}:${(await exporter(api)).listen_port}/metrics`,
       );
@@ -55,12 +55,12 @@ for (const serviceMetrics of serviceMetricsSettings) {
       await editServicePage.verifyMetrics(expected);
     };
 
-    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = toMetricsSettings(await exporter(api));
       address = await api.inventoryApi.getNodeAddress(service.node_id);
-      container = cliHelper.getContainerByAddress(address);
+      container = dockerHelper.getContainerByAddress(address);
     });
 
     pmmTest.afterEach(async ({ api }) => {
@@ -103,7 +103,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
-      async ({ api, cliHelper, editServicePage }) => {
+      async ({ api, dockerHelper, editServicePage }) => {
         // A pushing exporter listens only on its own host's 127.0.0.1 until it is exposed.
         const pushing: ServiceMetricsSettings = {
           ...original,
@@ -117,7 +117,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
           metricsSettingsChanges(pushing),
         );
         await expect
-          .poll(() => exporterHttpStatus(api, cliHelper), {
+          .poll(() => exporterHttpStatus(api, dockerHelper), {
             message: 'an exporter that is not exposed cannot be reached',
             timeout: Timeouts.ONE_MINUTE,
           })
@@ -129,7 +129,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         // Any HTTP answer will do: the exporter asks for its agent password, or has none to ask for.
         await expect
-          .poll(() => exporterHttpStatus(api, cliHelper), {
+          .poll(() => exporterHttpStatus(api, dockerHelper), {
             message: 'an exposed exporter can be reached from PMM Server',
             timeout: Timeouts.ONE_MINUTE,
           })
@@ -139,7 +139,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify changing log level of ${name} exporter @inventory`,
-      async ({ api, cliHelper, editServicePage }) => {
+      async ({ api, dockerHelper, editServicePage }) => {
         const verbose: LogLevel =
           original.logLevel === 'LOG_LEVEL_DEBUG' ? 'LOG_LEVEL_INFO' : 'LOG_LEVEL_DEBUG';
 
@@ -147,7 +147,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         await pmmTest.step(`Change log level to ${verbose}`, async () => {
           await saveMetrics(api, editServicePage, original, { logLevel: verbose });
-          await cliHelper.waitForExporterCommandLine(container, (await exporter(api)).listen_port, {
+          await dockerHelper.waitForExporterCommandLine(container, (await exporter(api)).listen_port, {
             matches: true,
             pattern: logLevelFlag(verbose),
           });

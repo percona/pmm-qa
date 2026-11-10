@@ -54,8 +54,8 @@ for (const settings of serviceTlsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify enabling TLS is rejected by the connection check when the ${name} server cannot be verified @inventory`,
-      async ({ api, cliHelper, editServicePage }) => {
-        const { cert } = cliHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
+      async ({ api, editServicePage, tlsHelper }) => {
+        const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);
         // Without a CA field the system roots are used, so a server without TLS or with its own certificate fails either way.
@@ -83,8 +83,8 @@ for (const settings of serviceTlsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify enabling TLS with skipped verification and the ${name} certificates @inventory`,
-      async ({ api, cliHelper, editServicePage }) => {
-        const { cert, key } = cliHelper.generateSelfSignedCertificate();
+      async ({ api, editServicePage, tlsHelper }) => {
+        const { cert, key } = tlsHelper.generateSelfSignedCertificate();
         const certificates = {
           tlsCa: cert,
           tlsCert: cert,

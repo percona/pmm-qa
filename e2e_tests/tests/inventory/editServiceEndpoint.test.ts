@@ -29,12 +29,12 @@ for (const ownService of serviceEndpoints) {
     let container: string;
     let up: string;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
       container = await getServiceContainer(
         api,
-        cliHelper,
+        dockerHelper,
         await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
       );
       service = await addOwnService(api, cliHelper, container, ownService);

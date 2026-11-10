@@ -25,10 +25,10 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
     let service: GetService;
     let container: string;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, cliHelper, service);
+      container = await getServiceContainer(api, dockerHelper, service);
     });
 
     for (const option of options) {
@@ -49,7 +49,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
 
         pmmTest(
           `PMM-15674 - Verify changing ${option.label} of ${name} service @inventory`,
-          async ({ api, cliHelper, editServicePage }) => {
+          async ({ api, dockerHelper, editServicePage }) => {
             const edited = option.edit(original);
 
             await editServicePage.open(service.service_id);
@@ -81,7 +81,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
             const commandLine = option.commandLine?.(edited);
 
             if (commandLine) {
-              await cliHelper.waitForExporterCommandLine(container, exporter.listen_port, commandLine);
+              await dockerHelper.waitForExporterCommandLine(container, exporter.listen_port, commandLine);
             }
 
             await editServicePage.open(service.service_id);

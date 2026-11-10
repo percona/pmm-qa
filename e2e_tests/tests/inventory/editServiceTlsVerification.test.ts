@@ -29,10 +29,10 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
     let exporter: ServiceAgent;
     let originalTls: Record<string, unknown> | undefined;
 
-    pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
+    pmmTest.beforeEach(async ({ api, cliHelper, credentials, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, cliHelper, service);
+      container = await getServiceContainer(api, dockerHelper, service);
 
       if (serverTlsCheck) {
         expect(
@@ -55,8 +55,8 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
 
     pmmTest(
       `PMM-15674 - Verify TLS verification refuses a server certificate from an untrusted CA for ${name} service ${tag}`,
-      async ({ api, cliHelper, editServicePage }) => {
-        const { cert } = cliHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
+      async ({ api, editServicePage, tlsHelper }) => {
+        const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);
         await editServicePage.editTls({ tls: true, tlsSkipVerify: false }, { tlsCa: cert });
@@ -78,8 +78,8 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
 
     pmmTest(
       `PMM-15674 - Verify skipping TLS verification accepts a server certificate from an untrusted CA for ${name} service ${tag}`,
-      async ({ api, cliHelper, editServicePage }) => {
-        const { cert } = cliHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
+      async ({ api, editServicePage, tlsHelper }) => {
+        const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);
         await editServicePage.editTls({ tls: true, tlsSkipVerify: true }, { tlsCa: cert });

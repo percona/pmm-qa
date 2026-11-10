@@ -6,8 +6,10 @@ import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
+import DockerHelper from '@helpers/docker.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
+import TlsHelper from '@helpers/tls.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -65,6 +67,7 @@ const pmmTest = base.extend<{
   loginPage: LoginPage;
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
+  dockerHelper: DockerHelper;
   dumpPage: DumpPage;
   editServicePage: EditServicePage;
   externalPostgresHelper: ExternalPostgresHelper;
@@ -98,6 +101,7 @@ const pmmTest = base.extend<{
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
   testState: TestState;
+  tlsHelper: TlsHelper;
 }>({
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
@@ -152,6 +156,7 @@ const pmmTest = base.extend<{
     await use(dashboardPage);
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
+  dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   editServicePage: async ({ page }, use) => await use(new EditServicePage(page)),
@@ -218,6 +223,7 @@ const pmmTest = base.extend<{
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   testState: async ({}, use) => await use(new TestState()),
+  tlsHelper: async ({ cliHelper }, use) => await use(new TlsHelper(cliHelper)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
