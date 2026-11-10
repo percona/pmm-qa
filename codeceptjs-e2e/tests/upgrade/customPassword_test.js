@@ -76,7 +76,7 @@ Data(clientDbServices).Scenario(
 Scenario(
   'PMM-T1189 - verify user is able to change password after upgrade @post-custom-password-upgrade',
   async ({ I, homePage, profileAPI }) => {
-    const newPass = process.env.NEW_ADMIN_PASSWORD || 'admin1';
+    const newPass = process.env.NEW_ADMIN_PASSWORD || 'Admin-pass-1';
 
     await I.unAuthorize();
     await I.parkPage();

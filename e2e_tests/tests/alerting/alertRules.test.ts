@@ -17,8 +17,8 @@ const testRule = {
   templateName: 'pmm_postgresql_too_many_connections',
   threshold: 0.01,
 };
-const viewer = { password: 'password', username: 'test_viewer' };
-const editor = { password: 'password', username: 'test_editor' };
+const viewer = { password: 'Password-123', username: 'test_viewer' };
+const editor = { password: 'Password-123', username: 'test_editor' };
 const users = [{ password: undefined, username: 'admin' }, editor];
 const createdUserIds: number[] = [];
 

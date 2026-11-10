@@ -105,7 +105,7 @@ jobs:
       ARCH: ${{ inputs.arch || 'amd64' }}
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin-password'
+      ADMIN_PASSWORD: 'PMM3testuser!'
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}

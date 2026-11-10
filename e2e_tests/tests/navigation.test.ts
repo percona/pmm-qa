@@ -36,13 +36,13 @@ pmmTest(
 
 pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigation }) => {
   await pmmTest.step('Create non-admin user', async () => {
-    await grafanaHelper.createUser('nonadmin', 'nonadmin');
+    await grafanaHelper.createUser('nonadmin', 'Nonadmin-pass-1');
   });
 
   await pmmTest.step('Sign out as admin and login as non-admin', async () => {
     await leftNavigation.selectMenuItem('accounts');
     await leftNavigation.selectMenuItem('accounts.signOut');
-    await grafanaHelper.authorize('nonadmin', 'nonadmin');
+    await grafanaHelper.authorize('nonadmin', 'Nonadmin-pass-1');
   });
 
   await pmmTest.step('verify permissions', async () => {
