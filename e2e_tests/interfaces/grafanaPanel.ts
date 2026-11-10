@@ -15,6 +15,14 @@ export type GrafanaPanelType =
   | 'unknown'
   | 'empty';
 
+export interface GrafanaFieldConfig {
+  defaults: { unit?: string };
+  overrides: {
+    matcher: { id: string; options: string };
+    properties: { id: string; value: unknown }[];
+  }[];
+}
+
 export interface GrafanaPanel {
   name: string;
   type: GrafanaPanelType;

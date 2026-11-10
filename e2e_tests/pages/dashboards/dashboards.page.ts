@@ -1,5 +1,5 @@
 import { expect, Locator, test } from '@playwright/test';
-import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import { GrafanaFieldConfig, GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -48,6 +48,18 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    legendSeries: (panelName: string, seriesName: string) =>
+      this.builders.panelByExactName(panelName).getByTitle(seriesName, { exact: true }),
+    legendSeriesIcons: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('series-icon'),
+    legendValue: (panelName: string, seriesName: string, column: 'Max' | 'Mean' | 'Min') =>
+      this.builders
+        .panelByExactName(panelName)
+        .getByRole('row')
+        .filter({ has: this.grafanaIframe().getByTitle(seriesName, { exact: true }) })
+        .locator(
+          `xpath=td[count(ancestor::table//th[normalize-space(.)="${column}"]/preceding-sibling::th) + 1]`,
+        ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -212,6 +224,31 @@ export default class Dashboards extends BasePage {
         .panelContentByExactName('Feature Compatibility Version')
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
+
+  // Axes are drawn on a canvas, so read them from the panel Grafana renders, after a legacy graph is migrated.
+  getPanelFieldConfig = async (panelName: string) =>
+    this.builders.panelByExactName(panelName).evaluate((_, title) => {
+      interface SceneObject {
+        forEachChild?: (callback: (child: SceneObject) => void) => void;
+        state: { fieldConfig?: GrafanaFieldConfig; pluginId?: string; title?: string };
+      }
+
+      const findPanel = (sceneObject?: SceneObject): SceneObject | undefined => {
+        if (sceneObject?.state.title === title && sceneObject.state.pluginId) return sceneObject;
+
+        let found: SceneObject | undefined;
+
+        sceneObject?.forEachChild?.((child) => {
+          found ??= findPanel(child);
+        });
+
+        return found;
+      };
+
+      const scene = (window as unknown as { __grafanaSceneContext?: SceneObject }).__grafanaSceneContext;
+
+      return findPanel(scene)?.state.fieldConfig;
+    }, panelName);
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
