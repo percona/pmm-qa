@@ -3710,6 +3710,16 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/42728384722/job/129606578671",
       "by": "Investigator routine",
       "at": "2026-11-10T03:56:40Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "setup bug",
+      "summary": "ha backup-restore #40: PMM-T2377 failed in its first step, 'At least one service must be monitored', 10 s into the test. The trace shows the up query (max by service_name of timestamp(up==1)) returned only 2 internal HA services, both last sampled at 00:55:00, 168 s before the check (cutoff 120 s). The ps/psmdb services registered at 00:56:58-00:57:37 had no up sample yet. pmm-managed logged the internal PostgreSQL shutting down / refusing connections / read-only in recovery at 00:55:12, right after the PG pods rolled at 00:54-00:55, so ingestion had not resumed when the test started. The setup-to-test gap (~10 s) is the same as in the green #38/#39. The servicesRunningAndReporting check is one-shot, with no wait. The re-run #41 with identical parameters passed T2377 (13.5 m).",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/41/",
+      "by": "Investigator routine",
+      "at": "2026-11-10T04:06:22Z"
     }
   ],
   "claims": [
