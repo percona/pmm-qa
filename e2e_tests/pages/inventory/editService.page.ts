@@ -1,4 +1,5 @@
 import BasePage from '../base.page';
+import { EndpointSettings, MetricsScheme } from '@helpers/serviceEndpoint.helper';
 import {
   LogLevel,
   logLevelLabels,
@@ -39,6 +40,8 @@ export default class EditServicePage extends BasePage {
       this.elements.metricsSection.getByTestId(`radio-option-${metricsMode}`),
     querySourceOption: (querySource: QuerySource) =>
       this.elements.qanSection.getByTestId(`radio-option-${querySource}`),
+    schemeOption: (scheme: MetricsScheme) =>
+      this.elements.connectionSection.getByTestId(`radio-option-${scheme}`),
     successMessage: (serviceName: string) =>
       this.page.getByText(`Service “${serviceName}” was changed. It is now ready to continue monitoring.`),
   };
@@ -49,11 +52,16 @@ export default class EditServicePage extends BasePage {
   elements = {
     clusterChangedWarning: this.page.getByTestId('cluster-changed-warning'),
     confirmModal: this.page.getByTestId('confirm-changes-modal'),
+    connectionSection: this.page.getByTestId('connection-settings'),
     connectionTimeoutError: this.page.getByText('Enter a number of seconds, or leave blank'),
     form: this.page.getByTestId('edit-service-form'),
     logLevelOptions: this.page.getByRole('listbox').getByRole('option'),
     metricsSection: this.page.getByTestId('metrics-settings'),
+    passwordKeptHint: this.page
+      .getByTestId('connection-settings')
+      .getByText('Leave blank to keep the current one'),
     qanSection: this.page.getByTestId('query-analytics-settings'),
+    querySourceRestriction: this.page.getByTestId('query-source-restriction'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
     tlsKeyStored: this.page.getByText('A key is stored. Leave blank to keep it.'),
@@ -80,12 +88,15 @@ export default class EditServicePage extends BasePage {
     environment: this.page.getByTestId('text-input-environment'),
     exposeExporter: this.page.getByTestId('switch-input-expose-exporter').locator('input'),
     extraDsnParams: this.page.getByTestId('text-input-extra-dsn-params'),
+    group: this.page.getByTestId('text-input-group'),
+    listenPort: this.page.getByTestId('text-input-listen-port'),
     // The select opens from its button; its hidden input holds the chosen value.
     logLevel: this.page.getByTestId('select-log-level-button'),
     logLevelValue: this.page.getByTestId('select-input-log-level'),
     maxExporterConnections: this.page.getByTestId('text-input-max-exporter-connections'),
     maxQueryLength: this.page.getByTestId('text-input-max-query-length'),
     maxSlowlogFileSize: this.page.getByTestId('text-input-max-slowlog-file-size'),
+    metricsPath: this.page.getByTestId('text-input-metrics-path'),
     password: this.page.getByTestId('text-input-password'),
     replicationSet: this.page.getByTestId('text-input-replication-set'),
     statsCollections: this.page.getByTestId('text-input-stats-collections'),
@@ -116,6 +127,24 @@ export default class EditServicePage extends BasePage {
 
   editCustomLabels = async (customLabels: Record<string, string>) => {
     await this.inputs.customLabels.fill(this.toCustomLabelsText(customLabels));
+  };
+
+  editEndpoint = async ({
+    group,
+    listenPort,
+    metricsPath,
+    password,
+    scheme,
+    tlsSkipVerify,
+    username,
+  }: Partial<EndpointSettings> & { password?: string }) => {
+    if (scheme) await this.builders.schemeOption(scheme).check();
+    if (listenPort !== undefined) await this.inputs.listenPort.fill(listenPort);
+    if (metricsPath !== undefined) await this.inputs.metricsPath.fill(metricsPath);
+    if (username !== undefined) await this.inputs.username.fill(username);
+    if (password !== undefined) await this.inputs.password.fill(password);
+    if (tlsSkipVerify !== undefined) await this.inputs.tlsSkipVerify.setChecked(tlsSkipVerify);
+    if (group !== undefined) await this.inputs.group.fill(group);
   };
 
   editEnvironment = async (environment: string) => {
@@ -214,6 +243,26 @@ export default class EditServicePage extends BasePage {
       await expect(secret).toHaveAttribute('type', 'password');
       await expect(secret).toHaveValue('');
     }
+  };
+
+  verifyEndpoint = async ({
+    group,
+    listenPort,
+    metricsPath,
+    scheme,
+    tlsSkipVerify,
+    username,
+  }: EndpointSettings) => {
+    await expect(this.builders.schemeOption(scheme)).toBeChecked();
+    await expect(this.inputs.listenPort).toHaveValue(listenPort);
+    await expect(this.inputs.metricsPath).toHaveValue(metricsPath);
+    await expect(this.inputs.username).toHaveValue(username);
+    await expect(this.inputs.password).toHaveAttribute('type', 'password');
+    await expect(this.inputs.password).toHaveValue('');
+    await expect(this.inputs.tlsSkipVerify).toBeChecked({ checked: tlsSkipVerify });
+    await expect(this.inputs.group).toBeVisible({ visible: group !== undefined });
+
+    if (group !== undefined) await expect(this.inputs.group).toHaveValue(group);
   };
 
   verifyLabels = async (labels: ServiceLabels) => {

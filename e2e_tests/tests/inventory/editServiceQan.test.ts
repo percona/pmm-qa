@@ -136,6 +136,31 @@ for (const { name, serviceRegex } of [
   );
 }
 
+const pdpgsqlQan = serviceQanSources.find(({ name }) => name === 'pdpgsql');
+
+if (!pdpgsqlQan) throw new Error('The pdpgsql query sources are missing');
+
+pmmTest(
+  "PMM-15674 - Verify query source of PMM Server's own PostgreSQL cannot be changed in the form @inventory",
+  async ({ api, editServicePage, grafanaHelper }) => {
+    await grafanaHelper.authorize();
+
+    const service = await api.inventoryApi.getServiceDetailsByRegex('^pmm-server-postgresql$');
+    const offered: QuerySource[] = ['none', ...pdpgsqlQan.sources.map(({ value }) => value)];
+
+    await editServicePage.open(service.service_id);
+    await editServicePage.verifyQuerySource(currentQuerySource(pdpgsqlQan, service), offered);
+
+    for (const querySource of offered) {
+      await expect(editServicePage.builders.querySourceOption(querySource)).toBeDisabled();
+    }
+
+    await expect(editServicePage.elements.querySourceRestriction).toHaveText(
+      'Query Analytics for PMM’s internal PostgreSQL is turned on and off in Settings.',
+    );
+  },
+);
+
 for (const instance of qanInstances) {
   const { agentType, hostServiceRegex, name, querySource, serviceName, serviceType } = instance;
 

@@ -167,4 +167,23 @@ export default class PrometheusApi {
 
     return serverTime;
   };
+
+  /** Waits until the latest samples of `selector` are newer than `since`, from `waitForServerTime`, and equal `value`. */
+  waitForValueAfter = async (
+    selector: string,
+    since: number,
+    value: number,
+    timeout: Timeouts = Timeouts.TWO_MINUTES,
+  ) => {
+    await expect
+      .poll(
+        async () => {
+          const latest = (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0;
+
+          return latest > since ? this.instantQueryValue(`max(${selector})`) : undefined;
+        },
+        { intervals: [Timeouts.FIVE_SECONDS], message: `${selector} after ${since}`, timeout },
+      )
+      .toEqual(value);
+  };
 }
