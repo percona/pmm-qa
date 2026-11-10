@@ -232,7 +232,6 @@ export default class Dashboards extends BasePage {
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
 
-  // Each data row as { column header: cell text }, read after a dashboard refresh.
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
     // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
     const queried = this.page.waitForResponse(

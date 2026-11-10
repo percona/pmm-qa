@@ -119,6 +119,24 @@ export default class CliHelper {
     ).stdout;
   };
 
+  /**
+   * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
+   *
+   * @param   container   a PSMDB container with the pbm CLI configured
+   */
+  getPbmAgentErrors = (container: string): Record<string, string[]> => {
+    const { cluster } = JSON.parse(
+      this.execute(`docker exec ${container} pbm status -s cluster -o json`).assertSuccess().stdout,
+    ) as { cluster: { nodes: { errors?: string[]; host: string; ok: boolean; role: string }[] }[] };
+
+    return Object.fromEntries(
+      cluster
+        .flatMap(({ nodes }) => nodes)
+        .filter(({ ok, role }) => role !== 'A' && !ok)
+        .map(({ errors, host }) => [host, errors ?? []]),
+    );
+  };
+
   getPmmAdminField = (output: string, field: string): string => {
     const value = output
       .split('\n')

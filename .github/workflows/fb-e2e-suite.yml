@@ -322,7 +322,6 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch || 'amd64' }}
-      # The tests stop pbm-agent and MinIO in these containers, so they run on the setup's own host.
       setup_services: '--database psmdb,SETUP_TYPE=psa'
       pmm_test_flag: '@pmm-psmdb-pbm-agents'
 

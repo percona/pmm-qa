@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import CliHelper from '@helpers/cli.helper';
+import { grafanaDurationSeconds } from '@helpers/time.helper';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe.configure({ mode: 'default' });
@@ -9,33 +9,6 @@ pmmTest.describe.configure({ mode: 'default' });
 // and MinIO in its containers. rs101 is the primary, rs102 a secondary and rs103 the arbiter.
 const environment = 'psmdb-dev';
 const cluster = 'replicaset';
-const durationUnits: Record<string, number> = {
-  day: 86_400,
-  hour: 3_600,
-  minute: 60,
-  second: 1,
-  week: 604_800,
-};
-// Grafana's dtdurations text ("3 minutes, 12 seconds") in seconds.
-const durationSeconds = (text: string) =>
-  [...text.matchAll(/(\d+)\s+(second|minute|hour|day|week)s?/g)].reduce(
-    (sum, [, value, unit]) => sum + Number(value) * durationUnits[unit],
-    0,
-  );
-// PBM's own view: the errors of each data-bearing agent that is not OK, by host.
-const pbmAgentErrors = (cliHelper: CliHelper): Record<string, string[]> =>
-  Object.fromEntries(
-    (
-      JSON.parse(
-        cliHelper.execute('docker exec rs101 pbm status -s cluster -o json').assertSuccess().stdout,
-      ) as {
-        cluster: { nodes: { errors?: string[]; host: string; ok: boolean; role: string }[] }[];
-      }
-    ).cluster
-      .flatMap(({ nodes }) => nodes)
-      .filter(({ ok, role }) => role !== 'A' && !ok)
-      .map(({ errors, host }) => [host, errors ?? []]),
-  );
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
@@ -103,13 +76,13 @@ pmmTest(
         })
         .toEqual([downRow]);
       await expect
-        .poll(() => pbmAgentErrors(cliHelper), { timeout: Timeouts.ONE_MINUTE })
+        .poll(() => cliHelper.getPbmAgentErrors('rs101'), { timeout: Timeouts.ONE_MINUTE })
         .toEqual({ 'rs102:27017': [expect.stringContaining('lost agent')] });
     });
 
     const firstFailingFor = await pmmTest.step('Failing for counts from the stop', async () => {
       const [row] = await dashboard.getTableRowsAfterRefresh(panelName);
-      const failingFor = durationSeconds(row['Failing for']);
+      const failingFor = grafanaDurationSeconds(row['Failing for']);
 
       expect(Math.abs(failingFor - (Date.now() - stoppedAt) / 1_000)).toBeLessThanOrEqual(120);
 
@@ -118,7 +91,8 @@ pmmTest(
 
     await expect
       .poll(
-        async () => durationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']),
+        async () =>
+          grafanaDurationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']),
         {
           intervals: [Timeouts.TEN_SECONDS],
           message: 'Failing for should grow by a minute',
@@ -164,6 +138,18 @@ pmmTest(
       await expect(page).not.toHaveURL(/var-Filters=cluster/);
       await expect(dashboard.builders.selectedVariableValues('Environment')).toHaveText(environment);
       await expect(dashboard.builders.selectedVariableValues('Cluster')).toHaveText(cluster);
+    });
+
+    await pmmTest.step('A Cluster filter for another value hides the row until it is removed', async () => {
+      await page.goto(
+        `${dashboardUrl}&var-Filters=${encodeURIComponent('cluster|=|pmm-qa-no-such-cluster')}`,
+      );
+      await dashboard.loadAllPanels();
+      await dashboard.verifyPanelTextAfterRefresh(panelName, emptyText, Timeouts.ONE_MINUTE);
+      await dashboard.builders.removeAdHocFilter('cluster').click();
+      await expect
+        .poll(async () => dashboard.getTableRowsAfterRefresh(panelName), { timeout: Timeouts.ONE_MINUTE })
+        .toEqual([downRow]);
     });
 
     await pmmTest.step('Start pbm-agent on rs102 and see the table empty again', async () => {
@@ -226,7 +212,7 @@ pmmTest(
     // before the restart: a Failing for reset by the restart is then told apart from the stop.
     const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age two minutes', async () => {
       const readFailingFor = async () =>
-        durationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']);
+        grafanaDurationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']);
 
       await expect
         .poll(readFailingFor, {
@@ -239,7 +225,7 @@ pmmTest(
       return readFailingFor();
     });
 
-    expect(pbmAgentErrors(cliHelper)).toEqual({
+    expect(cliHelper.getPbmAgentErrors('rs101')).toEqual({
       'rs101:27017': expect.arrayContaining([expect.stringContaining('storage')]),
       'rs102:27017': [expect.stringContaining('lost agent')],
     });
@@ -258,7 +244,7 @@ pmmTest(
     });
 
     await pmmTest.step('rs102 Failing for still counts from the agent stop', async () => {
-      const failingFor = durationSeconds(
+      const failingFor = grafanaDurationSeconds(
         (await dashboard.getTableRowsAfterRefresh(panelName))[1]['Failing for'],
       );
 

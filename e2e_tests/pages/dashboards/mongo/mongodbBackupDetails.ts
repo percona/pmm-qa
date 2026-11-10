@@ -32,6 +32,5 @@ export default class MongodbBackupDetails implements DashboardInterface {
     { name: 'Backup Sizes', type: 'unknown' },
     { name: 'Backup Duration', type: 'unknown' },
   ];
-  // Healthy agents leave the table on its "No failing backup agents" state.
   noDataMetrics = ['Failing Backup Agents'];
 }
