@@ -170752,16 +170752,18 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/41/",
         "by": "Investigator routine",
         "at": "2026-11-10T04:06:22Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-10T03:09:14Z",
         "suites": [
           "UI"
-        ]
+        ],
+        "verdict": "unstable",
+        "summary": "ui @instances #12104: PMM-T2010 'Verify Dashboard for Aurora Postgres RDS added via UI' failed only for the Aurora PostgreSQL 16 instance (the PG15 one passed): 'Execution time' empty on PostgreSQL Instances Overview over now-5m, about 40 s after the instance was added. Not reproduced: the re-run #12106 with identical parameters passed. The panel depends on query activity on the external AWS Aurora instance inside a 5-minute window, which the test does not generate; if it recurs, that is the next thing to check.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12106/",
+        "by": "Investigator routine",
+        "at": "2026-11-10T04:06:28Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
