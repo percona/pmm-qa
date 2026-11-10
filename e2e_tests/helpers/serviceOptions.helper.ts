@@ -170,7 +170,8 @@ export const serviceOptionsSettings: ServiceOptions[] = [
       {
         agentTypes: ['mysqld_exporter'],
         change: 'extra_dsn_params',
-        edit: () => ({ readTimeout: '30s' }),
+        // pmm-managed refuses every other parameter.
+        edit: () => ({ allowCleartextPasswords: 'true' }),
         field: 'extraDsnParams',
         label: 'extra DSN parameters',
         read: ({ mysql_options }) => mysql_options?.extra_dsn_params ?? {},

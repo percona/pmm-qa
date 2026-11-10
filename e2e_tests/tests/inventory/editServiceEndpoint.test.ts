@@ -42,13 +42,15 @@ for (const {
       }
 
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      up = `up{service_name="${service.service_name}"}`;
+      // The External service is added again under the same name for every test, and the series of the one
+      // removed before it can still be in the query window, so only the service ID tells them apart.
+      up = `up{service_id="${service.service_id}"}`;
 
       const { passwordSet, ...settings } = await readEndpoint(api, service.service_id, hasGroup);
 
+      original = settings;
       // The API never returns a stored password, so only a service without one can be put back as it was.
       expect(passwordSet, `${service.service_name} must have no basic auth password`).toBe(false);
-      original = settings;
     });
 
     pmmTest.afterEach(async ({ api, cliHelper }) => {
@@ -216,7 +218,7 @@ for (const {
             })
             .toEqual({ ...expected, passwordSet: false });
           await api.prometheusApi.waitForValueAfter(
-            `up{service_name="${service.service_name}",external_group="${expected.group}"}`,
+            `up{service_id="${service.service_id}",external_group="${expected.group}"}`,
             await api.prometheusApi.waitForServerTime(),
             1,
           );
