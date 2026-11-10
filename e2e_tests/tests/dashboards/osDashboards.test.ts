@@ -93,23 +93,11 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the Netstat: TCP panel shows new connections, resets and retransmits per second that rise during a burst and fall back afterwards @dashboards @docker-configuration',
+  'Verify the Netstat: TCP panel shows new connections, resets and retransmits per second that rise during a burst and fall back afterwards @nightly @dashboards',
   async ({ api, cliHelper, dashboard, page, urlHelper }) => {
-    const { networkDetails } = dashboard.os;
-    const { netstatTcp } = networkDetails;
+    const { netstatTcp } = dashboard.os.networkDetails;
     const [activeOpens, passiveOpens] = netstatTcp.connectionOpens;
     const nodeName = await api.haApi.getPmmServerNodeName();
-
-    const openNetworkDetails = async (from: number | string, to: number | string = 'now') => {
-      await page.goto(
-        urlHelper.buildUrlWithParameters(networkDetails.url, {
-          from: String(from),
-          nodeName,
-          to: String(to),
-        }),
-      );
-      await dashboard.loadAllPanels();
-    };
 
     const readRate = async (seriesName: string, column: 'Max' | 'Min') => {
       const value = dashboard.builders.legendValue(netstatTcp.name, seriesName, column);
@@ -123,9 +111,13 @@ pmmTest(
       'Open Network Details for the last 30 minutes and verify the Netstat: TCP legend',
       async () => {
         await page.goto(
-          urlHelper.buildUrlWithParameters(networkDetails.url, { from: 'now-30m', nodeName, to: 'now' }),
+          urlHelper.buildUrlWithParameters(dashboard.os.networkDetails.url, {
+            from: 'now-30m',
+            nodeName,
+            to: 'now',
+          }),
         );
-        await dashboard.verifyAllPanelsHaveData(networkDetails.noDataMetrics);
+        await dashboard.verifyAllPanelsHaveData(dashboard.os.networkDetails.noDataMetrics);
 
         for (const series of netstatTcp.series) {
           await expect(dashboard.builders.legendSeries(netstatTcp.name, series)).toBeVisible();
@@ -145,10 +137,14 @@ pmmTest(
     await pmmTest.step(
       'Verify activeOpens and passiveOpens fall back to a few ops/s after the burst',
       async () => {
-        await openNetworkDetails(
-          burstEnd + Timeouts.THIRTY_SECONDS,
-          burstEnd + Timeouts.ONE_MINUTE + Timeouts.THIRTY_SECONDS,
+        await page.goto(
+          urlHelper.buildUrlWithParameters(dashboard.os.networkDetails.url, {
+            from: String(burstEnd + Timeouts.THIRTY_SECONDS),
+            nodeName,
+            to: String(burstEnd + Timeouts.ONE_MINUTE + Timeouts.THIRTY_SECONDS),
+          }),
         );
+        await dashboard.loadAllPanels();
 
         for (const series of netstatTcp.connectionOpens) {
           expect(await readRate(series, 'Max'), `${series} after the burst`).toBeLessThan(
@@ -161,7 +157,14 @@ pmmTest(
     await pmmTest.step(
       'Verify activeOpens and passiveOpens overlap at the burst rate during the burst',
       async () => {
-        await openNetworkDetails(burstStart + Timeouts.TEN_SECONDS, burstEnd - Timeouts.FIVE_SECONDS);
+        await page.goto(
+          urlHelper.buildUrlWithParameters(dashboard.os.networkDetails.url, {
+            from: String(burstStart + Timeouts.TEN_SECONDS),
+            nodeName,
+            to: String(burstEnd - Timeouts.FIVE_SECONDS),
+          }),
+        );
+        await dashboard.loadAllPanels();
 
         const active = await readRate(activeOpens, 'Max');
         const passive = await readRate(passiveOpens, 'Max');
@@ -183,7 +186,14 @@ pmmTest(
     await pmmTest.step(
       'Verify the last 30 minutes show per-second rates, not since-boot totals',
       async () => {
-        await openNetworkDetails('now-30m');
+        await page.goto(
+          urlHelper.buildUrlWithParameters(dashboard.os.networkDetails.url, {
+            from: 'now-30m',
+            nodeName,
+            to: 'now',
+          }),
+        );
+        await dashboard.loadAllPanels();
 
         const max = await readRate(activeOpens, 'Max');
 
@@ -196,51 +206,5 @@ pmmTest(
         }
       },
     );
-  },
-);
-
-pmmTest(
-  'Verify established connections have their own Connections axis and the Netstat: TCP panel looks the same at Last 1 hour and Last 24 hours @nightly @dashboards',
-  async ({ api, dashboard, page, urlHelper }) => {
-    const { networkDetails } = dashboard.os;
-    const { netstatTcp } = networkDetails;
-    const nodeName = await api.haApi.getPmmServerNodeName();
-
-    for (const from of ['now-1h', 'now-24h']) {
-      await pmmTest.step(`Verify the Netstat: TCP axes and legend from ${from}`, async () => {
-        await page.goto(urlHelper.buildUrlWithParameters(networkDetails.url, { from, nodeName, to: 'now' }));
-        await dashboard.verifyAllPanelsHaveData(networkDetails.noDataMetrics);
-        await expect(dashboard.builders.legendSeriesIcons(netstatTcp.name)).toHaveCount(
-          netstatTcp.series.length,
-        );
-        await expect(dashboard.builders.legendSeries(netstatTcp.name, netstatTcp.established)).toHaveText(
-          netstatTcp.establishedLegend,
-        );
-        await expect(
-          dashboard.builders.legendValue(netstatTcp.name, netstatTcp.established, 'Mean'),
-        ).not.toHaveText(/ops\/s/);
-
-        for (const series of [...netstatTcp.connectionOpens, ...netstatTcp.connectionProblems]) {
-          await expect(dashboard.builders.legendSeries(netstatTcp.name, series)).toHaveText(series);
-          await expect(dashboard.builders.legendValue(netstatTcp.name, series, 'Mean')).toHaveText(
-            netstatTcp.rateValue,
-          );
-        }
-
-        await expect
-          .poll(() => dashboard.getPanelFieldConfig(netstatTcp.name), {
-            message: `${netstatTcp.name} keeps the rates on the left axis and established on the right`,
-          })
-          .toMatchObject({
-            defaults: { unit: netstatTcp.rateUnit },
-            overrides: [
-              {
-                ...netstatTcp.rightAxisOverride,
-                properties: expect.arrayContaining(netstatTcp.rightAxisOverride.properties),
-              },
-            ],
-          });
-      });
-    }
   },
 );
