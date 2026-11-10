@@ -1,5 +1,6 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
+import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import {
   exporterMetricsState,
@@ -27,11 +28,31 @@ for (const serviceMetrics of serviceMetricsSettings) {
     let address: string;
     let container: string;
     const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-    const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) =>
-      dockerHelper.getHttpStatus(
-        serverContainer,
-        `http://${address}:${(await exporter(api)).listen_port}/metrics`,
+
+    const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) => {
+      const { listen_port } = await exporter(api);
+      const url = `http://${address}:${listen_port}/metrics`;
+      const status = dockerHelper.getHttpStatus(serverContainer, url);
+      const port = Number(listen_port).toString(16).toUpperCase().padStart(4, '0');
+      const listeners = dockerHelper
+        .getProcessCommandLine(container, 'listen-address=', `:${listen_port}`)
+        ?.match(/web.listen-address=\S+/)?.[0];
+      const sockets = new CliHelper()
+        .execSilent(
+          `docker exec ${container} sh -c 'cat /proc/net/tcp /proc/net/tcp6' | grep -i ':${port} ' | awk '{print $2, $3, $4}'`,
+        )
+        .stdout.trim()
+        .replaceAll('\n', ' | ');
+      const curl = new CliHelper()
+        .execSilent(`docker exec ${serverContainer} curl -sS -o /dev/null --max-time 5 ${url} 2>&1`)
+        .stdout.trim();
+
+      console.log(
+        `DIAG ${new Date().toISOString()} url=${url} container=${container} status=${status} flag=${listeners} curl=[${curl}] sockets=[${sockets}]`,
       );
+
+      return status;
+    };
 
     // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
     const saveMetrics = async (
