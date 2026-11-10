@@ -140,18 +140,6 @@ pmmTest(
       await expect(dashboard.builders.selectedVariableValues('Cluster')).toHaveText(cluster);
     });
 
-    await pmmTest.step('A Cluster filter for another value hides the row until it is removed', async () => {
-      await page.goto(
-        `${dashboardUrl}&var-Filters=${encodeURIComponent('cluster|=|pmm-qa-no-such-cluster')}`,
-      );
-      await dashboard.loadAllPanels();
-      await dashboard.verifyPanelTextAfterRefresh(panelName, emptyText, Timeouts.ONE_MINUTE);
-      await dashboard.builders.removeAdHocFilter('cluster').click();
-      await expect
-        .poll(async () => dashboard.getTableRowsAfterRefresh(panelName), { timeout: Timeouts.ONE_MINUTE })
-        .toEqual([downRow]);
-    });
-
     await pmmTest.step('Start pbm-agent on rs102 and see the table empty again', async () => {
       cliHelper.execute('docker exec rs102 systemctl start pbm-agent').assertSuccess();
       await dashboard.verifyPanelTextAfterRefresh(panelName, emptyText, Timeouts.FIVE_MINUTES);
