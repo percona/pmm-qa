@@ -169,6 +169,13 @@ export default class CliHelper {
     ).agents_info;
   };
 
+  readMongodbTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca-certs.pem'), key: read('client.pem') };
+  };
+
   readMysqlTlsCertificates = (container: string) => {
     // mysqld's auto-generated PEM files end in a NUL byte.
     const read = (file: string) =>

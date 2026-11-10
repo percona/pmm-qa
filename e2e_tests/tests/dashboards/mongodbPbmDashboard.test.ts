@@ -19,14 +19,7 @@ pmmTest.afterEach(async ({ api, request }) => {
     expect(response.status(), response.statusText()).toEqual(200);
   }
 
-  for (const { location_id } of await api.backupsApi.getLocations()) {
-    const response = await request.delete(`${apiEndpoints.backups.locations}/${location_id}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-      params: { force: true },
-    });
-
-    expect(response.status(), response.statusText()).toEqual(200);
-  }
+  await api.backupsApi.removeAllLocations();
 });
 
 for (const mode of ['BACKUP_MODE_PITR', 'BACKUP_MODE_SNAPSHOT'] as const) {

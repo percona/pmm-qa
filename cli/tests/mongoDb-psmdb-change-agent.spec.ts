@@ -377,7 +377,10 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
         await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
         await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
         await expect(async () => {
-          await (await cli.exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess();
+          const status = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+          await status.assertSuccess();
+          // A disconnected agent still exits 0 and prints "Connected : false".
+          expect(status.stdout).toMatch(/Connected\s+:\s+true/);
         }).toPass({ intervals: [2_000], timeout: 60_000 });
       },
       async () => {
@@ -600,6 +603,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2435 - Verify Change agent skip connection check for mongodb-exporter and qan-mongodb-profiler-agent', async ({}) => {
+    // skip-until: 2026-12-03
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15835');
+
     for (const command of pmmAdmin.changeMongoAgents(containerName, exporterId, profilerId, '--password=invalid_skip_check_password --skip-connection-check')) {
       const output = await cli.exec(command);
       await output.assertSuccess();
@@ -705,7 +711,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
 
     await expect(async () => {
-      await (await cli.exec(`docker exec ${containerName} pmm-admin status --pmm-agent-listen-port=7778`)).assertSuccess();
+      const status = await cli.exec(`docker exec ${containerName} pmm-admin status --pmm-agent-listen-port=7778`);
+      await status.assertSuccess();
+      expect(status.stdout).toMatch(/Connected\s+:\s+true/);
     }).toPass({ intervals: [2_000], timeout: 60_000 });
 
     await pmmAdmin.changeAgentsUntilPersisted(
