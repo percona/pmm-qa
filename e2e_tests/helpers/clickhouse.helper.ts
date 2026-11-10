@@ -127,7 +127,7 @@ export default class ClickHouseHelper {
           );
         },
         {
-          intervals: [Timeouts.FIFTEEN_SECONDS],
+          intervals: [Timeouts.FIVE_SECONDS],
           message: `QAN rows from agent ${agentId}`,
           timeout: Timeouts.FIVE_MINUTES,
         },

@@ -19,14 +19,14 @@ export interface ServiceLabels {
   replicationSet: string;
 }
 
-export interface ServiceConnection {
+interface ServiceConnection {
   agentPassword?: string;
   database?: string;
   password?: string;
   username: string;
 }
 
-export interface ServiceTlsSettings {
+interface ServiceTlsSettings {
   tls: boolean;
   tlsSkipVerify: boolean;
 }
@@ -78,7 +78,6 @@ export default class EditServicePage extends BasePage {
     serviceDetails: this.page.getByTestId('edit-service-form').getByTestId('service-details'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
-    tlsKeyStored: this.page.getByText('A key is stored. Leave blank to keep it.'),
     unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
@@ -181,7 +180,6 @@ export default class EditServicePage extends BasePage {
     if (connectionTimeout !== undefined) await this.inputs.connectionTimeout.fill(connectionTimeout);
   };
 
-  // A switch takes a boolean; any other field takes the text the form shows.
   editOption = async (field: OptionField, value: boolean | string) => {
     await (typeof value === 'boolean'
       ? this.inputs[field].setChecked(value)
@@ -208,6 +206,16 @@ export default class EditServicePage extends BasePage {
     }
   };
 
+  expectRefused = async (response: Response, serviceId: string, reason: string) => {
+    expect(response.status(), reason).not.toEqual(200);
+    await expect(this.page).toHaveURL(new RegExp(`${serviceId}/edit$`));
+  };
+
+  expectSaved = async (response: Response) => {
+    expect(response.status(), await response.text()).toEqual(200);
+    await expect(this.page).toHaveURL(new RegExp(`${this.url}$`));
+  };
+
   open = async (serviceId: string) => {
     await this.page.goto(`${this.url}/${serviceId}/edit`);
     await expect(this.elements.form).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -223,14 +231,15 @@ export default class EditServicePage extends BasePage {
   recordApiWrites = () => {
     const writes: string[] = [];
 
-    // After any inventory change the UI refetches services:getTypes, a read the API takes as a POST.
+    // Custom methods named get, list or search are reads the API takes as a POST, such as the
+    // services:getTypes the UI refetches after any inventory change.
     this.page.on('request', (request) => {
       const { pathname } = new URL(request.url());
 
       if (
         request.method() !== 'GET' &&
         /^\/v1\/(management|inventory)\//.test(pathname) &&
-        !pathname.endsWith(':getTypes')
+        !/:(get|list|search)\w*$/.test(pathname)
       ) {
         writes.push(`${request.method()} ${pathname}`);
       }
@@ -241,9 +250,7 @@ export default class EditServicePage extends BasePage {
 
   saveChanges = async (
     serviceId: string,
-    clusterChanged: boolean,
-    settingsChanged = false,
-    skipConnectionCheck = false,
+    { clusterChanged = false, settingsChanged = true, skipConnectionCheck = false } = {},
   ): Promise<Response> => {
     await this.buttons.saveChanges.click();
     await expect(this.elements.confirmModal).toBeVisible();

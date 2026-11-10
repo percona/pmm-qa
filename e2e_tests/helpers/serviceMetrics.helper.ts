@@ -1,18 +1,9 @@
-import { GetService } from '@interfaces/inventory';
-
-type ServiceAgent = GetService['agents'][number];
+import { FrameworkService, frameworkServices } from '@helpers/frameworkServices.helper';
+import { ServiceAgent } from '@interfaces/inventory';
 
 export type MetricsMode = 'METRICS_MODE_PULL' | 'METRICS_MODE_PUSH';
 
-export type LogLevel =
-  | 'LOG_LEVEL_DEBUG'
-  | 'LOG_LEVEL_ERROR'
-  | 'LOG_LEVEL_FATAL'
-  | 'LOG_LEVEL_INFO'
-  | 'LOG_LEVEL_UNSPECIFIED'
-  | 'LOG_LEVEL_WARN';
-
-export const logLevelLabels: Record<LogLevel, string> = {
+export const logLevelLabels = {
   LOG_LEVEL_DEBUG: 'Debug',
   LOG_LEVEL_ERROR: 'Error',
   LOG_LEVEL_FATAL: 'Fatal',
@@ -20,6 +11,8 @@ export const logLevelLabels: Record<LogLevel, string> = {
   LOG_LEVEL_UNSPECIFIED: 'Default',
   LOG_LEVEL_WARN: 'Warning',
 };
+
+export type LogLevel = keyof typeof logLevelLabels;
 
 export interface ServiceMetricsSettings {
   // Seconds as the form shows them, blank for the default.
@@ -29,50 +22,36 @@ export interface ServiceMetricsSettings {
   metricsMode: MetricsMode;
 }
 
-export interface ServiceMetrics {
-  exporterType: string;
+interface ServiceMetrics extends FrameworkService {
   // mysqld_exporter, postgres_exporter and valkey_exporter have no fatal level, so the form leaves it out.
   fatalLogLevel: boolean;
-  name: string;
-  serviceRegex: string;
-  // The exporter's own up metric, whose fresh samples show its metrics still reach PMM Server.
   upMetric: string;
 }
 
 export const serviceMetricsSettings: ServiceMetrics[] = [
   {
-    exporterType: 'postgres_exporter',
+    ...frameworkServices.pdpgsql,
     fatalLogLevel: false,
-    name: 'pdpgsql',
-    serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
     upMetric: 'pg_up',
   },
   {
-    exporterType: 'mysqld_exporter',
+    ...frameworkServices.ps,
     fatalLogLevel: false,
-    name: 'ps',
-    serviceRegex: '^ps_pmm',
     upMetric: 'mysql_up',
   },
   {
-    exporterType: 'mongodb_exporter',
+    ...frameworkServices.psmdb,
     fatalLogLevel: true,
-    name: 'psmdb',
-    serviceRegex: '^rs101_',
     upMetric: 'mongodb_up',
   },
   {
-    exporterType: 'valkey_exporter',
+    ...frameworkServices.valkey,
     fatalLogLevel: false,
-    name: 'valkey',
-    serviceRegex: '^valkey-primary',
     upMetric: 'redis_up',
   },
   {
-    exporterType: 'proxysql_exporter',
+    ...frameworkServices.proxysql,
     fatalLogLevel: true,
-    name: 'proxysql',
-    serviceRegex: '^my-new-proxysql_',
     upMetric: 'proxysql_up',
   },
 ];

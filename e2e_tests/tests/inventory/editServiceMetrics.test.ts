@@ -1,4 +1,6 @@
+import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
+import CliHelper from '@helpers/cli.helper';
 import {
   exporterMetricsState,
   LogLevel,
@@ -12,7 +14,9 @@ import {
 } from '@helpers/serviceMetrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
+import EditServicePage from '@pages/inventory/editService.page';
 import { expect } from '@playwright/test';
+import { serverContainer } from '@testdata/datasourceProxy';
 
 for (const serviceMetrics of serviceMetricsSettings) {
   const { exporterType, name, serviceRegex, upMetric } = serviceMetrics;
@@ -22,13 +26,39 @@ for (const serviceMetrics of serviceMetricsSettings) {
     let original: ServiceMetricsSettings;
     let address: string;
     let container: string;
+    const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
+    const exporterHttpStatus = async (api: Api, cliHelper: CliHelper) =>
+      cliHelper.getHttpStatus(
+        serverContainer,
+        `http://${address}:${(await exporter(api)).listen_port}/metrics`,
+      );
+
+    // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
+    const saveMetrics = async (
+      api: Api,
+      editServicePage: EditServicePage,
+      base: ServiceMetricsSettings,
+      change: Partial<ServiceMetricsSettings>,
+    ) => {
+      const expected = { ...base, ...change };
+
+      await editServicePage.editMetrics(change);
+      await editServicePage.expectSaved(await editServicePage.saveChanges(service.service_id));
+      await expect
+        .poll(async () => exporterMetricsState(await exporter(api)), {
+          message: `${exporterType} runs with ${JSON.stringify(change)}`,
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toEqual({ ...expected, status: AgentStatus.running });
+
+      await editServicePage.open(service.service_id);
+      await editServicePage.verifyMetrics(expected);
+    };
 
     pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      original = toMetricsSettings(
-        await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-      );
+      original = toMetricsSettings(await exporter(api));
       address = await api.inventoryApi.getNodeAddress(service.node_id);
       container = cliHelper.getContainerByAddress(address);
     });
@@ -53,42 +83,19 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify changing metrics mode of ${name} service keeps its metrics reaching PMM Server @inventory`,
-      async ({ api, editServicePage, page }) => {
+      async ({ api, editServicePage }) => {
         const otherMode: MetricsMode =
           original.metricsMode === 'METRICS_MODE_PUSH' ? 'METRICS_MODE_PULL' : 'METRICS_MODE_PUSH';
 
+        await editServicePage.open(service.service_id);
+
         for (const metricsMode of [otherMode, original.metricsMode]) {
           await pmmTest.step(`Change metrics mode to ${metricsMode}`, async () => {
-            const expected = { ...original, metricsMode };
+            await saveMetrics(api, editServicePage, original, { metricsMode });
 
-            await editServicePage.open(service.service_id);
-            await editServicePage.editMetrics({ metricsMode });
-
-            const response = await editServicePage.saveChanges(service.service_id, false, true);
-
-            expect(response.status(), await response.text()).toEqual(200);
-            await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
-            await expect
-              .poll(
-                async () =>
-                  exporterMetricsState(
-                    await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-                  ),
-                { message: `${exporterType} in ${metricsMode}`, timeout: Timeouts.ONE_MINUTE },
-              )
-              .toEqual({ ...expected, status: AgentStatus.running });
-
-            // Taken once the exporter runs in the new mode, so the sample cannot come from the old one:
+            // Awaited once the exporter runs in the new mode, so the sample cannot come from the old one:
             // PMM Server scrapes a pulled exporter, the client's vmagent sends a pushed one's metrics.
-            const since = await api.prometheusApi.waitForServerTime();
-
-            await api.prometheusApi.waitForSampleAfter(
-              `${upMetric}{service_name="${service.service_name}"}`,
-              since,
-            );
-
-            await editServicePage.open(service.service_id);
-            await editServicePage.verifyMetrics(expected);
+            await api.prometheusApi.waitForNewSample(`${upMetric}{service_name="${service.service_name}"}`);
           });
         }
       },
@@ -96,14 +103,13 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
-      async ({ api, cliHelper, editServicePage, page }) => {
+      async ({ api, cliHelper, editServicePage }) => {
         // A pushing exporter listens only on its own host's 127.0.0.1 until it is exposed.
         const pushing: ServiceMetricsSettings = {
           ...original,
           exposeExporter: false,
           metricsMode: 'METRICS_MODE_PUSH',
         };
-        const exposed = { ...pushing, exposeExporter: true };
 
         await api.inventoryApi.updateService(
           service.service_id,
@@ -111,125 +117,51 @@ for (const serviceMetrics of serviceMetricsSettings) {
           metricsSettingsChanges(pushing),
         );
         await expect
-          .poll(
-            async () => {
-              const { listen_port } = await api.inventoryApi.getServiceExporter(
-                service.service_id,
-                exporterType,
-              );
-
-              return cliHelper.getHttpStatus('pmm-server', `http://${address}:${listen_port}/metrics`);
-            },
-            { message: 'an exporter that is not exposed cannot be reached', timeout: Timeouts.ONE_MINUTE },
-          )
+          .poll(() => exporterHttpStatus(api, cliHelper), {
+            message: 'an exporter that is not exposed cannot be reached',
+            timeout: Timeouts.ONE_MINUTE,
+          })
           .toEqual('000');
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyMetrics(pushing);
-        await editServicePage.editMetrics({ exposeExporter: true });
-
-        const response = await editServicePage.saveChanges(service.service_id, false, true);
-
-        expect(response.status(), await response.text()).toEqual(200);
-        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
-        await expect
-          .poll(
-            async () =>
-              exporterMetricsState(
-                await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-              ),
-            { message: `${exporterType} exposed`, timeout: Timeouts.ONE_MINUTE },
-          )
-          .toEqual({ ...exposed, status: AgentStatus.running });
+        await saveMetrics(api, editServicePage, pushing, { exposeExporter: true });
 
         // Any HTTP answer will do: the exporter asks for its agent password, or has none to ask for.
         await expect
-          .poll(
-            async () => {
-              const { listen_port } = await api.inventoryApi.getServiceExporter(
-                service.service_id,
-                exporterType,
-              );
-
-              return cliHelper.getHttpStatus('pmm-server', `http://${address}:${listen_port}/metrics`);
-            },
-            { message: 'an exposed exporter can be reached from PMM Server', timeout: Timeouts.ONE_MINUTE },
-          )
+          .poll(() => exporterHttpStatus(api, cliHelper), {
+            message: 'an exposed exporter can be reached from PMM Server',
+            timeout: Timeouts.ONE_MINUTE,
+          })
           .toMatch(/^(200|401)$/);
-
-        await editServicePage.open(service.service_id);
-        await editServicePage.verifyMetrics(exposed);
       },
     );
 
     pmmTest(
       `PMM-15674 - Verify changing log level of ${name} exporter @inventory`,
-      async ({ api, cliHelper, editServicePage, page }) => {
+      async ({ api, cliHelper, editServicePage }) => {
         const verbose: LogLevel =
           original.logLevel === 'LOG_LEVEL_DEBUG' ? 'LOG_LEVEL_INFO' : 'LOG_LEVEL_DEBUG';
 
+        await editServicePage.open(service.service_id);
+
         await pmmTest.step(`Change log level to ${verbose}`, async () => {
-          await editServicePage.open(service.service_id);
-          await editServicePage.editMetrics({ logLevel: verbose });
-
-          const response = await editServicePage.saveChanges(service.service_id, false, true);
-
-          expect(response.status(), await response.text()).toEqual(200);
-          await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
-          await expect
-            .poll(
-              async () =>
-                exporterMetricsState(
-                  await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-                ),
-              { message: `${exporterType} log level`, timeout: Timeouts.ONE_MINUTE },
-            )
-            .toEqual({ ...original, logLevel: verbose, status: AgentStatus.running });
-
-          const { listen_port } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-
-          await expect
-            .poll(
-              () => cliHelper.getProcessCommandLine(container, 'listen-address=', `:${listen_port}`) ?? '',
-              {
-                message: `${exporterType} runs with the new log level`,
-                timeout: Timeouts.ONE_MINUTE,
-              },
-            )
-            .toMatch(logLevelFlag(verbose));
-
-          await editServicePage.open(service.service_id);
-          await editServicePage.verifyMetrics({ ...original, logLevel: verbose });
+          await saveMetrics(api, editServicePage, original, { logLevel: verbose });
+          await cliHelper.waitForExporterCommandLine(container, (await exporter(api)).listen_port, {
+            matches: true,
+            pattern: logLevelFlag(verbose),
+          });
         });
 
         await pmmTest.step('Change log level back to Default', async () => {
-          const expected = { ...original, logLevel: 'LOG_LEVEL_UNSPECIFIED' as const };
-
-          await editServicePage.open(service.service_id);
-          await editServicePage.editMetrics({ logLevel: 'LOG_LEVEL_UNSPECIFIED' });
-
-          const response = await editServicePage.saveChanges(service.service_id, false, true);
-
-          expect(response.status(), await response.text()).toEqual(200);
-          await expect
-            .poll(
-              async () =>
-                exporterMetricsState(
-                  await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-                ),
-              { message: `${exporterType} log level`, timeout: Timeouts.ONE_MINUTE },
-            )
-            .toEqual({ ...expected, status: AgentStatus.running });
-
-          await editServicePage.open(service.service_id);
-          await editServicePage.verifyMetrics(expected);
+          await saveMetrics(api, editServicePage, original, { logLevel: 'LOG_LEVEL_UNSPECIFIED' });
         });
       },
     );
 
     pmmTest(
       `PMM-15674 - Verify changing connection timeout of ${name} exporter @inventory`,
-      async ({ api, editServicePage, page }) => {
+      async ({ api, editServicePage }) => {
         const timeout = original.connectionTimeout === '7.5' ? '8.5' : '7.5';
 
         await pmmTest.step('A negative timeout is refused by the form', async () => {
@@ -240,30 +172,12 @@ for (const serviceMetrics of serviceMetricsSettings) {
           await expect(editServicePage.elements.confirmModal).toBeHidden();
         });
 
+        await editServicePage.open(service.service_id);
+
         // Clearing the field puts the server's default timeout back.
         for (const connectionTimeout of [timeout, '']) {
           await pmmTest.step(`Change connection timeout to "${connectionTimeout}"`, async () => {
-            const expected = { ...original, connectionTimeout };
-
-            await editServicePage.open(service.service_id);
-            await editServicePage.editMetrics({ connectionTimeout });
-
-            const response = await editServicePage.saveChanges(service.service_id, false, true);
-
-            expect(response.status(), await response.text()).toEqual(200);
-            await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
-            await expect
-              .poll(
-                async () =>
-                  exporterMetricsState(
-                    await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
-                  ),
-                { message: `${exporterType} connection timeout`, timeout: Timeouts.ONE_MINUTE },
-              )
-              .toEqual({ ...expected, status: AgentStatus.running });
-
-            await editServicePage.open(service.service_id);
-            await editServicePage.verifyMetrics(expected);
+            await saveMetrics(api, editServicePage, original, { connectionTimeout });
           });
         }
       },

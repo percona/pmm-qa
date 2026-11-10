@@ -1,11 +1,14 @@
+import {
+  FrameworkService,
+  frameworkServices,
+  ownMongod,
+  OwnService,
+} from '@helpers/frameworkServices.helper';
 import Credentials from '@helpers/credentials.helper';
 import { mongo, mysql, psql } from '@helpers/serviceConnection.helper';
 import { GetService, ServiceType } from '@interfaces/inventory';
 
-export type QuerySource =
-  'mongolog' | 'none' | 'perfschema' | 'pgstatements' | 'pgstatmonitor' | 'profiler' | 'slowlog';
-
-export const querySources: QuerySource[] = [
+export const querySources = [
   'none',
   'perfschema',
   'slowlog',
@@ -13,7 +16,9 @@ export const querySources: QuerySource[] = [
   'mongolog',
   'pgstatements',
   'pgstatmonitor',
-];
+] as const;
+
+export type QuerySource = (typeof querySources)[number];
 
 interface QanAgentSource {
   agentType: string;
@@ -26,24 +31,20 @@ interface QanAgentSource {
   workload?: (container: string, credentials: Credentials) => string;
 }
 
-export interface ServiceQan {
-  // Undoes what the workloads changed in the database.
+export interface ServiceQan extends FrameworkService {
   cleanup?: (container: string, credentials: Credentials) => string;
-  name: string;
   // Puts back a server setting a workload turns on, from what saveState printed before the test.
   restoreState?: (container: string, credentials: Credentials, saved: string) => string;
   // Prints, as its last line, the statement that restores a server setting a workload turns on.
   saveState?: (container: string, credentials: Credentials) => string;
-  serviceRegex: string;
   sources: QanAgentSource[];
 }
 
 const qanCheckDatabase = 'pmm_qan_check';
 
-export const serviceQanSources: ServiceQan[] = [
-  {
-    name: 'pdpgsql',
-    serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
+export const serviceQanSources: Record<'pdpgsql' | 'ps' | 'psmdb', ServiceQan> = {
+  pdpgsql: {
+    ...frameworkServices.pdpgsql,
     sources: [
       {
         agentType: 'qan-postgresql-pgstatements-agent',
@@ -59,12 +60,11 @@ export const serviceQanSources: ServiceQan[] = [
       },
     ],
   },
-  {
-    name: 'ps',
+  ps: {
+    ...frameworkServices.ps,
     restoreState: (container, credentials, saved) => mysql(container, credentials, saved),
     saveState: (container, credentials) =>
       mysql(container, credentials, "SELECT CONCAT('SET GLOBAL slow_query_log = ', @@global.slow_query_log)"),
-    serviceRegex: '^ps_pmm',
     sources: [
       {
         agentType: 'qan-mysql-perfschema-agent',
@@ -86,11 +86,10 @@ export const serviceQanSources: ServiceQan[] = [
       },
     ],
   },
-  {
+  psmdb: {
+    ...frameworkServices.psmdb,
     cleanup: (container, credentials) =>
       mongo(container, credentials, `db.getSiblingDB("${qanCheckDatabase}").dropDatabase()`),
-    name: 'psmdb',
-    serviceRegex: '^rs101_',
     sources: [
       {
         agentType: 'qan-mongodb-profiler-agent',
@@ -112,6 +111,11 @@ export const serviceQanSources: ServiceQan[] = [
       },
     ],
   },
+};
+
+export const offeredQuerySources = ({ sources }: ServiceQan): QuerySource[] => [
+  'none',
+  ...sources.map(({ value }) => value),
 ];
 
 export const qanAgentTypes = ({ sources }: ServiceQan, { agents }: GetService) =>
@@ -126,18 +130,12 @@ export const currentQuerySource = (serviceQan: ServiceQan, service: GetService):
 export const querySourceChanges = ({ sources }: ServiceQan, querySource: QuerySource) =>
   Object.fromEntries(sources.map(({ change, value }) => [change, value === querySource]));
 
-export interface QanInstance {
+interface QanInstance extends OwnService {
   agentType: string;
   // The framework service whose container the instance runs in, so its pmm-agent can read the source.
   hostServiceRegex: string;
   name: string;
   querySource: QuerySource;
-  // Registers the instance with no query source, for the form to pick one.
-  register: (container: string) => string;
-  serviceName: string;
-  serviceType: ServiceType;
-  start: (container: string) => string;
-  stop: (container: string) => string;
   workload: (container: string) => string;
 }
 
@@ -154,7 +152,7 @@ const mongologPort = 27_099;
 export const qanInstances: QanInstance[] = [
   {
     agentType: 'qan-postgresql-pgstatements-agent',
-    hostServiceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
+    hostServiceRegex: frameworkServices.pdpgsql.serviceRegex,
     name: 'PostgreSQL with pg_stat_statements',
     querySource: 'pgstatements',
     register: (container) =>
@@ -178,19 +176,17 @@ export const qanInstances: QanInstance[] = [
       ),
   },
   {
+    // mongod logs an operation only when it takes longer than slowms, so the workload's query sleeps.
+    ...ownMongod({
+      dir: mongologDir,
+      mongodFlags: '--slowms 0',
+      port: mongologPort,
+      serviceName: 'pmm_qan_mongolog_check',
+    }),
     agentType: 'qan-mongodb-mongolog-agent',
-    hostServiceRegex: '^rs101_',
+    hostServiceRegex: frameworkServices.psmdb.serviceRegex,
     name: 'MongoDB logging to a file',
     querySource: 'mongolog',
-    register: (container) =>
-      `docker exec ${container} pmm-admin add mongodb --host=127.0.0.1 --port=${mongologPort} --query-source=none pmm_qan_mongolog_check`,
-    serviceName: 'pmm_qan_mongolog_check',
-    serviceType: ServiceType.mongodb,
-    // mongod logs an operation only when it takes longer than slowms, so the workload's query sleeps.
-    start: (container) =>
-      `docker exec ${container} sh -c 'rm -rf ${mongologDir} && mkdir -p ${mongologDir} && mongod --port ${mongologPort} --bind_ip 127.0.0.1 --dbpath ${mongologDir} --logpath ${mongologDir}/mongod.log --fork --slowms 0 >/dev/null'`,
-    stop: (container) =>
-      `docker exec ${container} sh -c 'mongod --dbpath ${mongologDir} --shutdown >/dev/null 2>&1; rm -rf ${mongologDir}'`,
     workload: (container) =>
       `docker exec ${container} mongo --quiet --port ${mongologPort} --eval 'const check = db.getSiblingDB("${qanCheckDatabase}"); check.checks.insertOne({ a: 1 }); check.checks.find({ $where: "sleep(5) || true" }).toArray()'`,
   },

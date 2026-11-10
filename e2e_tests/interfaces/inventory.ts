@@ -131,6 +131,8 @@ export interface GetService {
   version: string;
 }
 
+export type ServiceAgent = GetService['agents'][number];
+
 export interface AddRdsParameters {
   address: string;
   awsAccessKey: string;

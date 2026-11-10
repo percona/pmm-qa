@@ -1,6 +1,6 @@
-import { GetService } from '@interfaces/inventory';
-
-type ServiceAgent = GetService['agents'][number];
+import { FrameworkService, frameworkServices } from '@helpers/frameworkServices.helper';
+import { ServiceQan, serviceQanSources } from '@helpers/serviceQan.helper';
+import { GetService, ServiceAgent } from '@interfaces/inventory';
 
 export type OptionValue = boolean | number | Record<string, string> | string | string[];
 
@@ -20,25 +20,21 @@ export type OptionField =
   | 'statsCollections'
   | 'tablestatsGroupTableLimit';
 
-export interface ServiceOption {
+interface ServiceOption {
   // The agents that hold the option: the exporter, or whichever QAN agent the service has.
   agentTypes: string[];
   // The update API's name for the option, which puts the original value back.
   change: string;
   // What the running exporter's command line has to match, or must not, once the option is stored.
   commandLine?: (value: OptionValue) => undefined | { matches: boolean; pattern: RegExp };
-  // The value the test stores, chosen to differ from the original.
   edit: (original: OptionValue) => OptionValue;
   field: OptionField;
   label: string;
   read: (agent: ServiceAgent) => OptionValue;
 }
 
-export interface ServiceOptions {
-  exporterType: string;
-  name: string;
+interface ServiceOptions extends FrameworkService {
   options: ServiceOption[];
-  serviceRegex: string;
 }
 
 const flag = (name: string) => new RegExp(`${name.replaceAll('.', '\\.')}(\\s|$)`);
@@ -71,43 +67,47 @@ export const toOptionChange = ({ change }: ServiceOption, value: OptionValue) =>
 
 const other = (original: OptionValue, preferred: number, fallback: number) =>
   original === preferred ? fallback : preferred;
-const qanOptions = (agentTypes: string[], examplesAndComments: boolean): ServiceOption[] => [
-  {
-    agentTypes,
-    change: 'max_query_length',
-    edit: (original) => other(original, 512, 1_024),
-    field: 'maxQueryLength',
-    label: 'QAN max query length',
-    read: ({ max_query_length }) => Number(max_query_length ?? 0),
-  },
-  ...(examplesAndComments
-    ? [
-        {
-          agentTypes,
-          change: 'disable_query_examples',
-          edit: (original: OptionValue) => !original,
-          field: 'disableQueryExamples' as const,
-          label: 'QAN disable query examples',
-          read: ({ query_examples_disabled }: ServiceAgent) => !!query_examples_disabled,
-        },
-        {
-          agentTypes,
-          change: 'disable_comments_parsing',
-          edit: (original: OptionValue) => !original,
-          field: 'disableCommentsParsing' as const,
-          label: 'QAN disable comments parsing',
-          read: ({ comments_parsing_disabled }: ServiceAgent) => !!comments_parsing_disabled,
-        },
-      ]
-    : []),
-];
+
+const qanOptions = ({ sources }: ServiceQan, examplesAndComments: boolean): ServiceOption[] => {
+  const agentTypes = sources.map(({ agentType }) => agentType);
+
+  return [
+    {
+      agentTypes,
+      change: 'max_query_length',
+      edit: (original) => other(original, 512, 1_024),
+      field: 'maxQueryLength',
+      label: 'QAN max query length',
+      read: ({ max_query_length }) => Number(max_query_length ?? 0),
+    },
+    ...(examplesAndComments
+      ? [
+          {
+            agentTypes,
+            change: 'disable_query_examples',
+            edit: (original: OptionValue) => !original,
+            field: 'disableQueryExamples' as const,
+            label: 'QAN disable query examples',
+            read: ({ query_examples_disabled }: ServiceAgent) => !!query_examples_disabled,
+          },
+          {
+            agentTypes,
+            change: 'disable_comments_parsing',
+            edit: (original: OptionValue) => !original,
+            field: 'disableCommentsParsing' as const,
+            label: 'QAN disable comments parsing',
+            read: ({ comments_parsing_disabled }: ServiceAgent) => !!comments_parsing_disabled,
+          },
+        ]
+      : []),
+  ];
+};
 
 export const serviceOptionsSettings: ServiceOptions[] = [
   {
-    exporterType: 'postgres_exporter',
-    name: 'pdpgsql',
+    ...frameworkServices.pdpgsql,
     options: [
-      ...qanOptions(['qan-postgresql-pgstatements-agent', 'qan-postgresql-pgstatmonitor-agent'], true),
+      ...qanOptions(serviceQanSources.pdpgsql, true),
       {
         agentTypes: ['postgres_exporter'],
         change: 'disable_collectors',
@@ -138,13 +138,11 @@ export const serviceOptionsSettings: ServiceOptions[] = [
         read: ({ postgresql_options }) => Number(postgresql_options?.max_exporter_connections ?? 0),
       },
     ],
-    serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
   },
   {
-    exporterType: 'mysqld_exporter',
-    name: 'ps',
+    ...frameworkServices.ps,
     options: [
-      ...qanOptions(['qan-mysql-perfschema-agent', 'qan-mysql-slowlog-agent'], true),
+      ...qanOptions(serviceQanSources.ps, true),
       {
         agentTypes: ['mysqld_exporter'],
         change: 'disable_collectors',
@@ -177,13 +175,11 @@ export const serviceOptionsSettings: ServiceOptions[] = [
         read: ({ mysql_options }) => mysql_options?.extra_dsn_params ?? {},
       },
     ],
-    serviceRegex: '^ps_pmm',
   },
   {
-    exporterType: 'mongodb_exporter',
-    name: 'psmdb',
+    ...frameworkServices.psmdb,
     options: [
-      ...qanOptions(['qan-mongodb-profiler-agent', 'qan-mongodb-mongolog-agent'], false),
+      ...qanOptions(serviceQanSources.psmdb, false),
       {
         agentTypes: ['mongodb_exporter'],
         change: 'enable_all_collectors',
@@ -254,6 +250,5 @@ export const serviceOptionsSettings: ServiceOptions[] = [
         read: ({ mongo_db_options }) => mongo_db_options?.authentication_database ?? '',
       },
     ],
-    serviceRegex: '^rs101_',
   },
 ];

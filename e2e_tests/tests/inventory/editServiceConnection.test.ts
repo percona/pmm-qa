@@ -1,13 +1,14 @@
 import pmmTest from '@fixtures/pmmTest';
+import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import { serviceConnections, testDatabase, testUser } from '@helpers/serviceConnection.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 for (const {
+  agentPasswordEnforced,
   createUser,
   dropUser,
-  exporterAuth,
   exporterType,
   hasDatabase,
   name,
@@ -21,7 +22,7 @@ for (const {
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(service.node_id));
+      container = await getServiceContainer(api, cliHelper, service);
       cliHelper.execSilent(dropUser(container, credentials));
       cliHelper.execSilent(createUser(container, credentials)).assertSuccess();
     });
@@ -57,17 +58,16 @@ for (const {
 
     pmmTest(
       `PMM-15674 - Verify changing database, username, password and agent password of ${name} service @inventory`,
-      async ({ api, cliHelper, editServicePage, page }) => {
+      async ({ api, cliHelper, editServicePage }) => {
         const connection = { ...testUser, database: hasDatabase ? testDatabase : undefined };
 
         await editServicePage.open(service.service_id);
         await editServicePage.editConnection(connection);
 
-        const response = await editServicePage.saveChanges(service.service_id, false, true);
+        const response = await editServicePage.saveChanges(service.service_id);
 
-        expect(response.status(), await response.text()).toEqual(200);
+        await editServicePage.expectSaved(response);
         await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
-        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
 
         await expect
           .poll(
@@ -91,11 +91,7 @@ for (const {
 
         const { listen_port } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
         const metricsStatus = (agentPassword: string) =>
-          cliHelper
-            .execSilent(
-              `docker exec ${container} curl -s -o /dev/null -w '%{http_code}' -u 'pmm:${agentPassword}' http://127.0.0.1:${listen_port}/metrics`,
-            )
-            .stdout.trim();
+          cliHelper.getHttpStatus(container, `http://pmm:${agentPassword}@127.0.0.1:${listen_port}/metrics`);
 
         // The exporter picks up the new agent password only once pmm-agent has restarted it. One without
         // basic auth answers 200 before the restart too, so the next request can still find its port closed.
@@ -110,7 +106,7 @@ for (const {
             message: 'exporter rejects another agent password',
             timeout: Timeouts.ONE_MINUTE,
           })
-          .toEqual(exporterAuth ? '401' : '200');
+          .toEqual(agentPasswordEnforced ? '401' : '200');
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyConnection(connection);
@@ -119,16 +115,19 @@ for (const {
 
     pmmTest(
       `PMM-15674 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
-      async ({ api, credentials, editServicePage, page }) => {
+      async ({ api, credentials, editServicePage }) => {
         const { username } = original(credentials);
 
         await editServicePage.open(service.service_id);
         await editServicePage.editConnection({ password: 'wrong-password', username: testUser.username });
 
-        const response = await editServicePage.saveChanges(service.service_id, false, true);
+        const response = await editServicePage.saveChanges(service.service_id);
 
-        expect(response.status(), 'connection check fails with a wrong password').not.toEqual(200);
-        await expect(page).toHaveURL(new RegExp(`${service.service_id}/edit$`));
+        await editServicePage.expectRefused(
+          response,
+          service.service_id,
+          'connection check fails with a wrong password',
+        );
         expect(
           (await api.inventoryApi.getServiceExporter(service.service_id, exporterType)).username,
           'stored username is unchanged',

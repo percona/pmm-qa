@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import {
   OptionValue,
   readOption,
@@ -8,6 +9,7 @@ import {
 } from '@helpers/serviceOptions.helper';
 import {
   currentQuerySource,
+  offeredQuerySources,
   QuerySource,
   querySourceChanges,
   serviceQanSources,
@@ -26,7 +28,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
     pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(service.node_id));
+      container = await getServiceContainer(api, cliHelper, service);
     });
 
     for (const option of options) {
@@ -47,17 +49,16 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
 
         pmmTest(
           `PMM-15674 - Verify changing ${option.label} of ${name} service @inventory`,
-          async ({ api, cliHelper, editServicePage, page }) => {
+          async ({ api, cliHelper, editServicePage }) => {
             const edited = option.edit(original);
 
             await editServicePage.open(service.service_id);
             await editServicePage.verifyOption(option.field, toFormValue(original));
             await editServicePage.editOption(option.field, toFormValue(edited));
 
-            const response = await editServicePage.saveChanges(service.service_id, false, true);
+            const response = await editServicePage.saveChanges(service.service_id);
 
-            expect(response.status(), await response.text()).toEqual(200);
-            await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+            await editServicePage.expectSaved(response);
             await expect
               .poll(
                 async () => readOption(option, await api.inventoryApi.getServiceById(service.service_id)),
@@ -92,9 +93,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
   });
 }
 
-const psQan = serviceQanSources.find(({ name }) => name === 'ps');
-
-if (!psQan) throw new Error('The ps query sources are missing');
+const psQan = serviceQanSources.ps;
 
 pmmTest.describe('Edit service slow log rotation | ps', () => {
   let service: GetService;
@@ -121,7 +120,7 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
 
   pmmTest(
     'PMM-15674 - Verify changing slow log rotation size of ps service @inventory',
-    async ({ api, editServicePage, page }) => {
+    async ({ api, editServicePage }) => {
       // The form takes MiB; the server stores bytes, and a disabled rotation (-1) as 0.
       for (const { mib, stored } of [
         { mib: '256', stored: 256 * MIB },
@@ -132,10 +131,9 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
           await editServicePage.editQuerySource('slowlog');
           await editServicePage.inputs.maxSlowlogFileSize.fill(mib);
 
-          const response = await editServicePage.saveChanges(service.service_id, false, true);
+          const response = await editServicePage.saveChanges(service.service_id);
 
-          expect(response.status(), await response.text()).toEqual(200);
-          await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+          await editServicePage.expectSaved(response);
           await expect
             .poll(
               async () => {
@@ -149,10 +147,7 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
             .toEqual(stored);
 
           await editServicePage.open(service.service_id);
-          await editServicePage.verifyQuerySource('slowlog', [
-            'none',
-            ...psQan.sources.map(({ value }) => value),
-          ]);
+          await editServicePage.verifyQuerySource('slowlog', offeredQuerySources(psQan));
           await expect(editServicePage.inputs.maxSlowlogFileSize).toHaveValue(mib);
         });
       }

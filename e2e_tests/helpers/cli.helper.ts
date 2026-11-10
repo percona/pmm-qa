@@ -12,6 +12,9 @@ interface getMetrics {
   agentPassword?: string;
 }
 
+// Containers keep their name and address for the whole run.
+const containersByAddress = new Map<string, string>();
+
 export default class CliHelper {
   /**
    * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
@@ -82,6 +85,10 @@ export default class CliHelper {
 
   // pmm-agent registers a node under its container name, or under its IP when set up with one.
   getContainerByAddress = (address: string): string => {
+    const cached = containersByAddress.get(address);
+
+    if (cached) return cached;
+
     const containers = this.execSilent(
       "docker ps -q | xargs docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'",
     )
@@ -91,6 +98,8 @@ export default class CliHelper {
     const container = containers.find(([name, ...ips]) => name === address || ips.includes(address));
 
     if (!container) throw new Error(`No running container has name or IP ${address}`);
+
+    containersByAddress.set(address, container[0]);
 
     return container[0];
   };

@@ -4,6 +4,7 @@ import {
   serviceTlsSettings,
   storedTlsSecrets,
   tlsKeyPassword,
+  tlsOffChanges,
 } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { GetService } from '@interfaces/inventory';
@@ -12,7 +13,7 @@ import { expect } from '@playwright/test';
 const tlsOff = { tls: false, tlsSkipVerify: false };
 
 for (const settings of serviceTlsSettings) {
-  const { apiCertificates, certificateFields, exporterType, name, serviceRegex } = settings;
+  const { certificateFields, exporterType, name, serviceRegex } = settings;
 
   pmmTest.describe(`Edit service TLS | ${name}`, () => {
     let service: GetService;
@@ -28,11 +29,11 @@ for (const settings of serviceTlsSettings) {
     });
 
     pmmTest.afterEach(async ({ api }) => {
-      await api.inventoryApi.updateService(service.service_id, service.service_type, {
-        tls: false,
-        tls_skip_verify: false,
-        ...Object.fromEntries(apiCertificates.map((certificate) => [certificate, ''])),
-      });
+      await api.inventoryApi.updateService(
+        service.service_id,
+        service.service_type,
+        tlsOffChanges(certificateFields),
+      );
     });
 
     pmmTest(
@@ -53,7 +54,7 @@ for (const settings of serviceTlsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify enabling TLS is rejected by the connection check when the ${name} server cannot be verified @inventory`,
-      async ({ api, cliHelper, editServicePage, page }) => {
+      async ({ api, cliHelper, editServicePage }) => {
         const { cert } = cliHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);
@@ -63,12 +64,13 @@ for (const settings of serviceTlsSettings) {
           certificateFields.includes('tlsCa') ? { tlsCa: cert } : {},
         );
 
-        const response = await editServicePage.saveChanges(service.service_id, false, true);
+        const response = await editServicePage.saveChanges(service.service_id);
 
-        expect(response.status(), 'connection check fails when the server cannot be verified').not.toEqual(
-          200,
+        await editServicePage.expectRefused(
+          response,
+          service.service_id,
+          'connection check fails when the server cannot be verified',
         );
-        await expect(page).toHaveURL(new RegExp(`${service.service_id}/edit$`));
 
         const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
@@ -81,7 +83,7 @@ for (const settings of serviceTlsSettings) {
 
     pmmTest(
       `PMM-15674 - Verify enabling TLS with skipped verification and the ${name} certificates @inventory`,
-      async ({ api, cliHelper, editServicePage, page }) => {
+      async ({ api, cliHelper, editServicePage }) => {
         const { cert, key } = cliHelper.generateSelfSignedCertificate();
         const certificates = {
           tlsCa: cert,
@@ -99,11 +101,10 @@ for (const settings of serviceTlsSettings) {
         );
 
         // The service is monitored without TLS, so the connection check could refuse the change.
-        const response = await editServicePage.saveChanges(service.service_id, false, true, true);
+        const response = await editServicePage.saveChanges(service.service_id, { skipConnectionCheck: true });
 
-        expect(response.status(), await response.text()).toEqual(200);
+        await editServicePage.expectSaved(response);
         await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
-        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
 
         await expect
           .poll(

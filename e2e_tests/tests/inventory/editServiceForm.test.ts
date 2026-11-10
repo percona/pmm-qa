@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import { frameworkServices } from '@helpers/frameworkServices.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import {
   formServices,
@@ -47,7 +48,7 @@ for (const { name, serviceRegex } of formServices) {
 pmmTest(
   'PMM-15674 - Verify Edit action in the services list opens the edit page @inventory',
   async ({ api, editServicePage, page }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm');
+    const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
     await editServicePage.openFromServicesList(service.service_name);
     await expect(page).toHaveURL(new RegExp(`${editServicePage.url}/${service.service_id}/edit$`));
@@ -58,7 +59,7 @@ pmmTest(
 pmmTest(
   'PMM-15674 - Verify old edit-instance links redirect to the edit page @inventory',
   async ({ api, editServicePage, page }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm');
+    const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
     // The server sends a top-level /graph/ link to the PMM UI, whose router redirects both paths.
     for (const link of [
@@ -77,7 +78,7 @@ pmmTest(
 pmmTest(
   'PMM-15674 - Verify Cancel leaves the edit page without saving @inventory',
   async ({ api, editServicePage, page }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm');
+    const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
     await editServicePage.open(service.service_id);
     await editServicePage.editEnvironment('pmm_edit_cancelled');
@@ -121,7 +122,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
     pmmTest(
       `PMM-15674 - Verify ${role} cannot edit a service @inventory`,
       async ({ api, editServicePage, grafanaHelper, page }) => {
-        const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm');
+        const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
         await grafanaHelper.signInAs(username, formUserPassword);
         await page.goto(`${editServicePage.url}/${service.service_id}/edit`);
@@ -160,10 +161,10 @@ pmmTest.describe('Edit service requests | ps', () => {
   let originalLogLevel: string;
 
   pmmTest.beforeEach(async ({ api }) => {
-    service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm');
+    service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
     originalLogLevel =
-      (await api.inventoryApi.getServiceExporter(service.service_id, 'mysqld_exporter')).log_level ||
-      'LOG_LEVEL_UNSPECIFIED';
+      (await api.inventoryApi.getServiceExporter(service.service_id, frameworkServices.ps.exporterType))
+        .log_level || 'LOG_LEVEL_UNSPECIFIED';
   });
 
   pmmTest.afterEach(async ({ api }) => {
@@ -175,20 +176,26 @@ pmmTest.describe('Edit service requests | ps', () => {
 
   pmmTest(
     "PMM-15674 - Verify a refused save shows the server's reason @inventory",
-    async ({ api, editServicePage, page }) => {
-      const { username } = await api.inventoryApi.getServiceExporter(service.service_id, 'mysqld_exporter');
+    async ({ api, editServicePage }) => {
+      const { username } = await api.inventoryApi.getServiceExporter(
+        service.service_id,
+        frameworkServices.ps.exporterType,
+      );
 
       await editServicePage.open(service.service_id);
       await editServicePage.editConnection({ password: 'wrong-password', username });
 
-      const response = await editServicePage.saveChanges(service.service_id, false, true);
+      const response = await editServicePage.saveChanges(service.service_id);
 
-      expect(response.status(), 'the connection check refuses a wrong password').not.toEqual(200);
+      await editServicePage.expectRefused(
+        response,
+        service.service_id,
+        'the connection check refuses a wrong password',
+      );
 
       const { message } = (await response.json()) as { message: string };
 
       await expect(editServicePage.builders.text(toNotificationText(message))).toBeVisible();
-      await expect(page).toHaveURL(new RegExp(`${service.service_id}/edit$`));
     },
   );
 
@@ -216,9 +223,9 @@ pmmTest.describe('Edit service requests | ps', () => {
           : editServicePage.editMetrics({ logLevel: edit.logLevel }));
 
         const writes = editServicePage.recordApiWrites();
-        const response = await editServicePage.saveChanges(service.service_id, false, settingsChanged);
+        const response = await editServicePage.saveChanges(service.service_id, { settingsChanged });
 
-        expect(response.status(), await response.text()).toEqual(200);
+        await editServicePage.expectSaved(response);
         expect(response.request().postDataJSON(), 'untouched secrets stay out of the request').toEqual({
           [service.service_type]: body,
         });

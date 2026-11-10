@@ -1,6 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import {
+  addOwnService,
+  frameworkServices,
+  getServiceContainer,
+  removeOwnService,
+} from '@helpers/frameworkServices.helper';
+import {
   currentQuerySource,
+  offeredQuerySources,
   QuerySource,
   qanAgentTypes,
   qanInstances,
@@ -10,10 +17,11 @@ import {
 import { Timeouts } from '@helpers/timeouts';
 import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
+import { serverContainer } from '@testdata/datasourceProxy';
 
-for (const serviceQan of serviceQanSources) {
+for (const serviceQan of Object.values(serviceQanSources)) {
   const { cleanup, name, restoreState, saveState, serviceRegex, sources } = serviceQan;
-  const offered: QuerySource[] = ['none', ...sources.map(({ value }) => value)];
+  const offered = offeredQuerySources(serviceQan);
 
   pmmTest.describe(`Edit service query source | ${name}`, () => {
     let service: GetService;
@@ -25,7 +33,7 @@ for (const serviceQan of serviceQanSources) {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = currentQuerySource(serviceQan, service);
-      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(service.node_id));
+      container = await getServiceContainer(api, cliHelper, service);
       savedState =
         saveState &&
         cliHelper.execSilent(saveState(container, credentials)).assertSuccess().getStdOutLines().at(-1);
@@ -63,7 +71,7 @@ for (const serviceQan of serviceQanSources) {
 
     pmmTest(
       `PMM-15674 - Verify changing query source of ${name} service replaces its QAN agent @inventory`,
-      async ({ api, clickHouseHelper, cliHelper, credentials, editServicePage, page }) => {
+      async ({ api, clickHouseHelper, cliHelper, credentials, editServicePage }) => {
         // Ends on None, which removes the QAN agent, unless the service started without one.
         const targets = offered.filter((source) => source !== original && source !== 'none');
 
@@ -77,10 +85,9 @@ for (const serviceQan of serviceQanSources) {
             await editServicePage.open(service.service_id);
             await editServicePage.editQuerySource(target);
 
-            const response = await editServicePage.saveChanges(service.service_id, false, true);
+            const response = await editServicePage.saveChanges(service.service_id);
 
-            expect(response.status(), await response.text()).toEqual(200);
-            await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+            await editServicePage.expectSaved(response);
 
             await expect
               .poll(
@@ -103,7 +110,7 @@ for (const serviceQan of serviceQanSources) {
             await pmmTest.step(`QAN data from the ${target} agent reaches PMM Server`, async () => {
               const { agent_id } = await api.inventoryApi.getServiceExporter(service.service_id, agentType);
 
-              await clickHouseHelper.waitForQanRowsByAgent('pmm-server', agent_id, () =>
+              await clickHouseHelper.waitForQanRowsByAgent(serverContainer, agent_id, () =>
                 cliHelper.execSilent(workload(container, credentials)).assertSuccess(),
               );
             });
@@ -119,10 +126,7 @@ for (const serviceQan of serviceQanSources) {
   });
 }
 
-for (const { name, serviceRegex } of [
-  { name: 'valkey', serviceRegex: '^valkey-primary' },
-  { name: 'proxysql', serviceRegex: '^my-new-proxysql_' },
-]) {
+for (const { name, serviceRegex } of [frameworkServices.valkey, frameworkServices.proxysql]) {
   pmmTest(
     `PMM-15674 - Verify Query Analytics section is not shown for ${name} service @inventory`,
     async ({ api, editServicePage, grafanaHelper }) => {
@@ -136,9 +140,7 @@ for (const { name, serviceRegex } of [
   );
 }
 
-const pdpgsqlQan = serviceQanSources.find(({ name }) => name === 'pdpgsql');
-
-if (!pdpgsqlQan) throw new Error('The pdpgsql query sources are missing');
+const pdpgsqlQan = serviceQanSources.pdpgsql;
 
 pmmTest(
   "PMM-15674 - Verify query source of PMM Server's own PostgreSQL cannot be changed in the form @inventory",
@@ -146,7 +148,7 @@ pmmTest(
     await grafanaHelper.authorize();
 
     const service = await api.inventoryApi.getServiceDetailsByRegex('^pmm-server-postgresql$');
-    const offered: QuerySource[] = ['none', ...pdpgsqlQan.sources.map(({ value }) => value)];
+    const offered = offeredQuerySources(pdpgsqlQan);
 
     await editServicePage.open(service.service_id);
     await editServicePage.verifyQuerySource(currentQuerySource(pdpgsqlQan, service), offered);
@@ -162,41 +164,37 @@ pmmTest(
 );
 
 for (const instance of qanInstances) {
-  const { agentType, hostServiceRegex, name, querySource, serviceName, serviceType } = instance;
+  const { agentType, hostServiceRegex, name, querySource, serviceName } = instance;
 
   pmmTest.describe(`Edit service query source on a database of its own | ${name}`, () => {
     let container: string;
+    let service: GetService;
 
     pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
-      const host = await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex);
-
-      container = cliHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(host.node_id));
-      cliHelper.removeService(container, serviceType, serviceName);
-      cliHelper.execSilent(instance.stop(container));
-      cliHelper.execSilent(instance.start(container)).assertSuccess();
-      cliHelper.execSilent(instance.register(container)).assertSuccess();
+      container = await getServiceContainer(
+        api,
+        cliHelper,
+        await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex),
+      );
+      service = await addOwnService(api, cliHelper, container, instance);
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
-      cliHelper.removeService(container, serviceType, serviceName);
-      cliHelper.execSilent(instance.stop(container)).assertSuccess();
+      removeOwnService(cliHelper, container, instance);
     });
 
     pmmTest(
       `PMM-15674 - Verify QAN data reaches PMM Server after switching ${name} to ${querySource} @inventory`,
-      async ({ api, clickHouseHelper, cliHelper, editServicePage, page }) => {
-        const service = await api.inventoryApi.getServiceDetailsByRegex(`^${serviceName}$`);
-
+      async ({ api, clickHouseHelper, cliHelper, editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.builders.querySourceOption('none')).toBeChecked();
         await editServicePage.editQuerySource(querySource);
 
-        const response = await editServicePage.saveChanges(service.service_id, false, true);
+        const response = await editServicePage.saveChanges(service.service_id);
 
-        expect(response.status(), await response.text()).toEqual(200);
-        await expect(page).toHaveURL(new RegExp(`${editServicePage.url}$`));
+        await editServicePage.expectSaved(response);
         await expect
           .poll(
             async () =>
@@ -209,7 +207,7 @@ for (const instance of qanInstances) {
 
         const { agent_id } = await api.inventoryApi.getServiceExporter(service.service_id, agentType);
 
-        await clickHouseHelper.waitForQanRowsByAgent('pmm-server', agent_id, () =>
+        await clickHouseHelper.waitForQanRowsByAgent(serverContainer, agent_id, () =>
           cliHelper.execSilent(instance.workload(container)).assertSuccess(),
         );
       },

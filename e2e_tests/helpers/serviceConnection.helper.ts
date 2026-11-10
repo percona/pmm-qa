@@ -1,3 +1,4 @@
+import { FrameworkService, frameworkServices } from '@helpers/frameworkServices.helper';
 import Credentials from '@helpers/credentials.helper';
 
 export const testUser = {
@@ -7,22 +8,19 @@ export const testUser = {
 };
 export const testDatabase = 'pmm_connection_test';
 
-export interface DatabaseConnection {
+interface DatabaseConnection extends FrameworkService {
   createUser: (container: string, credentials: Credentials) => string;
   dropUser: (container: string, credentials: Credentials) => string;
-  // valkey_exporter has no basic auth on its metrics endpoint, so the agent password does not guard it.
-  exporterAuth: boolean;
-  exporterType: string;
+  // PMM-15898: valkey_exporter serves its metrics without basic auth, so the agent password guards nothing.
+  agentPasswordEnforced: boolean;
   hasDatabase?: boolean;
-  name: string;
   original: (credentials: Credentials) => { agentPassword?: string; password: string; username: string };
-  serviceRegex: string;
 }
 
 export const psql = (container: string, ...statements: string[]) =>
   `docker exec --user postgres ${container} psql -v ON_ERROR_STOP=1 ${statements.map((sql) => `-c "${sql}"`).join(' ')}`;
-export const mysql = (container: string, { perconaServer }: Credentials, sql: string) =>
-  `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} -e "${sql}"`;
+export const mysql = (container: string, { perconaServer }: Credentials, sql: string, flags = '') =>
+  `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} ${flags} -e "${sql}"`;
 export const mongo = (container: string, { psmdb }: Credentials, js: string) =>
   `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
 // ProxySQL keeps its admin users in one variable, which SQLite-backed admin SQL edits in place.
@@ -33,6 +31,8 @@ const valkeyCli = (container: string, { valkey }: Credentials, command: string) 
   `docker exec ${container} valkey-cli -a '${valkey.password}' --no-auth-warning ${command}`;
 export const serviceConnections: DatabaseConnection[] = [
   {
+    ...frameworkServices.pdpgsql,
+    agentPasswordEnforced: true,
     createUser: (container) =>
       psql(
         container,
@@ -45,14 +45,12 @@ export const serviceConnections: DatabaseConnection[] = [
         `DROP DATABASE IF EXISTS ${testDatabase} WITH (FORCE)`,
         `DROP ROLE IF EXISTS ${testUser.username}`,
       ),
-    exporterAuth: true,
-    exporterType: 'postgres_exporter',
     hasDatabase: true,
-    name: 'pdpgsql',
     original: ({ pdpgsql }) => pdpgsql,
-    serviceRegex: '^pdpgsql_pmm_(?!.*patroni).*$',
   },
   {
+    ...frameworkServices.ps,
+    agentPasswordEnforced: true,
     createUser: (container, credentials) =>
       mysql(
         container,
@@ -61,13 +59,11 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       mysql(container, credentials, `DROP USER IF EXISTS '${testUser.username}'@'%';`),
-    exporterAuth: true,
-    exporterType: 'mysqld_exporter',
-    name: 'ps',
     original: ({ perconaServer }) => perconaServer.ps_84,
-    serviceRegex: '^ps_pmm',
   },
   {
+    ...frameworkServices.psmdb,
+    agentPasswordEnforced: true,
     createUser: (container, credentials) =>
       mongo(
         container,
@@ -76,13 +72,11 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       mongo(container, credentials, `db.getSiblingDB("admin").dropUser("${testUser.username}")`),
-    exporterAuth: true,
-    exporterType: 'mongodb_exporter',
-    name: 'psmdb',
     original: ({ psmdb }) => psmdb,
-    serviceRegex: '^rs101_',
   },
   {
+    ...frameworkServices.valkey,
+    agentPasswordEnforced: false,
     createUser: (container, credentials) =>
       valkeyCli(
         container,
@@ -91,13 +85,11 @@ export const serviceConnections: DatabaseConnection[] = [
       ),
     dropUser: (container, credentials) =>
       valkeyCli(container, credentials, `ACL DELUSER ${testUser.username}`),
-    exporterAuth: false,
-    exporterType: 'valkey_exporter',
-    name: 'valkey',
     original: ({ valkey }) => valkey,
-    serviceRegex: '^valkey-primary',
   },
   {
+    ...frameworkServices.proxysql,
+    agentPasswordEnforced: true,
     createUser: (container, credentials) =>
       proxysqlAdmin(container, credentials, `variable_value = variable_value || '${proxysqlTestUser}'`),
     dropUser: (container, credentials) =>
@@ -106,10 +98,6 @@ export const serviceConnections: DatabaseConnection[] = [
         credentials,
         `variable_value = replace(variable_value, '${proxysqlTestUser}', '')`,
       ),
-    exporterAuth: true,
-    exporterType: 'proxysql_exporter',
-    name: 'proxysql',
     original: ({ proxysql }) => proxysql,
-    serviceRegex: '^my-new-proxysql_',
   },
 ];
