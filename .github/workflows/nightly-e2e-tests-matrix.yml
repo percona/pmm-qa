@@ -17,8 +17,7 @@ on:
         type: string
       admin_password:
         description: "Admin password configured on the remote PMM Server"
-        required: false
-        default: 'PMM3testuser!'
+        required: true
         type: string
       pmm_qa_branch:
         description: "Branch for pmm-qa repository to checkout"
@@ -52,8 +51,7 @@ on:
         required: true
         type: string
       admin_password:
-        required: false
-        default: 'PMM3testuser!'
+        required: true
         type: string
       pmm_qa_branch:
         required: false
@@ -114,7 +112,7 @@ jobs:
     timeout-minutes: 210
     env:
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-      ADMIN_PASSWORD: ${{ inputs.admin_password || 'PMM3testuser!' }}
+      ADMIN_PASSWORD: ${{ inputs.admin_password }}
       PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}

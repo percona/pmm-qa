@@ -11,10 +11,7 @@ pmmTest.beforeEach(async ({ api, context, grafanaHelper, page }) => {
 
   for (const scenario of accessControlScenarios) {
     const ensuredRole = await api.accessControlApi.ensureRole(scenario.role);
-    const existingUser = (await grafanaHelper.listUsers()).users.find(
-      (user) => user.login === scenario.username,
-    );
-    const userId = existingUser?.id ?? (await grafanaHelper.createUser(scenario.username, scenario.password));
+    const { id: userId } = await grafanaHelper.findOrCreateUser(scenario.username, scenario.password);
 
     await api.accessControlApi.assignRole(userId, ensuredRole.role_id);
   }

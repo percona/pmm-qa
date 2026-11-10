@@ -83,8 +83,8 @@ on:
         type: string
 
 env:
-  ADMIN_PASSWORD: admin
-  PMM_URL: http://admin:admin@127.0.0.1
+  ADMIN_PASSWORD: 'PMM3testuser!'
+  PMM_URL: 'http://admin:PMM3testuser!@127.0.0.1'
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
   DOCKER_TAG: ${{ inputs.docker_tag }}
@@ -178,6 +178,8 @@ jobs:
 
           # shellcheck disable=SC2016 # PMM_URL expands in the inner bash from the step env
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+          # PMM < 3.8 ignores GF_SECURITY_ADMIN_PASSWORD when /srv is a volume.
+          docker exec pmm-server change-admin-password "$ADMIN_PASSWORD"
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -221,7 +223,7 @@ jobs:
 
       - name: Check packages before upgrade
         run: |
-          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          V=$(curl -s --user "admin:$ADMIN_PASSWORD" "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
           python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p pre
 
       - name: Checkout pre upgrade branch
@@ -310,7 +312,7 @@ jobs:
 
       - name: Check packages after upgrade
         run: |
-          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          V=$(curl -s --user "admin:$ADMIN_PASSWORD" "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
           python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p post
 
       - name: Collect logs
