@@ -1,5 +1,12 @@
 import { Page, Route } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { SupportDiagnosticsBatchRequest, SupportDiagnosticsExecution } from '@interfaces/supportDiagnostics';
+import {
+  logExtractorSchema,
+  supportDiagnosticsCatalog,
+  supportDiagnosticsHosts,
+  supportDiagnosticsIncident,
+} from '@testdata/supportDiagnostics';
 
 export default class mocksHelper {
   constructor(public page: Page) {}
@@ -153,6 +160,76 @@ export default class mocksHelper {
         status: 200,
       }),
     );
+
+    return state;
+  };
+
+  mockSupportDiagnostics = async (executions: SupportDiagnosticsExecution[] = []) => {
+    const state = { batchRequests: [] as SupportDiagnosticsBatchRequest[], executions: [...executions] };
+    const incidentPath = `/apps/atw/incidents/${supportDiagnosticsIncident.id}`;
+    const responses: Record<string, unknown> = {
+      '/apps/atw/': supportDiagnosticsCatalog,
+      '/apps/atw/config/': { case_search_available: false, send_disabled_reasons: [] },
+      '/apps/atw/execution-schema/': logExtractorSchema,
+      '/extensions/app-info/': { footer_text: 'PMM Extensions', version: 'v3.10.0' },
+      '/extensions/hosts/': supportDiagnosticsHosts,
+      '/oauth/session/exchange': { access_token: 'mocked-token', expires_in: 300 },
+      [`${incidentPath}/send-jobs/`]: { items: [], limit: 50, offset: 0, total: 0 },
+      [incidentPath]: supportDiagnosticsIncident,
+    };
+
+    await this.page.route(apiEndpoints.extensions.api, (route: Route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname.replace(/^.*\/extensions\/api/, '');
+      const fulfillJson = (body: unknown, status = 200) =>
+        route.fulfill({ body: JSON.stringify(body), contentType: 'application/json', status });
+
+      if (path !== `${incidentPath}/executions/`) {
+        return path in responses ? fulfillJson(responses[path]) : fulfillJson({ detail: 'Not mocked' }, 404);
+      }
+      if (request.method() === 'POST') {
+        const batch = request.postDataJSON() as SupportDiagnosticsBatchRequest;
+        const now = new Date().toISOString();
+
+        state.batchRequests.push(batch);
+
+        for (const item of batch.items) {
+          state.executions.unshift({
+            args_withheld: false,
+            created_at: now,
+            failure_reason: null,
+            finished_at: null,
+            has_logs: false,
+            id: crypto.randomUUID(),
+            masked_args: Object.entries(item.args)
+              .map(([name, value]) => `--${name} ${value}`)
+              .join(' '),
+            snippet_filename: item.snippet_filename,
+            snippet_title:
+              supportDiagnosticsCatalog
+                .flatMap((category) => category.snippets)
+                .find((snippet) => snippet.name === item.snippet_filename)?.title ?? item.snippet_filename,
+            started_at: now,
+            task_history_id: state.executions.length + 1,
+            task_status: 'running',
+          });
+        }
+
+        return fulfillJson(
+          {
+            items: batch.items.map((item, index) => ({
+              error: null,
+              snippet_filename: item.snippet_filename,
+              task_history_id: state.executions.length + index,
+              task_name: 'atw__exec-artifact',
+            })),
+          },
+          201,
+        );
+      }
+
+      return fulfillJson({ items: state.executions, limit: 20, offset: 0, total: state.executions.length });
+    });
 
     return state;
   };

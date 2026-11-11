@@ -26,6 +26,9 @@ const apiEndpoints = {
     list: '/v1/dumps',
     start: '/v1/dumps:start',
   },
+  extensions: {
+    api: '**/extensions/api/**',
+  },
   grafana: {
     alertmanager: '/graph/api/alertmanager/grafana/api/v2',
     dashboardByUid: '/graph/api/dashboards/uid',

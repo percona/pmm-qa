@@ -12,6 +12,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
+    clusterCheckbox: (cluster: string) =>
+      this.page.getByTestId(`service-option-cluster-${cluster}`).getByRole('checkbox'),
     detailsPaneCodeByText: (queryText: string) =>
       this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
         hasText: queryText,
@@ -29,6 +31,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
     rowsPerPageOption: (pageSize: string) => this.page.getByRole('option', { exact: true, name: pageSize }),
+    serviceCheckbox: (serviceId: string) =>
+      this.page.getByTestId(`service-option-${serviceId}`).getByRole('checkbox'),
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),

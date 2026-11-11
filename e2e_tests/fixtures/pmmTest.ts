@@ -50,6 +50,7 @@ import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
 import TestState from '@helpers/upgradeState.helper';
+import SupportDiagnosticsPage from '@pages/extensions/supportDiagnostics.page';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
@@ -95,6 +96,7 @@ const pmmTest = base.extend<{
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
   storageLocationsPage: StorageLocationsPage;
+  supportDiagnosticsPage: SupportDiagnosticsPage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -220,6 +222,7 @@ const pmmTest = base.extend<{
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   storageLocationsPage: async ({ page }, use) => await use(new StorageLocationsPage(page)),
+  supportDiagnosticsPage: async ({ page }, use) => await use(new SupportDiagnosticsPage(page)),
   testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);

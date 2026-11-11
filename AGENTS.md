@@ -189,6 +189,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 | Alerting | `api/alerting/` | Alerting permissions API |
 | Dashboards | `dashboards/` | MySQL, Valkey, image renderer |
 | Docker config | `dockerConfiguration/` | ClickHouse, srv folder |
+| Extensions | `extensions/` | Support diagnostics, PMM Extensions API mocked |
 | HA settings | `ha/` | High-availability settings |
 | Inventory | `inventory/` | Nodes, services, agents |
 | Navigation | `navigation.test.ts` | New navigation |

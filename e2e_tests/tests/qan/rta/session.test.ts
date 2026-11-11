@@ -83,3 +83,66 @@ pmmTest(
     });
   },
 );
+
+pmmTest(
+  'PMM-T2522 - Verify a partly selected cluster shows as partially checked in the Real-Time Analytics service list @rta',
+  async ({ api, page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const { cluster } = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
+    const { service_id: rs103ServiceId } = await api.inventoryApi.getServiceDetailsByRegex('^rs103_');
+
+    await pmmTest.step('Stop the sessions and open the service selection', async () => {
+      for (const serviceId of [rs101ServiceId, rs102ServiceId, rs103ServiceId]) {
+        await api.realTimeAnalyticsApi.stopRealTimeAnalytics(serviceId);
+      }
+
+      await page.goto(queryAnalytics.rtaSelectionUrl);
+
+      await expect(rta.inputs.clusterService).toBeVisible();
+      await expect(queryAnalytics.buttons.startSessionButton).toBeVisible();
+    });
+
+    await pmmTest.step('Open the Cluster/Service list', async () => {
+      await rta.inputs.clusterService.click();
+
+      await expect(rta.builders.clusterCheckbox(cluster)).toBeVisible();
+      await expect(rta.builders.serviceCheckbox(rs101ServiceId)).toBeVisible();
+      await expect(rta.builders.serviceCheckbox(rs102ServiceId)).toBeVisible();
+      await expect(rta.builders.serviceCheckbox(rs103ServiceId)).toBeVisible();
+    });
+
+    await pmmTest.step('Select one service and verify the cluster is partially checked', async () => {
+      await rta.builders.serviceCheckbox(rs101ServiceId).click();
+
+      await expect(rta.builders.serviceCheckbox(rs101ServiceId)).toBeChecked();
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('data-indeterminate', 'true');
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('aria-checked', 'mixed');
+    });
+
+    await pmmTest.step('Select the other services and verify the cluster is checked', async () => {
+      await rta.builders.serviceCheckbox(rs102ServiceId).click();
+      await rta.builders.serviceCheckbox(rs103ServiceId).click();
+
+      await expect(rta.builders.clusterCheckbox(cluster)).toBeChecked();
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('data-indeterminate', 'false');
+      await expect(rta.builders.clusterCheckbox(cluster)).not.toHaveAttribute('aria-checked');
+    });
+
+    await pmmTest.step('Clear one service and verify the cluster is partially checked again', async () => {
+      await rta.builders.serviceCheckbox(rs103ServiceId).click();
+
+      await expect(rta.builders.serviceCheckbox(rs103ServiceId)).not.toBeChecked();
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('data-indeterminate', 'true');
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('aria-checked', 'mixed');
+    });
+
+    await pmmTest.step('Clear the selection and verify the cluster is unchecked', async () => {
+      await rta.builders.serviceCheckbox(rs101ServiceId).click();
+      await rta.builders.serviceCheckbox(rs102ServiceId).click();
+
+      await expect(rta.builders.clusterCheckbox(cluster)).not.toBeChecked();
+      await expect(rta.builders.clusterCheckbox(cluster)).toHaveAttribute('data-indeterminate', 'false');
+      await expect(rta.builders.clusterCheckbox(cluster)).not.toHaveAttribute('aria-checked');
+    });
+  },
+);
