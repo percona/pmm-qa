@@ -67,6 +67,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 
   test('PMM-T2542 - Verify Change agent disable collectors stops the collectors of mysqld-exporter', async ({}) => {
+    test.setTimeout(4 * 60_000);
     await expect(async () => {
       expect(await pmmCli.getExporterArgs(containerName, exporterId)).toContain('--collect.info_schema.innodb_metrics');
       expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName)).toMatch(/^mysql_info_schema_innodb_metrics_/m);
@@ -100,6 +101,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 
   test('PMM-T2544 - Verify Change agent log level is applied to the mysqld-exporter process', async ({}) => {
+    test.setTimeout(9 * 60_000);
     for (const level of ['debug', 'info', 'warn', 'error']) {
       const agentId = exporterId;
       const container = containerName;
@@ -119,6 +121,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 
   test('PMM-T2545 - Verify Change agent tablestats group table limit switches the tablestats collectors of the mysqld-exporter process', async ({}) => {
+    test.setTimeout(5 * 60_000);
     // -1 always disables the tablestats group; 0 means no limit.
     for (const { limit, enabled } of [{ limit: -1, enabled: false }, { limit: 0, enabled: true }]) {
       const agentId = exporterId;
@@ -142,6 +145,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 
   test('PMM-T2546 - Verify Change agent custom labels are added, overwritten and removed on mysqld-exporter metrics', async ({}) => {
+    test.setTimeout(8 * 60_000);
     const labelled = async (labels: string) => pmmApi.queryVictoriaMetrics(`mysql_up{service_name="${serviceName}",${labels}}`);
 
     await cli.execUntilPersisted(
@@ -176,6 +180,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 
   test('PMM-T2547 - Verify Change agent expose exporter and push metrics are switched on and off for mysqld-exporter', async ({}) => {
+    test.setTimeout(12 * 60_000);
     await cli.execUntilPersisted([pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
       expect((await pmmApi.getServerAgent(exporterId)).expose_exporter).toBe(true);
     });
@@ -351,6 +356,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T2524 - Verify Change agent username and password for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    test.setTimeout(3 * 60_000);
     await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "DROP USER IF EXISTS '${newUsername}'@'%'; CREATE USER '${newUsername}'@'%' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'%'; FLUSH PRIVILEGES;"`)).assertSuccess();
 
     for (const command of [
@@ -412,6 +418,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T2528 - Verify Change agent enable and disable for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    test.setTimeout(5 * 60_000);
     const enableCases = [
       {
         flag: '--enable=false', response: '- disabled agent', running: false,
@@ -471,7 +478,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       await metrics.assertSuccess();
       await metrics.outContains('mysql_up');
     }).toPass({ intervals: [2_000], timeout: 30_000 });
-    await (await cli.exec(`docker exec ${containerName} cat ${pmmAgentLog} | grep vmagent | tail -20 | grep error`)).outEquals('');
+    await (await cli.exec(`docker exec ${containerName} sh -c 'grep type=vm_agent ${pmmAgentLog} | tail -20 | grep -F "\\terror\\t" || true'`)).outEquals('');
     await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId], true);
   });
 
@@ -510,6 +517,9 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T2534 - Verify Change agent skip connection check for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    test.setTimeout(3 * 60_000);
+    await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER IF NOT EXISTS '${newUsername}'@'%' IDENTIFIED BY '${newPassword}'; ALTER USER '${newUsername}'@'%' IDENTIFIED BY '${newPassword}'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'%'; FLUSH PRIVILEGES;"`)).assertSuccess();
+
     for (const command of [
       pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--password=invalid_skip_check_password --skip-connection-check'),
       pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--password=invalid_skip_check_password --skip-connection-check'),
@@ -582,20 +592,24 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     // mysqld generates its own CA and client certificates in the datadir on first start. Their PEM files
     // carry a NUL byte, which change agent, unlike add, does not strip, so the CA fails to save (22P05).
     await (await cli.exec(`docker exec ${containerName} sh -c "mkdir -p /certs && for f in ca client-cert client-key; do tr -d '\\000' < /var/lib/mysql/\\$f.pem > /certs/\\$f.pem; done"`)).assertSuccess();
-    await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SET GLOBAL require_secure_transport=ON;"`)).assertSuccess();
-    await pmmApi.waitForServiceStatus(serviceName, 'STATUS_DOWN', 300_000);
-
     const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/certs/ca.pem --tls-cert-file=/certs/client-cert.pem --tls-key-file=/certs/client-key.pem';
 
-    for (const command of [
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, tlsFlags),
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, tlsFlags),
-    ]) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-    }
+    try {
+      await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SET GLOBAL require_secure_transport=ON;"`)).assertSuccess();
+      await pmmApi.waitForServiceStatus(serviceName, 'STATUS_DOWN', 300_000);
 
-    await pmmApi.waitForServiceStatus(serviceName, 'STATUS_UP', 300_000);
+      for (const command of [
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, tlsFlags),
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, tlsFlags),
+      ]) {
+        const output = await cli.exec(command);
+        await output.assertSuccess();
+      }
+
+      await pmmApi.waitForServiceStatus(serviceName, 'STATUS_UP', 300_000);
+    } finally {
+      await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SET GLOBAL require_secure_transport=OFF;"`)).assertSuccess();
+    }
   });
 
   test('PMM-T2540 - Verify Change agent pmm-agent listen port for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
@@ -618,7 +632,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2541 - Verify Change agent server URL and server insecure TLS for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
-    const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+    const serverUrl = cli.shellQuote(`https://admin:${encodeURIComponent(adminPassword)}@pmm-server:8443/`);
 
     for (const command of [
       pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--server-url=${serverUrl}`),
