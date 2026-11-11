@@ -1,9 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { grafanaDurationSeconds } from '@helpers/time.helper';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
-
-pmmTest.describe.configure({ mode: 'default' });
 
 // Runs on the host of `pmm-framework --database psmdb,SETUP_TYPE=psa`: the tests stop pbm-agent
 // and MinIO in its containers. rs101 is the primary, rs102 a secondary and rs103 the arbiter.
@@ -24,8 +22,8 @@ pmmTest.afterEach(async ({ cliHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2404 - Verify a stopped backup agent is listed as DOWN with its details and links, then leaves the table once it starts again @pmm-psmdb-pbm-agents',
-  async ({ api, cliHelper, dashboard, page, urlHelper }) => {
+  'PMM-T2404 - Verify a stopped backup agent is listed as DOWN with its details and links, then leaves the table once it starts again @pmm-psmdb-integration',
+  async ({ api, cliHelper, dashboard, mongoDbHelper, page, urlHelper }) => {
     const backupDetails = dashboard.mongo.backupDetails;
     const { columns, emptyText, filterableColumns, panelName, tooltipTerms } = backupDetails.failingAgents;
     const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters('^rs102_', {
@@ -76,13 +74,13 @@ pmmTest(
         })
         .toEqual([downRow]);
       await expect
-        .poll(() => cliHelper.getPbmAgentErrors('rs101'), { timeout: Timeouts.ONE_MINUTE })
+        .poll(() => mongoDbHelper.getPbmAgentErrors('rs101'), { timeout: Timeouts.ONE_MINUTE })
         .toEqual({ 'rs102:27017': [expect.stringContaining('lost agent')] });
     });
 
     const firstFailingFor = await pmmTest.step('Failing for counts from the stop', async () => {
       const [row] = await dashboard.getTableRowsAfterRefresh(panelName);
-      const failingFor = grafanaDurationSeconds(row['Failing for']);
+      const failingFor = GrafanaHelper.getDurationSeconds(row['Failing for']);
 
       expect(Math.abs(failingFor - (Date.now() - stoppedAt) / 1_000)).toBeLessThanOrEqual(120);
 
@@ -92,7 +90,9 @@ pmmTest(
     await expect
       .poll(
         async () =>
-          grafanaDurationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']),
+          GrafanaHelper.getDurationSeconds(
+            (await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for'],
+          ),
         {
           intervals: [Timeouts.TEN_SECONDS],
           message: 'Failing for should grow by a minute',
@@ -148,8 +148,8 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2405 - Verify agents that cannot reach backup storage are listed as FAIL after DOWN agents and sorted by host @pmm-psmdb-pbm-agents',
-  async ({ api, cliHelper, dashboard, page, urlHelper }) => {
+  'PMM-T2405 - Verify agents that cannot reach backup storage are listed as FAIL after DOWN agents and sorted by host @pmm-psmdb-integration',
+  async ({ api, cliHelper, dashboard, mongoDbHelper, page, urlHelper }) => {
     const backupDetails = dashboard.mongo.backupDetails;
     const { emptyText, panelName } = backupDetails.failingAgents;
     const [primary, secondary] = await Promise.all(
@@ -199,7 +199,9 @@ pmmTest(
     // before the restart: a Failing for reset by the restart is then told apart from the stop.
     const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age two minutes', async () => {
       const readFailingFor = async () =>
-        grafanaDurationSeconds((await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for']);
+        GrafanaHelper.getDurationSeconds(
+          (await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for'],
+        );
 
       await expect
         .poll(readFailingFor, {
@@ -212,7 +214,7 @@ pmmTest(
       return readFailingFor();
     });
 
-    expect(cliHelper.getPbmAgentErrors('rs101')).toEqual({
+    expect(mongoDbHelper.getPbmAgentErrors('rs101')).toEqual({
       'rs101:27017': expect.arrayContaining([expect.stringContaining('storage')]),
       'rs102:27017': [expect.stringContaining('lost agent')],
     });
@@ -231,7 +233,7 @@ pmmTest(
     });
 
     await pmmTest.step('rs102 Failing for still counts from the agent stop', async () => {
-      const failingFor = grafanaDurationSeconds(
+      const failingFor = GrafanaHelper.getDurationSeconds(
         (await dashboard.getTableRowsAfterRefresh(panelName))[1]['Failing for'],
       );
 

@@ -1,4 +1,5 @@
 import { Document, MongoClient } from 'mongodb';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from './timeouts';
 
 interface MongoConfig {
@@ -78,6 +79,25 @@ export default class MongoDBHelper {
    * @param options.queryLabel - string injected into the $where (and console.log'd); use it to find this query in RTA/logs
    * @returns Resolved array of documents
    */
+  /**
+   * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
+   *
+   * @param   container   a PSMDB container with the pbm CLI configured
+   */
+  getPbmAgentErrors = (container: string): Record<string, string[]> => {
+    const { cluster } = JSON.parse(
+      new CliHelper().execute(`docker exec ${container} pbm status -s cluster -o json`).assertSuccess()
+        .stdout,
+    ) as { cluster: { nodes: { errors?: string[]; host: string; ok: boolean; role: string }[] }[] };
+
+    return Object.fromEntries(
+      cluster
+        .flatMap(({ nodes }) => nodes)
+        .filter(({ ok, role }) => role !== 'A' && !ok)
+        .map(({ errors, host }) => [host, errors ?? []]),
+    );
+  };
+
   simulateLongRunningQuery = async (
     options: {
       chunkMs?: number;

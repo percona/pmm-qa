@@ -2,6 +2,14 @@ import { expect, Page } from '@playwright/test';
 import { GrafanaFolder, GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
 import customDashboard from '@testdata/customDashboard.json';
 
+const durationUnits: Record<string, number> = {
+  day: 86_400,
+  hour: 3_600,
+  minute: 60,
+  second: 1,
+  week: 604_800,
+};
+
 export default class GrafanaHelper {
   constructor(private page: Page) {}
 
@@ -102,6 +110,13 @@ export default class GrafanaHelper {
 
     return await response.json();
   };
+
+  // Grafana's dtdurations text ("3 minutes, 12 seconds") in seconds.
+  static getDurationSeconds = (text: string): number =>
+    [...text.matchAll(/(\d+)\s+(second|minute|hour|day|week)s?/g)].reduce(
+      (sum, [, value, unit]) => sum + Number(value) * durationUnits[unit],
+      0,
+    );
 
   getFolderDetailsByName = async (folderName: string): Promise<GrafanaFolder> => {
     const response = await this.page.request.get('graph/api/folders', {
