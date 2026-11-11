@@ -61,12 +61,7 @@ pmmTest(
     });
 
     await pmmTest.step('Close the tour and verify it does not reopen after a reload', async () => {
-      await Promise.all([
-        page.waitForRequest(
-          (request) => request.url().endsWith('/v1/users/me') && request.method() === 'PUT',
-        ),
-        tour.buttons.close.click(),
-      ]);
+      await Promise.all([page.waitForRequest(apiEndpoints.users.me), tour.buttons.close.click()]);
       await expect(leftNavigation.elements.tourPopover).toBeHidden();
       await Promise.all([page.waitForResponse(apiEndpoints.users.me), page.reload()]);
       await expect(leftNavigation.menuItemLocator('alerts.alertRules')).toBeVisible({
