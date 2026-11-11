@@ -291,8 +291,6 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2445 - Verify Change agent skip connection check for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
-
     for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--password=invalid_skip_check_password --skip-connection-check')) {
       const output = await cli.exec(command);
       await output.assertSuccess();
