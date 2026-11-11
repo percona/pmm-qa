@@ -1,19 +1,25 @@
 import AdvisorsApi from '@api/advisors.api';
 import MailpitApi from '@api/mailpit.api';
 import pmmTest from '@fixtures/pmmTest';
-import { AdvisorScheduleEmailMode, AdvisorScheduleInput } from '@interfaces/advisors';
+import { AdvisorScheduleEmailMode } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
 const defaultSeverities = ['SEVERITY_CRITICAL', 'SEVERITY_ERROR'];
 let notifications: Record<string, unknown>;
 
 pmmTest.describe('Advisor notifications', () => {
+  const createdChecks: string[] = [];
+  const createdSchedules: string[] = [];
+
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     notifications = await api.settingsApi.getAdvisorNotifications();
     await grafanaHelper.authorize();
   });
 
   pmmTest.afterEach(async ({ api }) => {
+    for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
+    for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
+
     await api.settingsApi.updateSettings(notifications);
   });
 
@@ -61,7 +67,7 @@ pmmTest.describe('Advisor notifications', () => {
         await expect(settingsPage.messages.advisorRecipientsMax).toBeVisible();
         await expect(apply).toBeDisabled();
         await recipients.fill('qa@example.com, not-an-email');
-        await expect(settingsPage.messages.advisorRecipientInvalid('not-an-email')).toBeVisible();
+        await expect(settingsPage.builders.advisorRecipientInvalid('not-an-email')).toBeVisible();
         await expect(apply).toBeDisabled();
       });
 
@@ -141,7 +147,7 @@ pmmTest.describe('Advisor notifications', () => {
         await expect(settingsPage.buttons.sendAdvisorTestEmail).toBeDisabled();
         await settingsPage.builders.advisorSeverity('warning').check();
         await settingsPage.buttons.sendAdvisorTestEmail.click();
-        await expect(settingsPage.messages.advisorTestEmailSent(recipient)).toBeVisible();
+        await expect(settingsPage.builders.advisorTestEmailSent(recipient)).toBeVisible();
 
         const email = await api.mailpitApi.waitForMessageTo(recipient);
 
@@ -161,7 +167,7 @@ pmmTest.describe('Advisor notifications', () => {
         await editor.inputs.severitiesOnlyThese.check();
         await editor.builders.severity('critical').uncheck();
         await editor.buttons.testEmail.click();
-        await expect(editor.messages.testEmailSent(recipient, 'Error')).toBeVisible();
+        await expect(editor.builders.testEmailSent(recipient, 'Error')).toBeVisible();
 
         const email = await api.mailpitApi.waitForMessageTo(recipient);
 
@@ -178,65 +184,56 @@ pmmTest.describe('Advisor notifications', () => {
       const settingsRecipient = MailpitApi.recipient('report-settings');
       const scheduleRecipient = MailpitApi.recipient('report-schedule');
       const service = await api.advisorsApi.getMysqlService();
-      // Three findings per service: one error and two warnings.
       const check = await api.advisorsApi.createCustomCheck({
         script: AdvisorsApi.findingsScript(3, 'error'),
       });
-      let scheduleId = '';
 
-      try {
-        const enabled = await api.settingsApi.putSettings({
-          advisor_notification_email_addresses: { values: [settingsRecipient] },
-          enable_advisor_notifications: true,
+      createdChecks.push(check.name);
+      await api.settingsApi.updateSettings({
+        advisor_notification_email_addresses: { values: [settingsRecipient] },
+        enable_advisor_notifications: true,
+      });
+
+      await pmmTest.step('A user run emails its findings at the Settings severities', async () => {
+        const run = await api.advisorsApi.runChecksAndWait([check.name]);
+        const errors = run.services_count;
+        const email = await api.mailpitApi.waitForMessageTo(settingsRecipient);
+
+        expect(email.Subject).toEqual(`PMM Advisor Insights: ${errors} finding(s) for run ${run.id}`);
+
+        for (const text of [
+          `This report covers run ${run.id}, which was triggered manually by an operator.`,
+          'with the selected severities (Critical, Error)',
+          `Findings by severity:\n  Critical: 0\n  Error: ${errors}\n\n`,
+          `Findings by technology:\n  MySQL: ${errors}\n  PostgreSQL: 0\n  MongoDB: 0\n`,
+        ]) {
+          expect(email.Text).toContain(text);
+        }
+
+        expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
+      });
+
+      await pmmTest.step('A schedule run emails its own recipients and severities', async () => {
+        const schedule = await api.advisorsApi.createSchedule({
+          check_names: [check.name],
+          email_addresses: [scheduleRecipient],
+          email_mode: AdvisorScheduleEmailMode.custom,
+          email_severities: ['SEVERITY_WARNING'],
+          service_ids: [service.service_id],
         });
 
-        expect(enabled.status(), await enabled.text()).toEqual(200);
+        createdSchedules.push(schedule.schedule_id);
+        await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(schedule.schedule_id));
 
-        await pmmTest.step('A user run emails its findings at the Settings severities', async () => {
-          const run = await api.advisorsApi.runChecksAndWait([check.name]);
-          const errors = run.services_count;
-          const email = await api.mailpitApi.waitForMessageTo(settingsRecipient);
+        const email = await api.mailpitApi.waitForMessageTo(scheduleRecipient);
 
-          expect(email.Subject).toEqual(`PMM Advisor Insights: ${errors} finding(s) for run ${run.id}`);
-
-          for (const text of [
-            `This report covers run ${run.id}, which was triggered manually by an operator.`,
-            'with the selected severities (Critical, Error)',
-            `Findings by severity:\n  Critical: 0\n  Error: ${errors}\n\n`,
-            `Findings by technology:\n  MySQL: ${errors}\n  PostgreSQL: 0\n  MongoDB: 0\n`,
-          ]) {
-            expect(email.Text).toContain(text);
-          }
-
-          expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
-        });
-
-        await pmmTest.step('A schedule run emails its own recipients and severities', async () => {
-          const schedule = await api.advisorsApi.createSchedule({
-            check_names: [check.name],
-            email_addresses: [scheduleRecipient],
-            email_mode: AdvisorScheduleEmailMode.custom,
-            email_severities: ['SEVERITY_WARNING'],
-            service_ids: [service.service_id],
-          });
-
-          scheduleId = schedule.schedule_id;
-          await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(scheduleId));
-
-          const email = await api.mailpitApi.waitForMessageTo(scheduleRecipient);
-
-          expect(email.Subject).toEqual(`PMM Advisor Insights: 2 finding(s) for ${schedule.name}`);
-          expect(email.Text).toContain(
-            `triggered manually by an operator from the schedule '${schedule.name}'`,
-          );
-          expect(email.Text).toContain('Findings by severity:\n  Warning: 2\n\n');
-          expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
-        });
-      } finally {
-        if (scheduleId) await api.advisorsApi.deleteSchedule(scheduleId);
-
-        await api.advisorsApi.deleteCheck(check.name);
-      }
+        expect(email.Subject).toEqual(`PMM Advisor Insights: 2 finding(s) for ${schedule.name}`);
+        expect(email.Text).toContain(
+          `triggered manually by an operator from the schedule '${schedule.name}'`,
+        );
+        expect(email.Text).toContain('Findings by severity:\n  Warning: 2\n\n');
+        expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
+      });
     },
   );
 
@@ -247,84 +244,77 @@ pmmTest.describe('Advisor notifications', () => {
     const service = await api.advisorsApi.getMysqlService();
     // One error and one warning on the service; the default severities email only the error.
     const check = await api.advisorsApi.createCustomCheck({ script: AdvisorsApi.findingsScript(2, 'error') });
-    const slowChecks = [
-      await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.endlessCheckScript }),
-      await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.endlessCheckScript }),
-    ];
-    const scheduleIds: string[] = [];
 
-    const createSchedule = async (overrides: Partial<AdvisorScheduleInput>) => {
-      const schedule = await api.advisorsApi.createSchedule({
-        check_names: [check.name],
-        service_ids: [service.service_id],
-        ...overrides,
-      });
+    createdChecks.push(check.name);
 
-      scheduleIds.push(schedule.schedule_id);
+    const slowChecks = await api.advisorsApi.createEndlessChecks(2);
+    const scope = { check_names: [check.name], service_ids: [service.service_id] };
 
-      return schedule;
-    };
+    createdChecks.push(...slowChecks);
+    await api.settingsApi.updateSettings({
+      advisor_notification_email_addresses: { values: [settingsRecipient] },
+      enable_advisor_notifications: true,
+    });
 
-    try {
-      const enabled = await api.settingsApi.putSettings({
-        advisor_notification_email_addresses: { values: [settingsRecipient] },
-        enable_advisor_notifications: true,
-      });
-
-      expect(enabled.status(), await enabled.text()).toEqual(200);
-
-      await pmmTest.step(
-        'A schedule without email sends none, one on Settings emails the defaults',
-        async () => {
-          const silent = await createSchedule({ email_mode: AdvisorScheduleEmailMode.off });
-          const defaults = await createSchedule({ email_mode: AdvisorScheduleEmailMode.settings });
-
-          // Runs finish one after another, so an email from the first would arrive before the second.
-          await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(silent.schedule_id));
-          await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(defaults.schedule_id));
-
-          const email = await api.mailpitApi.waitForMessageTo(settingsRecipient);
-
-          expect(email.Subject).toEqual(`PMM Advisor Insights: 1 finding(s) for ${defaults.name}`);
-          expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
-        },
-      );
-
-      await pmmTest.step('Own recipients get the findings at the Settings severities', async () => {
-        const own = await createSchedule({
-          email_addresses: [ownRecipient],
-          email_mode: AdvisorScheduleEmailMode.custom,
+    await pmmTest.step(
+      'A schedule without email sends none, one on Settings emails the defaults',
+      async () => {
+        const silent = await api.advisorsApi.createSchedule({
+          ...scope,
+          email_mode: AdvisorScheduleEmailMode.off,
+        });
+        const defaults = await api.advisorsApi.createSchedule({
+          ...scope,
+          email_mode: AdvisorScheduleEmailMode.settings,
         });
 
-        await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(own.schedule_id));
+        createdSchedules.push(silent.schedule_id, defaults.schedule_id);
+        // Runs finish one after another, so an email from the first would arrive before the second.
+        await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(silent.schedule_id));
+        await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(defaults.schedule_id));
 
-        const email = await api.mailpitApi.waitForMessageTo(ownRecipient);
+        const email = await api.mailpitApi.waitForMessageTo(settingsRecipient);
 
-        expect(email.Subject).toEqual(`PMM Advisor Insights: 1 finding(s) for ${own.name}`);
-        expect(email.Text).toContain('Findings by severity:\n  Critical: 0\n  Error: 1\n\n');
+        expect(email.Subject).toEqual(`PMM Advisor Insights: 1 finding(s) for ${defaults.name}`);
         expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
+      },
+    );
+
+    await pmmTest.step('Own recipients get the findings at the Settings severities', async () => {
+      const own = await api.advisorsApi.createSchedule({
+        ...scope,
+        email_addresses: [ownRecipient],
+        email_mode: AdvisorScheduleEmailMode.custom,
       });
 
-      await pmmTest.step('A schedule deleted during its run emails the Settings recipients', async () => {
-        const deleted = await createSchedule({
-          check_names: [check.name, ...slowChecks.map(({ name }) => name)],
-          email_addresses: [deletedRecipient],
-          email_mode: AdvisorScheduleEmailMode.custom,
-        });
-        const runId = await api.advisorsApi.runSchedule(deleted.schedule_id);
+      createdSchedules.push(own.schedule_id);
+      await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(own.schedule_id));
 
-        await api.advisorsApi.deleteSchedule(deleted.schedule_id);
-        await api.advisorsApi.waitForRun(runId);
-        await expect
-          .poll(async () =>
-            (await api.mailpitApi.messagesTo(settingsRecipient)).map(({ Subject }) => Subject),
-          )
-          .toContain(`PMM Advisor Insights: 1 finding(s) for ${deleted.name}`);
-        expect(await api.mailpitApi.messagesTo(deletedRecipient)).toHaveLength(0);
+      const email = await api.mailpitApi.waitForMessageTo(ownRecipient);
+
+      expect(email.Subject).toEqual(`PMM Advisor Insights: 1 finding(s) for ${own.name}`);
+      expect(email.Text).toContain('Findings by severity:\n  Critical: 0\n  Error: 1\n\n');
+      expect(await api.mailpitApi.messagesTo(settingsRecipient)).toHaveLength(1);
+    });
+
+    await pmmTest.step('A schedule deleted during its run emails the Settings recipients', async () => {
+      const deleted = await api.advisorsApi.createSchedule({
+        ...scope,
+        check_names: [check.name, ...slowChecks],
+        email_addresses: [deletedRecipient],
+        email_mode: AdvisorScheduleEmailMode.custom,
       });
-    } finally {
-      for (const scheduleId of scheduleIds) await api.advisorsApi.deleteSchedule(scheduleId);
-      for (const { name } of [check, ...slowChecks]) await api.advisorsApi.deleteCheck(name);
-    }
+
+      createdSchedules.push(deleted.schedule_id);
+
+      const runId = await api.advisorsApi.runSchedule(deleted.schedule_id);
+
+      await api.advisorsApi.deleteSchedule(deleted.schedule_id);
+      await api.advisorsApi.waitForRun(runId);
+      await expect
+        .poll(async () => (await api.mailpitApi.messagesTo(settingsRecipient)).map(({ Subject }) => Subject))
+        .toContain(`PMM Advisor Insights: 1 finding(s) for ${deleted.name}`);
+      expect(await api.mailpitApi.messagesTo(deletedRecipient)).toHaveLength(0);
+    });
   });
 });

@@ -1,6 +1,4 @@
 import BasePage from '@pages/base.page';
-import apiEndpoints from '@helpers/apiEndpoints';
-import { expect } from '@playwright/test';
 import AdvisorCheckFormComponent from '@components/advisors/advisorCheckForm.component';
 import DisableServicesDrawerComponent from '@components/advisors/disableServicesDrawer.component';
 
@@ -10,18 +8,38 @@ export default class AdvisorsCatalogPage extends BasePage {
   readonly url = 'pmm-ui/advisors';
   readonly checkForm = new AdvisorCheckFormComponent(this.page);
   readonly servicesDrawer = new DisableServicesDrawerComponent(this.page);
+  riskCategories = [
+    'Connections',
+    'Durability',
+    'Logging',
+    'Maintenance',
+    'Performance',
+    'Replication',
+    'Resources',
+    'Schema & indexes',
+    'Security',
+    'Versions',
+  ];
   builders = {
+    checkCreated: (name: string) => this.alertWithText(`Advisor check "${name}" created`),
+    checkDeleted: (summary: string) => this.alertWithText(`Check "${summary}" deleted`),
+    checkDisabled: (summary: string) => this.alertWithText(`Check "${summary}" disabled`),
+    checkDisabledForServices: (count: number) =>
+      this.alertWithText(`Check disabled for ${count} service${count === 1 ? '' : 's'}`),
+    checkEnabled: (summary: string) => this.alertWithText(`Check "${summary}" enabled`),
+    checkReEnabledForService: (serviceName: string) =>
+      this.alertWithText(`Check re-enabled for "${serviceName}"`),
+    checkStarted: (summary: string) => this.alertWithText(`Check "${summary}" started`),
+    checkUpdated: (name: string) => this.alertWithText(`Advisor check "${name}" updated`),
     deleteButton: (checkName: string) => this.page.getByTestId(`check-${checkName}-delete`),
     detailsField: (label: string) => this.page.getByTestId(`check-details-field-${label}`),
+    duplicateCheckName: (name: string) => this.alertWithText(`advisor check ${name} already exists`),
     editButton: (checkName: string) => this.page.getByTestId(`check-${checkName}-edit`),
     filter: (filter: CatalogFilter) => this.page.getByTestId(`${filter}-filter`).getByRole('combobox'),
-    option: (name: string) => this.page.getByRole('option', { exact: true, name }),
     row: (checkName: string) => this.page.getByTestId(`advisor-row-${checkName}`),
     runButton: (checkName: string) => this.page.getByTestId(`check-${checkName}-run`),
     servicesBadge: (checkName: string) => this.page.getByTestId(`check-${checkName}-services-badge`),
     servicesButton: (checkName: string) => this.page.getByTestId(`check-${checkName}-services`),
-    snackbar: (text: string) =>
-      this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text }),
     statusSwitch: (checkName: string) =>
       this.page.getByTestId(`check-${checkName}-status-switch`).locator('input'),
   };
@@ -52,21 +70,10 @@ export default class AdvisorsCatalogPage extends BasePage {
     search: this.page.getByTestId('advisors-search').getByRole('textbox'),
   };
   messages = {
-    checkCodeCopied: this.builders.snackbar('Check code copied to clipboard'),
-    checkCreated: (name: string) => this.builders.snackbar(`Advisor check "${name}" created`),
-    checkDeleted: (summary: string) => this.builders.snackbar(`Check "${summary}" deleted`),
-    checkDisabled: (summary: string) => this.builders.snackbar(`Check "${summary}" disabled`),
-    checkDisabledForServices: (count: number) =>
-      this.builders.snackbar(`Check disabled for ${count} service${count === 1 ? '' : 's'}`),
-    checkEnabled: (summary: string) => this.builders.snackbar(`Check "${summary}" enabled`),
-    checkReEnabledForService: (serviceName: string) =>
-      this.builders.snackbar(`Check re-enabled for "${serviceName}"`),
-    checksAlreadyRunning: this.builders.snackbar('Advisor checks are already running'),
-    checksStarted: this.builders.snackbar('Advisor checks started, run ID copied to clipboard'),
-    checkStarted: (summary: string) => this.builders.snackbar(`Check "${summary}" started`),
-    checkUpdated: (name: string) => this.builders.snackbar(`Advisor check "${name}" updated`),
-    duplicateCheckName: (name: string) => this.builders.snackbar(`advisor check ${name} already exists`),
-    scriptIndentedWithTabs: this.builders.snackbar('script should use spaces for indentation, not tabs'),
+    checkCodeCopied: this.alertWithText('Check code copied to clipboard'),
+    checksAlreadyRunning: this.alertWithText('Advisor checks are already running'),
+    checksStarted: this.alertWithText('Advisor checks started, run ID copied to clipboard'),
+    scriptIndentedWithTabs: this.alertWithText('script should use spaces for indentation, not tabs'),
   };
 
   deleteCheck = async (checkName: string) => {
@@ -76,22 +83,9 @@ export default class AdvisorsCatalogPage extends BasePage {
 
   detailsUrl = (checkName: string) => `${this.url}?details=${encodeURIComponent(checkName)}`;
 
-  // Returns the ID of the run the click starts.
-  runCheck = async (checkName: string): Promise<string> => {
-    const started = this.page.waitForResponse(
-      (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
-    );
+  runCheck = async (checkName: string): Promise<string> =>
+    (await this.startRun(this.builders.runButton(checkName))).runId;
 
-    await this.builders.runButton(checkName).click();
-
-    return ((await (await started).json()) as { run_id: string }).run_id;
-  };
-
-  // A click fired while the options menu is still closing is swallowed by its backdrop.
-  selectFilter = async (filter: CatalogFilter, value: string) => {
-    await this.builders.filter(filter).click();
-    await this.builders.option(value).click();
-    await expect(this.page.getByRole('listbox')).toBeHidden();
-    await expect(this.builders.filter(filter)).toHaveText(value);
-  };
+  selectFilter = async (filter: CatalogFilter, value: string) =>
+    await this.selectMenuOption(this.builders.filter(filter), value);
 }

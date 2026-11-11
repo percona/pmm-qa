@@ -50,7 +50,7 @@ Two variants change only the script: the **passing** variant returns no findings
 
 ### TC-01 · PMM-Txxxx - Verify the advisor checks catalog lists every check
 
-Spec: [catalog.test.ts:19](catalog.test.ts#L19)
+Spec: [catalog.test.ts:18](catalog.test.ts#L18)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ Spec: [catalog.test.ts:19](catalog.test.ts#L19)
 
 ### TC-02 · PMM-Txxxx - Verify searching and filtering advisor checks
 
-Spec: [catalog.test.ts:59](catalog.test.ts#L59)
+Spec: [catalog.test.ts:56](catalog.test.ts#L56)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ Spec: [catalog.test.ts:59](catalog.test.ts#L59)
 
 ### TC-03 · PMM-Txxxx - Verify the details pane of a built-in advisor check
 
-Spec: [catalog.test.ts:94](catalog.test.ts#L94)
+Spec: [catalog.test.ts:91](catalog.test.ts#L91)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ Spec: [catalog.test.ts:94](catalog.test.ts#L94)
 
 ### TC-04 · PMM-Txxxx - Verify creating a custom advisor check
 
-Spec: [catalog.test.ts:131](catalog.test.ts#L131)
+Spec: [catalog.test.ts:128](catalog.test.ts#L128)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ Cleanup: the check is deleted through the API.
 
 ### TC-05 · PMM-Txxxx - Verify a custom check name requires the custom_ prefix
 
-Spec: [catalog.test.ts:178](catalog.test.ts#L178)
+Spec: [catalog.test.ts:175](catalog.test.ts#L175)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ Spec: [catalog.test.ts:178](catalog.test.ts#L178)
 
 ### TC-06 · PMM-Txxxx - Verify disabling and enabling a check from the catalog
 
-Spec: [catalog.test.ts:194](catalog.test.ts#L194)
+Spec: [catalog.test.ts:191](catalog.test.ts#L191)
 
 Precondition: the QA custom check exists.
 
@@ -117,7 +117,7 @@ Precondition: the QA custom check exists.
 
 ### TC-07 · PMM-Txxxx - Verify deleting a custom advisor check
 
-Spec: [catalog.test.ts:220](catalog.test.ts#L220)
+Spec: [catalog.test.ts:217](catalog.test.ts#L217)
 
 Precondition: the QA custom check exists.
 
@@ -133,7 +133,7 @@ Precondition: the QA custom check exists.
 
 ### TC-08 · PMM-Txxxx - Verify editing a custom advisor check
 
-Spec: [checkForm.test.ts:20](checkForm.test.ts#L20)
+Spec: [checkForm.test.ts:19](checkForm.test.ts#L19)
 
 Precondition: the QA custom check exists.
 
@@ -146,7 +146,7 @@ Precondition: the QA custom check exists.
 
 ### TC-09 · PMM-Txxxx - Verify cloning a built-in advisor check
 
-Spec: [checkForm.test.ts:78](checkForm.test.ts#L78)
+Spec: [checkForm.test.ts:77](checkForm.test.ts#L77)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -158,7 +158,7 @@ Cleanup: the clone is deleted through the API.
 
 ### TC-10 · PMM-Txxxx - Verify advisor check form validation
 
-Spec: [checkForm.test.ts:111](checkForm.test.ts#L111)
+Spec: [checkForm.test.ts:112](checkForm.test.ts#L112)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -169,7 +169,7 @@ Spec: [checkForm.test.ts:111](checkForm.test.ts#L111)
 
 ### TC-11 · PMM-Txxxx - Verify query types follow the check technology
 
-Spec: [checkForm.test.ts:146](checkForm.test.ts#L146)
+Spec: [checkForm.test.ts:147](checkForm.test.ts#L147)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -179,7 +179,7 @@ Spec: [checkForm.test.ts:146](checkForm.test.ts#L146)
 
 ### TC-12 · PMM-Txxxx - Verify the server rejects a duplicate check name
 
-Spec: [checkForm.test.ts:172](checkForm.test.ts#L172)
+Spec: [checkForm.test.ts:173](checkForm.test.ts#L173)
 
 Precondition: the QA custom check exists.
 
@@ -192,7 +192,7 @@ Known UI issue: the error notification covers the form's **Save** button for at 
 
 ### TC-13 · PMM-Txxxx - Verify the server rejects a script indented with tabs
 
-Spec: [checkForm.test.ts:197](checkForm.test.ts#L197)
+Spec: [checkForm.test.ts:198](checkForm.test.ts#L198)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -201,7 +201,7 @@ Spec: [checkForm.test.ts:197](checkForm.test.ts#L197)
 
 ### TC-14 · PMM-Txxxx - Verify testing a check on a service from the form
 
-Spec: [checkForm.test.ts:222](checkForm.test.ts#L222)
+Spec: [checkForm.test.ts:223](checkForm.test.ts#L223)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -213,7 +213,7 @@ Spec: [checkForm.test.ts:222](checkForm.test.ts#L222)
 
 ### TC-15 · PMM-Txxxx - Verify copying the code of a check from the details pane
 
-Spec: [checkForm.test.ts:271](checkForm.test.ts#L271)
+Spec: [checkForm.test.ts:270](checkForm.test.ts#L270)
 
 Precondition: the QA custom check exists, and the browser allows clipboard access.
 
@@ -224,7 +224,7 @@ Precondition: the QA custom check exists, and the browser allows clipboard acces
 
 ### TC-16 · PMM-Txxxx - Verify built-in checks cannot be changed or deleted
 
-Spec: [checkForm.test.ts:333](checkForm.test.ts#L333)
+Spec: [checkForm.test.ts:331](checkForm.test.ts#L331)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -266,7 +266,7 @@ Precondition: the QA custom check exists and is disabled through the API.
 
 ### TC-19 · PMM-Txxxx - Verify the insights a run produced and their details
 
-Spec: [insights.test.ts:20](insights.test.ts#L20)
+Spec: [insights.test.ts:22](insights.test.ts#L22)
 
 Precondition: the QA custom check exists and one run of it, started through the API, has completed with findings.
 
@@ -279,7 +279,7 @@ Precondition: the QA custom check exists and one run of it, started through the 
 
 ### TC-20 · PMM-Txxxx - Verify filtering insights by run from the actions menu
 
-Spec: [insights.test.ts:60](insights.test.ts#L60)
+Spec: [insights.test.ts:61](insights.test.ts#L61)
 
 Precondition: same as TC-19.
 
@@ -295,7 +295,7 @@ Precondition: same as TC-19.
 
 ### TC-21 · PMM-Txxxx - Verify a check run from the catalog is recorded in run history
 
-Spec: [runs.test.ts:20](runs.test.ts#L20)
+Spec: [runs.test.ts:21](runs.test.ts#L21)
 
 Precondition: the QA custom check exists.
 
@@ -308,7 +308,7 @@ Precondition: the QA custom check exists.
 
 ### TC-22 · PMM-Txxxx - Verify run history filters by trigger and run ID
 
-Spec: [runs.test.ts:60](runs.test.ts#L60)
+Spec: [runs.test.ts:61](runs.test.ts#L61)
 
 Precondition: the QA custom check exists and one run of it, started through the API, has completed.
 
@@ -326,7 +326,7 @@ Precondition: the QA custom check exists and one run of it, started through the 
 
 ### TC-23 · PMM-Txxxx - Verify the Advisors menu opens Insights, Catalog, Run history and Scheduler
 
-Spec: [navigation.test.ts:10](navigation.test.ts#L10)
+Spec: [navigation.test.ts:18](navigation.test.ts#L18)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -337,7 +337,7 @@ Spec: [navigation.test.ts:10](navigation.test.ts#L10)
 
 ### TC-24 · PMM-Txxxx - Verify legacy Advisors URLs redirect to the new pages
 
-Spec: [navigation.test.ts:113](navigation.test.ts#L113)
+Spec: [navigation.test.ts:117](navigation.test.ts#L117)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -349,7 +349,7 @@ Spec: [navigation.test.ts:113](navigation.test.ts#L113)
 
 ### TC-25 · PMM-Txxxx - Verify the Advisors settings tab
 
-Spec: [navigation.test.ts:130](navigation.test.ts#L130)
+Spec: [navigation.test.ts:134](navigation.test.ts#L134)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -365,7 +365,7 @@ Precondition for both cases: Grafana users `advisors_viewer` (Viewer) and `advis
 
 ### TC-26 · PMM-Txxxx - Verify a viewer has no access to Advisors
 
-Spec: [permissions.test.ts:42](permissions.test.ts#L42)
+Spec: [permissions.test.ts:49](permissions.test.ts#L49)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -375,7 +375,7 @@ Spec: [permissions.test.ts:42](permissions.test.ts#L42)
 
 ### TC-27 · PMM-Txxxx - Verify an editor can run Advisors but not author checks or open its settings
 
-Spec: [permissions.test.ts:86](permissions.test.ts#L86)
+Spec: [permissions.test.ts:93](permissions.test.ts#L93)
 
 Precondition: the QA custom check exists.
 
@@ -400,7 +400,7 @@ Schedules a case creates are named `QA schedule <timestamp>_<random>` and delete
 
 ### TC-28 · PMM-Txxxx - Verify the default "All checks daily" schedule
 
-Spec: [scheduler.test.ts:52](scheduler.test.ts#L52)
+Spec: [scheduler.test.ts:50](scheduler.test.ts#L50)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -409,7 +409,7 @@ Spec: [scheduler.test.ts:52](scheduler.test.ts#L52)
 
 ### TC-29 · PMM-Txxxx - Verify creating a schedule
 
-Spec: [scheduler.test.ts:188](scheduler.test.ts#L188)
+Spec: [scheduler.test.ts:157](scheduler.test.ts#L157)
 
 Precondition: the QA custom check exists.
 
@@ -423,7 +423,7 @@ Precondition: the QA custom check exists.
 
 ### TC-30 · PMM-Txxxx - Verify schedule editor validation
 
-Spec: [scheduler.test.ts:241](scheduler.test.ts#L241)
+Spec: [scheduler.test.ts:210](scheduler.test.ts#L210)
 
 Precondition: one schedule exists, created through the API.
 
@@ -438,7 +438,7 @@ Precondition: one schedule exists, created through the API.
 
 ### TC-31 · PMM-Txxxx - Verify editing a schedule
 
-Spec: [scheduler.test.ts:310](scheduler.test.ts#L310)
+Spec: [scheduler.test.ts:279](scheduler.test.ts#L279)
 
 Precondition: a schedule created through the API.
 
@@ -450,7 +450,7 @@ Precondition: a schedule created through the API.
 
 ### TC-32 · PMM-Txxxx - Verify pausing and enabling a schedule
 
-Spec: [scheduler.test.ts:347](scheduler.test.ts#L347)
+Spec: [scheduler.test.ts:316](scheduler.test.ts#L316)
 
 Precondition: a schedule created through the API.
 
@@ -462,7 +462,7 @@ Precondition: a schedule created through the API.
 
 ### TC-33 · PMM-Txxxx - Verify a duplicated schedule starts paused
 
-Spec: [scheduler.test.ts:378](scheduler.test.ts#L378)
+Spec: [scheduler.test.ts:347](scheduler.test.ts#L347)
 
 Precondition: a schedule created through the API for the MySQL service, emailing its own recipient `qa@example.com`.
 
@@ -473,7 +473,7 @@ Precondition: a schedule created through the API for the MySQL service, emailing
 
 ### TC-34 · PMM-Txxxx - Verify Run now, View runs and deleting a schedule that has run
 
-Spec: [scheduler.test.ts:411](scheduler.test.ts#L411)
+Spec: [scheduler.test.ts:380](scheduler.test.ts#L380)
 
 Precondition: the QA custom check exists, and a schedule created through the API runs it on the MySQL service.
 
@@ -487,7 +487,7 @@ Precondition: the QA custom check exists, and a schedule created through the API
 
 ### TC-35 · PMM-Txxxx - Verify a second run cannot start while one is active
 
-Spec: [scheduler.test.ts:477](scheduler.test.ts#L477)
+Spec: [scheduler.test.ts:446](scheduler.test.ts#L446)
 
 Precondition: a schedule created through the API, and a run of all checks started through `POST /v1/advisors/checks:start` that is still running. A full run on one MySQL service takes about a minute; the test waits for it to finish.
 
@@ -504,7 +504,7 @@ Precondition: a schedule created through the API, and a run of all checks starte
 
 ### TC-36 · PMM-Txxxx - Verify the OK, Failed and Error status chips and the Status filter
 
-Spec: [insights.test.ts:98](insights.test.ts#L98)
+Spec: [insights.test.ts:99](insights.test.ts#L99)
 
 Precondition: three QA custom checks, run together through the API: the passing variant, the default one and the erroring variant.
 
@@ -516,7 +516,7 @@ Precondition: three QA custom checks, run together through the API: the passing 
 
 ### TC-37 · PMM-Txxxx - Verify insight filters, Filter by name and restoring filters from the menu
 
-Spec: [insights.test.ts:150](insights.test.ts#L150)
+Spec: [insights.test.ts:151](insights.test.ts#L151)
 
 Precondition: the QA custom check and the passing variant in category `QA passing`, run together through the API.
 
@@ -531,7 +531,7 @@ Precondition: the QA custom check and the passing variant in category `QA passin
 
 ### TC-38 · PMM-Txxxx - Verify copying an insight as text and as a URL that opens its details
 
-Spec: [insights.test.ts:216](insights.test.ts#L216)
+Spec: [insights.test.ts:217](insights.test.ts#L217)
 
 Precondition: one run of the QA custom check; the browser may read the clipboard.
 
@@ -545,7 +545,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 
 ### TC-39 · PMM-Txxxx - Verify re-running a check for the service of an insight
 
-Spec: [insights.test.ts:285](insights.test.ts#L285)
+Spec: [insights.test.ts:278](insights.test.ts#L278)
 
 Precondition: one run of the QA custom check; the browser may read the clipboard.
 
@@ -556,7 +556,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 
 ### TC-40 · PMM-Txxxx - Verify disabling and enabling a check for the service of an insight
 
-Spec: [insights.test.ts:317](insights.test.ts#L317)
+Spec: [insights.test.ts:310](insights.test.ts#L310)
 
 Precondition: one run of the QA custom check.
 
@@ -569,7 +569,7 @@ Precondition: one run of the QA custom check.
 
 ### TC-41 · PMM-Txxxx - Verify the Email insights dialog
 
-Spec: [insights.test.ts:375](insights.test.ts#L375)
+Spec: [insights.test.ts:368](insights.test.ts#L368)
 
 Precondition: one run of a QA custom check whose script returns 201 findings per service, the first an `error` and the rest `warning`. The counts below are for one MySQL service, as in CI.
 
@@ -588,7 +588,7 @@ Precondition: one run of a QA custom check whose script returns 201 findings per
 
 ### TC-42 · PMM-Txxxx - Verify exporting the insights of a run as CSV
 
-Spec: [runs.test.ts:116](runs.test.ts#L116)
+Spec: [runs.test.ts:117](runs.test.ts#L117)
 
 Precondition: the QA custom check and its passing variant run together through the API, and a MongoDB variant (no MongoDB service is monitored) runs on its own, producing no insights.
 
@@ -600,7 +600,7 @@ Precondition: the QA custom check and its passing variant run together through t
 
 ### TC-43 · PMM-Txxxx - Verify Copy run ID, Run again and following a run in progress
 
-Spec: [runs.test.ts:171](runs.test.ts#L171)
+Spec: [runs.test.ts:173](runs.test.ts#L173)
 
 Precondition: one run of the QA custom check; the browser may read the clipboard.
 
@@ -612,7 +612,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 
 ### TC-44 · PMM-Txxxx - Verify the ten risk categories of the built-in checks
 
-Spec: [catalog.test.ts:245](catalog.test.ts#L245)
+Spec: [catalog.test.ts:242](catalog.test.ts#L242)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -621,7 +621,7 @@ Spec: [catalog.test.ts:245](catalog.test.ts#L245)
 
 ### TC-46 · PMM-Txxxx - Verify testing a check rejects retired severities
 
-Spec: [checkForm.test.ts:353](checkForm.test.ts#L353)
+Spec: [checkForm.test.ts:351](checkForm.test.ts#L351)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -631,7 +631,7 @@ Spec: [checkForm.test.ts:353](checkForm.test.ts#L353)
 
 ### TC-47 · PMM-Txxxx - Verify Run selected and Run all
 
-Spec: [catalog.test.ts:280](catalog.test.ts#L280)
+Spec: [catalog.test.ts:266](catalog.test.ts#L266)
 
 Precondition: two QA custom checks in a category of their own, one of them disabled.
 
@@ -653,7 +653,7 @@ Each case restores the notification settings afterwards: notifications off, no r
 
 ### TC-48 · PMM-Txxxx - Verify Advisor notification settings validation
 
-Spec: [notifications.test.ts:25](notifications.test.ts#L25)
+Spec: [notifications.test.ts:27](notifications.test.ts#L27)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -668,7 +668,7 @@ Spec: [notifications.test.ts:25](notifications.test.ts#L25)
 
 ### TC-49 · PMM-Txxxx - Verify sending a test email from the API, Settings and the schedule editor
 
-Spec: [notifications.test.ts:113](notifications.test.ts#L113)
+Spec: [notifications.test.ts:115](notifications.test.ts#L115)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -679,7 +679,7 @@ Spec: [notifications.test.ts:113](notifications.test.ts#L113)
 
 ### TC-50 · PMM-Txxxx - Verify the report emails of a user run and of a schedule
 
-Spec: [notifications.test.ts:180](notifications.test.ts#L180)
+Spec: [notifications.test.ts:182](notifications.test.ts#L182)
 
 Precondition: a QA custom check whose script returns three findings per service, one `error` and two `warning`. Notifications are turned on through the API with one new recipient and the default severities (*Critical*, *Error*). The counts below are for one MySQL service, as in CI.
 
@@ -694,7 +694,7 @@ Precondition: a QA custom check whose script returns three findings per service,
 
 ### TC-51 · PMM-Txxxx - Verify testing a check from its details pane and the services it can target
 
-Spec: [checkForm.test.ts:286](checkForm.test.ts#L286)
+Spec: [checkForm.test.ts:285](checkForm.test.ts#L285)
 
 Precondition: a QA custom check whose script prints `QA print output` and returns one `warning` finding.
 
@@ -706,7 +706,7 @@ Precondition: a QA custom check whose script prints `QA print output` and return
 
 ### TC-52 · PMM-Txxxx - Verify double-clicking a row on every Advisor table and the schedule details link
 
-Spec: [navigation.test.ts:40](navigation.test.ts#L40)
+Spec: [navigation.test.ts:48](navigation.test.ts#L48)
 
 Precondition: a QA custom check, one completed run of it, and a schedule that picks it.
 
@@ -724,7 +724,7 @@ Precondition: a QA custom check, one completed run of it, and a schedule that pi
 
 ### TC-54 · PMM-Txxxx - Verify the empty Scheduler and turning Advisors off and on
 
-Spec: [scheduler.test.ts:74](scheduler.test.ts#L74)
+Spec: [scheduler.test.ts:71](scheduler.test.ts#L71)
 
 The test saves every schedule first, and afterwards turns Advisors on and recreates them.
 
@@ -737,7 +737,7 @@ The test saves every schedule first, and afterwards turns Advisors on and recrea
 
 ### TC-73 · PMM-Txxxx - Verify user schedules survive turning Advisors off and on
 
-Spec: [scheduler.test.ts:148](scheduler.test.ts#L148)
+Spec: [scheduler.test.ts:117](scheduler.test.ts#L117)
 
 Precondition: a schedule created through the API for Mon, Wed and Fri at 11:30 UTC.
 
@@ -748,7 +748,7 @@ Precondition: a schedule created through the API for Mon, Wed and Fri at 11:30 U
 
 ### TC-55 · PMM-Txxxx - Verify a schedule resolves its checks and services when it runs
 
-Spec: [scheduler.test.ts:516](scheduler.test.ts#L516)
+Spec: [scheduler.test.ts:490](scheduler.test.ts#L490)
 
 Precondition: two MySQL services added through `POST /v1/management/services` on their own remote nodes, at `127.0.0.1:1` with the connection check skipped, so every query to them fails. A custom check that runs the `MYSQL_SELECT` query `1` and returns no findings, and a second QA custom check. Two schedules: one picks both checks and both added services, the other picks only the query check, on all services.
 
@@ -763,7 +763,7 @@ Precondition: two MySQL services added through `POST /v1/management/services` on
 
 ### TC-56 · PMM-Txxxx - Verify the schedule editor shows local times and coverage warnings
 
-Spec: [scheduler.test.ts:630](scheduler.test.ts#L630)
+Spec: [scheduler.test.ts:597](scheduler.test.ts#L597)
 
 Precondition: the browser runs in the `Asia/Tokyo` time zone (UTC+9, no daylight saving time). A QA custom check, and a copy of it for PostgreSQL. CI monitors no PostgreSQL service besides PMM Server's own.
 
@@ -779,7 +779,7 @@ Precondition: the browser runs in the `Asia/Tokyo` time zone (UTC+9, no daylight
 
 ### TC-57 · PMM-Txxxx - Verify insights link to the documentation page of their check
 
-Spec: [insights.test.ts:464](insights.test.ts#L464)
+Spec: [insights.test.ts:457](insights.test.ts#L457)
 
 Precondition: the QA custom check exists, and a run of all checks has completed. It takes about a minute on one MySQL service.
 
@@ -791,7 +791,7 @@ Precondition: the QA custom check exists, and a run of all checks has completed.
 
 ### TC-58 · PMM-Txxxx - Verify an insight keeps the topology and labels of its service
 
-Spec: [insights.test.ts:519](insights.test.ts#L519)
+Spec: [insights.test.ts:512](insights.test.ts#L512)
 
 Precondition: a MySQL service added as in TC-55, with environment `qa-environment`, cluster `qa-cluster`, replication set `qa-replication-set`, custom label `qa_label=qa-value`, and its node in region `qa-region` and AZ `qa-az`. The QA custom check reads only metrics, so it still reports findings on this service.
 
@@ -806,7 +806,7 @@ Precondition: a MySQL service added as in TC-55, with environment `qa-environmen
 
 ### TC-59 · PMM-Txxxx - Verify each schedule emails as it is set to
 
-Spec: [notifications.test.ts:247](notifications.test.ts#L247)
+Spec: [notifications.test.ts:240](notifications.test.ts#L240)
 
 Precondition: a QA custom check whose script returns two findings per service, one `error` and one `warning`, and two custom checks whose script loops until the 4 s CPU limit stops it. Notifications are turned on through the API with one new recipient and the default severities. Every schedule picks the MySQL service and is started with `POST /v1/advisors/schedules/<id>:run`.
 
@@ -828,7 +828,7 @@ cd e2e_tests && npx playwright test --grep @advisor-scheduling
 
 ### TC-61 · PMM-Txxxx - Verify a schedule runs when it falls due and emails its report
 
-Spec: [scheduling.test.ts:76](scheduling.test.ts#L76)
+Spec: [scheduling.test.ts:53](scheduling.test.ts#L53)
 
 Precondition: the QA custom check. Notifications are turned on through the API.
 
@@ -840,7 +840,7 @@ Precondition: the QA custom check. Notifications are turned on through the API.
 
 ### TC-62 · PMM-Txxxx - Verify schedules that fall due during a run wait for it and start late
 
-Spec: [scheduling.test.ts:136](scheduling.test.ts#L136)
+Spec: [scheduling.test.ts:114](scheduling.test.ts#L114)
 
 Precondition: the QA custom check, and 40 custom checks whose script loops until the 4 s CPU limit stops it. Notifications are turned on through the API. Two schedules due at the same minute, *<name> A* and *<name> B* (created B first), each for the QA check and the MySQL service and emailing its own new recipient at warning severity.
 
@@ -852,7 +852,7 @@ Precondition: the QA custom check, and 40 custom checks whose script loops until
 
 ### TC-63 · PMM-Txxxx - Verify a schedule with nothing to check records no run
 
-Spec: [scheduling.test.ts:238](scheduling.test.ts#L238)
+Spec: [scheduling.test.ts:210](scheduling.test.ts#L210)
 
 Precondition: a custom check that returns no findings, and a MySQL service added as in TC-55.
 
@@ -868,7 +868,7 @@ These cases also run under `@advisor-scheduling`, after the cases above, because
 
 ### TC-64 · PMM-Txxxx - Verify a restart interrupts a run, which keeps the insights it saved
 
-Spec: [scheduling.test.ts:286](scheduling.test.ts#L286)
+Spec: [scheduling.test.ts:253](scheduling.test.ts#L253)
 
 Precondition: the QA custom check, named to sort first, and 15 custom checks whose script loops until the 4 s CPU limit stops it. A run executes its checks in name order. Notifications are turned on through the API. Two disabled schedules on the MySQL service, emailing one new recipient at warning severity: *interrupted* with all 16 checks, *following* with the QA check only.
 
@@ -882,7 +882,7 @@ Precondition: the QA custom check, named to sort first, and 15 custom checks who
 
 ### TC-65 · PMM-Txxxx - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped
 
-Spec: [scheduling.test.ts:400](scheduling.test.ts#L400)
+Spec: [scheduling.test.ts:361](scheduling.test.ts#L361)
 
 Precondition: a custom check that returns no findings. Two daily schedules for it on the MySQL service: *<name> missed*, due at the next minute, and *<name> control*, due a minute later.
 
@@ -903,7 +903,7 @@ cd e2e_tests && npx playwright test --grep @advisor-databases
 
 ### TC-66 · PMM-Txxxx - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2
 
-Spec: [databases.test.ts:81](databases.test.ts#L81)
+Spec: [databases.test.ts:47](databases.test.ts#L47)
 
 Precondition: `mysql:5.7` and `mongo:8.2` (no replica set, no authentication) monitored as remote services.
 
@@ -917,7 +917,7 @@ The test leaves out `mongodb_multiple_services` and `mongodb_swap_allocation`, w
 
 ### TC-67 · PMM-Txxxx - Verify a check reports one finding per database, naming at most 10 relations
 
-Spec: [databases.test.ts:120](databases.test.ts#L120)
+Spec: [databases.test.ts:99](databases.test.ts#L99)
 
 Precondition: `postgres:17` monitored as a remote service, with database *qa_many* holding 12 tables and *qa_few* holding 2, each table with an index no query has used.
 
@@ -948,7 +948,7 @@ These cases run under `@pmm-ha` against a three-node PMM HA cluster. HAProxy rou
 
 ### TC-70 · PMM-Txxxx - Verify the HA leader runs a run requested on a follower and allows one run at a time
 
-Spec: [advisorRuns.test.ts:49](../ha/advisorRuns.test.ts#L49)
+Spec: [advisorRuns.test.ts:27](../ha/advisorRuns.test.ts#L27)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -958,7 +958,7 @@ Spec: [advisorRuns.test.ts:49](../ha/advisorRuns.test.ts#L49)
 
 ### TC-71 · PMM-Txxxx - Verify the HA leader runs a schedule created on a follower when it falls due
 
-Spec: [advisorRuns.test.ts:79](../ha/advisorRuns.test.ts#L79)
+Spec: [advisorRuns.test.ts:64](../ha/advisorRuns.test.ts#L64)
 
 | # | Step | Expected result |
 | --- | --- | --- |
@@ -967,7 +967,7 @@ Spec: [advisorRuns.test.ts:79](../ha/advisorRuns.test.ts#L79)
 
 ### TC-72 · PMM-Txxxx - Verify an HA leader failover interrupts the open run and starts no run of its own
 
-Spec: [advisorRuns.test.ts:113](../ha/advisorRuns.test.ts#L113)
+Spec: [advisorRuns.test.ts:106](../ha/advisorRuns.test.ts#L106)
 
 | # | Step | Expected result |
 | --- | --- | --- |

@@ -7,6 +7,7 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe('Advisor insights', () => {
   const createdChecks: string[] = [];
+  const createdNodes: string[] = [];
 
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -14,6 +15,7 @@ pmmTest.describe('Advisor insights', () => {
 
   pmmTest.afterEach(async ({ api }) => {
     for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
+    for (const nodeId of createdNodes.splice(0)) await api.inventoryApi.deleteNode(nodeId, true);
   });
 
   pmmTest(
@@ -25,7 +27,6 @@ pmmTest.describe('Advisor insights', () => {
 
       const run = await api.advisorsApi.runChecksAndWait([check.name]);
 
-      // The custom check only targets MySQL, so it needs a monitored MySQL service to report anything.
       expect(run.findings_count, 'No MySQL service is monitored').toBeGreaterThan(0);
 
       const [insight] = await api.advisorsApi.listInsights({ run_id: run.id });
@@ -34,7 +35,7 @@ pmmTest.describe('Advisor insights', () => {
 
       await pmmTest.step('Verify the insights of the run', async () => {
         await expect(advisorInsightsPage.elements.title).toBeVisible();
-        await expect(advisorInsightsPage.inputs.runId).toHaveValue(run.id);
+        await expect(advisorInsightsPage.runIdFilter.inputs.runId).toHaveValue(run.id);
         await expect(advisorInsightsPage.elements.rows).toHaveCount(run.findings_count);
         await expect(advisorInsightsPage.builders.row(insight.id)).toContainText(insight.summary);
         await expect(advisorInsightsPage.builders.row(insight.id)).toContainText(insight.service_name);
@@ -88,7 +89,7 @@ pmmTest.describe('Advisor insights', () => {
 
       await pmmTest.step('Clearing filters drops the run ID', async () => {
         await advisorInsightsPage.buttons.clearFilters.click();
-        await expect(advisorInsightsPage.inputs.runId).toHaveValue('');
+        await expect(advisorInsightsPage.runIdFilter.inputs.runId).toHaveValue('');
         await expect(page).not.toHaveURL(/runId=/);
       });
     },
@@ -189,8 +190,8 @@ pmmTest.describe('Advisor insights', () => {
       await pmmTest.step('Filter by name keeps only the check of a row', async () => {
         await advisorInsightsPage.buttons.clearFilters.click();
         // The page empties the field after clearing, which overwrites anything typed before then.
-        await expect(advisorInsightsPage.inputs.runId).toHaveValue('');
-        await advisorInsightsPage.filterByRunId(run.id);
+        await expect(advisorInsightsPage.runIdFilter.inputs.runId).toHaveValue('');
+        await advisorInsightsPage.runIdFilter.apply(run.id);
         await expect(advisorInsightsPage.elements.rows).toHaveCount(insights.length);
 
         const [insight] = insights.filter(({ check_name }) => check_name === failing.name);
@@ -234,15 +235,7 @@ pmmTest.describe('Advisor insights', () => {
 
         const text = await page.evaluate(() => navigator.clipboard.readText());
 
-        for (const line of [
-          `The Advisor Check "${insight.summary}" completed at`,
-          'with status "Failed"',
-          `Run ID: ${run.id}`,
-          `Check Name: ${check.name}`,
-          `Service Name: ${insight.service_name}`,
-          'Description: Created by a UI test.',
-          'Severity: Warning',
-        ]) {
+        for (const line of advisorInsightsPage.copiedTextLines(insight, check, run.id)) {
           expect(text).toContain(line);
         }
       });
@@ -274,7 +267,7 @@ pmmTest.describe('Advisor insights', () => {
         await expect(shared.buttons.maximizeDetails).toHaveAttribute('aria-label', 'Minimize');
         await expect(shared.builders.detailsField('summary')).toContainText(insight.summary);
         await shared.buttons.closeDetails.click();
-        await expect(shared.inputs.runId).toHaveValue(run.id);
+        await expect(shared.runIdFilter.inputs.runId).toHaveValue(run.id);
         await expect(shared.builders.filter('status')).toHaveText('Failed');
         await sharedPage.close();
       });
@@ -297,7 +290,7 @@ pmmTest.describe('Advisor insights', () => {
       await advisorInsightsPage.builders.actionsButton(insight.id).click();
       await advisorInsightsPage.buttons.rerunNow.click();
       await expect(
-        advisorInsightsPage.messages.rerunStarted(check.summary, insight.service_name),
+        advisorInsightsPage.builders.rerunStarted(check.summary, insight.service_name),
       ).toBeVisible();
 
       const rerun = await api.advisorsApi.waitForRun(
@@ -335,7 +328,7 @@ pmmTest.describe('Advisor insights', () => {
         await expect(toggle).toHaveText('Disable check for service');
         await toggle.click();
         await expect(
-          advisorInsightsPage.messages.checkDisabledForService(check.summary, insight.service_name),
+          advisorInsightsPage.builders.checkDisabledForService(check.summary, insight.service_name),
         ).toBeVisible();
         await expect
           .poll(async () => (await api.advisorsApi.findCheck(check.name))?.disabled_service_ids)
@@ -361,7 +354,7 @@ pmmTest.describe('Advisor insights', () => {
         await advisorInsightsPage.builders.actionsButton(insight.id).click();
         await toggle.click();
         await expect(
-          advisorInsightsPage.messages.checkEnabledForService(check.summary, insight.service_name),
+          advisorInsightsPage.builders.checkEnabledForService(check.summary, insight.service_name),
         ).toBeVisible();
         await expect
           .poll(async () => (await api.advisorsApi.findCheck(check.name))?.disabled_service_ids ?? [])
@@ -398,8 +391,8 @@ pmmTest.describe('Advisor insights', () => {
       await pmmTest.step('More than 200 matching insights cannot be sent', async () => {
         await page.goto(advisorInsightsPage.runUrl(run.id));
         await advisorInsightsPage.buttons.emailInsights.click();
-        await expect(emailDialog.messages.filtered(run.findings_count)).toBeVisible();
-        await expect(emailDialog.messages.tooMany(run.findings_count)).toBeVisible();
+        await expect(emailDialog.builders.filtered(run.findings_count)).toBeVisible();
+        await expect(emailDialog.builders.tooMany(run.findings_count)).toBeVisible();
         await emailDialog.inputs.addresses.fill('qa@example.com');
         await expect(emailDialog.buttons.send).toBeDisabled();
         await emailDialog.buttons.cancel.click();
@@ -408,17 +401,17 @@ pmmTest.describe('Advisor insights', () => {
       await pmmTest.step('Recipients must be valid addresses, at most 20', async () => {
         await advisorInsightsPage.selectFilter('severity', 'Error');
         await advisorInsightsPage.buttons.emailInsights.click();
-        await expect(emailDialog.messages.filtered(run.services_count)).toBeVisible();
+        await expect(emailDialog.builders.filtered(run.services_count)).toBeVisible();
         await expect(emailDialog.elements.tooMany).toBeHidden();
         await emailDialog.inputs.addresses.fill('qa@example.com');
         await expect(emailDialog.buttons.send).toBeEnabled();
 
         for (const [addresses, error] of [
           ['', emailDialog.messages.addressRequired],
-          ['qa@example.com, not-an-email', emailDialog.messages.addressInvalid('not-an-email')],
+          ['qa@example.com, not-an-email', emailDialog.builders.addressInvalid('not-an-email')],
           [
             Array.from({ length: 21 }, (_, i) => `qa${i}@example.com`).join(' '),
-            emailDialog.messages.tooManyAddresses(21),
+            emailDialog.builders.tooManyAddresses(21),
           ],
         ] as const) {
           await emailDialog.inputs.addresses.fill(addresses);
@@ -434,7 +427,7 @@ pmmTest.describe('Advisor insights', () => {
 
           await emailDialog.inputs.addresses.fill(recipient);
           await emailDialog.buttons.send.click();
-          await expect(advisorInsightsPage.messages.insightsEmailed(run.services_count, 1)).toBeVisible();
+          await expect(advisorInsightsPage.builders.insightsEmailed(run.services_count, 1)).toBeVisible();
           await expect(emailDialog.elements.dialog).toBeHidden();
 
           const email = await api.mailpitApi.waitForMessageTo(recipient);
@@ -530,46 +523,44 @@ pmmTest.describe('Advisor insights', () => {
         { az: 'qa-az', region: 'qa-region' },
       );
 
-      try {
-        const check = await api.advisorsApi.createCustomCheck();
+      createdNodes.push(service.node_id);
 
-        createdChecks.push(check.name);
+      const check = await api.advisorsApi.createCustomCheck();
 
-        const run = await api.advisorsApi.runChecksAndWait([check.name]);
-        const insight = (await api.advisorsApi.listInsights({ run_id: run.id })).find(
-          ({ service_id }) => service_id === service.service_id,
-        ) as AdvisorInsight;
+      createdChecks.push(check.name);
 
-        await pmmTest.step('The API returns the topology and labels of the service', async () => {
-          expect(insight).toMatchObject({
-            ...topology,
-            az: 'qa-az',
-            node_name: name,
-            region: 'qa-region',
-            service_name: name,
-          });
-          expect(insight.labels).toMatchObject({ ...topology, qa_label: 'qa-value' });
+      const run = await api.advisorsApi.runChecksAndWait([check.name]);
+      const insight = (await api.advisorsApi.listInsights({ run_id: run.id })).find(
+        ({ service_id }) => service_id === service.service_id,
+      ) as AdvisorInsight;
+
+      await pmmTest.step('The API returns the topology and labels of the service', async () => {
+        expect(insight).toMatchObject({
+          ...topology,
+          az: 'qa-az',
+          node_name: name,
+          region: 'qa-region',
+          service_name: name,
         });
+        expect(insight.labels).toMatchObject({ ...topology, qa_label: 'qa-value' });
+      });
 
-        await pmmTest.step('The details pane shows them', async () => {
-          await page.goto(`${advisorInsightsPage.runUrl(run.id)}&insight=${insight.id}`);
-          await expect(advisorInsightsPage.elements.detailsPane).toBeVisible();
+      await pmmTest.step('The details pane shows them', async () => {
+        await page.goto(`${advisorInsightsPage.runUrl(run.id)}&insight=${insight.id}`);
+        await expect(advisorInsightsPage.elements.detailsPane).toBeVisible();
 
-          for (const [field, value] of [
-            ['node', name],
-            ['environment', topology.environment],
-            ['cluster', topology.cluster],
-            ['replication-set', topology.replication_set],
-            ['region', 'qa-region'],
-          ]) {
-            await expect(advisorInsightsPage.builders.detailsField(field)).toContainText(value);
-          }
+        for (const [field, value] of [
+          ['node', name],
+          ['environment', topology.environment],
+          ['cluster', topology.cluster],
+          ['replication-set', topology.replication_set],
+          ['region', 'qa-region'],
+        ]) {
+          await expect(advisorInsightsPage.builders.detailsField(field)).toContainText(value);
+        }
 
-          await expect(advisorInsightsPage.elements.detailsPane).toContainText('qa_label: qa-value');
-        });
-      } finally {
-        await api.inventoryApi.deleteNode(service.node_id, true);
-      }
+        await expect(advisorInsightsPage.elements.detailsPane).toContainText('qa_label: qa-value');
+      });
     },
   );
 });

@@ -1,19 +1,28 @@
 import BasePage from '@pages/base.page';
-import { Download, expect } from '@playwright/test';
+import RunIdFilterComponent from '@components/advisors/runIdFilter.component';
+import { Timeouts } from '@helpers/timeouts';
+import { AdvisorRun } from '@interfaces/advisors';
+import { Download } from '@playwright/test';
+
+const utcTime = (timestamp: string) => new Date(timestamp).toISOString().slice(11, 16);
 
 export default class AdvisorRunsPage extends BasePage {
   readonly url = 'pmm-ui/advisors/runs';
+  readonly runIdFilter = new RunIdFilterComponent(this.page);
+  readonly tooltips = {
+    interrupted:
+      'PMM restarted, or the HA leader changed, before the run finished. ' +
+      'The insights it saved are kept; the checks it did not reach show as Not run.',
+    queued: 'Requested and waiting for PMM to start it, which takes up to a minute',
+  };
   builders = {
     actionsButton: (runId: string) => this.page.getByTestId(`run-${runId}-actions`),
     inProgress: (runId: string) => this.builders.row(runId).getByTestId('run-in-progress'),
     interrupted: (runId: string) => this.builders.row(runId).getByTestId('run-interrupted'),
-    option: (name: string) => this.page.getByRole('option', { exact: true, name }),
     // The spinner beside the text never stops moving, so Playwright cannot hover it.
     queuedLabel: (runId: string) => this.builders.row(runId).getByText('Queued…'),
     row: (runId: string) => this.elements.rows.filter({ has: this.page.getByTestId(`run-${runId}-actions`) }),
     services: (runId: string) => this.builders.row(runId).getByTestId('run-services'),
-    snackbar: (text: string) =>
-      this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text }),
     startedLate: (runId: string) => this.builders.row(runId).getByTestId('run-started-late'),
   };
   buttons = {
@@ -36,15 +45,14 @@ export default class AdvisorRunsPage extends BasePage {
   };
   inputs = {
     rowsPerPage: this.page.getByRole('combobox', { name: 'Rows per page' }),
-    runId: this.page.getByTestId('run-id-filter').getByRole('textbox'),
     schedule: this.page.getByTestId('schedule-filter').getByRole('combobox'),
     triggeredBy: this.page.getByTestId('triggeredBy-filter').getByRole('combobox'),
   };
   messages = {
-    checksStarted: this.builders.snackbar('Advisor checks started'),
-    noFailedInsightsToExport: this.builders.snackbar('This run has no failed insights to export'),
-    noInsightsToExport: this.builders.snackbar('This run has no insights to export'),
-    runIdCopied: this.builders.snackbar('Run ID copied to clipboard'),
+    checksStarted: this.alertWithText('Advisor checks started'),
+    noFailedInsightsToExport: this.alertWithText('This run has no failed insights to export'),
+    noInsightsToExport: this.alertWithText('This run has no insights to export'),
+    runIdCopied: this.alertWithText('Run ID copied to clipboard'),
   };
 
   exportInsights = async (runId: string, scope: 'all' | 'failed'): Promise<Download> => {
@@ -57,24 +65,21 @@ export default class AdvisorRunsPage extends BasePage {
     return await download;
   };
 
-  filterByRunId = async (runId: string) => {
-    await this.inputs.runId.fill(runId);
-    await this.inputs.runId.press('Enter');
-    await expect(this.page).toHaveURL(new RegExp(`runId=${runId}`));
-  };
+  selectRowsPerPage = async (size: number) =>
+    await this.selectMenuOption(this.inputs.rowsPerPage, String(size));
 
-  selectRowsPerPage = async (size: number) => {
-    await this.inputs.rowsPerPage.click();
-    await this.builders.option(String(size)).click();
-    await expect(this.page.getByRole('listbox')).toBeHidden();
-    await expect(this.inputs.rowsPerPage).toHaveText(String(size));
-  };
+  selectTriggeredBy = async (triggeredBy: 'All' | 'Scheduler' | 'User') =>
+    await this.selectMenuOption(this.inputs.triggeredBy, triggeredBy);
 
-  // A click fired while the options menu is still closing is swallowed by its backdrop.
-  selectTriggeredBy = async (triggeredBy: 'All' | 'Scheduler' | 'User') => {
-    await this.inputs.triggeredBy.click();
-    await this.builders.option(triggeredBy).click();
-    await expect(this.page.getByRole('listbox')).toBeHidden();
-    await expect(this.inputs.triggeredBy).toHaveText(triggeredBy);
+  startedLateTooltip = (run: AdvisorRun, blocker: AdvisorRun, who: string) => {
+    const scheduledFor = run.scheduled_for as string;
+    const minutesLate = Math.round(
+      (Date.parse(run.started_at) - Date.parse(scheduledFor)) / Timeouts.ONE_MINUTE,
+    );
+
+    return (
+      `Scheduled for ${utcTime(scheduledFor)} UTC. Started ${minutesLate} min late, ` +
+      `after the run started at ${utcTime(blocker.started_at)} UTC (${who}).`
+    );
   };
 }

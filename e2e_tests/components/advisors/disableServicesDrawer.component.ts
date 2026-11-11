@@ -6,6 +6,8 @@ export default class DisableServicesDrawerComponent extends BasePage {
       this.elements.disabledList.getByRole('listitem').filter({ hasText: serviceName }),
     enableButton: (serviceId: string) => this.page.getByTestId(`disable-services-enable-${serviceId}`),
     serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
+    title: (summary: string) =>
+      this.elements.drawer.getByRole('heading', { exact: true, name: `Disable "${summary}" for services` }),
   };
   buttons = {
     close: this.page.getByTestId('disable-services-close'),
@@ -20,10 +22,7 @@ export default class DisableServicesDrawerComponent extends BasePage {
   inputs = {
     services: this.page.getByTestId('disable-services-picker').getByRole('combobox'),
   };
-  messages = {
-    title: (summary: string) =>
-      this.elements.drawer.getByRole('heading', { exact: true, name: `Disable "${summary}" for services` }),
-  };
+  messages = {};
 
   disableFor = async (serviceIds: string[]) => {
     await this.inputs.services.click();

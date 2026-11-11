@@ -28,8 +28,11 @@ export default class SettingsPage extends BasePage {
     ssh: this.page.getByTestId('settings-tab-ssh'),
   };
   builders = {
+    advisorRecipientInvalid: (address: string) =>
+      this.elements.advisorSettings.getByText(`"${address}" is not a valid email address`),
     advisorSeverity: (severity: AdvisorSeverity) =>
       this.page.getByTestId(`advisorSeverities-${severity}-checkbox-input`),
+    advisorTestEmailSent: (recipients: string) => this.alertWithText(`Test email sent to ${recipients}`),
     fieldDescription: (label: SettingsFieldLabel) => this.page.getByTestId(`${label}-label-description`),
     fieldReadMoreLink: (label: SettingsFieldLabel) => this.builders.fieldDescription(label).getByRole('link'),
   };
@@ -109,8 +112,6 @@ export default class SettingsPage extends BasePage {
     sshKey: this.page.getByTestId('text-input-ssh-key'),
   };
   messages = {
-    advisorRecipientInvalid: (address: string) =>
-      this.elements.advisorSettings.getByText(`"${address}" is not a valid email address`),
     advisorRecipientsMax: this.elements.advisorSettings.getByText('At most 20 recipients are allowed'),
     advisorRecipientsRequired: this.elements.advisorSettings.getByText(
       'Add at least one recipient, or turn Advisor notifications off',
@@ -118,14 +119,8 @@ export default class SettingsPage extends BasePage {
     advisorSeveritiesRequired: this.elements.advisorSettings.getByText(
       'Select at least one severity, or turn Advisor notifications off',
     ),
-    advisorTestEmailSent: (recipients: string) =>
-      this.page
-        .getByRole('alert', { includeHidden: true })
-        .filter({ hasText: `Test email sent to ${recipients}` }),
     popUp: this.page.getByRole('status').or(this.page.getByRole('alert')),
-    settingsUpdated: this.page
-      .getByRole('alert', { includeHidden: true })
-      .filter({ hasText: 'Settings updated' }),
+    settingsUpdated: this.alertWithText('Settings updated'),
   };
 
   applyAdvancedChanges = async (): Promise<Response> => {

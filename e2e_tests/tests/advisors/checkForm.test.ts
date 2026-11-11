@@ -6,7 +6,6 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe('Advisor check form', () => {
   const createdChecks: string[] = [];
-  const failingScript = 'def check_context(docs, context):\n    fail("broken check")\n';
 
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -42,7 +41,7 @@ pmmTest.describe('Advisor check form', () => {
         await form.inputs.category.fill(category);
         await form.inputs.category.press('Tab');
         await form.buttons.save.click();
-        await expect(advisorsCatalogPage.messages.checkUpdated(check.name)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkUpdated(check.name)).toBeVisible();
         await expect(form.elements.form).toBeHidden();
       });
 
@@ -96,7 +95,7 @@ pmmTest.describe('Advisor check form', () => {
       await pmmTest.step('Save the clone under a new name', async () => {
         await form.inputs.name.fill(name);
         await form.buttons.save.click();
-        await expect(advisorsCatalogPage.messages.checkCreated(name)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkCreated(name)).toBeVisible();
         expect(await api.advisorsApi.findCheck(name)).toMatchObject({
           category: builtinCheck.category,
           queries: builtinCheck.queries,
@@ -189,7 +188,7 @@ pmmTest.describe('Advisor check form', () => {
       });
       await form.buttons.save.click();
 
-      await expect(advisorsCatalogPage.messages.duplicateCheckName(existing.name)).toBeVisible();
+      await expect(advisorsCatalogPage.builders.duplicateCheckName(existing.name)).toBeVisible();
       await expect(form.elements.form).toBeVisible();
       expect(await api.advisorsApi.findCheck(existing.name)).toMatchObject({ summary: existing.summary });
     },
@@ -241,19 +240,17 @@ pmmTest.describe('Advisor check form', () => {
       await pmmTest.step('A passing script reports its findings', async () => {
         await form.testOnService(service.service_name);
         await expect(form.messages.testSucceeded).toBeVisible();
-        await expect(form.messages.testFindings(3)).toBeVisible();
+        await expect(form.builders.testFindings(3)).toBeVisible();
         await expect(form.elements.testOutput).toContainText('Finding 0');
       });
 
       await pmmTest.step('A failing script reports the error', async () => {
-        await form.inputs.script.fill(failingScript);
+        await form.inputs.script.fill(api.advisorsApi.erroringCheckScript);
         await form.buttons.test.click();
         await expect(form.messages.testFailed).toBeVisible();
-        await expect(form.elements.testError).toContainText('broken check');
+        await expect(form.elements.testError).toContainText('QA failure');
       });
 
-      // The CPU limit ends the script before the 5 s timeout, so the message reads
-      // "failed: signal: killed" rather than "timed out".
       await pmmTest.step('A script that never ends is stopped', async () => {
         await form.inputs.script.fill(api.advisorsApi.endlessCheckScript);
         await form.buttons.test.click();
@@ -292,7 +289,6 @@ pmmTest.describe('Advisor check form', () => {
           'def check_context(docs, context):\n    print("QA print output")\n' +
           '    return [{"summary": "Finding", "description": "D", "severity": "warning"}]\n',
       });
-      // The details pane has the same test controls as the form.
       const tester = advisorsCatalogPage.checkForm;
 
       createdChecks.push(check.name);
@@ -326,7 +322,7 @@ pmmTest.describe('Advisor check form', () => {
       await pmmTest.step('Test runs the saved check and shows its print output', async () => {
         await tester.testOnService((await api.advisorsApi.getMysqlService()).service_name);
         await expect(tester.messages.testSucceeded).toBeVisible();
-        await expect(tester.messages.testFindings(1)).toBeVisible();
+        await expect(tester.builders.testFindings(1)).toBeVisible();
         await expect(tester.elements.testScriptOutput).toContainText('QA print output');
       });
     },
@@ -357,9 +353,6 @@ pmmTest.describe('Advisor check form', () => {
       const service = await api.advisorsApi.getMysqlService();
       const form = advisorsCatalogPage.checkForm;
       const name = AdvisorsApi.customCheckName();
-      const scriptFor = (severity: string) =>
-        'def check_context(docs, context):\n' +
-        `    return [{"summary": "S", "description": "D", "severity": "${severity}"}]\n`;
 
       await page.goto(advisorsCatalogPage.url);
       await advisorsCatalogPage.buttons.addAdvisor.click();
@@ -368,27 +361,25 @@ pmmTest.describe('Advisor check form', () => {
         description: 'Created by a UI test.',
         name,
         query: { text: 'vector(1)', type: 'METRICS_INSTANT' },
-        script: scriptFor('notice'),
+        script: AdvisorsApi.findingsScript(1, 'notice'),
         summary: `QA UI check ${name}`,
       });
       await form.selectOption(form.inputs.testService, service.service_name);
 
       for (const severity of ['notice', 'emergency']) {
         await pmmTest.step(`A ${severity} finding fails the test`, async () => {
-          await form.inputs.script.fill(scriptFor(severity));
+          await form.inputs.script.fill(AdvisorsApi.findingsScript(1, severity));
           await form.buttons.test.click();
           await expect(form.messages.testFailed).toBeVisible();
-          await expect(form.elements.testError).toContainText(
-            `result severity '${severity}' is not supported by advisors; use one of: critical, error, warning, info`,
-          );
+          await expect(form.elements.testError).toContainText(form.severityNotSupported(severity));
         });
       }
 
       await pmmTest.step('An info finding passes the test', async () => {
-        await form.inputs.script.fill(scriptFor('info'));
+        await form.inputs.script.fill(AdvisorsApi.findingsScript(1, 'info'));
         await form.buttons.test.click();
         await expect(form.messages.testSucceeded).toBeVisible();
-        await expect(form.messages.testFindings(1)).toBeVisible();
+        await expect(form.builders.testFindings(1)).toBeVisible();
         await form.buttons.cancel.click();
       });
     },

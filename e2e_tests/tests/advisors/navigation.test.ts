@@ -2,8 +2,16 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('Advisors navigation and settings', () => {
+  const createdChecks: string[] = [];
+  const createdSchedules: string[] = [];
+
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
+  });
+
+  pmmTest.afterEach(async ({ api }) => {
+    for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
+    for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
   });
 
   pmmTest(
@@ -47,66 +55,62 @@ pmmTest.describe('Advisors navigation and settings', () => {
       page,
     }) => {
       const check = await api.advisorsApi.createCustomCheck();
-      let scheduleId = '';
 
-      try {
-        const run = await api.advisorsApi.runChecksAndWait([check.name]);
-        const [insight] = await api.advisorsApi.listInsights({ run_id: run.id });
-        const schedule = await api.advisorsApi.createSchedule({ check_names: [check.name] });
+      createdChecks.push(check.name);
 
-        scheduleId = schedule.schedule_id;
+      const run = await api.advisorsApi.runChecksAndWait([check.name]);
+      const [insight] = await api.advisorsApi.listInsights({ run_id: run.id });
+      const schedule = await api.advisorsApi.createSchedule({ check_names: [check.name] });
+      const scheduleId = schedule.schedule_id;
 
-        await pmmTest.step('Catalog: a row opens the check details', async () => {
-          await page.goto(advisorsCatalogPage.url);
-          await advisorsCatalogPage.inputs.search.fill(check.summary);
-          await advisorsCatalogPage.builders.row(check.name).dblclick();
-          await expect(advisorsCatalogPage.elements.detailsPane).toBeVisible();
-          await expect(page).toHaveURL(new RegExp(`details=${check.name}`));
-        });
+      createdSchedules.push(scheduleId);
 
-        await pmmTest.step('Insights: a row opens the insight details', async () => {
-          await page.goto(advisorInsightsPage.runUrl(run.id));
-          await advisorInsightsPage.builders.row(insight.id).dblclick();
-          await expect(advisorInsightsPage.elements.detailsPane).toBeVisible();
-          await expect(page).toHaveURL(new RegExp(`insight=${insight.id}`));
-        });
+      await pmmTest.step('Catalog: a row opens the check details', async () => {
+        await page.goto(advisorsCatalogPage.url);
+        await advisorsCatalogPage.inputs.search.fill(check.summary);
+        await advisorsCatalogPage.builders.row(check.name).dblclick();
+        await expect(advisorsCatalogPage.elements.detailsPane).toBeVisible();
+        await expect(page).toHaveURL(new RegExp(`details=${check.name}`));
+      });
 
-        await pmmTest.step('Run history: a row opens the insights of the run', async () => {
-          await page.goto(advisorRunsPage.url);
-          await advisorRunsPage.filterByRunId(run.id);
-          await advisorRunsPage.builders.row(run.id).dblclick();
-          await expect(page).toHaveURL(advisorInsightsPage.runUrl(run.id));
-          await expect(advisorInsightsPage.builders.row(insight.id)).toBeVisible();
-        });
+      await pmmTest.step('Insights: a row opens the insight details', async () => {
+        await page.goto(advisorInsightsPage.runUrl(run.id));
+        await advisorInsightsPage.builders.row(insight.id).dblclick();
+        await expect(advisorInsightsPage.elements.detailsPane).toBeVisible();
+        await expect(page).toHaveURL(new RegExp(`insight=${insight.id}`));
+      });
 
-        await pmmTest.step('Scheduler: a row opens the schedule details', async () => {
-          await page.goto(advisorSchedulerPage.url);
-          await advisorSchedulerPage.builders.row(scheduleId).dblclick();
-          await expect(advisorSchedulerPage.elements.detailsPane).toBeVisible();
-          await expect(page).toHaveURL(new RegExp(`details=${scheduleId}`));
-        });
+      await pmmTest.step('Run history: a row opens the insights of the run', async () => {
+        await page.goto(advisorRunsPage.url);
+        await advisorRunsPage.runIdFilter.apply(run.id);
+        await advisorRunsPage.builders.row(run.id).dblclick();
+        await expect(page).toHaveURL(advisorInsightsPage.runUrl(run.id));
+        await expect(advisorInsightsPage.builders.row(insight.id)).toBeVisible();
+      });
 
-        await pmmTest.step('Scheduler: the details link opens the same pane', async () => {
-          await page.goto(advisorSchedulerPage.detailsUrl(scheduleId));
-          await expect(advisorSchedulerPage.elements.detailsPane).toContainText(schedule.name);
-          await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText(
-            `Mon–Fri at ${schedule.time_of_day} UTC`,
-          );
-          await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText('1 selected');
+      await pmmTest.step('Scheduler: a row opens the schedule details', async () => {
+        await page.goto(advisorSchedulerPage.url);
+        await advisorSchedulerPage.builders.row(scheduleId).dblclick();
+        await expect(advisorSchedulerPage.elements.detailsPane).toBeVisible();
+        await expect(page).toHaveURL(new RegExp(`details=${scheduleId}`));
+      });
 
-          for (const section of ['next-runs', 'coverage', 'checks', 'recent-runs'] as const) {
-            await expect(advisorSchedulerPage.builders.detailsSection(section)).toBeVisible();
-          }
+      await pmmTest.step('Scheduler: the details link opens the same pane', async () => {
+        await page.goto(advisorSchedulerPage.detailsUrl(scheduleId));
+        await expect(advisorSchedulerPage.elements.detailsPane).toContainText(schedule.name);
+        await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText(
+          `Mon–Fri at ${schedule.time_of_day} UTC`,
+        );
+        await expect(advisorSchedulerPage.builders.detailsSection('summary')).toContainText('1 selected');
 
-          await expect(advisorSchedulerPage.builders.detailsSection('recent-runs')).toContainText(
-            'This schedule has not run yet.',
-          );
-        });
-      } finally {
-        if (scheduleId) await api.advisorsApi.deleteSchedule(scheduleId);
+        for (const section of ['next-runs', 'coverage', 'checks', 'recent-runs'] as const) {
+          await expect(advisorSchedulerPage.builders.detailsSection(section)).toBeVisible();
+        }
 
-        await api.advisorsApi.deleteCheck(check.name);
-      }
+        await expect(advisorSchedulerPage.builders.detailsSection('recent-runs')).toContainText(
+          advisorSchedulerPage.notRunYet,
+        );
+      });
     },
   );
 

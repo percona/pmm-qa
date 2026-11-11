@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import AdvisorsApi from '@api/advisors.api';
-import apiEndpoints from '@helpers/apiEndpoints';
 import { AdvisorCheckTechnology } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
@@ -37,9 +36,7 @@ pmmTest.describe('Advisors catalog', () => {
         }
       });
 
-      await pmmTest.step('Verify the table counts every check the API returns', async () => {
-        await expect(advisorsCatalogPage.elements.pagination).toHaveText(new RegExp(`of ${checks.length}$`));
-      });
+      await expect(advisorsCatalogPage.elements.pagination).toHaveText(new RegExp(`of ${checks.length}$`));
 
       await pmmTest.step('Verify a built-in check row shows its controls', async () => {
         await advisorsCatalogPage.inputs.search.fill(builtinCheck.summary);
@@ -150,7 +147,7 @@ pmmTest.describe('Advisors catalog', () => {
           technology: 'MySQL',
         });
         await advisorsCatalogPage.checkForm.buttons.save.click();
-        await expect(advisorsCatalogPage.messages.checkCreated(name)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkCreated(name)).toBeVisible();
         await expect(advisorsCatalogPage.checkForm.elements.form).toBeHidden();
       });
 
@@ -201,7 +198,7 @@ pmmTest.describe('Advisors catalog', () => {
 
       await pmmTest.step('Disable the check', async () => {
         await advisorsCatalogPage.builders.statusSwitch(check.name).click();
-        await expect(advisorsCatalogPage.messages.checkDisabled(check.summary)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkDisabled(check.summary)).toBeVisible();
         await expect(advisorsCatalogPage.builders.statusSwitch(check.name)).not.toBeChecked();
         await expect.poll(async () => (await api.advisorsApi.findCheck(check.name))?.enabled).toBe(false);
         await expect(advisorsCatalogPage.builders.runButton(check.name)).toBeDisabled();
@@ -209,7 +206,7 @@ pmmTest.describe('Advisors catalog', () => {
 
       await pmmTest.step('Enable the check again', async () => {
         await advisorsCatalogPage.builders.statusSwitch(check.name).click();
-        await expect(advisorsCatalogPage.messages.checkEnabled(check.summary)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkEnabled(check.summary)).toBeVisible();
         await expect(advisorsCatalogPage.builders.statusSwitch(check.name)).toBeChecked();
         await expect.poll(async () => (await api.advisorsApi.findCheck(check.name))?.enabled).toBe(true);
       });
@@ -234,7 +231,7 @@ pmmTest.describe('Advisors catalog', () => {
 
       await pmmTest.step('Confirm the delete dialog', async () => {
         await advisorsCatalogPage.deleteCheck(check.name);
-        await expect(advisorsCatalogPage.messages.checkDeleted(check.summary)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkDeleted(check.summary)).toBeVisible();
         await expect(advisorsCatalogPage.builders.row(check.name)).toBeHidden();
         expect(await api.advisorsApi.findCheck(check.name)).toBeUndefined();
       });
@@ -248,20 +245,9 @@ pmmTest.describe('Advisors catalog', () => {
       const countOf = (category: string) =>
         builtinChecks.filter((check) => check.category === category).length;
 
-      await pmmTest.step('Built-in checks fall into the ten risk categories', async () => {
-        expect([...new Set(builtinChecks.map(({ category }) => category))].sort()).toEqual([
-          'Connections',
-          'Durability',
-          'Logging',
-          'Maintenance',
-          'Performance',
-          'Replication',
-          'Resources',
-          'Schema & indexes',
-          'Security',
-          'Versions',
-        ]);
-      });
+      expect([...new Set(builtinChecks.map(({ category }) => category))].sort()).toEqual(
+        advisorsCatalogPage.riskCategories,
+      );
 
       await page.goto(advisorsCatalogPage.url);
 
@@ -284,20 +270,6 @@ pmmTest.describe('Advisors catalog', () => {
       const disabled = await api.advisorsApi.createCustomCheck({ category });
       const otherCategory = await api.advisorsApi.createCustomCheck();
 
-      const startedRun = async (start: () => Promise<void>) => {
-        const response = page.waitForResponse((r) => r.url().includes(apiEndpoints.advisors.start) && r.ok());
-
-        await start();
-        await expect(advisorsCatalogPage.messages.checksStarted).toBeVisible();
-
-        const resolved = await response;
-
-        return {
-          names: (resolved.request().postDataJSON() as { names: string[] }).names,
-          runId: ((await resolved.json()) as { run_id: string }).run_id,
-        };
-      };
-
       createdChecks.push(enabled.name, disabled.name, otherCategory.name);
       await api.advisorsApi.changeCheck(disabled.name, { enable: false });
       await page.goto(advisorsCatalogPage.url);
@@ -311,7 +283,9 @@ pmmTest.describe('Advisors catalog', () => {
         await advisorsCatalogPage.selectFilter('category', category);
         await expect(advisorsCatalogPage.buttons.runAll).toBeDisabled();
 
-        const { names, runId } = await startedRun(() => advisorsCatalogPage.buttons.runSelected.click());
+        const { names, runId } = await advisorsCatalogPage.startRun(advisorsCatalogPage.buttons.runSelected);
+
+        await expect(advisorsCatalogPage.messages.checksStarted).toBeVisible();
 
         expect(names).toEqual([enabled.name]);
         expect((await api.advisorsApi.waitForRun(runId)).check_names).toEqual([enabled.name]);
@@ -323,7 +297,10 @@ pmmTest.describe('Advisors catalog', () => {
         await expect(advisorsCatalogPage.builders.filter('category')).toHaveText(category);
         await advisorsCatalogPage.buttons.clearFilters.click();
 
-        const { names, runId } = await startedRun(() => advisorsCatalogPage.buttons.runAll.click());
+        const { names, runId } = await advisorsCatalogPage.startRun(advisorsCatalogPage.buttons.runAll);
+
+        await expect(advisorsCatalogPage.messages.checksStarted).toBeVisible();
+
         const run = await api.advisorsApi.waitForRun(runId);
         const checkNames = (await api.advisorsApi.listInsights({ page_size: '500', run_id: run.id })).map(
           ({ check_name }) => check_name,

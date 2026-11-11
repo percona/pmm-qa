@@ -1,6 +1,7 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import SnackbarComponent from '@components/snackbar.component';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 export type DropdownName =
   | 'Service Name'
@@ -27,11 +28,14 @@ export default abstract class BasePage {
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
-  abstract messages: Record<string, Locator | ((...args: never[]) => Locator)>;
+  abstract messages: Record<string, Locator>;
 
   constructor(protected page: Page) {
     this.snackBar = new SnackbarComponent(this.page);
   }
+
+  protected alertWithText = (text: string | RegExp) =>
+    this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text });
 
   duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();
@@ -66,6 +70,16 @@ export default abstract class BasePage {
   };
 
   protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
+
+  protected menuOption = (name: string) => this.page.getByRole('option', { exact: true, name });
+
+  // A click fired while the options menu is still closing is swallowed by its backdrop.
+  selectMenuOption = async (select: Locator, option: string) => {
+    await select.click();
+    await this.menuOption(option).click();
+    await expect(this.page.getByRole('listbox')).toBeHidden();
+    await expect(select).toHaveText(option);
+  };
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
     await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -114,6 +128,22 @@ export default abstract class BasePage {
     await expect(combobox).toHaveAttribute('aria-expanded', 'false', { timeout: Timeouts.THIRTY_SECONDS });
 
     return selectedOption;
+  };
+
+  // Returns the Advisor checks the click asked to run and the ID of the run it started.
+  startRun = async (control: Locator): Promise<{ names: string[]; runId: string }> => {
+    const started = this.page.waitForResponse(
+      (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
+    );
+
+    await control.click();
+
+    const response = await started;
+
+    return {
+      names: (response.request().postDataJSON() as { names: string[] }).names,
+      runId: ((await response.json()) as { run_id: string }).run_id,
+    };
   };
 
   switchPage = (page: Page) => {

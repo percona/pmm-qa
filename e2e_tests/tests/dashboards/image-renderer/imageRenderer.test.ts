@@ -14,7 +14,6 @@ pmmTest.afterEach(async ({ api }) => {
   uid = '';
 });
 
-// A text panel on its own dashboard renders the same on every build and setup, unlike the Home panels.
 pmmTest('PMM-T1946 - verify image renderer usage @image-renderer', async ({ api, dashboard, page }) => {
   const created = await api.grafanaApi.createDashboard(`Image renderer ${Date.now()}`, panelTitle, {
     options: { content: 'Rendered by the Grafana image renderer.', mode: 'markdown' },

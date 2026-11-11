@@ -1,6 +1,4 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AdvisorCheckResultStatus, AdvisorCheckTechnology, AdvisorInsight } from '@interfaces/advisors';
 import { AddServiceResponse } from '@interfaces/inventory';
@@ -35,38 +33,6 @@ const brokenChecks = ['mongodb_multiple_services', 'mongodb_swap_allocation'];
 const containers: string[] = [];
 const nodeIds: string[] = [];
 
-// pmm-framework sets up neither a standalone MongoDB nor MongoDB 8.2, so the tests start their own
-// databases, which PMM Server's own agent monitors over the pmm-qa network.
-const monitorDatabase = async (api: Api, cliHelper: CliHelper, database: Database) => {
-  const name = `qa-advisors-${database.type}-${Date.now()}`;
-
-  containers.push(name);
-  cliHelper
-    .execute(`docker run --detach --quiet --name ${name} --network pmm-qa ${database.dockerArgs}`)
-    .assertSuccess();
-
-  let service = { node_id: '', service_id: '' };
-
-  // The database accepts connections only once it has initialized, and PMM connects to it before adding it.
-  await expect(async () => {
-    const response = await api.managementApi.addService({
-      [database.type]: {
-        add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE' },
-        address: name,
-        pmm_agent_id: 'pmm-server',
-        port: database.port,
-        service_name: name,
-        ...database.credentials,
-      },
-    });
-
-    service = response[database.type]?.service ?? service;
-  }).toPass({ intervals: [5_000], timeout: Timeouts.TWO_MINUTES });
-  nodeIds.push(service.node_id);
-
-  return { container: name, serviceId: service.service_id };
-};
-
 pmmTest.describe('Built-in Advisor checks on other databases', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -80,8 +46,25 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   pmmTest(
     'PMM-Txxxx - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2 @advisor-databases',
     async ({ advisorRunsPage, api, cliHelper, page }) => {
-      const mysql = await monitorDatabase(api, cliHelper, databases.mysql57);
-      const mongodb = await monitorDatabase(api, cliHelper, databases.mongodb82);
+      const serviceIds: string[] = [];
+
+      for (const database of [databases.mysql57, databases.mongodb82] as Database[]) {
+        const name = `qa-advisors-${database.type}-${Date.now()}`;
+
+        containers.push(name);
+        cliHelper.startContainer(name, database.dockerArgs);
+
+        const service = await api.managementApi.addRemoteDatabase(
+          database.type,
+          name,
+          database.port,
+          database.credentials,
+        );
+
+        nodeIds.push(service.node_id);
+        serviceIds.push(service.service_id);
+      }
+
       const checks = (await api.advisorsApi.listChecks())
         .filter(
           ({ enabled, name, technology, user_defined }) =>
@@ -91,11 +74,7 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
             !brokenChecks.includes(name),
         )
         .map(({ name }) => name);
-      const run = await api.advisorsApi.runChecksAndWait(
-        checks,
-        [mysql.serviceId, mongodb.serviceId],
-        Timeouts.FIVE_MINUTES,
-      );
+      const run = await api.advisorsApi.runChecksAndWait(checks, serviceIds, Timeouts.FIVE_MINUTES);
 
       await pmmTest.step('No check errors on either database', async () => {
         const errors = (await api.advisorsApi.listInsights({ page_size: '500', run_id: run.id }))
@@ -119,10 +98,19 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   pmmTest(
     'PMM-Txxxx - Verify a check reports one finding per database, naming at most 10 relations @advisor-databases',
     async ({ advisorInsightsPage, api, cliHelper, page }) => {
-      const postgresql = await monitorDatabase(api, cliHelper, databases.postgresql17);
+      const { credentials, dockerArgs, port, type } = databases.postgresql17;
+      const container = `qa-advisors-${type}-${Date.now()}`;
+
+      containers.push(container);
+      cliHelper.startContainer(container, dockerArgs);
+
+      const postgresql = await api.managementApi.addRemoteDatabase(type, container, port, credentials);
+
+      nodeIds.push(postgresql.node_id);
+
       const psql = (database: string, sql: string) =>
         cliHelper
-          .execSilent(`docker exec ${postgresql.container} psql -U postgres -d ${database} -c "${sql}"`)
+          .execSilent(`docker exec ${container} psql -U postgres -d ${database} -c "${sql}"`)
           .assertSuccess();
 
       // No query has used the index of a new relation.
@@ -142,7 +130,7 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
 
       const run = await api.advisorsApi.runChecksAndWait(
         ['postgresql_unused_index_check'],
-        [postgresql.serviceId],
+        [postgresql.service_id],
       );
       const insights = await api.advisorsApi.listInsights({ run_id: run.id });
 

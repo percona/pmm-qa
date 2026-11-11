@@ -1,6 +1,5 @@
 import { readFile } from 'fs/promises';
 import pmmTest from '@fixtures/pmmTest';
-import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import { AdvisorCheckTechnology } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
@@ -13,6 +12,8 @@ pmmTest.describe('Advisor runs', () => {
   });
 
   pmmTest.afterEach(async ({ api }) => {
+    await api.advisorsApi.waitForNoActiveRun();
+
     for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
   });
 
@@ -29,14 +30,14 @@ pmmTest.describe('Advisor runs', () => {
 
         const started = await advisorsCatalogPage.runCheck(check.name);
 
-        await expect(advisorsCatalogPage.messages.checkStarted(check.summary)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkStarted(check.summary)).toBeVisible();
 
         return started;
       });
 
       await pmmTest.step('Verify the run in run history', async () => {
         await page.goto(advisorRunsPage.url);
-        await advisorRunsPage.filterByRunId(runId);
+        await advisorRunsPage.runIdFilter.apply(runId);
         await expect(advisorRunsPage.builders.row(runId)).toContainText('User');
         await expect(advisorRunsPage.elements.rows).toHaveCount(1);
         await expect(async () => {
@@ -92,7 +93,7 @@ pmmTest.describe('Advisor runs', () => {
       await pmmTest.step('Filter by run ID shows only that run', async () => {
         await advisorRunsPage.buttons.clearFilters.click();
         await expect(advisorRunsPage.inputs.triggeredBy).toHaveText('All');
-        await advisorRunsPage.filterByRunId(run.id);
+        await advisorRunsPage.runIdFilter.apply(run.id);
         await expect(advisorRunsPage.builders.row(run.id)).toContainText(String(run.findings_count));
         await expect(advisorRunsPage.elements.rows).toHaveCount(1);
       });
@@ -107,7 +108,7 @@ pmmTest.describe('Advisor runs', () => {
         await expect(page).not.toHaveURL(/runId=/);
         await expect(advisorRunsPage.inputs.triggeredBy).toHaveText('User');
         await expect(advisorRunsPage.inputs.rowsPerPage).toHaveText('100');
-        await expect(advisorRunsPage.inputs.runId).toHaveValue('');
+        await expect(advisorRunsPage.runIdFilter.inputs.runId).toHaveValue('');
       });
     },
   );
@@ -132,8 +133,9 @@ pmmTest.describe('Advisor runs', () => {
       const idleRun = await api.advisorsApi.runChecksAndWait([idle.name]);
 
       expect(failed.length, 'No MySQL service is monitored').toBeGreaterThan(0);
+      expect(passed.length, 'The passing check recorded no insights').toBeGreaterThan(0);
       await page.goto(advisorRunsPage.url);
-      await advisorRunsPage.filterByRunId(run.id);
+      await advisorRunsPage.runIdFilter.apply(run.id);
 
       await pmmTest.step('Export all downloads every insight of the run', async () => {
         const download = await advisorRunsPage.exportInsights(run.id, 'all');
@@ -156,7 +158,7 @@ pmmTest.describe('Advisor runs', () => {
       });
 
       await pmmTest.step('A run without insights has nothing to export', async () => {
-        await advisorRunsPage.filterByRunId(idleRun.id);
+        await advisorRunsPage.runIdFilter.apply(idleRun.id);
         await advisorRunsPage.builders.actionsButton(idleRun.id).click();
         await advisorRunsPage.buttons.exportAllInsights.click();
         await expect(advisorRunsPage.messages.noInsightsToExport).toBeVisible();
@@ -178,7 +180,7 @@ pmmTest.describe('Advisor runs', () => {
 
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
       await page.goto(advisorRunsPage.url);
-      await advisorRunsPage.filterByRunId(run.id);
+      await advisorRunsPage.runIdFilter.apply(run.id);
 
       await pmmTest.step('Copy run ID', async () => {
         await advisorRunsPage.builders.actionsButton(run.id).click();
@@ -188,17 +190,13 @@ pmmTest.describe('Advisor runs', () => {
       });
 
       await pmmTest.step('Run again repeats the checks of the run', async () => {
-        const started = page.waitForResponse(
-          (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
-        );
-
         await advisorRunsPage.builders.actionsButton(run.id).click();
-        await advisorRunsPage.buttons.runAgain.click();
+
+        const { runId } = await advisorRunsPage.startRun(advisorRunsPage.buttons.runAgain);
+
         await expect(advisorRunsPage.messages.checksStarted).toBeVisible();
 
-        const rerun = await api.advisorsApi.waitForRun(
-          ((await (await started).json()) as { run_id: string }).run_id,
-        );
+        const rerun = await api.advisorsApi.waitForRun(runId);
 
         expect(rerun.id).not.toEqual(run.id);
         expect(rerun.check_names).toEqual([check.name]);
@@ -218,16 +216,12 @@ pmmTest.describe('Advisor runs', () => {
         // About a second per check on one service: long enough to see the run in progress.
         const runId = await api.advisorsApi.startChecks(names);
 
-        try {
-          await advisorRunsPage.filterByRunId(runId);
-          await expect(advisorRunsPage.builders.inProgress(runId)).toBeVisible();
-          await expect(advisorRunsPage.builders.inProgress(runId)).toBeHidden({
-            timeout: Timeouts.ONE_MINUTE,
-          });
-          await expect(advisorRunsPage.builders.row(runId)).toContainText(`${names.length}/${names.length}`);
-        } finally {
-          await api.advisorsApi.waitForRun(runId);
-        }
+        await advisorRunsPage.runIdFilter.apply(runId);
+        await expect(advisorRunsPage.builders.inProgress(runId)).toBeVisible();
+        await expect(advisorRunsPage.builders.inProgress(runId)).toBeHidden({
+          timeout: Timeouts.ONE_MINUTE,
+        });
+        await expect(advisorRunsPage.builders.row(runId)).toContainText(`${names.length}/${names.length}`);
       });
     },
   );

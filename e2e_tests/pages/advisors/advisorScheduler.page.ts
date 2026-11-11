@@ -5,18 +5,31 @@ import ScheduleEditorComponent from '@components/advisors/scheduleEditor.compone
 export default class AdvisorSchedulerPage extends BasePage {
   readonly url = 'pmm-ui/advisors/scheduler';
   readonly editor = new ScheduleEditorComponent(this.page);
+  notRunYet = 'This schedule has not run yet.';
+  targetsNoCheck = 'Targets no existing check';
+  targetsNoService = 'Targets no existing service';
   builders = {
     actionsButton: (scheduleId: string) => this.page.getByTestId(`schedule-${scheduleId}-actions`),
+    created: (name: string) => this.alertWithText(`Created "${name}". Next run: `),
+    deleted: (name: string) => this.alertWithText(`Deleted "${name}".`),
+    deleteTitle: (name: string) =>
+      this.elements.deleteDialog.getByRole('heading', { exact: true, name: `Delete "${name}"?` }),
     detailsSection: (section: 'checks' | 'coverage' | 'next-runs' | 'recent-runs' | 'summary') =>
       this.elements.detailsPane.getByTestId(`schedule-pane-${section}`),
+    duplicated: (name: string) =>
+      this.alertWithText(
+        `Duplicated as "${name}". It stays paused until you enable it, so nothing runs twice.`,
+      ),
+    enabled: (name: string) => this.alertWithText(`Enabled "${name}". Next run: `),
     enabledSwitch: (scheduleId: string) =>
       this.page.getByTestId(`schedule-${scheduleId}-enabled`).locator('input'),
     lastRun: (scheduleId: string) => this.builders.row(scheduleId).getByTestId('schedule-last-run'),
     openLastRun: (scheduleId: string) =>
       this.builders.lastRun(scheduleId).getByRole('button', { name: 'Open this run in Run history' }),
+    paused: (name: string) => this.alertWithText(`Paused "${name}". It won't run until you enable it.`),
     row: (scheduleId: string) => this.page.getByTestId(`schedule-row-${scheduleId}`),
-    snackbar: (text: string) =>
-      this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text }),
+    saved: (name: string) => this.alertWithText(`Saved "${name}". Next run: `),
+    started: (name: string) => this.alertWithText(`Started "${name}". Follow it in Run history.`),
     targetsNothing: (scheduleId: string) => this.page.getByTestId(`schedule-${scheduleId}-targets-nothing`),
     weekMarks: (scheduleId: string) => this.page.getByTestId(`schedule-mark-${scheduleId}`),
   };
@@ -51,32 +64,20 @@ export default class AdvisorSchedulerPage extends BasePage {
     advisorsOff: this.elements.advisorsOffBanner.filter({
       hasText: 'Advisors are turned off, so no schedule runs. Schedules are kept.',
     }),
-    created: (name: string) => this.builders.snackbar(`Created "${name}". Next run: `),
-    deleted: (name: string) => this.builders.snackbar(`Deleted "${name}".`),
     deleteNotLast: this.elements.deleteDialog.getByText(
       'Its future runs are cancelled. Past runs stay in Run history under this name.',
     ),
-    deleteTitle: (name: string) =>
-      this.elements.deleteDialog.getByRole('heading', { exact: true, name: `Delete "${name}"?` }),
-    duplicated: (name: string) =>
-      this.builders.snackbar(
-        `Duplicated as "${name}". It stays paused until you enable it, so nothing runs twice.`,
-      ),
     emptyWeek: this.elements.weekEmpty.filter({
       hasText: 'Nothing is scheduled. Advisor checks run only when someone starts them.',
     }),
-    enabled: (name: string) => this.builders.snackbar(`Enabled "${name}". Next run: `),
     notificationsOff: this.elements.notificationsOffBanner.filter({
       hasText: 'Advisor email notifications are turned off, so no schedule sends email.',
     }),
     offWeek: this.elements.weekEmpty.filter({ hasText: 'Nothing runs while Advisors are turned off.' }),
-    paused: (name: string) => this.builders.snackbar(`Paused "${name}". It won't run until you enable it.`),
     runActive: this.elements.runActiveBanner.filter({ hasText: /is (queued|running)/ }),
     runActiveProgress: this.elements.runActiveBanner.filter({
       hasText: /is (queued and starts within a minute|running: \d+ of \d+ checks done, started)/,
     }),
-    saved: (name: string) => this.builders.snackbar(`Saved "${name}". Next run: `),
-    started: (name: string) => this.builders.snackbar(`Started "${name}". Follow it in Run history.`),
   };
 
   detailsUrl = (scheduleId: string) => `${this.url}?details=${encodeURIComponent(scheduleId)}`;

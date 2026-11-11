@@ -15,7 +15,7 @@ export interface AdvisorCheckFormValues extends Pick<
 export default class AdvisorCheckFormComponent extends BasePage {
   builders = {
     fieldError: (text: string) => this.elements.form.locator('.Mui-error', { hasText: text }),
-    option: (name: string) => this.page.getByRole('option', { exact: true, name }),
+    option: (name: string) => this.menuOption(name),
     parameterAdd: (queryIndex: number) => this.page.getByTestId(`check-query-${queryIndex}-parameter-add`),
     parameterName: (queryIndex: number, index: number) =>
       this.page
@@ -25,6 +25,10 @@ export default class AdvisorCheckFormComponent extends BasePage {
     queryText: (index: number) => this.page.getByTestId(`check-query-${index}-text`),
     queryType: (index: number) =>
       this.page.getByTestId(`check-query-${index}-type-select`).getByRole('combobox'),
+    testFindings: (count: number) =>
+      this.elements.testResults.getByText(
+        `· ${count === 0 ? 'no findings' : `${count} finding${count === 1 ? '' : 's'}`}`,
+      ),
   };
   buttons = {
     addQuery: this.page.getByTestId('check-query-add'),
@@ -61,10 +65,6 @@ export default class AdvisorCheckFormComponent extends BasePage {
     nameWithoutPrefix: this.builders.fieldError('Custom check names must start with "custom_".'),
     requiredField: this.builders.fieldError('This field is required.'),
     testFailed: this.elements.testStatus.filter({ hasText: /^Error$/ }),
-    testFindings: (count: number) =>
-      this.elements.testResults.getByText(
-        `· ${count === 0 ? 'no findings' : `${count} finding${count === 1 ? '' : 's'}`}`,
-      ),
     testSucceeded: this.elements.testStatus.filter({ hasText: /^Success$/ }),
   };
 
@@ -88,6 +88,9 @@ export default class AdvisorCheckFormComponent extends BasePage {
     await select.click();
     await this.builders.option(option).click();
   };
+
+  severityNotSupported = (severity: string) =>
+    `result severity '${severity}' is not supported by advisors; use one of: critical, error, warning, info`;
 
   testOnService = async (serviceName: string) => {
     await this.selectOption(this.inputs.testService, serviceName);

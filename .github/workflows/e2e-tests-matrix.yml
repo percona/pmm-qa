@@ -241,7 +241,6 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch }}
-      # the custom checks the tests create target MySQL, so they need a monitored MySQL service
       setup_services: '--database ps=8.4'
       pmm_test_flag: '@advisors'
 
@@ -261,7 +260,6 @@ jobs:
 
   advisor_databases:
     name: Advisor checks on other databases
-    # the tests run mysql:5.7, which has no arm64 image
     if: (inputs.arch || github.event.inputs.arch || 'amd64') == 'amd64'
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
@@ -271,7 +269,6 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       arch: amd64
-      # the tests start their own databases
       setup_services: '-h'
       pmm_test_flag: '@advisor-databases'
 

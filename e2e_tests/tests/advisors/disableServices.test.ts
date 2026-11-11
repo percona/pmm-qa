@@ -25,14 +25,14 @@ pmmTest.describe('Advisors disable for services', () => {
 
       await pmmTest.step('Open the drawer of a check enabled everywhere', async () => {
         await advisorsCatalogPage.builders.servicesButton(check.name).click();
-        await expect(drawer.messages.title(check.summary)).toBeVisible();
+        await expect(drawer.builders.title(check.summary)).toBeVisible();
         await expect(drawer.elements.noDisabledServices).toBeVisible();
         await expect(drawer.buttons.disable).toBeDisabled();
       });
 
       await pmmTest.step('Disable the check for a service', async () => {
         await drawer.disableFor([service.service_id]);
-        await expect(advisorsCatalogPage.messages.checkDisabledForServices(1)).toBeVisible();
+        await expect(advisorsCatalogPage.builders.checkDisabledForServices(1)).toBeVisible();
         await expect(drawer.builders.disabledService(service.service_name)).toBeVisible();
         await expect
           .poll(async () => (await api.advisorsApi.findCheck(check.name))?.disabled_service_ids)
@@ -52,7 +52,7 @@ pmmTest.describe('Advisors disable for services', () => {
         await advisorsCatalogPage.builders.servicesButton(check.name).click();
         await drawer.builders.enableButton(service.service_id).click();
         await expect(
-          advisorsCatalogPage.messages.checkReEnabledForService(service.service_name),
+          advisorsCatalogPage.builders.checkReEnabledForService(service.service_name),
         ).toBeVisible();
         await expect(drawer.elements.noDisabledServices).toBeVisible();
         await expect

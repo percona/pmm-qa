@@ -1,6 +1,20 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { MailpitMessage, MailpitMessageSummary } from '@interfaces/mailpit';
+
+interface MailpitAddress {
+  Address: string;
+  Name: string;
+}
+
+interface MailpitMessageSummary {
+  ID: string;
+  Subject: string;
+  To: MailpitAddress[];
+}
+
+interface MailpitMessage extends MailpitMessageSummary {
+  Text: string;
+}
 
 // The SMTP sink PMM Server sends to in docker-compose.yml.
 export default class MailpitApi {

@@ -48,6 +48,38 @@ export default class AdvisorsApi {
     return ((await response.json()) as { check: AdvisorCheck }).check;
   };
 
+  // Each check runs for about 4 s, so a run of them stays active for 4 s times the count.
+  // Fails at once if the schedule was saved after `at`, rather than when the run never comes.
+  createDueSchedule = async (
+    at: Date,
+    overrides: Partial<AdvisorScheduleInput>,
+  ): Promise<AdvisorSchedule> => {
+    const schedule = await this.createSchedule({
+      days_of_week: [0, 1, 2, 3, 4, 5, 6],
+      time_of_day: at.toISOString().slice(11, 16),
+      ...overrides,
+    });
+
+    expect(Date.parse(schedule.next_run_at as string), 'The schedule was saved after it fell due').toEqual(
+      at.getTime(),
+    );
+
+    return schedule;
+  };
+
+  createEndlessChecks = async (
+    count: number,
+    { namePrefix = AdvisorsApi.customCheckName(), technology = AdvisorCheckTechnology.mysql } = {},
+  ): Promise<string[]> => {
+    const names = Array.from({ length: count }, (_, i) => `${namePrefix}_${i}`);
+
+    for (const name of names) {
+      await this.createCustomCheck({ name, script: this.endlessCheckScript, technology });
+    }
+
+    return names;
+  };
+
   createSchedule = async (overrides: Partial<AdvisorScheduleInput> = {}): Promise<AdvisorSchedule> => {
     const response = await this.request.post(apiEndpoints.advisors.schedules, {
       data: AdvisorsApi.scheduleInput(overrides),
@@ -60,6 +92,10 @@ export default class AdvisorsApi {
   };
 
   static customCheckName = () => `custom_qa_${Date.now()}_${Math.floor(Math.random() * 1_000)}`;
+
+  deleteAllSchedules = async () => {
+    for (const { schedule_id } of await this.listSchedules()) await this.deleteSchedule(schedule_id);
+  };
 
   deleteCheck = async (name: string) => {
     const response = await this.requestDeleteCheck(name);
@@ -87,7 +123,6 @@ export default class AdvisorsApi {
     return ((await response.json()) as { check: AdvisorCheck }).check;
   };
 
-  // The first finding gets firstSeverity and the rest are warnings.
   static findingsScript = (count: number, firstSeverity = 'warning') =>
     'def check_context(docs, context):\n' +
     '    return [{"summary": "Finding " + str(i), "description": "Created by a UI test.", ' +
@@ -103,6 +138,14 @@ export default class AdvisorsApi {
 
     // The list leaves out the script and queries of built-in checks.
     return (await this.findCheck((check as AdvisorCheck).name)) as AdvisorCheck;
+  };
+
+  getMonitoredService = async (): Promise<AdvisorTargetService> => {
+    const [service] = await this.listServices();
+
+    expect(service, 'No service is monitored').toBeDefined();
+
+    return service;
   };
 
   getMysqlService = async (): Promise<AdvisorTargetService> => {
@@ -258,6 +301,25 @@ export default class AdvisorsApi {
   ): Promise<APIResponse> =>
     await this.request.put(`${apiEndpoints.advisors.checks}/${name}`, { data: { check }, headers });
 
+  // Replaces every schedule with the ones listSchedules returned earlier; they get new IDs.
+  restoreSchedules = async (schedules: AdvisorSchedule[]) => {
+    await this.deleteAllSchedules();
+
+    for (const schedule of schedules) {
+      await this.createSchedule({
+        check_names: schedule.check_names,
+        days_of_week: schedule.days_of_week,
+        email_addresses: schedule.email_addresses,
+        email_mode: schedule.email_mode,
+        email_severities: schedule.email_severities,
+        enabled: schedule.enabled,
+        name: schedule.name,
+        service_ids: schedule.service_ids,
+        time_of_day: schedule.time_of_day,
+      });
+    }
+  };
+
   runChecksAndWait = async (
     names: string[] = [],
     serviceIds: string[] = [],
@@ -337,4 +399,10 @@ export default class AdvisorsApi {
 
     return runs.find(({ status }) => status === AdvisorRunStatus.completed) as AdvisorRun;
   };
+
+  static warningEmailTo = (recipient: string): Partial<AdvisorScheduleInput> => ({
+    email_addresses: [recipient],
+    email_mode: AdvisorScheduleEmailMode.custom,
+    email_severities: ['SEVERITY_WARNING'],
+  });
 }

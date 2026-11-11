@@ -11,15 +11,27 @@ export interface ScheduleFormValues {
 }
 
 export default class ScheduleEditorComponent extends BasePage {
+  nextDayNote = 'In your time zone this lands on the next day. Days are picked in UTC.';
   builders = {
     checkOption: (checkName: string) => this.page.getByTestId(`schedule-checks-picker-item-${checkName}`),
     day: (day: number) => this.page.getByTestId(`schedule-day-${day}`),
+    emailInvalid: (addresses: string) => this.builders.error(`Not a valid address: ${addresses}`),
+    emailMax: (count: number) => this.builders.error(`Up to 20 addresses; there are ${count}.`),
     error: (text: string) => this.elements.editor.locator('.Mui-error', { hasText: text }),
+    fixFields: (fields: string[]) =>
+      this.elements.footerMessage.filter({
+        hasText: `Fix the highlighted ${fields.length > 1 ? 'fields' : 'field'}: ${fields.join(', ')}.`,
+      }),
+    nameTaken: (name: string) => this.builders.error(`A schedule named "${name}" already exists.`),
     scope: (scope: ScheduleScope) =>
       this.elements.editor.getByRole('radio', { name: new RegExp(`^${scope}`) }),
     serviceOption: (serviceId: string) => this.page.getByTestId(`schedule-services-picker-item-${serviceId}`),
     severity: (severity: 'critical' | 'error' | 'info' | 'warning') =>
       this.page.getByTestId(`schedule-severity-${severity}`),
+    testEmailSent: (recipients: string, severities: string) =>
+      this.alertWithText(
+        `Sent a test report to ${recipients} with sample ${severities} findings. No checks were run.`,
+      ),
   };
   buttons = {
     cancel: this.page.getByTestId('schedule-editor-cancel'),
@@ -46,23 +58,12 @@ export default class ScheduleEditorComponent extends BasePage {
   messages = {
     createTitle: this.elements.editor.getByRole('heading', { exact: true, name: 'New schedule' }),
     editTitle: this.elements.editor.getByRole('heading', { exact: true, name: 'Edit schedule' }),
-    emailInvalid: (addresses: string) => this.builders.error(`Not a valid address: ${addresses}`),
-    emailMax: (count: number) => this.builders.error(`Up to 20 addresses; there are ${count}.`),
     emailRequired: this.builders.error('Enter at least one address, or choose Settings recipients.'),
-    fixFields: (fields: string[]) =>
-      this.elements.footerMessage.filter({
-        hasText: `Fix the highlighted ${fields.length > 1 ? 'fields' : 'field'}: ${fields.join(', ')}.`,
-      }),
     nameRequired: this.builders.error('Give the schedule a name.'),
-    nameTaken: (name: string) => this.builders.error(`A schedule named "${name}" already exists.`),
     noChecks: this.builders.error('Pick at least one check, or choose All checks.'),
     noDays: this.elements.editor.getByText('Pick at least one day.'),
     noServices: this.builders.error('Pick at least one service, or choose All services.'),
     noSeverities: this.builders.error('Pick at least one severity, or choose Same as Settings.'),
-    testEmailSent: (recipients: string, severities: string) =>
-      this.page.getByRole('alert', { includeHidden: true }).filter({
-        hasText: `Sent a test report to ${recipients} with sample ${severities} findings. No checks were run.`,
-      }),
     timeInvalid: this.builders.error('Enter a time as HH:MM.'),
   };
 
@@ -82,6 +83,13 @@ export default class ScheduleEditorComponent extends BasePage {
     }
   };
 
+  idleChecksWarning = (count: number, technology: string) =>
+    `${count} ${technology} check${count === 1 ? '' : 's'} won't run: there is no ${technology} service in Inventory.`;
+
+  nothingToDoWarning = (technology: string) =>
+    'None of the selected checks applies to the selected services, so every run would have nothing to do. ' +
+    `Pick checks for ${technology}, or other services.`;
+
   setDays = async (days: number[]) => {
     for (const day of [0, 1, 2, 3, 4, 5, 6]) {
       const pressed = (await this.builders.day(day).getAttribute('aria-pressed')) === 'true';
@@ -89,4 +97,7 @@ export default class ScheduleEditorComponent extends BasePage {
       if (pressed !== days.includes(day)) await this.builders.day(day).click();
     }
   };
+
+  weekdayPreview = (utcTime: string, local?: { time: string; zone: string }) =>
+    `Runs every weekday at ${utcTime} UTC${local ? `, ${local.time} in your time zone (${local.zone}` : ''}`;
 }

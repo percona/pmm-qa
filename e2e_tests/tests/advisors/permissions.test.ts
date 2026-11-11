@@ -13,6 +13,8 @@ const suffix = Date.now();
 const users = { editor: `advisors_editor_${suffix}`, viewer: `advisors_viewer_${suffix}` } as const;
 const noAccess = 'Insufficient access permissions.';
 const createdUserIds: number[] = [];
+const createdChecks: string[] = [];
+const createdSchedules: string[] = [];
 
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
@@ -25,6 +27,11 @@ pmmTest.beforeAll(async ({ browser }) => {
   createdUserIds.push(editorId);
   await grafanaHelper.promoteToEditor(editorId);
   await page.close();
+});
+
+pmmTest.afterEach(async ({ api }) => {
+  for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
+  for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
 });
 
 pmmTest.afterAll(async ({ browser }) => {
@@ -96,112 +103,109 @@ pmmTest(
   }) => {
     const check = await api.advisorsApi.createCustomCheck();
     const editorAuth = GrafanaHelper.getAuthHeader(users.editor, password);
-    let scheduleId = '';
 
-    try {
-      await pmmTest.step('The editor reads, creates and runs schedules through the API', async () => {
-        for (const endpoint of [
-          apiEndpoints.advisors.schedules,
-          apiEndpoints.advisors.services,
-          apiEndpoints.advisors.notificationSettings,
-        ]) {
-          expect((await api.advisorsApi.requestGet(endpoint, editorAuth)).status(), endpoint).toEqual(200);
-        }
+    createdChecks.push(check.name);
 
-        const created = await api.advisorsApi.requestCreateSchedule(
-          {
-            check_names: [check.name],
-            days_of_week: [1],
-            email_mode: AdvisorScheduleEmailMode.off,
-            name: AdvisorsApi.scheduleName(),
-            time_of_day: '10:00',
-          },
-          editorAuth,
-        );
-
-        expect(created.status(), await created.text()).toEqual(200);
-        scheduleId = ((await created.json()) as { schedule: AdvisorSchedule }).schedule.schedule_id;
-
-        await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(scheduleId, editorAuth));
-      });
-
-      await pmmTest.step('The API refuses to let the editor author or test a check', async () => {
-        const newName = AdvisorsApi.customCheckName();
-        const service = await api.advisorsApi.getMysqlService();
-        const statuses = [
-          await api.advisorsApi.requestCreateCheck({ name: newName }, editorAuth),
-          await api.advisorsApi.requestUpdateCheck(check.name, { ...check, summary: 'Changed' }, editorAuth),
-          await api.advisorsApi.requestDeleteCheck(check.name, editorAuth),
-          await api.advisorsApi.requestTestCheck(service.service_id, check, editorAuth),
-        ].map((response) => response.status());
-
-        expect(statuses).toEqual([403, 403, 403, 403]);
-        expect(await api.advisorsApi.findCheck(newName)).toBeUndefined();
-        expect((await api.advisorsApi.findCheck(check.name))?.summary).toEqual(check.summary);
-      });
-
-      await grafanaHelper.authorize(users.editor, password);
-
-      await pmmTest.step('The catalog offers the editor no Add, Edit or Delete', async () => {
-        await page.goto(advisorsCatalogPage.url);
-        await advisorsCatalogPage.inputs.search.fill(check.summary);
-        await expect(advisorsCatalogPage.builders.runButton(check.name)).toBeVisible();
-        await expect(advisorsCatalogPage.buttons.addAdvisor).toBeHidden();
-        await expect(advisorsCatalogPage.builders.editButton(check.name)).toBeHidden();
-        await expect(advisorsCatalogPage.builders.deleteButton(check.name)).toBeHidden();
-      });
-
-      await pmmTest.step('The details pane shows the script but no Edit, Clone or Test', async () => {
-        await page.goto(advisorsCatalogPage.detailsUrl(check.name));
-        await expect(advisorsCatalogPage.elements.checkCode).toContainText('def check_context');
-        await expect(advisorsCatalogPage.buttons.editCheck).toBeHidden();
-        await expect(advisorsCatalogPage.buttons.cloneCheck).toBeHidden();
-        await expect(advisorsCatalogPage.checkForm.buttons.test).toBeHidden();
-      });
-
-      await pmmTest.step('The editor runs a check from the catalog', async () => {
-        await page.goto(advisorsCatalogPage.url);
-        await advisorsCatalogPage.inputs.search.fill(check.summary);
-
-        const runId = await advisorsCatalogPage.runCheck(check.name);
-
-        await expect(advisorsCatalogPage.messages.checkStarted(check.summary)).toBeVisible();
-        await api.advisorsApi.waitForRun(runId);
-      });
-
-      for (const { elements, url } of [advisorInsightsPage, advisorRunsPage, advisorSchedulerPage]) {
-        await pmmTest.step(`${url} is available`, async () => {
-          await page.goto(url);
-          await expect(elements.title).toBeVisible();
-          await expect(elements.unauthorized).toBeHidden();
-        });
+    await pmmTest.step('The editor reads, creates and runs schedules through the API', async () => {
+      for (const endpoint of [
+        apiEndpoints.advisors.schedules,
+        apiEndpoints.advisors.services,
+        apiEndpoints.advisors.notificationSettings,
+      ]) {
+        expect((await api.advisorsApi.requestGet(endpoint, editorAuth)).status(), endpoint).toEqual(200);
       }
 
-      await pmmTest.step('The Advisors settings tab is admin-only', async () => {
-        await page.goto(settingsPage.urls.advisors);
-        await expect(settingsPage.elements.unauthorized).toContainText(noAccess);
+      const created = await api.advisorsApi.requestCreateSchedule(
+        {
+          check_names: [check.name],
+          days_of_week: [1],
+          email_mode: AdvisorScheduleEmailMode.off,
+          name: AdvisorsApi.scheduleName(),
+          time_of_day: '10:00',
+        },
+        editorAuth,
+      );
+
+      expect(created.status(), await created.text()).toEqual(200);
+
+      const scheduleId = ((await created.json()) as { schedule: AdvisorSchedule }).schedule.schedule_id;
+
+      createdSchedules.push(scheduleId);
+      await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(scheduleId, editorAuth));
+    });
+
+    await pmmTest.step('The API refuses to let the editor author or test a check', async () => {
+      const newName = AdvisorsApi.customCheckName();
+      const service = await api.advisorsApi.getMysqlService();
+      const statuses = [
+        await api.advisorsApi.requestCreateCheck({ name: newName }, editorAuth),
+        await api.advisorsApi.requestUpdateCheck(check.name, { ...check, summary: 'Changed' }, editorAuth),
+        await api.advisorsApi.requestDeleteCheck(check.name, editorAuth),
+        await api.advisorsApi.requestTestCheck(service.service_id, check, editorAuth),
+      ].map((response) => response.status());
+
+      expect(statuses).toEqual([403, 403, 403, 403]);
+      expect(await api.advisorsApi.findCheck(newName)).toBeUndefined();
+      expect((await api.advisorsApi.findCheck(check.name))?.summary).toEqual(check.summary);
+    });
+
+    await grafanaHelper.authorize(users.editor, password);
+
+    await pmmTest.step('The catalog offers the editor no Add, Edit or Delete', async () => {
+      await page.goto(advisorsCatalogPage.url);
+      await advisorsCatalogPage.inputs.search.fill(check.summary);
+      await expect(advisorsCatalogPage.builders.runButton(check.name)).toBeVisible();
+      await expect(advisorsCatalogPage.buttons.addAdvisor).toBeHidden();
+      await expect(advisorsCatalogPage.builders.editButton(check.name)).toBeHidden();
+      await expect(advisorsCatalogPage.builders.deleteButton(check.name)).toBeHidden();
+    });
+
+    await pmmTest.step('The details pane shows the script but no Edit, Clone or Test', async () => {
+      await page.goto(advisorsCatalogPage.detailsUrl(check.name));
+      await expect(advisorsCatalogPage.elements.checkCode).toContainText('def check_context');
+      await expect(advisorsCatalogPage.buttons.editCheck).toBeHidden();
+      await expect(advisorsCatalogPage.buttons.cloneCheck).toBeHidden();
+      await expect(advisorsCatalogPage.checkForm.buttons.test).toBeHidden();
+    });
+
+    await pmmTest.step('The editor runs a check from the catalog', async () => {
+      await page.goto(advisorsCatalogPage.url);
+      await advisorsCatalogPage.inputs.search.fill(check.summary);
+
+      const runId = await advisorsCatalogPage.runCheck(check.name);
+
+      await expect(advisorsCatalogPage.builders.checkStarted(check.summary)).toBeVisible();
+      await api.advisorsApi.waitForRun(runId);
+    });
+
+    for (const { elements, url } of [advisorInsightsPage, advisorRunsPage, advisorSchedulerPage]) {
+      await pmmTest.step(`${url} is available`, async () => {
+        await page.goto(url);
+        await expect(elements.title).toBeVisible();
+        await expect(elements.unauthorized).toBeHidden();
       });
-
-      await pmmTest.step('The API serves the editor, including test notifications', async () => {
-        const recipient = MailpitApi.recipient('editor');
-        const withoutSeverity = await api.advisorsApi.requestTestNotification([recipient], [], editorAuth);
-        const withSeverity = await api.advisorsApi.requestTestNotification(
-          [recipient],
-          ['SEVERITY_CRITICAL'],
-          editorAuth,
-        );
-
-        expect((await api.advisorsApi.requestGet(apiEndpoints.advisors.checks, editorAuth)).status()).toEqual(
-          200,
-        );
-        expect(withoutSeverity.status()).toEqual(400);
-        expect(await withoutSeverity.text()).toContain('At least one severity is required.');
-        expect(withSeverity.status(), await withSeverity.text()).toEqual(200);
-      });
-    } finally {
-      if (scheduleId) await api.advisorsApi.deleteSchedule(scheduleId);
-
-      await api.advisorsApi.deleteCheck(check.name);
     }
+
+    await pmmTest.step('The Advisors settings tab is admin-only', async () => {
+      await page.goto(settingsPage.urls.advisors);
+      await expect(settingsPage.elements.unauthorized).toContainText(noAccess);
+    });
+
+    await pmmTest.step('The API serves the editor, including test notifications', async () => {
+      const recipient = MailpitApi.recipient('editor');
+      const withoutSeverity = await api.advisorsApi.requestTestNotification([recipient], [], editorAuth);
+      const withSeverity = await api.advisorsApi.requestTestNotification(
+        [recipient],
+        ['SEVERITY_CRITICAL'],
+        editorAuth,
+      );
+
+      expect((await api.advisorsApi.requestGet(apiEndpoints.advisors.checks, editorAuth)).status()).toEqual(
+        200,
+      );
+      expect(withoutSeverity.status()).toEqual(400);
+      expect(await withoutSeverity.text()).toContain('At least one severity is required.');
+      expect(withSeverity.status(), await withSeverity.text()).toEqual(200);
+    });
   },
 );

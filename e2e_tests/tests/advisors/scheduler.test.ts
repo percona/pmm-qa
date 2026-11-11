@@ -1,12 +1,10 @@
 import pmmTest from '@fixtures/pmmTest';
 import AdvisorsApi from '@api/advisors.api';
-import Api from '@api/api';
 import {
   AdvisorCheckResultStatus,
   AdvisorCheckTechnology,
   AdvisorSchedule,
   AdvisorScheduleEmailMode,
-  AdvisorScheduleInput,
 } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
@@ -20,24 +18,24 @@ const defaultSchedule = {
   time_of_day: '06:00',
 };
 
-const setAdvisors = async (api: Api, enable: boolean) => {
-  const response = await api.settingsApi.putSettings({ enable_advisor: enable });
-
-  expect(response.status(), await response.text()).toEqual(200);
-};
-
 pmmTest.describe('Advisor scheduler', () => {
   const createdChecks: string[] = [];
   const createdNodes = new Set<string>();
   const createdSchedules: string[] = [];
   const weekdays = [1, 2, 3, 4, 5];
+  let savedSchedules: AdvisorSchedule[] | undefined;
 
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
   });
 
   pmmTest.afterEach(async ({ api }) => {
-    if (!(await api.settingsApi.getSettings()).settings.advisor_enabled) await setAdvisors(api, true);
+    if (!(await api.settingsApi.getSettings()).settings.advisor_enabled) {
+      await api.settingsApi.updateSettings({ enable_advisor: true });
+    }
+    if (savedSchedules) await api.advisorsApi.restoreSchedules(savedSchedules);
+
+    savedSchedules = undefined;
 
     for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
     for (const nodeId of createdNodes) await api.inventoryApi.deleteNode(nodeId, true);
@@ -65,7 +63,6 @@ pmmTest.describe('Advisor scheduler', () => {
         await expect(row).toContainText(text);
       }
 
-      // Email notifications are off by default.
       await expect(advisorSchedulerPage.messages.notificationsOff).toBeVisible();
     },
   );
@@ -73,74 +70,46 @@ pmmTest.describe('Advisor scheduler', () => {
   pmmTest(
     'PMM-Txxxx - Verify the empty Scheduler and turning Advisors off and on @advisors',
     async ({ advisorSchedulerPage, api, leftNavigation, page }) => {
-      const saved = await api.advisorsApi.listSchedules();
       const { advisorsMenu } = leftNavigation.elements;
 
-      const deleteAllSchedules = async () => {
-        for (const { schedule_id } of await api.advisorsApi.listSchedules()) {
-          await api.advisorsApi.deleteSchedule(schedule_id);
-        }
-      };
+      savedSchedules = await api.advisorsApi.listSchedules();
 
-      try {
-        await pmmTest.step('Without schedules the page offers to create the default one', async () => {
-          await deleteAllSchedules();
-          await page.goto(advisorSchedulerPage.url);
-          await expect(advisorSchedulerPage.elements.empty).toContainText('No schedules');
-          await expect(advisorSchedulerPage.messages.emptyWeek).toBeVisible();
-          await advisorSchedulerPage.buttons.restoreDefault.click();
-          await expect(advisorSchedulerPage.elements.empty).toBeHidden();
-          await expect
-            .poll(() => api.advisorsApi.findSchedule(defaultSchedule.name))
-            .toMatchObject(defaultSchedule);
-        });
+      await pmmTest.step('Without schedules the page offers to create the default one', async () => {
+        await api.advisorsApi.deleteAllSchedules();
+        await page.goto(advisorSchedulerPage.url);
+        await expect(advisorSchedulerPage.elements.empty).toContainText('No schedules');
+        await expect(advisorSchedulerPage.messages.emptyWeek).toBeVisible();
+        await advisorSchedulerPage.buttons.restoreDefault.click();
+        await expect(advisorSchedulerPage.elements.empty).toBeHidden();
+        await expect
+          .poll(() => api.advisorsApi.findSchedule(defaultSchedule.name))
+          .toMatchObject(defaultSchedule);
+      });
 
-        await pmmTest.step('With Advisors off, schedules are kept and nothing runs', async () => {
-          const { schedule_id } = (await api.advisorsApi.findSchedule(
-            defaultSchedule.name,
-          )) as AdvisorSchedule;
+      await pmmTest.step('With Advisors off, schedules are kept and nothing runs', async () => {
+        const { schedule_id } = (await api.advisorsApi.findSchedule(defaultSchedule.name)) as AdvisorSchedule;
 
-          await setAdvisors(api, false);
-          await page.reload();
-          await expect(advisorSchedulerPage.messages.advisorsOff).toBeVisible();
-          await expect(advisorSchedulerPage.builders.row(schedule_id)).toContainText('Advisors are off');
-          await expect(advisorSchedulerPage.messages.offWeek).toBeVisible();
-          await expect(advisorsMenu).toBeHidden();
+        await api.settingsApi.updateSettings({ enable_advisor: false });
+        await page.reload();
+        await expect(advisorSchedulerPage.messages.advisorsOff).toBeVisible();
+        await expect(advisorSchedulerPage.builders.row(schedule_id)).toContainText('Advisors are off');
+        await expect(advisorSchedulerPage.messages.offWeek).toBeVisible();
+        await expect(advisorsMenu).toBeHidden();
 
-          const start = await api.advisorsApi.requestStartChecks();
+        const start = await api.advisorsApi.requestStartChecks();
 
-          expect(start.status()).toEqual(400);
-          expect(await start.text()).toContain('advisor checks are disabled.');
-        });
+        expect(start.status()).toEqual(400);
+        expect(await start.text()).toContain('advisor checks are disabled.');
+      });
 
-        await pmmTest.step('Turning Advisors on without schedules creates the default one', async () => {
-          await deleteAllSchedules();
-          await setAdvisors(api, true);
-          expect(await api.advisorsApi.findSchedule(defaultSchedule.name)).toMatchObject(defaultSchedule);
-          await page.reload();
-          await expect(advisorSchedulerPage.elements.advisorsOffBanner).toBeHidden();
-          await expect(advisorsMenu).toBeVisible();
-        });
-      } finally {
-        await setAdvisors(api, true);
-        await deleteAllSchedules();
-
-        for (const schedule of saved) {
-          const input: AdvisorScheduleInput = {
-            check_names: schedule.check_names,
-            days_of_week: schedule.days_of_week,
-            email_addresses: schedule.email_addresses,
-            email_mode: schedule.email_mode,
-            email_severities: schedule.email_severities,
-            enabled: schedule.enabled,
-            name: schedule.name,
-            service_ids: schedule.service_ids,
-            time_of_day: schedule.time_of_day,
-          };
-
-          await api.advisorsApi.createSchedule(input);
-        }
-      }
+      await pmmTest.step('Turning Advisors on without schedules creates the default one', async () => {
+        await api.advisorsApi.deleteAllSchedules();
+        await api.settingsApi.updateSettings({ enable_advisor: true });
+        expect(await api.advisorsApi.findSchedule(defaultSchedule.name)).toMatchObject(defaultSchedule);
+        await page.reload();
+        await expect(advisorSchedulerPage.elements.advisorsOffBanner).toBeHidden();
+        await expect(advisorsMenu).toBeVisible();
+      });
     },
   );
 
@@ -158,14 +127,14 @@ pmmTest.describe('Advisor scheduler', () => {
       const before = await api.advisorsApi.listSchedules();
 
       await pmmTest.step('With Advisors off, the Scheduler keeps the schedule', async () => {
-        await setAdvisors(api, false);
+        await api.settingsApi.updateSettings({ enable_advisor: false });
         await page.goto(advisorSchedulerPage.url);
         await expect(row).toContainText(schedule.name);
         await expect(row).toContainText('Advisors are off');
       });
 
       await pmmTest.step('Turning Advisors on brings the schedules back unchanged', async () => {
-        await setAdvisors(api, true);
+        await api.settingsApi.updateSettings({ enable_advisor: true });
 
         const after = await api.advisorsApi.listSchedules();
 
@@ -204,9 +173,9 @@ pmmTest.describe('Advisor scheduler', () => {
         serviceIds: [service.service_id],
         time: '10:00',
       });
-      await expect(editor.elements.preview).toContainText('Runs every weekday at 10:00 UTC');
+      await expect(editor.elements.preview).toContainText(editor.weekdayPreview('10:00'));
       await editor.buttons.save.click();
-      await expect(advisorSchedulerPage.messages.created(name)).toBeVisible();
+      await expect(advisorSchedulerPage.builders.created(name)).toBeVisible();
     });
 
     const schedule = await pmmTest.step('The API returns the new schedule', async () => {
@@ -275,30 +244,30 @@ pmmTest.describe('Advisor scheduler', () => {
         }
 
         await expect(
-          editor.messages.fixFields(['name', 'days', 'time', 'checks', 'services', 'email', 'severities']),
+          editor.builders.fixFields(['name', 'days', 'time', 'checks', 'services', 'email', 'severities']),
         ).toBeVisible();
       });
 
       await pmmTest.step('Names are unique ignoring case and at most 100 characters', async () => {
         await editor.inputs.name.fill(takenName);
-        await expect(editor.messages.nameTaken(takenName)).toBeVisible();
+        await expect(editor.builders.nameTaken(takenName)).toBeVisible();
         await editor.inputs.name.fill('a'.repeat(101));
         await expect(editor.inputs.name).toHaveValue('a'.repeat(100));
       });
 
       await pmmTest.step('Recipients must be valid addresses, at most 20', async () => {
         await editor.inputs.emailAddresses.fill('qa@example.com, not-an-email');
-        await expect(editor.messages.emailInvalid('not-an-email')).toBeVisible();
+        await expect(editor.builders.emailInvalid('not-an-email')).toBeVisible();
         await editor.inputs.emailAddresses.fill(
           Array.from({ length: 21 }, (_, i) => `qa${i}@example.com`).join(' '),
         );
-        await expect(editor.messages.emailMax(21)).toBeVisible();
+        await expect(editor.builders.emailMax(21)).toBeVisible();
       });
 
       await pmmTest.step('Nothing is saved while a field is invalid', async () => {
         await editor.buttons.save.click();
         await expect(
-          editor.messages.fixFields(['days', 'time', 'checks', 'services', 'email', 'severities']),
+          editor.builders.fixFields(['days', 'time', 'checks', 'services', 'email', 'severities']),
         ).toBeVisible();
         await editor.buttons.cancel.click();
         await expect(editor.elements.editor).toBeHidden();
@@ -327,7 +296,7 @@ pmmTest.describe('Advisor scheduler', () => {
         time: '11:30',
       });
       await editor.buttons.save.click();
-      await expect(advisorSchedulerPage.messages.saved(schedule.name)).toBeVisible();
+      await expect(advisorSchedulerPage.builders.saved(schedule.name)).toBeVisible();
     });
 
     await pmmTest.step('The table and the API show the change', async () => {
@@ -357,7 +326,7 @@ pmmTest.describe('Advisor scheduler', () => {
 
       await pmmTest.step('Pause the schedule', async () => {
         await enabledSwitch.click();
-        await expect(advisorSchedulerPage.messages.paused(schedule.name)).toBeVisible();
+        await expect(advisorSchedulerPage.builders.paused(schedule.name)).toBeVisible();
         await expect(enabledSwitch).not.toBeChecked();
         await expect(advisorSchedulerPage.builders.row(schedule.schedule_id)).toContainText('Paused');
         await expect(marks).toHaveCount(0);
@@ -366,7 +335,7 @@ pmmTest.describe('Advisor scheduler', () => {
 
       await pmmTest.step('Enable the schedule', async () => {
         await enabledSwitch.click();
-        await expect(advisorSchedulerPage.messages.enabled(schedule.name)).toBeVisible();
+        await expect(advisorSchedulerPage.builders.enabled(schedule.name)).toBeVisible();
         await expect(enabledSwitch).toBeChecked();
         await expect(marks).toHaveCount(weekdays.length);
         expect((await api.advisorsApi.findSchedule(schedule.name))?.enabled).toBe(true);
@@ -388,7 +357,7 @@ pmmTest.describe('Advisor scheduler', () => {
       createdSchedules.push(schedule.schedule_id);
       await page.goto(advisorSchedulerPage.url);
       await advisorSchedulerPage.openAction(schedule.schedule_id, 'duplicate');
-      await expect(advisorSchedulerPage.messages.duplicated(copyName)).toBeVisible();
+      await expect(advisorSchedulerPage.builders.duplicated(copyName)).toBeVisible();
 
       const copy = (await api.advisorsApi.findSchedule(copyName)) as AdvisorSchedule;
 
@@ -427,7 +396,7 @@ pmmTest.describe('Advisor scheduler', () => {
         );
 
         await advisorSchedulerPage.openAction(schedule.schedule_id, 'runNow');
-        await expect(advisorSchedulerPage.messages.started(schedule.name)).toBeVisible();
+        await expect(advisorSchedulerPage.builders.started(schedule.name)).toBeVisible();
 
         const completed = await api.advisorsApi.waitForRun(
           ((await (await started).json()) as { run_id: string }).run_id,
@@ -455,10 +424,10 @@ pmmTest.describe('Advisor scheduler', () => {
       await pmmTest.step('Delete the schedule', async () => {
         await page.goto(advisorSchedulerPage.url);
         await advisorSchedulerPage.openAction(schedule.schedule_id, 'delete');
-        await expect(advisorSchedulerPage.messages.deleteTitle(schedule.name)).toBeVisible();
+        await expect(advisorSchedulerPage.builders.deleteTitle(schedule.name)).toBeVisible();
         await expect(advisorSchedulerPage.messages.deleteNotLast).toBeVisible();
         await advisorSchedulerPage.buttons.confirmDelete.click();
-        await expect(advisorSchedulerPage.messages.deleted(schedule.name)).toBeVisible();
+        await expect(advisorSchedulerPage.builders.deleted(schedule.name)).toBeVisible();
         await expect(advisorSchedulerPage.builders.row(schedule.schedule_id)).toBeHidden();
         expect(await api.advisorsApi.findSchedule(schedule.name)).toBeUndefined();
       });
@@ -467,7 +436,7 @@ pmmTest.describe('Advisor scheduler', () => {
         await page.goto(`${advisorRunsPage.url}?scheduleId=${schedule.schedule_id}`);
         await expect(advisorRunsPage.inputs.schedule).toHaveText('Deleted schedule');
         await advisorRunsPage.buttons.clearFilters.click();
-        await advisorRunsPage.filterByRunId(run.id);
+        await advisorRunsPage.runIdFilter.apply(run.id);
         await expect(advisorRunsPage.builders.row(run.id)).toContainText(`User · ${schedule.name}`);
       });
     },
@@ -477,19 +446,13 @@ pmmTest.describe('Advisor scheduler', () => {
     'PMM-Txxxx - Verify a second run cannot start while one is active @advisors',
     async ({ advisorsCatalogPage, advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.createSchedule();
-      const slowChecks: string[] = [];
 
       createdSchedules.push(schedule.schedule_id);
 
-      // Each runs for about 4 s, until the CPU limit of pmm-managed-starlark stops it, so the run outlasts the test.
-      for (let i = 0; i < 8; i++) {
-        const { name } = await api.advisorsApi.createCustomCheck({
-          script: api.advisorsApi.endlessCheckScript,
-        });
+      // About 30 s of checks, so the run outlasts the test.
+      const slowChecks = await api.advisorsApi.createEndlessChecks(8);
 
-        slowChecks.push(name);
-        createdChecks.push(name);
-      }
+      createdChecks.push(...slowChecks);
 
       const runId = await api.advisorsApi.startChecks(slowChecks);
 
@@ -532,23 +495,13 @@ pmmTest.describe('Advisor scheduler', () => {
       });
       const disabledCheck = await api.advisorsApi.createCustomCheck();
 
-      const addUnreachable = async (name: string) => {
-        const service = await api.managementApi.addUnreachableMysql(name);
-
-        createdNodes.add(service.node_id);
-
-        return service;
-      };
-
-      const removeNode = async (nodeId: string) => {
-        await api.inventoryApi.deleteNode(nodeId, true);
-        createdNodes.delete(nodeId);
-      };
-
       createdChecks.push(queryCheck.name, disabledCheck.name);
 
-      const first = await addUnreachable(`qa-unreachable-${Date.now()}-1`);
-      const second = await addUnreachable(`qa-unreachable-${Date.now()}-2`);
+      const first = await api.managementApi.addUnreachableMysql(`qa-unreachable-${Date.now()}-1`);
+      const second = await api.managementApi.addUnreachableMysql(`qa-unreachable-${Date.now()}-2`);
+
+      createdNodes.add(first.node_id).add(second.node_id);
+
       const byServices = await api.advisorsApi.createSchedule({
         check_names: [queryCheck.name, disabledCheck.name],
         service_ids: [first.service_id, second.service_id],
@@ -581,13 +534,14 @@ pmmTest.describe('Advisor scheduler', () => {
       );
 
       await pmmTest.step('A service added after the schedule was saved joins its next run', async () => {
-        const runByCheck = async () =>
-          await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(byCheck.schedule_id));
-        const { planned_services_count: servicesBefore } = await runByCheck();
+        const { planned_services_count: servicesBefore } = await api.advisorsApi.waitForRun(
+          await api.advisorsApi.runSchedule(byCheck.schedule_id),
+        );
+        const third = await api.managementApi.addUnreachableMysql(`qa-unreachable-${Date.now()}-3`);
 
-        await addUnreachable(`qa-unreachable-${Date.now()}-3`);
+        createdNodes.add(third.node_id);
 
-        const run = await runByCheck();
+        const run = await api.advisorsApi.waitForRun(await api.advisorsApi.runSchedule(byCheck.schedule_id));
 
         expect(run.planned_services_count).toEqual(servicesBefore + 1);
         await page.goto(`${advisorRunsPage.url}?runId=${run.id}`);
@@ -601,13 +555,15 @@ pmmTest.describe('Advisor scheduler', () => {
 
         await page.goto(advisorSchedulerPage.url);
         await expect(services).toContainText('2 services');
-        await removeNode(first.node_id);
+        await api.inventoryApi.deleteNode(first.node_id, true);
+        createdNodes.delete(first.node_id);
         await page.reload();
         await expect(services).toContainText('1 of 2 services');
-        await removeNode(second.node_id);
+        await api.inventoryApi.deleteNode(second.node_id, true);
+        createdNodes.delete(second.node_id);
         await page.reload();
         await expect(advisorSchedulerPage.builders.targetsNothing(byServices.schedule_id)).toHaveText(
-          'Targets no existing service',
+          advisorSchedulerPage.targetsNoService,
         );
       });
 
@@ -616,7 +572,7 @@ pmmTest.describe('Advisor scheduler', () => {
         await api.advisorsApi.deleteCheck(queryCheck.name);
         await page.reload();
         await expect(advisorSchedulerPage.builders.targetsNothing(byCheck.schedule_id)).toHaveText(
-          'Targets no existing check',
+          advisorSchedulerPage.targetsNoCheck,
         );
       });
     },
@@ -654,11 +610,9 @@ pmmTest.describe('Advisor schedule editor in another time zone', () => {
       await pmmTest.step('The preview shows each run in UTC and in the local time zone', async () => {
         await editor.fill({ days: [1, 2, 3, 4, 5], name: AdvisorsApi.scheduleName(), time: '23:00' });
         await expect(editor.elements.preview).toContainText(
-          'Runs every weekday at 23:00 UTC, 08:00 in your time zone (Asia/Tokyo',
+          editor.weekdayPreview('23:00', { time: '08:00', zone: 'Asia/Tokyo' }),
         );
-        await expect(editor.elements.preview).toContainText(
-          'In your time zone this lands on the next day. Days are picked in UTC.',
-        );
+        await expect(editor.elements.preview).toContainText(editor.nextDayNote);
         await expect(editor.elements.preview).not.toContainText('daylight saving');
         await expect(editor.elements.previewRuns).toContainText('08:00 your time');
       });
@@ -669,17 +623,13 @@ pmmTest.describe('Advisor schedule editor in another time zone', () => {
           'PMM Server must monitor no PostgreSQL service',
         ).not.toContain(AdvisorCheckTechnology.postgresql);
         await editor.fill({ checkNames: [mysqlCheck.name, postgresqlCheck.name] });
-        await expect(editor.elements.coverageIdle).toHaveText(
-          "1 PostgreSQL check won't run: there is no PostgreSQL service in Inventory.",
-        );
+        await expect(editor.elements.coverageIdle).toHaveText(editor.idleChecksWarning(1, 'PostgreSQL'));
       });
 
       await pmmTest.step('Checks that apply to none of the selected services are flagged', async () => {
         await editor.builders.checkOption(mysqlCheck.name).uncheck();
         await editor.fill({ serviceIds: [service.service_id] });
-        await expect(editor.elements.coverageNothing).toHaveText(
-          'None of the selected checks applies to the selected services, so every run would have nothing to do. Pick checks for MySQL, or other services.',
-        );
+        await expect(editor.elements.coverageNothing).toHaveText(editor.nothingToDoWarning('MySQL'));
         await editor.buttons.cancel.click();
       });
     },

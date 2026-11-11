@@ -1,23 +1,32 @@
 import BasePage from '@pages/base.page';
 import EmailInsightsDialogComponent from '@components/advisors/emailInsightsDialog.component';
-import { expect } from '@playwright/test';
+import RunIdFilterComponent from '@components/advisors/runIdFilter.component';
+import { AdvisorCheck, AdvisorInsight } from '@interfaces/advisors';
 
 export type InsightFilter = 'category' | 'nodeName' | 'serviceName' | 'severity' | 'status';
 
 export default class AdvisorInsightsPage extends BasePage {
   readonly url = 'pmm-ui/advisors/insights';
   readonly emailDialog = new EmailInsightsDialogComponent(this.page);
+  readonly runIdFilter = new RunIdFilterComponent(this.page);
   builders = {
     actionsButton: (insightId: string) => this.page.getByTestId(`insight-${insightId}-actions`),
+    checkDisabledForService: (summary: string, serviceName: string) =>
+      this.alertWithText(`Check "${summary}" disabled for ${serviceName}`),
+    checkEnabledForService: (summary: string, serviceName: string) =>
+      this.alertWithText(`Check "${summary}" enabled for ${serviceName}`),
     detailsField: (label: string) => this.page.getByTestId(`details-field-${label}`),
     filter: (filter: InsightFilter) => this.page.getByTestId(`${filter}-filter`).getByRole('combobox'),
-    option: (name: string) => this.page.getByRole('option', { exact: true, name }),
+    insightsEmailed: (insights: number, recipients: number) =>
+      this.alertWithText(
+        `Emailed ${insights} insight${insights === 1 ? '' : 's'} to ${recipients} recipient${recipients === 1 ? '' : 's'}.`,
+      ),
     readMoreIndicator: (insightId: string) =>
       this.builders.row(insightId).getByTestId('insight-read-more-indicator'),
+    rerunStarted: (summary: string, serviceName: string) =>
+      this.alertWithText(`Check "${summary}" started on ${serviceName}, run ID copied to clipboard.`),
     row: (insightId: string) => this.page.getByTestId(`insight-row-${insightId}`),
     rowsWithText: (text: string) => this.elements.rows.filter({ hasText: text }),
-    snackbar: (text: string) =>
-      this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text }),
   };
   buttons = {
     clearFilters: this.page.getByTestId('clear-filters'),
@@ -42,37 +51,25 @@ export default class AdvisorInsightsPage extends BasePage {
     title: this.page.getByRole('heading', { name: 'Advisor insights' }),
     unauthorized: this.page.getByTestId('unauthorized'),
   };
-  inputs = {
-    runId: this.page.getByTestId('run-id-filter').getByRole('textbox'),
-  };
+  inputs = {};
   messages = {
-    checkDisabledForService: (summary: string, serviceName: string) =>
-      this.builders.snackbar(`Check "${summary}" disabled for ${serviceName}`),
-    checkEnabledForService: (summary: string, serviceName: string) =>
-      this.builders.snackbar(`Check "${summary}" enabled for ${serviceName}`),
-    insightCopied: this.builders.snackbar('Insight copied to clipboard'),
-    insightsEmailed: (insights: number, recipients: number) =>
-      this.builders.snackbar(
-        `Emailed ${insights} insight${insights === 1 ? '' : 's'} to ${recipients} recipient${recipients === 1 ? '' : 's'}.`,
-      ),
-    insightUrlCopied: this.builders.snackbar('Insight URL copied to clipboard'),
-    rerunStarted: (summary: string, serviceName: string) =>
-      this.builders.snackbar(`Check "${summary}" started on ${serviceName}, run ID copied to clipboard.`),
+    insightCopied: this.alertWithText('Insight copied to clipboard'),
+    insightUrlCopied: this.alertWithText('Insight URL copied to clipboard'),
   };
 
-  filterByRunId = async (runId: string) => {
-    await this.inputs.runId.fill(runId);
-    await this.inputs.runId.press('Enter');
-    await expect(this.page).toHaveURL(new RegExp(`runId=${runId}`));
-  };
+  // What Copy as text puts on the clipboard for a failed warning.
+  copiedTextLines = (insight: AdvisorInsight, check: AdvisorCheck, runId: string) => [
+    `The Advisor Check "${insight.summary}" completed at`,
+    'with status "Failed"',
+    `Run ID: ${runId}`,
+    `Check Name: ${check.name}`,
+    `Service Name: ${insight.service_name}`,
+    `Description: ${check.description}`,
+    'Severity: Warning',
+  ];
 
   runUrl = (runId: string) => `${this.url}?runId=${encodeURIComponent(runId)}`;
 
-  // A click fired while the options menu is still closing is swallowed by its backdrop.
-  selectFilter = async (filter: InsightFilter, option: string) => {
-    await this.builders.filter(filter).click();
-    await this.builders.option(option).click();
-    await expect(this.page.getByRole('listbox')).toBeHidden();
-    await expect(this.builders.filter(filter)).toHaveText(option);
-  };
+  selectFilter = async (filter: InsightFilter, option: string) =>
+    await this.selectMenuOption(this.builders.filter(filter), option);
 }

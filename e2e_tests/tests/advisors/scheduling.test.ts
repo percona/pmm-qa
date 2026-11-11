@@ -1,74 +1,45 @@
 import AdvisorsApi from '@api/advisors.api';
-import Api from '@api/api';
 import MailpitApi from '@api/mailpit.api';
 import pmmTest from '@fixtures/pmmTest';
-import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import {
   AdvisorCheckResultStatus,
   AdvisorInsight,
   AdvisorRun,
   AdvisorRunStatus,
-  AdvisorScheduleEmailMode,
-  AdvisorScheduleInput,
   AdvisorTriggeredBy,
 } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
-const emailTo = (recipient: string): Partial<AdvisorScheduleInput> => ({
-  email_addresses: [recipient],
-  email_mode: AdvisorScheduleEmailMode.custom,
-  email_severities: ['SEVERITY_WARNING'],
-});
-const utcTime = (timestamp: string) => new Date(timestamp).toISOString().slice(11, 16);
-const minutesLate = (run: AdvisorRun) =>
-  Math.round((Date.parse(run.started_at) - Date.parse(run.scheduled_for as string)) / Timeouts.ONE_MINUTE);
+const notificationsOn = {
+  advisor_notification_email_addresses: { values: [MailpitApi.recipient('scheduling-settings')] },
+  enable_advisor_notifications: true,
+};
 const createdChecks: string[] = [];
+const createdNodes = new Set<string>();
 const createdSchedules: string[] = [];
 let notifications: Record<string, unknown>;
-
-const createSchedule = async (api: Api, overrides: Partial<AdvisorScheduleInput>) => {
-  const schedule = await api.advisorsApi.createSchedule(overrides);
-
-  createdSchedules.push(schedule.schedule_id);
-
-  return schedule;
-};
-
-const createDueSchedule = async (api: Api, at: Date, overrides: Partial<AdvisorScheduleInput>) => {
-  const schedule = await createSchedule(api, {
-    days_of_week: [0, 1, 2, 3, 4, 5, 6],
-    time_of_day: utcTime(at.toISOString()),
-    ...overrides,
-  });
-
-  expect(Date.parse(schedule.next_run_at as string), 'The schedule was saved after it fell due').toEqual(
-    at.getTime(),
-  );
-
-  return schedule;
-};
-
-const enableNotifications = async (api: Api) => {
-  const response = await api.settingsApi.putSettings({
-    advisor_notification_email_addresses: { values: [MailpitApi.recipient('scheduling-settings')] },
-    enable_advisor_notifications: true,
-  });
-
-  expect(response.status(), await response.text()).toEqual(200);
-};
-
-const supervisorctl = (cliHelper: CliHelper, action: 'restart' | 'start' | 'stop') =>
-  cliHelper.execute(`docker exec pmm-server supervisorctl ${action} pmm-managed`).assertSuccess();
+let pmmManagedStopped = false;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   notifications = await api.settingsApi.getAdvisorNotifications();
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterEach(async ({ api }) => {
-  for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
+pmmTest.afterEach(async ({ api, cliHelper }) => {
+  if (pmmManagedStopped) {
+    cliHelper.supervisorctl('start');
+    await api.serverApi.waitForReady();
+    pmmManagedStopped = false;
+  }
+  if (!(await api.settingsApi.getSettings()).settings.advisor_enabled) {
+    await api.settingsApi.updateSettings({ enable_advisor: true });
+  }
 
+  for (const scheduleId of createdSchedules.splice(0)) await api.advisorsApi.deleteSchedule(scheduleId);
+  for (const nodeId of createdNodes) await api.inventoryApi.deleteNode(nodeId, true);
+
+  createdNodes.clear();
   // A run a failed test left queued outlives restarts and would start during the next test.
   await api.advisorsApi.waitForNoActiveRun();
 
@@ -88,13 +59,14 @@ pmmTest.describe('Advisor schedules falling due', () => {
 
       createdChecks.push(check.name);
 
-      const schedule = await createDueSchedule(api, due.at, {
+      const schedule = await api.advisorsApi.createDueSchedule(due.at, {
         check_names: [check.name],
         service_ids: [service.service_id],
-        ...emailTo(recipient),
+        ...AdvisorsApi.warningEmailTo(recipient),
       });
 
-      await enableNotifications(api);
+      createdSchedules.push(schedule.schedule_id);
+      await api.settingsApi.updateSettings(notificationsOn);
 
       const run = await pmmTest.step('The schedule starts a run at its time', async () => {
         const scheduled = await api.advisorsApi.waitForScheduledRun(schedule.schedule_id);
@@ -144,39 +116,34 @@ pmmTest.describe('Advisor schedules falling due', () => {
       const recipients = [MailpitApi.recipient('wait-first'), MailpitApi.recipient('wait-second')];
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck();
-      const slowChecks: string[] = [];
 
       createdChecks.push(check.name);
 
-      for (let i = 0; i < 40; i++) {
-        const { name } = await api.advisorsApi.createCustomCheck({
-          script: api.advisorsApi.endlessCheckScript,
-        });
-
-        slowChecks.push(name);
-        createdChecks.push(name);
-      }
-
+      const slowChecks = await api.advisorsApi.createEndlessChecks(40);
       const base = AdvisorsApi.scheduleName();
       const due = AdvisorsApi.nextDueMinute();
 
-      await enableNotifications(api);
+      createdChecks.push(...slowChecks);
+      await api.settingsApi.updateSettings(notificationsOn);
 
       // Created in reverse, since schedules due in the same minute start by name.
       const [second, first] = [
-        await createDueSchedule(api, due.at, {
+        await api.advisorsApi.createDueSchedule(due.at, {
           check_names: [check.name],
           name: `${base} B`,
           service_ids: [service.service_id],
-          ...emailTo(recipients[1]),
+          ...AdvisorsApi.warningEmailTo(recipients[1]),
         }),
-        await createDueSchedule(api, due.at, {
+        await api.advisorsApi.createDueSchedule(due.at, {
           check_names: [check.name],
           name: `${base} A`,
           service_ids: [service.service_id],
-          ...emailTo(recipients[0]),
+          ...AdvisorsApi.warningEmailTo(recipients[0]),
         }),
       ];
+
+      createdSchedules.push(second.schedule_id, first.schedule_id);
+
       // Each slow check takes at least 4 s, so the run ends at least 80 s after the schedules fall due:
       // a scheduled run that starts more than a minute late reports the run it waited for.
       const slowCount = Math.ceil((due.at.getTime() - Date.now() + 80_000) / Timeouts.FOUR_SECONDS);
@@ -231,8 +198,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
             await page.goto(`${advisorRunsPage.url}?runId=${run.id}`);
             await advisorRunsPage.builders.startedLate(run.id).hover();
             await expect(advisorRunsPage.elements.tooltip).toHaveText(
-              `Scheduled for ${utcTime(run.scheduled_for as string)} UTC. Started ${minutesLate(run)} min late, ` +
-                `after the run started at ${utcTime(blocker.started_at)} UTC (${who}).`,
+              advisorRunsPage.startedLateTooltip(run, blocker, who),
             );
           }
         },
@@ -246,43 +212,38 @@ pmmTest.describe('Advisor schedules falling due', () => {
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });
       const removed = await api.managementApi.addUnreachableMysql(`qa-unreachable-${Date.now()}`);
-      let removedNodeId: string | undefined = removed.node_id;
 
       createdChecks.push(check.name);
+      createdNodes.add(removed.node_id);
 
-      try {
-        const base = AdvisorsApi.scheduleName();
-        const due = AdvisorsApi.nextDueMinute();
-        // Due in the same minute, the empty schedule starts first and the control one after it.
-        const empty = await createDueSchedule(api, due.at, {
-          check_names: [check.name],
-          name: `${base} A`,
-          service_ids: [removed.service_id],
-        });
-        const control = await createDueSchedule(api, due.at, {
-          check_names: [check.name],
-          name: `${base} B`,
-          service_ids: [service.service_id],
-        });
+      const base = AdvisorsApi.scheduleName();
+      const due = AdvisorsApi.nextDueMinute();
+      // Due in the same minute, the empty schedule starts first and the control one after it.
+      const empty = await api.advisorsApi.createDueSchedule(due.at, {
+        check_names: [check.name],
+        name: `${base} A`,
+        service_ids: [removed.service_id],
+      });
+      const control = await api.advisorsApi.createDueSchedule(due.at, {
+        check_names: [check.name],
+        name: `${base} B`,
+        service_ids: [service.service_id],
+      });
 
-        await api.inventoryApi.deleteNode(removed.node_id, true);
-        removedNodeId = undefined;
+      createdSchedules.push(empty.schedule_id, control.schedule_id);
+      await api.inventoryApi.deleteNode(removed.node_id, true);
+      createdNodes.delete(removed.node_id);
 
-        await pmmTest.step('Once the control schedule has run, the empty one has no run', async () => {
-          await api.advisorsApi.waitForScheduledRun(control.schedule_id);
-          expect(await api.advisorsApi.listRuns({ schedule_id: empty.schedule_id })).toEqual([]);
-        });
+      await pmmTest.step('Once the control schedule has run, the empty one has no run', async () => {
+        await api.advisorsApi.waitForScheduledRun(control.schedule_id);
+        expect(await api.advisorsApi.listRuns({ schedule_id: empty.schedule_id })).toEqual([]);
+      });
 
-        await pmmTest.step('The Scheduler shows the empty schedule never ran', async () => {
-          await page.goto(advisorSchedulerPage.url);
-          await expect(advisorSchedulerPage.builders.openLastRun(control.schedule_id)).toHaveText(
-            '0 findings',
-          );
-          await expect(advisorSchedulerPage.builders.row(empty.schedule_id)).toContainText('Never run');
-        });
-      } finally {
-        if (removedNodeId) await api.inventoryApi.deleteNode(removedNodeId, true);
-      }
+      await pmmTest.step('The Scheduler shows the empty schedule never ran', async () => {
+        await page.goto(advisorSchedulerPage.url);
+        await expect(advisorSchedulerPage.builders.openLastRun(control.schedule_id)).toHaveText('0 findings');
+        await expect(advisorSchedulerPage.builders.row(empty.schedule_id)).toContainText('Never run');
+      });
     },
   );
 });
@@ -296,27 +257,26 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
       // A run executes its checks in name order, so this one runs before the slow ones.
       const prefix = AdvisorsApi.customCheckName();
       const check = await api.advisorsApi.createCustomCheck({ name: `${prefix}_a` });
-      const slowChecks: string[] = [];
 
       createdChecks.push(check.name);
 
-      for (let i = 0; i < 15; i++) {
-        const { name } = await api.advisorsApi.createCustomCheck({
-          name: `${prefix}_b${i}`,
-          script: api.advisorsApi.endlessCheckScript,
-        });
-
-        slowChecks.push(name);
-        createdChecks.push(name);
-      }
-
+      const slowChecks = await api.advisorsApi.createEndlessChecks(15, { namePrefix: `${prefix}_b` });
       // Disabled schedules never fall due, and a run of one emails the schedule's recipients.
-      const emailed = { enabled: false, service_ids: [service.service_id], ...emailTo(recipient) };
-      const interrupted = await createSchedule(api, { check_names: [check.name, ...slowChecks], ...emailed });
-      const following = await createSchedule(api, { check_names: [check.name], ...emailed });
+      const emailed = {
+        enabled: false,
+        service_ids: [service.service_id],
+        ...AdvisorsApi.warningEmailTo(recipient),
+      };
+      const interrupted = await api.advisorsApi.createSchedule({
+        check_names: [check.name, ...slowChecks],
+        ...emailed,
+      });
+      const following = await api.advisorsApi.createSchedule({ check_names: [check.name], ...emailed });
 
-      await enableNotifications(api);
-      supervisorctl(cliHelper, 'restart');
+      createdChecks.push(...slowChecks);
+      createdSchedules.push(interrupted.schedule_id, following.schedule_id);
+      await api.settingsApi.updateSettings(notificationsOn);
+      cliHelper.supervisorctl('restart');
       await api.serverApi.waitForReady();
 
       const runId = await api.advisorsApi.runSchedule(interrupted.schedule_id);
@@ -326,9 +286,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
         expect((await api.advisorsApi.getRun(runId))?.status).toEqual(AdvisorRunStatus.queued);
         await page.goto(`${advisorRunsPage.url}?runId=${runId}`);
         await advisorRunsPage.builders.queuedLabel(runId).hover();
-        await expect(advisorRunsPage.elements.tooltip).toHaveText(
-          'Requested and waiting for PMM to start it, which takes up to a minute',
-        );
+        await expect(advisorRunsPage.elements.tooltip).toHaveText(advisorRunsPage.tooltips.queued);
       });
 
       await pmmTest.step('Once it runs, the checks it has not reached are pending', async () => {
@@ -349,7 +307,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
             ),
           )
           .toContain(AdvisorCheckResultStatus.failed);
-        supervisorctl(cliHelper, 'restart');
+        cliHelper.supervisorctl('restart');
         await api.serverApi.waitForReady();
 
         return insights;
@@ -380,10 +338,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
 
           await page.goto(`${advisorRunsPage.url}?runId=${runId}`);
           await advisorRunsPage.builders.interrupted(runId).hover();
-          await expect(advisorRunsPage.elements.tooltip).toHaveText(
-            'PMM restarted, or the HA leader changed, before the run finished. ' +
-              'The insights it saved are kept; the checks it did not reach show as Not run.',
-          );
+          await expect(advisorRunsPage.elements.tooltip).toHaveText(advisorRunsPage.tooltips.interrupted);
           await page.goto(advisorInsightsPage.runUrl(runId));
           await expect(advisorInsightsPage.builders.row(kept[0].id)).toBeVisible();
           await expect(advisorInsightsPage.builders.row(notRun[0].id)).toContainText('Not run');
@@ -413,69 +368,58 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
 
       createdChecks.push(check.name);
 
-      const missed = await createDueSchedule(api, due.at, {
+      const missed = await api.advisorsApi.createDueSchedule(due.at, {
         check_names: [check.name],
         name: `${base} missed`,
         service_ids: [service.service_id],
       });
-      const control = await createDueSchedule(api, new Date(controlDueAt), {
+      const control = await api.advisorsApi.createDueSchedule(new Date(controlDueAt), {
         check_names: [check.name],
         name: `${base} control`,
         service_ids: [service.service_id],
       });
       const stoppedAt = Date.now();
 
-      supervisorctl(cliHelper, 'stop');
+      createdSchedules.push(missed.schedule_id, control.schedule_id);
+      cliHelper.supervisorctl('stop');
+      pmmManagedStopped = true;
 
-      try {
-        await pmmTest.step('pmm-managed is stopped when the first schedule falls due', async () => {
-          await expect
-            .poll(() => Date.now(), { timeout: Timeouts.TWO_MINUTES })
-            .toBeGreaterThan(due.at.getTime() + Timeouts.FIVE_SECONDS);
-          supervisorctl(cliHelper, 'start');
-          await api.serverApi.waitForReady();
-        });
-
-        await pmmTest.step('Turning Advisors off and on before the next schedule falls due', async () => {
-          for (const enabled of [false, true]) {
-            const response = await api.settingsApi.putSettings({ enable_advisor: enabled });
-
-            expect(response.status(), await response.text()).toEqual(200);
-          }
-        });
-
-        await pmmTest.step('Only the schedule falling due after the start runs', async () => {
-          const run = await api.advisorsApi.waitForScheduledRun(control.schedule_id);
-          const ours = [missed.schedule_id, control.schedule_id];
-          const runsSinceStop = (await api.advisorsApi.listRuns()).filter(
-            ({ schedule_id, started_at }) =>
-              Date.parse(started_at) >= stoppedAt && (!schedule_id || ours.includes(schedule_id)),
-          );
-          const missedNow = await api.advisorsApi.findSchedule(missed.name);
-
-          expect(Date.parse(run.scheduled_for as string)).toEqual(controlDueAt);
-          expect(runsSinceStop.map(({ id }) => id)).toEqual([run.id]);
-          expect(Date.parse(missedNow?.next_run_at as string)).toEqual(
-            due.at.getTime() + 24 * Timeouts.SIXTY_MINUTES,
-          );
-        });
-
-        await pmmTest.step('The Scheduler shows the missed schedule never ran', async () => {
-          await page.goto(advisorSchedulerPage.url);
-          await expect(advisorSchedulerPage.builders.openLastRun(control.schedule_id)).toHaveText(
-            '0 findings',
-          );
-          await expect(advisorSchedulerPage.builders.row(missed.schedule_id)).toContainText('Never run');
-        });
-      } finally {
-        // Fails harmlessly when pmm-managed is already running.
-        cliHelper.execSilent('docker exec pmm-server supervisorctl start pmm-managed');
+      await pmmTest.step('pmm-managed is stopped when the first schedule falls due', async () => {
+        await expect
+          .poll(() => Date.now(), { timeout: Timeouts.TWO_MINUTES })
+          .toBeGreaterThan(due.at.getTime() + Timeouts.FIVE_SECONDS);
+        cliHelper.supervisorctl('start');
+        pmmManagedStopped = false;
         await api.serverApi.waitForReady();
+      });
 
-        const response = await api.settingsApi.putSettings({ enable_advisor: true });
+      await pmmTest.step('Turning Advisors off and on before the next schedule falls due', async () => {
+        for (const enabled of [false, true]) {
+          await api.settingsApi.updateSettings({ enable_advisor: enabled });
+        }
+      });
 
-        expect(response.status(), await response.text()).toEqual(200);
-      }
+      await pmmTest.step('Only the schedule falling due after the start runs', async () => {
+        const run = await api.advisorsApi.waitForScheduledRun(control.schedule_id);
+        const ours = [missed.schedule_id, control.schedule_id];
+        const runsSinceStop = (await api.advisorsApi.listRuns()).filter(
+          ({ schedule_id, started_at }) =>
+            Date.parse(started_at) >= stoppedAt && (!schedule_id || ours.includes(schedule_id)),
+        );
+        const missedNow = await api.advisorsApi.findSchedule(missed.name);
+
+        expect(Date.parse(run.scheduled_for as string)).toEqual(controlDueAt);
+        expect(runsSinceStop.map(({ id }) => id)).toEqual([run.id]);
+        expect(Date.parse(missedNow?.next_run_at as string)).toEqual(
+          due.at.getTime() + 24 * Timeouts.SIXTY_MINUTES,
+        );
+      });
+
+      await pmmTest.step('The Scheduler shows the missed schedule never ran', async () => {
+        await page.goto(advisorSchedulerPage.url);
+        await expect(advisorSchedulerPage.builders.openLastRun(control.schedule_id)).toHaveText('0 findings');
+        await expect(advisorSchedulerPage.builders.row(missed.schedule_id)).toContainText('Never run');
+      });
     },
   );
 });

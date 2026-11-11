@@ -1,5 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
 
@@ -38,6 +39,33 @@ export default class ManagementApi {
     ).toEqual(200);
 
     return (await response.json()) as AddRdsResponse;
+  };
+
+  // PMM connects to the database before adding it, so this retries until the database accepts connections.
+  addRemoteDatabase = async (
+    type: keyof AddServiceResponse,
+    name: string,
+    port: number,
+    credentials: Record<string, string> = {},
+  ): Promise<{ node_id: string; service_id: string }> => {
+    let service = { node_id: '', service_id: '' };
+
+    await expect(async () => {
+      const response = await this.addService({
+        [type]: {
+          add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE' },
+          address: name,
+          pmm_agent_id: 'pmm-server',
+          port,
+          service_name: name,
+          ...credentials,
+        },
+      });
+
+      service = response[type]?.service ?? service;
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+    return service;
   };
 
   addService = async (service: object): Promise<AddServiceResponse> => {
