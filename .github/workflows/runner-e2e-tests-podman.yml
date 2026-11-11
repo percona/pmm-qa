@@ -122,8 +122,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates dirmngr libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
+          curl -fsSL --retry 3 --max-time 60 -o "$RUNNER_TEMP/clickhouse.key" https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key
+          sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg "$RUNNER_TEMP/clickhouse.key"
+          echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" | sudo tee \
               /etc/apt/sources.list.d/clickhouse.list
           . /etc/os-release
           echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
