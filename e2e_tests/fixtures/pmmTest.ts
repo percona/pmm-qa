@@ -21,6 +21,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import MySQLHelper from '@helpers/mysql.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
@@ -76,6 +77,7 @@ const pmmTest = base.extend<{
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
+  mySqlDbHelper: MySQLHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -193,6 +195,18 @@ const pmmTest = base.extend<{
     });
 
     await use(mongoDbHelper);
+  },
+  mySqlDbHelper: async ({ credentials }, use) => {
+    const mySqlDbHelper = new MySQLHelper({
+      database: 'mysql',
+      host: '127.0.0.1',
+      password: credentials.perconaServer.password,
+      port: 3_306,
+      username: credentials.perconaServer.username,
+    });
+
+    await use(mySqlDbHelper);
+    await mySqlDbHelper.close();
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),

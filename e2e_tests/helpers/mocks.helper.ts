@@ -1,6 +1,62 @@
 import { Page, Route } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 
+interface RtaQueryMock {
+  database?: string;
+  duration?: string;
+  mongoDb?: boolean;
+  mySqlPayload?: Record<string, unknown>;
+  queryId: string;
+  queryText: string;
+  username?: string;
+}
+
+interface RtaSessionMock {
+  serviceId: string;
+  serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' | 'SERVICE_TYPE_MYSQL_SERVICE';
+  statusMessage?: string;
+}
+
+// Snake_case, as the API sends it; the UI camelizes it.
+const rtaQueryWireFormat = (query: RtaQueryMock) => ({
+  client_address: '127.0.0.1:52134',
+  ...(query.mongoDb
+    ? {
+        mongo_db_payload: {
+          client_app_name: 'mongosh',
+          collection: 'mycollection',
+          database_name: 'admin',
+          db_instance_address: '127.0.0.1:27017',
+          operation: 'query',
+          operation_start_time: new Date().toISOString(),
+          plan_summary: 'COLLSCAN',
+          username: 'pmm-mongo',
+        },
+      }
+    : {
+        my_sql_payload: {
+          blocked_status: 'BLOCKED_STATUS_NOT_BLOCKED',
+          command: 'Query',
+          database_name: query.database ?? 'sbtest',
+          db_instance_address: '127.0.0.1:3306',
+          full_scan: false,
+          program_name: 'sysbench',
+          rows_examined: '100',
+          rows_sent: '10',
+          state: 'executing',
+          username: query.username ?? 'sbtest@localhost',
+          ...query.mySqlPayload,
+        },
+      }),
+  query_collect_time: new Date().toISOString(),
+  query_execution_duration: query.duration ?? '2s',
+  query_id: query.queryId,
+  query_raw_json: JSON.stringify({ current_statement: query.queryText }),
+  query_text: query.queryText,
+  service_id: query.mongoDb ? 'mock-mongo-service' : 'mock-mysql-service',
+  service_name: query.mongoDb ? 'mock-mongo-service' : 'mock-mysql-service',
+});
+
 export default class mocksHelper {
   constructor(public page: Page) {}
 
@@ -59,6 +115,16 @@ export default class mocksHelper {
     await this.page.route(apiEndpoints.management.services, fulfillNoServices);
   };
 
+  mockRealTimeAnalyticsQueries = async (queries: RtaQueryMock[]): Promise<void> => {
+    await this.page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+      route.fulfill({
+        body: JSON.stringify({ queries: queries.map(rtaQueryWireFormat) }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+  };
+
   mockRealTimeAnalyticsSessions = async (): Promise<void> => {
     const sessions = Array.from({ length: 26 }, (_, index) => ({
       cluster_name: `mock-cluster-${String(index + 1).padStart(2, '0')}`,
@@ -72,6 +138,27 @@ export default class mocksHelper {
     await this.page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
       route.fulfill({
         body: JSON.stringify({ sessions }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+  };
+
+  mockRealTimeAnalyticsSessionsOf = async (sessions: RtaSessionMock[]): Promise<void> => {
+    await this.page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          sessions: sessions.map((session) => ({
+            cluster_name: '',
+            collect_interval: '2s',
+            service_id: session.serviceId,
+            service_name: session.serviceId,
+            service_type: session.serviceType,
+            start_time: new Date().toISOString(),
+            status: 'SESSION_STATUS_RUNNING',
+            status_message: session.statusMessage,
+          })),
+        }),
         contentType: 'application/json',
         status: 200,
       }),
