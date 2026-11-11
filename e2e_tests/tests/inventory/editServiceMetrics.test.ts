@@ -1,6 +1,5 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import DockerHelper from '@helpers/docker.helper';
 import {
   exporterMetricsState,
@@ -61,7 +60,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = toMetricsSettings(await exporter(api));
-      container = await getServiceContainer(api, dockerHelper, service);
+      container = await dockerHelper.getServiceContainer(api, service);
     });
 
     pmmTest.afterEach(async ({ api }) => {

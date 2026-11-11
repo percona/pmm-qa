@@ -1,10 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import {
-  addOwnService,
-  frameworkServices,
-  getServiceContainer,
-  removeOwnService,
-} from '@helpers/frameworkServices.helper';
+import { addOwnService, frameworkServices } from '@helpers/frameworkServices.helper';
 import {
   currentQuerySource,
   offeredQuerySources,
@@ -33,7 +28,7 @@ for (const serviceQan of Object.values(serviceQanSources)) {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       original = currentQuerySource(serviceQan, service);
-      container = await getServiceContainer(api, dockerHelper, service);
+      container = await dockerHelper.getServiceContainer(api, service);
       savedState =
         saveState &&
         cliHelper.execSilent(saveState(container, credentials)).assertSuccess().getStdOutLines().at(-1);
@@ -173,16 +168,16 @@ for (const instance of qanInstances) {
     pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
-      container = await getServiceContainer(
+      container = await dockerHelper.getServiceContainer(
         api,
-        dockerHelper,
         await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex),
       );
       service = await addOwnService(api, cliHelper, container, instance);
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
-      removeOwnService(cliHelper, container, instance);
+      cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+      cliHelper.execSilent(instance.stop(container)).assertSuccess();
     });
 
     pmmTest(

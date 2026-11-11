@@ -1,7 +1,6 @@
 import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
-import DockerHelper from '@helpers/docker.helper';
-import { GetService, ServiceType } from '@interfaces/inventory';
+import { ServiceType } from '@interfaces/inventory';
 
 export interface FrameworkService {
   exporterType: string;
@@ -31,9 +30,6 @@ export const databaseServices: FrameworkService[] = [
   frameworkServices.proxysql,
 ];
 
-export const getServiceContainer = async (api: Api, dockerHelper: DockerHelper, { node_id }: GetService) =>
-  dockerHelper.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
-
 // A service the test registers itself in a framework service's container, and removes afterwards.
 export interface OwnService {
   register: (container: string) => string;
@@ -42,16 +38,6 @@ export interface OwnService {
   start?: (container: string) => string;
   stop?: (container: string) => string;
 }
-
-export const removeOwnService = (
-  cliHelper: CliHelper,
-  container: string,
-  { serviceName, serviceType, stop }: OwnService,
-) => {
-  cliHelper.removeService(container, serviceType, serviceName);
-
-  if (stop) cliHelper.execSilent(stop(container)).assertSuccess();
-};
 
 // A mongod of the test's own on 127.0.0.1, in a directory it removes again on stop.
 export const ownMongod = ({
@@ -68,7 +54,7 @@ export const ownMongod = ({
   port: number;
   prepare?: string;
   serviceName: string;
-}): OwnService => ({
+}): Required<OwnService> => ({
   register: (container) =>
     `docker exec ${container} pmm-admin add mongodb --host=127.0.0.1 --port=${port} --query-source=none ${addFlags} ${serviceName}`,
   serviceName,
@@ -85,8 +71,9 @@ export const addOwnService = async (
   container: string,
   ownService: OwnService,
 ) => {
-  removeOwnService(cliHelper, container, ownService);
+  cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
 
+  if (ownService.stop) cliHelper.execSilent(ownService.stop(container)).assertSuccess();
   if (ownService.start) cliHelper.execSilent(ownService.start(container)).assertSuccess();
 
   cliHelper.execSilent(ownService.register(container)).assertSuccess();

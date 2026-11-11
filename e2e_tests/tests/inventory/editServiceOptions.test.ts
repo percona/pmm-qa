@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import {
   OptionValue,
   readOption,
@@ -28,7 +27,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
     pmmTest.beforeEach(async ({ api, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, dockerHelper, service);
+      container = await dockerHelper.getServiceContainer(api, service);
     });
 
     for (const option of options) {

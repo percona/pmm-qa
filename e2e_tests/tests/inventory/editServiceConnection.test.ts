@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { getServiceContainer } from '@helpers/frameworkServices.helper';
 import { serviceConnections, testDatabase, testUser } from '@helpers/serviceConnection.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
@@ -22,7 +21,7 @@ for (const {
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, dockerHelper, service);
+      container = await dockerHelper.getServiceContainer(api, service);
       cliHelper.execSilent(dropUser(container, credentials));
       cliHelper.execSilent(createUser(container, credentials)).assertSuccess();
     });

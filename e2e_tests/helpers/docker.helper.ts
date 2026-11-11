@@ -1,5 +1,7 @@
+import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 // Containers keep their name and address for the whole run.
@@ -44,6 +46,9 @@ export default class DockerHelper {
       )
       .getStdOutLines()
       .find((line) => matches.every((match) => line.includes(match)));
+
+  getServiceContainer = async (api: Api, { node_id }: GetService) =>
+    this.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
 
   // A restarting exporter has no process for a moment, which counts as not yet rather than as a flag gone.
   waitForExporterCommandLine = async (

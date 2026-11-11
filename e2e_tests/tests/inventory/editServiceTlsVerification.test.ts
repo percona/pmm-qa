@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { addOwnService, getServiceContainer, removeOwnService } from '@helpers/frameworkServices.helper';
+import { addOwnService } from '@helpers/frameworkServices.helper';
 import { TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService, ServiceAgent } from '@interfaces/inventory';
@@ -32,7 +32,7 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
     pmmTest.beforeEach(async ({ api, cliHelper, credentials, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      container = await getServiceContainer(api, dockerHelper, service);
+      container = await dockerHelper.getServiceContainer(api, service);
 
       if (serverTlsCheck) {
         expect(
@@ -50,7 +50,10 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
       if (originalTls) {
         await api.inventoryApi.updateService(service.service_id, service.service_type, originalTls);
       }
-      if (instance) removeOwnService(cliHelper, container, instance);
+      if (instance) {
+        cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+        cliHelper.execSilent(instance.stop(container)).assertSuccess();
+      }
     });
 
     pmmTest(

@@ -1,10 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import {
-  addOwnService,
-  frameworkServices,
-  getServiceContainer,
-  removeOwnService,
-} from '@helpers/frameworkServices.helper';
+import { addOwnService, frameworkServices } from '@helpers/frameworkServices.helper';
 import {
   basicAuth,
   endpointExporterType,
@@ -32,9 +27,8 @@ for (const ownService of serviceEndpoints) {
     pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
-      container = await getServiceContainer(
+      container = await dockerHelper.getServiceContainer(
         api,
-        dockerHelper,
         await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
       );
       service = await addOwnService(api, cliHelper, container, ownService);
@@ -49,7 +43,7 @@ for (const ownService of serviceEndpoints) {
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
-      removeOwnService(cliHelper, container, ownService);
+      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
     });
 
     pmmTest(

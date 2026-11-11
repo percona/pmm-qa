@@ -130,7 +130,7 @@ export const currentQuerySource = (serviceQan: ServiceQan, service: GetService):
 export const querySourceChanges = ({ sources }: ServiceQan, querySource: QuerySource) =>
   Object.fromEntries(sources.map(({ change, value }) => [change, value === querySource]));
 
-interface QanInstance extends OwnService {
+interface QanInstance extends Required<OwnService> {
   agentType: string;
   // The framework service whose container the instance runs in, so its pmm-agent can read the source.
   hostServiceRegex: string;

@@ -86,7 +86,7 @@ export type TlsServerName = 'ps' | 'psmdb' | 'ssl_mysql' | 'ssl_pdpgsql' | 'valk
 interface TlsServer extends FrameworkService {
   // A TLS-only server the test starts itself, for a type whose framework setup in this job has no TLS,
   // registered over TLS without verification so the edit starts from a working exporter.
-  instance?: OwnService;
+  instance?: Required<OwnService>;
   name: TlsServerName;
   // The update API settings that put a framework service back as it was found.
   original?: (cliHelper: CliHelper, container: string, exporter: ServiceAgent) => Record<string, unknown>;
