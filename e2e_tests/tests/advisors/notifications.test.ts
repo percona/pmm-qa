@@ -24,7 +24,7 @@ pmmTest.describe('Advisor notifications', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify Advisor notification settings validation @advisors',
+    'PMM-T2599 - Verify Advisor notification settings validation @advisors',
     async ({ api, page, settingsPage }) => {
       const recipients = settingsPage.inputs.advisorRecipients;
       const apply = settingsPage.buttons.applyAdvisorsChanges;
@@ -112,7 +112,7 @@ pmmTest.describe('Advisor notifications', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify sending a test email from the API, Settings and the schedule editor @advisors',
+    'PMM-T2600 - Verify sending a test email from the API, Settings and the schedule editor @advisors',
     async ({ advisorSchedulerPage, api, page, settingsPage }) => {
       await pmmTest.step(
         'The API requires a severity and sends one sample finding per severity',
@@ -179,7 +179,7 @@ pmmTest.describe('Advisor notifications', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the report emails of a user run and of a schedule @advisors',
+    'PMM-T2601 - Verify the report emails of a user run and of a schedule @advisors',
     async ({ api }) => {
       const settingsRecipient = MailpitApi.recipient('report-settings');
       const scheduleRecipient = MailpitApi.recipient('report-schedule');
@@ -237,7 +237,7 @@ pmmTest.describe('Advisor notifications', () => {
     },
   );
 
-  pmmTest('PMM-Txxxx - Verify each schedule emails as it is set to @advisors', async ({ api }) => {
+  pmmTest('PMM-T2610 - Verify each schedule emails as it is set to @advisors', async ({ api }) => {
     const settingsRecipient = MailpitApi.recipient('modes-settings');
     const ownRecipient = MailpitApi.recipient('modes-own');
     const deletedRecipient = MailpitApi.recipient('modes-deleted');

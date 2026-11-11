@@ -44,7 +44,7 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2 @advisor-databases',
+    'PMM-T2616 - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2 @advisor-databases',
     async ({ advisorRunsPage, api, cliHelper, page }) => {
       const serviceIds: string[] = [];
 
@@ -96,7 +96,7 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a check reports one finding per database, naming at most 10 relations @advisor-databases',
+    'PMM-T2617 - Verify a check reports one finding per database, naming at most 10 relations @advisor-databases',
     async ({ advisorInsightsPage, api, cliHelper, page }) => {
       const { credentials, dockerArgs, port, type } = databases.postgresql17;
       const container = `qa-advisors-${type}-${Date.now()}`;

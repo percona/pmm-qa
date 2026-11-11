@@ -19,7 +19,7 @@ pmmTest.describe('Advisor insights', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the insights a run produced and their details @advisors',
+    'PMM-T2571 - Verify the insights a run produced and their details @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -58,7 +58,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify filtering insights by run from the actions menu @advisors',
+    'PMM-T2572 - Verify filtering insights by run from the actions menu @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -96,7 +96,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the OK, Failed and Error status chips and the Status filter @advisors',
+    'PMM-T2588 - Verify the OK, Failed and Error status chips and the Status filter @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       await api.advisorsApi.getMysqlService();
 
@@ -148,7 +148,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify insight filters, Filter by name and restoring filters from the menu @advisors',
+    'PMM-T2589 - Verify insight filters, Filter by name and restoring filters from the menu @advisors',
     async ({ advisorInsightsPage, api, leftNavigation, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const failing = await api.advisorsApi.createCustomCheck();
@@ -214,7 +214,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify copying an insight as text and as a URL that opens its details @advisors',
+    'PMM-T2590 - Verify copying an insight as text and as a URL that opens its details @advisors',
     async ({ advisorInsightsPage, api, context, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -275,7 +275,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify re-running a check for the service of an insight @advisors',
+    'PMM-T2591 - Verify re-running a check for the service of an insight @advisors',
     async ({ advisorInsightsPage, api, context, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -307,7 +307,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify disabling and enabling a check for the service of an insight @advisors',
+    'PMM-T2592 - Verify disabling and enabling a check for the service of an insight @advisors',
     async ({ advisorInsightsPage, advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -365,7 +365,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the Email insights dialog @advisors',
+    'PMM-T2593 - Verify the Email insights dialog @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       await api.advisorsApi.getMysqlService();
 
@@ -454,7 +454,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify insights link to the documentation page of their check @advisors',
+    'PMM-T2608 - Verify insights link to the documentation page of their check @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -509,7 +509,7 @@ pmmTest.describe('Advisor insights', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify an insight keeps the topology and labels of its service @advisors',
+    'PMM-T2609 - Verify an insight keeps the topology and labels of its service @advisors',
     async ({ advisorInsightsPage, api, page }) => {
       const name = `qa-topology-${Date.now()}`;
       const topology = {

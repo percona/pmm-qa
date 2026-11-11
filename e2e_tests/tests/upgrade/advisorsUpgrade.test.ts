@@ -10,7 +10,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
   // Before upgrading from 3.6 to 3.10, the @pre-upgrade tests of the pmm-3.x branches disable
   // mongodb_version and set postgresql_unsupported_check to the Frequent interval.
   pmmTest(
-    'PMM-Txxxx - Verify Advisors start from the default schedule with every check enabled after upgrade @post-upgrade',
+    'PMM-T2618 - Verify Advisors start from the default schedule with every check enabled after upgrade @post-upgrade',
     async ({ api, page, settingsPage }) => {
       await pmmTest.step('Checks disabled before the upgrade are enabled again', async () => {
         const checks = await api.advisorsApi.listChecks();

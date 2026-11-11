@@ -24,7 +24,7 @@ pmmTest.afterEach(async ({ api }) => {
 });
 
 pmmTest(
-  'PMM-Txxxx - Verify the HA leader runs a run requested on a follower and allows one run at a time @pmm-ha',
+  'PMM-T2619 - Verify the HA leader runs a run requested on a follower and allows one run at a time @pmm-ha',
   async ({ api, haClusterHelper }) => {
     const service = await api.advisorsApi.getMonitoredService();
     const names = await api.advisorsApi.createEndlessChecks(16, { technology: service.technology });
@@ -61,7 +61,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify the HA leader runs a schedule created on a follower when it falls due @pmm-ha',
+  'PMM-T2620 - Verify the HA leader runs a schedule created on a follower when it falls due @pmm-ha',
   async ({ api, haClusterHelper }) => {
     const service = await api.advisorsApi.getMonitoredService();
     const [check] = await api.advisorsApi.createEndlessChecks(1, { technology: service.technology });
@@ -103,7 +103,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify an HA leader failover interrupts the open run and starts no run of its own @pmm-ha',
+  'PMM-T2621 - Verify an HA leader failover interrupts the open run and starts no run of its own @pmm-ha',
   async ({ api, haClusterHelper }) => {
     pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
 

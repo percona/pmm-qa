@@ -18,7 +18,7 @@ pmmTest.describe('Advisor runs', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify a check run from the catalog is recorded in run history @advisors',
+    'PMM-T2573 - Verify a check run from the catalog is recorded in run history @advisors',
     async ({ advisorInsightsPage, advisorRunsPage, advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -58,7 +58,7 @@ pmmTest.describe('Advisor runs', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify run history filters by trigger and run ID @advisors',
+    'PMM-T2574 - Verify run history filters by trigger and run ID @advisors',
     async ({ advisorRunsPage, api, leftNavigation, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -114,7 +114,7 @@ pmmTest.describe('Advisor runs', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify exporting the insights of a run as CSV @advisors',
+    'PMM-T2594 - Verify exporting the insights of a run as CSV @advisors',
     async ({ advisorRunsPage, api, page }) => {
       const failing = await api.advisorsApi.createCustomCheck();
       const passing = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });
@@ -170,7 +170,7 @@ pmmTest.describe('Advisor runs', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify Copy run ID, Run again and following a run in progress @advisors',
+    'PMM-T2595 - Verify Copy run ID, Run again and following a run in progress @advisors',
     async ({ advisorRunsPage, api, context, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 

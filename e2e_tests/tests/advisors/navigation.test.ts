@@ -15,7 +15,7 @@ pmmTest.describe('Advisors navigation and settings', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the Advisors menu opens Insights, Catalog, Run history and Scheduler @advisors',
+    'PMM-T2575 - Verify the Advisors menu opens Insights, Catalog, Run history and Scheduler @advisors',
     async ({
       advisorInsightsPage,
       advisorRunsPage,
@@ -45,7 +45,7 @@ pmmTest.describe('Advisors navigation and settings', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify double-clicking a row on every Advisor table and the schedule details link @advisors',
+    'PMM-T2603 - Verify double-clicking a row on every Advisor table and the schedule details link @advisors',
     async ({
       advisorInsightsPage,
       advisorRunsPage,
@@ -114,7 +114,7 @@ pmmTest.describe('Advisors navigation and settings', () => {
     },
   );
 
-  pmmTest('PMM-Txxxx - Verify legacy Advisors URLs redirect to the new pages @advisors', async ({ page }) => {
+  pmmTest('PMM-T2576 - Verify legacy Advisors URLs redirect to the new pages @advisors', async ({ page }) => {
     const redirects = [
       { from: 'graph/advisors', to: /\/pmm-ui\/advisors$/ },
       { from: 'graph/advisors/configuration', to: /\/pmm-ui\/advisors$/ },
@@ -131,7 +131,7 @@ pmmTest.describe('Advisors navigation and settings', () => {
     }
   });
 
-  pmmTest('PMM-Txxxx - Verify the Advisors settings tab @advisors', async ({ page, settingsPage }) => {
+  pmmTest('PMM-T2577 - Verify the Advisors settings tab @advisors', async ({ page, settingsPage }) => {
     await page.goto(settingsPage.url);
     await settingsPage.tabs.advisors.click();
     await expect(page).toHaveURL(new RegExp(`${settingsPage.urls.advisors}$`));

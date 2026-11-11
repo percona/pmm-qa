@@ -13,7 +13,7 @@ pmmTest.describe('Advisors disable for services', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify disabling and re-enabling a check for a service @advisors',
+    'PMM-T2569 - Verify disabling and re-enabling a check for a service @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck();
@@ -63,7 +63,7 @@ pmmTest.describe('Advisors disable for services', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a globally disabled check cannot be disabled for services @advisors',
+    'PMM-T2570 - Verify a globally disabled check cannot be disabled for services @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
       const drawer = advisorsCatalogPage.servicesDrawer;

@@ -16,7 +16,7 @@ pmmTest.describe('Advisor check form', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify editing a custom advisor check @advisors',
+    'PMM-T2560 - Verify editing a custom advisor check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
       const form = advisorsCatalogPage.checkForm;
@@ -74,7 +74,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify cloning a built-in advisor check @advisors',
+    'PMM-T2561 - Verify cloning a built-in advisor check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const builtinCheck = await api.advisorsApi.getBuiltinCheck();
       const form = advisorsCatalogPage.checkForm;
@@ -109,7 +109,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify advisor check form validation @advisors',
+    'PMM-T2562 - Verify advisor check form validation @advisors',
     async ({ advisorsCatalogPage, page }) => {
       const form = advisorsCatalogPage.checkForm;
 
@@ -144,7 +144,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify query types follow the check technology @advisors',
+    'PMM-T2563 - Verify query types follow the check technology @advisors',
     async ({ advisorsCatalogPage, page }) => {
       const form = advisorsCatalogPage.checkForm;
       const queryTypes = {
@@ -170,7 +170,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the server rejects a duplicate check name @advisors',
+    'PMM-T2564 - Verify the server rejects a duplicate check name @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const existing = await api.advisorsApi.createCustomCheck();
       const form = advisorsCatalogPage.checkForm;
@@ -195,7 +195,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the server rejects a script indented with tabs @advisors',
+    'PMM-T2565 - Verify the server rejects a script indented with tabs @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const form = advisorsCatalogPage.checkForm;
       const name = AdvisorsApi.customCheckName();
@@ -220,7 +220,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify testing a check on a service from the form @advisors',
+    'PMM-T2566 - Verify testing a check on a service from the form @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const form = advisorsCatalogPage.checkForm;
@@ -267,7 +267,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify copying the code of a check from the details pane @advisors',
+    'PMM-T2567 - Verify copying the code of a check from the details pane @advisors',
     async ({ advisorsCatalogPage, api, context, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -282,7 +282,7 @@ pmmTest.describe('Advisor check form', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify testing a check from its details pane and the services it can target @advisors',
+    'PMM-T2602 - Verify testing a check from its details pane and the services it can target @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck({
         script:
@@ -328,7 +328,7 @@ pmmTest.describe('Advisor check form', () => {
     },
   );
 
-  pmmTest('PMM-Txxxx - Verify built-in checks cannot be changed or deleted @advisors', async ({ api }) => {
+  pmmTest('PMM-T2568 - Verify built-in checks cannot be changed or deleted @advisors', async ({ api }) => {
     const builtinCheck = await api.advisorsApi.getBuiltinCheck();
     const update = await api.advisorsApi.requestUpdateCheck(builtinCheck.name, {
       category: builtinCheck.category,
@@ -348,7 +348,7 @@ pmmTest.describe('Advisor check form', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify testing a check rejects retired severities @advisors',
+    'PMM-T2597 - Verify testing a check rejects retired severities @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const form = advisorsCatalogPage.checkForm;

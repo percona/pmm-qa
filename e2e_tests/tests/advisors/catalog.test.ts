@@ -15,7 +15,7 @@ pmmTest.describe('Advisors catalog', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the advisor checks catalog lists every check @advisors',
+    'PMM-T2553 - Verify the advisor checks catalog lists every check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const checks = await api.advisorsApi.listChecks();
       const builtinCheck = await api.advisorsApi.getBuiltinCheck();
@@ -53,7 +53,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify searching and filtering advisor checks @advisors',
+    'PMM-T2554 - Verify searching and filtering advisor checks @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const checks = await api.advisorsApi.listChecks();
       const mongoChecks = checks.filter((check) => check.technology === AdvisorCheckTechnology.mongodb);
@@ -88,7 +88,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the details pane of a built-in advisor check @advisors',
+    'PMM-T2555 - Verify the details pane of a built-in advisor check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const builtinCheck = await api.advisorsApi.getBuiltinCheck();
 
@@ -125,7 +125,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify creating a custom advisor check @advisors',
+    'PMM-T2556 - Verify creating a custom advisor check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const name = AdvisorsApi.customCheckName();
       const summary = `QA UI check ${name}`;
@@ -172,7 +172,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a custom check name requires the custom_ prefix @advisors',
+    'PMM-T2557 - Verify a custom check name requires the custom_ prefix @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const name = `qa_${Date.now()}`;
 
@@ -188,7 +188,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify disabling and enabling a check from the catalog @advisors',
+    'PMM-T2558 - Verify disabling and enabling a check from the catalog @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -214,7 +214,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify deleting a custom advisor check @advisors',
+    'PMM-T2559 - Verify deleting a custom advisor check @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -239,7 +239,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the ten risk categories of the built-in checks @advisors',
+    'PMM-T2596 - Verify the ten risk categories of the built-in checks @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const builtinChecks = (await api.advisorsApi.listChecks()).filter(({ user_defined }) => !user_defined);
       const countOf = (category: string) =>
@@ -263,7 +263,7 @@ pmmTest.describe('Advisors catalog', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify Run selected and Run all @advisors',
+    'PMM-T2598 - Verify Run selected and Run all @advisors',
     async ({ advisorsCatalogPage, api, page }) => {
       const category = `QA run ${Date.now()}`;
       const enabled = await api.advisorsApi.createCustomCheck({ category });

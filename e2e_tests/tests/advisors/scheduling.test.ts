@@ -50,7 +50,7 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
 
 pmmTest.describe('Advisor schedules falling due', () => {
   pmmTest(
-    'PMM-Txxxx - Verify a schedule runs when it falls due and emails its report @advisor-scheduling',
+    'PMM-T2611 - Verify a schedule runs when it falls due and emails its report @advisor-scheduling',
     async ({ advisorRunsPage, advisorSchedulerPage, api, page }) => {
       const recipient = MailpitApi.recipient('due');
       const service = await api.advisorsApi.getMysqlService();
@@ -111,7 +111,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify schedules that fall due during a run wait for it and start late @advisor-scheduling',
+    'PMM-T2612 - Verify schedules that fall due during a run wait for it and start late @advisor-scheduling',
     async ({ advisorRunsPage, api, page }) => {
       const recipients = [MailpitApi.recipient('wait-first'), MailpitApi.recipient('wait-second')];
       const service = await api.advisorsApi.getMysqlService();
@@ -207,7 +207,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a schedule with nothing to check records no run @advisor-scheduling',
+    'PMM-T2613 - Verify a schedule with nothing to check records no run @advisor-scheduling',
     async ({ advisorSchedulerPage, api, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });
@@ -250,7 +250,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
 
 pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
   pmmTest(
-    'PMM-Txxxx - Verify a restart interrupts a run, which keeps the insights it saved @advisor-scheduling',
+    'PMM-T2614 - Verify a restart interrupts a run, which keeps the insights it saved @advisor-scheduling',
     async ({ advisorInsightsPage, advisorRunsPage, api, cliHelper, page }) => {
       const recipient = MailpitApi.recipient('interrupted');
       const service = await api.advisorsApi.getMysqlService();
@@ -358,7 +358,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped @advisor-scheduling',
+    'PMM-T2615 - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped @advisor-scheduling',
     async ({ advisorSchedulerPage, api, cliHelper, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });

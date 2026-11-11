@@ -47,7 +47,7 @@ pmmTest.describe('Advisor scheduler', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the default "All checks daily" schedule @advisors',
+    'PMM-T2580 - Verify the default "All checks daily" schedule @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.findSchedule(defaultSchedule.name);
 
@@ -68,7 +68,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the empty Scheduler and turning Advisors off and on @advisors',
+    'PMM-T2604 - Verify the empty Scheduler and turning Advisors off and on @advisors',
     async ({ advisorSchedulerPage, api, leftNavigation, page }) => {
       const { advisorsMenu } = leftNavigation.elements;
 
@@ -114,7 +114,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify user schedules survive turning Advisors off and on @advisors',
+    'PMM-T2605 - Verify user schedules survive turning Advisors off and on @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.createSchedule({
         days_of_week: [1, 3, 5],
@@ -154,7 +154,7 @@ pmmTest.describe('Advisor scheduler', () => {
     },
   );
 
-  pmmTest('PMM-Txxxx - Verify creating a schedule @advisors', async ({ advisorSchedulerPage, api, page }) => {
+  pmmTest('PMM-T2581 - Verify creating a schedule @advisors', async ({ advisorSchedulerPage, api, page }) => {
     const check = await api.advisorsApi.createCustomCheck();
     const service = await api.advisorsApi.getMysqlService();
     const name = AdvisorsApi.scheduleName();
@@ -207,7 +207,7 @@ pmmTest.describe('Advisor scheduler', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify schedule editor validation @advisors',
+    'PMM-T2582 - Verify schedule editor validation @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const existing = await api.advisorsApi.createSchedule();
       const { editor } = advisorSchedulerPage;
@@ -276,7 +276,7 @@ pmmTest.describe('Advisor scheduler', () => {
     },
   );
 
-  pmmTest('PMM-Txxxx - Verify editing a schedule @advisors', async ({ advisorSchedulerPage, api, page }) => {
+  pmmTest('PMM-T2583 - Verify editing a schedule @advisors', async ({ advisorSchedulerPage, api, page }) => {
     const schedule = await api.advisorsApi.createSchedule();
     const service = await api.advisorsApi.getMysqlService();
     const { editor } = advisorSchedulerPage;
@@ -313,7 +313,7 @@ pmmTest.describe('Advisor scheduler', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify pausing and enabling a schedule @advisors',
+    'PMM-T2584 - Verify pausing and enabling a schedule @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.createSchedule();
       const enabledSwitch = advisorSchedulerPage.builders.enabledSwitch(schedule.schedule_id);
@@ -344,7 +344,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a duplicated schedule starts paused @advisors',
+    'PMM-T2585 - Verify a duplicated schedule starts paused @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const schedule = await api.advisorsApi.createSchedule({
@@ -377,7 +377,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify Run now, View runs and deleting a schedule that has run @advisors',
+    'PMM-T2586 - Verify Run now, View runs and deleting a schedule that has run @advisors',
     async ({ advisorRunsPage, advisorSchedulerPage, api, page }) => {
       const check = await api.advisorsApi.createCustomCheck();
       const service = await api.advisorsApi.getMysqlService();
@@ -443,7 +443,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a second run cannot start while one is active @advisors',
+    'PMM-T2587 - Verify a second run cannot start while one is active @advisors',
     async ({ advisorsCatalogPage, advisorSchedulerPage, api, page }) => {
       const schedule = await api.advisorsApi.createSchedule();
 
@@ -487,7 +487,7 @@ pmmTest.describe('Advisor scheduler', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify a schedule resolves its checks and services when it runs @advisors',
+    'PMM-T2606 - Verify a schedule resolves its checks and services when it runs @advisors',
     async ({ advisorRunsPage, advisorSchedulerPage, api, page }) => {
       const queryCheck = await api.advisorsApi.createCustomCheck({
         queries: [{ query: '1', type: 'MYSQL_SELECT' }],
@@ -594,7 +594,7 @@ pmmTest.describe('Advisor schedule editor in another time zone', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the schedule editor shows local times and coverage warnings @advisors',
+    'PMM-T2607 - Verify the schedule editor shows local times and coverage warnings @advisors',
     async ({ advisorSchedulerPage, api, page }) => {
       const mysqlCheck = await api.advisorsApi.createCustomCheck();
       const postgresqlCheck = await api.advisorsApi.createCustomCheck({

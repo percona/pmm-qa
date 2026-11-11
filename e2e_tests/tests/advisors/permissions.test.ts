@@ -46,7 +46,7 @@ pmmTest.afterAll(async ({ browser }) => {
 });
 
 pmmTest(
-  'PMM-Txxxx - Verify a viewer has no access to Advisors @advisors',
+  'PMM-T2578 - Verify a viewer has no access to Advisors @advisors',
   async ({
     advisorInsightsPage,
     advisorRunsPage,
@@ -90,7 +90,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify an editor can run Advisors but not author checks or open its settings @advisors',
+  'PMM-T2579 - Verify an editor can run Advisors but not author checks or open its settings @advisors',
   async ({
     advisorInsightsPage,
     advisorRunsPage,
