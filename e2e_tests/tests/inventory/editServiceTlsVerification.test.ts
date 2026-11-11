@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { addOwnService } from '@helpers/frameworkServices.helper';
 import { TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService, ServiceAgent } from '@interfaces/inventory';
@@ -40,7 +39,13 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
           `${container} must serve TLS`,
         ).toEqual(0);
       }
-      if (instance) service = await addOwnService(api, cliHelper, container, instance);
+      if (instance) {
+        cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+        cliHelper.execSilent(instance.stop(container)).assertSuccess();
+        cliHelper.execSilent(instance.start(container)).assertSuccess();
+        cliHelper.execSilent(instance.register(container)).assertSuccess();
+        service = await api.inventoryApi.getServiceDetailsByRegex(`^${instance.serviceName}$`);
+      }
 
       exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
       originalTls = original?.(cliHelper, container, exporter);

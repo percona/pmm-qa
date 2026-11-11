@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { addOwnService, frameworkServices } from '@helpers/frameworkServices.helper';
+import { frameworkServices } from '@helpers/frameworkServices.helper';
 import {
   basicAuth,
   endpointExporterType,
@@ -31,7 +31,9 @@ for (const ownService of serviceEndpoints) {
         api,
         await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
       );
-      service = await addOwnService(api, cliHelper, container, ownService);
+      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
+      cliHelper.execSilent(ownService.register(container)).assertSuccess();
+      service = await api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
       // The service is added again under the same name for every test, and the series of the one removed
       // before it can still be in the query window, so only the service ID tells them apart.
       up = `up{service_id="${service.service_id}"}`;

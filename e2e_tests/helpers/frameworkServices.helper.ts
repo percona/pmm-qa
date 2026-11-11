@@ -1,5 +1,3 @@
-import Api from '@api/api';
-import CliHelper from '@helpers/cli.helper';
 import { ServiceType } from '@interfaces/inventory';
 
 export interface FrameworkService {
@@ -64,19 +62,3 @@ export const ownMongod = ({
   stop: (container) =>
     `docker exec ${container} sh -c 'mongod --dbpath ${dir} --shutdown >/dev/null 2>&1; rm -rf ${dir}'`,
 });
-
-export const addOwnService = async (
-  api: Api,
-  cliHelper: CliHelper,
-  container: string,
-  ownService: OwnService,
-) => {
-  cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
-
-  if (ownService.stop) cliHelper.execSilent(ownService.stop(container)).assertSuccess();
-  if (ownService.start) cliHelper.execSilent(ownService.start(container)).assertSuccess();
-
-  cliHelper.execSilent(ownService.register(container)).assertSuccess();
-
-  return api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
-};

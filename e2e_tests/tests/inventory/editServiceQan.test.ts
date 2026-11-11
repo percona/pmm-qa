@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { addOwnService, frameworkServices } from '@helpers/frameworkServices.helper';
+import { frameworkServices } from '@helpers/frameworkServices.helper';
 import {
   currentQuerySource,
   offeredQuerySources,
@@ -172,7 +172,11 @@ for (const instance of qanInstances) {
         api,
         await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex),
       );
-      service = await addOwnService(api, cliHelper, container, instance);
+      cliHelper.removeService(container, instance.serviceType, instance.serviceName);
+      cliHelper.execSilent(instance.stop(container)).assertSuccess();
+      cliHelper.execSilent(instance.start(container)).assertSuccess();
+      cliHelper.execSilent(instance.register(container)).assertSuccess();
+      service = await api.inventoryApi.getServiceDetailsByRegex(`^${instance.serviceName}$`);
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
