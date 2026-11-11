@@ -152,6 +152,16 @@ export default class BackupsApi {
     return ((await response.json()) as BackupLocationsResponse).locations ?? [];
   };
 
+  getRestoreLogs = async (restoreId: string) => {
+    const response = await this.request.get(`${apiEndpoints.backups.restores}/${restoreId}/logs`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    return ((await response.json()) as { logs?: { data: string }[] }).logs ?? [];
+  };
+
   getRestores = async () => {
     const response = await this.request.get(apiEndpoints.backups.restores, {
       headers: GrafanaHelper.getAuthHeader(),

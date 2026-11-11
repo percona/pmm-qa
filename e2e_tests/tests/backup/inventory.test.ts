@@ -434,7 +434,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T1562 - Verify Mongo restore error logs when replica primary down @bm-mongo',
-  async ({ api, backupInventoryPage, cliHelper, page }) => {
+  async ({ api, backupInventoryPage, cliHelper }) => {
     const backupName = 'mongo_error_logs';
 
     await api.backupsApi.verifyBackupSuccess(
@@ -443,9 +443,15 @@ pmmTest(
     await backupInventoryPage.verifyBackupStatus(backupName, 'BACKUP_STATUS_SUCCESS');
 
     await pmmTest.step('Stop the primary while the restore runs', async () => {
-      await backupInventoryPage.startRestore(backupName);
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- outage window: the restore reports in progress as soon as it is requested, so no status marks PBM having started it.
-      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      const restoreId = await backupInventoryPage.startRestore(backupName);
+
+      await expect
+        .poll(async () => (await api.backupsApi.getRestoreLogs(restoreId)).length, {
+          intervals: [Timeouts.ONE_SECOND],
+          message: 'PBM should start the restore and stream its first log',
+          timeout: Timeouts.TWO_MINUTES,
+        })
+        .toBeGreaterThan(0);
       cliHelper.execute('docker exec rs101 systemctl stop mongod').assertSuccess();
       await backupInventoryPage.verifyRestoreStatus(backupName, 'RESTORE_STATUS_ERROR');
     });

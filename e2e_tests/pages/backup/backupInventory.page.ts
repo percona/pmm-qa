@@ -96,10 +96,13 @@ export default class BackupInventoryPage extends BasePage {
 
   startRestore = async (name: string) => {
     await this.openRestoreModal(name);
-    await Promise.all([
+
+    const [response] = await Promise.all([
       this.page.waitForResponse((response) => response.url().includes(apiEndpoints.backups.startRestore)),
       this.buttons.restore.click(),
     ]);
+
+    return ((await response.json()) as { restore_id: string }).restore_id;
   };
 
   submitBackup = async () => {
