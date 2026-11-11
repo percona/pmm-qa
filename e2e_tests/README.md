@@ -106,6 +106,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dump`
 - `@exporters`
 - `@fb-alerting`
+- `@fb-dashboards`
 - `@fb-encryption`
 - `@fb-instances`
 - `@fb-settings`
