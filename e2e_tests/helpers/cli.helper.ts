@@ -212,9 +212,6 @@ export default class CliHelper {
       `docker run --detach --quiet --name ${name} --network ${network} ${dockerArgs}`,
     ).assertSuccess();
 
-  supervisorctl = (action: 'restart' | 'start' | 'stop', program = 'pmm-managed') =>
-    this.execute(`docker exec pmm-server supervisorctl ${action} ${program}`).assertSuccess();
-
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
 

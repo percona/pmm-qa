@@ -21,6 +21,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import PmmServerHelper from '@helpers/pmmServer.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
@@ -84,6 +85,7 @@ const pmmTest = base.extend<{
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
+  pmmServerHelper: PmmServerHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -208,6 +210,7 @@ const pmmTest = base.extend<{
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
+  pmmServerHelper: async ({ cliHelper }, use) => await use(new PmmServerHelper(cliHelper)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
