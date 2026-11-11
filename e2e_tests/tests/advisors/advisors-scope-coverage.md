@@ -323,7 +323,7 @@ TC-67 passed on the local build, and TC-66 failed on findings 6 and 7 only. TC-6
 
 - **After Phase 4 and the review:** 3 scope items are not covered (retention, sessions and rejected logins) and 5 are dropped on purpose. 4 more have tests that have not run yet: the upgrade and settings rows and HA. The run-states row still lacks Aborted.
 - **Manual:** retention, sessions and rejected logins.
-- **Housekeeping:** replace the `PMM-Txxxx` placeholders with Zephyr keys once the zephyr-bot connector works again, and report findings 1 to 5 on PMM-14109.
+- **Housekeeping:** report findings 1 to 5 on PMM-14109.
 
 ## SMTP
 

@@ -2,7 +2,7 @@
 
 Test cases automated by the `@advisors`, `@advisor-scheduling` and `@advisor-databases` Playwright suites in this folder, and by
 the upgrade and HA tests linked from the last sections, for the new Advisors pages served by PMM UI
-(percona/pmm#5656, percona/grafana#930). Every case still carries the `PMM-Txxxx` placeholder until its Zephyr case is created.
+(percona/pmm#5656, percona/grafana#930). Each heading carries the case's Zephyr key, which its test title also starts with.
 
 Run them with:
 
@@ -48,7 +48,7 @@ Two variants change only the script: the **passing** variant returns no findings
 
 ## Catalog
 
-### TC-01 · PMM-Txxxx - Verify the advisor checks catalog lists every check
+### TC-01 · PMM-T2553 - Verify the advisor checks catalog lists every check
 
 Spec: [catalog.test.ts:18](catalog.test.ts#L18)
 
@@ -59,7 +59,7 @@ Spec: [catalog.test.ts:18](catalog.test.ts#L18)
 | 3 | Look at the pagination label. | It ends with `of <number of checks from step 1>`. |
 | 4 | Search for the summary of a built-in check. | Its row shows Source **Builtin**, the status switch matches its enabled state, and **Run** and **Disable for services** are shown. **Edit** and **Delete** are not shown. |
 
-### TC-02 · PMM-Txxxx - Verify searching and filtering advisor checks
+### TC-02 · PMM-T2554 - Verify searching and filtering advisor checks
 
 Spec: [catalog.test.ts:56](catalog.test.ts#L56)
 
@@ -69,7 +69,7 @@ Spec: [catalog.test.ts:56](catalog.test.ts#L56)
 | 2 | Click **Clear filters**, then set **Technology** to *MongoDB*. | The total count equals the number of MongoDB checks in the API. |
 | 3 | Click **Clear filters**. | The total count equals the number of all checks again. |
 
-### TC-03 · PMM-Txxxx - Verify the details pane of a built-in advisor check
+### TC-03 · PMM-T2555 - Verify the details pane of a built-in advisor check
 
 Spec: [catalog.test.ts:91](catalog.test.ts#L91)
 
@@ -80,7 +80,7 @@ Spec: [catalog.test.ts:91](catalog.test.ts#L91)
 | 3 | Click **Close**. | The pane closes and `details=` is removed from the URL. |
 | 4 | Open `/pmm-ui/advisors?details=<check name>` directly. | The details pane opens for that check. |
 
-### TC-04 · PMM-Txxxx - Verify creating a custom advisor check
+### TC-04 · PMM-T2556 - Verify creating a custom advisor check
 
 Spec: [catalog.test.ts:128](catalog.test.ts#L128)
 
@@ -93,7 +93,7 @@ Spec: [catalog.test.ts:128](catalog.test.ts#L128)
 
 Cleanup: the check is deleted through the API.
 
-### TC-05 · PMM-Txxxx - Verify a custom check name requires the custom_ prefix
+### TC-05 · PMM-T2557 - Verify a custom check name requires the custom_ prefix
 
 Spec: [catalog.test.ts:175](catalog.test.ts#L175)
 
@@ -103,7 +103,7 @@ Spec: [catalog.test.ts:175](catalog.test.ts#L175)
 | 2 | Enter the name `qa_<timestamp>` and click **Save**. | The error *Custom check names must start with "custom_".* is shown and the form stays open. |
 | 3 | Look the name up through the API. | No such check exists. |
 
-### TC-06 · PMM-Txxxx - Verify disabling and enabling a check from the catalog
+### TC-06 · PMM-T2558 - Verify disabling and enabling a check from the catalog
 
 Spec: [catalog.test.ts:191](catalog.test.ts#L191)
 
@@ -115,7 +115,7 @@ Precondition: the QA custom check exists.
 | 2 | Turn the status switch off. | A `Check "<summary>" disabled` notification appears, the switch is off, the API reports `enabled: false`, and the row's **Run** button is disabled. |
 | 3 | Turn the status switch on again. | A `Check "<summary>" enabled` notification appears, the switch is on and the API reports `enabled: true`. |
 
-### TC-07 · PMM-Txxxx - Verify deleting a custom advisor check
+### TC-07 · PMM-T2559 - Verify deleting a custom advisor check
 
 Spec: [catalog.test.ts:217](catalog.test.ts#L217)
 
@@ -131,7 +131,7 @@ Precondition: the QA custom check exists.
 
 ## Check form
 
-### TC-08 · PMM-Txxxx - Verify editing a custom advisor check
+### TC-08 · PMM-T2560 - Verify editing a custom advisor check
 
 Spec: [checkForm.test.ts:19](checkForm.test.ts#L19)
 
@@ -144,7 +144,7 @@ Precondition: the QA custom check exists.
 | 3 | Search for the new summary. | The row shows category **QA edited**, and the API returns the new summary and category. |
 | 4 | Call `PUT /v1/advisors/checks/<name>` with a new name in the body. | `200`. The check keeps its name, and no check with the new name exists. |
 
-### TC-09 · PMM-Txxxx - Verify cloning a built-in advisor check
+### TC-09 · PMM-T2561 - Verify cloning a built-in advisor check
 
 Spec: [checkForm.test.ts:77](checkForm.test.ts#L77)
 
@@ -156,7 +156,7 @@ Spec: [checkForm.test.ts:77](checkForm.test.ts#L77)
 
 Cleanup: the clone is deleted through the API.
 
-### TC-10 · PMM-Txxxx - Verify advisor check form validation
+### TC-10 · PMM-T2562 - Verify advisor check form validation
 
 Spec: [checkForm.test.ts:112](checkForm.test.ts#L112)
 
@@ -167,7 +167,7 @@ Spec: [checkForm.test.ts:112](checkForm.test.ts#L112)
 | 3 | Enter a name of `custom_` followed by 128 letters. | *Name must be at most 128 characters.* is shown. |
 | 4 | Set the query type to `METRICS_INSTANT`, then add two parameters both named `lookback`. | *This parameter is already set for the query.* is shown. |
 
-### TC-11 · PMM-Txxxx - Verify query types follow the check technology
+### TC-11 · PMM-T2563 - Verify query types follow the check technology
 
 Spec: [checkForm.test.ts:147](checkForm.test.ts#L147)
 
@@ -177,7 +177,7 @@ Spec: [checkForm.test.ts:147](checkForm.test.ts#L147)
 | 2 | Set **Technology** to *MySQL* and open the **Type** list. | `MYSQL_SHOW` and `METRICS_INSTANT` are offered; `POSTGRESQL_SHOW` is not. |
 | 3 | Set **Technology** to *PostgreSQL* and open the **Type** list. | `POSTGRESQL_SELECT` and `METRICS_INSTANT` are offered; `MONGODB_BUILDINFO` is not. |
 
-### TC-12 · PMM-Txxxx - Verify the server rejects a duplicate check name
+### TC-12 · PMM-T2564 - Verify the server rejects a duplicate check name
 
 Spec: [checkForm.test.ts:173](checkForm.test.ts#L173)
 
@@ -190,7 +190,7 @@ Precondition: the QA custom check exists.
 
 Known UI issue: the error notification covers the form's **Save** button for at least 10 seconds.
 
-### TC-13 · PMM-Txxxx - Verify the server rejects a script indented with tabs
+### TC-13 · PMM-T2565 - Verify the server rejects a script indented with tabs
 
 Spec: [checkForm.test.ts:198](checkForm.test.ts#L198)
 
@@ -199,7 +199,7 @@ Spec: [checkForm.test.ts:198](checkForm.test.ts#L198)
 | 1 | Open **Add advisor** and fill in a valid check whose script is indented with a tab character. Click **Save**. | An error saying the script should use spaces for indentation, not tabs, appears and the form stays open. |
 | 2 | Look the name up through the API. | No such check exists. |
 
-### TC-14 · PMM-Txxxx - Verify testing a check on a service from the form
+### TC-14 · PMM-T2566 - Verify testing a check on a service from the form
 
 Spec: [checkForm.test.ts:223](checkForm.test.ts#L223)
 
@@ -211,7 +211,7 @@ Spec: [checkForm.test.ts:223](checkForm.test.ts#L223)
 | 4 | Replace the script with a loop over `range(1000000000)` and click **Test**. | Within seconds, test results show **Error** and the error text contains `check script execution`. Today it reads *failed: signal: killed*, not *timed out* (finding 5 in the coverage doc). |
 | 5 | Click **Cancel**. | The form closes and the API has no check with that name. |
 
-### TC-15 · PMM-Txxxx - Verify copying the code of a check from the details pane
+### TC-15 · PMM-T2567 - Verify copying the code of a check from the details pane
 
 Spec: [checkForm.test.ts:270](checkForm.test.ts#L270)
 
@@ -222,7 +222,7 @@ Precondition: the QA custom check exists, and the browser allows clipboard acces
 | 1 | Open `/pmm-ui/advisors?details=<check name>` and click **Copy** in the script section. | A *Check code copied to clipboard* notification appears. |
 | 2 | Read the clipboard. | It contains `def check_context`. |
 
-### TC-16 · PMM-Txxxx - Verify built-in checks cannot be changed or deleted
+### TC-16 · PMM-T2568 - Verify built-in checks cannot be changed or deleted
 
 Spec: [checkForm.test.ts:331](checkForm.test.ts#L331)
 
@@ -236,7 +236,7 @@ Spec: [checkForm.test.ts:331](checkForm.test.ts#L331)
 
 ## Disable for services
 
-### TC-17 · PMM-Txxxx - Verify disabling and re-enabling a check for a service
+### TC-17 · PMM-T2569 - Verify disabling and re-enabling a check for a service
 
 Spec: [disableServices.test.ts:16](disableServices.test.ts#L16)
 
@@ -250,7 +250,7 @@ Precondition: the QA custom check exists; one MySQL service is picked as the tar
 | 4 | Run the check through the API and list the run's insights. | None of the insights belongs to the disabled service. |
 | 5 | Open the drawer again and click **Re-enable** for the service. | A `Check re-enabled for "<service name>"` notification appears, the drawer reads *This check is not disabled for any service.*, and `disabled_service_ids` is empty. |
 
-### TC-18 · PMM-Txxxx - Verify a globally disabled check cannot be disabled for services
+### TC-18 · PMM-T2570 - Verify a globally disabled check cannot be disabled for services
 
 Spec: [disableServices.test.ts:66](disableServices.test.ts#L66)
 
@@ -264,7 +264,7 @@ Precondition: the QA custom check exists and is disabled through the API.
 
 ## Insights
 
-### TC-19 · PMM-Txxxx - Verify the insights a run produced and their details
+### TC-19 · PMM-T2571 - Verify the insights a run produced and their details
 
 Spec: [insights.test.ts:22](insights.test.ts#L22)
 
@@ -277,7 +277,7 @@ Precondition: the QA custom check exists and one run of it, started through the 
 | 3 | Double-click the row. | The details pane opens with the check name, the run ID and the service name. |
 | 4 | Close the details pane. | The pane closes. |
 
-### TC-20 · PMM-Txxxx - Verify filtering insights by run from the actions menu
+### TC-20 · PMM-T2572 - Verify filtering insights by run from the actions menu
 
 Spec: [insights.test.ts:61](insights.test.ts#L61)
 
@@ -293,7 +293,7 @@ Precondition: same as TC-19.
 
 ## Run history
 
-### TC-21 · PMM-Txxxx - Verify a check run from the catalog is recorded in run history
+### TC-21 · PMM-T2573 - Verify a check run from the catalog is recorded in run history
 
 Spec: [runs.test.ts:21](runs.test.ts#L21)
 
@@ -306,7 +306,7 @@ Precondition: the QA custom check exists.
 | 3 | Click **Refresh** until the run finishes. | The run's coverage shows `1/1`. |
 | 4 | Open the run's **More actions** menu and choose **View insights**. | Insights opens at `?runId=<run id>` and the first row contains `Finding`. |
 
-### TC-22 · PMM-Txxxx - Verify run history filters by trigger and run ID
+### TC-22 · PMM-T2574 - Verify run history filters by trigger and run ID
 
 Spec: [runs.test.ts:61](runs.test.ts#L61)
 
@@ -324,7 +324,7 @@ Precondition: the QA custom check exists and one run of it, started through the 
 
 ## Navigation and settings
 
-### TC-23 · PMM-Txxxx - Verify the Advisors menu opens Insights, Catalog, Run history and Scheduler
+### TC-23 · PMM-T2575 - Verify the Advisors menu opens Insights, Catalog, Run history and Scheduler
 
 Spec: [navigation.test.ts:18](navigation.test.ts#L18)
 
@@ -335,7 +335,7 @@ Spec: [navigation.test.ts:18](navigation.test.ts#L18)
 | 3 | Choose **Advisors → Run history**. | The URL ends with `/pmm-ui/advisors/runs` and **Advisor runs** is shown. |
 | 4 | Choose **Advisors → Scheduler**. | The URL ends with `/pmm-ui/advisors/scheduler` and **Advisor schedules** is shown. |
 
-### TC-24 · PMM-Txxxx - Verify legacy Advisors URLs redirect to the new pages
+### TC-24 · PMM-T2576 - Verify legacy Advisors URLs redirect to the new pages
 
 Spec: [navigation.test.ts:117](navigation.test.ts#L117)
 
@@ -347,7 +347,7 @@ Spec: [navigation.test.ts:117](navigation.test.ts#L117)
 | 4 | Open `/graph/pmm-database-checks`. | Redirected to `/pmm-ui/advisors/insights`. |
 | 5 | Open `/graph/pmm-database-checks/all-checks`. | Redirected to `/pmm-ui/advisors`. |
 
-### TC-25 · PMM-Txxxx - Verify the Advisors settings tab
+### TC-25 · PMM-T2577 - Verify the Advisors settings tab
 
 Spec: [navigation.test.ts:134](navigation.test.ts#L134)
 
@@ -363,7 +363,7 @@ Spec: [navigation.test.ts:134](navigation.test.ts#L134)
 
 Precondition for both cases: Grafana users `advisors_viewer` (Viewer) and `advisors_editor` (Editor) exist. The suite creates them with a unique suffix and deletes them afterwards.
 
-### TC-26 · PMM-Txxxx - Verify a viewer has no access to Advisors
+### TC-26 · PMM-T2578 - Verify a viewer has no access to Advisors
 
 Spec: [permissions.test.ts:49](permissions.test.ts#L49)
 
@@ -373,7 +373,7 @@ Spec: [permissions.test.ts:49](permissions.test.ts#L49)
 | 2 | Open the Catalog, Insights, Run history and Scheduler pages one by one. | Each page shows *Insufficient access permissions.* |
 | 3 | Call `GET /v1/advisors/checks` and `GET /v1/advisors/schedules` as the viewer. | `401` or `403` for each. |
 
-### TC-27 · PMM-Txxxx - Verify an editor can run Advisors but not author checks or open its settings
+### TC-27 · PMM-T2579 - Verify an editor can run Advisors but not author checks or open its settings
 
 Spec: [permissions.test.ts:93](permissions.test.ts#L93)
 
@@ -398,7 +398,7 @@ Precondition: the QA custom check exists.
 
 Schedules a case creates are named `QA schedule <timestamp>_<random>` and deleted after the test. Unless a case says otherwise, a schedule created through the API runs Mon–Fri at 10:00 UTC on all checks and all services, with no email.
 
-### TC-28 · PMM-Txxxx - Verify the default "All checks daily" schedule
+### TC-28 · PMM-T2580 - Verify the default "All checks daily" schedule
 
 Spec: [scheduler.test.ts:50](scheduler.test.ts#L50)
 
@@ -407,7 +407,7 @@ Spec: [scheduler.test.ts:50](scheduler.test.ts#L50)
 | 1 | Call `GET /v1/advisors/schedules`. | A schedule named *All checks daily* is enabled, runs every day (0–6) at `06:00`, has no check names or service IDs, and emails the Settings recipients. |
 | 2 | Open the Scheduler. | **Advisor schedules** is shown. The schedule's row reads *Every day, 06:00 UTC*, *All checks*, *All services* and *Settings recipients*. With email notifications off, as by default, a banner says *Advisor email notifications are turned off, so no schedule sends email.* |
 
-### TC-29 · PMM-Txxxx - Verify creating a schedule
+### TC-29 · PMM-T2581 - Verify creating a schedule
 
 Spec: [scheduler.test.ts:157](scheduler.test.ts#L157)
 
@@ -421,7 +421,7 @@ Precondition: the QA custom check exists.
 | 4 | Call `GET /v1/advisors/schedules`. | The schedule is enabled, with days 1–5, time `10:00`, the QA check and the MySQL service. |
 | 5 | Look at the schedule's row and the **This week, UTC** view. | The row shows *Mon–Fri, 10:00 UTC*, *1 check*, *1 service*, the service name and a next run at 10:00 UTC; the week view has five markers for it. |
 
-### TC-30 · PMM-Txxxx - Verify schedule editor validation
+### TC-30 · PMM-T2582 - Verify schedule editor validation
 
 Spec: [scheduler.test.ts:210](scheduler.test.ts#L210)
 
@@ -436,7 +436,7 @@ Precondition: one schedule exists, created through the API.
 | 5 | Enter 21 addresses separated by spaces. | *Up to 20 addresses; there are 21.* |
 | 6 | Click **Create schedule**, then **Cancel**. | The footer lists every field but the name; the editor closes and the number of schedules is unchanged. |
 
-### TC-31 · PMM-Txxxx - Verify editing a schedule
+### TC-31 · PMM-T2583 - Verify editing a schedule
 
 Spec: [scheduler.test.ts:279](scheduler.test.ts#L279)
 
@@ -448,7 +448,7 @@ Precondition: a schedule created through the API.
 | 2 | Pick Mon, Wed and Fri, set the time to `11:30`, choose **Selected services** and tick the MySQL service. Click **Save changes**. | A `Saved "<name>". Next run: …` notification appears. |
 | 3 | Look at the row and call `GET /v1/advisors/schedules`. | The row shows *Mon, Wed, Fri, 11:30 UTC*, *1 service* and the service name; the API returns days 1, 3, 5, time `11:30` and the service ID. |
 
-### TC-32 · PMM-Txxxx - Verify pausing and enabling a schedule
+### TC-32 · PMM-T2584 - Verify pausing and enabling a schedule
 
 Spec: [scheduler.test.ts:316](scheduler.test.ts#L316)
 
@@ -460,7 +460,7 @@ Precondition: a schedule created through the API.
 | 2 | Turn the switch off. | `Paused "<name>". It won't run until you enable it.`; the row's next run reads *Paused*; its markers disappear; the API returns `enabled: false`. |
 | 3 | Turn the switch on. | `Enabled "<name>". Next run: …`; five markers again; the API returns `enabled: true`. |
 
-### TC-33 · PMM-Txxxx - Verify a duplicated schedule starts paused
+### TC-33 · PMM-T2585 - Verify a duplicated schedule starts paused
 
 Spec: [scheduler.test.ts:347](scheduler.test.ts#L347)
 
@@ -471,7 +471,7 @@ Precondition: a schedule created through the API for the MySQL service, emailing
 | 1 | Open the schedule's **More actions** menu and choose **Duplicate**. | `Duplicated as "<name> (copy)". It stays paused until you enable it, so nothing runs twice.` |
 | 2 | Call `GET /v1/advisors/schedules` and look at the copy's row. | The copy is disabled and has the same days, time, checks, services, email mode and recipients; its **Enabled** switch is off. |
 
-### TC-34 · PMM-Txxxx - Verify Run now, View runs and deleting a schedule that has run
+### TC-34 · PMM-T2586 - Verify Run now, View runs and deleting a schedule that has run
 
 Spec: [scheduler.test.ts:380](scheduler.test.ts#L380)
 
@@ -485,7 +485,7 @@ Precondition: the QA custom check exists, and a schedule created through the API
 | 4 | Click **Delete**. | `Deleted "<name>".`; the row disappears and the API no longer returns the schedule. |
 | 5 | Open Run history at `?scheduleId=<id>`, clear the filters and filter by the run's ID. | The **Schedule** filter reads *Deleted schedule*; the run is still listed as *User · <name>*. |
 
-### TC-35 · PMM-Txxxx - Verify a second run cannot start while one is active
+### TC-35 · PMM-T2587 - Verify a second run cannot start while one is active
 
 Spec: [scheduler.test.ts:446](scheduler.test.ts#L446)
 
@@ -502,7 +502,7 @@ Precondition: a schedule created through the API, and a run of all checks starte
 
 ## Insights: statuses, filters and actions
 
-### TC-36 · PMM-Txxxx - Verify the OK, Failed and Error status chips and the Status filter
+### TC-36 · PMM-T2588 - Verify the OK, Failed and Error status chips and the Status filter
 
 Spec: [insights.test.ts:99](insights.test.ts#L99)
 
@@ -514,7 +514,7 @@ Precondition: three QA custom checks, run together through the API: the passing 
 | 2 | Set **Status** to *OK*, then *Failed*, then *Error*. | The URL carries `status=ADVISOR_CHECK_RESULT_STATUS_<status>` and only that check's rows are shown each time. |
 | 3 | Double-click the *Error* row. | The details pane's **Outcome** contains *QA failure*. |
 
-### TC-37 · PMM-Txxxx - Verify insight filters, Filter by name and restoring filters from the menu
+### TC-37 · PMM-T2589 - Verify insight filters, Filter by name and restoring filters from the menu
 
 Spec: [insights.test.ts:151](insights.test.ts#L151)
 
@@ -529,7 +529,7 @@ Precondition: the QA custom check and the passing variant in category `QA passin
 | 5 | Click **Clear filters**, filter by the run ID, open a QA-check row's **More actions** menu and choose **Filter by name**. | The URL carries `check=<name>` and only that check's rows are shown. |
 | 6 | Choose **Advisors → Catalog** in the left menu, then **Advisors → Insights**. | Insights opens with `check=<name>` and `runId=<run id>` restored, showing the same rows. |
 
-### TC-38 · PMM-Txxxx - Verify copying an insight as text and as a URL that opens its details
+### TC-38 · PMM-T2590 - Verify copying an insight as text and as a URL that opens its details
 
 Spec: [insights.test.ts:217](insights.test.ts#L217)
 
@@ -543,7 +543,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 | 4 | Open the copied URL in a new page. | The insight's details pane opens maximized (the toggle offers **Minimize**) with its summary. |
 | 5 | Close the pane. | The Run ID filter holds the run's ID and **Status** reads *Failed*. |
 
-### TC-39 · PMM-Txxxx - Verify re-running a check for the service of an insight
+### TC-39 · PMM-T2591 - Verify re-running a check for the service of an insight
 
 Spec: [insights.test.ts:278](insights.test.ts#L278)
 
@@ -554,7 +554,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 | 1 | Open Insights at `?runId=<run id>` and choose **Re-run now** for an insight. | `Check "<summary>" started on <service>, run ID copied to clipboard.` |
 | 2 | Wait for the run whose ID is on the clipboard. | It completes with only the QA check, 1 planned check, 1 planned service and the insight's service ID. |
 
-### TC-40 · PMM-Txxxx - Verify disabling and enabling a check for the service of an insight
+### TC-40 · PMM-T2592 - Verify disabling and enabling a check for the service of an insight
 
 Spec: [insights.test.ts:310](insights.test.ts#L310)
 
@@ -567,7 +567,7 @@ Precondition: one run of the QA custom check.
 | 3 | Open the Catalog and search for the check. | Its services badge shows `1`. |
 | 4 | Back in Insights, choose **Enable check for service**. | `Check "<summary>" enabled for <service>`; `disabled_service_ids` is empty and the row is no longer dimmed. |
 
-### TC-41 · PMM-Txxxx - Verify the Email insights dialog
+### TC-41 · PMM-T2593 - Verify the Email insights dialog
 
 Spec: [insights.test.ts:368](insights.test.ts#L368)
 
@@ -586,7 +586,7 @@ Precondition: one run of a QA custom check whose script returns 201 findings per
 
 ## Run history and Catalog: exports, reruns and runs
 
-### TC-42 · PMM-Txxxx - Verify exporting the insights of a run as CSV
+### TC-42 · PMM-T2594 - Verify exporting the insights of a run as CSV
 
 Spec: [runs.test.ts:117](runs.test.ts#L117)
 
@@ -598,7 +598,7 @@ Precondition: the QA custom check and its passing variant run together through t
 | 2 | Choose **Export failed**. | `advisor_run_failed_insights_<yyyyMMdd_HHmmss>.csv` holds the QA check's insights and not the passing check's. |
 | 3 | Filter by the MongoDB run's ID and choose **Export all**, then **Export failed**. | *This run has no insights to export*, then *This run has no failed insights to export*; nothing downloads. |
 
-### TC-43 · PMM-Txxxx - Verify Copy run ID, Run again and following a run in progress
+### TC-43 · PMM-T2595 - Verify Copy run ID, Run again and following a run in progress
 
 Spec: [runs.test.ts:173](runs.test.ts#L173)
 
@@ -610,7 +610,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 | 2 | Choose **Run again**. | *Advisor checks started*; a new run completes with the same check. |
 | 3 | Start a run of 20 MySQL built-in checks through the API and filter by its ID, without clicking **Refresh** afterwards. | The row shows the run in progress, then completes by itself with `20/20` checks. A 20-check run takes about 20 seconds on one service. |
 
-### TC-44 · PMM-Txxxx - Verify the ten risk categories of the built-in checks
+### TC-44 · PMM-T2596 - Verify the ten risk categories of the built-in checks
 
 Spec: [catalog.test.ts:242](catalog.test.ts#L242)
 
@@ -619,7 +619,7 @@ Spec: [catalog.test.ts:242](catalog.test.ts#L242)
 | 1 | Call `GET /v1/advisors/checks`. | The built-in checks use exactly ten categories: Connections, Durability, Logging, Maintenance, Performance, Replication, Resources, Schema & indexes, Security, Versions. |
 | 2 | Open the Catalog and set **Category** to *Security*, *Schema & indexes* and *Logging* in turn. | The pagination counts as many checks as the API returns for that category. |
 
-### TC-46 · PMM-Txxxx - Verify testing a check rejects retired severities
+### TC-46 · PMM-T2597 - Verify testing a check rejects retired severities
 
 Spec: [checkForm.test.ts:351](checkForm.test.ts#L351)
 
@@ -629,7 +629,7 @@ Spec: [checkForm.test.ts:351](checkForm.test.ts#L351)
 | 2 | Change the severity to `emergency` and click **Test**. | The same error for `emergency`. |
 | 3 | Change the severity to `info` and click **Test**. | *Success* with one finding. Cancel saves nothing. |
 
-### TC-47 · PMM-Txxxx - Verify Run selected and Run all
+### TC-47 · PMM-T2598 - Verify Run selected and Run all
 
 Spec: [catalog.test.ts:266](catalog.test.ts#L266)
 
@@ -651,7 +651,7 @@ The notification after a run should offer **View results**, but build `ede5df3c7
 
 Each case restores the notification settings afterwards: notifications off, no recipients, severities *Critical* and *Error*.
 
-### TC-48 · PMM-Txxxx - Verify Advisor notification settings validation
+### TC-48 · PMM-T2599 - Verify Advisor notification settings validation
 
 Spec: [notifications.test.ts:27](notifications.test.ts#L27)
 
@@ -666,7 +666,7 @@ Spec: [notifications.test.ts:27](notifications.test.ts#L27)
 | 7 | Clear **Default recipients**. | The required-recipient error; **Apply changes** is disabled. |
 | 8 | Turn **Advisor notifications** off and click **Apply changes**. | *Settings updated*; the API returns notifications off and no recipients. |
 
-### TC-49 · PMM-Txxxx - Verify sending a test email from the API, Settings and the schedule editor
+### TC-49 · PMM-T2600 - Verify sending a test email from the API, Settings and the schedule editor
 
 Spec: [notifications.test.ts:115](notifications.test.ts#L115)
 
@@ -677,7 +677,7 @@ Spec: [notifications.test.ts:115](notifications.test.ts#L115)
 | 3 | Tick *Warning* and click **Send test email** without applying. | *Test email sent to <address>*. The email reaches that address with a `[Test]` subject and *Warning: 1*; the saved settings still have notifications off and no recipients. |
 | 4 | In the Scheduler, click **New schedule**, choose **These recipients** with a new address and **Only these** severities, untick *Critical*, and click **Send test email**. | *Sent a test report to <address> with sample Error findings. No checks were run.* The email has a `[Test]` subject and *Error: 1*. Cancel saves nothing. |
 
-### TC-50 · PMM-Txxxx - Verify the report emails of a user run and of a schedule
+### TC-50 · PMM-T2601 - Verify the report emails of a user run and of a schedule
 
 Spec: [notifications.test.ts:182](notifications.test.ts#L182)
 
@@ -692,7 +692,7 @@ Precondition: a QA custom check whose script returns three findings per service,
 
 ## Details panes and deep links
 
-### TC-51 · PMM-Txxxx - Verify testing a check from its details pane and the services it can target
+### TC-51 · PMM-T2602 - Verify testing a check from its details pane and the services it can target
 
 Spec: [checkForm.test.ts:285](checkForm.test.ts#L285)
 
@@ -704,7 +704,7 @@ Precondition: a QA custom check whose script prints `QA print output` and return
 | 2 | Open the check's details pane (`/pmm-ui/advisors?details=<name>`) and open **Test on service**. | The options are exactly the MySQL test targets the API returns. |
 | 3 | Pick the MySQL service and click **Test**. | Test results show **Success** and `· 1 finding`, and **Script output** contains `QA print output`. |
 
-### TC-52 · PMM-Txxxx - Verify double-clicking a row on every Advisor table and the schedule details link
+### TC-52 · PMM-T2603 - Verify double-clicking a row on every Advisor table and the schedule details link
 
 Spec: [navigation.test.ts:48](navigation.test.ts#L48)
 
@@ -722,7 +722,7 @@ Precondition: a QA custom check, one completed run of it, and a schedule that pi
 
 ## Scheduler: Advisors off, scope and time zones
 
-### TC-54 · PMM-Txxxx - Verify the empty Scheduler and turning Advisors off and on
+### TC-54 · PMM-T2604 - Verify the empty Scheduler and turning Advisors off and on
 
 Spec: [scheduler.test.ts:71](scheduler.test.ts#L71)
 
@@ -735,7 +735,7 @@ The test saves every schedule first, and afterwards turns Advisors on and recrea
 | 3 | Turn Advisors off through `PUT /v1/server/settings` and reload. | The banner says *Advisors are turned off, so no schedule runs. Schedules are kept.* The default schedule's row reads *Advisors are off*, and the week reads *Nothing runs while Advisors are turned off.* The Advisors menu is gone. `POST /v1/advisors/checks:start` returns `400` *advisor checks are disabled.* |
 | 4 | Delete every schedule, turn Advisors on and reload. | The API has *All checks daily* again, the Advisors-off banner is gone and the Advisors menu is back. |
 
-### TC-73 · PMM-Txxxx - Verify user schedules survive turning Advisors off and on
+### TC-73 · PMM-T2605 - Verify user schedules survive turning Advisors off and on
 
 Spec: [scheduler.test.ts:117](scheduler.test.ts#L117)
 
@@ -746,7 +746,7 @@ Precondition: a schedule created through the API for Mon, Wed and Fri at 11:30 U
 | 1 | Turn Advisors off through `PUT /v1/server/settings` and open the Scheduler. | The schedule's row is there and reads *Advisors are off*. |
 | 2 | Turn Advisors on and reload. | The API lists the same schedules as before, and this one keeps its name, days and time and is enabled. The Advisors-off banner is gone and the row is shown. |
 
-### TC-55 · PMM-Txxxx - Verify a schedule resolves its checks and services when it runs
+### TC-55 · PMM-T2606 - Verify a schedule resolves its checks and services when it runs
 
 Spec: [scheduler.test.ts:490](scheduler.test.ts#L490)
 
@@ -761,7 +761,7 @@ Precondition: two MySQL services added through `POST /v1/management/services` on
 | 5 | Remove the other node and reload. | The row is flagged *Targets no existing service*. |
 | 6 | Delete the query check and reload. | The second schedule, unflagged before, is flagged *Targets no existing check*. |
 
-### TC-56 · PMM-Txxxx - Verify the schedule editor shows local times and coverage warnings
+### TC-56 · PMM-T2607 - Verify the schedule editor shows local times and coverage warnings
 
 Spec: [scheduler.test.ts:597](scheduler.test.ts#L597)
 
@@ -777,7 +777,7 @@ Precondition: the browser runs in the `Asia/Tokyo` time zone (UTC+9, no daylight
 
 ## Insights: documentation links and topology
 
-### TC-57 · PMM-Txxxx - Verify insights link to the documentation page of their check
+### TC-57 · PMM-T2608 - Verify insights link to the documentation page of their check
 
 Spec: [insights.test.ts:457](insights.test.ts#L457)
 
@@ -789,7 +789,7 @@ Precondition: the QA custom check exists, and a run of all checks has completed.
 | 2 | Open Insights for the run filtered by a failed built-in check (`&check=<name>`). | Its row has the documentation icon. Double-clicking it opens the pane, where **Read more** links to the check's page. |
 | 3 | Open Insights for the run filtered by the QA custom check. | Its rows have no documentation icon. |
 
-### TC-58 · PMM-Txxxx - Verify an insight keeps the topology and labels of its service
+### TC-58 · PMM-T2609 - Verify an insight keeps the topology and labels of its service
 
 Spec: [insights.test.ts:512](insights.test.ts#L512)
 
@@ -804,7 +804,7 @@ Precondition: a MySQL service added as in TC-55, with environment `qa-environmen
 
 ## Email modes
 
-### TC-59 · PMM-Txxxx - Verify each schedule emails as it is set to
+### TC-59 · PMM-T2610 - Verify each schedule emails as it is set to
 
 Spec: [notifications.test.ts:240](notifications.test.ts#L240)
 
@@ -826,7 +826,7 @@ These cases run under `@advisor-scheduling`, in their own CI job, because each w
 cd e2e_tests && npx playwright test --grep @advisor-scheduling
 ```
 
-### TC-61 · PMM-Txxxx - Verify a schedule runs when it falls due and emails its report
+### TC-61 · PMM-T2611 - Verify a schedule runs when it falls due and emails its report
 
 Spec: [scheduling.test.ts:53](scheduling.test.ts#L53)
 
@@ -838,7 +838,7 @@ Precondition: the QA custom check. Notifications are turned on through the API.
 | 2 | Read the recipient's email. | *PMM Advisor Insights: 3 finding(s) for <schedule>*, saying the run *was run automatically by the schedule '<schedule>'*. |
 | 3 | Open the Scheduler and click the schedule's last run. | The link reads *3 findings* and opens Run history at the run. Triggered by shows the schedule name, not *User · <schedule>*, and there is no late-start icon. |
 
-### TC-62 · PMM-Txxxx - Verify schedules that fall due during a run wait for it and start late
+### TC-62 · PMM-T2612 - Verify schedules that fall due during a run wait for it and start late
 
 Spec: [scheduling.test.ts:114](scheduling.test.ts#L114)
 
@@ -850,7 +850,7 @@ Precondition: the QA custom check, and 40 custom checks whose script loops until
 | 2 | Read both recipients' email. | Each gets one email, *PMM Advisor Insights: 3 finding(s) for <its schedule>*. |
 | 3 | Open each run in Run history and hover the clock icon by its start time. | A: *Scheduled for HH:MM UTC. Started N min late, after the run started at HH:MM UTC (a user run).* B: the same, ending *(<name> A)*. |
 
-### TC-63 · PMM-Txxxx - Verify a schedule with nothing to check records no run
+### TC-63 · PMM-T2613 - Verify a schedule with nothing to check records no run
 
 Spec: [scheduling.test.ts:210](scheduling.test.ts#L210)
 
@@ -866,7 +866,7 @@ Precondition: a custom check that returns no findings, and a MySQL service added
 
 These cases also run under `@advisor-scheduling`, after the cases above, because they stop or restart pmm-managed with `docker exec pmm-server supervisorctl … pmm-managed`. After a start, pmm-managed waits a minute before it starts any run.
 
-### TC-64 · PMM-Txxxx - Verify a restart interrupts a run, which keeps the insights it saved
+### TC-64 · PMM-T2614 - Verify a restart interrupts a run, which keeps the insights it saved
 
 Spec: [scheduling.test.ts:253](scheduling.test.ts#L253)
 
@@ -880,7 +880,7 @@ Precondition: the QA custom check, named to sort first, and 15 custom checks who
 | 4 | Open the run in Run history and hover *Interrupted*; open its insights. | *PMM restarted, or the HA leader changed, before the run finished. The insights it saved are kept; the checks it did not reach show as Not run.* Insights shows a kept Failed insight and a *Not run* one. |
 | 5 | Run *following* now and wait for it to complete. | The recipient gets one email, for the *following* run. The interrupted run sent none. |
 
-### TC-65 · PMM-Txxxx - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped
+### TC-65 · PMM-T2615 - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped
 
 Spec: [scheduling.test.ts:361](scheduling.test.ts#L361)
 
@@ -901,7 +901,7 @@ These cases run under `@advisor-databases`, in their own amd64-only CI job. Each
 cd e2e_tests && npx playwright test --grep @advisor-databases
 ```
 
-### TC-66 · PMM-Txxxx - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2
+### TC-66 · PMM-T2616 - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2
 
 Spec: [databases.test.ts:47](databases.test.ts#L47)
 
@@ -915,7 +915,7 @@ Precondition: `mysql:5.7` and `mongo:8.2` (no replica set, no authentication) mo
 
 The test leaves out `mongodb_multiple_services` and `mongodb_swap_allocation`, which error on a standalone MongoDB ([findings](advisors-scope-coverage.md#findings) 6 and 7), until [PMM-15706](https://perconadev.atlassian.net/browse/PMM-15706) fixes them.
 
-### TC-67 · PMM-Txxxx - Verify a check reports one finding per database, naming at most 10 relations
+### TC-67 · PMM-T2617 - Verify a check reports one finding per database, naming at most 10 relations
 
 Spec: [databases.test.ts:99](databases.test.ts#L99)
 
@@ -929,7 +929,7 @@ Precondition: `postgres:17` monitored as a remote service, with database *qa_man
 
 ## Upgrade
 
-### TC-69 · PMM-Txxxx - Verify Advisors start from the default schedule with every check enabled after upgrade
+### TC-69 · PMM-T2618 - Verify Advisors start from the default schedule with every check enabled after upgrade
 
 Spec: [advisorsUpgrade.test.ts:13](../upgrade/advisorsUpgrade.test.ts#L13), tagged `@post-upgrade` and run by the upgrade workflows after upgrading from each of the last five minor releases.
 
@@ -946,7 +946,7 @@ Precondition: before the upgrade, the `@pre-upgrade` tests of the release's own 
 
 These cases run under `@pmm-ha` against a three-node PMM HA cluster. HAProxy routes every request to the leader, so a test reaches a follower with `curl` inside its pod. The leader looks for runs queued and schedules changed on followers once a minute.
 
-### TC-70 · PMM-Txxxx - Verify the HA leader runs a run requested on a follower and allows one run at a time
+### TC-70 · PMM-T2619 - Verify the HA leader runs a run requested on a follower and allows one run at a time
 
 Spec: [advisorRuns.test.ts:27](../ha/advisorRuns.test.ts#L27)
 
@@ -956,7 +956,7 @@ Spec: [advisorRuns.test.ts:27](../ha/advisorRuns.test.ts#L27)
 | 2 | Through HAProxy, start checks again. | 400: *Advisor checks are already running (started … by a user)*. |
 | 3 | Wait. | The leader starts the queued run at its next poll and completes it. |
 
-### TC-71 · PMM-Txxxx - Verify the HA leader runs a schedule created on a follower when it falls due
+### TC-71 · PMM-T2620 - Verify the HA leader runs a schedule created on a follower when it falls due
 
 Spec: [advisorRuns.test.ts:64](../ha/advisorRuns.test.ts#L64)
 
@@ -965,7 +965,7 @@ Spec: [advisorRuns.test.ts:64](../ha/advisorRuns.test.ts#L64)
 | 1 | On a follower, create a daily schedule due at the next minute. | 200. |
 | 2 | Wait for its run. | The leader runs it for its due time. |
 
-### TC-72 · PMM-Txxxx - Verify an HA leader failover interrupts the open run and starts no run of its own
+### TC-72 · PMM-T2621 - Verify an HA leader failover interrupts the open run and starts no run of its own
 
 Spec: [advisorRuns.test.ts:106](../ha/advisorRuns.test.ts#L106)
 
