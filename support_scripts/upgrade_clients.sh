@@ -91,9 +91,7 @@ upgrade_client() {
   echo "== upgrade succeeded in $c =="
 }
 
-# A container whose client came from the tarball downloads and solves the full OL9 BaseOS and AppStream
-# metadata (EPEL and PGDG too in some) before installing, at ~650 MB RSS per dnf. All 13 at once
-# exhausted memory next to PMM Server and stalled it into Grafana and pmm-managed deadline errors.
+# Every dnf here solves the full OL9 metadata; all 13 at once starve PMM Server of memory.
 parallel="${CLIENT_UPGRADE_PARALLEL:-4}"
 
 # Each container writes its own output so per-container logs stay contiguous when printed.
@@ -105,9 +103,10 @@ done
 wait
 
 rc=0
-for f in "$outdir"/*.rc; do
+# A job killed before writing its .rc leaves only its .out, and counts as a failure.
+for f in "$outdir"/*.out; do
   [ -e "$f" ] || continue
-  [ "$(cat "$f")" = 0 ] || rc=1
+  [ "$(cat "${f%.out}.rc" 2>/dev/null)" = 0 ] || rc=1
 done
 
 for f in "$outdir"/*.out; do
