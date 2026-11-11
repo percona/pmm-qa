@@ -159,9 +159,9 @@ pmmTest(
       async () => {
         await page.goto(
           urlHelper.buildUrlWithParameters(dashboard.os.networkDetails.url, {
-            from: String(burstStart + Timeouts.TEN_SECONDS),
+            from: String(burstStart),
             nodeName,
-            to: String(burstEnd - Timeouts.FIVE_SECONDS),
+            to: String(burstEnd),
           }),
         );
         await dashboard.loadAllPanels();
@@ -173,7 +173,7 @@ pmmTest(
           expect(rate, `rate during a burst of ${burstRate.toFixed(1)} connections/s`).toBeGreaterThanOrEqual(
             burstRate / 2,
           );
-          expect(rate).toBeLessThan(netstatTcp.tensOfOpsUpTo);
+          expect(rate).toBeLessThanOrEqual(burstRate * 2);
         }
 
         expect(
@@ -199,7 +199,7 @@ pmmTest(
 
         expect(await readRate(activeOpens, 'Min')).toBeLessThan(netstatTcp.tensOfOpsFrom);
         expect(max).toBeGreaterThanOrEqual(netstatTcp.tensOfOpsFrom);
-        expect(max).toBeLessThan(netstatTcp.tensOfOpsUpTo);
+        expect(max).toBeLessThanOrEqual(burstRate * 2);
 
         for (const series of netstatTcp.connectionProblems) {
           expect(await readRate(series, 'Max'), `${series} Max`).toBeLessThan(netstatTcp.maxProblemRate);

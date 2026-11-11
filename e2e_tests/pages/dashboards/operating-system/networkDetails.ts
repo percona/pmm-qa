@@ -54,7 +54,6 @@ export default class NetworkDetailsDashboard implements DashboardInterface {
     },
     series: ['established', ...connectionOpens, ...connectionProblems],
     tensOfOpsFrom: 10,
-    tensOfOpsUpTo: 100,
   };
   noDataMetrics = ['Network Utilization Hourly'];
 }
