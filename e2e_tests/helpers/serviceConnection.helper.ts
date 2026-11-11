@@ -1,4 +1,4 @@
-import { FrameworkService, frameworkServices } from '@helpers/frameworkServices.helper';
+import { FrameworkService, frameworkServices, mongo, mysql, psql } from '@helpers/frameworkServices.helper';
 import Credentials from '@helpers/credentials.helper';
 
 export const testUser = {
@@ -17,12 +17,6 @@ interface DatabaseConnection extends FrameworkService {
   original: (credentials: Credentials) => { agentPassword?: string; password: string; username: string };
 }
 
-export const psql = (container: string, ...statements: string[]) =>
-  `docker exec --user postgres ${container} psql -v ON_ERROR_STOP=1 ${statements.map((sql) => `-c "${sql}"`).join(' ')}`;
-export const mysql = (container: string, { perconaServer }: Credentials, sql: string, flags = '') =>
-  `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} ${flags} -e "${sql}"`;
-export const mongo = (container: string, { psmdb }: Credentials, js: string) =>
-  `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
 // ProxySQL keeps its admin users in one variable, which SQLite-backed admin SQL edits in place.
 const proxysqlAdmin = (container: string, { proxysql }: Credentials, sql: string) =>
   `docker exec -e MYSQL_PWD='${proxysql.password}' ${container} mysql -u${proxysql.username} -h127.0.0.1 -P6032 -e "UPDATE global_variables SET ${sql} WHERE variable_name = 'admin-admin_credentials'; LOAD ADMIN VARIABLES TO RUNTIME;"`;

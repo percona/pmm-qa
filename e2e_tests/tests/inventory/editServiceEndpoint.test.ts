@@ -6,7 +6,7 @@ import {
   EndpointSettings,
   readEndpoint,
   serviceEndpoints,
-} from '@helpers/serviceEndpoint.helper';
+} from '@helpers/serviceMetrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { GetService, ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';

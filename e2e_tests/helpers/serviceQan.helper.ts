@@ -3,9 +3,11 @@ import {
   frameworkServices,
   ownMongod,
   OwnService,
+  mongo,
+  mysql,
+  psql,
 } from '@helpers/frameworkServices.helper';
 import Credentials from '@helpers/credentials.helper';
-import { mongo, mysql, psql } from '@helpers/serviceConnection.helper';
 import { GetService, ServiceType } from '@interfaces/inventory';
 
 export const querySources = [

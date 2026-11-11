@@ -3,8 +3,8 @@ import {
   frameworkServices,
   ownMongod,
   OwnService,
+  mysql,
 } from '@helpers/frameworkServices.helper';
-import { mysql } from '@helpers/serviceConnection.helper';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import { ServiceAgent, ServiceType } from '@interfaces/inventory';

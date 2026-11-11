@@ -1,10 +1,11 @@
 import BasePage from '../base.page';
-import { EndpointSettings, MetricsScheme } from '@helpers/serviceEndpoint.helper';
 import {
   LogLevel,
   logLevelLabels,
   MetricsMode,
   ServiceMetricsSettings,
+  EndpointSettings,
+  MetricsScheme,
 } from '@helpers/serviceMetrics.helper';
 import { OptionField } from '@helpers/serviceOptions.helper';
 import { QuerySource, querySources } from '@helpers/serviceQan.helper';

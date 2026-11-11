@@ -1,3 +1,4 @@
+import Credentials from '@helpers/credentials.helper';
 import { ServiceType } from '@interfaces/inventory';
 
 export interface FrameworkService {
@@ -27,6 +28,13 @@ export const databaseServices: FrameworkService[] = [
   frameworkServices.valkey,
   frameworkServices.proxysql,
 ];
+
+export const psql = (container: string, ...statements: string[]) =>
+  `docker exec --user postgres ${container} psql -v ON_ERROR_STOP=1 ${statements.map((sql) => `-c "${sql}"`).join(' ')}`;
+export const mysql = (container: string, { perconaServer }: Credentials, sql: string, flags = '') =>
+  `docker exec -e MYSQL_PWD='${perconaServer.ps_84.password}' ${container} mysql -u${perconaServer.ps_84.username} ${flags} -e "${sql}"`;
+export const mongo = (container: string, { psmdb }: Credentials, js: string) =>
+  `docker exec ${container} mongo --quiet -u ${psmdb.root.username} -p ${psmdb.root.password} --authenticationDatabase admin --eval '${js}'`;
 
 // A service the test registers itself in a framework service's container, and removes afterwards.
 export interface OwnService {
