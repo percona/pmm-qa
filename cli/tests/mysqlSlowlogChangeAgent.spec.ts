@@ -250,7 +250,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
 
       await expect(async () => {
         await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -D ${database} -e "SELECT * FROM items WHERE ${where};"`)).assertSuccess();
-        const queries = await pmmApi.getQanQueries(serviceName, database, from);
+        const queries = await pmmApi.getQanQueries(serviceName, database, from, 'schema');
         queryId = queries.find((q) => /items/i.test(q.fingerprint) && !otherQueryIds.includes(q.queryId))?.queryId ?? '';
         expect(queryId, `No SELECT on items in QAN for ${serviceName}/${database}: ${JSON.stringify(queries)}`).toBeTruthy();
       }).toPass({ intervals: [15_000], timeout: 4 * 60_000 });
@@ -592,7 +592,8 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     // mysqld generates its own CA and client certificates in the datadir on first start. Their PEM files
     // carry a NUL byte, which change agent, unlike add, does not strip, so the CA fails to save (22P05).
     await (await cli.exec(`docker exec ${containerName} sh -c "mkdir -p /certs && for f in ca client-cert client-key; do tr -d '\\000' < /var/lib/mysql/\\$f.pem > /certs/\\$f.pem; done"`)).assertSuccess();
-    const tlsFlags = '--tls --tls-skip-verify --tls-ca-file=/certs/ca.pem --tls-cert-file=/certs/client-cert.pem --tls-key-file=/certs/client-key.pem';
+    // Credentials go with the TLS flags: a change saved while an agent restarts can be reverted (PMM-15835).
+    const tlsFlags = `--username=${newUsername} --password=${newPassword} --tls --tls-skip-verify --tls-ca-file=/certs/ca.pem --tls-cert-file=/certs/client-cert.pem --tls-key-file=/certs/client-key.pem`;
 
     try {
       await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SET GLOBAL require_secure_transport=ON;"`)).assertSuccess();
