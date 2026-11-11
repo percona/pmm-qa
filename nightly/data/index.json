@@ -174468,6 +174468,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1740",
         "by": "Investigator routine",
         "at": "2026-11-11T05:20:57Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test bug",
+        "summary": "ha backup-restore #42: PMM-T2377 failed in its first step, 'At least one service must be monitored', like #40. The one-shot capture kept only services whose timestamp(up==1) was newer than now-120s, and on this HA cluster that query returns timestamps on a 5-minute grid: #42 read 136 s past the boundary and got 4 stale internal services (#40 168 s, green #41 104 s), and even green runs never included the ps/psmdb services. Fix PR polls until every running service reports; verified in #43 on the fix branch (SUCCESS, 23 passed): its first poll matched the failing shape and the 15th, at the next boundary, had all 8 services, which the restore check then verified.",
+        "link": "https://github.com/percona/pmm-qa/pull/1753",
+        "by": "Investigator routine",
+        "at": "2026-11-11T05:21:12Z"
       }
     ],
     "claims": [
