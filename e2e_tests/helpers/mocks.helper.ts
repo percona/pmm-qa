@@ -178,6 +178,16 @@ export default class mocksHelper {
       [incidentPath]: supportDiagnosticsIncident,
     };
 
+    await this.page.route(apiEndpoints.server.settings, async (route: Route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+
+      await route.fulfill({
+        json: { ...body, settings: { ...body.settings, extensions_enabled: true } },
+        response,
+      });
+    });
+
     await this.page.route(apiEndpoints.extensions.api, (route: Route) => {
       const request = route.request();
       const path = new URL(request.url()).pathname.replace(/^.*\/extensions\/api/, '');
