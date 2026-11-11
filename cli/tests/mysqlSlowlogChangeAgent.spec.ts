@@ -380,31 +380,33 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T2525 - Verify Change agent custom labels for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
-    for (const command of [
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--custom-labels=env=qa_testing_mysqld_exporter'),
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--custom-labels=env=qa_testing_mysqld_exporter'),
-    ]) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-    }
-
-    for (const agentId of [mysqldExporterId, mysqldSlowlogAgentId]) {
-      expect((await pmmApi.getServerAgent(agentId)).custom_labels).toMatchObject({ env: 'qa_testing_mysqld_exporter' });
-    }
+    await cli.execUntilPersisted(
+      [
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--custom-labels=env=qa_testing_mysqld_exporter'),
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--custom-labels=env=qa_testing_mysqld_exporter'),
+      ],
+      ['Custom labels : env=qa_testing_mysqld_exporter', '- updated custom labels'],
+      async () => {
+        for (const agentId of [mysqldExporterId, mysqldSlowlogAgentId]) {
+          expect((await pmmApi.getServerAgent(agentId)).custom_labels, `Custom labels were not persisted on ${agentId}`).toMatchObject({ env: 'qa_testing_mysqld_exporter' });
+        }
+      },
+    );
   });
 
   test('PMM-T2526 - Verify Change agent log level for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
-    for (const command of [
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--log-level=debug'),
-      pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--log-level=debug'),
-    ]) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-    }
-
-    for (const agentId of [mysqldExporterId, mysqldSlowlogAgentId]) {
-      expect((await pmmApi.getServerAgent(agentId)).log_level).toEqual('LOG_LEVEL_DEBUG');
-    }
+    await cli.execUntilPersisted(
+      [
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--log-level=debug'),
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--log-level=debug'),
+      ],
+      ['- changed log level to debug'],
+      async () => {
+        for (const agentId of [mysqldExporterId, mysqldSlowlogAgentId]) {
+          expect((await pmmApi.getServerAgent(agentId)).log_level, `Log level was not persisted on ${agentId}`).toEqual('LOG_LEVEL_DEBUG');
+        }
+      },
+    );
   });
 
   test('PMM-T2527 - Verify Change agent debug, trace and json flags for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
@@ -484,14 +486,15 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2532 - Verify Change agent disable collectors for mysqld-exporter', async ({}) => {
     const collectorsToDisable = ['info_schema.query_response_time', 'info_schema.processlist'];
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--disable-collectors=${collectorsToDisable.join(',')}`));
-    await output.assertSuccess();
-    await output.outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
 
-    expect(
-      (await pmmApi.getServerAgent(mysqldExporterId)).disabled_collectors,
-      'Disabled collectors were not persisted on the mysqld_exporter agent',
-    ).toEqual(collectorsToDisable);
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--disable-collectors=${collectorsToDisable.join(',')}`)],
+      [`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`],
+      async () => {
+        expect((await pmmApi.getServerAgent(mysqldExporterId)).disabled_collectors, 'Disabled collectors were not persisted on the mysqld_exporter agent')
+          .toEqual(collectorsToDisable);
+      },
+    );
   });
 
   test('PMM-T2533 - Verify Change agent comments parsing for qan-mysql-slowlog-agent', async ({}) => {
@@ -505,14 +508,18 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     ];
 
     for (const commentsParsingCase of commentsParsingCases) {
-      const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--comments-parsing=${commentsParsingCase.value}`));
-      await output.assertSuccess();
-      await output.outContains(commentsParsingCase.response);
+      const agentId = mysqldSlowlogAgentId;
 
-      expect(
-        (await pmmApi.getServerAgent(mysqldSlowlogAgentId)).disable_comments_parsing ?? false,
-        `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_mysql_slowlog_agent`,
-      ).toEqual(commentsParsingCase.disabled);
+      await cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, agentId, `--comments-parsing=${commentsParsingCase.value}`)],
+        [commentsParsingCase.response],
+        async () => {
+          expect(
+            (await pmmApi.getServerAgent(agentId)).disable_comments_parsing ?? false,
+            `Comments parsing '${commentsParsingCase.value}' was not persisted on the qan_mysql_slowlog_agent`,
+          ).toEqual(commentsParsingCase.disabled);
+        },
+      );
     }
   });
 
@@ -542,49 +549,52 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2535 - Verify Change agent tablestats group table limit for mysqld-exporter', async ({}) => {
     const tablestatsGroupTableLimit = 2_000;
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--tablestats-group-table-limit=${tablestatsGroupTableLimit}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
 
-    expect(
-      (await pmmApi.getServerAgent(mysqldExporterId)).tablestats_group_table_limit,
-      'Tablestats group table limit was not persisted on the mysqld_exporter agent',
-    ).toEqual(tablestatsGroupTableLimit);
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--tablestats-group-table-limit=${tablestatsGroupTableLimit}`)],
+      [`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`],
+      async () => {
+        expect((await pmmApi.getServerAgent(mysqldExporterId)).tablestats_group_table_limit, 'Tablestats group table limit was not persisted on the mysqld_exporter agent')
+          .toEqual(tablestatsGroupTableLimit);
+      },
+    );
   });
 
   test('PMM-T2536 - Verify Change agent disable query examples for qan-mysql-slowlog-agent', async ({}) => {
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--disable-query-examples'));
-    await output.assertSuccess();
-    await output.outContains('- disabled query examples');
-
-    expect(
-      (await pmmApi.getServerAgent(mysqldSlowlogAgentId)).query_examples_disabled,
-      'Query examples were not disabled on the qan_mysql_slowlog_agent',
-    ).toEqual(true);
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--disable-query-examples')],
+      ['- disabled query examples'],
+      async () => {
+        expect((await pmmApi.getServerAgent(mysqldSlowlogAgentId)).query_examples_disabled, 'Query examples were not disabled on the qan_mysql_slowlog_agent')
+          .toEqual(true);
+      },
+    );
   });
 
   test('PMM-T2537 - Verify Change agent max query length for qan-mysql-slowlog-agent', async ({}) => {
     const maxQueryLength = 2_048;
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-query-length=${maxQueryLength}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed max query length to ${maxQueryLength}`);
 
-    expect(
-      (await pmmApi.getServerAgent(mysqldSlowlogAgentId)).max_query_length,
-      'Max query length was not persisted on the qan_mysql_slowlog_agent',
-    ).toEqual(maxQueryLength);
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-query-length=${maxQueryLength}`)],
+      [`- changed max query length to ${maxQueryLength}`],
+      async () => {
+        expect((await pmmApi.getServerAgent(mysqldSlowlogAgentId)).max_query_length, 'Max query length was not persisted on the qan_mysql_slowlog_agent')
+          .toEqual(maxQueryLength);
+      },
+    );
   });
 
   test('PMM-T2538 - Verify Change agent max slowlog file size for qan-mysql-slowlog-agent', async ({}) => {
     const maxSlowlogFileSize = '104857600';
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-slowlog-file-size=${maxSlowlogFileSize}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed max slowlog file size to ${maxSlowlogFileSize}`);
 
-    expect(
-      (await pmmApi.getServerAgent(mysqldSlowlogAgentId)).max_slowlog_file_size,
-      'Max slowlog file size was not persisted on the qan_mysql_slowlog_agent',
-    ).toEqual(maxSlowlogFileSize);
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-slowlog-file-size=${maxSlowlogFileSize}`)],
+      [`- changed max slowlog file size to ${maxSlowlogFileSize}`],
+      async () => {
+        expect((await pmmApi.getServerAgent(mysqldSlowlogAgentId)).max_slowlog_file_size, 'Max slowlog file size was not persisted on the qan_mysql_slowlog_agent')
+          .toEqual(maxSlowlogFileSize);
+      },
+    );
   });
 
   test('PMM-T2539 - Verify Change agent TLS for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
