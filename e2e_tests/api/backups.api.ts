@@ -183,6 +183,14 @@ export default class BackupsApi {
 
       expect(response.status(), await response.text()).toEqual(200);
     }
+
+    await expect
+      .poll(async () => (await this.getArtifacts()).map(({ artifact_id }) => artifact_id), {
+        intervals: [Timeouts.FIVE_SECONDS],
+        message: 'Removed backup artifacts should be gone',
+        timeout: Timeouts.FIVE_MINUTES,
+      })
+      .toEqual([]);
   };
 
   removeAllLocations = async () => {
@@ -280,7 +288,9 @@ export default class BackupsApi {
       .poll(
         async () =>
           (await this.getArtifacts())
-            .filter(({ status }) => /^BACKUP_STATUS_(PENDING|IN_PROGRESS)$/.test(status))
+            .filter(({ status }) =>
+              /^BACKUP_STATUS_(PENDING|IN_PROGRESS|DELETING|CLEANUP_IN_PROGRESS)$/.test(status),
+            )
             .map(({ artifact_id }) => artifact_id),
         {
           intervals: [Timeouts.FIVE_SECONDS],
