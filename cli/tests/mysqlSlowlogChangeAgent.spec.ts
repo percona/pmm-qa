@@ -11,17 +11,323 @@ const agentPassword = 'newAgentPassword';
 const pmmAgentConfig = '/usr/local/percona/pmm/config/pmm-agent.yaml';
 const pmmAgentLog = '/tmp/pmm-agent.log';
 let containerName: string;
-let serviceName: string;
-let mysqldExporterId: string;
-let mysqldSlowlogAgentId: string;
+
+test.beforeAll(async ({}) => {
+  const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep ps_pmm_ | head -1');
+  await result.outContains('ps_pmm', 'Percona Server docker container should exist. please run pmm-framework with --database ps,QUERY_SOURCE=slowlog');
+  containerName = result.stdout.trim();
+});
+
+test.describe('pmm-admin inventory change agent effects on mysqld_exporter and QAN slowlog agent', { tag: '@ps-slowlog-change-agent' }, () => {
+  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
+
+  const serviceName = 'mysql_change_agent_effects';
+  const database = 'pmm_qa_change_agent';
+
+  let exporterId: string;
+  let slowlogId: string;
+
+  test.beforeAll(async ({}) => {
+    await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE DATABASE IF NOT EXISTS ${database}; CREATE TABLE IF NOT EXISTS ${database}.items (id INT AUTO_INCREMENT PRIMARY KEY, pmm_qa_first_long_column INT, pmm_qa_second_long_column INT, pmm_qa_third_long_column INT, pmm_qa_fourth_long_column INT);"`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --query-source=slowlog --username=root --password=${mysqlPassword} --metrics-mode=push --agent-password=${agentPassword} ${serviceName} 127.0.0.1:3306`);
+    await output.assertSuccess();
+    const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
+    expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
+
+    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
+    exporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
+    slowlogId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT')?.agent_id ?? '';
+    expect(exporterId, `mysqld_exporter for service ${serviceName} not found`).toBeTruthy();
+    expect(slowlogId, `mysql_slowlog_agent for service ${serviceName} not found`).toBeTruthy();
+
+    await pmmAdmin.expectAgentsRunning(containerName, [exporterId, slowlogId], true);
+  });
+
+  test.afterAll(async ({}) => {
+    await pmmCli.runEach([
+      async () => {
+        if (exporterId) await pmmAdmin.removeMySQLService(containerName, serviceName);
+      },
+      async () => (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "DROP DATABASE IF EXISTS ${database};"`)).assertSuccess(),
+    ]);
+  });
+
+  test('PMM-T2542 - Verify Change agent disable collectors stops the collectors of mysqld-exporter', async ({}) => {
+    await expect(async () => {
+      expect(await pmmCli.getExporterArgs(containerName, exporterId)).toContain('--collect.info_schema.innodb_metrics');
+      expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName)).toMatch(/^mysql_info_schema_innodb_metrics_/m);
+    }).toPass({ intervals: [5_000], timeout: 60_000 });
+
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--disable-collectors=info_schema.innodb_metrics')],
+      ['- updated disabled collectors: [info_schema.innodb_metrics]'],
+      async () => {
+        expect((await pmmApi.getServerAgent(exporterId)).disabled_collectors).toEqual(['info_schema.innodb_metrics']);
+      },
+    );
+
+    await expect(async () => {
+      expect(await pmmCli.getExporterArgs(containerName, exporterId)).not.toContain('--collect.info_schema.innodb_metrics');
+      expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'InnoDB metrics are still exported')
+        .not.toMatch(/^mysql_info_schema_innodb_metrics_/m);
+    }).toPass({ intervals: [5_000], timeout: 60_000 });
+  });
+
+  test('PMM-T2543 - Verify Change agent empty disable collectors re-enables the collectors of mysqld-exporter', async ({}) => {
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15837');
+
+    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--disable-collectors='));
+    await output.assertSuccess();
+    await output.outContains('- updated disabled collectors: []');
+
+    await expect(async () => {
+      expect((await pmmApi.getServerAgent(exporterId)).disabled_collectors, 'Disabled collectors were not cleared').toEqual([]);
+    }).toPass({ intervals: [2_000], timeout: 10_000 });
+  });
+
+  test('PMM-T2544 - Verify Change agent log level is applied to the mysqld-exporter process', async ({}) => {
+    for (const level of ['debug', 'info', 'warn', 'error']) {
+      const agentId = exporterId;
+      const container = containerName;
+
+      await cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(container, pmmAdmin.ChangeAgentType.MysqldExporter, agentId, `--log-level=${level}`)],
+        [`- changed log level to ${level}`],
+        async () => {
+          expect((await pmmApi.getServerAgent(agentId)).log_level).toEqual(`LOG_LEVEL_${level.toUpperCase()}`);
+        },
+      );
+
+      await expect(async () => {
+        expect(await pmmCli.getExporterArgs(container, agentId)).toContain(`--log.level=${level}`);
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+    }
+  });
+
+  test('PMM-T2545 - Verify Change agent tablestats group table limit switches the tablestats collectors of the mysqld-exporter process', async ({}) => {
+    // -1 always disables the tablestats group; 0 means no limit.
+    for (const { limit, enabled } of [{ limit: -1, enabled: false }, { limit: 0, enabled: true }]) {
+      const agentId = exporterId;
+      const container = containerName;
+
+      await cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(container, pmmAdmin.ChangeAgentType.MysqldExporter, agentId, `--tablestats-group-table-limit=${limit}`)],
+        [`- changed tablestats group table limit to ${limit}`],
+        async () => {
+          const agent = await pmmApi.getServerAgent(agentId);
+          expect(agent.tablestats_group_table_limit ?? 0).toEqual(limit);
+          expect(agent.tablestats_group_disabled ?? false).toBe(!enabled);
+        },
+      );
+
+      await expect(async () => {
+        const args = await pmmCli.getExporterArgs(container, agentId);
+        expect(args.includes('--collect.info_schema.tables'), `--collect.info_schema.tables in ${args.join(' ')}`).toBe(enabled);
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+    }
+  });
+
+  test('PMM-T2546 - Verify Change agent custom labels are added, overwritten and removed on mysqld-exporter metrics', async ({}) => {
+    const labelled = async (labels: string) => pmmApi.queryVictoriaMetrics(`mysql_up{service_name="${serviceName}",${labels}}`);
+
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--custom-labels=env=qa_first,team=pmm_qa')],
+      ['Custom labels : env=qa_first, team=pmm_qa'],
+      async () => {
+        expect((await pmmApi.getServerAgent(exporterId)).custom_labels).toEqual({ env: 'qa_first', team: 'pmm_qa' });
+      },
+    );
+    await expect(async () => {
+      expect(await labelled('env="qa_first",team="pmm_qa"'), 'No mysql_up series carries the custom labels').not.toHaveLength(0);
+    }).toPass({ intervals: [5_000], timeout: 120_000 });
+
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--custom-labels=env=qa_second')],
+      ['Custom labels : env=qa_second'],
+      async () => {
+        expect((await pmmApi.getServerAgent(exporterId)).custom_labels).toEqual({ env: 'qa_second' });
+      },
+    );
+    await expect(async () => {
+      expect(await labelled('env="qa_second",team=""'), 'No mysql_up series carries only the overwritten label').not.toHaveLength(0);
+    }).toPass({ intervals: [5_000], timeout: 120_000 });
+
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--custom-labels=')],
+      ['Custom labels : (none)', '- custom labels are removed'],
+      async () => {
+        expect((await pmmApi.getServerAgent(exporterId)).custom_labels ?? {}).toEqual({});
+      },
+    );
+  });
+
+  test('PMM-T2547 - Verify Change agent expose exporter and push metrics are switched on and off for mysqld-exporter', async ({}) => {
+    await cli.execUntilPersisted([pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--expose-exporter')], ['- enabled expose exporter'], async () => {
+      expect((await pmmApi.getServerAgent(exporterId)).expose_exporter).toBe(true);
+    });
+    await expect(async () => {
+      await (await pmmCli.scrapeExporterFromPmmServer(containerName, exporterId, agentPassword)).assertSuccess();
+    }).toPass({ intervals: [5_000], timeout: 60_000 });
+
+    await cli.execUntilPersisted([pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--expose-exporter=false')], ['- disabled expose exporter'], async () => {
+      expect((await pmmApi.getServerAgent(exporterId)).expose_exporter).toBe(false);
+    });
+    await expect(async () => {
+      expect((await pmmCli.getExporterArgs(containerName, exporterId)).find((arg) => arg.startsWith('--web.listen-address='))).toMatch(/^--web\.listen-address=127\.0\.0\.1:/);
+      expect((await pmmCli.scrapeExporterFromPmmServer(containerName, exporterId, agentPassword)).code, 'The exporter is still reachable from PMM Server').not.toEqual(0);
+    }).toPass({ intervals: [5_000], timeout: 60_000 });
+
+    for (const push of [false, true]) {
+      const agentId = exporterId;
+      const container = containerName;
+
+      await cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(container, pmmAdmin.ChangeAgentType.MysqldExporter, agentId, `--push-metrics=${push}`)],
+        [`- ${push ? 'enabled' : 'disabled'} push metrics`],
+        async () => {
+          expect((await pmmApi.getServerAgent(agentId)).push_metrics_enabled).toBe(push);
+        },
+      );
+
+      await expect(async () => {
+        const line = (await cli.exec(`docker exec ${container} pmm-admin list`)).getStdOutLines().find((l) => l.includes(agentId));
+        expect(line).toContain(push ? 'push' : 'pull');
+      }).toPass({ intervals: [3_000], timeout: 30_000 });
+      await expect(async () => {
+        expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, container)).toMatch(/^mysql_up(\{[^}]*\})? 1$/m);
+      }).toPass({ intervals: [5_000], timeout: 120_000 });
+    }
+  });
+
+  test('PMM-T2548 - Verify Change agent credentials and max query length keep qan-mysql-slowlog-agent sending queries to QAN', async ({}) => {
+    test.setTimeout(10 * 60_000);
+
+    await cli.execUntilPersisted(
+      [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, slowlogId, `--username=root --password=${mysqlPassword}`)],
+      ['- updated username', '- updated password'],
+      async () => {
+        expect((await pmmApi.getServerAgent(slowlogId)).username).toEqual('root');
+      },
+    );
+
+    const runAndFindInQan = async (where: string, maxQueryLength: number, otherQueryIds: string[] = []) => {
+      const agentId = slowlogId;
+      const runningReports = await pmmCli.countAgentRunningReports(containerName, agentId, pmmAgentLog);
+
+      await cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, agentId, `--max-query-length=${maxQueryLength}`)],
+        [`- changed max query length to ${maxQueryLength}`],
+        async () => {
+          expect((await pmmApi.getServerAgent(agentId)).max_query_length).toEqual(maxQueryLength);
+        },
+      );
+      // A query the agent reads before pmm-agent restarts it is sent with the old limit.
+      await expect(async () => {
+        expect(await pmmCli.countAgentRunningReports(containerName, agentId, pmmAgentLog), 'pmm-agent has not restarted the slowlog agent yet').toBeGreaterThan(runningReports);
+      }).toPass({ intervals: [2_000], timeout: 60_000 });
+
+      const from = new Date(Date.now() - 60_000);
+      let queryId = '';
+
+      await expect(async () => {
+        await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -D ${database} -e "SELECT * FROM items WHERE ${where};"`)).assertSuccess();
+        const queries = await pmmApi.getQanQueries(serviceName, database, from);
+        queryId = queries.find((q) => /items/i.test(q.fingerprint) && !otherQueryIds.includes(q.queryId))?.queryId ?? '';
+        expect(queryId, `No SELECT on items in QAN for ${serviceName}/${database}: ${JSON.stringify(queries)}`).toBeTruthy();
+      }).toPass({ intervals: [15_000], timeout: 4 * 60_000 });
+
+      return { queryId, ...(await pmmApi.getQanExample(serviceName, queryId, from)) };
+    };
+
+    const truncated = await runAndFindInQan('pmm_qa_first_long_column = 1 AND pmm_qa_second_long_column = 2', 40);
+    expect(truncated.isTruncated, `Example should be truncated: ${truncated.example}`).toBe(true);
+    expect(truncated.example.length, `Example longer than 40 characters plus " ...": ${truncated.example}`).toBeLessThanOrEqual(44);
+
+    // -1 lifts the limit; a different query shape gets its own query class and example.
+    const full = await runAndFindInQan('pmm_qa_third_long_column = 3 AND pmm_qa_fourth_long_column = 4', -1, [truncated.queryId]);
+    expect(full.isTruncated, `Example should not be truncated: ${full.example}`).toBe(false);
+    expect(full.example).toContain('pmm_qa_fourth_long_column');
+  });
+
+  test('PMM-T2549 - Verify Change agent leaves fields that are not passed unchanged for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    const ignored = ['log_level', 'status', 'listen_port', 'process_exec_path'];
+    const without = (agent: Record<string, unknown>) => Object.fromEntries(Object.entries(agent).filter(([key]) => !ignored.includes(key)));
+    const before = { exporter: without(await pmmApi.getServerAgent(exporterId)), slowlog: without(await pmmApi.getServerAgent(slowlogId)) };
+
+    await cli.execUntilPersisted(
+      [
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, '--log-level=error'),
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, slowlogId, '--log-level=error'),
+      ],
+      ['- changed log level to error'],
+      async () => {
+        for (const agentId of [exporterId, slowlogId]) {
+          expect((await pmmApi.getServerAgent(agentId)).log_level).toEqual('LOG_LEVEL_ERROR');
+        }
+      },
+    );
+
+    expect(without(await pmmApi.getServerAgent(exporterId)), 'mysqld_exporter fields changed').toEqual(before.exporter);
+    expect(without(await pmmApi.getServerAgent(slowlogId)), 'qan-mysql-slowlog-agent fields changed').toEqual(before.slowlog);
+  });
+
+  test('PMM-T2550 - Verify Change agent rejects an unknown agent ID, the wrong agent type and an invalid log level for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    const unknownId = '00000000-0000-0000-0000-000000000000';
+
+    await cli.expectFailure(await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, unknownId, '--log-level=info')), `Agent with ID ${unknownId} not found.`);
+    await cli.expectFailure(await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, unknownId, '--log-level=info')), `Agent with ID ${unknownId} not found.`);
+    await cli.expectFailure(
+      await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, slowlogId, '--log-level=info')),
+      `Agent with ID ${slowlogId} has type qan-mysql-slowlog-agent, expected mysqld_exporter.`,
+    );
+    await cli.expectFailure(
+      await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, exporterId, '--log-level=info')),
+      `Agent with ID ${exporterId} has type mysqld_exporter, expected qan-mysql-slowlog-agent.`,
+    );
+
+    // mysqld_exporter has no fatal log level, unlike the QAN agents.
+    for (const level of ['foo', 'fatal']) {
+      await cli.expectFailure(
+        await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, `--log-level=${level}`)),
+        `--log-level must be one of "debug","info","warn","error" but got "${level}"`,
+      );
+    }
+  });
+
+  test('PMM-T2551 - Verify Change agent output does not print passwords for mysqld-exporter', async ({}) => {
+    for (const json of ['', ' --json']) {
+      const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, `--password=${mysqlPassword} --agent-password=${agentPassword}${json}`));
+      await output.assertSuccess();
+      const printed = `${output.stdout}${output.stderr.text}`;
+
+      expect(printed).not.toContain(mysqlPassword);
+      expect(printed).not.toContain(agentPassword);
+    }
+  });
+
+  test('PMM-T2552 - Verify Change agent debug and trace output does not print passwords for mysqld-exporter', async ({}) => {
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15836');
+
+    for (const mode of ['--debug', '--trace']) {
+      const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, exporterId, `--password=${mysqlPassword} --agent-password=${agentPassword} ${mode}`));
+      await output.assertSuccess();
+      const printed = `${output.stdout}${output.stderr.text}`;
+
+      expect(printed, `${mode} output contains the MySQL password`).not.toContain(mysqlPassword);
+      expect(printed, `${mode} output contains the agent password`).not.toContain(agentPassword);
+    }
+  });
+});
 
 test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-slowlog-change-agent' }, () => {
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
+  let serviceName: string;
+  let mysqldExporterId: string;
+  let mysqldSlowlogAgentId: string;
+
   test.beforeAll(async ({}) => {
-    const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep ps_pmm_ | head -1');
-    await result.outContains('ps_pmm', 'Percona Server docker container should exist. please run pmm-framework with --database ps,QUERY_SOURCE=slowlog');
-    containerName = result.stdout.trim();
     const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1`)).stdout.trim().split(/\s+/);
     serviceName = service[1];
     const serviceId = service[3];
