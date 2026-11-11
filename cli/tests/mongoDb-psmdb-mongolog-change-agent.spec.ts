@@ -262,8 +262,6 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2309 - Verify Change agent enable diagnostic data histograms for mongodb-exporter', async ({}) => {
-    test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
-
     await cli.execUntilPersisted(
       [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MongodbExporter, exporterId, '--enable-diagnostic-data-histograms')],
       ['- enabled diagnostic data histograms'],
@@ -312,8 +310,6 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2446 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    test.skip(versionBelow(adminVersion, '3.9.0'), 'Requires pmm-client 3.9.0+');
-
     const ext = 'basicConstraints=CA:FALSE\\nextendedKeyUsage=serverAuth,clientAuth';
     const certCommands = [
       'mkdir -p /certs',
