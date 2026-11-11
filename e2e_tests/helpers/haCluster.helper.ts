@@ -352,10 +352,6 @@ export default class HaClusterHelper {
   };
 
   /**
-   * The `up` timestamps this query returns on an HA cluster fall on a 5-minute grid, so a one-shot
-   * snapshot sees nothing newer than the last boundary: services added since then are missing, and
-   * the rest are missing too once the boundary is older than `since`.
-   *
    * @param   since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns
    * @returns every running service, once each of them reports
    */
