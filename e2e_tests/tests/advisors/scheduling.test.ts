@@ -26,9 +26,9 @@ pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterEach(async ({ api, pmmServerHelper }) => {
+pmmTest.afterEach(async ({ api, dockerHelper }) => {
   if (pmmManagedStopped) {
-    pmmServerHelper.supervisorctl('start');
+    dockerHelper.supervisorctl('start');
     await api.serverApi.waitForReady();
     pmmManagedStopped = false;
   }
@@ -251,7 +251,7 @@ pmmTest.describe('Advisor schedules falling due', () => {
 pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
   pmmTest(
     'PMM-T2614 - Verify a restart interrupts a run, which keeps the insights it saved @advisor-scheduling',
-    async ({ advisorInsightsPage, advisorRunsPage, api, page, pmmServerHelper }) => {
+    async ({ advisorInsightsPage, advisorRunsPage, api, dockerHelper, page }) => {
       const recipient = MailpitApi.recipient('interrupted');
       const service = await api.advisorsApi.getMysqlService();
       // A run executes its checks in name order, so this one runs before the slow ones.
@@ -276,7 +276,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
       createdChecks.push(...slowChecks);
       createdSchedules.push(interrupted.schedule_id, following.schedule_id);
       await api.settingsApi.updateSettings(notificationsOn);
-      pmmServerHelper.supervisorctl('restart');
+      dockerHelper.supervisorctl('restart');
       await api.serverApi.waitForReady();
 
       const runId = await api.advisorsApi.runSchedule(interrupted.schedule_id);
@@ -307,7 +307,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
             ),
           )
           .toContain(AdvisorCheckResultStatus.failed);
-        pmmServerHelper.supervisorctl('restart');
+        dockerHelper.supervisorctl('restart');
         await api.serverApi.waitForReady();
 
         return insights;
@@ -359,7 +359,7 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
 
   pmmTest(
     'PMM-T2615 - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped @advisor-scheduling',
-    async ({ advisorSchedulerPage, api, page, pmmServerHelper }) => {
+    async ({ advisorSchedulerPage, api, dockerHelper, page }) => {
       const service = await api.advisorsApi.getMysqlService();
       const check = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });
       const base = AdvisorsApi.scheduleName();
@@ -381,14 +381,14 @@ pmmTest.describe('Advisor runs across pmm-managed restarts', () => {
       const stoppedAt = Date.now();
 
       createdSchedules.push(missed.schedule_id, control.schedule_id);
-      pmmServerHelper.supervisorctl('stop');
+      dockerHelper.supervisorctl('stop');
       pmmManagedStopped = true;
 
       await pmmTest.step('pmm-managed is stopped when the first schedule falls due', async () => {
         await expect
           .poll(() => Date.now(), { timeout: Timeouts.TWO_MINUTES })
           .toBeGreaterThan(due.at.getTime() + Timeouts.FIVE_SECONDS);
-        pmmServerHelper.supervisorctl('start');
+        dockerHelper.supervisorctl('start');
         pmmManagedStopped = false;
         await api.serverApi.waitForReady();
       });

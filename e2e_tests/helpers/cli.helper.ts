@@ -207,11 +207,6 @@ export default class CliHelper {
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
-  startContainer = (name: string, dockerArgs: string, network = 'pmm-qa') =>
-    this.execute(
-      `docker run --detach --quiet --name ${name} --network ${network} ${dockerArgs}`,
-    ).assertSuccess();
-
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
 

@@ -45,14 +45,14 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
 
   pmmTest(
     'PMM-T2616 - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2 @advisor-databases',
-    async ({ advisorRunsPage, api, cliHelper, page }) => {
+    async ({ advisorRunsPage, api, dockerHelper, page }) => {
       const serviceIds: string[] = [];
 
       for (const database of [databases.mysql57, databases.mongodb82] as Database[]) {
         const name = `qa-advisors-${database.type}-${Date.now()}`;
 
         containers.push(name);
-        cliHelper.startContainer(name, database.dockerArgs);
+        dockerHelper.startContainer(name, database.dockerArgs);
 
         const service = await api.managementApi.addRemoteDatabase(
           database.type,
@@ -97,12 +97,12 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
 
   pmmTest(
     'PMM-T2617 - Verify a check reports one finding per database, naming at most 10 relations @advisor-databases',
-    async ({ advisorInsightsPage, api, cliHelper, page }) => {
+    async ({ advisorInsightsPage, api, cliHelper, dockerHelper, page }) => {
       const { credentials, dockerArgs, port, type } = databases.postgresql17;
       const container = `qa-advisors-${type}-${Date.now()}`;
 
       containers.push(container);
-      cliHelper.startContainer(container, dockerArgs);
+      dockerHelper.startContainer(container, dockerArgs);
 
       const postgresql = await api.managementApi.addRemoteDatabase(type, container, port, credentials);
 

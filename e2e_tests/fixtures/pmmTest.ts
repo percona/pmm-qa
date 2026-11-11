@@ -4,6 +4,7 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
@@ -21,7 +22,6 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
-import PmmServerHelper from '@helpers/pmmServer.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
@@ -72,6 +72,7 @@ const pmmTest = base.extend<{
   changePasswordPage: ChangePasswordPage;
   clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
+  dockerHelper: DockerHelper;
   credentials: Credentials;
   loginPage: LoginPage;
   dashboard: Dashboard;
@@ -85,7 +86,6 @@ const pmmTest = base.extend<{
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
-  pmmServerHelper: PmmServerHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -169,6 +169,7 @@ const pmmTest = base.extend<{
     await use(dashboardPage);
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
+  dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
@@ -210,7 +211,6 @@ const pmmTest = base.extend<{
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
-  pmmServerHelper: async ({ cliHelper }, use) => await use(new PmmServerHelper(cliHelper)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
