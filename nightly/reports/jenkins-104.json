@@ -3710,15 +3710,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1753",
       "by": "Investigator routine",
       "at": "2026-11-11T05:21:12Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-11T03:01:32Z",
       "suites": [
         "Upgrade"
-      ]
+      ],
+      "verdict": "setup bug",
+      "summary": "upgrade 3.6.0 UI: 'Verify grafana logs after upgrade' found 'failed to save dashboard ... context deadline exceeded' at 01:02:48, inside the 782 s client-upgrade step: the nights 100/102/103 signature. Root cause: upgrade_clients.sh runs dnf install pmm-client in all 13 tarball-installed containers at once, and each downloads and solves the full OL9 (plus EPEL/PGDG) metadata. On a 4-CPU/16 GB CHAOS VM replay that held 6.5 GB RSS in dnf, left 300 MB free, load ~400, and PMM readyz stopped answering. Fix PR caps it at 4 at a time; dispatched upgrade runs on the branch passed 3.6.0 UI (step 307 s) and 3.7.0 Docker (433 s), both with the Grafana log check green.",
+      "link": "https://github.com/percona/pmm-qa/pull/1754",
+      "by": "Investigator routine",
+      "at": "2026-11-11T05:21:18Z"
     }
-  ]
+  ],
+  "claims": []
 }
