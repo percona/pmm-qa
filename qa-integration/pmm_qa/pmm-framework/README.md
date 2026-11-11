@@ -63,6 +63,15 @@ qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database valkey=8,SETUP_TYPE=sentinel
 ```
 
+Add Percona Search for MongoDB (mongot) to a PSMDB 8.3 replica set, with one
+search and one vector index on `search.movies`; `MONGOT_VERSION` picks the
+`percona/percona-search-mongodb` tag:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database psmdb=8.3,MONGOT=true
+```
+
 Run independent setups concurrently:
 
 ```bash
