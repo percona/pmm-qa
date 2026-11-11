@@ -174456,6 +174456,36 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-11T03:01:32Z",
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-11T03:01:32Z",
+        "suites": [
+          "Nightly"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-11T03:01:32Z",
+        "suites": [
+          "Nightly Compatibility"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-11T03:01:32Z",
+        "suites": [
+          "Upgrade"
+        ]
+      }
+    ]
   }
 ]
