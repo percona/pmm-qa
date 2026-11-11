@@ -26,8 +26,6 @@ for (const serviceMetrics of serviceMetricsSettings) {
     let original: ServiceMetricsSettings;
     let container: string;
     const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-    // pmm-framework joins some containers, such as psmdb's, to networks PMM Server is not on, and their node
-    // can be registered under an address on one of those. The container name resolves on the network both share.
     const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) =>
       dockerHelper.getHttpStatus(
         serverContainer,
