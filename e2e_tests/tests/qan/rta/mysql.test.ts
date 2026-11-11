@@ -161,7 +161,7 @@ pmmTest(
         'Blocked by 77',
       );
       await expect(queryAnalytics.rta.builders.blockedUnknownChipForQuery('DELETE FROM sbtest1')).toHaveText(
-        'Blocked: unknown',
+        'Possibly blocked',
       );
       await expect(queryAnalytics.rta.builders.blockedChipForQuery('SELECT c FROM sbtest1')).toHaveCount(0);
       await expect(queryAnalytics.rta.toggles.blockedOnly).toHaveText('Blocked only (1)');
@@ -230,7 +230,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Hide BEGIN/COMMIT toggle filters transaction-control statements @rta',
+  'Verify Hide transaction control toggle filters transaction-control statements @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await pmmTest.step('Mock BEGIN, COMMIT and SELECT statements', async () => {
       await mocks.mockRealTimeAnalyticsQueries([
@@ -246,7 +246,7 @@ pmmTest(
     });
 
     await pmmTest.step('Enable the toggle and verify BEGIN and COMMIT disappear', async () => {
-      await expect(queryAnalytics.rta.toggles.hideBeginCommit).toHaveText('Hide BEGIN/COMMIT');
+      await expect(queryAnalytics.rta.toggles.hideBeginCommit).toHaveText('Hide transaction control');
 
       await queryAnalytics.rta.toggles.hideBeginCommit.click();
 
