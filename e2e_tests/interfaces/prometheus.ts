@@ -10,3 +10,10 @@ export interface PrometheusQueryResponse {
   };
   status: string;
 }
+
+export interface ScrapeTarget {
+  health: 'down' | 'unknown' | 'up';
+  labels: Record<string, string>;
+  lastError: string;
+  scrapeUrl: string;
+}

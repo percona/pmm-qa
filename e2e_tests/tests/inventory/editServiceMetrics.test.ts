@@ -86,6 +86,11 @@ for (const serviceMetrics of serviceMetricsSettings) {
       async ({ api, editServicePage }) => {
         const otherMode: MetricsMode =
           original.metricsMode === 'METRICS_MODE_PUSH' ? 'METRICS_MODE_PULL' : 'METRICS_MODE_PUSH';
+        const { agent_id } = await exporter(api);
+        const serverTargets = async () =>
+          (await api.grafanaApi.getActiveTargets())
+            .filter(({ labels }) => labels.instance === agent_id)
+            .map(({ health, lastError, scrapeUrl }) => ({ health, lastError, scrapeUrl }));
 
         await editServicePage.open(service.service_id);
 
@@ -93,8 +98,18 @@ for (const serviceMetrics of serviceMetricsSettings) {
           await pmmTest.step(`Change metrics mode to ${metricsMode}`, async () => {
             await saveMetrics(api, editServicePage, original, { metricsMode });
 
-            // Awaited once the exporter runs in the new mode, so the sample cannot come from the old one:
-            // PMM Server scrapes a pulled exporter, the client's vmagent sends a pushed one's metrics.
+            // PMM Server scrapes a pulled exporter, the client's vmagent sends a pushed one's metrics. A new
+            // sample alone does not say which: vmagent can still scrape the exporter just after it turns to pull.
+            await expect
+              .poll(serverTargets, {
+                message: `PMM Server scrapes the exporter only in pull mode, now ${metricsMode}`,
+                timeout: Timeouts.TWO_MINUTES,
+              })
+              .toEqual(
+                metricsMode === 'METRICS_MODE_PULL'
+                  ? expect.arrayContaining([expect.objectContaining({ health: 'up' })])
+                  : [],
+              );
             await api.prometheusApi.waitForNewSample(`${upMetric}{service_name="${service.service_name}"}`);
           });
         }
