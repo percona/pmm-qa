@@ -528,7 +528,6 @@ assert_file_log() {
   ! grep -q syslog "$1" || false
 }
 
-# The config directories are private mktemp directories, so read the one compose was given.
 # Usage: recorded_config_dir rs|rs1|rs2|cfg|mongos
 recorded_config_dir() {
   local line re=" $1=([^ ]*)"
