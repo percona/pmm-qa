@@ -473,7 +473,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
       test_name: 'PSMDB Shard 7.x'
 
   psmdb-8-shard-tests:
@@ -489,7 +489,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
       test_name: 'PSMDB Shard 8.x'
 
   psmdb-7-arbiter-tests:

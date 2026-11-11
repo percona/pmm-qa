@@ -149,4 +149,6 @@ dist
 .claude/
 .cursor
 .cursorrules
+.migration-observations/
+.playwright-cli/
 

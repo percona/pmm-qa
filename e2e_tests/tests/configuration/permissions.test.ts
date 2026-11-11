@@ -40,10 +40,10 @@ pmmTest.afterAll(async ({ browser }) => {
 
 pmmTest(
   'PMM-T682 - Verify backup locations access for user with viewer role [critical] @grafana-pr',
-  async ({ api, grafanaHelper, page, scheduledBackupsPage }) => {
+  async ({ api, grafanaHelper, page, scheduledBackupsPage, storageLocationsPage }) => {
     await api.settingsApi.enableBackupManagement();
     await grafanaHelper.authorize(users.viewer, password);
-    await page.goto(scheduledBackupsPage.urls.locations);
+    await page.goto(storageLocationsPage.url);
     await expect(scheduledBackupsPage.elements.unauthorized).toBeVisible({
       timeout: Timeouts.THIRTY_SECONDS,
     });
@@ -51,10 +51,12 @@ pmmTest(
   },
 );
 
+const grafanaPages = new Set(['addInstancePage']);
+
 for (const role of ['viewer', 'editor'] as const) {
   for (const target of ['addInstancePage', 'settingsPage', 'nodesPage', 'servicesPage'] as const) {
     pmmTest(
-      `PMM-T824 - Verify ${role} users do not see Inventory, Settings, Remote Instances Page @permissions-nightly @gssapi-nightly @grafana-pr | ${target}`,
+      `PMM-T824 - Verify ${role} users do not see Inventory, Settings, Remote Instances Page @permissions-nightly @gssapi-nightly${grafanaPages.has(target) ? ' @grafana-pr' : ''} | ${target}`,
       async ({ addInstancePage, grafanaHelper, nodesPage, page, servicesPage, settingsPage }) => {
         const { elements, url } = { addInstancePage, nodesPage, servicesPage, settingsPage }[target];
 

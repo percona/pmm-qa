@@ -1,14 +1,11 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
 
 export default class GrafanaApi {
-  constructor(
-    private readonly page: Page,
-    private request: APIRequestContext,
-  ) {}
+  constructor(private request: APIRequestContext) {}
 
   changePassword = async (currentPassword: string, newPassword: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken('admin', currentPassword)}` };
@@ -202,24 +199,12 @@ export default class GrafanaApi {
   };
 
   waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    const deadline = Date.now() + timeout;
-
-    while (true) {
-      const metric = await this.getMetric(metricName);
-
-      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
-
-      // Against the wall clock, not a count of sleeps, which leaves the time spent in
-      // getMetric outside the budget.
-      const remaining = deadline - Date.now();
-
-      if (remaining <= 0) {
-        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-      }
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
-      await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
-    }
+    await expect
+      .poll(async () => (await this.getMetric(metricName)).results.A.frames[0].data.values.length, {
+        message: `Timed out waiting for metric data for metric: ${metricName}`,
+        timeout,
+      })
+      .not.toBe(0);
   };
 
   waitForMetricAbsent = async (metricName: string, from: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
