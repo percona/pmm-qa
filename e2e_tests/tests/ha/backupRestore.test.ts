@@ -48,12 +48,10 @@ pmmTest(
     });
 
     await pmmTest.step('Capture the services running and reporting before the backup', async () => {
-      monitoredServices = await haClusterHelper.servicesRunningAndReporting(
+      monitoredServices = await haClusterHelper.waitForRunningServicesReporting(
         api,
         (await api.prometheusApi.waitForServerTime()) - 120,
       );
-
-      expect(monitoredServices.length, 'At least one service must be monitored').toBeGreaterThan(0);
     });
 
     const backupId = await pmmTest.step('Back up with a Job cloned from the backup CronJob', async () => {
