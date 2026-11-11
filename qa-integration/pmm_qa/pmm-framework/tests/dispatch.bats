@@ -528,6 +528,14 @@ assert_file_log() {
   ! grep -q syslog "$1" || false
 }
 
+# Usage: recorded_config_dir rs|rs1|rs2|cfg|mongos
+recorded_config_dir() {
+  local line re=" $1=([^ ]*)"
+  line=$(grep '^config ' "$DOCKER_CALLS" | tail -n 1)
+  [[ $line =~ $re ]]
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
 @test "PSMDB QUERY_SOURCE=mongolog gives the replica set a file log and registers its members with mongolog" {
   stub_prebaked_docker
   record_compose_config_dirs
@@ -535,8 +543,10 @@ assert_file_log() {
   parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,MINIO=false'
   dispatch_setup
 
-  local dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog/mongod-rs
-  grep -q "^config rs=$dir rs1= rs2= cfg= mongos=$" "$DOCKER_CALLS"
+  local dir
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs.* ]]
+  grep -q '^config rs=[^ ]* rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
   assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
   grep -q '^  replSetName: "rs"$' "$dir/mongod.conf"
   for node in rs101 rs102 rs103; do
@@ -546,8 +556,8 @@ assert_file_log() {
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,STORAGE_ENGINE=inmemory,MINIO=false'
   dispatch_setup
-  dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog/mongod-rs-inmemory
-  grep -q "^config rs=$dir " "$DOCKER_CALLS"
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-inmemory.* ]]
   assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
 }
 
@@ -560,14 +570,19 @@ assert_file_log() {
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
   dispatch_setup
 
-  local dir=$BATS_TEST_TMPDIR/pmm-framework-psmdb-mongolog
-  grep -q "^config rs= rs1=$dir/mongod-rs1 rs2=$dir/mongod-rs2 cfg=$dir/mongod-cfg mongos=$dir/mongos$" "$DOCKER_CALLS"
-  for set in rs1 rs2 cfg; do
-    assert_file_log "$dir/mongod-$set/mongod.conf" /var/log/mongo/mongod.log
+  local rs1 rs2 cfg mongos dir
+  rs1=$(recorded_config_dir rs1) rs2=$(recorded_config_dir rs2) cfg=$(recorded_config_dir cfg) mongos=$(recorded_config_dir mongos)
+  grep -q '^config rs= ' "$DOCKER_CALLS"
+  [[ $rs1 == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs1.* ]]
+  [[ $rs2 == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs2.* ]]
+  [[ $cfg == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-cfg.* ]]
+  [[ $mongos == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongos.* ]]
+  for dir in "$rs1" "$rs2" "$cfg"; do
+    assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
   done
-  grep -q '^  clusterRole: configsvr$' "$dir/mongod-cfg/mongod.conf"
-  assert_file_log "$dir/mongos/mongos.conf" /var/log/mongo/mongos.log
-  [[ -f $dir/mongos/mongos.service ]]
+  grep -q '^  clusterRole: configsvr$' "$cfg/mongod.conf"
+  assert_file_log "$mongos/mongos.conf" /var/log/mongo/mongos.log
+  [[ -f $mongos/mongos.service ]]
   [[ $(grep -Ec '^exec (rs[12]0[123]|rscfg0[123]|mongos) pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ' "$DOCKER_CALLS") -eq 10 ]]
   ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
 }
