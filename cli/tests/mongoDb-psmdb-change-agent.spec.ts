@@ -377,7 +377,10 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
         await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
         await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
         await expect(async () => {
-          await (await cli.exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess();
+          const status = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+          await status.assertSuccess();
+          // A disconnected agent still exits 0 and prints "Connected : false".
+          expect(status.stdout).toMatch(/Connected\s+:\s+true/);
         }).toPass({ intervals: [2_000], timeout: 60_000 });
       },
       async () => {
@@ -708,7 +711,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
     await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
 
     await expect(async () => {
-      await (await cli.exec(`docker exec ${containerName} pmm-admin status --pmm-agent-listen-port=7778`)).assertSuccess();
+      const status = await cli.exec(`docker exec ${containerName} pmm-admin status --pmm-agent-listen-port=7778`);
+      await status.assertSuccess();
+      expect(status.stdout).toMatch(/Connected\s+:\s+true/);
     }).toPass({ intervals: [2_000], timeout: 60_000 });
 
     await pmmAdmin.changeAgentsUntilPersisted(
