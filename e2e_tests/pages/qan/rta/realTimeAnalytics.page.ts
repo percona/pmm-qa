@@ -42,6 +42,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
         .last()
         .getByTestId(/-host-cell$/),
     hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-host-cell$/),
+    idleInTransactionChipForQuery: (queryText: string) =>
+      this.builders.rowByQueryText(queryText).getByTestId(/^query-.+-idle-in-transaction-chip$/),
+    operationIdForQueryByText: (queryText: string) =>
+      this.builders.rowByQueryText(queryText).getByTestId(/-operation-id-cell$/),
     operationIdForRow: (rowIndex: string) =>
       this.builders.rowByIndex(rowIndex).getByTestId(/-operation-id-cell$/),
     queryByRowIndex: (rowIndex: string) =>
@@ -52,6 +56,11 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
     rowsPerPageOption: (pageSize: string) => this.page.getByRole('option', { exact: true, name: pageSize }),
     serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
+    sessionStatusMessageFor: (sessionName: string) =>
+      this.page
+        .getByTestId(sessionsTableTestId)
+        .locator('tr', { hasText: sessionName })
+        .getByTestId('session-status-message'),
     technologyForSession: (sessionName: string) =>
       this.page
         .getByTestId(sessionsTableTestId)
@@ -90,17 +99,25 @@ export default class RealTimeAnalyticsPage extends BasePage {
     columnPinButtons: this.page.getByRole('button', { name: /^(Pin to (left|right)|Unpin)$/ }),
     columnsMenu: this.page.getByRole('menu'),
     databaseColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Database', { exact: true }),
+    detailsClientAppName: this.page.getByTestId('client-app-name-value'),
     detailsCommand: this.page.getByTestId('command-value'),
+    detailsDatabaseName: this.page.getByTestId('database-name-value'),
+    detailsDbInstanceAddress: this.page.getByTestId('db-instance-address-value'),
     detailsFullScan: this.page.getByTestId('full-scan-value'),
     detailsLockTime: this.page.getByTestId('lock-time-value'),
     detailsOperationId: this.page.getByTestId('operation-id-value'),
+    detailsOperationStartTime: this.page.getByTestId('operation-start-time-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
     detailsProgramName: this.page.getByTestId('program-name-value'),
+    detailsQueryId: this.page.getByTestId('query-id-value'),
+    detailsQueryTextTruncated: this.page.getByTestId('query-text-truncated'),
     detailsRawData: this.page.getByTestId('query-raw-data'),
     detailsRowsExamined: this.page.getByTestId('rows-examined-value'),
     detailsRowsSent: this.page.getByTestId('rows-sent-value'),
     detailsState: this.page.getByTestId('state-value'),
+    detailsTransactionStartTime: this.page.getByTestId('transaction-start-time-value'),
     detailsUsername: this.page.getByTestId('username-value'),
+    detailsWaitEvent: this.page.getByTestId('wait-event-value'),
     durationCells: this.page.getByTestId(realTimeTableTestId).getByTestId(/-elapsed-time-cell$/),
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
@@ -110,6 +127,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByRole('columnheader', { name: /Elapsed time/ })
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
+    newSessionModal: this.page.getByTestId('new-session-modal'),
     // peak-ui <1.0.30 wraps the empty row in an info alert, >=1.0.30 in an EmptyState (PMM-15002).
     noQueriesAvailable: this.builders.rowByIndex('1').getByText(/^(No queries available|No data found)$/),
     queryTextColumnHeader: this.page
@@ -127,6 +145,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     technologyColumnHeader: this.page
       .getByTestId(sessionsTableTestId)
       .getByText('Technology', { exact: true }),
+    tooltip: this.page.getByRole('tooltip'),
     userColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('User', { exact: true }),
   };
   inputs = {

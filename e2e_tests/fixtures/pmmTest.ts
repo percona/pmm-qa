@@ -22,6 +22,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import MySQLHelper from '@helpers/mysql.helper';
+import PostgreSQLHelper from '@helpers/postgresql.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
@@ -75,6 +76,7 @@ const pmmTest = base.extend<{
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
   mySqlDbHelper: MySQLHelper;
+  postgreSqlDbHelper: PostgreSQLHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -209,6 +211,18 @@ const pmmTest = base.extend<{
     const portalRemoval = new PortalRemoval(page);
 
     await use(portalRemoval);
+  },
+  postgreSqlDbHelper: async ({ credentials }, use) => {
+    const postgreSqlDbHelper = new PostgreSQLHelper({
+      database: 'postgres',
+      host: '127.0.0.1',
+      password: credentials.pdpgsql.password,
+      port: 5_432,
+      username: credentials.pdpgsql.username,
+    });
+
+    await use(postgreSqlDbHelper);
+    await postgreSqlDbHelper.close();
   },
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);

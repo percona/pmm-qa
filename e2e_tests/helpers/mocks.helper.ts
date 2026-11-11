@@ -6,6 +6,7 @@ interface RtaQueryMock {
   duration?: string;
   mongoDb?: boolean;
   mySqlPayload?: Record<string, unknown>;
+  postgreSqlPayload?: Record<string, unknown>;
   queryId: string;
   queryText: string;
   username?: string;
@@ -13,24 +14,34 @@ interface RtaQueryMock {
 
 interface RtaSessionMock {
   serviceId: string;
-  serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' | 'SERVICE_TYPE_MYSQL_SERVICE';
+  serviceType:
+    'SERVICE_TYPE_MONGODB_SERVICE' | 'SERVICE_TYPE_MYSQL_SERVICE' | 'SERVICE_TYPE_POSTGRESQL_SERVICE';
   statusMessage?: string;
 }
 
-// Snake_case, as the API sends it; the UI camelizes it.
-const rtaQueryWireFormat = (query: RtaQueryMock) => ({
-  client_address: '127.0.0.1:52134',
-  ...(query.mongoDb
+const rtaMockServiceId = (query: RtaQueryMock) => {
+  if (query.mongoDb) return 'mock-mongo-service';
+
+  return query.postgreSqlPayload ? 'mock-postgresql-service' : 'mock-mysql-service';
+};
+
+const sqlPayloadWireFormat = (query: RtaQueryMock) =>
+  query.postgreSqlPayload
     ? {
-        mongo_db_payload: {
-          client_app_name: 'mongosh',
-          collection: 'mycollection',
-          database_name: 'admin',
-          db_instance_address: '127.0.0.1:27017',
-          operation: 'query',
-          operation_start_time: new Date().toISOString(),
-          plan_summary: 'COLLSCAN',
-          username: 'pmm-mongo',
+        postgresql_payload: {
+          application_name: 'pgbench',
+          blocked_status: 'BLOCKED_STATUS_NOT_BLOCKED',
+          database_name: query.database ?? 'pgbench',
+          db_instance_address: '127.0.0.1:5432',
+          pid: Number(query.queryId),
+          query_id: '-6094915464410306043',
+          query_start_time: new Date().toISOString(),
+          state: 'active',
+          transaction_start_time: new Date().toISOString(),
+          username: query.username ?? 'pgbench',
+          wait_event: '',
+          wait_event_type: '',
+          ...query.postgreSqlPayload,
         },
       }
     : {
@@ -47,14 +58,31 @@ const rtaQueryWireFormat = (query: RtaQueryMock) => ({
           username: query.username ?? 'sbtest@localhost',
           ...query.mySqlPayload,
         },
-      }),
+      };
+// Snake_case, as the API sends it; the UI camelizes it.
+const rtaQueryWireFormat = (query: RtaQueryMock) => ({
+  client_address: '127.0.0.1:52134',
+  ...(query.mongoDb
+    ? {
+        mongo_db_payload: {
+          client_app_name: 'mongosh',
+          collection: 'mycollection',
+          database_name: 'admin',
+          db_instance_address: '127.0.0.1:27017',
+          operation: 'query',
+          operation_start_time: new Date().toISOString(),
+          plan_summary: 'COLLSCAN',
+          username: 'pmm-mongo',
+        },
+      }
+    : sqlPayloadWireFormat(query)),
   query_collect_time: new Date().toISOString(),
   query_execution_duration: query.duration ?? '2s',
   query_id: query.queryId,
   query_raw_json: JSON.stringify({ current_statement: query.queryText }),
   query_text: query.queryText,
-  service_id: query.mongoDb ? 'mock-mongo-service' : 'mock-mysql-service',
-  service_name: query.mongoDb ? 'mock-mongo-service' : 'mock-mysql-service',
+  service_id: rtaMockServiceId(query),
+  service_name: rtaMockServiceId(query),
 });
 
 export default class mocksHelper {

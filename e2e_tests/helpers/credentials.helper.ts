@@ -3,6 +3,10 @@ export default class Credentials {
     accessKey: process.env.PMM_QA_AWS_ACCESS_KEY_ID ?? '',
     secretKey: process.env.PMM_QA_AWS_ACCESS_KEY ?? '',
   };
+  pdpgsql = {
+    password: 'pass+this',
+    username: 'postgres',
+  };
   perconaServer = {
     password: 'GRgrO9301RuF',
     ps_84: {
