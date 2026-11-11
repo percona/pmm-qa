@@ -6,6 +6,7 @@
 # Env:   CLIENT_UPGRADE_REPOSITORY  pmm3-client repository to upgrade from (optional)
 #        CLIENT_INSTALL_VERSION  without CLIENT_UPGRADE_REPOSITORY, pmm3-rc upgrades from experimental, anything else from testing
 #        CLIENT_TARBALL_UPGRADE  tarball URL to upgrade from instead of the repository (optional)
+#        CLIENT_UPGRADE_PARALLEL  containers upgraded at once (default 4)
 set -uo pipefail
 
 want="${1:?usage: $0 <expected-version>}"
@@ -90,17 +91,23 @@ upgrade_client() {
   echo "== upgrade succeeded in $c =="
 }
 
+# A container whose client came from the tarball downloads and solves the full OL9 BaseOS and AppStream
+# metadata (EPEL and PGDG too in some) before installing, at ~650 MB RSS per dnf. All 13 at once
+# exhausted memory next to PMM Server and stalled it into Grafana and pmm-managed deadline errors.
+parallel="${CLIENT_UPGRADE_PARALLEL:-4}"
+
 # Each container writes its own output so per-container logs stay contiguous when printed.
 outdir=$(mktemp -d)
-pids=()
 for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
-  upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
-  pids+=("$!")
+  while [ "$(jobs -pr | wc -l)" -ge "$parallel" ]; do wait -n; done
+  { upgrade_client "$c" >"$outdir/$c.out" 2>&1; echo "$?" >"$outdir/$c.rc"; } &
 done
+wait
 
 rc=0
-for pid in "${pids[@]}"; do
-  wait "$pid" || rc=1
+for f in "$outdir"/*.rc; do
+  [ -e "$f" ] || continue
+  [ "$(cat "$f")" = 0 ] || rc=1
 done
 
 for f in "$outdir"/*.out; do
