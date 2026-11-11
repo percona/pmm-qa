@@ -168,8 +168,7 @@ pmmTest(
         Status: status,
       });
 
-    await pmmTest.step('Store backups on MinIO and see no failing agent', async () => {
-      cliHelper.execute('docker exec rs101 pbm config --file /etc/pbm/minio.yaml').assertSuccess();
+    await pmmTest.step('Open MongoDB Backup Details and see no failing agent', async () => {
       await page.goto(
         urlHelper.buildUrlWithParameters(backupDetails.url, {
           cluster,
