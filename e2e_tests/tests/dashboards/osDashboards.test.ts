@@ -93,7 +93,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the Netstat: TCP panel shows new connections, resets and retransmits per second that rise during a burst and fall back afterwards @dashboards @fb-dashboards',
+  'Verify the Netstat: TCP panel shows new connections, resets and retransmits per second that rise during a burst and fall back afterwards @dashboards @e2e-dashboards',
   async ({ api, cliHelper, dashboard, page, urlHelper }) => {
     const { netstatTcp } = dashboard.os.networkDetails;
     const [activeOpens, passiveOpens] = netstatTcp.connectionOpens;
