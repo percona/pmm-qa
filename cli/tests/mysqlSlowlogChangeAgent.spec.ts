@@ -18,6 +18,19 @@ test.beforeAll(async ({}) => {
   containerName = result.stdout.trim();
 });
 
+// The @percona-server specs run next in the same container, so give them back pmm-agent on its default port and a mysqld
+// without require_secure_transport. A restart clears the latter and stops pmm-agent, which pmm-framework runs unsupervised.
+test.afterAll(async ({}) => {
+  await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
+  await (await cli.exec(`docker restart ${containerName}`)).assertSuccess();
+  await (await cli.exec(`docker exec -d ${containerName} sh -c "exec pmm-agent --config-file=${pmmAgentConfig} >>${pmmAgentLog} 2>&1"`)).assertSuccess();
+
+  await expect(async () => {
+    await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SELECT 1;"`)).assertSuccess();
+    await (await cli.exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess();
+  }).toPass({ intervals: [5_000], timeout: 120_000 });
+});
+
 test.describe('pmm-admin inventory change agent effects on mysqld_exporter and QAN slowlog agent', { tag: '@ps-slowlog-change-agent' }, () => {
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
