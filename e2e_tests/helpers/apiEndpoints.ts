@@ -12,10 +12,14 @@ const apiEndpoints = {
   },
   backups: {
     artifacts: '/v1/backups/artifacts',
+    changeScheduled: '/v1/backups:changeScheduled',
     locations: '/v1/backups/locations',
     removeScheduled: '/v1/backups',
+    restores: '/v1/backups/restores',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
+    startBackup: '/v1/backups:start',
+    startRestore: '/v1/backups/restores:start',
   },
   dumps: {
     batchDelete: '/v1/dumps:batchDelete',
