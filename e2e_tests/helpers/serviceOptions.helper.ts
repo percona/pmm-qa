@@ -251,4 +251,18 @@ export const serviceOptionsSettings: ServiceOptions[] = [
       },
     ],
   },
+  {
+    ...frameworkServices.proxysql,
+    options: [
+      {
+        agentTypes: ['proxysql_exporter'],
+        change: 'disable_collectors',
+        commandLine: () => ({ matches: false, pattern: flag('-collect.mysql_connection_list') }),
+        edit: () => ['mysql_connection_list'],
+        field: 'disableCollectors',
+        label: 'disabled collectors',
+        read: ({ disabled_collectors }) => disabled_collectors ?? [],
+      },
+    ],
+  },
 ];
