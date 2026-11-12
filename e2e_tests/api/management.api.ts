@@ -1,7 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
+import { AddRdsParameters, AddRdsResponse, AddServiceResponse, RdsExporter } from '@interfaces/inventory';
 
 // The Percona QA RDS instances listen on a non-default port, all in one region.
 const rdsPort = 42_001;
@@ -49,6 +49,24 @@ export default class ManagementApi {
     expect(response.status(), `Adding service failed: ${await response.text()}`).toEqual(200);
 
     return (await response.json()) as AddServiceResponse;
+  };
+
+  getRdsExporter = async (nodeId: string): Promise<RdsExporter> => {
+    const response = await this.request.get(apiEndpoints.management.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+      params: { node_id: nodeId },
+    });
+
+    expect(response.status(), `Listing agents of node "${nodeId}" failed: ${await response.text()}`).toEqual(
+      200,
+    );
+
+    const { agents } = (await response.json()) as { agents: RdsExporter[] };
+    const exporter = agents.find(({ agent_type }) => agent_type === 'rds_exporter');
+
+    if (!exporter) throw new Error(`Node ${nodeId} has no RDS exporter`);
+
+    return exporter;
   };
 
   removeService = async (serviceId: string): Promise<void> => {

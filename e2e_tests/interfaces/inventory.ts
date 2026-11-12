@@ -148,6 +148,15 @@ export interface AddServiceResponse {
   postgresql?: { service: { node_id: string; service_id: string } };
 }
 
+export interface RdsExporter {
+  agent_id: string;
+  agent_type: string;
+  aws_access_key?: string;
+  aws_role_arn?: string;
+  is_aws_secret_key_set?: boolean;
+  status: string;
+}
+
 export interface AddRdsResponse {
   rds: {
     mysql: {
