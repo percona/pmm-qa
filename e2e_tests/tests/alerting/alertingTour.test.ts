@@ -19,9 +19,7 @@ pmmTest(
       await leftNavigation.menuItemLocator('alerts').click({ timeout: Timeouts.THIRTY_SECONDS });
       await expect(page).toHaveURL(/\/graph\/alerting\//);
 
-      for (const tip of tips) {
-        await expect(leftNavigation.menuItemLocator(tip.navItem)).toHaveText(tip.title);
-      }
+      await expect(leftNavigation.elements.alertsMenuItems).toHaveText(tips.map((tip) => tip.title));
 
       await expect(tour.builders.counter(1, tips.length)).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     });
