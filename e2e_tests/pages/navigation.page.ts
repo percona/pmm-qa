@@ -165,6 +165,7 @@ export default class LeftNavigation extends BasePage {
   };
   elements: Record<string, Locator> = {
     advisorsMenu: (this.buttons.advisors as NestedLocators).locator as Locator,
+    alertsMenuItems: this.page.getByTestId(/^navitem-alerts-.+-list-item$/),
     applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
     changeTimeSettingsButton: this.grafanaIframe().getByTestId(
       'data-testid Time zone picker Change time settings button',
