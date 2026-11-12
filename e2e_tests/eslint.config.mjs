@@ -306,6 +306,7 @@ export default defineConfig([
             'waitForNewSample',
             'waitForNewValue',
             'waitForExporterCommandLine',
+            'changeLabels',
           ],
         },
       ],
