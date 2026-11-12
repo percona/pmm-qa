@@ -98,6 +98,28 @@ preflight_run() {
   [[ $(parallel_decision pdpgsql 'pgsql,SETUP_TYPE=replication') == true ]]
 }
 
+@test "PCSM runs in parallel with PSMDB, and two PCSM setups fall back to sequential" {
+  [[ $(parallel_decision 'psmdb,SETUP_TYPE=pss' pcsm) == true ]]
+  DATABASE_SPECS=(pcsm 'pcsm,INSTANCES=1')
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'two PCSM setups cannot run in parallel'* ]]
+}
+
+@test "PCSM SOURCE=psmdb runs after the PSMDB replica set it syncs, and is refused before one or with a sharded one" {
+  DATABASE_SPECS=('psmdb,SETUP_TYPE=pss' 'pcsm,SOURCE=psmdb')
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set) cannot run in parallel'* ]]
+  [[ $(parallel_decision 'pcsm,SOURCE=psmdb' pgsql) == true ]]
+  preflight_run 'pcsm,SOURCE=psmdb' 'psmdb,SETUP_TYPE=pss'
+  [[ $status -ne 0 && $output == *'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'* ]]
+  preflight_run 'psmdb,SETUP_TYPE=sharding' 'pcsm,SOURCE=psmdb'
+  [[ $status -ne 0 && $output == *'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'* ]]
+}
+
 @test "EXTERNAL and VALKEY each parallelize with other setups" {
   [[ $(parallel_decision external haproxy pdpgsql) == true ]]
   [[ $(parallel_decision valkey haproxy pdpgsql) == true ]]
