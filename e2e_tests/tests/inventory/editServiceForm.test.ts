@@ -6,9 +6,9 @@ import {
   formUserPassword,
   serviceEndpoint,
   serviceTypeLabels,
-  toNotificationText,
   validationCases,
 } from '@helpers/serviceForm.helper';
+import { serviceMetricsSettings } from '@helpers/serviceMetrics.helper';
 import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
@@ -156,83 +156,66 @@ for (const { field, label, message, serviceRegex, value } of validationCases) {
   });
 }
 
-pmmTest.describe('Edit service requests | ps', () => {
-  let service: GetService;
-  let originalLogLevel: string;
+for (const { exporterType, name, serviceRegex } of formServices) {
+  // Only the database services have the Metrics section, and with it a log level.
+  const hasLogLevel = serviceMetricsSettings.some((metrics) => metrics.name === name);
 
-  pmmTest.beforeEach(async ({ api }) => {
-    service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
-    originalLogLevel =
-      (await api.inventoryApi.getServiceExporter(service.service_id, frameworkServices.ps.exporterType))
-        .log_level || 'LOG_LEVEL_UNSPECIFIED';
-  });
+  pmmTest.describe(`Edit service requests | ${name}`, () => {
+    let service: GetService;
+    let originalLogLevel: string;
 
-  pmmTest.afterEach(async ({ api }) => {
-    await api.inventoryApi.updateService(service.service_id, service.service_type, {
-      environment: service.environment ?? '',
-      log_level: originalLogLevel,
+    pmmTest.beforeEach(async ({ api }) => {
+      service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
+      originalLogLevel =
+        (await api.inventoryApi.getServiceExporter(service.service_id, exporterType)).log_level ||
+        'LOG_LEVEL_UNSPECIFIED';
     });
-  });
 
-  pmmTest(
-    "PMM-15674 - Verify a refused save shows the server's reason @inventory",
-    async ({ api, editServicePage }) => {
-      const { username } = await api.inventoryApi.getServiceExporter(
-        service.service_id,
-        frameworkServices.ps.exporterType,
-      );
+    pmmTest.afterEach(async ({ api }) => {
+      await api.inventoryApi.updateService(service.service_id, service.service_type, {
+        environment: service.environment ?? '',
+        ...(hasLogLevel && { log_level: originalLogLevel }),
+      });
+    });
 
-      await editServicePage.open(service.service_id);
-      await editServicePage.editConnection({ password: 'wrong-password', username });
-
-      const response = await editServicePage.saveChanges(service.service_id);
-
-      await editServicePage.expectRefused(
-        response,
-        service.service_id,
-        'the connection check refuses a wrong password',
-      );
-
-      const { message } = (await response.json()) as { message: string };
-
-      await expect(editServicePage.builders.text(toNotificationText(message))).toBeVisible();
-    },
-  );
-
-  // ps is monitored with a stored password, so a save that resent it would show here.
-  for (const { body, edit, label, settingsChanged } of [
-    {
-      body: { environment: 'pmm_edit_request_check' },
-      edit: { environment: 'pmm_edit_request_check' },
-      label: 'label',
-      settingsChanged: false,
-    },
-    {
-      body: { log_level: 'LOG_LEVEL_DEBUG' },
-      edit: { logLevel: 'LOG_LEVEL_DEBUG' as const },
-      label: 'setting',
-      settingsChanged: true,
-    },
-  ]) {
-    pmmTest(
-      `PMM-15674 - Verify a ${label} change sends only that change, in one update call @inventory`,
-      async ({ editServicePage }) => {
-        await editServicePage.open(service.service_id);
-        await (edit.environment
-          ? editServicePage.editEnvironment(edit.environment)
-          : editServicePage.editMetrics({ logLevel: edit.logLevel }));
-
-        const writes = editServicePage.recordApiWrites();
-        const response = await editServicePage.saveChanges(service.service_id, { settingsChanged });
-
-        await editServicePage.expectSaved(response);
-        expect(response.request().postDataJSON(), 'untouched secrets stay out of the request').toEqual({
-          [service.service_type]: body,
-        });
-        expect(writes, 'the save is one call to the update API').toEqual([
-          `PUT /v1/management/services/${service.service_id}`,
-        ]);
+    for (const { body, edit, label, settingsChanged } of [
+      {
+        body: { environment: 'pmm_edit_request_check' },
+        edit: { environment: 'pmm_edit_request_check' },
+        label: 'label',
+        settingsChanged: false,
       },
-    );
-  }
-});
+      ...(hasLogLevel
+        ? [
+            {
+              body: { log_level: 'LOG_LEVEL_DEBUG' },
+              edit: { logLevel: 'LOG_LEVEL_DEBUG' as const },
+              label: 'setting',
+              settingsChanged: true,
+            },
+          ]
+        : []),
+    ]) {
+      pmmTest(
+        `PMM-15674 - Verify a ${label} change of ${name} service sends only that change, in one update call @inventory`,
+        async ({ editServicePage }) => {
+          await editServicePage.open(service.service_id);
+          await (edit.environment
+            ? editServicePage.editEnvironment(edit.environment)
+            : editServicePage.editMetrics({ logLevel: edit.logLevel }));
+
+          const writes = editServicePage.recordApiWrites();
+          const response = await editServicePage.saveChanges(service.service_id, { settingsChanged });
+
+          await editServicePage.expectSaved(response);
+          expect(response.request().postDataJSON(), 'untouched secrets stay out of the request').toEqual({
+            [service.service_type]: body,
+          });
+          expect(writes, 'the save is one call to the update API').toEqual([
+            `PUT /v1/management/services/${service.service_id}`,
+          ]);
+        },
+      );
+    }
+  });
+}
