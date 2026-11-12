@@ -299,6 +299,31 @@ export default class EditServicePage extends BasePage {
     await this.verifyMetrics(expected);
   };
 
+  // Saves TLS settings on the open form, waits for the exporter to run with them, and opens the form again.
+  saveTls = async (
+    serviceId: string,
+    settings: ServiceTlsSettings,
+    certificates: Partial<Record<TlsCertificateField, string>>,
+    shownCertificates: TlsCertificateField[],
+    getExporter: () => Promise<ServiceAgent>,
+  ) => {
+    await this.editTls(settings, certificates);
+    await this.expectSaved(await this.saveChanges(serviceId));
+    await expect
+      .poll(
+        async () => {
+          const { status, tls, tls_skip_verify } = await getExporter();
+
+          return { status, tls: !!tls, tlsSkipVerify: !!tls_skip_verify };
+        },
+        { message: `the exporter runs with ${JSON.stringify(settings)}`, timeout: Timeouts.ONE_MINUTE },
+      )
+      .toEqual({ ...settings, status: AgentStatus.running });
+
+    await this.open(serviceId);
+    await this.verifyTls(settings, shownCertificates);
+  };
+
   // The form lists custom labels in the order the API returns them, which is sorted by name.
   toCustomLabelsText = (customLabels: Record<string, string>) =>
     Object.entries(customLabels)
