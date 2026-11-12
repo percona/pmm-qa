@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removeMySQLService } from '@root/helpers/pmm-admin';
+import { ChangeAgentType, getPmmAdminMinorVersion, inventoryChangeAgent, removeMySQLService } from '@root/helpers/pmm-admin';
 
 const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
@@ -199,7 +199,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=4s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.MysqldExporter, agentId.stdout, '--connection-timeout=4s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
 
@@ -214,7 +214,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=0s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.MysqldExporter, agentId.stdout, '--connection-timeout=0s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
 
