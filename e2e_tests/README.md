@@ -106,6 +106,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@docker-configuration`
 - `@downloads`
 - `@dump`
+- `@e2e-dashboards`
 - `@exporters`
 - `@fb-alerting`
 - `@fb-encryption`
