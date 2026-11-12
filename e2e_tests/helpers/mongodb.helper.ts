@@ -1,4 +1,5 @@
 import { Document, MongoClient } from 'mongodb';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from './timeouts';
 
 interface MongoConfig {
@@ -72,6 +73,25 @@ export default class MongoDBHelper {
 
   getCollection = (dbName: string, collectionName: string) =>
     this.client.db(dbName).collection(collectionName);
+
+  /**
+   * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
+   *
+   * @param   container   a PSMDB container with the pbm CLI configured
+   */
+  getPbmAgentErrors = (container: string): Record<string, string[]> => {
+    const { cluster } = JSON.parse(
+      new CliHelper().execute(`docker exec ${container} pbm status -s cluster -o json`).assertSuccess()
+        .stdout,
+    ) as { cluster: { nodes: { errors?: string[]; host: string; ok: boolean; role: string }[] }[] };
+
+    return Object.fromEntries(
+      cluster
+        .flatMap(({ nodes }) => nodes)
+        .filter(({ ok, role }) => role !== 'A' && !ok)
+        .map(({ errors, host }) => [host, errors ?? []]),
+    );
+  };
 
   getReplicaSetMemberStates = async () =>
     ((await this.client.db('admin').command({ replSetGetStatus: 1 })).members as { stateStr: string }[]).map(
