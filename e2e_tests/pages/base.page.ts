@@ -130,7 +130,6 @@ export default abstract class BasePage {
     return selectedOption;
   };
 
-  // Returns the Advisor checks the click asked to run and the ID of the run it started.
   startRun = async (control: Locator): Promise<{ names: string[]; runId: string }> => {
     const started = this.page.waitForResponse(
       (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
