@@ -63,14 +63,14 @@ export default class AdvisorsCatalogPage extends BasePage {
     pagination: this.page.getByText(/^\d+-\d+ of \d+$/),
     rows: this.page.getByTestId('advisors-list-table').locator('tbody tr'),
     table: this.page.getByTestId('advisors-list-table'),
-    title: this.page.getByRole('heading', { name: 'Advisor checks' }),
+    title: this.page.getByRole('heading', { name: 'Advisor catalog' }),
     unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
     search: this.page.getByTestId('advisors-search').getByRole('textbox'),
   };
   messages = {
-    checkCodeCopied: this.alertWithText('Check code copied to clipboard'),
+    checkCodeCopied: this.alertWithText('Script copied to clipboard'),
     checksAlreadyRunning: this.alertWithText('Advisor checks are already running'),
     checksStarted: this.alertWithText('Advisor checks started, run ID copied to clipboard'),
     scriptIndentedWithTabs: this.alertWithText('script should use spaces for indentation, not tabs'),

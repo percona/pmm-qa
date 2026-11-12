@@ -29,7 +29,7 @@ export default class SettingsPage extends BasePage {
   };
   builders = {
     advisorRecipientInvalid: (address: string) =>
-      this.elements.advisorSettings.getByText(`"${address}" is not a valid email address`),
+      this.elements.advisorSettings.getByText(`Not a valid address: ${address}`),
     advisorSeverity: (severity: AdvisorSeverity) =>
       this.page.getByTestId(`advisorSeverities-${severity}-checkbox-input`),
     advisorTestEmailSent: (recipients: string) => this.alertWithText(`Test email sent to ${recipients}`),
@@ -112,7 +112,7 @@ export default class SettingsPage extends BasePage {
     sshKey: this.page.getByTestId('text-input-ssh-key'),
   };
   messages = {
-    advisorRecipientsMax: this.elements.advisorSettings.getByText('At most 20 recipients are allowed'),
+    advisorRecipientsMax: this.elements.advisorSettings.getByText('Enter up to 20 recipients'),
     advisorRecipientsRequired: this.elements.advisorSettings.getByText(
       'Add at least one recipient, or turn Advisor notifications off',
     ),

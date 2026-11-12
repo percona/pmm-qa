@@ -12,8 +12,8 @@ export default class AdvisorRunsPage extends BasePage {
   readonly tooltips = {
     interrupted:
       'PMM restarted, or the HA leader changed, before the run finished. ' +
-      'The insights it saved are kept; the checks it did not reach show as Not run.',
-    queued: 'Requested and waiting for PMM to start it, which takes up to a minute',
+      'The insights it saved are kept. Any checks it didn\'t reach show as "Not run".',
+    queued: 'Waiting to start. This takes up to a minute.',
   };
   builders = {
     actionsButton: (runId: string) => this.page.getByTestId(`run-${runId}-actions`),
@@ -36,10 +36,12 @@ export default class AdvisorRunsPage extends BasePage {
   };
   elements = {
     header: this.page.getByTestId('advisor-runs-table').locator('thead'),
-    noData: this.page.getByText('No Advisor runs recorded yet'),
+    noData: this.page.getByText(
+      'No runs yet. Run checks from the Catalog, or wait for the next scheduled run.',
+    ),
     rows: this.page.getByTestId('advisor-runs-table').locator('tbody tr'),
     table: this.page.getByTestId('advisor-runs-table'),
-    title: this.page.getByRole('heading', { name: 'Advisor runs' }),
+    title: this.page.getByRole('heading', { name: 'Advisor run history' }),
     tooltip: this.page.getByRole('tooltip'),
     unauthorized: this.page.getByTestId('unauthorized'),
   };
@@ -78,8 +80,8 @@ export default class AdvisorRunsPage extends BasePage {
     );
 
     return (
-      `Scheduled for ${utcTime(scheduledFor)} UTC. Started ${minutesLate} min late, ` +
-      `after the run started at ${utcTime(blocker.started_at)} UTC (${who}).`
+      `Scheduled for ${utcTime(scheduledFor)} UTC. Started ${minutesLate} min late ` +
+      `because it waited for ${who}, which started at ${utcTime(blocker.started_at)} UTC.`
     );
   };
 }

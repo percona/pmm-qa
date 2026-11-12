@@ -54,7 +54,7 @@ export default class AdvisorSchedulerPage extends BasePage {
     empty: this.page.getByTestId('schedules-empty'),
     notificationsOffBanner: this.page.getByTestId('schedules-notifications-off'),
     runActiveBanner: this.page.getByTestId('schedules-run-active'),
-    title: this.page.getByRole('heading', { name: 'Advisor schedules' }),
+    title: this.page.getByRole('heading', { name: 'Advisor scheduler' }),
     unauthorized: this.page.getByTestId('unauthorized'),
     week: this.page.getByTestId('schedule-week'),
     weekEmpty: this.page.getByTestId('schedule-week-empty'),

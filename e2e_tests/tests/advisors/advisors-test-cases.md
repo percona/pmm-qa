@@ -55,9 +55,9 @@ Spec: [catalog.test.ts:18](catalog.test.ts#L18)
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Get the check list from `GET /v1/advisors/checks`. | The list is returned. |
-| 2 | Open the Catalog page. | The **Advisor checks** heading is shown, with **Add advisor**, **Clear filters**, **Refresh**, **Run all** and **Run selected** in the toolbar. |
+| 2 | Open the Catalog page. | The **Advisor catalog** heading is shown, with **Add advisor check**, **Clear filters**, **Refresh**, **Run all** and **Run selected** in the toolbar. |
 | 3 | Look at the pagination label. | It ends with `of <number of checks from step 1>`. |
-| 4 | Search for the summary of a built-in check. | Its row shows Source **Builtin**, the status switch matches its enabled state, and **Run** and **Disable for services** are shown. **Edit** and **Delete** are not shown. |
+| 4 | Search for the summary of a built-in check. | Its row shows Source **Built-in**, the status switch matches its enabled state, and **Run** and **Disable for services** are shown. **Edit** and **Delete** are not shown. |
 
 ### TC-02 · PMM-T2554 - Verify searching and filtering advisor checks
 
@@ -76,7 +76,7 @@ Spec: [catalog.test.ts:91](catalog.test.ts#L91)
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Open the Catalog page, search for a built-in check and double-click its row. | The details pane opens and the URL contains `details=<check name>`. |
-| 2 | Look at the details pane. | **Check name** shows the check's name, **Source** shows *Builtin*, and the script contains `def check_context`. **Edit** is disabled and **Clone** is enabled. |
+| 2 | Look at the details pane. | **Check name** shows the check's name, **Source** shows *Built-in*, and the script contains `def check_context`. **Edit** is disabled and **Clone** is enabled. |
 | 3 | Click **Close**. | The pane closes and `details=` is removed from the URL. |
 | 4 | Open `/pmm-ui/advisors?details=<check name>` directly. | The details pane opens for that check. |
 
@@ -86,8 +86,8 @@ Spec: [catalog.test.ts:128](catalog.test.ts#L128)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open the Catalog page and click **Add advisor**. | The **Add advisor check** form opens, with the **Name** field prefilled as `custom_`. |
-| 2 | Fill in: a unique `custom_…` name, a summary, description *Created by a UI test.*, category *QA*, technology *MySQL*, query type `METRICS_INSTANT` with query `vector(1)`, and the QA custom check script. Click **Save**. | A `Advisor check "<name>" created` notification appears and the form closes. |
+| 1 | Open the Catalog page and click **Add advisor check**. | The **Add advisor check** form opens, with the **Name** field prefilled as `custom_`. |
+| 2 | Fill in: a unique `custom_…` name, a summary, description *Created by a UI test.*, category *QA*, technology *MySQL*, query type `METRICS_INSTANT` with query `vector(1)`, and the QA custom check script. Click **Save check**. | A `Advisor check "<name>" created` notification appears and the form closes. |
 | 3 | Search for the new summary. | The row shows Source **Custom**, with **Edit** and **Delete** buttons. |
 | 4 | Read the check from `GET /v1/advisors/checks/<name>`. | Category `QA`, technology MySQL, the entered summary, and `user_defined: true`. |
 
@@ -99,8 +99,8 @@ Spec: [catalog.test.ts:175](catalog.test.ts#L175)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open the Catalog page and click **Add advisor**. | The form opens. |
-| 2 | Enter the name `qa_<timestamp>` and click **Save**. | The error *Custom check names must start with "custom_".* is shown and the form stays open. |
+| 1 | Open the Catalog page and click **Add advisor check**. | The form opens. |
+| 2 | Enter the name `qa_<timestamp>` and click **Save check**. | The error *Start the name with "custom_".* is shown and the form stays open. |
 | 3 | Look the name up through the API. | No such check exists. |
 
 ### TC-06 · PMM-T2558 - Verify disabling and enabling a check from the catalog
@@ -140,7 +140,7 @@ Precondition: the QA custom check exists.
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Open the Catalog page, search for the check and click **Edit**. | The **Edit advisor check** form opens. **Name** shows the check's name and is disabled, **Summary** shows its summary, and the first query is `vector(1)`. |
-| 2 | Change the summary to `<summary> edited` and the category to *QA edited*, then click **Save**. | A `Advisor check "<name>" updated` notification appears and the form closes. |
+| 2 | Change the summary to `<summary> edited` and the category to *QA edited*, then click **Save check**. | A `Advisor check "<name>" updated` notification appears and the form closes. |
 | 3 | Search for the new summary. | The row shows category **QA edited**, and the API returns the new summary and category. |
 | 4 | Call `PUT /v1/advisors/checks/<name>` with a new name in the body. | `200`. The check keeps its name, and no check with the new name exists. |
 
@@ -151,7 +151,7 @@ Spec: [checkForm.test.ts:77](checkForm.test.ts#L77)
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Open the details pane of a built-in check and click **Clone**. | The **Clone advisor check** form opens. **Name** is `custom_<built-in name>` and can be edited; **Summary** and **Category** are copied from the built-in check. |
-| 2 | Change the name to a unique `custom_…` value and click **Save**. | A `Advisor check "<name>" created` notification appears. |
+| 2 | Change the name to a unique `custom_…` value and click **Save check**. | A `Advisor check "<name>" created` notification appears. |
 | 3 | Read the new check from the API. | Same category, summary and technology as the built-in check, with `user_defined: true`. |
 
 Cleanup: the clone is deleted through the API.
@@ -162,9 +162,9 @@ Spec: [checkForm.test.ts:112](checkForm.test.ts#L112)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open the Catalog page, click **Add advisor**, then click **Save** without filling anything in. | *This field is required.* is shown four times (summary, description, category, script). The only query's **Remove** button is disabled. |
-| 2 | Enter the name `custom_bad-name`. | *Enter a valid name: letters, digits and underscores…* is shown. |
-| 3 | Enter a name of `custom_` followed by 128 letters. | *Name must be at most 128 characters.* is shown. |
+| 1 | Open the Catalog page, click **Add advisor check**, then click **Save check** without filling anything in. | *Fill in this field.* is shown four times (summary, description, category, script). The only query's **Remove** button is disabled. |
+| 2 | Enter the name `custom_bad-name`. | *Use only letters, digits and underscores.* is shown. |
+| 3 | Enter a name of `custom_` followed by 128 letters. | *Use 128 characters or fewer.* is shown. |
 | 4 | Set the query type to `METRICS_INSTANT`, then add two parameters both named `lookback`. | *This parameter is already set for the query.* is shown. |
 
 ### TC-11 · PMM-T2563 - Verify query types follow the check technology
@@ -173,7 +173,7 @@ Spec: [checkForm.test.ts:147](checkForm.test.ts#L147)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open **Add advisor**, set **Technology** to *MongoDB* and open the first query's **Type** list. | `MONGODB_GETPARAMETER` and `METRICS_INSTANT` are offered; `MYSQL_SHOW` is not. |
+| 1 | Open **Add advisor check**, set **Technology** to *MongoDB* and open the first query's **Type** list. | `MONGODB_GETPARAMETER` and `METRICS_INSTANT` are offered; `MYSQL_SHOW` is not. |
 | 2 | Set **Technology** to *MySQL* and open the **Type** list. | `MYSQL_SHOW` and `METRICS_INSTANT` are offered; `POSTGRESQL_SHOW` is not. |
 | 3 | Set **Technology** to *PostgreSQL* and open the **Type** list. | `POSTGRESQL_SELECT` and `METRICS_INSTANT` are offered; `MONGODB_BUILDINFO` is not. |
 
@@ -185,10 +185,10 @@ Precondition: the QA custom check exists.
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open **Add advisor** and fill in a valid check that uses the existing check's name with a different summary. Click **Save**. | An `advisor check <name> already exists` error appears and the form stays open. |
+| 1 | Open **Add advisor check** and fill in a valid check that uses the existing check's name with a different summary. Click **Save check**. | An `advisor check <name> already exists` error appears and the form stays open. |
 | 2 | Read the existing check from the API. | Its summary is unchanged. |
 
-Known UI issue: the error notification covers the form's **Save** button for at least 10 seconds.
+Known UI issue: the error notification covers the form's **Save check** button for at least 10 seconds.
 
 ### TC-13 · PMM-T2565 - Verify the server rejects a script indented with tabs
 
@@ -196,7 +196,7 @@ Spec: [checkForm.test.ts:198](checkForm.test.ts#L198)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open **Add advisor** and fill in a valid check whose script is indented with a tab character. Click **Save**. | An error saying the script should use spaces for indentation, not tabs, appears and the form stays open. |
+| 1 | Open **Add advisor check** and fill in a valid check whose script is indented with a tab character. Click **Save check**. | An error saying the script should use spaces for indentation, not tabs, appears and the form stays open. |
 | 2 | Look the name up through the API. | No such check exists. |
 
 ### TC-14 · PMM-T2566 - Verify testing a check on a service from the form
@@ -205,7 +205,7 @@ Spec: [checkForm.test.ts:223](checkForm.test.ts#L223)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open **Add advisor** and fill in the QA custom check without saving it. | The form is filled in. |
+| 1 | Open **Add advisor check** and fill in the QA custom check without saving it. | The form is filled in. |
 | 2 | Pick a monitored MySQL service in **Test on service** and click **Test**. | Test results show **Success** and `· 3 findings`, and the output contains `Finding 0`. |
 | 3 | Replace the script with one that calls `fail("broken check")` and click **Test**. | Test results show **Error** and the error text contains `broken check`. |
 | 4 | Replace the script with a loop over `range(1000000000)` and click **Test**. | Within seconds, test results show **Error** and the error text contains `check script execution`. Today it reads *failed: signal: killed*, not *timed out* (finding 5 in the coverage doc). |
@@ -219,7 +219,7 @@ Precondition: the QA custom check exists, and the browser allows clipboard acces
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open `/pmm-ui/advisors?details=<check name>` and click **Copy** in the script section. | A *Check code copied to clipboard* notification appears. |
+| 1 | Open `/pmm-ui/advisors?details=<check name>` and click **Copy** in the script section. | A *Script copied to clipboard* notification appears. |
 | 2 | Read the clipboard. | It contains `def check_context`. |
 
 ### TC-16 · PMM-T2568 - Verify built-in checks cannot be changed or deleted
@@ -314,7 +314,7 @@ Precondition: the QA custom check exists and one run of it, started through the 
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open Run history. | The **Advisor runs** heading and the run's row are shown. The columns are Started, Duration, Triggered by, Checks, Findings, Errors and Services. |
+| 1 | Open Run history. | The **Advisor run history** heading and the run's row are shown. The columns are Started, Duration, Triggered by, Checks, Findings, Errors and Services. |
 | 2 | Set **Triggered by** to *Scheduler*. | The run's row is hidden. |
 | 3 | Click **Clear filters**. | **Triggered by** reads *All*. |
 | 4 | Filter by the run's ID. | Exactly one row is shown, and it contains the run's findings count. |
@@ -331,9 +331,9 @@ Spec: [navigation.test.ts:18](navigation.test.ts#L18)
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Open `/pmm-ui` and choose **Advisors → Insights** in the left menu. | The URL ends with `/pmm-ui/advisors/insights` and **Advisor insights** is shown. |
-| 2 | Choose **Advisors → Catalog**. | The URL ends with `/pmm-ui/advisors` and **Advisor checks** is shown. |
-| 3 | Choose **Advisors → Run history**. | The URL ends with `/pmm-ui/advisors/runs` and **Advisor runs** is shown. |
-| 4 | Choose **Advisors → Scheduler**. | The URL ends with `/pmm-ui/advisors/scheduler` and **Advisor schedules** is shown. |
+| 2 | Choose **Advisors → Catalog**. | The URL ends with `/pmm-ui/advisors` and **Advisor catalog** is shown. |
+| 3 | Choose **Advisors → Run history**. | The URL ends with `/pmm-ui/advisors/runs` and **Advisor run history** is shown. |
+| 4 | Choose **Advisors → Scheduler**. | The URL ends with `/pmm-ui/advisors/scheduler` and **Advisor scheduler** is shown. |
 
 ### TC-24 · PMM-T2576 - Verify legacy Advisors URLs redirect to the new pages
 
@@ -384,7 +384,7 @@ Precondition: the QA custom check exists.
 | 1 | As the editor, call `GET /v1/advisors/schedules`, `GET /v1/advisors/services` and `GET /v1/advisors/notificationSettings`. | `200` for each. |
 | 2 | As the editor, create a schedule for the check through `POST /v1/advisors/schedules` and run it with `POST /v1/advisors/schedules/<id>:run`. | Both return `200` and the run completes. |
 | 3 | As the editor, call `POST /v1/advisors/checks` for a new check, `PUT` and `DELETE /v1/advisors/checks/<check>`, and `POST /v1/advisors/checks:test` on the MySQL service. | `403` for each; the new check does not exist and the QA check keeps its summary. |
-| 4 | Log in as `advisors_editor`, open the Catalog page and search for the check. | The check's **Run** button is shown; **Add advisor** and the check's **Edit** and **Delete** buttons are not. |
+| 4 | Log in as `advisors_editor`, open the Catalog page and search for the check. | The check's **Run** button is shown; **Add advisor check** and the check's **Edit** and **Delete** buttons are not. |
 | 5 | Open the check's details pane. | The script is shown; **Edit**, **Clone** and **Test** are not. |
 | 6 | Click the check's **Run** button. | A `Check "<summary>" started` notification appears. |
 | 7 | Open Insights, Run history and the Scheduler. | Each page shows its heading and no access error. |
@@ -405,7 +405,7 @@ Spec: [scheduler.test.ts:50](scheduler.test.ts#L50)
 | # | Step | Expected result |
 | --- | --- | --- |
 | 1 | Call `GET /v1/advisors/schedules`. | A schedule named *All checks daily* is enabled, runs every day (0–6) at `06:00`, has no check names or service IDs, and emails the Settings recipients. |
-| 2 | Open the Scheduler. | **Advisor schedules** is shown. The schedule's row reads *Every day, 06:00 UTC*, *All checks*, *All services* and *Settings recipients*. With email notifications off, as by default, a banner says *Advisor email notifications are turned off, so no schedule sends email.* |
+| 2 | Open the Scheduler. | **Advisor scheduler** is shown. The schedule's row reads *Every day, 06:00 UTC*, *All checks*, *All services* and *Settings recipients*. With email notifications off, as by default, a banner says *Advisor email notifications are turned off, so no schedule sends email.* |
 
 ### TC-29 · PMM-T2581 - Verify creating a schedule
 
@@ -433,7 +433,7 @@ Precondition: one schedule exists, created through the API.
 | 2 | Enter the existing schedule's name in upper case. | *A schedule named "<NAME>" already exists.* |
 | 3 | Type a 101-character name. | The field keeps the first 100 characters. |
 | 4 | Enter `qa@example.com, not-an-email` as recipients. | *Not a valid address: not-an-email* |
-| 5 | Enter 21 addresses separated by spaces. | *Up to 20 addresses; there are 21.* |
+| 5 | Enter 21 addresses separated by spaces. | *Enter up to 20 addresses. There are 21.* |
 | 6 | Click **Create schedule**, then **Cancel**. | The footer lists every field but the name; the editor closes and the number of schedules is unchanged. |
 
 ### TC-31 · PMM-T2583 - Verify editing a schedule
@@ -525,7 +525,7 @@ Precondition: the QA custom check and the passing variant in category `QA passin
 | 1 | Open Insights at `?runId=<run id>`. Set **Service** to the MySQL service and **Node** to its node. | Both options are offered; every row of the run is still shown. |
 | 2 | Set **Category** to `QA`. | Only the QA check's rows are shown. |
 | 3 | Set **Severity** to *Warning* and **Status** to *Failed*. | The same rows; the URL carries `service`, `node`, `category`, `severity=SEVERITY_WARNING` and `status`. |
-| 4 | Set **Category** to `QA passing`. | *No advisor insights found*: the filters combine. |
+| 4 | Set **Category** to `QA passing`. | *No insights match. Clear the filters, or run checks from the Catalog.*: the filters combine. |
 | 5 | Click **Clear filters**, filter by the run ID, open a QA-check row's **More actions** menu and choose **Filter by name**. | The URL carries `check=<name>` and only that check's rows are shown. |
 | 6 | Choose **Advisors → Catalog** in the left menu, then **Advisors → Insights**. | Insights opens with `check=<name>` and `runId=<run id>` restored, showing the same rows. |
 
@@ -551,7 +551,7 @@ Precondition: one run of the QA custom check; the browser may read the clipboard
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open Insights at `?runId=<run id>` and choose **Re-run now** for an insight. | `Check "<summary>" started on <service>, run ID copied to clipboard.` |
+| 1 | Open Insights at `?runId=<run id>` and choose **Re-run now** for an insight. | `Check "<summary>" started on <service>, run ID copied to clipboard` |
 | 2 | Wait for the run whose ID is on the clipboard. | It completes with only the QA check, 1 planned check, 1 planned service and the insight's service ID. |
 
 ### TC-40 · PMM-T2592 - Verify disabling and enabling a check for the service of an insight
@@ -578,7 +578,7 @@ Precondition: one run of a QA custom check whose script returns 201 findings per
 | 1 | Open Insights without filters and click **Email insights**. | *No filters are set, so this emails all N insights.* Cancel closes the dialog. |
 | 2 | Open Insights at `?runId=<run id>` and click **Email insights**. Enter `qa@example.com`. | *Email 201 insights matching the current filters.* and *201 insights match, more than the 200 one email can carry. Narrow the filters to 200 insights or fewer.* **Send** stays disabled. |
 | 3 | Cancel, set **Severity** to *Error* and click **Email insights**. Enter `qa@example.com`. | *Email 1 insight matching the current filters.*, no over-limit warning, **Send** enabled. |
-| 4 | Clear the addresses; enter `qa@example.com, not-an-email`; enter 21 addresses. | *Enter at least one address.*, *Not a valid address: not-an-email*, *Up to 20 addresses; there are 21.* in turn; **Send** disabled each time. |
+| 4 | Clear the addresses; enter `qa@example.com, not-an-email`; enter 21 addresses. | *Enter at least one address.*, *Not a valid address: not-an-email*, *Enter up to 20 addresses. There are 21.* in turn; **Send** disabled each time. |
 | 5 | Enter a new address and click **Send**. | *Emailed 1 insight to 1 recipient.* and the dialog closes. The email's subject is *PMM Advisor Insights: 1 insight(s) shared with you*; its body lists the filters (*Run ID*, *Severity: Error*), the counts by status (*Failed: 1*, *Error: 0*, *OK: 0*) and the insight *Finding 0*. |
 | 6 | Read the notification settings. | Unchanged: notifications off, no recipients. |
 
@@ -625,7 +625,7 @@ Spec: [checkForm.test.ts:351](checkForm.test.ts#L351)
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Open the Catalog, click **Add advisor** and fill the form with a script returning one `notice` finding. Pick the MySQL service and click **Test**. | *Error*: `result severity 'notice' is not supported by advisors; use one of: critical, error, warning, info`. |
+| 1 | Open the Catalog, click **Add advisor check** and fill the form with a script returning one `notice` finding. Pick the MySQL service and click **Test**. | *Error*: `result severity 'notice' is not supported by advisors; use one of: critical, error, warning, info`. |
 | 2 | Change the severity to `emergency` and click **Test**. | The same error for `emergency`. |
 | 3 | Change the severity to `info` and click **Test**. | *Success* with one finding. Cancel saves nothing. |
 
@@ -660,7 +660,7 @@ Spec: [notifications.test.ts:27](notifications.test.ts#L27)
 | 1 | Through `PUT /v1/server/settings`, turn notifications on with no recipients, with 21, then with `not-an-email`. | `400` each time: *at least one recipient is required while Advisor notifications are enabled.*, *at most 20 addresses are allowed, got 21.*, *invalid address 'not-an-email'.* |
 | 2 | Open Settings → Advisors and turn **Advisor notifications** on. | *Critical* and *Error* are checked; **Default recipients** is empty and **Apply changes** is disabled. |
 | 3 | Type an address in **Default recipients**, then clear it. | *Add at least one recipient, or turn Advisor notifications off* |
-| 4 | Enter 21 addresses, then `qa@example.com, not-an-email`. | *At most 20 recipients are allowed*, then *"not-an-email" is not a valid email address*; **Apply changes** stays disabled. |
+| 4 | Enter 21 addresses, then `qa@example.com, not-an-email`. | *Enter up to 20 recipients*, then *Not a valid address: not-an-email*; **Apply changes** stays disabled. |
 | 5 | Untick *Critical* and *Error*, then tick them again. | *Select at least one severity, or turn Advisor notifications off*, which goes away once a severity is ticked. |
 | 6 | Enter `qa@example.com, dba@example.com qa@example.com` and click **Apply changes**. | *Settings updated*. The API returns notifications on, recipients `dba@example.com` and `qa@example.com` and severities critical and error. After a reload the field reads `dba@example.com, qa@example.com`. |
 | 7 | Clear **Default recipients**. | The required-recipient error; **Apply changes** is disabled. |
@@ -769,7 +769,7 @@ Precondition: the browser runs in the `Asia/Tokyo` time zone (UTC+9, no daylight
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Click **New schedule**, pick Mon–Fri and enter `23:00`. | The preview reads *Runs every weekday at 23:00 UTC, 08:00 in your time zone (Asia/Tokyo, …)* and *In your time zone this lands on the next day. Days are picked in UTC.* It does not mention daylight saving time, and the first next run shows *08:00 your time*. |
+| 1 | Click **New schedule**, pick Mon–Fri and enter `23:00`. | The preview reads *Runs every weekday at 23:00 UTC, 08:00 in your time zone, Asia/Tokyo …* and *In your time zone this lands on the next day. Days are picked in UTC.* It does not mention daylight saving time, and the first next run shows *08:00 your time*. |
 | 2 | Choose **Selected checks** and pick both checks. | *1 PostgreSQL check won't run: there is no PostgreSQL service in Inventory.* |
 | 3 | Untick the MySQL check, choose **Selected services** and pick the MySQL service. | *None of the selected checks applies to the selected services, so every run would have nothing to do. Pick checks for MySQL, or other services.* Cancel saves nothing. |
 
@@ -848,7 +848,7 @@ Precondition: the QA custom check, and 40 custom checks whose script loops until
 | --- | --- | --- |
 | 1 | Start a user run of enough slow checks to last until at least 80 s after the schedules fall due, and wait for both schedules to run. | The user run started before the schedules fell due. Both runs have that `scheduled_for`. A starts after the user run finishes and B after A finishes. A's `waited_for_run` is the user run, B's is A. |
 | 2 | Read both recipients' email. | Each gets one email, *PMM Advisor Insights: 3 finding(s) for <its schedule>*. |
-| 3 | Open each run in Run history and hover the clock icon by its start time. | A: *Scheduled for HH:MM UTC. Started N min late, after the run started at HH:MM UTC (a user run).* B: the same, ending *(<name> A)*. |
+| 3 | Open each run in Run history and hover the clock icon by its start time. | A: *Scheduled for HH:MM UTC. Started N min late because it waited for a user run, which started at HH:MM UTC.* B: the same, waiting for *<name> A*. |
 
 ### TC-63 · PMM-T2613 - Verify a schedule with nothing to check records no run
 
@@ -874,10 +874,10 @@ Precondition: the QA custom check, named to sort first, and 15 custom checks who
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Restart pmm-managed, then click **Run now** on *interrupted* (through the API) and open the run in Run history. | The run is Queued. Its row reads *Queued…*, and hovering that text shows *Requested and waiting for PMM to start it, which takes up to a minute*. |
+| 1 | Restart pmm-managed, then click **Run now** on *interrupted* (through the API) and open the run in Run history. | The run is Queued. Its row reads *Queued…*, and hovering that text shows *Waiting to start. This takes up to a minute.* |
 | 2 | Wait for the run to start and open its insights. | The row changes to *Running…* without a refresh. Insights lists *Pending* rows for the checks the run has not reached. |
 | 3 | Once the QA check's insights are Failed, restart pmm-managed. | The run is Interrupted with 3 findings. The QA check's Failed insights are kept, no insight is Pending, and at least one is Not run with the outcome *The run ended before executing the check, for example because PMM restarted.* |
-| 4 | Open the run in Run history and hover *Interrupted*; open its insights. | *PMM restarted, or the HA leader changed, before the run finished. The insights it saved are kept; the checks it did not reach show as Not run.* Insights shows a kept Failed insight and a *Not run* one. |
+| 4 | Open the run in Run history and hover *Interrupted*; open its insights. | *PMM restarted, or the HA leader changed, before the run finished. The insights it saved are kept. Any checks it didn't reach show as "Not run".* Insights shows a kept Failed insight and a *Not run* one. |
 | 5 | Run *following* now and wait for it to complete. | The recipient gets one email, for the *following* run. The interrupted run sent none. |
 
 ### TC-65 · PMM-T2615 - Verify PMM starts no run of its own after a restart and skips a schedule missed while stopped

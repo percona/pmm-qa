@@ -12,7 +12,7 @@ export default class EmailInsightsDialogComponent extends BasePage {
       this.elements.tooMany.filter({
         hasText: `${count} insights match, more than the 200 one email can carry. Narrow the filters to 200 insights or fewer.`,
       }),
-    tooManyAddresses: (count: number) => this.builders.error(`Up to 20 addresses; there are ${count}.`),
+    tooManyAddresses: (count: number) => this.builders.error(`Enter up to 20 addresses. There are ${count}.`),
   };
   buttons = {
     cancel: this.page.getByTestId('email-insights-dialog').getByRole('button', { name: 'Cancel' }),

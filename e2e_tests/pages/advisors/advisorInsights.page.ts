@@ -19,12 +19,12 @@ export default class AdvisorInsightsPage extends BasePage {
     filter: (filter: InsightFilter) => this.page.getByTestId(`${filter}-filter`).getByRole('combobox'),
     insightsEmailed: (insights: number, recipients: number) =>
       this.alertWithText(
-        `Emailed ${insights} insight${insights === 1 ? '' : 's'} to ${recipients} recipient${recipients === 1 ? '' : 's'}.`,
+        `Emailed ${insights} insight${insights === 1 ? '' : 's'} to ${recipients} recipient${recipients === 1 ? '' : 's'}`,
       ),
     readMoreIndicator: (insightId: string) =>
       this.builders.row(insightId).getByTestId('insight-read-more-indicator'),
     rerunStarted: (summary: string, serviceName: string) =>
-      this.alertWithText(`Check "${summary}" started on ${serviceName}, run ID copied to clipboard.`),
+      this.alertWithText(`Check "${summary}" started on ${serviceName}, run ID copied to clipboard`),
     row: (insightId: string) => this.page.getByTestId(`insight-row-${insightId}`),
     rowsWithText: (text: string) => this.elements.rows.filter({ hasText: text }),
   };
@@ -44,7 +44,7 @@ export default class AdvisorInsightsPage extends BasePage {
   };
   elements = {
     detailsPane: this.page.getByTestId('insight-details-pane'),
-    noData: this.page.getByText('No advisor insights found'),
+    noData: this.page.getByText('No insights match. Clear the filters, or run checks from the Catalog.'),
     readMoreLink: this.builders.detailsField('read-more').getByRole('link'),
     rows: this.page.getByTestId('advisor-insights-table').locator('tbody tr'),
     table: this.page.getByTestId('advisor-insights-table'),

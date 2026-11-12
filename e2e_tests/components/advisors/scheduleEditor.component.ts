@@ -16,7 +16,7 @@ export default class ScheduleEditorComponent extends BasePage {
     checkOption: (checkName: string) => this.page.getByTestId(`schedule-checks-picker-item-${checkName}`),
     day: (day: number) => this.page.getByTestId(`schedule-day-${day}`),
     emailInvalid: (addresses: string) => this.builders.error(`Not a valid address: ${addresses}`),
-    emailMax: (count: number) => this.builders.error(`Up to 20 addresses; there are ${count}.`),
+    emailMax: (count: number) => this.builders.error(`Enter up to 20 addresses. There are ${count}.`),
     error: (text: string) => this.elements.editor.locator('.Mui-error', { hasText: text }),
     fixFields: (fields: string[]) =>
       this.elements.footerMessage.filter({
@@ -99,5 +99,5 @@ export default class ScheduleEditorComponent extends BasePage {
   };
 
   weekdayPreview = (utcTime: string, local?: { time: string; zone: string }) =>
-    `Runs every weekday at ${utcTime} UTC${local ? `, ${local.time} in your time zone (${local.zone}` : ''}`;
+    `Runs every weekday at ${utcTime} UTC${local ? `, ${local.time} in your time zone, ${local.zone}` : ''}`;
 }

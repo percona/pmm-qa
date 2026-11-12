@@ -40,7 +40,7 @@ pmmTest.describe('Advisors catalog', () => {
 
       await pmmTest.step('Verify a built-in check row shows its controls', async () => {
         await advisorsCatalogPage.inputs.search.fill(builtinCheck.summary);
-        await expect(advisorsCatalogPage.builders.row(builtinCheck.name)).toContainText('Builtin');
+        await expect(advisorsCatalogPage.builders.row(builtinCheck.name)).toContainText('Built-in');
         await expect(advisorsCatalogPage.builders.statusSwitch(builtinCheck.name)).toBeChecked({
           checked: builtinCheck.enabled,
         });
@@ -103,7 +103,7 @@ pmmTest.describe('Advisors catalog', () => {
         await expect(advisorsCatalogPage.builders.detailsField('check-name')).toContainText(
           builtinCheck.name,
         );
-        await expect(advisorsCatalogPage.builders.detailsField('source')).toContainText('Builtin');
+        await expect(advisorsCatalogPage.builders.detailsField('source')).toContainText('Built-in');
         await expect(advisorsCatalogPage.elements.detailsPane).toContainText('def check_context');
         await expect(advisorsCatalogPage.buttons.editCheck).toBeDisabled();
         await expect(advisorsCatalogPage.buttons.cloneCheck).toBeEnabled();
