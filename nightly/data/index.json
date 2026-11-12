@@ -178214,34 +178214,26 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Nightly",
+          "Nightly Compatibility",
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "test bug",
+        "summary": "PMM-T2036 failed again in all 11 nightly lanes (docker, docker arm64, ami, helm, ha, compat 3.7.1/3.8.0/3.8.1/3.9.0/3.9.1, gssapi). Every time it was the only hard failure, and every time with 'Metrics without data are: Failing Backup Agents' (Nightly 2/4 shard). The PMM-T1698, PMM-T2401 and PMM-T318 failures on helm, ha, ami, docker and compat 3.9.0 passed on retry. Same cause as nights 103 and 104: the Failing Backup Agents table that percona/pmm#6109 added is empty when no PBM agent fails, and MongodbBackupDetails.noDataMetrics on main still doesn't list it. The fix (noDataMetrics = ['Failing Backup Agents']) is in pmm-qa#1740, which is still open and unmerged. Merging it clears these lanes. Deduped from the run logs, not re-reproduced.",
+        "link": "https://github.com/percona/pmm-qa/pull/1740",
+        "by": "Investigator routine",
+        "at": "2026-11-12T03:09:08Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-12T03:05:46Z",
         "suites": [
           "E2E Tests"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-12T03:05:46Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-12T03:05:46Z",
-        "suites": [
-          "Nightly"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-12T03:05:46Z",
-        "suites": [
-          "Nightly Compatibility"
         ]
       }
     ]
