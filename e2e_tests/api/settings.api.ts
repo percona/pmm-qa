@@ -12,11 +12,6 @@ interface SettingsBody {
   enable_backup_management?: boolean;
   enable_internal_pg_qan?: boolean;
   enable_advisor?: boolean;
-  advisor_run_intervals?: {
-    rare_interval: string;
-    standard_interval: string;
-    frequent_interval: string;
-  };
   enable_azurediscover?: boolean;
   enable_access_control?: boolean;
 }
@@ -49,6 +44,17 @@ export default class SettingsApi {
     if (settings.settings.backup_management_enabled === true) return;
 
     await this.updateSettings({ enable_backup_management: true });
+  };
+
+  /** The Advisor notification settings, shaped to be put back with updateSettings. */
+  getAdvisorNotifications = async (): Promise<Record<string, unknown>> => {
+    const { settings } = await this.getSettings();
+
+    return {
+      advisor_notification_email_addresses: { values: settings.advisor_notification_email_addresses },
+      advisor_notification_severities: settings.advisor_notification_severities,
+      enable_advisor_notifications: settings.advisor_notifications_enabled,
+    };
   };
 
   getSettings = async () => {

@@ -1,6 +1,9 @@
 export interface SettingsResponse {
   settings: {
     advisor_enabled: boolean;
+    advisor_notification_email_addresses: string[];
+    advisor_notification_severities: string[];
+    advisor_notifications_enabled: boolean;
     alerting_enabled: boolean;
     azurediscover_enabled: boolean;
     backup_management_enabled: boolean;
