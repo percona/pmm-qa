@@ -785,7 +785,7 @@ Precondition: the QA custom check exists, and a run of all checks has completed.
 
 | # | Step | Expected result |
 | --- | --- | --- |
-| 1 | Read the run's insights through the API. | At least one built-in check failed. Each failed built-in insight links to `https://docs.percona.com/percona-monitoring-and-management/3/advisors/checks/<page>.html`, and no two checks share a page. None of these pages answers `404`. |
+| 1 | Read the run's insights through the API. | At least one built-in check failed. Each failed built-in insight links to `https://docs.percona.com/percona-monitoring-and-management/3/advisors/checks/<page>.html`, and no two checks share a page. Each page answers `200` without a redirect; a missing page redirects to the docs 404 page. |
 | 2 | Open Insights for the run filtered by a failed built-in check (`&check=<name>`). | Its row has the documentation icon. Double-clicking it opens the pane, where **Read more** links to the check's page. |
 | 3 | Open Insights for the run filtered by the QA custom check. | Its rows have no documentation icon. |
 

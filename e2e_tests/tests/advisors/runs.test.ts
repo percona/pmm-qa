@@ -213,6 +213,9 @@ pmmTest.describe('Advisor runs', () => {
           )
           .slice(0, 20)
           .map(({ name }) => name);
+
+        expect(names.length, 'No enabled built-in MySQL check found').toBeGreaterThan(0);
+
         // About a second per check on one service: long enough to see the run in progress.
         const runId = await api.advisorsApi.startChecks(names);
 

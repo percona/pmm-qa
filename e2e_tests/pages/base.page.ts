@@ -131,13 +131,15 @@ export default abstract class BasePage {
   };
 
   startRun = async (control: Locator): Promise<{ names: string[]; runId: string }> => {
-    const started = this.page.waitForResponse(
-      (response) => response.url().includes(apiEndpoints.advisors.start) && response.ok(),
+    const started = this.page.waitForResponse((response) =>
+      response.url().includes(apiEndpoints.advisors.start),
     );
 
     await control.click();
 
     const response = await started;
+
+    expect(response.status(), await response.text()).toEqual(200);
 
     return {
       names: (response.request().postDataJSON() as { names: string[] }).names,

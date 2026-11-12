@@ -57,9 +57,9 @@ Status: **Covered** = asserted end to end · **Partial** = some of the item is a
 | Catalog | Four severities; a retired severity fails clearly; notice becomes warning | Partial | TC-46 (notice and emergency fail, info passes) | — |
 | Catalog | No Interval column, filter or inline select | Dropped | — | — |
 | Built-ins | Starlark error shown; timeouts reported separately | Partial | TC-14 (error; a runaway script is stopped, but by the CPU limit, see finding 5) | — |
-| Built-ins | Crash fixes: MySQL 5.7, MongoDB standalone and 8.2, empty metrics | Covered | TC-66 (leaves out the checks of findings 6 and 7) | — |
+| Built-ins | Crash fixes: MySQL 5.7, MongoDB standalone and 8.2, empty metrics | Partial | TC-66 (leaves out the checks of findings 6 and 7) | — |
 | Built-ins | 13 checks emit one finding per service or database | Partial | TC-67 (`postgresql_unused_index_check`, one of the 10 PostgreSQL checks that share the 10-name cap) | — |
-| Built-ins | Read-more links point to each check's own page | Covered | TC-57 (form, one page per check, and no page answers 404) | — |
+| Built-ins | Read-more links point to each check's own page | Covered | TC-57 (form, one page per check, and each page exists) | — |
 | Email | Completed runs emailed through GF_SMTP | Covered | TC-50, TC-61 (a schedule that falls due), TC-62 | — |
 | Email | Settings defaults: toggle, severities, ≤20 recipients, enable without recipients rejected | Covered | TC-25, TC-48 | — |
 | Email | Per-schedule recipients and severities | Covered | TC-50 (own recipients and severities), TC-59 (Settings, own, none, deleted during the run) | — |
@@ -149,7 +149,7 @@ Priority: **P1** automate before 3.11.0 · **P2** automate when its setup exists
 | NC-42 | TC-14 | Only *check script execution* is asserted: the message says *signal: killed*, not *timed out* (finding 5). |
 | NC-43 | TC-66 | The test starts `mysql:5.7` and `mongo:8.2` itself and has PMM Server's own agent monitor them as remote services. It runs every built-in MySQL and MongoDB check but the two of findings 6 and 7 on those two services only, rather than **Run all**, and reads the errors from the run's insights. |
 | NC-44 | TC-67 | PostgreSQL rather than MySQL: `mysql_tables_without_pk` still reports one finding per table. The 13 checks are the 10 PostgreSQL ones that share a 10-name cap, plus `mongodb_balancer`, `mongodb_shard_collection_inconsistent_indexes` and `mongodb_xfs_ftype`. Two databases show the split per database. |
-| NC-45 | TC-57 | Each link is checked for its form and one page per check, and fetched from docs.percona.com to show it is not a 404. |
+| NC-45 | TC-57 | Each link is checked for its form and one page per check, and fetched from docs.percona.com without following redirects to show the page exists: a missing page redirects to the docs 404 page. |
 | NC-49 | TC-59 | Settings recipients, own recipients, no email, and a schedule deleted during its run. Own severities are in TC-50. |
 | NC-51 | TC-54 | **Run selected** is not tried; starting checks is refused through the API. |
 | NC-52 | TC-69 | Only the after-upgrade half is new: the `@pre-upgrade` tests of the `pmm-3.6.0` to `pmm-3.10.0` branches already disable `mongodb_version` and set an interval. The bookmark is opened as a URL. |
@@ -251,7 +251,7 @@ Priority: **P1** automate before 3.11.0 · **P2** automate when its setup exists
 
 ## Plan
 
-Done so far: U-01 to U-07, every P1 case, the SMTP sink, and Phases 0 to 4. TC-69 to TC-72 are written but have not run yet.
+Done so far: U-01 to U-07, every P1 case except NC-37 (its TC-45 was dropped in review), the SMTP sink, and Phases 0 to 4. TC-69 to TC-72 are written but have not run yet.
 
 pmm's own `api-tests/server/advisor*_test.go` already cover the API side of most of the feature:
 
@@ -309,7 +309,7 @@ TC-67 passed on the local build, and TC-66 failed on findings 6 and 7 only. TC-6
 ### Review changes (2 Nov 2026)
 
 - Dropped: TC-45 (check list API and removed endpoints), TC-53 (Grafana Advisor panel removed), TC-60 (Advisor fields of the settings API) and TC-68 (Connected Agents), and every assertion that interval controls or fields are gone.
-- Added: TC-73 (user schedules survive Advisors off and on), a step in TC-55 where a new service joins the next run, and a 404 check of the read-more pages in TC-57.
+- Added: TC-73 (user schedules survive Advisors off and on), a step in TC-55 where a new service joins the next run, and a check in TC-57 that each read-more page exists.
 - Locators the tests built inline now live in the page and component objects, and the scheduler tests wait for the active run in `afterEach` instead of a try/finally.
 
 ### Manual or left to pmm's tests

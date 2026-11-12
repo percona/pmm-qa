@@ -1,6 +1,7 @@
 import AdvisorsApi from '@api/advisors.api';
 import MailpitApi from '@api/mailpit.api';
 import pmmTest from '@fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 import { AdvisorScheduleEmailMode } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
@@ -312,7 +313,12 @@ pmmTest.describe('Advisor notifications', () => {
       await api.advisorsApi.deleteSchedule(deleted.schedule_id);
       await api.advisorsApi.waitForRun(runId);
       await expect
-        .poll(async () => (await api.mailpitApi.messagesTo(settingsRecipient)).map(({ Subject }) => Subject))
+        .poll(
+          async () => (await api.mailpitApi.messagesTo(settingsRecipient)).map(({ Subject }) => Subject),
+          {
+            timeout: Timeouts.ONE_MINUTE,
+          },
+        )
         .toContain(`PMM Advisor Insights: 1 finding(s) for ${deleted.name}`);
       expect(await api.mailpitApi.messagesTo(deletedRecipient)).toHaveLength(0);
     });

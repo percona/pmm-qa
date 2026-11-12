@@ -72,9 +72,17 @@ export default class AdvisorsApi {
     { namePrefix = AdvisorsApi.customCheckName(), technology = AdvisorCheckTechnology.mysql } = {},
   ): Promise<string[]> => {
     const names = Array.from({ length: count }, (_, i) => `${namePrefix}_${i}`);
+    const created: string[] = [];
 
-    for (const name of names) {
-      await this.createCustomCheck({ name, script: this.endlessCheckScript, technology });
+    try {
+      for (const name of names) {
+        await this.createCustomCheck({ name, script: this.endlessCheckScript, technology });
+        created.push(name);
+      }
+    } catch (error) {
+      for (const name of created) await this.deleteCheck(name);
+
+      throw error;
     }
 
     return names;

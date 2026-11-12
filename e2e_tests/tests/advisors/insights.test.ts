@@ -100,14 +100,19 @@ pmmTest.describe('Advisor insights', () => {
     async ({ advisorInsightsPage, api, page }) => {
       await api.advisorsApi.getMysqlService();
 
-      const checks = {
-        error: await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.erroringCheckScript }),
-        failed: await api.advisorsApi.createCustomCheck(),
-        ok: await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript }),
-      };
+      const error = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.erroringCheckScript });
 
-      createdChecks.push(...Object.values(checks).map(({ name }) => name));
+      createdChecks.push(error.name);
 
+      const failed = await api.advisorsApi.createCustomCheck();
+
+      createdChecks.push(failed.name);
+
+      const ok = await api.advisorsApi.createCustomCheck({ script: api.advisorsApi.passingCheckScript });
+
+      createdChecks.push(ok.name);
+
+      const checks = { error, failed, ok };
       const run = await api.advisorsApi.runChecksAndWait(Object.values(checks).map(({ name }) => name));
       const insights = await api.advisorsApi.listInsights({ run_id: run.id });
       const insightsOf = (checkName: string) => insights.filter(({ check_name }) => check_name === checkName);
@@ -162,22 +167,28 @@ pmmTest.describe('Advisor insights', () => {
       const run = await api.advisorsApi.runChecksAndWait([failing.name, passing.name]);
       const insights = await api.advisorsApi.listInsights({ run_id: run.id });
       const failingCount = insights.filter(({ check_name }) => check_name === failing.name).length;
-      const [nodeName] = insights.map(({ node_name }) => node_name);
+      const [nodeName] = insights
+        .filter(({ service_id }) => service_id === service.service_id)
+        .map(({ node_name }) => node_name);
+      const scoped = insights.filter(
+        ({ node_name, service_id }) => service_id === service.service_id && node_name === nodeName,
+      );
+      const scopedFailingCount = scoped.filter(({ check_name }) => check_name === failing.name).length;
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
 
       await pmmTest.step('Service and Node options come from the insights history', async () => {
         await advisorInsightsPage.selectFilter('serviceName', service.service_name);
         await advisorInsightsPage.selectFilter('nodeName', nodeName);
-        await expect(advisorInsightsPage.elements.rows).toHaveCount(insights.length);
+        await expect(advisorInsightsPage.elements.rows).toHaveCount(scoped.length);
       });
 
       await pmmTest.step('Category, Severity and Status narrow the rows together', async () => {
         await advisorInsightsPage.selectFilter('category', failing.category);
-        await expect(advisorInsightsPage.elements.rows).toHaveCount(failingCount);
+        await expect(advisorInsightsPage.elements.rows).toHaveCount(scopedFailingCount);
         await advisorInsightsPage.selectFilter('severity', 'Warning');
         await advisorInsightsPage.selectFilter('status', 'Failed');
-        await expect(advisorInsightsPage.elements.rows).toHaveCount(failingCount);
+        await expect(advisorInsightsPage.elements.rows).toHaveCount(scopedFailingCount);
 
         for (const param of ['service=', 'node=', 'category=', 'severity=SEVERITY_WARNING', 'status=']) {
           await expect(page).toHaveURL(new RegExp(param));
@@ -484,7 +495,8 @@ pmmTest.describe('Advisor insights', () => {
 
         for (const [url, names] of checksByUrl) {
           expect([...names], url).toHaveLength(1);
-          expect((await page.request.get(url)).status(), url).not.toEqual(404);
+          // A missing page answers 301 to the docs 404 page, which answers 200.
+          expect((await page.request.get(url, { maxRedirects: 0 })).status(), url).toEqual(200);
         }
       });
 

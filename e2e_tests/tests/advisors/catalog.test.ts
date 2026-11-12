@@ -267,10 +267,16 @@ pmmTest.describe('Advisors catalog', () => {
     async ({ advisorsCatalogPage, api, page }) => {
       const category = `QA run ${Date.now()}`;
       const enabled = await api.advisorsApi.createCustomCheck({ category });
+
+      createdChecks.push(enabled.name);
+
       const disabled = await api.advisorsApi.createCustomCheck({ category });
+
+      createdChecks.push(disabled.name);
+
       const otherCategory = await api.advisorsApi.createCustomCheck();
 
-      createdChecks.push(enabled.name, disabled.name, otherCategory.name);
+      createdChecks.push(otherCategory.name);
       await api.advisorsApi.changeCheck(disabled.name, { enable: false });
       await page.goto(advisorsCatalogPage.url);
 

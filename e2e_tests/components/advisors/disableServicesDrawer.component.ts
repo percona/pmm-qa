@@ -3,7 +3,9 @@ import BasePage from '@pages/base.page';
 export default class DisableServicesDrawerComponent extends BasePage {
   builders = {
     disabledService: (serviceName: string) =>
-      this.elements.disabledList.getByRole('listitem').filter({ hasText: serviceName }),
+      this.elements.disabledList
+        .getByRole('listitem')
+        .filter({ has: this.page.getByText(serviceName, { exact: true }) }),
     enableButton: (serviceId: string) => this.page.getByTestId(`disable-services-enable-${serviceId}`),
     serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
     title: (summary: string) =>

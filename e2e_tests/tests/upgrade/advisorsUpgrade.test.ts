@@ -11,7 +11,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
   // mongodb_version and set postgresql_unsupported_check to the Frequent interval.
   pmmTest(
     'PMM-T2618 - Verify Advisors start from the default schedule with every check enabled after upgrade @post-upgrade',
-    async ({ api, page, settingsPage }) => {
+    async ({ advisorsCatalogPage, api, page, settingsPage }) => {
       await pmmTest.step('Checks disabled before the upgrade are enabled again', async () => {
         const checks = await api.advisorsApi.listChecks();
 
@@ -41,6 +41,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
       await pmmTest.step('A bookmark of the old Advisors page opens the new one', async () => {
         await page.goto('graph/advisors');
         await expect(page).toHaveURL(/\/pmm-ui\/advisors$/);
+        await expect(advisorsCatalogPage.elements.title).toBeVisible();
       });
     },
   );
