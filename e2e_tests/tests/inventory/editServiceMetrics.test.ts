@@ -2,7 +2,6 @@ import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import DockerHelper from '@helpers/docker.helper';
 import {
-  exporterMetricsState,
   LogLevel,
   logLevelFlag,
   MetricsMode,
@@ -13,8 +12,7 @@ import {
   toMetricsSettings,
 } from '@helpers/serviceMetrics.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { AgentStatus, GetService } from '@interfaces/inventory';
-import EditServicePage from '@pages/inventory/editService.page';
+import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 import { serverContainer } from '@testdata/datasourceProxy';
 
@@ -31,28 +29,6 @@ for (const serviceMetrics of serviceMetricsSettings) {
         serverContainer,
         `http://${container}:${(await exporter(api)).listen_port}/metrics`,
       );
-
-    // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
-    const saveMetrics = async (
-      api: Api,
-      editServicePage: EditServicePage,
-      base: ServiceMetricsSettings,
-      change: Partial<ServiceMetricsSettings>,
-    ) => {
-      const expected = { ...base, ...change };
-
-      await editServicePage.editMetrics(change);
-      await editServicePage.expectSaved(await editServicePage.saveChanges(service.service_id));
-      await expect
-        .poll(async () => exporterMetricsState(await exporter(api)), {
-          message: `${exporterType} runs with ${JSON.stringify(change)}`,
-          timeout: Timeouts.ONE_MINUTE,
-        })
-        .toEqual({ ...expected, status: AgentStatus.running });
-
-      await editServicePage.open(service.service_id);
-      await editServicePage.verifyMetrics(expected);
-    };
 
     pmmTest.beforeEach(async ({ api, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
@@ -94,7 +70,9 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         for (const metricsMode of [otherMode, original.metricsMode]) {
           await pmmTest.step(`Change metrics mode to ${metricsMode}`, async () => {
-            await saveMetrics(api, editServicePage, original, { metricsMode });
+            await editServicePage.saveMetrics(service.service_id, original, { metricsMode }, () =>
+              exporter(api),
+            );
 
             // PMM Server scrapes a pulled exporter, the client's vmagent sends a pushed one's metrics. A new
             // sample alone does not say which: vmagent can still scrape the exporter just after it turns to pull.
@@ -138,7 +116,9 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyMetrics(pushing);
-        await saveMetrics(api, editServicePage, pushing, { exposeExporter: true });
+        await editServicePage.saveMetrics(service.service_id, pushing, { exposeExporter: true }, () =>
+          exporter(api),
+        );
 
         // Any HTTP answer will do: the exporter asks for its agent password, or has none to ask for.
         await expect
@@ -159,7 +139,9 @@ for (const serviceMetrics of serviceMetricsSettings) {
         await editServicePage.open(service.service_id);
 
         await pmmTest.step(`Change log level to ${verbose}`, async () => {
-          await saveMetrics(api, editServicePage, original, { logLevel: verbose });
+          await editServicePage.saveMetrics(service.service_id, original, { logLevel: verbose }, () =>
+            exporter(api),
+          );
           await dockerHelper.waitForExporterCommandLine(container, (await exporter(api)).listen_port, {
             matches: true,
             pattern: logLevelFlag(verbose),
@@ -167,7 +149,12 @@ for (const serviceMetrics of serviceMetricsSettings) {
         });
 
         await pmmTest.step('Change log level back to Default', async () => {
-          await saveMetrics(api, editServicePage, original, { logLevel: 'LOG_LEVEL_UNSPECIFIED' });
+          await editServicePage.saveMetrics(
+            service.service_id,
+            original,
+            { logLevel: 'LOG_LEVEL_UNSPECIFIED' },
+            () => exporter(api),
+          );
         });
       },
     );
@@ -190,7 +177,9 @@ for (const serviceMetrics of serviceMetricsSettings) {
         // Clearing the field puts the server's default timeout back.
         for (const connectionTimeout of [timeout, '']) {
           await pmmTest.step(`Change connection timeout to "${connectionTimeout}"`, async () => {
-            await saveMetrics(api, editServicePage, original, { connectionTimeout });
+            await editServicePage.saveMetrics(service.service_id, original, { connectionTimeout }, () =>
+              exporter(api),
+            );
           });
         }
       },

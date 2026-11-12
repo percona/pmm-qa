@@ -5,12 +5,14 @@ import {
   MetricsMode,
   ServiceMetricsSettings,
   EndpointSettings,
+  exporterMetricsState,
   MetricsScheme,
 } from '@helpers/serviceMetrics.helper';
 import { OptionField } from '@helpers/serviceOptions.helper';
 import { QuerySource, querySources } from '@helpers/serviceQan.helper';
 import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { AgentStatus, ServiceAgent } from '@interfaces/inventory';
 import { expect, Response } from '@playwright/test';
 
 export interface ServiceLabels {
@@ -273,6 +275,28 @@ export default class EditServicePage extends BasePage {
     ]);
 
     return response;
+  };
+
+  // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
+  saveMetrics = async (
+    serviceId: string,
+    base: ServiceMetricsSettings,
+    change: Partial<ServiceMetricsSettings>,
+    getExporter: () => Promise<ServiceAgent>,
+  ) => {
+    const expected = { ...base, ...change };
+
+    await this.editMetrics(change);
+    await this.expectSaved(await this.saveChanges(serviceId));
+    await expect
+      .poll(async () => exporterMetricsState(await getExporter()), {
+        message: `the exporter runs with ${JSON.stringify(change)}`,
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toEqual({ ...expected, status: AgentStatus.running });
+
+    await this.open(serviceId);
+    await this.verifyMetrics(expected);
   };
 
   // The form lists custom labels in the order the API returns them, which is sorted by name.
