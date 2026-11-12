@@ -79,9 +79,20 @@ pmmTest(
     });
 
     const firstFailingFor = await pmmTest.step('Failing for counts from the stop', async () => {
-      const [row] = await dashboard.getTableRowsAfterRefresh(panelName);
-      const failingFor = GrafanaHelper.getDurationSeconds(row['Failing for']);
+      let failingFor = NaN;
 
+      await expect
+        .poll(
+          async () => {
+            const [row] = await dashboard.getTableRowsAfterRefresh(panelName);
+
+            failingFor = GrafanaHelper.getDurationSeconds(row['Failing for']);
+
+            return failingFor;
+          },
+          { message: 'Failing for should show a duration', timeout: Timeouts.ONE_MINUTE },
+        )
+        .not.toBeNaN();
       expect(Math.abs(failingFor - (Date.now() - stoppedAt) / 1_000)).toBeLessThanOrEqual(120);
 
       return failingFor;

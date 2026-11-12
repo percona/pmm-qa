@@ -111,12 +111,14 @@ export default class GrafanaHelper {
     return await response.json();
   };
 
-  // Grafana's dtdurations text ("3 minutes, 12 seconds") in seconds.
-  static getDurationSeconds = (text: string): number =>
-    [...text.matchAll(/(\d+)\s+(second|minute|hour|day|week)s?/g)].reduce(
-      (sum, [, value, unit]) => sum + Number(value) * durationUnits[unit],
-      0,
-    );
+  // NaN for "N/A" or "> 24h", so no comparison on an unavailable duration passes.
+  static getDurationSeconds = (text: string): number => {
+    const parts = [...text.matchAll(/(\d+)\s+(second|minute|hour|day|week)s?/g)];
+
+    return parts.length
+      ? parts.reduce((sum, [, value, unit]) => sum + Number(value) * durationUnits[unit], 0)
+      : NaN;
+  };
 
   getFolderDetailsByName = async (folderName: string): Promise<GrafanaFolder> => {
     const response = await this.page.request.get('graph/api/folders', {

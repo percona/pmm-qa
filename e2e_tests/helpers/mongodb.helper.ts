@@ -72,14 +72,6 @@ export default class MongoDBHelper {
   };
 
   /**
-   * Simulates a long-running query by splitting delay across many documents.
-   * MongoDB kills server-side JS after a few seconds; so we use a short delay per document
-   * (e.g. 2s) and ensure enough documents so total time ≈ delayMs. Query stays "running" on server.
-   *
-   * @param options.queryLabel - string injected into the $where (and console.log'd); use it to find this query in RTA/logs
-   * @returns Resolved array of documents
-   */
-  /**
    * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
    *
    * @param   container   a PSMDB container with the pbm CLI configured
@@ -98,6 +90,14 @@ export default class MongoDBHelper {
     );
   };
 
+  /**
+   * Simulates a long-running query by splitting delay across many documents.
+   * MongoDB kills server-side JS after a few seconds; so we use a short delay per document
+   * (e.g. 2s) and ensure enough documents so total time ≈ delayMs. Query stays "running" on server.
+   *
+   * @param options.queryLabel - string injected into the $where (and console.log'd); use it to find this query in RTA/logs
+   * @returns Resolved array of documents
+   */
   simulateLongRunningQuery = async (
     options: {
       chunkMs?: number;
