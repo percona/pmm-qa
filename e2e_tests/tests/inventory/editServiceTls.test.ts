@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import { serviceMetricsSettings } from '@helpers/serviceMetrics.helper';
 import {
   expectedTlsSecrets,
   serviceTlsSettings,
@@ -35,7 +36,7 @@ for (const settings of serviceTlsSettings) {
         const container = tlsServerContainer;
 
         tlsServerContainer = undefined;
-        cliHelper.execSilent(serverTls.disable(container)).assertSuccess();
+        cliHelper.execSilent(serverTls.disable(container, credentials)).assertSuccess();
         await expect
           .poll(() => cliHelper.execSilent(serverTls.plainProbe(container, credentials)).code, {
             message: `${container} takes connections without TLS again`,
@@ -146,52 +147,57 @@ for (const settings of serviceTlsSettings) {
     );
 
     if (serverTls) {
+      // Without a CA field the exporter checks the server certificate against the system roots, which it fails.
+      const verifiable = certificateFields.includes('tlsCa');
+      const upMetric = serviceMetricsSettings.find((metrics) => metrics.name === name)?.upMetric;
+
+      if (!upMetric) throw new Error(`${name} has no up metric in serviceMetricsSettings`);
+
       pmmTest(
-        `PMM-15674 - Verify ${name} exporter works over TLS once enabled, with and without verification @inventory`,
+        `PMM-15674 - Verify ${name} exporter works over TLS once enabled${verifiable ? ', with and without verification' : ''} @inventory`,
         async ({ api, cliHelper, credentials, dockerHelper, editServicePage }) => {
           const container = await dockerHelper.getServiceContainer(api, service);
           const exporter = () => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-          const up = `${serverTls.upMetric}{service_name="${service.service_name}"}`;
+          const up = `${upMetric}{service_name="${service.service_name}"}`;
 
-          await pmmTest.step(`${container} takes TLS connections only`, async () => {
-            tlsServerContainer = container;
-            cliHelper.execSilent(serverTls.enable(container)).assertSuccess();
-            // systemd returns from the restart before the database has read its TLS settings.
-            await expect
-              .poll(() => cliHelper.execSilent(serverTls.tlsProbe(container, credentials)).code, {
-                message: `${container} takes TLS connections`,
-                timeout: Timeouts.TWO_MINUTES,
-              })
-              .toEqual(0);
-            expect(
-              cliHelper.execSilent(serverTls.plainProbe(container, credentials)).code,
-              `${container} refuses connections without TLS`,
-            ).not.toEqual(0);
-          });
+          await pmmTest.step(
+            `${container} takes ${serverTls.tlsOnly ? 'only ' : ''}TLS connections`,
+            async () => {
+              tlsServerContainer = container;
+              cliHelper.execSilent(serverTls.enable(container, credentials)).assertSuccess();
+              // A restarted database takes a moment to read its TLS settings after systemd returns.
+              await expect
+                .poll(() => cliHelper.execSilent(serverTls.tlsProbe(container, credentials)).code, {
+                  message: `${container} takes TLS connections`,
+                  timeout: Timeouts.TWO_MINUTES,
+                })
+                .toEqual(0);
+              expect(
+                cliHelper.execSilent(serverTls.plainProbe(container, credentials)).code === 0,
+                `${container} takes connections without TLS`,
+              ).toBe(!serverTls.tlsOnly);
+            },
+          );
 
-          await pmmTest.step('Enable TLS without verification', async () => {
-            await editServicePage.open(service.service_id);
-            await editServicePage.saveTls(
-              service.service_id,
-              { tls: true, tlsSkipVerify: true },
-              serverTls.certificates(cliHelper, container),
-              certificateFields,
-              exporter,
+          // The server certificate names the host the exporter connects to, so it passes verification too.
+          for (const tlsSkipVerify of verifiable ? [true, false] : [true]) {
+            await pmmTest.step(
+              tlsSkipVerify
+                ? 'Enable TLS without verification'
+                : 'Verify the server certificate against the CA',
+              async () => {
+                await editServicePage.open(service.service_id);
+                await editServicePage.saveTls(
+                  service.service_id,
+                  { tls: true, tlsSkipVerify },
+                  tlsSkipVerify ? serverTls.certificates(cliHelper, container) : {},
+                  certificateFields,
+                  exporter,
+                );
+                await api.prometheusApi.waitForNewValue(up, 1);
+              },
             );
-            await api.prometheusApi.waitForNewValue(up, 1);
-          });
-
-          // The server certificate names the container the exporter connects to, so it passes verification too.
-          await pmmTest.step('Verify the server certificate against the CA', async () => {
-            await editServicePage.saveTls(
-              service.service_id,
-              { tls: true, tlsSkipVerify: false },
-              {},
-              certificateFields,
-              exporter,
-            );
-            await api.prometheusApi.waitForNewValue(up, 1);
-          });
+          }
         },
       );
     }
