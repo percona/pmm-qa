@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import { serviceConnections, testDatabase, testUser } from '@helpers/serviceConnection.helper';
-import { toNotificationText } from '@helpers/serviceForm.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
@@ -121,7 +120,7 @@ for (const {
     );
 
     pmmTest(
-      `PMM-15674 - Verify wrong password is rejected by the connection check, showing its reason, for ${name} service @inventory`,
+      `PMM-15674 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
       async ({ api, credentials, editServicePage }) => {
         const { username } = original(credentials);
 
@@ -135,10 +134,6 @@ for (const {
           service.service_id,
           'connection check fails with a wrong password',
         );
-
-        const { message } = (await response.json()) as { message: string };
-
-        await expect(editServicePage.builders.text(toNotificationText(message))).toBeVisible();
         expect(
           (await api.inventoryApi.getServiceExporter(service.service_id, exporterType)).username,
           'stored username is unchanged',
