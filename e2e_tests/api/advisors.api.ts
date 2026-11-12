@@ -80,7 +80,15 @@ export default class AdvisorsApi {
         created.push(name);
       }
     } catch (error) {
-      for (const name of created) await this.deleteCheck(name);
+      const cleanupErrors = (await Promise.allSettled(created.map((name) => this.deleteCheck(name))))
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+        .map(({ reason }) => reason);
+
+      if (cleanupErrors.length) {
+        throw new AggregateError(cleanupErrors, 'Creating endless checks failed, and so did deleting some', {
+          cause: error,
+        });
+      }
 
       throw error;
     }
