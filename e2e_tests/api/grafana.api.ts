@@ -21,11 +21,15 @@ export default class GrafanaApi {
     ).toEqual(200);
   };
 
-  createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
+  createDashboard = async (
+    title: string,
+    panelTitle: string,
+    panel: Record<string, unknown> = { type: 'timeseries' },
+  ): Promise<GrafanaDashboard> => {
     const response = await this.request.post(apiEndpoints.grafana.dashboards, {
       data: {
         dashboard: {
-          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, type: 'timeseries' }],
+          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, ...panel }],
           schemaVersion: 39,
           title,
         },

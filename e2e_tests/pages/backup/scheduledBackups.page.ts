@@ -1,11 +1,13 @@
 import BasePage from '@pages/base.page';
+import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 export default class ScheduledBackupsPage extends BasePage {
   url = 'graph/backup/scheduled';
-  urls = {
-    locations: 'graph/backup/locations',
+  builders = {
+    lastBackup: (name: string) =>
+      this.grafanaIframe().getByRole('row').filter({ hasText: name }).getByTestId('detailed-date'),
   };
-  builders = {};
   buttons = {
     createScheduledBackup: this.grafanaIframe().getByTestId('scheduled-backup-add-button'),
     settingsLink: this.grafanaIframe().getByTestId('settings-link'),
@@ -16,4 +18,11 @@ export default class ScheduledBackupsPage extends BasePage {
   };
   inputs = {};
   messages = {};
+
+  open = async () => {
+    await this.page.goto(this.url);
+    await expect(this.buttons.createScheduledBackup).toContainText('Create scheduled backup', {
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+  };
 }

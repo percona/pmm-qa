@@ -1,21 +1,21 @@
 const { I } = inject();
 const paginationPart = require('./paginationFragment');
+const { tableDataRows } = require('../../helper/locatorHelper');
 
-const getServiceRowLocator = (serviceName) => `//span[contains(text(), '${serviceName}')]//ancestor::tr`;
+const getServiceRowLocator = (serviceName) => `${tableDataRows}[td[4]/div/span[text()="${serviceName}"]]`;
 
 /**
  * All elements and methods for the PMM Inventory / Services Page
  */
 module.exports = {
-  url: 'graph/inventory/services',
+  url: 'pmm-ui/inventory/services',
   fields: {
     serviceRow: (serviceName) => getServiceRowLocator(serviceName),
-    serviceCellMonitoring: (serviceName) => `${getServiceRowLocator(serviceName)}/td[5]`,
-    serviceCellAddress: (serviceName) => `${getServiceRowLocator(serviceName)}/td[6]`,
-    inventoryTable: locate('table'),
+    serviceCellMonitoring: (serviceName) => `${getServiceRowLocator(serviceName)}//*[@data-testid="monitoring-status-link"]`,
+    serviceCellAddress: (serviceName) => `${getServiceRowLocator(serviceName)}/td[7]`,
   },
   buttons: {
-    addService: locate('button').withText('Add Service'),
+    addService: '$add-service-button',
   },
   pagination: paginationPart,
 

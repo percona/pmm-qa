@@ -34,7 +34,10 @@ export default class DockerHelper {
 
   // 000 when nothing answers on the address, as for an exporter listening only on its own host's 127.0.0.1.
   getHttpStatus = (container: string, url: string) =>
+  startContainer = (name: string, dockerArgs: string, network = 'pmm-qa') =>
     this.cliHelper
+      .execute(`docker run --detach --quiet --name ${name} --network ${network} ${dockerArgs}`)
+      .assertSuccess();
       .execSilent(`docker exec ${container} curl -s -o /dev/null --max-time 5 -w '%{http_code}' ${url}`)
       .stdout.trim();
 
@@ -47,6 +50,8 @@ export default class DockerHelper {
       .getStdOutLines()
       .find((line) => matches.every((match) => line.includes(match)));
 
+  supervisorctl = (action: 'restart' | 'start' | 'stop', program = 'pmm-managed', container = 'pmm-server') =>
+    this.cliHelper.execute(`docker exec ${container} supervisorctl ${action} ${program}`).assertSuccess();
   getServiceContainer = async (api: Api, { node_id }: GetService) =>
     this.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
 
