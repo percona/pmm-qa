@@ -71,6 +71,14 @@ export default class MongoDBHelper {
     }
   };
 
+  getCollection = (dbName: string, collectionName: string) =>
+    this.client.db(dbName).collection(collectionName);
+
+  getReplicaSetMemberStates = async () =>
+    ((await this.client.db('admin').command({ replSetGetStatus: 1 })).members as { stateStr: string }[]).map(
+      ({ stateStr }) => stateStr,
+    );
+
   /**
    * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
    *
