@@ -98,7 +98,8 @@ export default class QanApi {
     try {
       body = JSON.parse(text) as T;
     } catch {
-      // Keep the raw text for the assertion message.
+      // A 200 that is not JSON would read as empty and pass a denial check.
+      if (response.status() === 200 && text.trim()) throw new Error(`Invalid JSON from ${path}: ${text}`);
     }
 
     return { body, status: response.status(), text };
