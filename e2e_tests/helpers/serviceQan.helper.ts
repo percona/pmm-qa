@@ -134,6 +134,8 @@ export const querySourceChanges = ({ sources }: ServiceQan, querySource: QuerySo
 
 interface QanInstance extends Required<OwnService> {
   agentType: string;
+  // A query source whose extension the instance lacks, so the server uses this one instead and warns.
+  fallbackFrom?: QuerySource;
   // The framework service whose container the instance runs in, so its pmm-agent can read the source.
   hostServiceRegex: string;
   name: string;
@@ -154,6 +156,7 @@ const mongologPort = 27_099;
 export const qanInstances: QanInstance[] = [
   {
     agentType: 'qan-postgresql-pgstatements-agent',
+    fallbackFrom: 'pgstatmonitor',
     hostServiceRegex: frameworkServices.pdpgsql.serviceRegex,
     name: 'PostgreSQL with pg_stat_statements',
     querySource: 'pgstatements',

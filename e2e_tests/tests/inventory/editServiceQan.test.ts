@@ -159,7 +159,7 @@ pmmTest(
 );
 
 for (const instance of qanInstances) {
-  const { agentType, hostServiceRegex, name, querySource, serviceName } = instance;
+  const { agentType, fallbackFrom, hostServiceRegex, name, querySource, serviceName } = instance;
 
   pmmTest.describe(`Edit service query source on a database of its own | ${name}`, () => {
     let container: string;
@@ -211,5 +211,33 @@ for (const instance of qanInstances) {
         );
       },
     );
+
+    if (fallbackFrom) {
+      pmmTest(
+        `PMM-15674 - Verify choosing ${fallbackFrom} for ${name} falls back to ${querySource} with the server's warning @inventory`,
+        async ({ api, editServicePage }) => {
+          await editServicePage.open(service.service_id);
+          await editServicePage.editQuerySource(fallbackFrom);
+
+          const response = await editServicePage.saveChanges(service.service_id);
+
+          await editServicePage.expectSaved(response);
+
+          const { warning } = (await response.json()) as { warning?: string };
+
+          expect(warning, `the server warns that ${fallbackFrom} cannot be used`).toBeTruthy();
+          await expect(editServicePage.builders.text(warning ?? '')).toBeVisible();
+          await expect
+            .poll(
+              async () =>
+                (await api.inventoryApi.getServiceById(service.service_id)).agents
+                  .map(({ agent_type }) => agent_type)
+                  .filter((type) => type.startsWith('qan-')),
+              { message: `${serviceName} gets a ${agentType} instead`, timeout: Timeouts.THIRTY_SECONDS },
+            )
+            .toEqual([agentType]);
+        },
+      );
+    }
   });
 }
