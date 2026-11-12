@@ -120,9 +120,6 @@ module.exports = {
           case 'resolution':
             body.metrics_resolutions = value;
             break;
-          case 'checkIntervals':
-            body.advisor_run_intervals = value;
-            break;
           case 'alertmanagerRules':
             body.alert_manager_rules = value;
             break;
