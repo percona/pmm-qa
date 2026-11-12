@@ -156,7 +156,7 @@ for (const { field, label, message, serviceRegex, value } of validationCases) {
   });
 }
 
-pmmTest.describe('Edit service requests | ps', () => {
+pmmTest.describe('Edit service requests', () => {
   let service: GetService;
   let originalLogLevel: string;
 
@@ -199,7 +199,7 @@ pmmTest.describe('Edit service requests | ps', () => {
     },
   );
 
-  // ps is monitored with a stored password, so a save that resent it would show here.
+  // The service is monitored with a stored password, so a save that resent it would show here.
   for (const { body, edit, label, settingsChanged } of [
     {
       body: { environment: 'pmm_edit_request_check' },

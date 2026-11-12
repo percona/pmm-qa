@@ -309,6 +309,7 @@ export default defineConfig([
             'verifyMonitoringStatusesOk',
             'verifyLocationFields',
             'verifyBackupSuccess',
+            'changeLabels',
           ],
         },
       ],

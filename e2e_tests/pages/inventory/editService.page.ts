@@ -5,12 +5,15 @@ import {
   MetricsMode,
   ServiceMetricsSettings,
   EndpointSettings,
+  exporterMetricsState,
   MetricsScheme,
 } from '@helpers/serviceMetrics.helper';
 import { OptionField } from '@helpers/serviceOptions.helper';
 import { QuerySource, querySources } from '@helpers/serviceQan.helper';
+import { RdsAuthMode } from '@helpers/serviceRds.helper';
 import { TlsCertificateField, tlsCertificateFields } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { AgentStatus, ServiceAgent } from '@interfaces/inventory';
 import { expect, Response } from '@playwright/test';
 
 export interface ServiceLabels {
@@ -32,6 +35,21 @@ interface ServiceTlsSettings {
   tlsSkipVerify: boolean;
 }
 
+interface RdsCredentialsForm {
+  awsAccessKey?: string;
+  awsRoleArn?: string;
+  awsSecretKey?: string;
+  mode: RdsAuthMode;
+}
+
+interface SaveOptions {
+  clusterChanged?: boolean;
+  credentialsChanged?: boolean;
+  dropsCredentials?: boolean;
+  settingsChanged?: boolean;
+  skipConnectionCheck?: boolean;
+}
+
 export default class EditServicePage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
   builders = {
@@ -42,6 +60,8 @@ export default class EditServicePage extends BasePage {
       this.elements.metricsSection.getByTestId(`radio-option-${metricsMode}`),
     querySourceOption: (querySource: QuerySource) =>
       this.elements.qanSection.getByTestId(`radio-option-${querySource}`),
+    rdsAuthModeOption: (mode: RdsAuthMode) =>
+      this.elements.rdsCredentials.getByTestId(`radio-option-${mode}`),
     // Material React Table names each row's menu button "Row Actions".
     rowActions: (serviceName: string) =>
       this.page
@@ -67,7 +87,9 @@ export default class EditServicePage extends BasePage {
     confirmModal: this.page.getByTestId('confirm-changes-modal'),
     connectionSection: this.page.getByTestId('connection-settings'),
     connectionTimeoutError: this.page.getByText('Enter a number of seconds, or leave blank'),
+    credentialsChangedInfo: this.page.getByTestId('credentials-changed-info'),
     form: this.page.getByTestId('edit-service-form'),
+    hostCredentialsWarning: this.page.getByTestId('host-credentials-warning'),
     logLevelOptions: this.page.getByRole('listbox').getByRole('option'),
     metricsSection: this.page.getByTestId('metrics-settings'),
     notFound: this.page.getByText('This service no longer exists.', { exact: true }),
@@ -76,6 +98,8 @@ export default class EditServicePage extends BasePage {
       .getByText('Leave blank to keep the current one'),
     qanSection: this.page.getByTestId('query-analytics-settings'),
     querySourceRestriction: this.page.getByTestId('query-source-restriction'),
+    rdsCredentials: this.page.getByTestId('rds-credentials'),
+    rdsHostCredentialsNote: this.page.getByTestId('rds-host-credentials-note'),
     serviceDetails: this.page.getByTestId('edit-service-form').getByTestId('service-details'),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
     skipConnectionCheck: this.page.getByTestId('skip-connection-check'),
@@ -86,6 +110,9 @@ export default class EditServicePage extends BasePage {
     authenticationDatabase: this.page.getByTestId('text-input-authentication-database'),
     authenticationMechanism: this.page.getByTestId('text-input-authentication-mechanism'),
     autoDiscoveryLimit: this.page.getByTestId('text-input-auto-discovery-limit'),
+    awsAccessKey: this.page.getByTestId('text-input-aws-access-key'),
+    awsRoleArn: this.page.getByTestId('text-input-aws-role-arn'),
+    awsSecretKey: this.page.getByTestId('text-input-aws-secret-key'),
     cluster: this.page.getByTestId('text-input-cluster'),
     collectionsLimit: this.page.getByTestId('text-input-collections-limit'),
     // Its own htmlInput props replace the ones peak-ui puts the test ID in, so the field has none.
@@ -191,6 +218,14 @@ export default class EditServicePage extends BasePage {
     await this.builders.querySourceOption(querySource).check();
   };
 
+  editRdsCredentials = async ({ awsAccessKey, awsRoleArn, awsSecretKey, mode }: RdsCredentialsForm) => {
+    await this.builders.rdsAuthModeOption(mode).check();
+
+    if (awsAccessKey !== undefined) await this.inputs.awsAccessKey.fill(awsAccessKey);
+    if (awsSecretKey !== undefined) await this.inputs.awsSecretKey.fill(awsSecretKey);
+    if (awsRoleArn !== undefined) await this.inputs.awsRoleArn.fill(awsRoleArn);
+  };
+
   editReplicationSet = async (replicationSet: string) => {
     await this.inputs.replicationSet.fill(replicationSet);
   };
@@ -249,30 +284,62 @@ export default class EditServicePage extends BasePage {
     return writes;
   };
 
-  saveChanges = async (
+  saveChanges = async (serviceId: string, options: SaveOptions = {}): Promise<Response> =>
+    this.confirmSave(`/v1/management/services/${serviceId}`, options);
+
+  // Saves a change of AWS credentials alone, which updates the RDS exporter and not the service.
+  saveCredentials = async (rdsExporterId: string, { dropsCredentials = false } = {}): Promise<Response> =>
+    this.confirmSave(`/v1/inventory/agents/${rdsExporterId}`, {
+      credentialsChanged: true,
+      dropsCredentials,
+      settingsChanged: false,
+    });
+
+  // Saves the change made on the open form, waits for the exporter to run with it, and opens the form again.
+  saveMetrics = async (
     serviceId: string,
-    { clusterChanged = false, settingsChanged = true, skipConnectionCheck = false } = {},
-  ): Promise<Response> => {
-    await this.buttons.saveChanges.click();
-    await expect(this.elements.confirmModal).toBeVisible();
-    await expect(this.elements.clusterChangedWarning).toBeVisible({ visible: clusterChanged });
-    await expect(this.elements.settingsChangedInfo).toBeVisible({ visible: settingsChanged });
-    await expect(this.elements.skipConnectionCheck).toBeVisible({ visible: settingsChanged });
+    base: ServiceMetricsSettings,
+    change: Partial<ServiceMetricsSettings>,
+    getExporter: () => Promise<ServiceAgent>,
+  ) => {
+    const expected = { ...base, ...change };
 
-    if (skipConnectionCheck) await this.elements.skipConnectionCheck.locator('input').check();
+    await this.editMetrics(change);
+    await this.expectSaved(await this.saveChanges(serviceId));
+    await expect
+      .poll(async () => exporterMetricsState(await getExporter()), {
+        message: `the exporter runs with ${JSON.stringify(change)}`,
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toEqual({ ...expected, status: AgentStatus.running });
 
-    const [response] = await Promise.all([
-      // A connection check that cannot reach the database waits out its own 10 s timeout before the server answers.
-      this.page.waitForResponse(
-        (response) =>
-          response.url().includes(`/v1/management/services/${serviceId}`) &&
-          response.request().method() === 'PUT',
-        { timeout: Timeouts.THIRTY_SECONDS },
-      ),
-      this.buttons.confirmChanges.click(),
-    ]);
+    await this.open(serviceId);
+    await this.verifyMetrics(expected);
+  };
 
-    return response;
+  // Saves TLS settings on the open form, waits for the exporter to run with them, and opens the form again.
+  saveTls = async (
+    serviceId: string,
+    settings: ServiceTlsSettings,
+    certificates: Partial<Record<TlsCertificateField, string>>,
+    shownCertificates: TlsCertificateField[],
+    getExporter: () => Promise<ServiceAgent>,
+  ) => {
+    await this.editTls(settings, certificates);
+    await this.expectSaved(await this.saveChanges(serviceId));
+    await expect
+      .poll(
+        async () => {
+          const { status, tls, tls_skip_verify } = await getExporter();
+
+          return { status, tls: !!tls, tlsSkipVerify: !!tls_skip_verify };
+        },
+        { message: `the exporter runs with ${JSON.stringify(settings)}`, timeout: Timeouts.ONE_MINUTE },
+      )
+      .toEqual({ ...settings, status: AgentStatus.running });
+
+    await this.open(serviceId);
+    await this.verifyTls(settings, shownCertificates);
   };
 
   // The form lists custom labels in the order the API returns them, which is sorted by name.
@@ -363,6 +430,31 @@ export default class EditServicePage extends BasePage {
     }
   };
 
+  // The secret key is never sent to the UI, so its field always opens empty.
+  verifyRdsCredentials = async (
+    mode: RdsAuthMode,
+    { awsAccessKey = '', awsRoleArn = '' }: Omit<RdsCredentialsForm, 'awsSecretKey' | 'mode'> = {},
+  ) => {
+    await expect(this.builders.rdsAuthModeOption(mode)).toBeChecked();
+    await expect(this.inputs.awsAccessKey).toBeVisible({ visible: mode === RdsAuthMode.accessKey });
+    await expect(this.inputs.awsSecretKey).toBeVisible({ visible: mode === RdsAuthMode.accessKey });
+    await expect(this.inputs.awsRoleArn).toBeVisible({ visible: mode === RdsAuthMode.iamRole });
+    await expect(this.elements.rdsHostCredentialsNote).toBeVisible({
+      visible: mode === RdsAuthMode.hostCredentials,
+    });
+
+    if (mode === RdsAuthMode.accessKey) {
+      await expect(this.inputs.awsAccessKey).toHaveValue(awsAccessKey);
+      await expect(this.inputs.awsSecretKey).toHaveAttribute('type', 'password');
+      await expect(this.inputs.awsSecretKey).toHaveValue('');
+      await expect(this.inputs.awsSecretKey).toHaveAttribute(
+        'placeholder',
+        'Leave blank to keep the current secret key',
+      );
+    }
+    if (mode === RdsAuthMode.iamRole) await expect(this.inputs.awsRoleArn).toHaveValue(awsRoleArn);
+  };
+
   // Certificates are never sent to the UI, so the fields shown always open empty.
   verifyTls = async (
     { tls, tlsSkipVerify }: ServiceTlsSettings,
@@ -378,5 +470,37 @@ export default class EditServicePage extends BasePage {
 
       if (shown) await expect(this.inputs[field]).toHaveValue('');
     }
+  };
+
+  private confirmSave = async (
+    path: string,
+    {
+      clusterChanged = false,
+      credentialsChanged = false,
+      dropsCredentials = false,
+      settingsChanged = true,
+      skipConnectionCheck = false,
+    }: SaveOptions,
+  ): Promise<Response> => {
+    await this.buttons.saveChanges.click();
+    await expect(this.elements.confirmModal).toBeVisible();
+    await expect(this.elements.clusterChangedWarning).toBeVisible({ visible: clusterChanged });
+    await expect(this.elements.settingsChangedInfo).toBeVisible({ visible: settingsChanged });
+    await expect(this.elements.skipConnectionCheck).toBeVisible({ visible: settingsChanged });
+    await expect(this.elements.credentialsChangedInfo).toBeVisible({ visible: credentialsChanged });
+    await expect(this.elements.hostCredentialsWarning).toBeVisible({ visible: dropsCredentials });
+
+    if (skipConnectionCheck) await this.elements.skipConnectionCheck.locator('input').check();
+
+    const [response] = await Promise.all([
+      // A connection check that cannot reach the database waits out its own 10 s timeout before the server answers.
+      this.page.waitForResponse(
+        (response) => response.url().includes(path) && response.request().method() === 'PUT',
+        { timeout: Timeouts.THIRTY_SECONDS },
+      ),
+      this.buttons.confirmChanges.click(),
+    ]);
+
+    return response;
   };
 }
