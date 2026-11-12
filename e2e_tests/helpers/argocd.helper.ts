@@ -50,10 +50,15 @@ export default class ArgoCdHelper {
   automatedSyncPolicy = (app: string): { prune?: boolean; selfHeal?: boolean } | undefined =>
     this.application(app).spec?.syncPolicy?.automated;
 
-  hardRefresh = (app: string): void => {
-    this.k8sHelper
-      .exec(`annotate applications.argoproj.io ${app} ${refreshAnnotation}=hard --overwrite`)
-      .assertSuccess();
+  /** Asks Argo CD to re-render each Application from source, then gives it settleMs to do so. */
+  hardRefresh = async (apps: string[], settleMs: number): Promise<void> => {
+    for (const app of apps) {
+      this.k8sHelper
+        .exec(`annotate applications.argoproj.io ${app} ${refreshAnnotation}=hard --overwrite`)
+        .assertSuccess();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, settleMs));
   };
 
   healthStatus = (app: string): string => this.application(app).status?.health?.status ?? '';
@@ -96,10 +101,19 @@ export default class ArgoCdHelper {
   waitForSyncedHealthy = async (app: string, timeout: Timeouts): Promise<void> => {
     await expect(async () => {
       const status = this.application(app).status;
+      const conditions =
+        status?.conditions?.map((condition) => `${condition.type}: ${condition.message ?? ''}`).join('; ') ||
+        '(none)';
+      const operation = status?.operationState;
 
       expect(
         { health: status?.health?.status, sync: status?.sync?.status },
-        `Argo CD Application "${app}" must be Synced and Healthy.\n${this.describe(status)}`,
+        [
+          `Argo CD Application "${app}" must be Synced and Healthy.`,
+          `sync: ${status?.sync?.status ?? '(none)'}, health: ${status?.health?.status ?? '(none)'}`,
+          `conditions: ${conditions}`,
+          `last operation (${operation?.phase ?? 'none'}): ${operation?.message ?? '(no message)'}`,
+        ].join('\n'),
       ).toEqual({ health: 'Healthy', sync: 'Synced' });
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout });
   };
@@ -108,14 +122,4 @@ export default class ArgoCdHelper {
     JSON.parse(
       this.k8sHelper.execSilent(`get applications.argoproj.io ${app} --output=json`).assertSuccess().stdout,
     ) as ArgoCdApplication;
-
-  private describe = (status: ArgoCdApplication['status']): string =>
-    [
-      `sync: ${status?.sync?.status ?? '(none)'}, health: ${status?.health?.status ?? '(none)'}`,
-      `conditions: ${
-        status?.conditions?.map((condition) => `${condition.type}: ${condition.message ?? ''}`).join('; ') ||
-        '(none)'
-      }`,
-      `last operation (${status?.operationState?.phase ?? 'none'}): ${status?.operationState?.message ?? '(no message)'}`,
-    ].join('\n');
 }

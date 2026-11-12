@@ -50,6 +50,12 @@ setup() {
     [[ "$output" == *"--pmm-secret-from is not supported with --install-method argocd"* ]]
 }
 
+@test "argocd refuses a release name without pmm-ha" {
+    run "$SCRIPT" --install-method argocd --platform eks --chart-branch main --release foo
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--release must contain pmm-ha with --install-method argocd; got 'foo'"* ]]
+}
+
 @test "a different --deps-chart-branch needs a --chart-branch that is a branch" {
     run "$SCRIPT" --platform eks --deps-chart-branch main
     [ "$status" -eq 1 ]

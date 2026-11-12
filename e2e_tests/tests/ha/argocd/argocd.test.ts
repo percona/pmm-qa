@@ -5,7 +5,6 @@ import K8sHelper from '@helpers/k8s.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { defaultReplicas, pmmServerPodSelector } from '@helpers/haCluster.helper';
-import { KubernetesResourceList } from '@interfaces/kubernetes';
 
 const run = Date.now();
 const backupJob = `pmm-e2e-argocd-backup-${run}`;
@@ -13,23 +12,6 @@ const restoreJob = `pmm-e2e-argocd-restore-${run}`;
 const refreshInterval = Timeouts.THIRTY_SECONDS + Timeouts.TEN_SECONDS;
 // PMM Server logs to files on its PVC, not to the container's stdout.
 const serverLogs = ['/srv/logs/pmm-managed.log', '/srv/logs/grafana.log'];
-
-interface OwnedPod {
-  metadata: { name: string; ownerReferences?: { kind: string }[]; uid: string };
-}
-
-// A Job pod, such as a scheduled backup, comes and goes on its own.
-const controllerPodUids = (k8sHelper: K8sHelper): Record<string, string> =>
-  Object.fromEntries(
-    (
-      JSON.parse(
-        k8sHelper.execSilent('get pods --output=json').assertSuccess().stdout,
-      ) as KubernetesResourceList<OwnedPod>
-    ).items
-      .filter((pod) => ['ReplicaSet', 'StatefulSet'].includes(pod.metadata.ownerReferences?.[0]?.kind ?? ''))
-      .map((pod) => [pod.metadata.name, pod.metadata.uid]),
-  );
-const sleep = async (ms: number): Promise<void> => await new Promise((resolve) => setTimeout(resolve, ms));
 
 // The later cases change the cluster, and a retry of a serial file repeats all of
 // it, backup and restore included, inside the run's globalTimeout.
@@ -120,7 +102,7 @@ pmmTest(
     pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
 
     const { deps, pmm } = argoCdHelper.apps();
-    const podUids = controllerPodUids(k8sHelper);
+    const podUids = k8sHelper.getControllerPodUids();
     const lastOperations = [deps, pmm].map((app) => argoCdHelper.lastOperationFinishedAt(app));
 
     expect(
@@ -130,9 +112,7 @@ pmmTest(
 
     for (const attempt of [1, 2, 3]) {
       await pmmTest.step(`Hard refresh ${attempt} of 3: both Applications stay Synced`, async () => {
-        argoCdHelper.hardRefresh(deps);
-        argoCdHelper.hardRefresh(pmm);
-        await sleep(refreshInterval);
+        await argoCdHelper.hardRefresh([deps, pmm], refreshInterval);
 
         for (const app of [deps, pmm]) {
           await expect(async () => {
@@ -151,7 +131,7 @@ pmmTest(
         [deps, pmm].map((app) => argoCdHelper.lastOperationFinishedAt(app)),
         'A drift corrected by self-heal shows up as a new sync operation',
       ).toEqual(lastOperations);
-      expect(controllerPodUids(k8sHelper)).toEqual(podUids);
+      expect(k8sHelper.getControllerPodUids()).toEqual(podUids);
     });
   },
 );

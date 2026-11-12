@@ -41,7 +41,7 @@
 #       --pmm-secret-from pmm --backup-s3-bucket pmm-backups --backup-s3-provider Minio \
 #       --backup-s3-endpoint http://pmm-backup-minio.pmm.svc.cluster.local:9000
 #
-# Through Argo CD instead of helm - eks and chart branches only:
+# Through Argo CD instead of helm - eks only:
 #   ./install_pmm_ha.sh --platform eks --install-method argocd --chart-branch main --external-access
 #
 # With no --image it installs the newest released percona/pmm-server tag, resolved
@@ -60,11 +60,8 @@ CHART_BRANCH="${CHART_BRANCH:-${PMM_CHART_BRANCH:-latest}}"
 CHART_REPO="${CHART_REPO:-https://github.com/percona/percona-helm-charts.git}"
 # Empty means the pmm-ha branch; set after the flags are parsed.
 DEPS_CHART_BRANCH="${DEPS_CHART_BRANCH:-}"
-# helm installs with `helm upgrade`; argocd hands both charts to Argo CD Applications.
 INSTALL_METHOD="${INSTALL_METHOD:-helm}"
 ARGOCD_VERSION="${ARGOCD_VERSION:-v3.5.6}"
-# A directory to clone the chart branches into and keep, instead of temp dirs
-# removed on success.
 CLONE_PARENT="${CLONE_PARENT:-}"
 CHART_VERSION="${CHART_VERSION:-}"
 DEPS_CHART_VERSION="${DEPS_CHART_VERSION:-}"
@@ -300,6 +297,9 @@ if [ "$INSTALL_METHOD" = "argocd" ]; then
     [ "$CHARTS" = "all" ] || fail "--charts is not supported with --install-method argocd."
     [ -z "$CHART_DIR" ] || fail "--chart-dir is not supported with --install-method argocd."
     [ -z "$PMM_SECRET_FROM" ] || fail "--pmm-secret-from is not supported with --install-method argocd."
+    # The chart names its objects after a release only when the name contains pmm-ha, and the
+    # ignoreDifferences entries below assume it does.
+    [[ "$RELEASE" == *pmm-ha* ]] || fail "--release must contain pmm-ha with --install-method argocd; got '$RELEASE'."
     chart_is_released "$CHART_BRANCH" || [ -z "$CHART_VERSION" ] \
         || fail "--chart-version applies to the released chart only; --chart-branch is '$CHART_BRANCH_SPEC'."
     chart_is_released "$DEPS_CHART_BRANCH" || [ -z "$DEPS_CHART_VERSION" ] \
@@ -585,8 +585,6 @@ $params
 PMM_APP_EOF
 }
 
-# all: the AppProject, the dependencies Application and the pmm-ha Application;
-# deps: the dependencies Application; pmm: the AppProject and the pmm-ha Application.
 render_argocd_manifests() {
     case "${1:-all}" in
         all)  render_argocd_project; echo "---"; render_argocd_deps_app; echo "---"; render_argocd_pmm_app ;;
@@ -1132,7 +1130,7 @@ if [ "$CHART_BRANCH" != "latest" ]; then
     CHART_DIR="$CLONE_DIR"
 fi
 
-# Where the dependencies chart is read from; empty when it is the published one.
+# Where the dependencies chart is read from; empty for the published chart in helm mode.
 DEPS_CHART_PATH=""
 if [ "$INSTALL_METHOD" = "argocd" ] && [ "$DEPS_CHART_SOURCE" = "released" ]; then
     if [ -n "$CLONE_PARENT" ]; then
