@@ -178226,16 +178226,18 @@
         "link": "https://github.com/percona/pmm-qa/pull/1740",
         "by": "Investigator routine",
         "at": "2026-11-12T03:09:08Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-12T03:05:46Z",
         "suites": [
           "E2E Tests"
-        ]
+        ],
+        "verdict": "test bug",
+        "summary": "Nightly Test Suite run 43127073829, E2E Inventory|Image renderer (amd64 and arm64): PMM-T1946 'verify image renderer usage' (@image-renderer) failed all 3 attempts with 'Missing dashboard panels: Failed advisors'. The other 18 tests passed. percona/pmm#5656 (PMM-14109 Improve Advisor UX, merged 2026-11-11 21:47 UTC) removed the Failed advisors / Advisor Insights panels from the Home dashboard on purpose, and 3-dev-latest now ships that. home.ts metrics() and imageRenderer.test.ts on main still expect the panel. pmm-qa#1712 (draft, PMM-14109 tests) already rewrites PMM-T1946 to render a text panel on a dashboard the test creates. It was waiting on #5656, which has now merged, so #1712 can come out of draft. PMM-T1946 stays red until it lands. Deduped from the run logs and the #5656 diff, not re-reproduced.",
+        "link": "https://github.com/percona/pmm-qa/pull/1712",
+        "by": "Investigator routine",
+        "at": "2026-11-12T03:09:16Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
