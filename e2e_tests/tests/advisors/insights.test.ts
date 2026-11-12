@@ -5,6 +5,20 @@ import { AdvisorCheckResultStatus, AdvisorInsight } from '@interfaces/advisors';
 import AdvisorInsightsPage from '@pages/advisors/advisorInsights.page';
 import { expect } from '@playwright/test';
 
+// Merged to main by percona/pmm#5656; docs.percona.com publishes them with the next PMM release. Drop the list then.
+const unreleasedDocs = [
+  'mongodb-authentication',
+  'mongodb-cve-2025-14847',
+  'mongodb-cve-version',
+  'mongodb-eol',
+  'mongodb-unsupported-version',
+  'mysql-automatic-expired-password',
+  'mysql-private-networks-only',
+  'mysql-test-database',
+  'mysql-version',
+  'postgresql-super-role',
+].map((page) => `https://docs.percona.com/percona-monitoring-and-management/3/advisors/checks/${page}.html`);
+
 pmmTest.describe('Advisor insights', () => {
   const createdChecks: string[] = [];
   const createdNodes: string[] = [];
@@ -495,6 +509,9 @@ pmmTest.describe('Advisor insights', () => {
 
         for (const [url, names] of checksByUrl) {
           expect([...names], url).toHaveLength(1);
+
+          if (unreleasedDocs.includes(url)) continue;
+
           // A missing page answers 301 to the docs 404 page, which answers 200.
           expect((await page.request.get(url, { maxRedirects: 0 })).status(), url).toEqual(200);
         }

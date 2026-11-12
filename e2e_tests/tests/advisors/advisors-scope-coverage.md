@@ -59,7 +59,7 @@ Status: **Covered** = asserted end to end · **Partial** = some of the item is a
 | Built-ins | Starlark error shown; timeouts reported separately | Partial | TC-14 (error; a runaway script is stopped, but by the CPU limit, see finding 5) | — |
 | Built-ins | Crash fixes: MySQL 5.7, MongoDB standalone and 8.2, empty metrics | Partial | TC-66 (leaves out the checks of findings 6 and 7) | — |
 | Built-ins | 13 checks emit one finding per service or database | Partial | TC-67 (`postgresql_unused_index_check`, one of the 10 PostgreSQL checks that share the 10-name cap) | — |
-| Built-ins | Read-more links point to each check's own page | Covered | TC-57 (form, one page per check, and each page exists) | — |
+| Built-ins | Read-more links point to each check's own page | Covered | TC-57 (form, one page per check, and each page exists; the 10 pages added by percona/pmm#5656 are skipped until the next release publishes them) | — |
 | Email | Completed runs emailed through GF_SMTP | Covered | TC-50, TC-61 (a schedule that falls due), TC-62 | — |
 | Email | Settings defaults: toggle, severities, ≤20 recipients, enable without recipients rejected | Covered | TC-25, TC-48 | — |
 | Email | Per-schedule recipients and severities | Covered | TC-50 (own recipients and severities), TC-59 (Settings, own, none, deleted during the run) | — |
