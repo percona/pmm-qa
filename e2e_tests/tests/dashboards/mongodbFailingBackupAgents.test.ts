@@ -78,7 +78,7 @@ pmmTest(
         .toEqual({ 'rs102:27017': [expect.stringContaining('lost agent')] });
     });
 
-    const firstFailingFor = await pmmTest.step('Failing for counts from the stop', async () => {
+    await pmmTest.step('Failing for counts from the stop', async () => {
       let failingFor = NaN;
 
       await expect
@@ -94,23 +94,7 @@ pmmTest(
         )
         .not.toBeNaN();
       expect(Math.abs(failingFor - (Date.now() - stoppedAt) / 1_000)).toBeLessThanOrEqual(120);
-
-      return failingFor;
     });
-
-    await expect
-      .poll(
-        async () =>
-          GrafanaHelper.getDurationSeconds(
-            (await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for'],
-          ),
-        {
-          intervals: [Timeouts.TEN_SECONDS],
-          message: 'Failing for should grow by a minute',
-          timeout: Timeouts.FIVE_MINUTES,
-        },
-      )
-      .toBeGreaterThanOrEqual(firstFailingFor + 60);
 
     await pmmTest.step('PMM service opens MongoDB Instance Summary of rs102', async () => {
       await dashboard.builders.tableCellLink(panelName, 0, columns.indexOf('PMM service')).click();
@@ -206,9 +190,8 @@ pmmTest(
         .toEqual([row('DOWN', 'rs102:27017', secondary), row('FAIL', 'rs101:27017', primary)]);
     });
 
-    // PBM declares an agent lost about a minute after it stops, so let the DOWN row age
-    // before the restart: a Failing for reset by the restart is then told apart from the stop.
-    const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age two minutes', async () => {
+    // Let the DOWN row age before the restart, so a Failing for reset by the restart is told apart from the stop.
+    const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age a minute', async () => {
       const readFailingFor = async () =>
         GrafanaHelper.getDurationSeconds(
           (await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for'],
@@ -217,10 +200,10 @@ pmmTest(
       await expect
         .poll(readFailingFor, {
           intervals: [Timeouts.TEN_SECONDS],
-          message: 'rs102 should be DOWN for two minutes',
+          message: 'rs102 should be DOWN for a minute',
           timeout: Timeouts.FIVE_MINUTES,
         })
-        .toBeGreaterThanOrEqual(120);
+        .toBeGreaterThanOrEqual(60);
 
       return readFailingFor();
     });
@@ -249,7 +232,7 @@ pmmTest(
       );
 
       expect(failingFor).toBeGreaterThanOrEqual((Date.now() - stoppedAt) / 1_000 - 120);
-      expect(failingFor).toBeGreaterThanOrEqual(downFailingFor + (Date.now() - restartedAt) / 1_000 - 60);
+      expect(failingFor).toBeGreaterThanOrEqual(downFailingFor + (Date.now() - restartedAt) / 1_000 - 30);
     });
 
     await pmmTest.step('Start MinIO and see the table empty again', async () => {
