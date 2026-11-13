@@ -61,6 +61,7 @@ pmmTest(
     await pmmTest.step('Clear the filter, select MySQL and one MongoDB member and export', async () => {
       await servicesPage.buttons.organizeByClusters.uncheck();
       await servicesPage.inputs.serviceNameFilter.clear();
+      await servicesPage.pagination.showAllRows();
       await servicesPage.builders.selectServiceCheckbox(mysqlName).check();
       await servicesPage.builders.selectServiceCheckbox(mongoNames[0]).check();
       expect(await exportedNames()).toEqual([mysqlName, mongoNames[0]].sort());
