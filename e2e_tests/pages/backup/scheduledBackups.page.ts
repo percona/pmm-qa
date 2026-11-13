@@ -26,7 +26,7 @@ export default class ScheduledBackupsPage extends BasePage {
     scheduleField: (field: 'day' | 'month' | 'period' | 'weekDay') =>
       this.grafanaIframe().getByTestId(`${field}-field-label`).locator('xpath=../following-sibling::div[1]'),
     showDetails: (name: string) => this.builders.row(name).getByTestId('show-row-details'),
-    toggle: (name: string) => this.builders.row(name).getByTestId('toggle-scheduled-backpup'),
+    toggle: (name: string) => this.builders.row(name).locator('label'),
   };
   buttons = {
     cancelDelete: this.grafanaIframe().getByTestId('cancel-delete-modal-button'),

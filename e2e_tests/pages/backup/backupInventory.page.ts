@@ -38,7 +38,7 @@ export default class BackupInventoryPage extends BasePage {
   };
   buttons = {
     advancedSettings: this.grafanaIframe().getByTestId('add-backup-advanced-settings'),
-    closeAlert: this.grafanaIframe().getByLabel('Close alert'),
+    closeAlert: this.grafanaIframe().getByRole('button', { exact: true, name: 'Close alert' }),
     confirmDelete: this.grafanaIframe().getByTestId('confirm-delete-modal-button'),
     copyToClipboard: this.grafanaIframe()
       .getByTestId('modal-content')
