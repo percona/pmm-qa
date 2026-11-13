@@ -4,6 +4,19 @@ import apiEndpoints from '@helpers/apiEndpoints';
 export default class mocksHelper {
   constructor(public page: Page) {}
 
+  // mock alerting tour not completed until the UI saves it as completed
+  mockAlertingTourNotCompleted = async (): Promise<void> => {
+    let alertingTourCompleted = false;
+
+    await this.page.route(apiEndpoints.users.me, async (route: Route) => {
+      if (route.request().method() !== 'GET') alertingTourCompleted = true;
+
+      await route.fulfill({
+        json: { alerting_tour_completed: alertingTourCompleted, product_tour_completed: true, user_id: 1 },
+      });
+    });
+  };
+
   // mock api for fresh install
   mockFreshInstall = async (): Promise<void> => {
     let productTourCompleted = false;

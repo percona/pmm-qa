@@ -4,6 +4,7 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
@@ -50,10 +51,18 @@ import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
+import AdvisorsCatalogPage from '@pages/advisors/advisorsCatalog.page';
+import AdvisorInsightsPage from '@pages/advisors/advisorInsights.page';
+import AdvisorRunsPage from '@pages/advisors/advisorRuns.page';
+import AdvisorSchedulerPage from '@pages/advisors/advisorScheduler.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
+  advisorInsightsPage: AdvisorInsightsPage;
+  advisorRunsPage: AdvisorRunsPage;
+  advisorSchedulerPage: AdvisorSchedulerPage;
+  advisorsCatalogPage: AdvisorsCatalogPage;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
@@ -65,6 +74,7 @@ const pmmTest = base.extend<{
   changePasswordPage: ChangePasswordPage;
   clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
+  dockerHelper: DockerHelper;
   credentials: Credentials;
   loginPage: LoginPage;
   dashboard: Dashboard;
@@ -106,6 +116,10 @@ const pmmTest = base.extend<{
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
+  advisorInsightsPage: async ({ page }, use) => await use(new AdvisorInsightsPage(page)),
+  advisorRunsPage: async ({ page }, use) => await use(new AdvisorRunsPage(page)),
+  advisorsCatalogPage: async ({ page }, use) => await use(new AdvisorsCatalogPage(page)),
+  advisorSchedulerPage: async ({ page }, use) => await use(new AdvisorSchedulerPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
@@ -158,6 +172,7 @@ const pmmTest = base.extend<{
     await use(dashboardPage);
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
+  dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),

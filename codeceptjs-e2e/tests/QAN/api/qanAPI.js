@@ -18,6 +18,18 @@ module.exports = {
     return resp;
   },
 
+  // QAN agents send their first bucket at the first minute boundary after they start,
+  // so a service added under a minute ago may have no QAN data yet.
+  async waitForServiceData(serviceName, timeoutInSeconds = 180) {
+    await I.asyncWaitFor(async () => {
+      const to = new Date();
+      const from = new Date(to.getTime() - 5 * 60 * 1000);
+      const { data } = await this.getMetricByFilterAPI(serviceName, 'service_name', [], from.toISOString(), to.toISOString());
+
+      return Number(data?.metrics?.num_queries?.sum) > 0;
+    }, timeoutInSeconds, `QAN has no data for ${serviceName}`);
+  },
+
   async getMetricsFromPGSM(database, queryId, connection, version) {
     let total_exec_time = 0;
     let average_exec_time = 0;
