@@ -84,14 +84,8 @@ Data(instances).Scenario(
 
     // Wait 10 seconds before test to start getting metrics
     I.wait(10);
-    // Execution time comes from QAN, which sends its first bucket at the first minute boundary after the agent starts.
-    await I.asyncWaitFor(async () => {
-      const to = new Date();
-      const from = new Date(to.getTime() - 5 * 60 * 1000);
-      const { data } = await qanAPI.getMetricByFilterAPI(serviceName, 'service_name', [], from.toISOString(), to.toISOString());
-
-      return Number(data?.metrics?.num_queries?.sum) > 0;
-    }, 180, `QAN has no data for ${serviceName}`);
+    // Execution time comes from QAN.
+    await qanAPI.waitForServiceData(serviceName);
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceOverviewDashboard.url, {
       service_name: serviceName,
       from: 'now-5m',
