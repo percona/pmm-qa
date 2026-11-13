@@ -191,7 +191,8 @@ pmmTest(
     });
 
     // Let the DOWN row age before the restart, so a Failing for reset by the restart is told apart from the stop.
-    const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age a minute', async () => {
+    // From 60 s on Failing for shows whole minutes only, so one minute of age is within its rounding.
+    const downFailingFor = await pmmTest.step('Let the rs102 DOWN row age two minutes', async () => {
       const readFailingFor = async () =>
         GrafanaHelper.getDurationSeconds(
           (await dashboard.getTableRowsAfterRefresh(panelName))[0]['Failing for'],
@@ -200,10 +201,10 @@ pmmTest(
       await expect
         .poll(readFailingFor, {
           intervals: [Timeouts.TEN_SECONDS],
-          message: 'rs102 should be DOWN for a minute',
+          message: 'rs102 should be DOWN for two minutes',
           timeout: Timeouts.FIVE_MINUTES,
         })
-        .toBeGreaterThanOrEqual(60);
+        .toBeGreaterThanOrEqual(120);
 
       return readFailingFor();
     });
@@ -230,9 +231,11 @@ pmmTest(
       const failingFor = GrafanaHelper.getDurationSeconds(
         (await dashboard.getTableRowsAfterRefresh(panelName))[1]['Failing for'],
       );
+      // A value shown in whole minutes is up to 59 s below the real one.
+      const rounding = failingFor >= 60 ? 60 : 1;
 
       expect(failingFor).toBeGreaterThanOrEqual((Date.now() - stoppedAt) / 1_000 - 120);
-      expect(failingFor).toBeGreaterThanOrEqual(downFailingFor + (Date.now() - restartedAt) / 1_000 - 30);
+      expect(failingFor).toBeGreaterThan(downFailingFor + (Date.now() - restartedAt) / 1_000 - rounding - 30);
     });
 
     await pmmTest.step('Start MinIO and see the table empty again', async () => {
