@@ -527,5 +527,5 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: amd64
-      setup_services: '-h'
+      setup_services: '--parallel --database ps=8.0 --database psmdb=6.0 --database pgsql=14'
       pmm_test_flag: '@advisor-versions'

@@ -2,7 +2,7 @@ import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import DockerHelper from '@helpers/docker.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { AdvisorCheckResultStatus, AdvisorInsight } from '@interfaces/advisors';
+import { AdvisorCheckResultStatus, AdvisorCheckTechnology, AdvisorInsight } from '@interfaces/advisors';
 import { AddServiceResponse } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
@@ -99,6 +99,141 @@ pmmTest.describe('Built-in Advisor version checks', () => {
     for (const container of containers.splice(0)) cliHelper.removeContainer(container);
     for (const nodeId of nodeIds.splice(0)) await api.inventoryApi.deleteNode(nodeId, true);
   });
+
+  pmmTest(
+    'PMM-T2622 - Verify agent-monitored MySQL, MongoDB and PostgreSQL past end of life each get one EOL error, with no check failing to run @advisor-versions',
+    async ({ advisorInsightsPage, advisorsCatalogPage, api, page }) => {
+      const eolChecks = ['mysql_unsupported_version_check', 'mongodb_EOL', 'postgresql_eol_check'];
+      const retiredChecks = [
+        'mongodb_cve_version',
+        'mongodb_unsupported_version',
+        'mysql_version_eol_57',
+        'postgresql_cve_check',
+        'postgresql_unsupported_check',
+      ];
+      const monitored = (services: { service_id: string; service_name: string }[]): MonitoredDatabase[] =>
+        services.map(({ service_id, service_name }) => ({ name: service_name, serviceId: service_id }));
+      // The services pmm-framework adds for ps=8.0, psmdb=6.0 and pgsql=14.
+      const [ps] = monitored([await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_0_')]);
+      const psmdb = monitored(await api.inventoryApi.getAllServiceDetailsByRegex('^rs10[1-3]_')).sort(
+        (a, b) => a.name.localeCompare(b.name),
+      );
+      const [pgsql] = monitored([await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_14_')]);
+      const checks = await api.advisorsApi.listChecks();
+      const { builders, buttons, elements } = advisorInsightsPage;
+
+      await pmmTest.step(
+        'The retired checks are gone and the EOL checks are built in and enabled',
+        async () => {
+          expect(checks.filter(({ name }) => retiredChecks.includes(name))).toEqual([]);
+
+          for (const name of eolChecks) {
+            expect(checks.find((check) => check.name === name)).toMatchObject({
+              enabled: true,
+              user_defined: false,
+            });
+          }
+
+          await page.goto(advisorsCatalogPage.url);
+
+          for (const name of eolChecks) {
+            await advisorsCatalogPage.inputs.search.fill(name);
+            await expect(advisorsCatalogPage.builders.row(name)).toContainText('Built-in');
+            await expect(advisorsCatalogPage.builders.statusSwitch(name)).toBeChecked();
+          }
+
+          for (const name of retiredChecks) {
+            await advisorsCatalogPage.inputs.search.fill(name);
+            await expect(advisorsCatalogPage.messages.noChecks).toBeVisible();
+            await expect(advisorsCatalogPage.builders.row(name)).toHaveCount(0);
+          }
+        },
+      );
+
+      const builtinChecks = checks
+        .filter(
+          ({ enabled, technology, user_defined }) =>
+            enabled &&
+            !user_defined &&
+            [
+              AdvisorCheckTechnology.mongodb,
+              AdvisorCheckTechnology.mysql,
+              AdvisorCheckTechnology.postgresql,
+            ].includes(technology),
+        )
+        .map(({ name }) => name);
+      const { finding, insightsOf, run } = await runChecks(api, builtinChecks, [ps, ...psmdb, pgsql]);
+
+      await pmmTest.step('Every planned check runs without an error', async () => {
+        const errors = [ps, ...psmdb, pgsql]
+          .flatMap((service) => insightsOf(service))
+          .filter(({ status }) => status === AdvisorCheckResultStatus.error)
+          .map(({ check_name, outcome, service_name }) => `${service_name} ${check_name}: ${outcome}`);
+
+        expect(errors).toEqual([]);
+        expect(run.services_count).toEqual(psmdb.length + 2);
+        expect(run.checks_count).toEqual(run.planned_checks_count);
+        await page.goto(advisorInsightsPage.runUrl(run.id));
+        await advisorInsightsPage.selectFilter('status', 'Error');
+        await expect(elements.noData).toBeVisible();
+      });
+
+      await page.goto(advisorInsightsPage.runUrl(run.id));
+      await advisorInsightsPage.selectFilter('category', 'Versions');
+
+      await pmmTest.step('Percona Server 8.0 reached end of life on 2026-04-01', async () => {
+        const eol = finding(ps, 'mysql_unsupported_version_check');
+
+        await advisorInsightsPage.selectFilter('serviceName', ps.name);
+        await expect(builders.row(eol.id)).toContainText('Percona Server for MySQL 8.0 reached end of life');
+        await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+        await expect(builders.rowsWithCell('Error')).toContainText(
+          'Percona Server for MySQL 8.0 reached end of life',
+        );
+        await builders.row(eol.id).dblclick();
+        await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-04-01');
+        await buttons.closeDetails.click();
+      });
+
+      await pmmTest.step(
+        'PSMDB 6.0 reached end of life and keeps its default journal and log level',
+        async () => {
+          const [member] = psmdb;
+
+          await advisorInsightsPage.selectFilter('serviceName', member.name);
+          await expect(builders.row(finding(member, 'mongodb_EOL').id)).toContainText(
+            'MongoDB 6.0 reached end of life',
+          );
+          await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+          await expect(builders.rowsWithCell('Error')).toContainText('MongoDB 6.0 reached end of life');
+          await advisorInsightsPage.selectFilter('category', 'All');
+          await expect(builders.row(finding(member, 'mongodb_journal').id)).toBeVisible();
+          await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
+          await expect(builders.rowsWithText('MongoDB is not using the default log level.')).toHaveCount(0);
+
+          for (const service of psmdb) {
+            for (const checkName of ['mongodb_journal', 'mongodb_loglevel']) {
+              expect(finding(service, checkName).status, `${service.name} ${checkName}`).toEqual(
+                AdvisorCheckResultStatus.ok,
+              );
+            }
+          }
+        },
+      );
+
+      await pmmTest.step('PostgreSQL 14 reached end of life on 2026-11-12', async () => {
+        const eol = finding(pgsql, 'postgresql_eol_check');
+
+        await advisorInsightsPage.selectFilter('category', 'Versions');
+        await advisorInsightsPage.selectFilter('serviceName', pgsql.name);
+        await expect(builders.row(eol.id)).toContainText('PostgreSQL 14 reached end of life');
+        await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+        await expect(builders.rowsWithCell('Error')).toContainText('PostgreSQL 14 reached end of life');
+        await builders.row(eol.id).dblclick();
+        await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-11-12');
+      });
+    },
+  );
 
   pmmTest(
     'PMM-T2623 - Verify MySQL, Percona Server and MariaDB get end-of-life errors and newer-version advice from their own release series @advisor-versions',

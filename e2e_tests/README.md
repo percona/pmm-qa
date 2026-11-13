@@ -66,6 +66,7 @@ not start with `@advisors`, which `--grep` would also match.
 `pmm-qa` network and add them as remote services that PMM Server's own agent monitors. `mysql:5.7` has no
 arm64 image, so their CI job runs on amd64 only. `@advisor-versions` tests do the same with pinned MySQL,
 Percona Server, MariaDB, MongoDB and PostgreSQL images, in a CI job of their own that also runs on amd64 only.
+That job also sets up `ps=8.0`, `psmdb=6.0` and `pgsql=14` with pmm-framework for PMM-T2622, which checks those agent-monitored services.
 
 ## Running Tests
 
