@@ -95,6 +95,15 @@ export default class InventoryApi {
     };
   };
 
+  getServiceAgent = async (serviceType: ServiceType, partialServiceName: string, agentType: string) => {
+    const { agents } = await this.getServiceDetailsByTypeAndPartialName(serviceType, partialServiceName);
+    const agent = agents.find((serviceAgent) => serviceAgent.agent_type === agentType);
+
+    if (!agent) throw new Error(`Agent ${agentType} of service ${partialServiceName} is not present`);
+
+    return agent;
+  };
+
   getServiceAgents = async (serviceId: string) =>
     Object.values(await this.getAgents())
       .flat()
@@ -183,6 +192,14 @@ export default class InventoryApi {
     expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
+  };
+
+  removeNodesByName = async (names: string[]): Promise<void> => {
+    for (const { node_id } of (await this.getAllNodes()).filter(({ node_name }) =>
+      names.includes(node_name),
+    )) {
+      await this.deleteNode(node_id, true);
+    }
   };
 
   verifyAgentsAreRunning = async (serviceName: string) =>

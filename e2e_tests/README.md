@@ -34,12 +34,13 @@ HEADLESS=true
 WORKERS=1
 ```
 
-| Variable         | Default             | Purpose                                                |
-| ---------------- | ------------------- | ------------------------------------------------------ |
-| `PMM_UI_URL`     | `http://localhost/` | PMM server base URL.                                   |
-| `ADMIN_PASSWORD` | `admin`             | Password used to authenticate as PMM `admin`.          |
-| `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
-| `WORKERS`        | `1`                 | Playwright worker count.                               |
+| Variable         | Default                 | Purpose                                                |
+| ---------------- | ----------------------- | ------------------------------------------------------ |
+| `PMM_UI_URL`     | `http://localhost/`     | PMM server base URL.                                   |
+| `ADMIN_PASSWORD` | `admin`                 | Password used to authenticate as PMM `admin`.          |
+| `HEADLESS`       | `true`                  | Browser visibility; use `false` for a visible browser. |
+| `WORKERS`        | `1`                     | Playwright worker count.                               |
+| `MAILPIT_URL`    | `http://127.0.0.1:8025` | Mailpit API the Advisors email tests read.             |
 
 `@pmm-ha` and `@ha-backup-restore` tests need `kubectl` on the runner and a `KUBECONFIG`
 pointing at the PMM HA cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
@@ -52,6 +53,18 @@ sets up; without them it fails on the missing backup-tools Deployment. It is kep
 PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
 It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
 start it by name from `e2e_tests/`: `docker compose up -d --no-deps webhookd`.
+
+The `@advisors` and `@advisor-scheduling` email tests read the mail PMM Server sends from the
+`mailpit` container, which `docker compose up -d` starts with PMM Server; PMM Server sends to it
+through its `GF_SMTP_*` variables. Open `http://localhost:8025` to see the messages.
+
+`@advisor-scheduling` tests create schedules due in the next minute and wait for them, and they stop
+and restart pmm-managed in the `pmm-server` container, so they run in their own CI job. Its tag must
+not start with `@advisors`, which `--grep` would also match.
+
+`@advisor-databases` tests start their own `mysql:5.7`, `mongo:8.2` and `postgres:17` containers on the
+`pmm-qa` network and add them as remote services that PMM Server's own agent monitors. `mysql:5.7` has no
+arm64 image, so their CI job runs on amd64 only.
 
 ## Running Tests
 
@@ -95,10 +108,15 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
+- `@advisor-databases`
+- `@advisor-scheduling`
+- `@advisors`
 - `@alerting`
 - `@ami-ovf-post-upgrade`
 - `@ami-ovf-pre-upgrade`
 - `@annotations`
+- `@bm-locations`
+- `@bm-mongo`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
@@ -118,6 +136,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@inventory-fb`
 - `@LBAC`
+- `@max-length`
 - `@menu`
 - `@mongodb-exporter`
 - `@new-navigation`
@@ -135,6 +154,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-replica-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-psmdb-sharding-integration`
+- `@pmm-pxc-integration`
 - `@pmm-upgrade`
 - `@pmm-valkey-integration`
 - `@post-release`
@@ -146,6 +166,11 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@rta`
 - `@service-account`
 - `@settings`
+- `@ssl`
+- `@ssl-mongo`
+- `@ssl-mysql`
+- `@ssl-postgres`
+- `@ssl-remote`
 - `@standalone`
 - `@user-password`
 

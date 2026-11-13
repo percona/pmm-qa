@@ -1,6 +1,7 @@
 import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage, { DropdownName } from '@pages/base.page';
@@ -41,12 +42,12 @@ export default class Dashboards extends BasePage {
       this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
     collapseRowByName: (rowName: string) =>
       this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Collapse row"]`,
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Collapse row")]`,
       ),
     dashboardTitle: (dashboardName: string) => this.grafanaIframe().getByText(dashboardName),
     expandRowByName: (rowName: string) =>
       this.grafanaIframe().locator(
-        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and @aria-label="Expand row"]`,
+        `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
@@ -60,9 +61,13 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelInfoIconByName: (panelName: string) =>
+      this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    removeAdHocFilter: (key: string) =>
+      this.grafanaIframe().getByRole('button', { name: `Remove filter with key ${key}` }),
     removeSelectedVariableValue: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -73,6 +78,19 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
+    tableCell: (panelName: string, rowIndex: number, columnIndex: number) =>
+      this.builders
+        .tableRows(panelName)
+        .nth(rowIndex)
+        .locator(`[role="gridcell"][aria-colindex="${columnIndex + 1}"]`),
+    tableCellFilterForValue: (panelName: string, rowIndex: number, columnIndex: number) =>
+      this.builders
+        .tableCell(panelName, rowIndex, columnIndex)
+        .getByRole('button', { name: 'Filter for value' }),
+    tableCellLink: (panelName: string, rowIndex: number, columnIndex: number) =>
+      this.builders.tableCell(panelName, rowIndex, columnIndex).getByRole('link'),
+    tableRows: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('[role="row"]:has([role="gridcell"])'),
     templateVariableCombobox: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -108,6 +126,7 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+    tooltip: this.grafanaIframe().getByTestId('data-testid tooltip'),
     variableOptions: this.grafanaIframe().getByTestId('data-testid Select option'),
   };
   inputs = {};
@@ -212,6 +231,35 @@ export default class Dashboards extends BasePage {
         .panelContentByExactName('Feature Compatibility Version')
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
+
+  getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
+    // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
+    const queried = this.page.waitForResponse(
+      (response) =>
+        response.url().includes(apiEndpoints.grafana.dsQuery) && response.request().method() === 'POST',
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+
+    await this.elements.refreshButton.click();
+    await queried;
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.THIRTY_SECONDS });
+
+    const headers = await this.builders
+      .panelContentByExactName(panelName)
+      .getByRole('columnheader')
+      .allInnerTexts();
+    const rows = await this.builders.tableRows(panelName).all();
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const cells = await row.getByRole('gridcell').allInnerTexts();
+
+        return Object.fromEntries(
+          headers.map((header, index) => [header.trim(), cells[index]?.trim() ?? '']),
+        );
+      }),
+    );
+  };
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.

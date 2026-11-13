@@ -13,7 +13,7 @@ test.describe('HAProxy service CLI tests', { tag: '@haproxy' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/haproxy-tests.bats#L5
    */
   test('PMM-T655 - Verify adding HAProxy as service', async ({}) => {
-    let output = (await cli.exec('sudo pmm-admin add haproxy --listen-port=42100 haproxyServiceCLI1'));
+    let output = (await cli.exec('sudo pmm-admin add haproxy --listen-port=8404 haproxyServiceCLI1'));
     await output.assertSuccess();
     await output.outContains('HAProxy Service added.');
 

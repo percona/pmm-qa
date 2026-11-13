@@ -1,7 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { expect } from '@playwright/test';
-import apiEndpoints from '@helpers/apiEndpoints';
-import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe.configure({ mode: 'default' });
@@ -10,23 +7,9 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterEach(async ({ api, request }) => {
-  for (const { scheduled_backup_id } of await api.backupsApi.getScheduledBackups()) {
-    const response = await request.delete(`${apiEndpoints.backups.removeScheduled}/${scheduled_backup_id}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-
-    expect(response.status(), response.statusText()).toEqual(200);
-  }
-
-  for (const { location_id } of await api.backupsApi.getLocations()) {
-    const response = await request.delete(`${apiEndpoints.backups.locations}/${location_id}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-      params: { force: true },
-    });
-
-    expect(response.status(), response.statusText()).toEqual(200);
-  }
+pmmTest.afterEach(async ({ api }) => {
+  await api.backupsApi.removeAllScheduledBackups();
+  await api.backupsApi.removeAllLocations();
 });
 
 for (const mode of ['BACKUP_MODE_PITR', 'BACKUP_MODE_SNAPSHOT'] as const) {

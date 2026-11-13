@@ -1,4 +1,5 @@
-import { MongoClient } from 'mongodb';
+import { Document, MongoClient } from 'mongodb';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from './timeouts';
 
 interface MongoConfig {
@@ -24,6 +25,20 @@ export default class MongoDBHelper {
     });
   }
 
+  addUser = async (username: string, password: string, roles: Document[]) =>
+    this.client.db('admin').command({ createUser: username, pwd: password, roles });
+
+  createBulkCollections = async (dbName: string, collectionNames: string[]) => {
+    const db = this.client.db(dbName);
+    const existing = (await db.listCollections({}, { nameOnly: true }).toArray()).map(({ name }) => name);
+
+    for (const collectionName of collectionNames) {
+      if (existing.includes(collectionName)) await db.dropCollection(collectionName);
+
+      await (await db.createCollection(collectionName)).insertOne({ a: `${dbName}-${collectionName}` });
+    }
+  };
+
   createIndexStats = async (dbName: string, collectionName: string) => {
     const collection = this.client.db(dbName).collection(collectionName);
 
@@ -39,6 +54,8 @@ export default class MongoDBHelper {
 
   dropDatabase = async (dbName: string) => this.client.db(dbName).dropDatabase();
 
+  dropUser = async (username: string) => this.client.db('admin').command({ dropUser: username });
+
   /**
    * Ensures the collection has at least n documents. Used so a find with $where
    * (per-document delay) runs long enough without exceeding server JS time limit per doc.
@@ -53,6 +70,33 @@ export default class MongoDBHelper {
       await collection.insertMany(Array.from({ length: toInsert }, () => ({ created: new Date() })));
     }
   };
+
+  getCollection = (dbName: string, collectionName: string) =>
+    this.client.db(dbName).collection(collectionName);
+
+  /**
+   * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
+   *
+   * @param   container   a PSMDB container with the pbm CLI configured
+   */
+  getPbmAgentErrors = (container: string): Record<string, string[]> => {
+    const { cluster } = JSON.parse(
+      new CliHelper().execute(`docker exec ${container} pbm status -s cluster -o json`).assertSuccess()
+        .stdout,
+    ) as { cluster: { nodes: { errors?: string[]; host: string; ok: boolean; role: string }[] }[] };
+
+    return Object.fromEntries(
+      cluster
+        .flatMap(({ nodes }) => nodes)
+        .filter(({ ok, role }) => role !== 'A' && !ok)
+        .map(({ errors, host }) => [host, errors ?? []]),
+    );
+  };
+
+  getReplicaSetMemberStates = async () =>
+    ((await this.client.db('admin').command({ replSetGetStatus: 1 })).members as { stateStr: string }[]).map(
+      ({ stateStr }) => stateStr,
+    );
 
   /**
    * Simulates a long-running query by splitting delay across many documents.

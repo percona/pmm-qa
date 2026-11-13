@@ -14,16 +14,25 @@ stub_prebaked_docker() {
   # shellcheck disable=SC2329,SC2317
   docker() {
     printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    # Each container's stdin goes to stdin/NAME: parallel nodes would interleave in one file.
+    if [[ $1 == exec && ($2 == -i || $2 == --interactive) ]]; then
+      local arg
+      for arg in "${@:3}"; do
+        [[ $arg == -* || $arg == root || $arg == *=* ]] || break
+      done
+      mkdir -p "$BATS_TEST_TMPDIR/stdin"
+      cat >>"$BATS_TEST_TMPDIR/stdin/$arg"
+    fi
     if [[ $1 == compose && ${5:-} == */compose.yml ]]; then
       cp "$5" "$BATS_TEST_TMPDIR/override.yml"
       printf '%s' "$5" >"$BATS_TEST_TMPDIR/override.path"
     fi
     case "$*" in
-      *'test -f /etc/debian_version'*)
-        [[ ${DEBIAN_NODE:-false} == true ]]
+      # Nomad companions and MySQL 5.7 run without systemd.
+      *'test -d /run/systemd/system'*)
+        [[ $* != *nomad_agent_* && $* != *mysql_pmm_5_7_* ]]
         return
         ;;
-      *VERSION_CODENAME*) printf 'noble\n' ;;
       'exec rs'*' pmm-admin --version')
         [[ ${PMM_ADMIN_VERSION:-} != fail ]] || return 1
         printf 'ProjectName: pmm-admin\nVersion: %s\n' "${PMM_ADMIN_VERSION:-3.11.0}"
@@ -59,16 +68,18 @@ stub_prebaked_docker() {
   dispatch_setup
 
   [[ $(grep -c '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- '--name ps_pmm_gr_8_4_3 .*--volume ps_pmm_gr_8_4_3_pmm:/usr/local/percona/pmm --volume ps_pmm_gr_8_4_3_tmp:/tmp .*--publish 3308:3306 pmm-qa/ps:8.4 --server-id=3 ' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_gr_8_4_3 .*--volume ps_pmm_gr_8_4_3_pmm:/usr/local/percona/pmm --volume ps_pmm_gr_8_4_3_tmp:/tmp .*--publish 3308:3306 --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^server-id=3$' "$BATS_TEST_TMPDIR/stdin/ps_pmm_gr_8_4_3"
+  grep -q '^exec -i ps_pmm_gr_8_4_3 sh -c cat >/etc/my.cnf.d/zz-pmm-qa.cnf$' "$DOCKER_CALLS"
+  [[ $(grep -c 'mysqld --initialize-insecure --user=mysql; systemctl enable -q --now mysqld' "$DOCKER_CALLS") -eq 3 ]]
   database_runs=$(grep '^run --detach --name ps_pmm_gr_8_4_[123] ' "$DOCKER_CALLS")
   [[ $database_runs != *--privileged* ]]
   [[ $(grep -c '^run --detach --name nomad_agent_[0-9]* ' "$DOCKER_CALLS") -eq 3 ]]
   grep -q -- '^run --detach --name nomad_agent_[0-9]* .*--label pmm-qa.parent=ps_pmm_gr_8_4_3 --network container:ps_pmm_gr_8_4_3 --pid container:ps_pmm_gr_8_4_3 --volumes-from ps_pmm_gr_8_4_3 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --entrypoint sleep pmm-qa/ps:8.4 infinity$' "$DOCKER_CALLS"
-  grep -q -- '--loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061' "$DOCKER_CALLS"
+  grep -q '^loose-group-replication-group-seeds=ps_pmm_gr_8_4_1:34061,ps_pmm_gr_8_4_2:34061,ps_pmm_gr_8_4_3:34061$' "$BATS_TEST_TMPDIR/stdin/ps_pmm_gr_8_4_2"
   grep -q 'START GROUP_REPLICATION' "$DOCKER_CALLS"
   [[ $(grep -c 'SET GLOBAL log_slow_rate_limit=1' "$DOCKER_CALLS") -eq 3 ]]
-  # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
-  [[ $(grep -Fc 'enable-only pmm3-client experimental && $pkg install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -Fc 'enable-only pmm3-client experimental && dnf install -y pmm-client' "$DOCKER_CALLS") -eq 3 ]]
   grep -q -- '^exec --user root nomad_agent_[0-9]* pmm-agent setup .*--server-address=pmm-server:8443 .*--force --debug ps_pmm_gr_8_4_2 container ps_pmm_gr_8_4_2$' "$DOCKER_CALLS"
   [[ $(grep -c '^exec --user root nomad_agent_[0-9]* sh -c tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id$' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq -- '^exec ps_pmm_gr_8_4_1 pmm-admin add mysql --query-source=slowlog --username=root --password=GRgrO9301RuF --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication --debug ps_pmm_gr_8_4_1_[0-9]+ 127\.0\.0\.1:3306$' "$DOCKER_CALLS"
@@ -92,7 +103,7 @@ stub_prebaked_docker() {
 
   [[ $(grep -c '^run --detach --name ps_pmm_replication_5_7_[12] ' "$DOCKER_CALLS") -eq 2 ]]
   [[ $(grep -c -- '--publish' "$DOCKER_CALLS") -eq 0 ]]
-  grep -q -- '--log-slave-updates=ON' "$DOCKER_CALLS"
+  grep -q '^log-slave-updates=ON$' "$BATS_TEST_TMPDIR/stdin/ps_pmm_replication_5_7_2"
   grep -q "CHANGE MASTER TO MASTER_HOST='ps_pmm_replication_5_7_1'" "$DOCKER_CALLS"
   grep -Eq -- '--environment=ps-replication-dev --cluster=ps-replication-dev-cluster --replication-set=ps-async-replication --debug ps_pmm_replication_5_7_2_[0-9]+ ' "$DOCKER_CALLS"
   [[ $(grep -c -- '--replica-parallel-workers' "$DOCKER_CALLS") -eq 0 ]]
@@ -104,9 +115,11 @@ stub_prebaked_docker() {
   parse_database_spec 'ps=8.4,SETUP_TYPE=replication'
   dispatch_setup
 
-  grep -q -- '--name ps_pmm_replication_8_4_1 .*--sync-binlog=1' "$DOCKER_CALLS"
-  [[ $(grep -c -- '--name ps_pmm_replication_8_4_1 .*--replica-parallel-workers' "$DOCKER_CALLS") -eq 0 ]]
-  grep -q -- '--name ps_pmm_replication_8_4_2 .*--disabled-storage-engines=MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY .*--replica-parallel-workers=4 --replica-preserve-commit-order=ON --replica-parallel-type=LOGICAL_CLOCK' "$DOCKER_CALLS"
+  local primary=$BATS_TEST_TMPDIR/stdin/ps_pmm_replication_8_4_1 replica=$BATS_TEST_TMPDIR/stdin/ps_pmm_replication_8_4_2
+  grep -q '^sync-binlog=1$' "$primary"
+  [[ $(grep -c '^replica-parallel-workers' "$primary") -eq 0 ]]
+  grep -q '^disabled-storage-engines=MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY$' "$replica"
+  [[ $(grep -A2 '^replica-parallel-workers=4$' "$replica" | tr '\n' ' ') == 'replica-parallel-workers=4 replica-preserve-commit-order=ON replica-parallel-type=LOGICAL_CLOCK ' ]]
   grep -q -- ' ps_pmm_replication_8_4_2 container ps_pmm_replication_8_4_2-nightly$' "$DOCKER_CALLS"
 }
 
@@ -115,15 +128,18 @@ stub_prebaked_docker() {
   parse_database_spec 'ps=8.0,MY_ROCKS=true,ENCRYPTED_CLIENT_CONFIG=true,CLIENT_VERSION=3.6.0'
   dispatch_setup
 
-  grep -q -- '--name ps_pmm_8_0_1 .*--publish 3306:3306 --env INIT_ROCKSDB=1 pmm-qa/ps:8.0 ' "$DOCKER_CALLS"
-  grep -q -- '--name ps_pmm_8_0_1 --hostname ps_pmm_8_0_1 --user root .* --user=mysql' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_8_0_1 .*--publish 3306:3306 --cgroupns=host .* pmm-qa/ps:8.0$' "$DOCKER_CALLS"
+  grep -q '^exec -e MYSQL_PWD=GRgrO9301RuF ps_pmm_8_0_1 ps-admin --enable-rocksdb -uroot$' "$DOCKER_CALLS"
+  grep -q -- '--name ps_pmm_8_0_1 --hostname ps_pmm_8_0_1 --user root ' "$DOCKER_CALLS"
+  grep -q '^user=mysql$' "$BATS_TEST_TMPDIR/stdin/ps_pmm_8_0_1"
   [[ $(grep -c 'mysql-sockets' "$DOCKER_CALLS") -eq 0 ]]
-  # shellcheck disable=SC2016 # a literal $pkg, expanded later in the container
-  grep -Fq 'pmm3-client release && $pkg install -y pmm-client-3.6.0' "$DOCKER_CALLS"
+  grep -Fq 'pmm3-client release && dnf install -y pmm-client-3.6.0' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 0 ]]
   grep -Eq -- '--environment=ps-dev --cluster=ps-single-dev-cluster --debug ps_pmm_8_0_1_[0-9]+ ' "$DOCKER_CALLS"
   [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
-  grep -q '^exec --detach --user root ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS"
+  grep -Fq "'ExecStart=/usr/local/percona/pmm/bin/pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml' 'Restart=on-failure'" "$DOCKER_CALLS"
+  grep -q "'StandardOutput=append:/tmp/pmm-agent.log'" "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --detach --user root ps_pmm_8_0_1 sh -c' "$DOCKER_CALLS") -eq 0 ]]
 }
 
 @test "PS rejects what it cannot provision before touching docker" {
@@ -168,6 +184,41 @@ stub_prebaked_docker() {
   [[ $output == *'after 3 attempt(s); last output: flaky'* ]]
 }
 
+@test "retry reruns any failure until the command succeeds" {
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  fails_twice() {
+    local n
+    n=$(($(cat "$1" 2>/dev/null || echo 0) + 1))
+    echo "$n" >"$1"
+    if ((n < 3)); then
+      echo 'not ready yet'
+      return 1
+    fi
+    echo ready
+  }
+  run retry 5 'the probe' fails_twice "$BATS_TEST_TMPDIR/attempts"
+  [[ $status -eq 0 ]]
+  [[ $output == ready ]]
+  [[ $(cat "$BATS_TEST_TMPDIR/attempts") -eq 3 ]]
+}
+
+@test "pmm_register retries a connection check that times out while the database starts" {
+  DOCKER_CALLS=$BATS_TEST_TMPDIR/docker.calls
+  # shellcheck disable=SC2329,SC2317
+  sleep() { :; }
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf '%s\n' "$*" >>"$DOCKER_CALLS"
+    (($(wc -l <"$DOCKER_CALLS") > 1)) && return 0
+    echo 'Connection check failed: read tcp 127.0.0.1:41806->127.0.0.1:5432: i/o timeout.' >&2
+    return 1
+  }
+  run pmm_register pgsql_pgss_pmm_17 pmm-admin add postgresql pgsql_pgss_pmm_17_service_1
+  [[ $status -eq 0 ]]
+  [[ $(grep -c '^exec pgsql_pgss_pmm_17 pmm-admin add postgresql' "$DOCKER_CALLS") -eq 2 ]]
+}
+
 @test "ensure_image pulls the published image before building one" {
   stub_prebaked_docker
   # shellcheck disable=SC2329,SC2317
@@ -210,10 +261,10 @@ stub_prebaked_docker() {
   [[ $(grep -c '^build ' "$DOCKER_CALLS") -eq 0 ]]
 }
 
-@test "the PS image builds from the shared Dockerfile with the version's base image" {
+@test "the PS image builds on BASE_OS from the version's repository" {
   stub_prebaked_docker
   build_ps_image 8.0
-  grep -q -- "^build --build-arg PS_IMAGE=percona/percona-server:8.0 --build-arg XTRABACKUP_PACKAGE=percona-xtrabackup-80 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $FRAMEWORK_DIR/images/ps$" "$DOCKER_CALLS"
+  grep -q -- "^build --build-arg BASE_OS=oraclelinux:9 --build-arg PS_VERSION=8.0 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/ps:8.0 $FRAMEWORK_DIR/images/ps$" "$DOCKER_CALLS"
   run build_ps_image 9.9
   [[ $status -ne 0 ]]
 }
@@ -248,7 +299,9 @@ stub_prebaked_docker() {
   dispatch_setup
 
   [[ $(grep -c '^run --detach --name mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS") -eq 3 ]]
-  grep -q -- '--label pmm-qa.engine=mysql .*--publish 3306:3306 pmm-qa/mysql:8.4 ' "$DOCKER_CALLS"
+  grep -q -- '--label pmm-qa.engine=mysql .*--publish 3306:3306 --cgroupns=host .* pmm-qa/mysql:8.4$' "$DOCKER_CALLS"
+  grep -q -- '--name mysql_pmm_gr_8_4_1 .*--volume /tmp/mysql-sockets/1:/var/lib/mysql-sockets ' "$DOCKER_CALLS"
+  [[ $(grep -c '^socket=/var/lib/mysql-sockets/mysqld.sock$' "$BATS_TEST_TMPDIR/stdin/mysql_pmm_gr_8_4_1") -eq 2 ]]
   database_runs=$(grep '^run --detach --name mysql_pmm_gr_8_4_[123] ' "$DOCKER_CALLS")
   [[ $database_runs != *--privileged* ]]
   [[ $(grep -c 'nomad_agent_' "$DOCKER_CALLS") -eq 0 ]]
@@ -268,36 +321,36 @@ stub_prebaked_docker() {
   grep -q -- '--name mysql_pmm_5_7_1 --hostname mysql_pmm_5_7_1 --user root .*--volume /tmp/mysql-sockets/1:/var/run/mysqld ' "$DOCKER_CALLS"
   grep -q -- 'pmm-qa/mysql:5.7 .* --user=mysql' "$DOCKER_CALLS"
   grep -Eq -- '--environment=mysql-dev --cluster=mysql-single-dev-cluster --debug mysql_pmm_5_7_1_[0-9]+ ' "$DOCKER_CALLS"
+  grep -q -- '^exec --detach --user root mysql_pmm_5_7_1 sh -c exec pmm-agent ' "$DOCKER_CALLS"
 
   build_mysql_image 5.7
-  grep -q -- "^build --target mysql-57 --build-arg MYSQL_IMAGE=mysql:5.7 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 $FRAMEWORK_DIR/images/mysql$" "$DOCKER_CALLS"
+  grep -q -- "^build --target mysql-57 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=5.7 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 $FRAMEWORK_DIR/images/mysql$" "$DOCKER_CALLS"
   build_mysql_image 8.0
-  grep -q -- "--target mysql-epel --build-arg MYSQL_IMAGE=mysql:8.0 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 " "$DOCKER_CALLS"
+  grep -q -- "--target mysql-el9 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=8.0 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 " "$DOCKER_CALLS"
 }
 
-@test "single PGSQL starts the prebaked node through service and registers it as pgsql_pgss_setup.yml did" {
+@test "single PGSQL boots the prebaked node under systemd and registers it as pgsql_pgss_setup.yml did" {
   stub_prebaked_docker
   SHARD_NAME=nightly
   parse_database_spec 'pgsql=17'
   dispatch_setup
 
-  grep -q -- '^run --detach --name pgsql_pgss_pmm_17 .*--publish 5448:5432 pmm-qa/pgsql:17$' "$DOCKER_CALLS"
-  grep -q '^exec pgsql_pgss_pmm_17 service postgresql start$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pgsql_pgss_pmm_17 .*--cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --publish 5448:5432 pmm-qa/pgsql:17$' "$DOCKER_CALLS"
   grep -q -- ' pgsql_pgss_pmm_17 container pgsql_pgss_pmm_17-nightly$' "$DOCKER_CALLS"
-  grep -q ">>'/pmm-agent.log'" "$DOCKER_CALLS"
+  grep -q "'StandardOutput=append:/pmm-agent.log'" "$DOCKER_CALLS"
   grep -Eq '^exec pgsql_pgss_pmm_17 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements pgsql_pgss_pmm_17_service_[0-9]+$' "$DOCKER_CALLS"
   grep -q '^exec --detach pgsql_pgss_pmm_17 bash /run_queries.sh$' "$DOCKER_CALLS"
 }
 
-@test "PGSQL replication clones a replica on the official image and names services as the playbook did" {
+@test "PGSQL replication clones a replica on the prebaked image and names services as the playbook did" {
   stub_prebaked_docker
   parse_database_spec 'pgsql=16,SETUP_TYPE=replication,ENCRYPTED_CLIENT_CONFIG=true'
   dispatch_setup
 
-  grep -q -- '^run --detach --name pgsql_pmm_16_1 .*--publish 6432:5432 postgres:16-bookworm -c config_file=/etc/postgresql/postgresql.conf$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name pgsql_pmm_16_2 .*--publish 6433:5432 --entrypoint bash postgres:16-bookworm -ceu ' "$DOCKER_CALLS"
-  # shellcheck disable=SC2016 # a literal $PGDATA, expanded in the container
-  grep -Fq 'pg_basebackup "--pgdata=$PGDATA"' "$DOCKER_CALLS"
+  grep -q '^image inspect pmm-qa/pgsql:16$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pgsql_pmm_16_1 .*--publish 6432:5432 pmm-qa/pgsql:16$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pgsql_pmm_16_2 .*--publish 6433:5432 pmm-qa/pgsql:16$' "$DOCKER_CALLS"
+  grep -q -- '^exec --user postgres --env PGPASSWORD=GRgrO9301RuF pgsql_pmm_16_2 timeout 120 pg_basebackup --pgdata=/var/lib/pgsql/16/data .*--host=pgsql_pmm_16_1 ' "$DOCKER_CALLS"
   [[ $(grep -c 'openssl genpkey' "$DOCKER_CALLS") -eq 2 ]]
   grep -q '^exec pgsql_pmm_16_2 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements pgsql_pmm_16_2 --debug 127.0.0.1:5432$' "$DOCKER_CALLS"
   grep -q 'pgbench -i -s 1000 pgbench' "$DOCKER_CALLS"
@@ -308,34 +361,16 @@ stub_prebaked_docker() {
   [[ $output == *'PGSQL SETUP_TYPE must be empty or replication'* ]]
 }
 
-# Usage: stub_deb_fetch [STATUS]  (non-zero: the version is not in the index)
-stub_deb_fetch() {
-  DEBIAN_NODE=true
-  # Setups still read their data files, such as the Patroni template, from images/.
-  mkdir -p "$BATS_TEST_TMPDIR/framework"
-  ln -s "$FRAMEWORK_DIR/images" "$BATS_TEST_TMPDIR/framework/images"
-  FRAMEWORK_DIR=$BATS_TEST_TMPDIR/framework
-  mkdir -p "$FRAMEWORK_DIR/lib"
-  cat >"$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh" <<EOF
-#!/usr/bin/env bash
-echo "\$*" >>'$BATS_TEST_TMPDIR/deb.calls'
-[[ ${1:-0} -eq 0 ]] || exit ${1:-0}
-echo /cache/pmm-client.deb
-EOF
-  chmod +x "$FRAMEWORK_DIR/lib/fetch_pmm_client_deb.sh"
-}
-
-@test "single PDPGSQL runs the prebaked node, installs the Debian client package and registers TCP and socket services" {
+@test "single PDPGSQL runs the prebaked node unprivileged, installs the client package and registers TCP and socket services" {
   stub_prebaked_docker
-  stub_deb_fetch
   parse_database_spec 'pdpgsql=17'
   GLOBAL_CLIENT_VERSION=3-dev-latest
   dispatch_setup
 
-  grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--privileged --cgroupns=host .*--publish 5432:5432 pmm-qa/pdpgsql:17$' "$DOCKER_CALLS"
-  [[ $(cat "$BATS_TEST_TMPDIR/deb.calls") == 'experimental noble /tmp/pmm-client-cache 1800 ' ]]
-  grep -q '^cp /cache/pmm-client.deb pdpgsql_pmm_17_1:/tmp/pmm-client.deb$' "$DOCKER_CALLS"
-  grep -q 'apt-get install -y /tmp/pmm-client.deb' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--cgroupns=host .*--publish 5432:5432 pmm-qa/pdpgsql:17$' "$DOCKER_CALLS"
+  [[ $(grep -c -- '--privileged' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q -- '^run --detach --name pdpgsql_pmm_17_1 .*--cap-add NET_ADMIN ' "$DOCKER_CALLS"
+  grep -Fq 'enable-only pmm3-client experimental && dnf install -y pmm-client' "$DOCKER_CALLS"
   grep -q "CREATE ROLE pmm LOGIN PASSWORD 'pmm' IN ROLE pg_monitor;" "$DOCKER_CALLS"
   grep -q -- ' pdpgsql_pmm_17_1 container pdpgsql_pmm_17_1$' "$DOCKER_CALLS"
   grep -Eq '^exec pdpgsql_pmm_17_1 pmm-admin add postgresql --query-source=pgstatmonitor --username=pmm --password=pmm pdpgsql_pmm_17_1_[0-9]+ --debug 127\.0\.0\.1:5432$' "$DOCKER_CALLS"
@@ -346,44 +381,24 @@ EOF
 
 @test "PDPGSQL patroni runs three nodes under etcd, builds PGSM_BRANCH and registers the Patroni API" {
   stub_prebaked_docker
-  stub_deb_fetch
   SHARD_NAME=nightly
   parse_database_spec 'pdpgsql=17,SETUP_TYPE=patroni,PGSM_BRANCH=feature,CLIENT_VERSION=3.9.1'
   dispatch_setup
 
   grep -q -- '--name pdpgsql_pmm_patroni_17_3 .*--publish 6434:5432 ' "$DOCKER_CALLS"
   [[ $(grep -c "git clone --branch 'feature'" "$DOCKER_CALLS") -eq 3 ]]
-  grep -q 'main noble /tmp/pmm-client-cache 1800 3.9.1' "$BATS_TEST_TMPDIR/deb.calls"
+  [[ $(grep -c 'percona-postgresql17-devel$' "$DOCKER_CALLS") -eq 3 ]]
+  grep -Fq 'enable-only pmm3-client release && dnf install -y pmm-client-3.9.1' "$DOCKER_CALLS"
+  grep -q 'bin_dir: /usr/pgsql-17/bin' "$BATS_TEST_TMPDIR/stdin/pdpgsql_pmm_patroni_17_2"
   [[ $(grep -c '^exec --detach --user postgres pdpgsql_pmm_patroni_17_[123] sh -c exec patroni /patroni.yml' "$DOCKER_CALLS") -eq 3 ]]
   grep -q 'stanza=patroni_backup .*stanza-create' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_1 systemctl stop postgresql$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_2 systemctl stop postgresql$' "$DOCKER_CALLS"
+  grep -q '^exec --user root pdpgsql_pmm_patroni_17_3 systemctl stop postgresql$' "$DOCKER_CALLS"
   grep -q -- ' pdpgsql_pmm_patroni_17_2 container pdpgsql_pmm_patroni_17_2-nightly$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_2 pmm-admin add postgresql --query-source=pgstatmonitor --username=postgres --password=pass\+this --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment pdpgsql_pmm_patroni_17_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1_[0-9]+$' "$DOCKER_CALLS"
   grep -Eq -- '^exec pdpgsql_pmm_patroni_17_3 pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_3_[0-9]+$' "$DOCKER_CALLS"
-}
-
-@test "a pinned client release that left the Debian index installs from its release tarball" {
-  stub_prebaked_docker
-  stub_deb_fetch 1
-  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3.7.1'
-  # shellcheck disable=SC2329,SC2317
-  fetch_client_tarball() {
-    [[ $1 == http* ]] || return 0
-    echo "$1" >>"$BATS_TEST_TMPDIR/tarball.calls"
-    printf '/cache/client.tar.gz'
-  }
-  dispatch_setup
-
-  grep -q 'main noble /tmp/pmm-client-cache 1800 3.7.1' "$BATS_TEST_TMPDIR/deb.calls"
-  [[ $(cat "$BATS_TEST_TMPDIR/tarball.calls") == "https://downloads.percona.com/downloads/pmm3/3.7.1/binary/tarball/pmm-client-3.7.1-$(uname -m).tar.gz" ]]
-  grep -q '^cp /cache/client.tar.gz pdpgsql_pmm_17_1:/tmp/pmm-client.tar.gz$' "$DOCKER_CALLS"
-  grep -q 'bash ./install_tarball' "$DOCKER_CALLS"
-  [[ $(grep -c 'apt-get install' "$DOCKER_CALLS") -eq 0 ]]
-
-  parse_database_spec 'pdpgsql=17,CLIENT_VERSION=3-dev-latest'
-  run dispatch_setup
-  [[ $status -ne 0 ]]
-  [[ $output == *'Could not fetch the PMM Client package for pdpgsql_pmm_17_1'* ]]
 }
 
 @test "PDPGSQL replication streams a basebackup replica and rejects an unknown SETUP_TYPE" {
@@ -394,6 +409,7 @@ EOF
 
   grep -q -- '^exec --user postgres --env PGPASSWORD=GRgrO9301RuF pdpgsql_pmm_replication_16_2 timeout 120 pg_basebackup .*--host=pdpgsql_pmm_replication_16_1 ' "$DOCKER_CALLS"
   [[ $(grep -c 'pg_basebackup' "$DOCKER_CALLS") -eq 1 ]]
+  grep -q '^exec --user root pdpgsql_pmm_replication_16_2 systemctl stop postgresql$' "$DOCKER_CALLS"
   grep -Eq -- '--cluster=pdpgsql_replication_cluster --environment=pdpgsql_replication_environment pdpgsql_pmm_replication_16_2_[0-9]+ ' "$DOCKER_CALLS"
   grep -q "pg_create_logical_replication_slot('test_slot', 'test_decoding')" "$DOCKER_CALLS"
 
@@ -417,6 +433,7 @@ EOF
   # shellcheck disable=SC2016 # a literal $external
   grep -Fq 'getSiblingDB("$external").createUser({ user: "pmm@PERCONATEST.COM"' "$DOCKER_CALLS"
   [[ $(grep -c '^exec rs10[123] systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c '>/etc/systemd/system/pmm-agent.service.d/pmm-qa.conf' "$DOCKER_CALLS") -eq 3 ]]
   grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
   [[ $(grep -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id' "$DOCKER_CALLS") -eq 3 ]]
   grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
@@ -467,8 +484,9 @@ EOF
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
   stub_prebaked_docker
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { printf 'traffic\n' >>"$DOCKER_CALLS"; }
+  record_compose_config_dirs
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards'
   dispatch_setup
 
@@ -484,6 +502,105 @@ EOF
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
   [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]
   grep -q '^traffic$' "$DOCKER_CALLS"
+  grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
+  ! grep -q -- '--query-source' "$DOCKER_CALLS" || false
+  grep -Fq 'diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data"' "$DOCKER_CALLS"
+}
+
+# The stub logs arguments only, and compose reads the config directories it mounts from the environment.
+record_compose_config_dirs() {
+  eval "stubbed_$(declare -f docker)"
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    if [[ $1 == compose && $* == *' up -d' ]]; then
+      printf 'config rs=%s rs1=%s rs2=%s cfg=%s mongos=%s\n' "${MONGOD_RS_CONFIG_DIR:-}" "${MONGOD_RS1_CONFIG_DIR:-}" \
+        "${MONGOD_RS2_CONFIG_DIR:-}" "${MONGOD_CFG_CONFIG_DIR:-}" "${MONGOS_CONFIG_DIR:-}" >>"$DOCKER_CALLS"
+    fi
+    stubbed_docker "$@"
+  }
+}
+
+# Usage: assert_file_log FILE LOG_PATH
+assert_file_log() {
+  grep -q '^  destination: file$' "$1"
+  grep -q "^  path: $2$" "$1"
+  grep -q '^  logAppend: true$' "$1"
+  ! grep -q syslog "$1" || false
+}
+
+# Usage: recorded_config_dir rs|rs1|rs2|cfg|mongos
+recorded_config_dir() {
+  local line re=" $1=([^ ]*)"
+  line=$(grep '^config ' "$DOCKER_CALLS" | tail -n 1)
+  [[ $line =~ $re ]]
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+@test "PSMDB QUERY_SOURCE=mongolog gives the replica set a file log and registers its members with mongolog" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,MINIO=false'
+  dispatch_setup
+
+  local dir
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs.* ]]
+  grep -q '^config rs=[^ ]* rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+  grep -q '^  replSetName: "rs"$' "$dir/mongod.conf"
+  for node in rs101 rs102 rs103; do
+    grep -Eq "^exec $node pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ${node}_[0-9]+ " "$DOCKER_CALLS"
+  done
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,STORAGE_ENGINE=inmemory,MINIO=false'
+  dispatch_setup
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-inmemory.* ]]
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+}
+
+@test "PSMDB sharding with QUERY_SOURCE=mongolog gives every mongod and mongos a file log" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  # shellcheck disable=SC2329
+  psmdb_traffic() { :; }
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
+  dispatch_setup
+
+  local rs1 rs2 cfg mongos dir
+  rs1=$(recorded_config_dir rs1) rs2=$(recorded_config_dir rs2) cfg=$(recorded_config_dir cfg) mongos=$(recorded_config_dir mongos)
+  grep -q '^config rs= ' "$DOCKER_CALLS"
+  [[ $rs1 == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs1.* ]]
+  [[ $rs2 == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs2.* ]]
+  [[ $cfg == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-cfg.* ]]
+  [[ $mongos == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongos.* ]]
+  for dir in "$rs1" "$rs2" "$cfg"; do
+    assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+  done
+  grep -q '^  clusterRole: configsvr$' "$cfg/mongod.conf"
+  assert_file_log "$mongos/mongos.conf" /var/log/mongo/mongos.log
+  [[ -f $mongos/mongos.service ]]
+  [[ $(grep -Ec '^exec (rs[12]0[123]|rscfg0[123]|mongos) pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ' "$DOCKER_CALLS") -eq 10 ]]
+  ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {
+  stub_prebaked_docker
+  record_compose_config_dirs
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=none,MINIO=false'
+  dispatch_setup
+  grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec rs10[123] pmm-admin add mongodb --enable-all-collectors --query-source=none ' "$DOCKER_CALLS") -eq 3 ]]
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,QUERY_SOURCE=slowlog'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *"Unsupported PSMDB QUERY_SOURCE 'slowlog'."* ]]
+  ! grep -q '^compose ' "$DOCKER_CALLS" || false
 }
 
 @test "SSL PSMDB runs the TLS stack on the prebaked image without writing the password to disk" {
@@ -512,7 +629,7 @@ EOF
   parse_database_spec 'PXC=8.4,QUERY_SOURCE=slowlog'
   dispatch_setup
 
-  grep -q -- '^run --detach --init --name pxc_proxysql_pmm_8.4 --hostname pxc_proxysql_pmm_8.4 --label pmm-qa.engine=pxc --network pmm-qa pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pxc_proxysql_pmm_8.4 --hostname pxc_proxysql_pmm_8.4 --label pmm-qa.engine=pxc --network pmm-qa --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock pmm-qa/pxc-proxysql:8.4$' "$DOCKER_CALLS"
   grep -q '^exec --user root pxc_proxysql_pmm_8.4 pmm_pxc start$' "$DOCKER_CALLS"
   grep -q -- '^exec --user root pxc_proxysql_pmm_8.4 pmm-agent setup .* pxc_proxysql_pmm_8.4 container pxc_proxysql_pmm_8_4-ps-gr-pxc-valkey$' "$DOCKER_CALLS"
   [[ $(grep -c "SET GLOBAL log_slow_rate_limit=1" "$DOCKER_CALLS") -eq 3 ]]
@@ -562,8 +679,12 @@ EOF
   parse_database_spec 'valkey=7'
   dispatch_setup
 
-  grep -q -- '^run --detach --name valkey-primary-1 --hostname valkey-primary-1-node .*--publish 6379:6379 --volume valkey-primary-1-data:/data pmm-qa/valkey:7 valkey-server --port 6379 ' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name valkey-replica-4 .*--publish 6385:6379 .*--cluster-enabled yes' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name valkey-primary-1 --hostname valkey-primary-1-node .*--publish 6379:6379 --volume valkey-primary-1-data:/data --cgroupns=host .* pmm-qa/valkey:7$' "$DOCKER_CALLS"
+  grep -q '^exec valkey-server --port 6379 ' "$BATS_TEST_TMPDIR/stdin/valkey-primary-1"
+  grep -Fq -- "--save 900\ 1\ 300\ 10\ 60\ 10000 " "$BATS_TEST_TMPDIR/stdin/valkey-primary-1"
+  grep -q -- '^run --detach --name valkey-replica-4 .*--publish 6385:6379 ' "$DOCKER_CALLS"
+  grep -q -- '--cluster-enabled yes' "$BATS_TEST_TMPDIR/stdin/valkey-replica-4"
+  [[ $(grep -c 'systemctl enable -q --now valkey' "$DOCKER_CALLS") -eq 6 ]]
   grep -q -- '--cluster create valkey-primary-1:6379 valkey-primary-2:6379 valkey-primary-3:6379 valkey-replica-4:6379 valkey-replica-5:6379 valkey-replica-6:6379 --cluster-replicas 1 --cluster-yes$' "$DOCKER_CALLS"
   grep -q -- ' valkey-replica-5 container valkey-replica-5-node$' "$DOCKER_CALLS"
   grep -q -- '^exec valkey-replica-5 pmm-admin add valkey --service-name=valkey-replica-5-svc --cluster=valkey-native-cluster --custom-labels=role=replica --environment=valkey-test --username=default --password=VKvl41568AsE --host=valkey-replica-5 --port=6379$' "$DOCKER_CALLS"
@@ -585,7 +706,9 @@ EOF
   parse_database_spec 'valkey=8,SETUP_TYPE=sentinels'
   dispatch_setup
 
-  grep -q -- '^run --detach --name valkey-replica-2 .*--publish 6381:6379 .*--replicaof valkey-primary 6379$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name valkey-replica-2 .*--publish 6381:6379 ' "$DOCKER_CALLS"
+  grep -q -- '--replicaof valkey-primary 6379 $' "$BATS_TEST_TMPDIR/stdin/valkey-replica-2"
+  grep -Fq 'exec\ valkey-sentinel\ /data/sentinel.conf' "$BATS_TEST_TMPDIR/stdin/sentinel-3"
   grep -q -- '^run --detach --name sentinel-3 --hostname sentinel-3-node .*--publish 26381:26379 ' "$DOCKER_CALLS"
   grep -q -- '^exec valkey-replica-1 pmm-admin add valkey --service-name=valkey-replica1-svc --cluster=valkey-cluster --replication-set=valkey-repl --custom-labels=role=replica ' "$DOCKER_CALLS"
   grep -q -- '^exec sentinel-2 pmm-admin add valkey --service-name=sentinel2-svc --cluster=valkey-cluster --custom-labels=role=sentinel .*--port=26379$' "$DOCKER_CALLS"
@@ -597,7 +720,9 @@ EOF
   parse_database_spec 'ssl_mysql=8.4'
   dispatch_setup
 
-  grep -q -- '^run --detach --name mysql_ssl_8.4 --hostname mysql_ssl_8.4 --user root .*--network mysql_ssl_8.4_network .* pmm-qa/ps:8.4 .*--require-secure-transport=ON .*--log-slow-replica-statements=ON$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name mysql_ssl_8.4 --hostname mysql_ssl_8.4 --user root .*--network mysql_ssl_8.4_network .* pmm-qa/ps:8.4$' "$DOCKER_CALLS"
+  grep -q '^require-secure-transport=ON$' "$BATS_TEST_TMPDIR/stdin/mysql_ssl_8.4"
+  grep -q '^log-slow-replica-statements=ON$' "$BATS_TEST_TMPDIR/stdin/mysql_ssl_8.4"
   grep -q '^network connect pmm-qa mysql_ssl_8.4$' "$DOCKER_CALLS"
   grep -Fq "CREATE USER 'pmm_tls'@'%' REQUIRE X509" "$DOCKER_CALLS"
   grep -q -- ' mysql_ssl_8.4 container mysql_ssl_8.4-nightly-shard$' "$DOCKER_CALLS"
@@ -611,7 +736,8 @@ EOF
   dispatch_setup
 
   grep -q '^network create pdpgsql_pgsm_ssl_16_network$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name pdpgsql_pgsm_ssl_16 .*--network pdpgsql_pgsm_ssl_16_network pmm-qa/ssl-pdpgsql:16$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pdpgsql_pgsm_ssl_16 .*--network pdpgsql_pgsm_ssl_16_network --cgroupns=host .* pmm-qa/ssl-pdpgsql:16$' "$DOCKER_CALLS"
+  grep -q 'cp -a /artifacts/certificates/. /var/lib/pgsql/16/data/' "$DOCKER_CALLS"
   grep -q '^network connect pmm-qa pdpgsql_pgsm_ssl_16$' "$DOCKER_CALLS"
   grep -q 'bash create_certs.sh' "$DOCKER_CALLS"
   grep -Eq '^exec pdpgsql_pgsm_ssl_16 pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem pdpgsql_pgsm_ssl_16_ssl_service[0-9]+$' "$DOCKER_CALLS"
@@ -628,7 +754,7 @@ EOF
 
   grep -q '^image inspect pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
   grep -q -- '^run --detach --name redis_container .*--publish 6379:6379 redis --requirepass oFukiBRg7GujAJXq3tmd$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name external_pmm --hostname external_pmm .*--network pmm-qa --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name external_pmm --hostname external_pmm .*--network pmm-qa --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --privileged pmm-qa/external:1.14.0-0.7.5$' "$DOCKER_CALLS"
   grep -q -- '--web.listen-address=:42200 >/redis.log' "$DOCKER_CALLS"
   grep -q -- ' external_pmm container external_pmm-nightly-shard$' "$DOCKER_CALLS"
   grep -Eq '^exec external_pmm pmm-admin add external --listen-port=42200 --group=redis --service-name=redis_external_service_([0-9]+)$' "$DOCKER_CALLS"
@@ -642,8 +768,7 @@ EOF
   parse_database_spec haproxy
   dispatch_setup
 
-  grep -Eq '^sudo -n sysctl -qw net\.ipv4\.ip_local_reserved_ports=(.+,)?42100$' "$DOCKER_CALLS"
-  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 42100:42100 --privileged --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name haproxy_pmm --hostname haproxy_pmm --label pmm-qa.engine=haproxy --network pmm-qa --publish 8404:42100 --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock --privileged pmm-qa/haproxy:latest$' "$DOCKER_CALLS"
   grep -q '^cp .*/images/haproxy/haproxy.cfg haproxy_pmm:/haproxy.cfg$' "$DOCKER_CALLS"
   grep -q '^exec haproxy_pmm haproxy -f /haproxy.cfg -D$' "$DOCKER_CALLS"
   grep -q -- 'pmm-agent setup .*--debug haproxy_pmm container haproxy_pmm-extra-pxc-pdpgsql-haproxy$' "$DOCKER_CALLS"
