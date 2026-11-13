@@ -250,11 +250,14 @@ pmmTest(
         .toMatch(/\S/);
       await scheduledBackupsPage.open();
 
-      const now = new Date();
-      const minute = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+      const lastRun = new Date(
+        (await api.backupsApi.getScheduledBackups()).find(({ name }) => name === scheduleName)?.last_run ??
+          '',
+      );
+      const minute = lastRun.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
       await expect(scheduledBackupsPage.builders.lastBackup(scheduleName)).toHaveText(
-        new RegExp(`^${now.toLocaleDateString('sv-SE')}.*${minute}:00$`),
+        new RegExp(`^${lastRun.toLocaleDateString('sv-SE')}.*${minute}:00$`),
       );
     });
 
