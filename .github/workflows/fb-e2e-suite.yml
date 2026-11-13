@@ -72,23 +72,6 @@ on:
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets:
-      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-#      setup_services: '--database psmdb,SETUP_TYPE=pss'
-      arch: ${{ inputs.arch || 'amd64' }}
-      setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
-      tags_for_tests: '@bm-mongo'
-
-  backup_management_mongo_playwright:
-    name: Backup Management MongoDB Playwright tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
