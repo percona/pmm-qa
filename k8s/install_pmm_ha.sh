@@ -527,7 +527,7 @@ DEPS_APP_EOF
 render_argocd_pmm_app() {
     local params
     params="$(
-        argocd_param gitops.enabled true false
+        argocd_param offlineRender.enabled true false
         argocd_param tls.secretFormat kubernetes.io/tls false
         argocd_param victoriaMetrics.vmagent.scrapeApiserver false false
         if [ "$EXTERNAL_ACCESS" = "true" ]; then
@@ -978,7 +978,7 @@ wait_for_statefulsets_rolled() {
 
 # Rotating these on an existing cluster would break PG, ClickHouse and VM, which
 # still hold the old ones - so an existing secret is kept, never overwritten.
-# With gitops.enabled the PostgreSQL operator generates the PG and Grafana passwords,
+# With offlineRender.enabled the PostgreSQL operator generates the PG and Grafana passwords,
 # and the Grafana ClickHouse data source password is read from here instead.
 ensure_pmm_secret() {
     local mode_keys=()
@@ -1016,7 +1016,7 @@ ensure_pmm_secret() {
     log "Created pmm-secret in $NAMESPACE"
 }
 
-# With gitops.enabled the chart generates no HAProxy certificate; tls.secretFormat
+# With offlineRender.enabled the chart generates no HAProxy certificate; tls.secretFormat
 # kubernetes.io/tls reads this one.
 ensure_haproxy_tls_secret() {
     local tls_dir out

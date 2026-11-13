@@ -97,7 +97,7 @@ render() {
 @test "argocd print mode renders the helm values" {
     render --external-access --backup-minio
     [ "$status" -eq 0 ]
-    for kv in "gitops.enabled|true" "tls.secretFormat|kubernetes.io/tls" \
+    for kv in "offlineRender.enabled|true" "tls.secretFormat|kubernetes.io/tls" \
         "victoriaMetrics.vmagent.scrapeApiserver|false" "secret.create|false" "secret.name|pmm-secret" \
         "haproxy.service.type|LoadBalancer" "centralBackupStorage.enabled|true" \
         "image.repository|perconalab/pmm-server" "image.tag|3-dev-latest" \
@@ -135,7 +135,7 @@ assert nlb['value'] == 'nlb'
 assert params['pmmEnv.PMM_DEBUG']['forceString'] is True
 assert params['pmmClient.image.tag']['forceString'] is True
 assert params['image.tag']['forceString'] is True
-assert 'forceString' not in params['gitops.enabled']
+assert 'forceString' not in params['offlineRender.enabled']
 assert 'forceString' not in params['centralBackupStorage.enabled']
 assert pmm['spec']['syncPolicy']['retry']['backoff'] == {'duration': '10s', 'factor': 2, 'maxDuration': '3m'}
 assert [i['name'] for i in pmm['spec']['ignoreDifferences']] == ['pmm-ha', 'pmm-ha-vmcluster']
