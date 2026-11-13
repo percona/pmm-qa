@@ -1,0 +1,13 @@
+# A pmm-agent started in the background with "&" opens its local API a moment
+# after the shell returns, so pmm-admin run straight after it can find the port
+# still closed. Include this between starting the agent and the first query.
+#
+# Task adjustments are handled by parent playbook vars:
+#             var "custom_port"    :  the agent's --listen-port, when not 7777
+#
+- name: Wait for pmm-agent to listen on 127.0.0.1:{{ custom_port | default(7777) }}
+  wait_for:
+    host: 127.0.0.1
+    port: "{{ custom_port | default(7777) }}"
+    timeout: 60
+    msg: "pmm-agent did not open 127.0.0.1:{{ custom_port | default(7777) }} within 60s, see pmm-agent.log"

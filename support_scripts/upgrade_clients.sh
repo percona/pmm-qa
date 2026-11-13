@@ -6,6 +6,7 @@
 # Env:   CLIENT_UPGRADE_REPOSITORY  pmm3-client repository to upgrade from (optional)
 #        CLIENT_INSTALL_VERSION  without CLIENT_UPGRADE_REPOSITORY, pmm3-rc upgrades from experimental, anything else from testing
 #        CLIENT_TARBALL_UPGRADE  tarball URL to upgrade from instead of the repository (optional)
+#        CLIENT_UPGRADE_PARALLEL  containers upgraded at once (default 4)
 set -uo pipefail
 
 want="${1:?usage: $0 <expected-version>}"
@@ -24,8 +25,7 @@ upgrade_client() {
   log=$(mktemp)
   {
     if [ -n "${CLIENT_TARBALL_UPGRADE:-}" ]; then
-      docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v apt-get >/dev/null && apt-get install -y wget || $(command -v dnf || command -v microdnf) install -y wget)'
-      docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
+      docker exec "$c" curl -fsSLo /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
       docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz &&
         d=$(ls -1td pmm-client*/ | head -n1) &&
         rm -rf /usr/local/bin/pmm-client &&
@@ -34,15 +34,17 @@ upgrade_client() {
     else
       echo "Upgrading using packages to repository: $repository"
       docker exec "$c" percona-release enable-only pmm3-client "$repository"
-      docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || $(command -v dnf || command -v microdnf) install -y pmm-client'
+      for attempt in 1 2 3 4 5; do
+        docker exec "$c" dnf --refresh --setopt=skip_if_unavailable=True install -y pmm-client && break
+        if [ "$attempt" -eq 5 ]; then
+          echo "pmm-client install failed 5 times; the version check below reports it"
+          break
+        fi
+        echo "pmm-client install failed (attempt $attempt of 5), retrying in 60s"
+        sleep 60
+      done
     fi
-    # The pmm-client package ships a pmm-agent.service, but the QA DB
-    # containers already run pmm-agent as a standalone (nohup) process that
-    # holds the agent's local API port (127.0.0.1:7777). A bare
-    # `systemctl restart` then starts the new binary as a service that cannot
-    # bind that port and crash-loops (Restart=always), while the old process
-    # keeps serving pmm-admin on the previous version. Stop every instance and
-    # wait for the port to free before starting the upgraded agent.
+    # A standalone pmm-agent (no systemd) holds 127.0.0.1:7777; stop every instance before restarting.
     docker exec "$c" sh -c '
       systemctl stop pmm-agent 2>/dev/null || true
       pkill -x pmm-agent 2>/dev/null || true
@@ -89,17 +91,22 @@ upgrade_client() {
   echo "== upgrade succeeded in $c =="
 }
 
+# Every dnf here solves the full OL9 metadata; all 13 at once starve PMM Server of memory.
+parallel="${CLIENT_UPGRADE_PARALLEL:-4}"
+
 # Each container writes its own output so per-container logs stay contiguous when printed.
 outdir=$(mktemp -d)
-pids=()
 for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
-  upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
-  pids+=("$!")
+  while [ "$(jobs -pr | wc -l)" -ge "$parallel" ]; do wait -n; done
+  { upgrade_client "$c" >"$outdir/$c.out" 2>&1; echo "$?" >"$outdir/$c.rc"; } &
 done
+wait
 
 rc=0
-for pid in "${pids[@]}"; do
-  wait "$pid" || rc=1
+# A job killed before writing its .rc leaves only its .out, and counts as a failure.
+for f in "$outdir"/*.out; do
+  [ -e "$f" ] || continue
+  [ "$(cat "${f%.out}.rc" 2>/dev/null)" = 0 ] || rc=1
 done
 
 for f in "$outdir"/*.out; do

@@ -121,20 +121,9 @@ module.exports = {
         text: 'Option to check new versions and ability to update PMM from UI.',
         link: links.checkForUpdates,
       },
-      stt: {
-        nativeTextLocator: locate('$advanced-advisors-label-description').as('Advisors tooltip'),
-        nativeLinkLocator: locate('$advanced-advisors-label-description').find('a').as('Advisors tooltip Read more link'),
-        text: 'Run automated checks to identify potential database performance and configuration issues.',
-        link: links.advisorsDocs,
-      },
       publicAddress: {
         nativeTextLocator: locate('$public-address-label-description').as('Public address tooltip'),
         text: 'The address or hostname PMM Server will be accessible at.',
-        link: false,
-      },
-      executionIntervals: {
-        iconLocator: locate('$check-intervals-label').find(I.useDataQA('info-icon')).as('Execution intervals tooltip'),
-        text: 'Interval between check runs',
         link: false,
       },
       backupManagement: {
@@ -304,9 +293,6 @@ module.exports = {
     sshKeyInput: '$ssh-key',
     sshKeyLabel: '$ssh-key-label',
     sshKeyButton: '$ssh-key-button',
-    sttLabel: locate('$advanced-advisors').find('span'),
-    sttSwitchSelectorInput: locate('$advanced-advisors').find('input'),
-    sttSwitchSelector: locate('$advanced-advisors').find('label'),
     subSectionHeader: '//following-sibling::div//div[@class="ant-collapse-header"]',
     signUpEmail: '$email-text-input',
     signUpPassword: '$password-password-input',
@@ -325,12 +311,6 @@ module.exports = {
     tabContent: '$settings-tab-content',
     termsOfService: '//span[contains(text(), "Terms of Service")]',
     validationMessage: 'span.error-message',
-    rareIntervalInput: '$rareInterval-number-input',
-    rareIntervalValidation: '$rareInterval-field-error-message',
-    standartIntervalInput: '$standardInterval-number-input',
-    standartIntervalValidation: '$standardInterval-field-error-message',
-    frequentIntervalInput: '$frequentInterval-number-input',
-    frequentIntervalValidation: '$frequentInterval-field-error-message',
     pmmServerNameInput: '$pmmServerName-text-input',
     perconaAccountEmailInput: '$email-text-input',
     perconaAccountPasswordInput: '$password-password-input',
@@ -670,7 +650,6 @@ module.exports = {
         tooltips: {
           dataRetention: this.tooltips.advancedSettings.dataRetention,
           telemetry: this.tooltips.advancedSettings.telemetry,
-          stt: this.tooltips.advancedSettings.stt,
         },
       },
     ];

@@ -43,6 +43,39 @@ export default class HaClusterHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
 
   /**
+   * The chart's `dataRetentionDays`, read from what it rendered rather than from the settings API:
+   * `PMM_DATA_RETENTION` on every pod and `retentionPeriod` on the VMCluster must agree on it.
+   */
+  dataRetentionDaysFromChart = (): number => {
+    const fromPods = this.podNames().map((podName) => {
+      const { stdout } = this.k8sHelper.execInPod(podName, 'printenv PMM_DATA_RETENTION', { silent: true });
+
+      return { podName, value: stdout.trim() };
+    });
+    const hours = /^(\d+)h$/.exec(fromPods[0].value)?.[1];
+
+    if (!hours || Number(hours) % 24 !== 0 || fromPods.some(({ value }) => value !== fromPods[0].value)) {
+      throw new Error(
+        `Expected every pod to export the same whole-day PMM_DATA_RETENTION, got: ${fromPods
+          .map(({ podName, value }) => `${podName}=${value || '(unset)'}`)
+          .join(', ')}`,
+      );
+    }
+
+    const days = Number(hours) / 24;
+    const vmRetention = this.k8sHelper
+      .exec(`get vmcluster -o jsonpath='{.items[*].spec.retentionPeriod}'`)
+      .assertSuccess()
+      .stdout.trim();
+
+    if (vmRetention !== `${days}d`) {
+      throw new Error(`PMM_DATA_RETENTION is ${days} days but VMCluster retentionPeriod is "${vmRetention}"`);
+    }
+
+    return days;
+  };
+
+  /**
    * Moves leadership onto one of `podNames` by restarting whoever leads until it
    * lands there. Only the leader removes departing members from the Raft
    * configuration, so a scale-down that evicts the leader leaves the survivors
@@ -184,22 +217,31 @@ export default class HaClusterHelper {
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
 
+  /** Like {@link nodesFromPod}, for any call: the pod itself answers, not the leader HAProxy routes to. */
+  requestFromPod = (
+    podName: string,
+    method: 'GET' | 'POST',
+    endpoint: string,
+    body?: object,
+  ): { body: string; status: number } => {
+    const data = body ? ` -H 'Content-Type: application/json' -d ${shellQuote(JSON.stringify(body))}` : '';
+    const lines = this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -X ${method} -w '\\n%{http_code}' -H "Authorization: Basic ${GrafanaHelper.getToken()}"${data} https://127.0.0.1:${pmmServerPort}${endpoint}`,
+        { silent: true },
+      )
+      .assertSuccess()
+      .stdout.trimEnd()
+      .split('\n');
+
+    return { body: lines.slice(0, -1).join('\n'), status: Number(lines.at(-1)) };
+  };
+
   /** @param since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns */
   servicesRunningAndReporting = async (api: Api, since: number): Promise<string[]> => {
-    const running = (await api.inventoryApi.getServices()).services
-      .filter((service) => {
-        const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
-
-        return agents.length > 0 && agents.every((agent) => agent.status === AgentStatus.running);
-      })
-      .map((service) => service.service_name);
-    const reporting = (
-      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""}))', {
-        nocache: '1',
-      })
-    )
-      .filter((sample) => Number(sample.value[1]) > since)
-      .map((sample) => sample.metric.service_name);
+    const running = await this.servicesRunning(api);
+    const reporting = await this.servicesReporting(api, since);
 
     return running.filter((serviceName) => reporting.includes(serviceName)).sort();
   };
@@ -222,6 +264,20 @@ export default class HaClusterHelper {
   verifyHaEnabled = async (haApi: HaApi): Promise<void> =>
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await haApi.getStatus()).toEqual('Enabled');
+    });
+
+  verifyServicesReportAgain = async (api: Api, services: string[]): Promise<void> =>
+    await pmmTest.step(`Verify the ${services.length} monitored services run and report again`, async () => {
+      const since = await api.prometheusApi.waitForServerTime();
+
+      await expect(async () => {
+        const reporting = await this.servicesRunningAndReporting(api, since);
+
+        expect(
+          services.filter((serviceName) => !reporting.includes(serviceName)),
+          'Every service that reported before must run and report again',
+        ).toEqual([]);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     });
 
   /**
@@ -316,6 +372,28 @@ export default class HaClusterHelper {
       .toEqual(replicas);
   };
 
+  /**
+   * @param   since server-clock epoch seconds, as `prometheusApi.waitForServerTime()` returns
+   * @returns every running service, once each of them reports
+   */
+  waitForRunningServicesReporting = async (api: Api, since: number): Promise<string[]> => {
+    let services: string[] = [];
+
+    await expect(async () => {
+      const running = await this.servicesRunning(api);
+      const reporting = await this.servicesReporting(api, since);
+
+      expect(running.length, 'At least one service must be monitored').toBeGreaterThan(0);
+      expect(
+        running.filter((serviceName) => !reporting.includes(serviceName)),
+        'Every running service must report',
+      ).toEqual([]);
+      services = [...running].sort();
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TEN_MINUTES });
+
+    return services;
+  };
+
   // Hits the pod directly rather than through HAProxy, which only ever routes
   // to whichever pod passes this same check.
   private isLeader = (podName: string): boolean =>
@@ -326,4 +404,22 @@ export default class HaClusterHelper {
         { silent: true },
       )
       .stdout.trim() === '200';
+
+  private servicesReporting = async (api: Api, since: number): Promise<string[]> =>
+    (
+      await api.prometheusApi.instantQuery('max by (service_name) (timestamp(up{service_name!=""} == 1))', {
+        nocache: '1',
+      })
+    )
+      .filter((sample) => Number(sample.value[1]) > since)
+      .map((sample) => sample.metric.service_name);
+
+  private servicesRunning = async (api: Api): Promise<string[]> =>
+    (await api.inventoryApi.getServices()).services
+      .filter((service) => {
+        const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
+
+        return agents.length > 0 && agents.every((agent) => agent.status === AgentStatus.running);
+      })
+      .map((service) => service.service_name);
 }

@@ -122,16 +122,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates dirmngr libaio1 libaio-dev libnuma-dev libncurses6 socat sysbench
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
-              /etc/apt/sources.list.d/clickhouse.list
           . /etc/os-release
           echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
               /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
           curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y clickhouse-client podman
-          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          sudo apt-get install -y podman
           ls -la
           pushd ./pmm-qa
           wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
@@ -183,6 +179,7 @@ jobs:
           DISABLE_UPDATES=1
           #ENABLE_DBAAS=1
           PMM_DEBUG=1
+          PMM_ENABLE_TELEMETRY=0
           PMM_ENABLE_INTERNAL_PG_QAN=1
           GF_SECURITY_ADMIN_PASSWORD=${{ env.ADMIN_PASSWORD }}
           PERCONA_TEST_SAAS_HOST=check-dev.percona.com:443

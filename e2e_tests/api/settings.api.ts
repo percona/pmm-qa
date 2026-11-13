@@ -1,18 +1,7 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
-
-interface SettingsResponse {
-  settings: {
-    advisor_enabled: boolean;
-    backup_management_enabled: boolean;
-    data_retention: string;
-    default_role_id?: number | string;
-    enable_access_control: boolean;
-    pmm_public_address: string;
-    telemetry_summaries: string[];
-  };
-}
+import { SettingsResponse } from '@interfaces/settings';
 
 interface SettingsBody {
   data_retention?: string;
@@ -23,11 +12,6 @@ interface SettingsBody {
   enable_backup_management?: boolean;
   enable_internal_pg_qan?: boolean;
   enable_advisor?: boolean;
-  advisor_run_intervals?: {
-    rare_interval: string;
-    standard_interval: string;
-    frequent_interval: string;
-  };
   enable_azurediscover?: boolean;
   enable_access_control?: boolean;
 }
@@ -62,6 +46,17 @@ export default class SettingsApi {
     await this.updateSettings({ enable_backup_management: true });
   };
 
+  /** The Advisor notification settings, shaped to be put back with updateSettings. */
+  getAdvisorNotifications = async (): Promise<Record<string, unknown>> => {
+    const { settings } = await this.getSettings();
+
+    return {
+      advisor_notification_email_addresses: { values: settings.advisor_notification_email_addresses },
+      advisor_notification_severities: settings.advisor_notification_severities,
+      enable_advisor_notifications: settings.advisor_notifications_enabled,
+    };
+  };
+
   getSettings = async () => {
     const response = await this.request.get(apiEndpoints.server.settings, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -71,6 +66,11 @@ export default class SettingsApi {
 
     return (await response.json()) as SettingsResponse;
   };
+
+  putSettings = async (
+    data: Record<string, unknown>,
+    headers: Record<string, string> = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> => await this.request.put(apiEndpoints.server.settings, { data, headers });
 
   restoreSettingsDefaults = async (): Promise<void> => {
     const body: Record<string, unknown> = {

@@ -1,12 +1,13 @@
-import { expect, FrameLocator, Locator } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import { tableDataRows, tableLoadedRows } from '@helpers/tableLocators';
 
 type RowsPerPage = '25' | '50' | '100';
 
 export default class InventoryPagination {
-  readonly activePageButton: Locator;
-  readonly firstPageButton: Locator;
   readonly itemsInterval: Locator;
+  readonly monitoringNotOkRows: Locator;
+  readonly monitoringStatuses: Locator;
   readonly nextPageButton: Locator;
   readonly previousPageButton: Locator;
   readonly rowsPerPageDropdown: Locator;
@@ -14,20 +15,22 @@ export default class InventoryPagination {
   readonly selectedRowCheckboxes: Locator;
   readonly selectRowCheckboxes: Locator;
 
-  constructor(readonly frame: FrameLocator) {
-    this.activePageButton = frame.getByTestId('page-button-active');
-    this.firstPageButton = frame.getByTestId('first-page-button');
-    this.itemsInterval = frame.getByTestId('pagination-items-inverval');
-    this.nextPageButton = frame.getByTestId('next-page-button');
-    this.previousPageButton = frame.getByTestId('previous-page-button');
-    this.rowsPerPageDropdown = frame.getByTestId('pagination-size-select');
-    this.selectAllCheckbox = frame.getByTestId('select-all').locator('span');
-    this.selectRowCheckboxes = frame.getByTestId('select-row').locator('span');
-    this.selectedRowCheckboxes = frame.getByTestId('select-row').getByRole('checkbox', { checked: true });
+  constructor(readonly page: Page) {
+    this.itemsInterval = page.getByText(/^\d+-\d+ of \d+$/);
+    this.monitoringNotOkRows = page.locator(tableDataRows).filter({
+      hasNot: page.getByTestId('monitoring-status-link').filter({ hasText: /^OK$/ }),
+    });
+    this.monitoringStatuses = page.locator(tableDataRows).getByTestId('monitoring-status-link');
+    this.nextPageButton = page.getByRole('button', { name: 'Go to next page' });
+    this.previousPageButton = page.getByRole('button', { name: 'Go to previous page' });
+    this.rowsPerPageDropdown = page.getByRole('combobox', { name: 'Rows per page' });
+    this.selectAllCheckbox = page.getByRole('checkbox', { name: 'Toggle select all' });
+    this.selectRowCheckboxes = page.getByRole('checkbox', { name: 'Toggle select row' });
+    this.selectedRowCheckboxes = page.getByRole('checkbox', { checked: true, name: 'Toggle select row' });
   }
 
   rowsPerPageOption = (rowsPerPage: RowsPerPage) =>
-    this.frame.getByRole('option', { exact: true, name: rowsPerPage });
+    this.page.getByRole('option', { exact: true, name: rowsPerPage });
 
   selectAllRows = async (): Promise<number> => {
     await this.selectAllCheckbox.click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -48,16 +51,33 @@ export default class InventoryPagination {
     await this.rowsPerPageOption(rowsPerPage).click({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  // Tables of up to 10 rows have no pagination, so they already show every row
+  showAllRows = async () => {
+    await expect(this.page.locator(tableLoadedRows).first()).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
+    });
+
+    if (!(await this.rowsPerPageDropdown.isVisible())) return;
+
+    await this.selectRowsPerPage('100');
+    await expect(this.rowsPerPageDropdown).toHaveText('100', { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.itemsInterval, 'Every row should fit on one page of 100').toHaveText(/^1-(\d+) of \1$/);
+  };
+
+  verifyMonitoringStatusesOk = async (listName: 'services' | 'nodes') => {
+    await expect(this.monitoringStatuses.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.monitoringNotOkRows, `${listName} with incorrect monitoring statuses`).toHaveText([]);
+  };
+
   verifyPaginationFunctionality = async () => {
     await expect(this.rowsPerPageDropdown).toHaveText('25', { timeout: Timeouts.THIRTY_SECONDS });
 
-    const totalItems = Number((await this.itemsInterval.textContent())?.split(' ')[3]);
+    const totalItems = Number((await this.itemsInterval.textContent())?.split(' ')[2]);
 
     await expect(this.previousPageButton).toBeDisabled();
     await this.nextPageButton.click();
-    await expect(this.activePageButton).toHaveText('2', { timeout: Timeouts.THIRTY_SECONDS });
     await expect(this.itemsInterval).toContainText(`26-${totalItems <= 50 ? totalItems : 50}`);
-    await this.firstPageButton.click();
+    await this.previousPageButton.click();
     await expect(this.itemsInterval).toContainText('1-25');
   };
 }

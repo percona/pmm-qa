@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion, removePGService } from '@helpers/pmm-admin';
+import { ChangeAgentType, getPmmAdminMinorVersion, inventoryChangeAgent, removePGService } from '@helpers/pmm-admin';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
@@ -201,7 +201,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=4s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.PostgresExporter, agentId.stdout, '--connection-timeout=4s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
     const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=4`);
@@ -214,7 +214,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=0s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.PostgresExporter, agentId.stdout, '--connection-timeout=0s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
     const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=2`);

@@ -58,9 +58,7 @@ pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, le
   });
 });
 
-// skip-until: 2026-11-23 -- the selected time range is lost when switching dashboards (PMM-15557); unskip once it is fixed.
-// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15557, see the skip-until line above.
-pmmTest.skip(
+pmmTest(
   'PMM-T2198 verify custom time range persists on any dashboard @new-navigation',
   async ({ leftNavigation, page }, testInfo) => {
     const selectedTimeRange = 'Last 15 minutes';
@@ -97,6 +95,26 @@ pmmTest.skip(
       await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
         timeout: Timeouts.TEN_SECONDS,
       });
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2394 - Verify an absolute time range stays when switching dashboards from the left menu @new-navigation',
+  async ({ leftNavigation, page }) => {
+    const date = new Date(Date.now() - 24 * 60 * 60 * 1_000).toLocaleDateString('sv-SE');
+    const from = `${date} 10:00:00`;
+    const to = `${date} 10:30:00`;
+
+    await leftNavigation.selectMenuItem('mysql.innodbDetails');
+    await leftNavigation.setAbsoluteTimeRange(from, to);
+    await page.reload();
+    // The sidebar re-expands MySQL on reload; clicking its toggle before that collapses it again.
+    await leftNavigation.menuItemLocator('mysql.innodbDetails').waitFor();
+    await leftNavigation.selectMenuItem('mysql.summary');
+    await expect(page).toHaveURL(/mysql-instance-summary/);
+    await expect(leftNavigation.elements.timePickerOpenButton).toContainText(`${from} to ${to}`, {
+      timeout: Timeouts.TEN_SECONDS,
     });
   },
 );

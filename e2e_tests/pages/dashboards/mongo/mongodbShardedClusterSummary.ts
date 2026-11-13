@@ -17,6 +17,8 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
     { name: 'Balancer Enabled', type: 'stat' },
     { name: 'Chunks', type: 'stat' },
     { name: 'Last Election', type: 'stat' },
+    { name: 'Total Data Size', type: 'stat' },
+    { name: 'Data Size Over Time', type: 'timeSeries' },
     { name: 'Data distribution', type: 'barGauge' },
     { name: 'Command Operations', type: 'timeSeries' },
     { name: 'Top Hottest Collections by Read', type: 'barGauge' },

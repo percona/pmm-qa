@@ -1,7 +1,5 @@
 import BasePage from '@pages/base.page';
-import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import { expect } from '@playwright/test';
 
 /** The "PMM HA" entry of the left navigation, rendered from `/v1/ha/nodes`. */
 export default class HighAvailabilityPage extends BasePage {
@@ -14,28 +12,11 @@ export default class HighAvailabilityPage extends BasePage {
   };
   elements = {
     badge: this.page.getByTestId('ha-badge'),
-    leaderNavItem: this.page.getByTestId('navitem-high-availability-leader-text-item'),
-    leaderNodeName: this.page
-      .getByTestId('navitem-high-availability-leader-text-item')
-      .locator('[class*="MuiListItemText-secondary"]'),
   };
   inputs = {};
   messages = {};
 
-  expandHaNavItem = async (): Promise<void> => {
-    if (await this.elements.leaderNavItem.isVisible()) return;
-
-    // The HA entry renders late while /v1/ha/nodes is failing over.
-    await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
-    await this.buttons.haNavItemToggle.click({ timeout: Timeouts.TEN_SECONDS });
-    await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-  };
-
-  /**
-   * Opens "PMM HA" -> "Overview". Deliberately not built on
-   * {@link expandHaNavItem}, which waits for the "Leader:" row the HA menu no
-   * longer carries once it has children.
-   */
+  /** Opens "PMM HA" -> "Overview", the only navigation route to the HA health dashboard. */
   openOverviewDashboard = async (): Promise<void> => {
     await this.buttons.haNavItemToggle.waitFor({ state: 'visible', timeout: Timeouts.TWO_MINUTES });
 
@@ -45,23 +26,4 @@ export default class HighAvailabilityPage extends BasePage {
 
     await this.buttons.overviewNavItem.click({ timeout: Timeouts.TEN_SECONDS });
   };
-
-  /**
-   * Needed after a failover: the page was talking to the pod that was killed, so
-   * its sidebar can be left holding a failed query instead of retrying.
-   */
-  reloadAndExpandHaNavItem = async (): Promise<void> => {
-    await this.page.reload();
-    await this.expandHaNavItem();
-  };
-
-  verifyLeaderBadge = async (leader: string): Promise<void> =>
-    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
-      await expect(async () => {
-        await this.reloadAndExpandHaNavItem();
-        await expect(this.elements.leaderNodeName).toHaveText(leader, {
-          timeout: Timeouts.TEN_SECONDS,
-        });
-      }).toPass({ timeout: Timeouts.TWO_MINUTES });
-    });
 }

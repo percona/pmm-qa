@@ -19,6 +19,13 @@ export default class LeftNavigation extends BasePage {
       profile: { locator: this.page.getByTestId('navitem-profile') },
       signOut: { locator: this.page.getByTestId('navitem-sign-out') },
     },
+    advisors: {
+      catalog: { locator: this.page.getByTestId('navitem-advisors-checks') },
+      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
+      locator: this.page.getByTestId('navitem-advisors'),
+      runHistory: { locator: this.page.getByTestId('navitem-advisors-runs') },
+      scheduler: { locator: this.page.getByTestId('navitem-advisors-scheduler') },
+    },
     alerts: {
       alertGroups: { locator: this.page.getByTestId('navitem-alerts-groups') },
       alertRules: { locator: this.page.getByTestId('navitem-alerts-rules') },
@@ -120,14 +127,6 @@ export default class LeftNavigation extends BasePage {
       temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
-    perconaadvisors: {
-      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
-      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
-      locator: this.page.getByTestId('navitem-advisors'),
-      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
-      query: { locator: this.page.getByTestId('navitem-advisors-query') },
-      security: { locator: this.page.getByTestId('navitem-advisors-security') },
-    },
     postgresql: {
       ha: {
         patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
@@ -165,6 +164,8 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    advisorsMenu: (this.buttons.advisors as NestedLocators).locator as Locator,
+    alertsMenuItems: this.page.getByTestId(/^navitem-alerts-.+-list-item$/),
     applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
     changeTimeSettingsButton: this.grafanaIframe().getByTestId(
       'data-testid Time zone picker Change time settings button',
