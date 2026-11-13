@@ -182040,16 +182040,19 @@
         "link": "https://github.com/percona/pmm-qa/pull/1767",
         "by": "Investigator routine",
         "at": "2026-11-13T04:47:02Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "test bug",
+        "summary": "CLI Generic: PMM-T2227 ran 'dnf install -y wget' in the AlmaLinux 10 container without checking it; the install failed (12.9 s for the whole test) and the test reported the misleading 'wget: command not found'. The image and repos were unchanged and the install works 4/4 on a VM. Fix asserts and retries the install so dnf's own error surfaces.",
+        "link": "https://github.com/percona/pmm-qa/pull/1765",
+        "by": "Investigator routine",
+        "at": "2026-11-13T04:47:08Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-13T03:15:51Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-13T03:15:51Z",
