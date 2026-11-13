@@ -8,7 +8,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-const password = 'password';
+const password = 'Password-123';
 const users = { editor: 'test_editor', viewer: 'test_viewer' } as const;
 const noAccess = 'Insufficient access permissions.';
 const createdUserIds: number[] = [];

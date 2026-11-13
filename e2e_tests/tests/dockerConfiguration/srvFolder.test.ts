@@ -74,10 +74,12 @@ for (const configuration of srvConfigurations) {
         });
 
         await grafanaHelper.unAuthorize();
-        cliHelper.execSilent(`docker exec ${configuration.containerName} change-admin-password anotherpass`);
+        cliHelper.execSilent(
+          `docker exec ${configuration.containerName} change-admin-password Another-pass-1`,
+        );
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
         await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-        await grafanaHelper.authorize(newUser, 'anotherpass', baseUrl);
+        await grafanaHelper.authorize(newUser, 'Another-pass-1', baseUrl);
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
         await page.waitForTimeout(Timeouts.FIVE_SECONDS);
         await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}));

@@ -53,7 +53,7 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
     'PMM-T1189 - verify user is able to change password after upgrade @post-upgrade',
     async ({ grafanaHelper, page }) => {
       const currentPass = process.env.ADMIN_PASSWORD || 'admin';
-      const newPass = process.env.NEW_ADMIN_PASSWORD || 'admin1';
+      const newPass = process.env.NEW_ADMIN_PASSWORD || 'Admin-pass-1';
 
       await grafanaHelper.changePassword(currentPass, newPass);
       await grafanaHelper.authorize('admin', newPass);

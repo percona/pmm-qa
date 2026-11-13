@@ -1,9 +1,9 @@
 import { ProxyUser } from '@api/datasourceProxy.api';
 import { AccessRole } from '@interfaces/accessControl';
 
-export const viewer: ProxyUser = { password: 'pmm-15379-viewer', username: 'pmm-15379-viewer' };
-export const editor: ProxyUser = { password: 'pmm-15379-editor', username: 'pmm-15379-editor' };
-export const probe: ProxyUser = { password: 'pmm-15379-probe', username: 'pmm-15379-probe' };
+export const viewer: ProxyUser = { password: 'PMM-15379-viewer', username: 'pmm-15379-viewer' };
+export const editor: ProxyUser = { password: 'PMM-15379-editor', username: 'pmm-15379-editor' };
+export const probe: ProxyUser = { password: 'PMM-15379-probe', username: 'pmm-15379-probe' };
 
 export const noAccessRole: AccessRole = {
   filter: '{environment="pmm-none-15379"}',

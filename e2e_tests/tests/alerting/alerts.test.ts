@@ -35,8 +35,8 @@ const severityBands: Record<AlertSeverity, string> = {
   [AlertSeverity.Notice]: 'Info',
   [AlertSeverity.Warning]: 'Warning',
 };
-const viewer = { password: 'password', username: 'test_viewer' };
-const editor = { password: 'password', username: 'test_editor' };
+const viewer = { password: 'Password-123', username: 'test_viewer' };
+const editor = { password: 'Password-123', username: 'test_editor' };
 const createdUserIds: number[] = [];
 
 pmmTest.beforeAll(async ({ browser }) => {

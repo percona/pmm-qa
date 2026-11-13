@@ -2,7 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-const password = 'test_user_password';
+const password = 'Test_user_password1';
 let userId = 0;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
