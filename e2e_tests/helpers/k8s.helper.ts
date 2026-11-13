@@ -101,6 +101,20 @@ export default class K8sHelper {
     return this.getVolumeUsage(pod, dir, container);
   };
 
+  /** Name to uid of every ReplicaSet or StatefulSet pod. A Job pod, such as a scheduled backup, comes and goes on its own. */
+  getControllerPodUids = (): Record<string, string> =>
+    Object.fromEntries(
+      (
+        JSON.parse(
+          this.execSilent('get pods --output=json').assertSuccess().stdout,
+        ) as KubernetesResourceList<KubernetesPodResource>
+      ).items
+        .filter((pod) =>
+          ['ReplicaSet', 'StatefulSet'].includes(pod.metadata.ownerReferences?.[0]?.kind ?? ''),
+        )
+        .map((pod) => [pod.metadata.name, pod.metadata.uid]),
+    );
+
   getEventMessages = (objectName: string): string[] =>
     (
       JSON.parse(
