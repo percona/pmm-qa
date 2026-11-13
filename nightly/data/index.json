@@ -182020,6 +182020,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15914",
         "by": "Investigator routine",
         "at": "2026-11-13T04:46:49Z"
+      },
+      {
+        "suites": [
+          "UI"
+        ],
+        "verdict": "test bug",
+        "summary": "ui @instances #12209: PMM-T2010 checked the Aurora PostgreSQL 16 dashboard 40-50 s after adding it, before the QAN agent's first one-minute bucket (agent started 01:09:00.5, first bucket 01:10:00, check 01:09:31-48), so the QAN-backed Execution time panel was empty; it failed 5 of 7 @instances runs on Nov 12-13. Fix polls QAN for the service first; verified in pmm3-ui-tests #12212.",
+        "link": "https://github.com/percona/pmm-qa/pull/1766",
+        "by": "Investigator routine",
+        "at": "2026-11-13T04:46:55Z"
       }
     ],
     "claims": [
@@ -182042,13 +182052,6 @@
         "at": "2026-11-13T03:15:51Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-13T03:15:51Z",
-        "suites": [
-          "UI"
         ]
       }
     ]
