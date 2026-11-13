@@ -110,6 +110,35 @@ export default class PrometheusApi {
     );
   };
 
+  /** For a series that already exists, waits for a sample newer than the server's time now. */
+  waitForNewSample = async (selector: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    await expect
+      .poll(async () => (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0, {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} has no sample after ${since}`,
+        timeout,
+      })
+      .toBeGreaterThan(since);
+  };
+
+  /** Waits until the latest samples of `selector` are newer than the server's time now, and equal `value`. */
+  waitForNewValue = async (selector: string, value: number, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    await expect
+      .poll(
+        async () => {
+          const latest = (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0;
+
+          return latest > since ? this.instantQueryValue(`max(${selector})`) : undefined;
+        },
+        { intervals: [Timeouts.ONE_SECOND], message: `${selector} after ${since}`, timeout },
+      )
+      .toEqual(value);
+  };
+
   waitForQueryValue = async (
     baseUrl: string,
     query: string,

@@ -77,6 +77,14 @@ export default class InventoryApi {
     return filteredServices;
   };
 
+  getNodeAddress = async (nodeId: string): Promise<string> => {
+    const node = (await this.getAllNodes()).find(({ node_id }) => node_id === nodeId);
+
+    if (!node?.address) throw new Error(`Node ${nodeId} has no address`);
+
+    return node.address;
+  };
+
   getNodeWithMysqlService = async (nodeName: string) => {
     const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
 
@@ -108,6 +116,14 @@ export default class InventoryApi {
     Object.values(await this.getAgents())
       .flat()
       .filter((agent) => agent.service_id === serviceId);
+
+  getServiceById = async (serviceId: string): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ service_id }) => service_id === serviceId);
+
+    if (!service) throw new Error(`Service ${serviceId} is not present`);
+
+    return service;
+  };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
@@ -160,6 +176,16 @@ export default class InventoryApi {
     return service;
   };
 
+  getServiceExporter = async (serviceId: string, exporterType: string) => {
+    const exporter = (await this.getServiceById(serviceId)).agents.find(
+      ({ agent_type }) => agent_type === exporterType,
+    );
+
+    if (!exporter) throw new Error(`${exporterType} of service ${serviceId} is not present`);
+
+    return exporter;
+  };
+
   getServices = async (): Promise<GetServices> => {
     const authToken = GrafanaHelper.getToken();
     const services = await this.request.get(apiEndpoints.management.services, {
@@ -200,6 +226,15 @@ export default class InventoryApi {
     )) {
       await this.deleteNode(node_id, true);
     }
+  };
+
+  updateService = async (serviceId: string, serviceType: string, changes: Record<string, unknown>) => {
+    const response = await this.request.put(`${apiEndpoints.management.services}/${serviceId}`, {
+      data: { [serviceType]: changes },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
   };
 
   verifyAgentsAreRunning = async (serviceName: string) =>
