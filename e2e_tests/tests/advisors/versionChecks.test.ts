@@ -1,100 +1,16 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import DockerHelper from '@helpers/docker.helper';
-import { Timeouts } from '@helpers/timeouts';
-import { AdvisorCheckResultStatus, AdvisorCheckTechnology, AdvisorInsight } from '@interfaces/advisors';
-import { AddServiceResponse } from '@interfaces/inventory';
+import {
+  MonitoredDatabase,
+  remoteMongodb,
+  remoteMysql,
+  remotePostgresql,
+} from '@helpers/remoteDatabases.helper';
+import { AdvisorCheckResultStatus, AdvisorCheckTechnology } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
-
-interface Database {
-  credentials?: Record<string, string>;
-  dockerArgs: string;
-  port: number;
-  type: keyof AddServiceResponse;
-}
-
-interface MonitoredDatabase {
-  name: string;
-  serviceId: string;
-}
-
-const credentials = { password: 'qa-advisors' };
-const mongodb = (dockerArgs: string): Database => ({ dockerArgs, port: 27_017, type: 'mongodb' });
-const mysql = (dockerArgs: string, passwordVariable = 'MYSQL_ROOT_PASSWORD'): Database => ({
-  credentials: { ...credentials, username: 'root' },
-  dockerArgs: `-e ${passwordVariable}=qa-advisors ${dockerArgs}`,
-  port: 3_306,
-  type: 'mysql',
-});
-const postgresql = (image: string): Database => ({
-  credentials: { ...credentials, username: 'postgres' },
-  dockerArgs: `-e POSTGRES_PASSWORD=qa-advisors ${image}`,
-  port: 5_432,
-  type: 'postgresql',
-});
-const containers: string[] = [];
-const nodeIds: string[] = [];
-
-// The Service filter of Insights matches substrings, so the shared suffix keeps one name from matching another.
-const addDatabases = async <T extends string>(
-  api: Api,
-  dockerHelper: DockerHelper,
-  databases: Record<T, Database>,
-): Promise<Record<T, MonitoredDatabase>> => {
-  const suffix = Date.now();
-  const entries = Object.entries(databases) as [T, Database][];
-  const monitored = {} as Record<T, MonitoredDatabase>;
-
-  for (const [key, { dockerArgs }] of entries) {
-    const name = `qa-${key}-${suffix}`;
-
-    containers.push(name);
-    dockerHelper.startContainer(name, dockerArgs);
-  }
-
-  for (const [key, { credentials: databaseCredentials, port, type }] of entries) {
-    const name = `qa-${key}-${suffix}`;
-    const service = await api.managementApi.addRemoteDatabase(type, name, port, databaseCredentials);
-
-    nodeIds.push(service.node_id);
-    monitored[key] = { name, serviceId: service.service_id };
-  }
-
-  return monitored;
-};
-
-const runChecks = async (api: Api, checkNames: string[], databases: MonitoredDatabase[]) => {
-  const run = await api.advisorsApi.runChecksAndWait(
-    checkNames,
-    databases.map(({ serviceId }) => serviceId),
-    Timeouts.FIVE_MINUTES,
-  );
-  const insights = await api.advisorsApi.listInsights({ page_size: '500', run_id: run.id });
-
-  return {
-    finding: ({ serviceId }: MonitoredDatabase, checkName: string): AdvisorInsight => {
-      const insight = insights.find(
-        ({ check_name, service_id }) => check_name === checkName && service_id === serviceId,
-      );
-
-      expect(insight, `No ${checkName} insight for service ${serviceId}`).toBeDefined();
-
-      return insight as AdvisorInsight;
-    },
-    insightsOf: ({ serviceId }: MonitoredDatabase) =>
-      insights.filter(({ service_id }) => service_id === serviceId),
-    run,
-  };
-};
 
 pmmTest.describe('Built-in Advisor version checks', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
-  });
-
-  pmmTest.afterEach(async ({ api, cliHelper }) => {
-    for (const container of containers.splice(0)) cliHelper.removeContainer(container);
-    for (const nodeId of nodeIds.splice(0)) await api.inventoryApi.deleteNode(nodeId, true);
   });
 
   pmmTest(
@@ -119,6 +35,7 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         (a, b) => a.name.localeCompare(b.name),
       );
       const [pgsql] = monitored([await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_14_')]);
+      const services = [ps, ...psmdb, pgsql];
       const checks = await api.advisorsApi.listChecks();
       const { builders, buttons, elements } = advisorInsightsPage;
 
@@ -142,7 +59,10 @@ pmmTest.describe('Built-in Advisor version checks', () => {
             await expect(advisorsCatalogPage.builders.statusSwitch(name)).toBeChecked();
           }
 
+          // Each search starts from a listed check, so "No checks" can only come from the retired name.
           for (const name of retiredChecks) {
+            await advisorsCatalogPage.inputs.search.fill(versionChecks[0]);
+            await expect(advisorsCatalogPage.builders.row(versionChecks[0])).toBeVisible();
             await advisorsCatalogPage.inputs.search.fill(name);
             await expect(advisorsCatalogPage.messages.noChecks).toBeVisible();
             await expect(advisorsCatalogPage.builders.row(name)).toHaveCount(0);
@@ -162,16 +82,18 @@ pmmTest.describe('Built-in Advisor version checks', () => {
             ].includes(technology),
         )
         .map(({ name }) => name);
-      const { finding, insightsOf, run } = await runChecks(api, builtinChecks, [ps, ...psmdb, pgsql]);
+      const { insightOf, insights, run } = await api.advisorsApi.runChecksAndListInsights(
+        builtinChecks,
+        services.map(({ serviceId }) => serviceId),
+      );
 
       await pmmTest.step('Every planned check runs without an error', async () => {
-        const errors = [ps, ...psmdb, pgsql]
-          .flatMap((service) => insightsOf(service))
+        const errors = insights
           .filter(({ status }) => status === AdvisorCheckResultStatus.error)
           .map(({ check_name, outcome, service_name }) => `${service_name} ${check_name}: ${outcome}`);
 
         expect(errors).toEqual([]);
-        expect(run.services_count).toEqual(psmdb.length + 2);
+        expect(run.services_count).toEqual(services.length);
         expect(run.checks_count).toEqual(run.planned_checks_count);
         await page.goto(advisorInsightsPage.runUrl(run.id));
         await advisorInsightsPage.selectFilter('status', 'Error');
@@ -182,58 +104,59 @@ pmmTest.describe('Built-in Advisor version checks', () => {
       await advisorInsightsPage.selectFilter('category', 'Versions');
 
       await pmmTest.step('Percona Server 8.0 reached end of life on 2026-04-01', async () => {
-        const eol = finding(ps, 'mysql_version');
+        const eol = insightOf(ps.serviceId, 'mysql_version');
 
         await advisorInsightsPage.selectFilter('serviceName', ps.name);
-        await expect(builders.row(eol.id)).toContainText('Percona Server for MySQL 8.0 reached end of life');
-        await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText(
-          'Percona Server for MySQL 8.0 reached end of life',
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('Percona Server for MySQL 8.0 reached end of life')).toHaveCount(
+          1,
         );
-        await expect(builders.rowsWithText('Newer version of')).toHaveCount(0);
+        await expect(builders.rowsWithCell('Error')).toHaveCount(1);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-04-01');
         await buttons.closeDetails.click();
       });
 
       await pmmTest.step(
-        'PSMDB 6.0 reached end of life and keeps its default journal and log level',
+        'Each PSMDB 6.0 member reached end of life and keeps its default journal and log level',
         async () => {
-          const [member] = psmdb;
-
-          await advisorInsightsPage.selectFilter('serviceName', member.name);
-          await expect(builders.row(finding(member, 'mongodb_version').id)).toContainText(
-            'Percona Server for MongoDB 6.0 reached end of life',
-          );
-          await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-          await expect(builders.rowsWithCell('Error')).toContainText(
-            'Percona Server for MongoDB 6.0 reached end of life',
-          );
-          await expect(builders.rowsWithText('Newer version of')).toHaveCount(0);
-          await advisorInsightsPage.selectFilter('category', 'All');
-          await expect(builders.row(finding(member, 'mongodb_journal').id)).toBeVisible();
-          await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
-          await expect(builders.rowsWithText('MongoDB is not using the default log level.')).toHaveCount(0);
-
           for (const service of psmdb) {
+            expect(insightOf(service.serviceId, 'mongodb_version'), service.name).toMatchObject({
+              severity: 'SEVERITY_ERROR',
+              status: AdvisorCheckResultStatus.failed,
+              summary: 'Percona Server for MongoDB 6.0 reached end of life',
+            });
+
             for (const checkName of ['mongodb_journal', 'mongodb_loglevel']) {
-              expect(finding(service, checkName).status, `${service.name} ${checkName}`).toEqual(
+              expect(insightOf(service.serviceId, checkName).status, `${service.name} ${checkName}`).toEqual(
                 AdvisorCheckResultStatus.ok,
               );
             }
           }
+
+          const [member] = psmdb;
+
+          await advisorInsightsPage.selectFilter('serviceName', member.name);
+          await expect(elements.rows).toHaveCount(1);
+          await expect(
+            builders.rowsWithCell('Percona Server for MongoDB 6.0 reached end of life'),
+          ).toHaveCount(1);
+          await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+          await advisorInsightsPage.selectFilter('category', 'All');
+          await expect(builders.row(insightOf(member.serviceId, 'mongodb_journal').id)).toBeVisible();
+          await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
+          await expect(builders.rowsWithText('MongoDB is not using the default log level.')).toHaveCount(0);
         },
       );
 
       await pmmTest.step('PostgreSQL 14 reached end of life on 2026-11-12', async () => {
-        const eol = finding(pgsql, 'postgresql_version_check');
+        const eol = insightOf(pgsql.serviceId, 'postgresql_version_check');
 
         await advisorInsightsPage.selectFilter('category', 'Versions');
         await advisorInsightsPage.selectFilter('serviceName', pgsql.name);
-        await expect(builders.row(eol.id)).toContainText('PostgreSQL 14 reached end of life');
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('PostgreSQL 14 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('PostgreSQL 14 reached end of life');
-        await expect(builders.rowsWithText('Newer version of')).toHaveCount(0);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-11-12');
       });
@@ -242,31 +165,33 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
   pmmTest(
     'PMM-T2623 - Verify MySQL, Percona Server and MariaDB past end of life get only an end-of-life error and supported series get newer-version advice from their own release series @advisor-versions',
-    async ({ advisorInsightsPage, api, dockerHelper, page }) => {
+    async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const versionCheck = 'mysql_version';
-      const databases = await addDatabases(api, dockerHelper, {
-        mariadb106: mysql('mariadb:10.6', 'MARIADB_ROOT_PASSWORD'),
-        mariadb10119: mysql('mariadb:10.11.9', 'MARIADB_ROOT_PASSWORD'),
-        mysql57: mysql('--platform linux/amd64 mysql:5.7'),
-        mysql80: mysql('mysql:8.0'),
-        mysql840: mysql('mysql:8.4.0'),
-        mysql8037: mysql('mysql:8.0.37'),
-        ps971: mysql('percona/percona-server:9.7.1'),
+      const databases = await remoteDatabasesHelper.add({
+        mariadb106: remoteMysql('mariadb:10.6', 'MARIADB_ROOT_PASSWORD'),
+        mariadb1142: remoteMysql('mariadb:11.4.2', 'MARIADB_ROOT_PASSWORD'),
+        mysql57: remoteMysql('--platform linux/amd64 mysql:5.7'),
+        mysql80: remoteMysql('mysql:8.0'),
+        mysql840: remoteMysql('mysql:8.4.0'),
+        mysql8037: remoteMysql('mysql:8.0.37'),
+        ps971: remoteMysql('percona/percona-server:9.7.1'),
       });
-      const { finding, insightsOf, run } = await runChecks(api, [versionCheck], Object.values(databases));
-      const { builders, buttons } = advisorInsightsPage;
+      const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
+        [versionCheck],
+        Object.values(databases).map(({ serviceId }) => serviceId),
+      );
+      const { builders, buttons, elements } = advisorInsightsPage;
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
       await advisorInsightsPage.selectFilter('category', 'Versions');
 
-      await pmmTest.step('MySQL 8.0.46 reached end of life and has no newer version', async () => {
-        const eol = finding(databases.mysql80, versionCheck);
+      await pmmTest.step('MySQL 8.0 on its latest patch reached end of life', async () => {
+        const eol = insightOf(databases.mysql80.serviceId, versionCheck);
 
         await advisorInsightsPage.selectFilter('serviceName', databases.mysql80.name);
-        await expect(builders.row(eol.id)).toContainText('MySQL 8.0 reached end of life');
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('MySQL 8.0 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('MySQL 8.0 reached end of life');
-        await expect(builders.rowsWithText('Newer version of MySQL is available')).toHaveCount(0);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-04-30');
         await buttons.closeDetails.click();
@@ -275,140 +200,148 @@ pmmTest.describe('Built-in Advisor version checks', () => {
       await pmmTest.step(
         'MySQL 8.0.37 reached end of life and is not told about a newer 8.0 release',
         async () => {
-          const eol = finding(databases.mysql8037, versionCheck);
+          const eol = insightOf(databases.mysql8037.serviceId, versionCheck);
 
           await advisorInsightsPage.selectFilter('serviceName', databases.mysql8037.name);
-          await expect(builders.row(eol.id)).toContainText('MySQL 8.0 reached end of life');
+          await expect(elements.rows).toHaveCount(1);
+          await expect(builders.rowsWithCell('MySQL 8.0 reached end of life')).toHaveCount(1);
           await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-          await expect(builders.rowsWithText('Newer version of MySQL is available')).toHaveCount(0);
           await builders.row(eol.id).dblclick();
           await expect(builders.detailsField('outcome')).toContainText(
             'Upgrade to a supported release series.',
           );
           await expect(builders.detailsField('outcome')).not.toContainText('8.0.46');
-          await expect(builders.detailsField('outcome')).not.toContainText(
-            'The newer release includes security fixes',
-          );
+          await expect(builders.detailsField('outcome')).not.toContainText('Release notes');
+          await expect(builders.detailsField('outcome')).not.toContainText('can include security fixes');
           await buttons.closeDetails.click();
         },
       );
 
       await pmmTest.step('MySQL 5.7 gets exactly one end-of-life error', async () => {
         await advisorInsightsPage.selectFilter('serviceName', databases.mysql57.name);
-        await expect(builders.row(finding(databases.mysql57, versionCheck).id)).toBeVisible();
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('MySQL 5.7 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('MySQL 5.7 reached end of life');
       });
 
       await pmmTest.step('MySQL 8.4.0 is compared with the 8.4 series', async () => {
-        const newer = finding(databases.mysql840, versionCheck);
+        const newer = insightOf(databases.mysql840.serviceId, versionCheck);
 
         await advisorInsightsPage.selectFilter('serviceName', databases.mysql840.name);
-        await expect(builders.row(newer.id)).toContainText('Newer version of MySQL is available');
-        await expect(builders.row(newer.id)).toContainText('Warning');
-        await expect(builders.rowsWithText('end of life')).toHaveCount(0);
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('Newer version of MySQL is available')).toHaveCount(1);
+        await expect(builders.rowsWithCell('Warning')).toHaveCount(1);
         await builders.row(newer.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText(
-          /Current version is 8\.4\.0, the latest available version is 8\.4\.[1-9]\d*\./,
+          /Current version is 8\.4\.0, the latest release of MySQL 8\.4 is 8\.4\.[1-9]\d*\./,
         );
-        await expect(builders.detailsField('outcome')).not.toContainText('8.0.38');
+        await expect(builders.detailsField('outcome')).toContainText(
+          'Release notes: https://dev.mysql.com/doc/relnotes/mysql/8.4/en/.',
+        );
         await buttons.closeDetails.click();
       });
 
       await pmmTest.step('Percona Server 9.7.1 is compared with the 9.7 series', async () => {
-        const newer = finding(databases.ps971, versionCheck);
+        const newer = insightOf(databases.ps971.serviceId, versionCheck);
 
         await advisorInsightsPage.selectFilter('serviceName', databases.ps971.name);
-        await expect(builders.row(newer.id)).toContainText(
-          'Newer version of Percona Server for MySQL is available',
-        );
-        await expect(builders.row(newer.id)).toContainText('Warning');
-        await expect(builders.rowsWithText('end of life')).toHaveCount(0);
+        await expect(elements.rows).toHaveCount(1);
+        await expect(
+          builders.rowsWithCell('Newer version of Percona Server for MySQL is available'),
+        ).toHaveCount(1);
+        await expect(builders.rowsWithCell('Warning')).toHaveCount(1);
         await builders.row(newer.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText(
-          /the latest available version is 9\.7\.(?:[2-9]|[1-9]\d+)\./,
+          /the latest release of Percona Server for MySQL 9\.7 is 9\.7\.(?:[2-9]|[1-9]\d+)\./,
+        );
+        await expect(builders.detailsField('outcome')).toContainText(
+          'Release notes: https://docs.percona.com/percona-server/9.7/',
         );
         await buttons.closeDetails.click();
       });
 
       await pmmTest.step('MariaDB 10.6 gets exactly one end-of-life error and no 10.9.2 advice', async () => {
+        const eol = insightOf(databases.mariadb106.serviceId, versionCheck);
+
         await advisorInsightsPage.selectFilter('serviceName', databases.mariadb106.name);
-        await expect(builders.row(finding(databases.mariadb106, versionCheck).id)).toBeVisible();
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('MariaDB 10.6 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('MariaDB 10.6 reached end of life');
-        await expect(builders.rowsWithText('Newer version of MariaDB is available')).toHaveCount(0);
-        await expect(builders.rowsWithText('10.9.2')).toHaveCount(0);
-        expect(insightsOf(databases.mariadb106).filter(({ outcome }) => outcome.includes('10.9.2'))).toEqual(
-          [],
-        );
+        expect(eol.outcome).not.toContain('10.9.2');
+        expect(eol.outcome).toContain('Lifecycle policy: https://mariadb.org/about/#maintenance-policy.');
       });
 
-      await pmmTest.step('MariaDB 10.11.9 is compared with the 10.11 series', async () => {
-        const newer = finding(databases.mariadb10119, versionCheck);
+      await pmmTest.step('MariaDB 11.4.2 is compared with the 11.4 series', async () => {
+        const newer = insightOf(databases.mariadb1142.serviceId, versionCheck);
 
-        await advisorInsightsPage.selectFilter('serviceName', databases.mariadb10119.name);
-        await expect(builders.row(newer.id)).toContainText('Newer version of MariaDB is available');
-        await expect(builders.row(newer.id)).toContainText('Warning');
-        await expect(builders.rowsWithText('end of life')).toHaveCount(0);
+        await advisorInsightsPage.selectFilter('serviceName', databases.mariadb1142.name);
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('Newer version of MariaDB is available')).toHaveCount(1);
+        await expect(builders.rowsWithCell('Warning')).toHaveCount(1);
         await builders.row(newer.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText(
-          /Current version is 10\.11\.9, the latest available version is 10\.11\.[1-9]\d+\./,
+          /Current version is 11\.4\.2-MariaDB\S*, the latest release of MariaDB 11\.4 is 11\.4\.(?:[3-9]|[1-9]\d+)\./,
         );
         await expect(builders.detailsField('outcome')).toContainText(
           'https://mariadb.org/about/security-policy/',
         );
-        await expect(builders.detailsField('outcome')).not.toContainText('10.9.2');
       });
     },
   );
 
   pmmTest(
     'PMM-T2624 - Verify MongoDB 4.2 and 4.4 each get exactly one end-of-life error and no newer-version warning, and MongoDB 8.0 gets no end-of-life finding @advisor-versions',
-    async ({ advisorInsightsPage, api, dockerHelper, page }) => {
+    async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const versionCheck = 'mongodb_version';
-      const databases = await addDatabases(api, dockerHelper, {
-        mongo42: mongodb('mongo:4.2'),
-        mongo44: mongodb('mongo:4.4'),
-        mongo80: mongodb('mongo:8.0'),
+      const databases = await remoteDatabasesHelper.add({
+        mongo42: remoteMongodb('mongo:4.2'),
+        mongo44: remoteMongodb('mongo:4.4'),
+        mongo80: remoteMongodb('mongo:8.0'),
       });
-      const { finding, run } = await runChecks(api, [versionCheck], Object.values(databases));
-      const { builders, buttons } = advisorInsightsPage;
+      const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
+        [versionCheck],
+        Object.values(databases).map(({ serviceId }) => serviceId),
+      );
+      const { builders, buttons, elements } = advisorInsightsPage;
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
       await advisorInsightsPage.selectFilter('category', 'Versions');
 
       await pmmTest.step('MongoDB 4.4 reached end of life on 2024-02-29', async () => {
-        const eol = finding(databases.mongo44, versionCheck);
+        const eol = insightOf(databases.mongo44.serviceId, versionCheck);
 
         await advisorInsightsPage.selectFilter('serviceName', databases.mongo44.name);
-        await expect(builders.row(eol.id)).toContainText('MongoDB 4.4 reached end of life');
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('MongoDB 4.4 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('MongoDB 4.4 reached end of life');
-        await expect(builders.rowsWithText(/reaches end of life|about to reach/i)).toHaveCount(0);
-        await expect(builders.rowsWithText('Newer version of MongoDB is available')).toHaveCount(0);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2024-02-29');
-        await expect(builders.detailsField('outcome')).not.toContainText('new minor version');
+        await expect(builders.detailsField('outcome')).toContainText(
+          'Lifecycle policy: https://www.mongodb.com/legal/support-policy/lifecycles.',
+        );
+        await expect(builders.detailsField('outcome')).not.toContainText('Release notes');
         await buttons.closeDetails.click();
       });
 
       await pmmTest.step('MongoDB 4.2 gets exactly one end-of-life error', async () => {
         await advisorInsightsPage.selectFilter('serviceName', databases.mongo42.name);
-        await expect(builders.row(finding(databases.mongo42, versionCheck).id)).toBeVisible();
+        await expect(elements.rows).toHaveCount(1);
+        await expect(builders.rowsWithCell('MongoDB 4.2 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toContainText('MongoDB 4.2 reached end of life');
-        await expect(builders.rowsWithText('Newer version of MongoDB is available')).toHaveCount(0);
       });
 
       await pmmTest.step(
         'MongoDB 8.0 gets no end-of-life finding, only MongoDB newer-version advice',
         async () => {
+          const newer = insightOf(databases.mongo80.serviceId, versionCheck);
+
           await advisorInsightsPage.selectFilter('serviceName', databases.mongo80.name);
-          await expect(builders.row(finding(databases.mongo80, versionCheck).id)).toContainText(
-            'Newer version of MongoDB is available',
+          await expect(elements.rows).toHaveCount(1);
+          await expect(builders.rowsWithCell('Newer version of MongoDB is available')).toHaveCount(1);
+          await expect(builders.rowsWithCell('Warning')).toHaveCount(1);
+          expect(newer.outcome).toMatch(
+            /Release notes: https:\/\/www\.mongodb\.com\/docs\/manual\/release-notes\/\d+\.\d+\/\./,
           );
-          await expect(builders.rowsWithText('end of life')).toHaveCount(0);
-          await expect(builders.rowsWithText('Percona Server for MongoDB')).toHaveCount(0);
         },
       );
     },
@@ -416,13 +349,16 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
   pmmTest(
     'PMM-T2625 - Verify PostgreSQL 13 gets only an end-of-life error with its full version and PostgreSQL 17 gets newer-version advice @advisor-versions',
-    async ({ advisorInsightsPage, api, dockerHelper, page }) => {
+    async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const versionCheck = 'postgresql_version_check';
-      const databases = await addDatabases(api, dockerHelper, {
-        pg13: postgresql('postgres:13'),
-        pg17: postgresql('postgres:17'),
+      const databases = await remoteDatabasesHelper.add({
+        pg13: remotePostgresql('postgres:13.23'),
+        pg17: remotePostgresql('postgres:17.11'),
       });
-      const { finding, run } = await runChecks(api, [versionCheck], Object.values(databases));
+      const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
+        [versionCheck],
+        Object.values(databases).map(({ serviceId }) => serviceId),
+      );
       const { builders, buttons, elements } = advisorInsightsPage;
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
@@ -431,40 +367,44 @@ pmmTest.describe('Built-in Advisor version checks', () => {
       await pmmTest.step(
         'PostgreSQL 13.23 reached end of life and gets no newer-version advice',
         async () => {
-          const eol = finding(databases.pg13, versionCheck);
+          const eol = insightOf(databases.pg13.serviceId, versionCheck);
 
           await advisorInsightsPage.selectFilter('serviceName', databases.pg13.name);
-          await expect(builders.row(eol.id)).toContainText('PostgreSQL 13 reached end of life');
+          await expect(elements.rows).toHaveCount(1);
+          await expect(builders.rowsWithCell('PostgreSQL 13 reached end of life')).toHaveCount(1);
           await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-          await expect(builders.rowsWithCell('Error')).toContainText('PostgreSQL 13 reached end of life');
-          await expect(builders.rowsWithText('Newer version of PostgreSQL is available')).toHaveCount(0);
           await builders.row(eol.id).dblclick();
           await expect(builders.detailsLabel('current', '13.23')).toBeVisible();
-          await expect(builders.detailsLabel('current', '13.3')).toBeHidden();
           await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2025-11-13');
+          await expect(builders.detailsField('outcome')).toContainText(
+            'Lifecycle policy: https://www.postgresql.org/support/versioning/.',
+          );
           await expect(builders.detailsField('outcome')).not.toContainText('newer');
           await buttons.closeDetails.click();
         },
       );
 
       await pmmTest.step(
-        'PostgreSQL 17 gets newer-version advice that points to security fixes',
+        'PostgreSQL 17.11 gets newer-version advice with release notes and the security page',
         async () => {
-          const newer = finding(databases.pg17, versionCheck);
+          const newer = insightOf(databases.pg17.serviceId, versionCheck);
 
           await advisorInsightsPage.selectFilter('serviceName', databases.pg17.name);
-          await expect(builders.row(newer.id)).toContainText('Newer version of PostgreSQL is available');
-          await expect(builders.row(newer.id)).toContainText('Warning');
-          await expect(builders.rowsWithText('end of life')).toHaveCount(0);
+          await expect(elements.rows).toHaveCount(1);
+          await expect(builders.rowsWithCell('Newer version of PostgreSQL is available')).toHaveCount(1);
+          await expect(builders.rowsWithCell('Warning')).toHaveCount(1);
           await builders.row(newer.id).dblclick();
           await expect(builders.detailsField('outcome')).toContainText(
-            /Current version is 17\.\d+, the latest release of PostgreSQL 17/,
+            /Current version is 17\.11, the latest release of PostgreSQL 17 is 17\.(?:1[2-9]|[2-9]\d)\./,
           );
           await expect(builders.detailsField('outcome')).toContainText(
             'PostgreSQL 17 reaches end of life on 2029-11-08.',
           );
           await expect(builders.detailsField('outcome')).toContainText(
-            'The newer release includes security fixes: https://www.postgresql.org/support/security/',
+            /Release notes: https:\/\/www\.postgresql\.org\/docs\/release\/17\.\d+\/\./,
+          );
+          await expect(builders.detailsField('outcome')).toContainText(
+            'Newer releases can include security fixes; see which ones affect your version: https://www.postgresql.org/support/security/.',
           );
           await buttons.closeDetails.click();
           await expect(elements.detailsPane).toBeHidden();
@@ -475,45 +415,56 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
   pmmTest(
     'PMM-T2627 - Verify MongoDB journal and log level warnings appear only for settings changed explicitly @advisor-versions',
-    async ({ advisorInsightsPage, api, dockerHelper, page }) => {
+    async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const journalCheck = 'mongodb_journal';
       const logLevelCheck = 'mongodb_loglevel';
       const journalDisabled = 'MongoDB journaling is disabled';
       const logLevelChanged = 'MongoDB is not using the default log level.';
-      const databases = await addDatabases(api, dockerHelper, {
-        mongo60: mongodb('mongo:6.0'),
-        'mongo60-nojournal': mongodb('mongo:6.0 --nojournal'),
-        'mongo82-loglevel': mongodb('mongo:8.2 --setParameter logLevel=1'),
+      const databases = await remoteDatabasesHelper.add({
+        mongo60: remoteMongodb('mongo:6.0'),
+        'mongo60-nojournal': remoteMongodb('mongo:6.0 --nojournal'),
+        'mongo82-loglevel': remoteMongodb('mongo:8.2 --setParameter logLevel=1'),
       });
-      const { finding, run } = await runChecks(api, [journalCheck, logLevelCheck], Object.values(databases));
+      const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
+        [journalCheck, logLevelCheck],
+        Object.values(databases).map(({ serviceId }) => serviceId),
+      );
       const { builders, elements } = advisorInsightsPage;
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
       await advisorInsightsPage.selectFilter('status', 'Failed');
 
-      await pmmTest.step('A raised log level is reported', async () => {
-        const insight = finding(databases['mongo82-loglevel'], logLevelCheck);
+      await pmmTest.step('A raised log level is reported, and only the log level', async () => {
+        const service = databases['mongo82-loglevel'];
+        const insight = insightOf(service.serviceId, logLevelCheck);
 
-        await advisorInsightsPage.selectFilter('serviceName', databases['mongo82-loglevel'].name);
+        expect(insightOf(service.serviceId, journalCheck).status).toEqual(AdvisorCheckResultStatus.ok);
+        await advisorInsightsPage.selectFilter('serviceName', service.name);
         await expect(builders.row(insight.id)).toContainText(logLevelChanged);
         await expect(builders.row(insight.id)).toContainText('Warning');
+        await expect(builders.rowsWithText(journalDisabled)).toHaveCount(0);
       });
 
-      await pmmTest.step('A disabled journal is reported', async () => {
-        const insight = finding(databases['mongo60-nojournal'], journalCheck);
+      await pmmTest.step('A disabled journal is reported, and only the journal', async () => {
+        const service = databases['mongo60-nojournal'];
+        const insight = insightOf(service.serviceId, journalCheck);
 
-        await advisorInsightsPage.selectFilter('serviceName', databases['mongo60-nojournal'].name);
+        expect(insightOf(service.serviceId, logLevelCheck).status).toEqual(AdvisorCheckResultStatus.ok);
+        await advisorInsightsPage.selectFilter('serviceName', service.name);
         await expect(builders.row(insight.id)).toContainText(journalDisabled);
         await expect(builders.row(insight.id)).toContainText('Warning');
+        await expect(builders.rowsWithText(logLevelChanged)).toHaveCount(0);
       });
 
       await pmmTest.step('MongoDB 6.0 with default settings gets neither warning', async () => {
-        expect(finding(databases.mongo60, journalCheck).status).toEqual(AdvisorCheckResultStatus.ok);
-        expect(finding(databases.mongo60, logLevelCheck).status).toEqual(AdvisorCheckResultStatus.ok);
+        expect(insightOf(databases.mongo60.serviceId, journalCheck).status).toEqual(
+          AdvisorCheckResultStatus.ok,
+        );
+        expect(insightOf(databases.mongo60.serviceId, logLevelCheck).status).toEqual(
+          AdvisorCheckResultStatus.ok,
+        );
         await advisorInsightsPage.selectFilter('serviceName', databases.mongo60.name);
         await expect(elements.noData).toBeVisible();
-        await expect(builders.rowsWithText(journalDisabled)).toHaveCount(0);
-        await expect(builders.rowsWithText(logLevelChanged)).toHaveCount(0);
       });
     },
   );

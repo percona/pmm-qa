@@ -20,6 +20,7 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
@@ -102,6 +103,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  remoteDatabasesHelper: RemoteDatabasesHelper;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
   storageLocationsPage: StorageLocationsPage;
@@ -227,6 +229,12 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  remoteDatabasesHelper: async ({ api, cliHelper, dockerHelper }, use) => {
+    const remoteDatabasesHelper = new RemoteDatabasesHelper(api, cliHelper, dockerHelper);
+
+    await use(remoteDatabasesHelper);
+    await remoteDatabasesHelper.removeAll();
+  },
   scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
