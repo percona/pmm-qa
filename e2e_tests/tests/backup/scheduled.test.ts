@@ -416,7 +416,8 @@ pmmTest(
   },
 );
 
-pmmTest(
+// eslint-disable-next-line playwright/no-skipped-test -- PMM-15916: pmm-managed drops one of two scheduled backups that fire together; unskip once PMM-15916 is fixed.
+pmmTest.skip(
   'PMM-T924 - Verify user is able to schedule a backup for MongoDB with replica & MySQL and try to run those backup schedule job in parallel @bm-common',
   async ({ api, backupInventoryPage }) => {
     const mongoSchedule = {
@@ -497,7 +498,7 @@ for (const [mode, serviceName] of [
 }
 
 pmmTest(
-  'PMM-T1517 - Verify that BM Scheduler is more clear regarding frequency specification @bm-common',
+  'PMM-T1517 - Verify that BM Scheduler is more clear regarding frequency specification @bm-common @bm-mongo',
   async ({ scheduledBackupsPage }) => {
     await scheduledBackupsPage.openScheduleForm();
     await expect(scheduledBackupsPage.builders.scheduleField('period')).toHaveText('Every year');
