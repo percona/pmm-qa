@@ -15,9 +15,12 @@ import ManagementApi from '@api/management.api';
 import PrometheusApi from '@api/prometheus.api';
 import DumpApi from '@api/dump.api';
 import QanApi from '@api/qan.api';
+import AdvisorsApi from '@api/advisors.api';
+import MailpitApi from '@api/mailpit.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
+  readonly advisorsApi: AdvisorsApi;
   readonly alertingApi: AlertingApi;
   readonly annotationApi: AnnotationApi;
   readonly backupsApi: BackupsApi;
@@ -26,6 +29,7 @@ export default class Api {
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
+  readonly mailpitApi: MailpitApi;
   readonly managementApi: ManagementApi;
   readonly prometheusApi: PrometheusApi;
   readonly qanApi: QanApi;
@@ -36,6 +40,7 @@ export default class Api {
 
   constructor(request: APIRequestContext) {
     this.accessControlApi = new AccessControlApi(request);
+    this.advisorsApi = new AdvisorsApi(request);
     this.alertingApi = new AlertingApi(request);
     this.annotationApi = new AnnotationApi(request);
     this.backupsApi = new BackupsApi(request);
@@ -43,6 +48,7 @@ export default class Api {
     this.dumpApi = new DumpApi(request);
     this.haApi = new HaApi(request);
     this.inventoryApi = new InventoryApi(request);
+    this.mailpitApi = new MailpitApi(request);
     this.managementApi = new ManagementApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.qanApi = new QanApi(request);

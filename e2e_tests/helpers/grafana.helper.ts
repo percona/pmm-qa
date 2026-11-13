@@ -2,6 +2,14 @@ import { expect, Page } from '@playwright/test';
 import { GrafanaFolder, GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
 import customDashboard from '@testdata/customDashboard.json';
 
+const durationUnits: Record<string, number> = {
+  day: 86_400,
+  hour: 3_600,
+  minute: 60,
+  second: 1,
+  week: 604_800,
+};
+
 export default class GrafanaHelper {
   constructor(private page: Page) {}
 
@@ -101,6 +109,15 @@ export default class GrafanaHelper {
     ).toEqual(200);
 
     return await response.json();
+  };
+
+  // NaN for "N/A" or "> 24h", so no comparison on an unavailable duration passes.
+  static getDurationSeconds = (text: string): number => {
+    const parts = [...text.matchAll(/(\d+)\s+(second|minute|hour|day|week)s?/g)];
+
+    return parts.length
+      ? parts.reduce((sum, [, value, unit]) => sum + Number(value) * durationUnits[unit], 0)
+      : NaN;
   };
 
   getFolderDetailsByName = async (folderName: string): Promise<GrafanaFolder> => {
