@@ -174,7 +174,6 @@ pmmTest(
     for (const name of [scheduleName, immortalScheduleName]) {
       await api.backupsApi.createScheduledBackup({
         ...defaultSchedule,
-        folder: 'replicaset',
         location_id: locationId,
         name,
         retention: 6,
