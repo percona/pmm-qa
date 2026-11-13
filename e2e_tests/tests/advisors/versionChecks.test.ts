@@ -203,10 +203,12 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
           await advisorInsightsPage.selectFilter('serviceName', member.name);
           await expect(builders.row(finding(member, 'mongodb_version').id)).toContainText(
-            'MongoDB 6.0 reached end of life',
+            'Percona Server for MongoDB 6.0 reached end of life',
           );
           await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-          await expect(builders.rowsWithCell('Error')).toContainText('MongoDB 6.0 reached end of life');
+          await expect(builders.rowsWithCell('Error')).toContainText(
+            'Percona Server for MongoDB 6.0 reached end of life',
+          );
           await expect(builders.rowsWithText('Newer version of')).toHaveCount(0);
           await advisorInsightsPage.selectFilter('category', 'All');
           await expect(builders.row(finding(member, 'mongodb_journal').id)).toBeVisible();
@@ -398,11 +400,17 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         await expect(builders.rowsWithText('Newer version of MongoDB is available')).toHaveCount(0);
       });
 
-      await pmmTest.step('MongoDB 8.0 gets no end-of-life finding', async () => {
-        await advisorInsightsPage.selectFilter('serviceName', databases.mongo80.name);
-        await expect(builders.row(finding(databases.mongo80, versionCheck).id)).toBeVisible();
-        await expect(builders.rowsWithText('end of life')).toHaveCount(0);
-      });
+      await pmmTest.step(
+        'MongoDB 8.0 gets no end-of-life finding, only MongoDB newer-version advice',
+        async () => {
+          await advisorInsightsPage.selectFilter('serviceName', databases.mongo80.name);
+          await expect(builders.row(finding(databases.mongo80, versionCheck).id)).toContainText(
+            'Newer version of MongoDB is available',
+          );
+          await expect(builders.rowsWithText('end of life')).toHaveCount(0);
+          await expect(builders.rowsWithText('Percona Server for MongoDB')).toHaveCount(0);
+        },
+      );
     },
   );
 
