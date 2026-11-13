@@ -61,7 +61,7 @@ Data(instances).Scenario(
 Data(instances).Scenario(
   'PMM-T2010 - Verify Dashboard for Aurora Postgres RDS added via UI @aws @instances',
   async ({
-    I, current, dashboardPage, settingsAPI,
+    I, current, dashboardPage, settingsAPI, qanAPI,
   }) => {
     const {
       instance,
@@ -84,6 +84,8 @@ Data(instances).Scenario(
 
     // Wait 10 seconds before test to start getting metrics
     I.wait(10);
+    // Execution time comes from QAN.
+    await qanAPI.waitForServiceData(serviceName);
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceOverviewDashboard.url, {
       service_name: serviceName,
       from: 'now-5m',

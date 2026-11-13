@@ -24,7 +24,7 @@ export default class HomeDashboard extends BasePage implements DashboardInterfac
     };
   }
 
-  metrics = (): GrafanaPanel[] => [{ name: `Failed advisors`, type: 'text' }];
+  metrics = (): GrafanaPanel[] => [{ name: 'Monitored DB Services', type: 'stat' }];
 
   metricsWithData = () => this.metrics().filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
