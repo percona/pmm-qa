@@ -730,11 +730,12 @@ recorded_config_dir() {
   grep -q '^cp mysql_ssl_8.4:/var/lib/mysql/client-key.pem .*/pmm_qa/tls-ssl-setup/mysql/8.4/client-key.pem$' "$DOCKER_CALLS"
 }
 
-@test "SSL PDPGSQL makes its own certificates, registers over TLS and copies the client certificates out" {
+@test "SSL PDPGSQL makes its own certificates, requires SSL, registers over TLS and copies the client certificates out" {
   stub_prebaked_docker
   parse_database_spec 'ssl_pdpgsql=16'
   dispatch_setup
 
+  grep -Pzq "sed -i -E '/\^host\[\[:space:\]\]/d' /var/lib/pgsql/16/data/pg_hba\.conf\n\s*service postgresql start" "$DOCKER_CALLS"
   grep -q '^network create pdpgsql_pgsm_ssl_16_network$' "$DOCKER_CALLS"
   grep -q -- '^run --detach --name pdpgsql_pgsm_ssl_16 .*--network pdpgsql_pgsm_ssl_16_network --cgroupns=host .* pmm-qa/ssl-pdpgsql:16$' "$DOCKER_CALLS"
   grep -q 'cp -a /artifacts/certificates/. /var/lib/pgsql/16/data/' "$DOCKER_CALLS"

@@ -619,7 +619,14 @@ export default class Dashboards extends BasePage {
   private changeRow = async (locator: Locator, error: string) => {
     let iterator = 0;
 
-    if ((await locator.count()) == 0) throw new Error(`Locator: ${locator} is not visible`);
+    // Grafana renders a row below the fold only once it is scrolled into view.
+    for (let i = 0; (await locator.count()) == 0 && i < (await this.elements.gridItems.count()); i++) {
+      await this.elements.gridItems.nth(i).scrollIntoViewIfNeeded();
+    }
+
+    await expect(locator, `${error}: row is not on the dashboard`).not.toHaveCount(0, {
+      timeout: Timeouts.FIVE_SECONDS,
+    });
 
     while ((await locator.count()) > 0) {
       if (iterator++ == 5) throw new Error(error);
