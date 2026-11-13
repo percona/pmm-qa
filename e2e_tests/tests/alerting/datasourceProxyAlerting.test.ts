@@ -26,7 +26,7 @@ pmmTest.afterEach(async ({ accessControlHelper, api }) => {
 });
 
 pmmTest(
-  'PMM-T2351 - Verify alert rule groups named with # or ? can be opened, edited and deleted @LBAC',
+  'PMM-T2351 - Verify alert rule groups named with # or ? can be opened, edited and deleted @lbac',
   async ({ alertingPage, page }) => {
     for (const name of ['PMM-15379 #1', 'PMM-15379 ?2']) {
       const groupPath = `${apiEndpoints.grafana.ruler}/${folderUid}/${encodeURIComponent(name)}`;
@@ -64,7 +64,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2352 - Verify alert rule preview shows only the metrics the user may see @LBAC',
+  'PMM-T2352 - Verify alert rule preview shows only the metrics the user may see @lbac',
   async ({ accessControlHelper, alertingPage, api, grafanaHelper }) => {
     const proxyApi = api.datasourceProxyApi;
     const ruleTest = `/graph/api/v1/rule/test/${metricsUid}`;
