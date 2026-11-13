@@ -64,7 +64,8 @@ not start with `@advisors`, which `--grep` would also match.
 
 `@advisor-databases` tests start their own `mysql:5.7`, `mongo:8.2` and `postgres:17` containers on the
 `pmm-qa` network and add them as remote services that PMM Server's own agent monitors. `mysql:5.7` has no
-arm64 image, so their CI job runs on amd64 only.
+arm64 image, so their CI job runs on amd64 only. `@advisor-versions` tests do the same with pinned MySQL,
+Percona Server, MariaDB, MongoDB and PostgreSQL images, in a CI job of their own that also runs on amd64 only.
 
 ## Running Tests
 
@@ -110,6 +111,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 - `@advisor-databases`
 - `@advisor-scheduling`
+- `@advisor-versions`
 - `@advisors`
 - `@alerting`
 - `@ami-ovf-post-upgrade`

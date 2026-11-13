@@ -27,9 +27,6 @@ const databases = {
     type: 'postgresql',
   },
 } satisfies Record<string, Database>;
-// Both error on a standalone MongoDB on main as well, so the run leaves them out until PMM-15706 fixes them:
-// one expects a cluster name, the other a swap metric.
-const brokenChecks = ['mongodb_multiple_services', 'mongodb_swap_allocation'];
 const containers: string[] = [];
 const nodeIds: string[] = [];
 
@@ -44,9 +41,9 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
   });
 
   pmmTest(
-    'PMM-T2616 - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2 @advisor-databases',
-    async ({ advisorRunsPage, api, dockerHelper, page }) => {
-      const serviceIds: string[] = [];
+    'PMM-T2616 + PMM-T2626 - Verify every built-in check completes on MySQL 5.7 and a standalone MongoDB 8.2, Verify every MongoDB check completes on a standalone remote MongoDB without a cluster name @advisor-databases',
+    async ({ advisorInsightsPage, advisorRunsPage, api, dockerHelper, page }) => {
+      const services: Partial<Record<keyof AddServiceResponse, { name: string; serviceId: string }>> = {};
 
       for (const database of [databases.mysql57, databases.mongodb82] as Database[]) {
         const name = `qa-advisors-${database.type}-${Date.now()}`;
@@ -62,16 +59,17 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
         );
 
         nodeIds.push(service.node_id);
-        serviceIds.push(service.service_id);
+        services[database.type] = { name, serviceId: service.service_id };
       }
 
+      const serviceIds = Object.values(services).map(({ serviceId }) => serviceId);
+      const mongodb = services.mongodb as { name: string; serviceId: string };
       const checks = (await api.advisorsApi.listChecks())
         .filter(
-          ({ enabled, name, technology, user_defined }) =>
+          ({ enabled, technology, user_defined }) =>
             [AdvisorCheckTechnology.mongodb, AdvisorCheckTechnology.mysql].includes(technology) &&
             !user_defined &&
-            enabled &&
-            !brokenChecks.includes(name),
+            enabled,
         )
         .map(({ name }) => name);
       const run = await api.advisorsApi.runChecksAndWait(checks, serviceIds, Timeouts.FIVE_MINUTES);
@@ -91,6 +89,31 @@ pmmTest.describe('Built-in Advisor checks on other databases', () => {
         await expect(advisorRunsPage.builders.row(run.id)).toContainText(
           `${run.planned_checks_count}/${run.planned_checks_count}`,
         );
+      });
+
+      await pmmTest.step('MongoDB checks pass on the defaults of a standalone MongoDB', async () => {
+        const insights = await api.advisorsApi.listInsights({ page_size: '500', run_id: run.id });
+        const insightOf = (checkName: string) =>
+          insights.find(
+            ({ check_name, service_id }) => check_name === checkName && service_id === mongodb.serviceId,
+          );
+        const { builders, elements } = advisorInsightsPage;
+
+        await page.goto(advisorInsightsPage.runUrl(run.id));
+        await advisorInsightsPage.selectFilter('serviceName', mongodb.name);
+        await advisorInsightsPage.selectFilter('status', 'Error');
+        await expect(elements.noData).toBeVisible();
+        await advisorInsightsPage.selectFilter('status', 'OK');
+
+        for (const summary of ['MongoDB - Multiple mongod services', 'MongoDB - allocate swap memory']) {
+          await expect(builders.rowsWithText(summary)).toHaveCount(1);
+        }
+
+        expect(insightOf('mongodb_auth')?.status).toEqual(AdvisorCheckResultStatus.failed);
+        await advisorInsightsPage.selectFilter('status', 'Failed');
+        await expect(builders.row(insightOf('mongodb_auth')?.id as string)).toBeVisible();
+        await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
+        await expect(builders.rowsWithText('MongoDB is not using the default log level.')).toHaveCount(0);
       });
     },
   );

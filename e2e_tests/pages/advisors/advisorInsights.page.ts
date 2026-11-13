@@ -16,6 +16,8 @@ export default class AdvisorInsightsPage extends BasePage {
     checkEnabledForService: (summary: string, serviceName: string) =>
       this.alertWithText(`Check "${summary}" enabled for ${serviceName}`),
     detailsField: (label: string) => this.page.getByTestId(`details-field-${label}`),
+    detailsLabel: (key: string, value: string) =>
+      this.elements.detailsPane.getByText(`${key}: ${value}`, { exact: true }),
     filter: (filter: InsightFilter) => this.page.getByTestId(`${filter}-filter`).getByRole('combobox'),
     insightsEmailed: (insights: number, recipients: number) =>
       this.alertWithText(
@@ -26,7 +28,9 @@ export default class AdvisorInsightsPage extends BasePage {
     rerunStarted: (summary: string, serviceName: string) =>
       this.alertWithText(`Check "${summary}" started on ${serviceName}, run ID copied to clipboard`),
     row: (insightId: string) => this.page.getByTestId(`insight-row-${insightId}`),
-    rowsWithText: (text: string) => this.elements.rows.filter({ hasText: text }),
+    rowsWithCell: (text: string) =>
+      this.elements.rows.filter({ has: this.page.getByRole('cell', { exact: true, name: text }) }),
+    rowsWithText: (text: RegExp | string) => this.elements.rows.filter({ hasText: text }),
   };
   buttons = {
     clearFilters: this.page.getByTestId('clear-filters'),
