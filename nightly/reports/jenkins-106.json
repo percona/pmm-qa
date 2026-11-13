@@ -3808,15 +3808,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1765",
       "by": "Investigator routine",
       "at": "2026-11-13T04:47:08Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-13T03:15:51Z",
       "suites": [
         "E2E Tests"
-      ]
+      ],
+      "verdict": "test bug",
+      "summary": "PSMDB integration: PMM-T2405 (added in #1740) compared Failing for before and after a pbm-agent restart with 30 s slack, but from 60 s the cell shows whole minutes, so it read '1 minute' (60) both times and failed by ~1.7 s; reproduced 1/2 on a VM. Fix ages the DOWN row to 2 minutes and allows the rounding; 3/3 on the VM and green in the PR's CI.",
+      "link": "https://github.com/percona/pmm-qa/pull/1764",
+      "by": "Investigator routine",
+      "at": "2026-11-13T04:47:14Z"
     }
-  ]
+  ],
+  "claims": []
 }
