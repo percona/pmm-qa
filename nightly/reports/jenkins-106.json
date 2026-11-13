@@ -3788,6 +3788,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1766",
       "by": "Investigator routine",
       "at": "2026-11-13T04:46:55Z"
+    },
+    {
+      "suites": [
+        "HA, OpenShift & GSSAPI"
+      ],
+      "verdict": "test bug",
+      "summary": "ha #169: PMM-T2135's pmm_node_high_cpu_load rule used threshold 1%, and the Jenkins agent's client node idles at ~0.5% once setup load ends; since advisorRuns tests now run first, PMM-T2135 starts ~8 min in and that node's alert stays Normal (seen live on re-run #170). Fix uses threshold 0; verified passing in #171.",
+      "link": "https://github.com/percona/pmm-qa/pull/1767",
+      "by": "Investigator routine",
+      "at": "2026-11-13T04:47:02Z"
     }
   ],
   "claims": [
@@ -3803,13 +3813,6 @@
       "at": "2026-11-13T03:15:51Z",
       "suites": [
         "E2E Tests"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-13T03:15:51Z",
-      "suites": [
-        "HA, OpenShift & GSSAPI"
       ]
     }
   ]
