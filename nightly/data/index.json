@@ -182010,7 +182010,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Integrations"
+        ],
+        "verdict": "product bug",
+        "summary": "PBM_FULL Replica set PSMDB 6.0: test_metrics got no metrics because after a PMM logical restore the rs101 mongodb_exporter's MongoDB connection is unauthenticated, and every scrape then panics in makeRegistry (MustRegister of the top collector, exporter.go:239, '(Unauthorized) command top requires authentication') until the exporter restarts; reproduced 3/4 on a CHAOS VM, restarting the exporter cleared it.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15914",
+        "by": "Investigator routine",
+        "at": "2026-11-13T04:46:49Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -182031,13 +182042,6 @@
         "at": "2026-11-13T03:15:51Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-13T03:15:51Z",
-        "suites": [
-          "Integrations"
         ]
       },
       {
