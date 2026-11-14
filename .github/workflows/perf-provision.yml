@@ -1,0 +1,199 @@
+---
+# Provision N PMM client VMs on Linode against a PMM server, run an install or
+# upgrade test, collect exporter/server metrics, and let the "Performance Analyst"
+# Claude step decide the run green/red (notify only on fail). Pairs with
+# perf-cleanup.yml.
+#
+# DRAFT — depends on the performance/ scripts landing on main (PR #1333). Two
+# pieces are deliberately stubbed and marked TODO:
+#   * PMM SERVER provisioning: no callable Linode server-provisioner exists yet
+#     (Alex's Terraform / the relay flow are agent-driven), so the server address
+#     + admin password are inputs here, like ha-e2e-tests.yml. Wire the real
+#     provisioner in later.
+#   * THRESHOLDS + PromQL in performance/ci/thresholds.yml are placeholders for
+#     Shruti + Nailya to confirm.
+name: perf-provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_server_address:
+        description: 'PMM server hostname (no scheme). TODO: auto-provision instead.'
+        type: string
+        required: true
+      client_count:
+        description: 'Clients to provision per DB type (~50-100 dev, 300-500 RC).'
+        type: string
+        required: false
+        default: '50'
+      db_types:
+        description: 'Space-separated DB types: mysql postgresql mongodb.'
+        type: string
+        required: false
+        default: 'mysql'
+      pmm_version:
+        description: 'PMM client version to install (and, for upgrade, to upgrade to).'
+        type: string
+        required: false
+        default: '3-dev-latest'
+      install_repo:
+        description: 'percona-release repo for the client (release|testing|experimental).'
+        type: string
+        required: false
+        default: 'testing'
+      test_type:
+        description: 'install = fresh install only; upgrade = install then upgrade.'
+        type: choice
+        options: [install, upgrade]
+        default: install
+      metrics_window:
+        description: 'How long to let metrics settle/spike before sampling (e.g. 30m).'
+        type: string
+        required: false
+        default: '30m'
+      data_wait_minutes:
+        description: 'Minutes to wait after provisioning for clients to register + accumulate data.'
+        type: string
+        required: false
+        default: '20'
+      run_id:
+        description: 'Batch id (tags + labels the VMs; used by perf-cleanup). Default: gha-<run id>.'
+        type: string
+        required: false
+        default: ''
+  # TODO: enable weekly once validated (meeting: weekly, not daily).
+  # schedule:
+  #   - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  perf:
+    name: "perf: ${{ inputs.test_type }} ${{ inputs.client_count }}x${{ inputs.db_types }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    # Gates who can spend on the Linode account and reach the server creds.
+    # TODO: create this environment and attach the secrets below to it.
+    environment: pmm-perf-staging
+    env:
+      PERF_RUN_ID: ${{ inputs.run_id || format('gha-{0}', github.run_id) }}
+      SERVER_ADDR: ${{ inputs.pmm_server_address }}
+      LINODE_CLI_TOKEN: ${{ secrets.LINODE_CLI_TOKEN }}
+      LINODE_ROOT_PASS: ${{ secrets.PERF_LINODE_ROOT_PASS }}
+      PMM_PERF_SSH_PUBKEY: ${{ secrets.PERF_SSH_PUBKEY }}
+      PMM_SERVER_PASSWORD: ${{ secrets.PMM_ADMIN_PASSWORD }}
+      ADMIN_PASSWORD: ${{ secrets.PMM_ADMIN_PASSWORD }}
+    steps:
+      - name: Checkout pmm-qa
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install tooling
+        run: |
+          set -Eeuo pipefail
+          pipx install linode-cli
+          python3 -m pip install --user pyyaml
+          sudo apt-get update && sudo apt-get install -y ansible jq
+
+      - name: Sanity-check the PMM server is reachable
+        run: |
+          set -eu
+          host="${SERVER_ADDR#http://}"; host="${host#https://}"; host="${host%/}"
+          for i in $(seq 1 60); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${host}/v1/server/readyz" || echo 000)
+            [ "$code" = "200" ] && { echo "server ready"; exit 0; }
+            echo "attempt $i: server not ready (http=$code)"; sleep 5
+          done
+          echo "PMM server did not become ready" >&2; exit 1
+
+      - name: Provision client VMs
+        run: |
+          set -Eeuo pipefail
+          host="${SERVER_ADDR#http://}"; host="${host#https://}"; host="${host%/}"
+          chmod +x performance/*.sh
+          for db in ${{ inputs.db_types }}; do
+            PERF_RUN_ID="${PERF_RUN_ID}" \
+              performance/linode_stackScript_load_pmm3.sh \
+                "$host" "${{ inputs.pmm_version }}" "${{ inputs.client_count }}" push "$db"
+          done
+
+      - name: Wait for clients to register and accumulate data
+        run: sleep "$(( ${{ inputs.data_wait_minutes }} * 60 ))"
+
+      - name: Upgrade clients (test_type=upgrade)
+        if: ${{ inputs.test_type == 'upgrade' }}
+        env:
+          PMM_PERF_SSH_KEY: ${{ github.workspace }}/.perf_ssh_key
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          printf '%s' "${{ secrets.PERF_SSH_PRIVATE_KEY }}" > "$PMM_PERF_SSH_KEY"
+          chmod 600 "$PMM_PERF_SSH_KEY"
+          cd performance
+          PERF_RUN_ID="${PERF_RUN_ID}" PMM_PERF_SSH_KEY="$PMM_PERF_SSH_KEY" ./prepare_ansible_client_inventory.sh
+          ./start_upgrade_v3.sh "${{ inputs.pmm_version }}" "${{ inputs.install_repo }}"
+
+      - name: Let metrics settle / spike
+        run: sleep "$(python3 -c "import sys;w='${{ inputs.metrics_window }}';print(int(w[:-1])*({'h':3600,'m':60,'s':1}[w[-1]]))")"
+
+      - name: Collect metrics
+        run: |
+          set -Eeuo pipefail
+          chmod +x performance/ci/collect_metrics.sh
+          performance/ci/collect_metrics.sh \
+            --server "$SERVER_ADDR" \
+            --thresholds performance/ci/thresholds.yml \
+            --window "${{ inputs.metrics_window }}" \
+            --out metrics.json
+          cat metrics.json
+
+      - name: Analyze with the Performance Analyst skill
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: >
+            /performance-analyst Read ./metrics.json and ./performance/ci/thresholds.yml,
+            then write ./perf-verdict.json and ./perf-report.md exactly as the skill's
+            output contract specifies. Do not push, comment, or touch anything else.
+          claude_args: |
+            --model claude-opus-5
+            --allowedTools "Read,Write,Bash(jq:*),Bash(cat:*)"
+
+      - name: Gate the run on the verdict (green/red)
+        run: |
+          set -Eeuo pipefail
+          test -f perf-verdict.json || { echo "no verdict written -> fail" >&2; exit 1; }
+          cat perf-report.md 2>/dev/null || true
+          jq -e '.status=="pass"' perf-verdict.json >/dev/null \
+            || { echo "performance verdict: FAIL" >&2; exit 1; }
+          echo "performance verdict: PASS"
+
+      - name: Upload report + metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-${{ env.PERF_RUN_ID }}
+          path: |
+            metrics.json
+            perf-report.md
+            perf-verdict.json
+
+      - name: Notify on failure
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "::warning::perf run ${PERF_RUN_ID} FAILED — clients left up for investigation."
+          echo "Investigate, then run perf-cleanup with run_id=${PERF_RUN_ID}."
+          # TODO: wire a real notification (Slack webhook / routine-fire like notify-investigator.yml).
+
+      - name: Tear down clients (success or cancel/timeout)
+        # A genuine test failure (gate red) is left running for investigation
+        # (meeting: keep ~12h). A cancel/timeout has nothing to investigate, so
+        # cancelled() cleans up rather than leaking — the CI-level backstop for the
+        # ERR/signal traps in the create script, which a hard SIGKILL escapes.
+        if: ${{ success() || cancelled() }}
+        env:
+          PMM_PERF_TAG: pmm-qa-perf-run:${{ env.PERF_RUN_ID }}
+        run: performance/teardown_perf_linodes.sh
+        # Even this can't survive a runner dying, so a scheduled out-of-band sweep
+        # of expired pmm-qa-perf tags is still the real guarantee. TODO.
