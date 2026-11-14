@@ -101,17 +101,20 @@ pmmTest.describe('Built-in Advisor version checks', () => {
       });
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
+      // Other Versions checks, such as mongodb_fcv_check and the outdated extensions check, add OK rows for these services.
       await advisorInsightsPage.selectFilter('category', 'Versions');
 
       await pmmTest.step('Percona Server 8.0 reached end of life on 2026-04-01', async () => {
         const eol = insightOf(ps.serviceId, 'mysql_version');
 
         await advisorInsightsPage.selectFilter('serviceName', ps.name);
-        await expect(elements.rows).toHaveCount(1);
         await expect(builders.rowsWithCell('Percona Server for MySQL 8.0 reached end of life')).toHaveCount(
           1,
         );
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+        await expect(
+          builders.rowsWithCell('Newer version of Percona Server for MySQL is available'),
+        ).toHaveCount(0);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-04-01');
         await buttons.closeDetails.click();
@@ -137,7 +140,6 @@ pmmTest.describe('Built-in Advisor version checks', () => {
           const [member] = psmdb;
 
           await advisorInsightsPage.selectFilter('serviceName', member.name);
-          // mongodb_fcv_check is also in Versions and reports OK on a replica set member.
           await expect(
             builders.rowsWithCell('Percona Server for MongoDB 6.0 reached end of life'),
           ).toHaveCount(1);
@@ -157,9 +159,9 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
         await advisorInsightsPage.selectFilter('category', 'Versions');
         await advisorInsightsPage.selectFilter('serviceName', pgsql.name);
-        await expect(elements.rows).toHaveCount(1);
         await expect(builders.rowsWithCell('PostgreSQL 14 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+        await expect(builders.rowsWithCell('Newer version of PostgreSQL is available')).toHaveCount(0);
         await builders.row(eol.id).dblclick();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-11-12');
       });
