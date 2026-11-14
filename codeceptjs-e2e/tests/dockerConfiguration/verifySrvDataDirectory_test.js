@@ -11,11 +11,6 @@ const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('chmod -R 777 $HOME/srvPasswordUpgrade/ || true');
   await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${dockerVersion}`);
   I.wait(30);
-  await I.verifyCommand('docker exec pmm-server-password-upgrade yum update -y percona-release');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade sed -i\'\' -e \'s^/release/^/experimental/^\' /etc/yum.repos.d/pmm3-server.repo');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade percona-release enable percona experimental');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade yum clean all');
-  await I.verifyCommand('docker restart pmm-server-password-upgrade');
 };
 
 const runContainerWithDataContainer = async (I) => {
