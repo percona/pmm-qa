@@ -236,7 +236,7 @@ pmmTest(
     await pmmTest.step(
       'The Alerts page lists the SQL query, threshold, reduce and condition steps',
       async () => {
-          await alertStatusPage.openAlertDetails(ruleName, mysql.serviceName);
+        await alertStatusPage.openAlertDetails(ruleName, mysql.serviceName);
         await expect(alertStatusPage.elements.ruleSteps).toHaveCount(4);
         await expect(alertStatusPage.builders.ruleStep('A')).toContainText('A · SQL query');
         await expect(alertStatusPage.builders.ruleStep('A')).toContainText('FROM pmm.metrics');
