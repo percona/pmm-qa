@@ -7,7 +7,7 @@ const {
 
 const externalExporterServiceName = 'external_service_new';
 const haproxyServiceName = 'haproxy_remote';
-// skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+// skip-until: 2026-12-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
 const skipOnHa = process.env.INSTALLATION_TYPE === 'ha';
 
 const instances = new DataTable(['name']);
