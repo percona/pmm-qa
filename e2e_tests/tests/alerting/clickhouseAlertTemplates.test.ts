@@ -247,9 +247,10 @@ pmmTest(
         await expect(alertStatusPage.builders.ruleStep('B')).toContainText('max($A)');
         await expect(alertStatusPage.builders.ruleStep('C')).toContainText('C · Math · condition');
         await expect(alertStatusPage.builders.ruleStep('C')).toContainText('$B > $T_threshold');
-        await expect(alertStatusPage.builders.detailsValue('Value / Threshold')).toContainText(
-          /12\.\d\d \/ 5/,
-        );
+        // Value / Threshold, e.g. "12 / 5 (140% over)" or "12.01 / 5 (140% over)".
+        await expect(
+          alertStatusPage.builders.detailsParagraph(/^12(\.\d+)? \/ 5 \(\d+% over\)$/),
+        ).toBeVisible();
       },
     );
 
@@ -263,7 +264,10 @@ pmmTest(
         expect(reduce.model.reducer).toBe('max');
 
         await alertingPage.openRuleEditor(uid);
-        await expect(alertingPage.elements.dataSourcePicker.first()).toContainText('ClickHouse');
+        // The picker shows the selected datasource as its placeholder.
+        await expect(
+          alertingPage.elements.dataSourcePicker.first().getByPlaceholder('ClickHouse'),
+        ).toBeVisible();
 
         const results = await alertingPage.previewRule();
 

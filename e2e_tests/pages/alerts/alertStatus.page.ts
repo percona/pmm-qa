@@ -7,7 +7,7 @@ export default class AlertStatusPage extends BasePage {
   builders = {
     alertRow: (alertName: string, serviceName: string) =>
       this.page.getByRole('row').filter({ hasText: alertName }).filter({ hasText: serviceName }),
-    detailsValue: (title: string) => this.page.getByText(title, { exact: true }).locator('..'),
+    detailsParagraph: (text: RegExp) => this.page.getByRole('paragraph').filter({ hasText: text }),
     firingAlert: (alertName: string) =>
       this.page.locator(
         `//td[text()="${alertName}"]/parent::tr//td[position()="2"]//span[contains(text(), "Firing")]`,
