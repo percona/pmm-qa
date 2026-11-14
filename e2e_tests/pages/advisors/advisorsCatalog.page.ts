@@ -73,6 +73,7 @@ export default class AdvisorsCatalogPage extends BasePage {
     checkCodeCopied: this.alertWithText('Script copied to clipboard'),
     checksAlreadyRunning: this.alertWithText('Advisor checks are already running'),
     checksStarted: this.alertWithText('Advisor checks started, run ID copied to clipboard'),
+    noChecks: this.page.getByText('No checks match your search or filters. Clear them to see all checks.'),
     scriptIndentedWithTabs: this.alertWithText('script should use spaces for indentation, not tabs'),
   };
 
