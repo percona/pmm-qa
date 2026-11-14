@@ -42,9 +42,9 @@ export default class AlertThresholdsPage extends BasePage {
     await this.buttons.submit.click();
   };
 
-  verifyDefault = async (ruleTitle: string, threshold: number): Promise<void> => {
+  verifyDefault = async (ruleTitle: string, threshold: number, unit = '%'): Promise<void> => {
     await expect(this.builders.row(ruleTitle)).toContainText('threshold');
-    await expect(this.builders.row(ruleTitle)).toContainText('%');
+    await expect(this.builders.row(ruleTitle)).toContainText(unit);
     await this.verifyOverride(ruleTitle, String(threshold));
   };
 

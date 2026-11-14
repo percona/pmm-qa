@@ -4,8 +4,10 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import {
   AlertInstance,
   AlertRule,
+  AlertRuleFilter,
   AlertRulesResponse,
   AlertSeverity,
+  AlertTemplate,
   ProvisionedAlertRule,
   RulerRulesResponse,
   TemplatedAlertRule,
@@ -27,11 +29,7 @@ export interface CreateRuleBody {
   params?: { name: string; type: string; float: number }[];
   group?: string;
   folder_uid?: string;
-  filters?: {
-    label: string;
-    regexp: string;
-    type: 'FILTER_TYPE_MATCH' | 'FILTER_TYPE_MISMATCH';
-  }[];
+  filters?: AlertRuleFilter[];
 }
 
 export default class AlertingApi {
@@ -51,9 +49,11 @@ export default class AlertingApi {
 
   createRuleFromTemplate = async (rule: TemplatedAlertRule): Promise<string> => {
     const response = await this.createRule(GrafanaHelper.getAuthHeader(), {
-      filters: rule.serviceName
-        ? [{ label: 'service_name', regexp: rule.serviceName, type: 'FILTER_TYPE_MATCH' }]
-        : undefined,
+      filters:
+        rule.filters ??
+        (rule.serviceName
+          ? [{ label: 'service_name', regexp: rule.serviceName, type: 'FILTER_TYPE_MATCH' }]
+          : undefined),
       folder_uid: rule.folderUid,
       for: rule.pendingPeriod,
       group: rule.group,
@@ -156,6 +156,30 @@ export default class AlertingApi {
     expect(response.status()).toEqual(200);
 
     return Object.values((await response.json()) as RulerRulesResponse).flat();
+  };
+
+  getRuleUid = async (title: string): Promise<string> => {
+    const uid = (await this.getRulerGroups())
+      .flatMap(({ rules }) => rules)
+      .find(({ grafana_alert }) => grafana_alert.title === title)?.grafana_alert.uid;
+
+    if (!uid) throw new Error(`Rule ${title} is not listed`);
+
+    return uid;
+  };
+
+  getTemplate = async (name: string): Promise<AlertTemplate> => {
+    const response = await this.listTemplates(GrafanaHelper.getAuthHeader());
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    const template = ((await response.json()) as { templates: AlertTemplate[] }).templates.find(
+      (t) => t.name === name,
+    );
+
+    if (!template) throw new Error(`Template ${name} is not listed`);
+
+    return template;
   };
 
   listFolders = async (headers?: Headers): Promise<GrafanaFolder[]> => {

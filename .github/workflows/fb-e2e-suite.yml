@@ -199,7 +199,8 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch }}
-      setup_services: '-h'
+      # QAN alert templates (PMM-15193) need a MySQL slow log and a pg_stat_statements service.
+      setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog --database pgsql=17'
       pmm_test_flag: '@alerting|@fb-alerting'
 
   settings:

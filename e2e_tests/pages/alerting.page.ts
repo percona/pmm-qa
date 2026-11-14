@@ -35,6 +35,7 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByTestId('edit-template-button'),
     evaluationIntervalOption: (interval: string) =>
       this.grafanaIframe().getByRole('option', { exact: true, name: interval }),
+    filterRow: (index: number) => this.grafanaIframe().getByTestId('filter-fields-row').nth(index),
     folderOption: (folder: string) =>
       this.grafanaIframe().getByTestId('folder-picker').getByRole('treeitem', { exact: true, name: folder }),
     rowActions: (alertName: string) =>
@@ -64,6 +65,10 @@ export default class AlertingPage extends BasePage {
     stateOption: (state: string) => this.page.getByRole('option', { exact: true, name: state }),
     templateColumnHeader: (header: string) =>
       this.grafanaIframe().getByRole('columnheader', { exact: true, name: header }),
+    templateExpression: (refId: string) => this.grafanaIframe().getByTestId(`template-expression-${refId}`),
+    templateQuery: (refId: string) => this.grafanaIframe().getByTestId(`template-query-${refId}`),
+    templateQueryDatasource: (refId: string) =>
+      this.grafanaIframe().getByTestId(`template-query-${refId}-datasource`),
     templateRow: (templateName: string) =>
       this.grafanaIframe()
         .getByRole('row')
@@ -76,6 +81,7 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByRole('button', { name: 'View' }),
   };
   buttons = {
+    addFilter: this.grafanaIframe().getByTestId('add-filter-button'),
     addTemplate: this.grafanaIframe().getByTestId('alert-rule-template-add-modal-button'),
     cancelModal: this.grafanaIframe().getByRole('dialog').getByRole('button', { name: 'Cancel' }),
     cancelTemplate: this.grafanaIframe().getByTestId('alert-rule-template-cancel-button'),
@@ -108,6 +114,7 @@ export default class AlertingPage extends BasePage {
       'data-testid alert-rule new-evaluation-group-button',
     ),
     newSilence: this.grafanaIframe().getByRole('link', { name: /^(add|create) silence$/i }),
+    preview: this.grafanaIframe().getByRole('button', { exact: true, name: 'Preview' }),
     runQueries: this.grafanaIframe().getByRole('button', { exact: true, name: 'Run queries' }),
     save: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save' }),
     saveRule: this.grafanaIframe().getByTestId('save-rule'),
@@ -123,6 +130,7 @@ export default class AlertingPage extends BasePage {
     viewConfiguration: this.grafanaIframe().getByRole('button', { name: 'View configuration' }),
   };
   elements = {
+    advancedSection: this.grafanaIframe().getByTestId('alert-rule-advanced-section'),
     alertingDisabled: this.page.getByTestId('empty-block-card'),
     dataSourcePicker: this.grafanaIframe().getByTestId('data-testid Data source picker select container'),
     deleteModalMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
@@ -138,6 +146,7 @@ export default class AlertingPage extends BasePage {
     ruleDetails: this.grafanaIframe().getByTestId('data-testid expanded-content'),
     ruleGroupHeaders: this.grafanaIframe().getByTestId('rule-group-header'),
     ruleName: this.grafanaIframe().locator('[data-column="Name"]'),
+    templateCondition: this.grafanaIframe().getByTestId('template-condition'),
     templateNames: this.grafanaIframe().locator('//tr/td[1]'),
     templatesLoader: this.grafanaIframe().getByTestId('template-select-input').getByText('Choose'),
     templatesTable: this.grafanaIframe().getByTestId('table-tbody'),
@@ -170,6 +179,18 @@ export default class AlertingPage extends BasePage {
     await this.createTemplate(yaml);
     await expect(this.messages.popUp).toContainText('Alert rule template successfully added');
     await expect(this.builders.dynamicBadge(templateName)).toBeVisible();
+  };
+
+  addFilter = async (label: string, operator: 'MATCH' | 'MISMATCH', regexp: string) => {
+    const row = this.builders.filterRow(await this.grafanaIframe().getByTestId('filter-fields-row').count());
+
+    await this.buttons.addFilter.click();
+    await row.getByPlaceholder('Label').fill(label);
+    // The select's placeholder overlays its input and intercepts clicks, so open it from the keyboard.
+    await row.getByRole('combobox').focus();
+    await row.getByRole('combobox').press('ArrowDown');
+    await this.builders.selectOption(operator).click();
+    await row.getByPlaceholder('Regex').fill(regexp);
   };
 
   attachTemplateFile = async (path: string) => {
@@ -232,6 +253,13 @@ export default class AlertingPage extends BasePage {
     await this.builders.stateOption(state).click();
   };
 
+  openAdvancedDetails = async () => {
+    await this.elements.advancedSection
+      .getByTestId('collapse-clickable')
+      .click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.templateCondition).toBeVisible();
+  };
+
   openNewRuleWithQuery = async (datasourceUid: string, expr: string) => {
     const defaults = {
       condition: 'A',
@@ -252,6 +280,11 @@ export default class AlertingPage extends BasePage {
     await expect(this.buttons.runQueries).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openRuleEditor = async (uid: string) => {
+    await this.page.goto(`graph/alerting/${uid}/edit`);
+    await expect(this.buttons.preview).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   openRuleGroupEditor = async (folderUid: string, group: string) => {
     await this.page.goto(
       `graph/alerting/grafana/namespaces/${folderUid}/groups/${encodeURIComponent(group)}/edit`,
@@ -266,6 +299,19 @@ export default class AlertingPage extends BasePage {
       await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
       await this.builders.selectOption('100').click();
     });
+  };
+
+  // The evaluation result per ref ID, as the Preview button gets it.
+  previewRule = async (): Promise<Record<string, { error?: string; frames?: unknown[]; status: number }>> => {
+    const response = this.page.waitForResponse((r) => r.url().includes('/api/v1/eval'));
+
+    await this.buttons.preview.click();
+
+    return (
+      (await (await response).json()) as {
+        results: Record<string, { error?: string; frames?: unknown[]; status: number }>;
+      }
+    ).results;
   };
 
   runQueries = async (): Promise<number> => {
