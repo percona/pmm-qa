@@ -592,7 +592,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
     const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
-    await cli.exec(`docker exec ${containerName} dnf install -y wget`);
+    await expect(async () => {
+      await (await cli.exec(`docker exec ${containerName} dnf install -y wget`)).assertSuccess();
+    }).toPass({ intervals: [10_000], timeout: 120_000 });
     const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
 
     await install.assertSuccess();
