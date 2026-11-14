@@ -46,26 +46,7 @@ export default class TelemetryHelper {
       (entry) => [entry['1'], entry['2']] as [string, string],
     );
 
-  // VictoriaMetrics-backed keys lag a scrape behind the database-backed ones.
-  waitForCaptureMatching = async (
-    expected: TelemetryCapture,
-    timeout = Timeouts.FIVE_MINUTES,
-  ): Promise<TelemetryCapture> => {
-    let capture = await this.waitForFreshCapture();
-
-    await expect
-      .poll(
-        () => {
-          capture = this.captures().at(-1) as TelemetryCapture;
-
-          return Object.fromEntries(Object.keys(expected).map((key) => [key, capture[key]]));
-        },
-        { message: 'The telemetry report never matched the expected values', timeout },
-      )
-      .toEqual(expected);
-
-    return capture;
-  };
+  latestCapture = (): TelemetryCapture => this.captures().at(-1) ?? {};
 
   // Two reports, so the newest one began after the call, not while the state was changing.
   waitForFreshCapture = async (timeout = Timeouts.TWO_MINUTES): Promise<TelemetryCapture> => {

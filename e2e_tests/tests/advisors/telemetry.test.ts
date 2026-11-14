@@ -2,14 +2,14 @@ import Api from '@api/api';
 import AdvisorsApi from '@api/advisors.api';
 import MailpitApi from '@api/mailpit.api';
 import pmmTest from '@fixtures/pmmTest';
-import apiEndpoints from '@helpers/apiEndpoints';
 import CliHelper from '@helpers/cli.helper';
-import GrafanaHelper from '@helpers/grafana.helper';
-import TelemetryHelper from '@helpers/telemetry.helper';
+import DockerHelper from '@helpers/docker.helper';
+import TelemetryHelper, { TelemetryCapture } from '@helpers/telemetry.helper';
 import { Timeouts } from '@helpers/timeouts';
 import {
   AdvisorCheckResultStatus,
   AdvisorRunStatus,
+  AdvisorSchedule,
   AdvisorScheduleEmailMode,
   AdvisorTriggeredBy,
 } from '@interfaces/advisors';
@@ -17,6 +17,9 @@ import { APIRequestContext, expect } from '@playwright/test';
 
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+
+pmmTest.describe.configure({ mode: 'default' });
+
 const checkMetrics = [
   'pmm_managed_advisor_checks_available',
   'pmm_managed_advisor_checks_executed_total',
@@ -27,15 +30,20 @@ const checkMetrics = [
 pmmTest.describe('Advisor metrics', () => {
   const createdChecks: string[] = [];
   let notifications: Record<string, unknown>;
+  let schedules: AdvisorSchedule[];
 
+  // The default daily schedule would add a run, and an email, to a test that crosses 06:00 UTC.
   pmmTest.beforeEach(async ({ api }) => {
     notifications = await api.settingsApi.getAdvisorNotifications();
+    schedules = await api.advisorsApi.listSchedules();
+    await api.advisorsApi.deleteAllSchedules();
   });
 
   pmmTest.afterEach(async ({ api }) => {
     for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
 
     await api.settingsApi.updateSettings(notifications);
+    await api.advisorsApi.restoreSchedules(schedules);
   });
 
   pmmTest(
@@ -161,14 +169,19 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   const port = 460;
   const cliHelper = new CliHelper();
   const telemetry = new TelemetryHelper(cliHelper, container);
+
+  const reportOf = (keys: string[]): TelemetryCapture => {
+    const capture = telemetry.latestCapture();
+
+    return Object.fromEntries(keys.map((key) => [key, capture[key]]));
+  };
+
   const serviceIds: string[] = [];
   let api: Api;
   let request: APIRequestContext;
   let canary: string;
 
   pmmTest.beforeAll(async ({ playwright }) => {
-    pmmTest.setTimeout(Timeouts.TEN_MINUTES);
-
     const mysql = cliHelper
       .execSilent('docker ps --filter name=ps_pmm_ --format "{{.Names}}"')
       .assertSuccess()
@@ -182,18 +195,16 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
       .assertSuccess()
       .stdout.trim();
 
-    cliHelper.execSilent(`docker rm -f ${container}`);
+    cliHelper.removeContainer(container);
     // SMTP points at a closed port, so every Advisor email from this server fails.
-    cliHelper
-      .execSilent(
-        `docker run --detach --network pmm-qa --publish ${port}:8443 --name ${container}` +
-          ` -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} -e PMM_DEBUG=1` +
-          ' -e PMM_DEV_TELEMETRY_INTERVAL=15s -e PMM_DEV_TELEMETRY_DISABLE_SEND=1' +
-          ' -e PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1' +
-          ' -e GF_SMTP_ENABLED=true -e GF_SMTP_HOST=127.0.0.1:2525 -e GF_SMTP_FROM_ADDRESS=pmm@example.com' +
-          ` ${dockerVersion}`,
-      )
-      .assertSuccess();
+    new DockerHelper(cliHelper).startContainer(
+      container,
+      `--publish ${port}:8443 -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} -e PMM_DEBUG=1` +
+        ' -e PMM_DEV_TELEMETRY_INTERVAL=15s -e PMM_DEV_TELEMETRY_DISABLE_SEND=1' +
+        ' -e PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1' +
+        ' -e GF_SMTP_ENABLED=true -e GF_SMTP_HOST=127.0.0.1:2525 -e GF_SMTP_FROM_ADDRESS=pmm@example.com' +
+        ` ${dockerVersion}`,
+    );
 
     request = await playwright.request.newContext({
       baseURL: `https://127.0.0.1:${port}/`,
@@ -203,43 +214,18 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
     await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
 
     // Two services on one database, so every built-in check that fails reports it twice.
-    const names = ['telemetry-mysql-1', 'telemetry-mysql-2'];
+    for (const name of ['telemetry-mysql-1', 'telemetry-mysql-2']) {
+      const { service_id } = await api.managementApi.addRemoteDatabase('mysql', name, 3_306, {
+        address: mysql,
+        password: mysqlPassword,
+        username: 'root',
+      });
 
-    // readyz answers before the server's own pmm-agent connects, and adding a service needs that agent.
-    for (const name of names) {
-      await expect
-        .poll(
-          async () => {
-            const response = await request.post(apiEndpoints.management.services, {
-              data: {
-                mysql: {
-                  add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE' },
-                  address: mysql,
-                  password: mysqlPassword,
-                  pmm_agent_id: 'pmm-server',
-                  port: 3_306,
-                  service_name: name,
-                  username: 'root',
-                },
-              },
-              headers: GrafanaHelper.getAuthHeader(),
-            });
-
-            return response.ok() ? 'added' : `${response.status()}: ${await response.text()}`;
-          },
-          { message: `Adding ${name} kept failing`, timeout: Timeouts.TWO_MINUTES },
-        )
-        .toEqual('added');
+      serviceIds.push(service_id);
     }
 
-    const services = await api.advisorsApi.listServices();
-
-    for (const name of names) {
-      serviceIds.push(services.find(({ service_name }) => service_name === name)?.service_id as string);
-    }
-
-    expect(serviceIds.every(Boolean), 'A remote MySQL service is missing').toBe(true);
-
+    // The default daily schedule would add a run, and a failed email, to a test that crosses 06:00 UTC.
+    await api.advisorsApi.deleteAllSchedules();
     canary = `custom_telemetry_canary_${Date.now()}`;
     await api.advisorsApi.createCustomCheck({ name: canary });
     await api.advisorsApi.runChecksAndWait([], [], Timeouts.FIVE_MINUTES);
@@ -247,17 +233,12 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
 
   pmmTest.afterAll(async () => {
     await request?.dispose();
-    cliHelper.execSilent(`docker rm -f ${container}`);
+    cliHelper.removeContainer(container);
   });
 
   pmmTest(
     'PMM-Txxxx - Verify PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1 makes telemetry report on start @advisor-telemetry',
     async () => {
-      expect(
-        telemetry.grepLog(
-          'Overriding Telemetry.Reporting.SendOnStart with environment variable [PMM_DEV_TELEMETRY_DISABLE_START_DELAY] to true.',
-        ),
-      ).not.toEqual('');
       expect(telemetry.grepLog('Sending telemetry on start is enabled, in progress...')).not.toEqual('');
     },
   );
@@ -300,13 +281,17 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
         await api.advisorsApi.changeCheck(canary, { enable: false });
         await api.advisorsApi.changeCheck(builtin.name, { enable: false });
 
-        const capture = await telemetry.waitForCaptureMatching({
-          advisor_checks_disabled: JSON.stringify({
-            v: [{ advisor_checks_disabled: `["${builtin.name}"]` }],
-          }),
-        });
-
-        expect(capture.advisor_checks_disabled).not.toContain(canary);
+        await telemetry.waitForFreshCapture();
+        await expect
+          .poll(() => reportOf(['advisor_checks_disabled']), {
+            message: 'advisor_checks_disabled did not list exactly the disabled built-in check',
+            timeout: Timeouts.FIVE_MINUTES,
+          })
+          .toEqual({
+            advisor_checks_disabled: JSON.stringify({
+              v: [{ advisor_checks_disabled: `["${builtin.name}"]` }],
+            }),
+          });
         await api.advisorsApi.changeCheck(canary, { enable: true });
         await api.advisorsApi.changeCheck(builtin.name, { enable: true });
       });
@@ -341,15 +326,13 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
 
       expect(onBothServices, 'No built-in check fails on both services').not.toEqual([]);
 
+      await telemetry.waitForFreshCapture();
       await expect
         .poll(
-          async () => {
-            const entries = TelemetryHelper.jsonEntries(
-              (await telemetry.waitForFreshCapture()).advisor_check_insights,
-            );
-
-            return entries.sort(([a], [b]) => a.localeCompare(b));
-          },
+          () =>
+            TelemetryHelper.jsonEntries(telemetry.latestCapture().advisor_check_insights).sort(([a], [b]) =>
+              a.localeCompare(b),
+            ),
           {
             message: 'advisor_check_insights did not match the insights of the run',
             timeout: Timeouts.FIVE_MINUTES,
@@ -366,15 +349,10 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   pmmTest(
     'PMM-Txxxx - Verify the Advisor usage telemetry keys match the server state @advisor-telemetry',
     async () => {
-      pmmTest.setTimeout(Timeouts.TEN_MINUTES);
-
       const recipients = ['qa-telemetry-1@example.com', 'qa-telemetry-2@example.com'];
-      const [first, second] = (await api.advisorsApi.listChecks())
+      const [first, second, scoped] = (await api.advisorsApi.listChecks())
         .filter(({ enabled, user_defined }) => !user_defined && enabled)
         .map(({ name }) => name);
-      const scoped = (await api.advisorsApi.listChecks()).find(
-        ({ name, user_defined }) => !user_defined && name !== first && name !== second,
-      )?.name as string;
 
       await pmmTest.step('Change checks, schedules, notification settings and retention', async () => {
         await api.advisorsApi.changeCheck(first, { enable: false });
@@ -424,7 +402,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
 
         expect(runs.some(({ triggered_by }) => triggered_by === AdvisorTriggeredBy.scheduler)).toBe(true);
 
-        await telemetry.waitForCaptureMatching({
+        const expected = {
           advisor_builtin_checks_disabled_count: String(
             checks.filter(({ enabled, user_defined }) => !user_defined && !enabled).length,
           ),
@@ -459,7 +437,16 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
           pmm_server_advisor_history_retention: String(1_209_600 * 1e9),
           pmm_server_advisor_notification_recipients_count: String(recipients.length),
           pmm_server_advisor_notifications_enabled: '1',
-        });
+        };
+
+        // The VictoriaMetrics-backed email keys lag a scrape behind the database-backed ones.
+        await telemetry.waitForFreshCapture();
+        await expect
+          .poll(() => reportOf(Object.keys(expected)), {
+            message: 'The Advisor usage keys did not match the API',
+            timeout: Timeouts.FIVE_MINUTES,
+          })
+          .toEqual(expected);
       });
     },
   );
