@@ -7,16 +7,19 @@ export default class AlertStatusPage extends BasePage {
   builders = {
     alertRow: (alertName: string, serviceName: string) =>
       this.page.getByRole('row').filter({ hasText: alertName }).filter({ hasText: serviceName }),
-    detailsParagraph: (text: RegExp) => this.page.getByRole('paragraph').filter({ hasText: text }),
+    detailsParagraph: (text: RegExp) =>
+      this.elements.detailsPane.getByRole('paragraph').filter({ hasText: text }),
     firingAlert: (alertName: string) =>
       this.page.locator(
         `//td[text()="${alertName}"]/parent::tr//td[position()="2"]//span[contains(text(), "Firing")]`,
       ),
-    ruleStep: (refId: string) => this.page.getByTestId(`rule-step-${refId}`),
+    ruleStep: (refId: string) => this.elements.detailsPane.getByTestId(`rule-step-${refId}`),
+    ruleStepHeading: (refId: string) => this.builders.ruleStep(refId).getByRole('heading'),
   };
   buttons = {};
   elements = {
-    ruleSteps: this.page.locator('[data-testid^="rule-step-"]'),
+    detailsPane: this.page.getByTestId('alert-details-pane'),
+    ruleSteps: this.page.getByTestId('alert-details-pane').locator('[data-testid^="rule-step-"]'),
   };
   inputs = {};
   messages = {};

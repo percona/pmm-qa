@@ -7,7 +7,15 @@ export const qanAlertLabels = [
   'node_name',
   'node_id',
   'node_type',
+  'node_model',
   'machine_id',
+  'container_id',
+  'container_name',
+  'environment',
+  'cluster',
+  'replication_set',
+  'region',
+  'az',
   'severity',
 ];
 
@@ -126,3 +134,13 @@ export const rejectedClickHouseTemplates = [
     message: "overridable parameter 'threshold' is used in query A, but can only be used in expressions",
   },
 ];
+
+export const rejectedName = (index: number) => `qa_qan_bad_${index}`;
+
+// The list shows summaries, so each refused template gets its own to tell it apart.
+export const refusedTemplate = (index: number, edit: (yaml: string) => string) =>
+  replaceOnce(
+    replaceOnce(edit(userTemplate.yaml), `name: ${userTemplate.name}`, `name: ${rejectedName(index)}`),
+    `summary: ${userTemplate.summary}`,
+    `summary: ${rejectedName(index)}`,
+  );

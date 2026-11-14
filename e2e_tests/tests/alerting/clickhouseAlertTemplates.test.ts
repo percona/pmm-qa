@@ -6,7 +6,9 @@ import { expect } from '@playwright/test';
 import {
   qanAlertLabels,
   qanTemplate,
+  refusedTemplate,
   rejectedClickHouseTemplates,
+  rejectedName,
   unsupportedReducer,
   userTemplate,
 } from '@testdata/clickhouseAlertTemplates';
@@ -19,12 +21,6 @@ const qanResolveTimeout = Timeouts.FIVE_MINUTES + Timeouts.TWO_MINUTES + Timeout
 const mysqlQan = 'qan-mysql-slowlog-agent';
 const postgresqlQan = 'qan-postgresql-pgstatements-agent';
 let folderUid: string;
-const rejectedName = (index: number) => `qa_qan_bad_${index}`;
-// The list shows summaries, so each refused template gets its own to tell it apart.
-const refusedTemplate = (index: number, edit: (yaml: string) => string) =>
-  edit(userTemplate.yaml)
-    .replace(`name: ${userTemplate.name}`, `name: ${rejectedName(index)}`)
-    .replace(`summary: ${userTemplate.summary}`, `summary: ${rejectedName(index)}`);
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   folderUid = '';
@@ -180,14 +176,17 @@ pmmTest(
       async () => {
         await alertStatusPage.openAlertDetails(ruleName, mysql.service_name);
         await expect(alertStatusPage.elements.ruleSteps).toHaveCount(4);
-        await expect(alertStatusPage.builders.ruleStep('A')).toContainText('A · SQL query');
+        await expect(alertStatusPage.builders.ruleStepHeading('A')).toHaveText('A · SQL query');
         await expect(alertStatusPage.builders.ruleStep('A')).toContainText('FROM pmm.metrics');
+        await expect(alertStatusPage.builders.ruleStepHeading('T_threshold')).toHaveText(
+          'T_threshold · Threshold',
+        );
         await expect(alertStatusPage.builders.ruleStep('T_threshold')).toContainText(
           'Per-target threshold: the override set for the target, or the rule default.',
         );
-        await expect(alertStatusPage.builders.ruleStep('B')).toContainText('B · Reduce');
+        await expect(alertStatusPage.builders.ruleStepHeading('B')).toHaveText('B · Reduce');
         await expect(alertStatusPage.builders.ruleStep('B')).toContainText('max($A)');
-        await expect(alertStatusPage.builders.ruleStep('C')).toContainText('C · Math · condition');
+        await expect(alertStatusPage.builders.ruleStepHeading('C')).toHaveText('C · Math · condition');
         await expect(alertStatusPage.builders.ruleStep('C')).toContainText('$B > $T_threshold');
         await expect(
           alertStatusPage.builders.detailsParagraph(/^12(\.\d+)? \/ 5 \((\d+% )?over\)$/),
@@ -207,7 +206,6 @@ pmmTest(
           expect.objectContaining({ editorType: 'sql', intervalMs: 60_000, queryType: 'timeseries' }),
         );
         expect(query?.relativeTimeRange?.from).toBe(300);
-        // Strict mode would turn a gap into NaN, which Grafana treats as firing.
         expect(reduce?.model).toEqual(
           expect.objectContaining({ reducer: 'max', settings: { mode: 'dropNN' } }),
         );
@@ -439,7 +437,7 @@ pmmTest(
       });
 
       expect(alerts).toHaveLength(1);
-      expect(alerts[0].annotations?.description).toContain('more than 5s');
+      expect(alerts[0].annotations?.description).toMatch(/took 12\.\d\ds, more than 5s\./);
     });
 
     await pmmTest.step('PostgreSQL keeps the default of 15', async () => {
@@ -476,7 +474,7 @@ pmmTest(
               ({ annotations, state }) =>
                 `${state.split(' ')[0]}: ${annotations?.description?.split('\n')[0]}`,
             ),
-          { timeout: Timeouts.TWO_MINUTES },
+          { timeout: qanFiringTimeout },
         )
         .toEqual([expect.stringMatching(/^Normal: .*took 12\.\d\ds, more than 15s\.$/)]);
     });

@@ -138,7 +138,6 @@ export default class AlertingPage extends BasePage {
     viewConfiguration: this.grafanaIframe().getByRole('button', { name: 'View configuration' }),
   };
   elements = {
-    advancedSection: this.grafanaIframe().getByTestId('alert-rule-advanced-section'),
     advancedToggle: this.grafanaIframe()
       .getByTestId('alert-rule-advanced-section')
       .getByTestId('collapse-clickable'),
