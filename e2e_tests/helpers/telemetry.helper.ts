@@ -9,6 +9,7 @@ const captureMarker = '@@CAPTURE@@';
 /**
  * Reads the reports pmm-managed logs as "Telemetry captured:" when it runs with PMM_DEBUG=1.
  * A report is one log entry of `key: value` lines, so it ends at the next `time=` line.
+ * A key reported more than once keeps all its values, one per line, so it matches no single value.
  */
 export default class TelemetryHelper {
   constructor(
@@ -26,14 +27,18 @@ export default class TelemetryHelper {
     return stdout
       .split(`${captureMarker}\n`)
       .slice(1)
-      .map((block) =>
-        Object.fromEntries(
-          block
-            .split('\n')
-            .filter((line) => line.includes(': '))
-            .map((line) => [line.slice(0, line.indexOf(': ')), line.slice(line.indexOf(': ') + 2)]),
-        ),
-      );
+      .map((block) => {
+        const capture: TelemetryCapture = {};
+
+        for (const line of block.split('\n').filter((entry) => entry.includes(': '))) {
+          const key = line.slice(0, line.indexOf(': '));
+          const value = line.slice(line.indexOf(': ') + 2);
+
+          capture[key] = key in capture ? `${capture[key]}\n${value}` : value;
+        }
+
+        return capture;
+      });
   };
 
   grepLog = (pattern: string): string =>
@@ -46,7 +51,11 @@ export default class TelemetryHelper {
       (entry) => [entry['1'], entry['2']] as [string, string],
     );
 
-  latestCapture = (): TelemetryCapture => this.captures().at(-1) ?? {};
+  latestCapture = (keys?: string[]): TelemetryCapture => {
+    const capture = this.captures().at(-1) ?? {};
+
+    return keys ? Object.fromEntries(keys.map((key) => [key, capture[key]])) : capture;
+  };
 
   // Two reports, so the newest one began after the call, not while the state was changing.
   waitForFreshCapture = async (timeout = Timeouts.TWO_MINUTES): Promise<TelemetryCapture> => {

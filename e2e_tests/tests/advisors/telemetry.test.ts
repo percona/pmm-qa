@@ -4,7 +4,7 @@ import MailpitApi from '@api/mailpit.api';
 import pmmTest from '@fixtures/pmmTest';
 import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
-import TelemetryHelper, { TelemetryCapture } from '@helpers/telemetry.helper';
+import TelemetryHelper from '@helpers/telemetry.helper';
 import { Timeouts } from '@helpers/timeouts';
 import {
   AdvisorCheckResultStatus,
@@ -169,17 +169,11 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   const port = 460;
   const cliHelper = new CliHelper();
   const telemetry = new TelemetryHelper(cliHelper, container);
-
-  const reportOf = (keys: string[]): TelemetryCapture => {
-    const capture = telemetry.latestCapture();
-
-    return Object.fromEntries(keys.map((key) => [key, capture[key]]));
-  };
-
   const serviceIds: string[] = [];
   let api: Api;
   let request: APIRequestContext;
   let canary: string;
+  let firstRunId: string;
 
   pmmTest.beforeAll(async ({ playwright }) => {
     const mysql = cliHelper
@@ -188,7 +182,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
       .stdout.trim()
       .split('\n')[0];
 
-    expect(mysql, 'No ps_pmm_* container from pmm-framework is running').toBeTruthy();
+    expect(mysql, 'No ps_pmm_* container from pmm-framework is running').toMatch(/^ps_pmm_/);
 
     const mysqlPassword = cliHelper
       .execSilent(`docker exec ${mysql} printenv MYSQL_ROOT_PASSWORD`)
@@ -228,7 +222,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
     await api.advisorsApi.deleteAllSchedules();
     canary = `custom_telemetry_canary_${Date.now()}`;
     await api.advisorsApi.createCustomCheck({ name: canary });
-    await api.advisorsApi.runChecksAndWait([], [], Timeouts.FIVE_MINUTES);
+    firstRunId = (await api.advisorsApi.runChecksAndWait([], [], Timeouts.FIVE_MINUTES)).id;
   });
 
   pmmTest.afterAll(async () => {
@@ -281,9 +275,8 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
         await api.advisorsApi.changeCheck(canary, { enable: false });
         await api.advisorsApi.changeCheck(builtin.name, { enable: false });
 
-        await telemetry.waitForFreshCapture();
         await expect
-          .poll(() => reportOf(['advisor_checks_disabled']), {
+          .poll(() => telemetry.latestCapture(['advisor_checks_disabled']), {
             message: 'advisor_checks_disabled did not list exactly the disabled built-in check',
             timeout: Timeouts.FIVE_MINUTES,
           })
@@ -326,7 +319,6 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
 
       expect(onBothServices, 'No built-in check fails on both services').not.toEqual([]);
 
-      await telemetry.waitForFreshCapture();
       await expect
         .poll(
           () =>
@@ -350,6 +342,10 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
     'PMM-Txxxx - Verify the Advisor usage telemetry keys match the server state @advisor-telemetry',
     async () => {
       const recipients = ['qa-telemetry-1@example.com', 'qa-telemetry-2@example.com'];
+      const erroring = await api.advisorsApi.createCustomCheck({
+        name: `custom_telemetry_error_${Date.now()}`,
+        script: api.advisorsApi.erroringCheckScript,
+      });
       const [first, second, scoped] = (await api.advisorsApi.listChecks())
         .filter(({ enabled, user_defined }) => !user_defined && enabled)
         .map(({ name }) => name);
@@ -376,43 +372,52 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
         });
       });
 
-      await pmmTest.step('A due schedule runs, and a test email fails', async () => {
+      await pmmTest.step('A due schedule runs, and a test email and a shared email fail', async () => {
         const { at } = AdvisorsApi.nextDueMinute();
         const schedule = await api.advisorsApi.createDueSchedule(at, {
-          check_names: [canary],
+          check_names: [canary, erroring.name],
           email_mode: AdvisorScheduleEmailMode.off,
         });
+        const run = await api.advisorsApi.waitForScheduledRun(schedule.schedule_id, Timeouts.FIVE_MINUTES);
+        const testEmail = await api.advisorsApi.requestTestNotification(recipients, ['SEVERITY_ERROR']);
+        const sharedEmail = await api.advisorsApi.requestEmailInsights(recipients, { run_id: run.id });
 
-        await api.advisorsApi.waitForScheduledRun(schedule.schedule_id, Timeouts.FIVE_MINUTES);
-
-        const response = await api.advisorsApi.requestTestNotification(recipients, ['SEVERITY_ERROR']);
-
-        expect(response.status(), 'The test email to a closed SMTP port did not fail').toEqual(500);
+        expect(testEmail.status(), 'The test email to a closed SMTP port did not fail').toEqual(500);
+        expect(sharedEmail.status(), 'The shared email to a closed SMTP port did not fail').toEqual(500);
       });
 
-      await pmmTest.step('Every usage key matches the API', async () => {
-        const checks = await api.advisorsApi.listChecks();
-        const schedules = await api.advisorsApi.listSchedules();
+      await pmmTest.step('The first run moves out of the last 24 hours', async () => {
+        cliHelper
+          .execSilent(
+            `docker exec ${container} psql -U pmm-managed -d pmm-managed -c` +
+              ` "UPDATE advisor_runs SET started_at = started_at - interval '25 hours' WHERE id = '${firstRunId}'"`,
+          )
+          .assertSuccess();
+      });
+
+      await pmmTest.step('Every usage key matches the server state', async () => {
         const dayAgo = Date.now() - 24 * Timeouts.SIXTY_MINUTES;
         const runs = (await api.advisorsApi.listRuns({ page_size: '1000' })).filter(
           ({ started_at }) => Date.parse(started_at) > dayAgo,
         );
-        const enabled = schedules.filter(({ enabled }) => enabled);
-        const sum = (values: number[]) => String(values.reduce((total, value) => total + value, 0));
+        const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+        const errors = sum(runs.map(({ errors_count }) => errors_count ?? 0));
 
-        expect(runs.some(({ triggered_by }) => triggered_by === AdvisorTriggeredBy.scheduler)).toBe(true);
+        expect(
+          runs.map(({ id }) => id),
+          'The first run is still in the last 24 hours',
+        ).not.toContain(firstRunId);
+        expect(errors, 'The erroring check reported no error').toBeGreaterThan(0);
 
+        // Created by this test: 2 built-in checks disabled, 1 disabled for one service, 2 user checks,
+        // and 4 schedules, of which 3 are enabled: 1 with custom recipients and 2 with email off.
         const expected = {
-          advisor_builtin_checks_disabled_count: String(
-            checks.filter(({ enabled, user_defined }) => !user_defined && !enabled).length,
-          ),
-          advisor_checks_disabled_for_some_services_count: String(
-            checks.filter(({ disabled_service_ids }) => disabled_service_ids?.length).length,
-          ),
-          advisor_findings_24h: sum(runs.map(({ findings_count }) => findings_count ?? 0)),
-          advisor_notifications_failed_24h: '1',
+          advisor_builtin_checks_disabled_count: '2',
+          advisor_checks_disabled_for_some_services_count: '1',
+          advisor_findings_24h: String(sum(runs.map(({ findings_count }) => findings_count ?? 0))),
+          advisor_notifications_failed_24h: '2',
           advisor_notifications_sent_24h: '0',
-          advisor_run_errors_24h: sum(runs.map(({ errors_count }) => errors_count ?? 0)),
+          advisor_run_errors_24h: String(errors),
           advisor_runs_24h: String(runs.length),
           advisor_runs_by_user_24h: String(
             runs.filter(({ triggered_by }) => triggered_by === AdvisorTriggeredBy.user).length,
@@ -422,28 +427,20 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
               [AdvisorRunStatus.aborted, AdvisorRunStatus.interrupted].includes(status),
             ).length,
           ),
-          advisor_runs_scheduled_24h: String(
-            runs.filter(({ triggered_by }) => triggered_by === AdvisorTriggeredBy.scheduler).length,
-          ),
-          advisor_schedules_count: String(schedules.length),
-          advisor_schedules_custom_email: String(
-            enabled.filter(({ email_mode }) => email_mode === AdvisorScheduleEmailMode.custom).length,
-          ),
-          advisor_schedules_email_off: String(
-            enabled.filter(({ email_mode }) => email_mode === AdvisorScheduleEmailMode.off).length,
-          ),
-          advisor_schedules_enabled: String(enabled.length),
-          advisor_user_checks_count: String(checks.filter(({ user_defined }) => user_defined).length),
+          advisor_runs_scheduled_24h: '1',
+          advisor_schedules_count: '4',
+          advisor_schedules_custom_email: '1',
+          advisor_schedules_email_off: '2',
+          advisor_schedules_enabled: '3',
+          advisor_user_checks_count: '2',
           pmm_server_advisor_history_retention: String(1_209_600 * 1e9),
           pmm_server_advisor_notification_recipients_count: String(recipients.length),
           pmm_server_advisor_notifications_enabled: '1',
         };
 
-        // The VictoriaMetrics-backed email keys lag a scrape behind the database-backed ones.
-        await telemetry.waitForFreshCapture();
         await expect
-          .poll(() => reportOf(Object.keys(expected)), {
-            message: 'The Advisor usage keys did not match the API',
+          .poll(() => telemetry.latestCapture(Object.keys(expected)), {
+            message: 'The Advisor usage keys did not match the server state',
             timeout: Timeouts.FIVE_MINUTES,
           })
           .toEqual(expected);
