@@ -137,11 +137,14 @@ pmmTest.describe('Built-in Advisor version checks', () => {
           const [member] = psmdb;
 
           await advisorInsightsPage.selectFilter('serviceName', member.name);
-          await expect(elements.rows).toHaveCount(1);
+          // mongodb_fcv_check is also in Versions and reports OK on a replica set member.
           await expect(
             builders.rowsWithCell('Percona Server for MongoDB 6.0 reached end of life'),
           ).toHaveCount(1);
           await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+          await expect(
+            builders.rowsWithCell('Newer version of Percona Server for MongoDB is available'),
+          ).toHaveCount(0);
           await advisorInsightsPage.selectFilter('category', 'All');
           await expect(builders.row(insightOf(member.serviceId, 'mongodb_journal').id)).toBeVisible();
           await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
