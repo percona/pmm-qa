@@ -19,7 +19,7 @@ export default class AlertStatusPage extends BasePage {
   buttons = {};
   elements = {
     detailsPane: this.page.getByTestId('alert-details-pane'),
-    ruleSteps: this.page.getByTestId('alert-details-pane').locator('[data-testid^="rule-step-"]'),
+    ruleSteps: this.page.getByTestId('alert-details-pane').getByTestId(/^rule-step-/),
   };
   inputs = {};
   messages = {};

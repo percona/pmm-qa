@@ -59,7 +59,7 @@ export const userTemplate = {
 const replaceOnce = (yaml: string, from: string, to: string) => {
   if (!yaml.includes(from)) throw new Error(`"${from}" is not in the template`);
 
-  return yaml.replace(from, to);
+  return yaml.replace(from, () => to);
 };
 
 export const unsupportedReducer = {

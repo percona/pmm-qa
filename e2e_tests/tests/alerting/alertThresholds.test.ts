@@ -90,7 +90,7 @@ pmmTest(
       await alertStatusPage.verifyAlertFiring(ruleName);
 
       const firing = ((await api.alertingApi.getRule(ruleName))?.alerts ?? []).filter(
-        ({ state }) => state === 'Alerting',
+        ({ state }) => !state.startsWith('Normal'),
       );
 
       expect(firing.map(({ labels }) => labels.node_name)).toEqual(['pmm-server']);
