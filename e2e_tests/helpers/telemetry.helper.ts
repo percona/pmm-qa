@@ -41,10 +41,6 @@ export default class TelemetryHelper {
       });
   };
 
-  grepLog = (pattern: string): string =>
-    this.cliHelper.execSilent(`docker exec ${this.container} grep -F "${pattern}" /srv/logs/pmm-managed.log`)
-      .stdout;
-
   /** `{"v":[{"1":"<label>","2":"<value>"}]}`, the shape of the JSON-transformed VictoriaMetrics keys. */
   static jsonEntries = (value: string | undefined): [string, string][] =>
     ((JSON.parse(value ?? '{"v":[]}') as { v: Record<string, string>[] }).v ?? []).map(

@@ -101,11 +101,9 @@ pmmTest.describe('Advisor metrics', () => {
         ) as Record<string, number | undefined>;
       const before = await counts();
 
-      await pmmTest.step('All six series exist before any email is counted', async () => {
-        for (const [series, value] of Object.entries(before)) {
-          expect(value, `${series} is not exported`).toBeDefined();
-        }
-      });
+      for (const [series, value] of Object.entries(before)) {
+        expect(value, `${series} is not exported before any email is counted`).toBeDefined();
+      }
 
       const check = await api.advisorsApi.createCustomCheck({
         script: AdvisorsApi.findingsScript(1, 'error'),
@@ -207,7 +205,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
     api = new Api(request);
     await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
 
-    // Two services on one database, so every built-in check that fails reports it twice.
+    // Two services on one database, so advisor_check_insights sums a check over both.
     for (const name of ['telemetry-mysql-1', 'telemetry-mysql-2']) {
       const { service_id } = await api.managementApi.addRemoteDatabase('mysql', name, 3_306, {
         address: mysql,
@@ -218,7 +216,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
       serviceIds.push(service_id);
     }
 
-    // The default daily schedule would add a run, and a failed email, to a test that crosses 06:00 UTC.
+    // The usage keys count only the schedules these tests create.
     await api.advisorsApi.deleteAllSchedules();
     canary = `custom_telemetry_canary_${Date.now()}`;
     await api.advisorsApi.createCustomCheck({ name: canary });
@@ -233,7 +231,12 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   pmmTest(
     'PMM-Txxxx - Verify PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1 makes telemetry report on start @advisor-telemetry',
     async () => {
-      expect(telemetry.grepLog('Sending telemetry on start is enabled, in progress...')).not.toEqual('');
+      expect(
+        cliHelper.execSilent(
+          `docker exec ${container} grep -F "Sending telemetry on start is enabled" /srv/logs/pmm-managed.log`,
+        ).code,
+        'pmm-managed did not collect a telemetry report on start',
+      ).toEqual(0);
     },
   );
 
@@ -393,6 +396,12 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
               ` "UPDATE advisor_runs SET started_at = started_at - interval '25 hours' WHERE id = '${firstRunId}'"`,
           )
           .assertSuccess();
+
+        const [firstRun] = await api.advisorsApi.listRuns({ run_id: firstRunId });
+
+        expect(Date.parse(firstRun.started_at), 'The first run is still in the last 24 hours').toBeLessThan(
+          Date.now() - 24 * Timeouts.SIXTY_MINUTES,
+        );
       });
 
       await pmmTest.step('Every usage key matches the server state', async () => {
@@ -403,14 +412,8 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
         const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
         const errors = sum(runs.map(({ errors_count }) => errors_count ?? 0));
 
-        expect(
-          runs.map(({ id }) => id),
-          'The first run is still in the last 24 hours',
-        ).not.toContain(firstRunId);
         expect(errors, 'The erroring check reported no error').toBeGreaterThan(0);
 
-        // Created by this test: 2 built-in checks disabled, 1 disabled for one service, 2 user checks,
-        // and 4 schedules, of which 3 are enabled: 1 with custom recipients and 2 with email off.
         const expected = {
           advisor_builtin_checks_disabled_count: '2',
           advisor_checks_disabled_for_some_services_count: '1',
