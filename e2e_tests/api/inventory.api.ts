@@ -95,6 +95,17 @@ export default class InventoryApi {
     };
   };
 
+  // The service of the first enabled Query Analytics agent of this type, e.g. qan-mysql-slowlog-agent.
+  getQanService = async (agentType: string): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ agents }) =>
+      agents?.some((agent) => agent.agent_type === agentType && !agent.disabled),
+    );
+
+    if (!service) throw new Error(`No service has an enabled ${agentType}`);
+
+    return service;
+  };
+
   getServiceAgent = async (serviceType: ServiceType, partialServiceName: string, agentType: string) => {
     const { agents } = await this.getServiceDetailsByTypeAndPartialName(serviceType, partialServiceName);
     const agent = agents.find((serviceAgent) => serviceAgent.agent_type === agentType);

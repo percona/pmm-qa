@@ -1,8 +1,5 @@
 export const qanTemplate = { name: 'pmm_qan_slow_queries', summary: 'QAN slow queries' };
 
-export const qanFiltersHint =
-  "For Query Analytics (ClickHouse) templates, filters apply to the columns the query returns, e.g. service_name, node_name, region, environment. A label the query doesn't return counts as empty, as for metrics. Custom labels aren't available.";
-
 export const qanAlertLabels = [
   'service_name',
   'service_id',
@@ -57,7 +54,13 @@ const replaceOnce = (yaml: string, from: string, to: string) => {
   return yaml.replace(from, to);
 };
 
-// Each one breaks a rule of ClickHouse templates; the API answers with the message on Add.
+export const unsupportedReducer = {
+  change: 'an unsupported reducer',
+  edit: (yaml: string) => replaceOnce(yaml, 'reducer: sum', 'reducer: avg'),
+  message:
+    "template expression B has unsupported reducer 'avg', want one of sum, mean, min, max, count, last, median",
+};
+
 export const rejectedClickHouseTemplates = [
   {
     change: 'math on the ClickHouse query',
@@ -71,11 +74,12 @@ export const rejectedClickHouseTemplates = [
     message:
       'template condition A is a ClickHouse query; add a reduce expression over it and use that instead',
   },
+  unsupportedReducer,
   {
-    change: 'an unsupported reducer',
-    edit: (yaml: string) => replaceOnce(yaml, 'reducer: sum', 'reducer: avg'),
+    change: 'a ref ID with a dash',
+    edit: (yaml: string) => replaceOnce(yaml, '- ref_id: A\n', '- ref_id: A-1\n'),
     message:
-      "template expression B has unsupported reducer 'avg', want one of sum, mean, min, max, count, last, median",
+      "template query ref_id 'A-1' must start with a letter or underscore and contain only letters, digits and underscores",
   },
   {
     change: 'a reduce over an expression',

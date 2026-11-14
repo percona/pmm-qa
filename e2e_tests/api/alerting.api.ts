@@ -103,6 +103,12 @@ export default class AlertingApi {
     return (await response.json()) as Pick<AlertInstance, 'labels'>[];
   };
 
+  getFiringServices = async (ruleName: string): Promise<string[]> =>
+    ((await this.getRule(ruleName))?.alerts ?? [])
+      .filter(({ state }) => state === 'Alerting')
+      .map(({ labels }) => labels.service_name)
+      .sort();
+
   getFolderByName = async (folderName: string, headers?: Headers): Promise<GrafanaFolder> => {
     const folders = await this.listFolders(headers);
     const folder = folders.find((folder) => folder.title === folderName);

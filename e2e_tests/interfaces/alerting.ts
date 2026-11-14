@@ -29,7 +29,7 @@ export interface AlertRulesResponse {
 
 export interface AlertTemplate {
   condition?: string;
-  expressions?: { expression: string; reducer: string; ref_id: string; type: string }[];
+  expressions?: { expression: string; reducer?: string; ref_id: string; type: string }[];
   name: string;
   params?: {
     float?: { default: number; max: number; min: number };
@@ -49,11 +49,14 @@ export interface ProvisionedAlertRule {
     model: {
       editorType?: string;
       expression?: string;
+      intervalMs?: number;
       queryType?: string;
       rawSql?: string;
       reducer?: string;
+      settings?: { mode?: string };
     };
     refId: string;
+    relativeTimeRange?: { from: number; to: number };
   }[];
   folderUID: string;
   for: string;

@@ -4,6 +4,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 import { rejectedTemplates, thresholdTemplates } from '@testdata/alertThresholds';
+import { qanTemplate } from '@testdata/clickhouseAlertTemplates';
 
 pmmTest.describe.configure({ mode: 'default' });
 
@@ -50,7 +51,7 @@ pmmTest(
       await expect(alertingPage.builders.dynamicBadge('Node high CPU load')).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
-      await expect(alertingPage.builders.dynamicBadge('QAN slow queries')).toBeVisible();
+      await expect(alertingPage.builders.dynamicBadge(qanTemplate.summary)).toBeVisible();
       await expect(alertingPage.elements.dynamicBadges).toHaveCount(2);
     });
 
@@ -93,6 +94,19 @@ pmmTest(
 
       expect(firing.map(({ labels }) => labels.node_name)).toEqual(['pmm-server']);
       expect(firing[0].annotations?.description).toContain('CPU load is more than 1%');
+    });
+
+    await pmmTest.step('The Alerts page lists the query, threshold and condition steps', async () => {
+      await alertStatusPage.openAlertDetails(ruleName, 'pmm-server');
+      await expect(alertStatusPage.elements.ruleSteps).toHaveCount(3);
+      await expect(alertStatusPage.builders.ruleStep('A')).toContainText('A · Query');
+      await expect(alertStatusPage.builders.ruleStep('A')).toContainText('node_cpu_seconds_total');
+      await expect(alertStatusPage.builders.ruleStep('T_threshold')).toContainText(
+        'Per-target threshold: the override set for the target, or the rule default.',
+      );
+      await expect(alertStatusPage.builders.ruleStep('C')).toContainText('C · Math · condition');
+      await expect(alertStatusPage.builders.ruleStep('C')).toContainText('$A > $T_threshold');
+      await expect(alertStatusPage.builders.detailsParagraph(/ \/ 1 \((\d+% )?over\)$/)).toBeVisible();
     });
 
     await pmmTest.step('Reset to default clears the override', async () => {

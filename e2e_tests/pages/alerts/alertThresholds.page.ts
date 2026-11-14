@@ -3,6 +3,7 @@ import { expect } from '@playwright/test';
 
 export default class AlertThresholdsPage extends BasePage {
   builders = {
+    defaultCell: (ruleTitle: string) => this.builders.row(ruleTitle).getByRole('cell').nth(2),
     overrideInput: (ruleTitle: string) => this.builders.row(ruleTitle).getByRole('spinbutton'),
     resetToDefault: (ruleTitle: string) =>
       this.builders.row(ruleTitle).getByRole('button', { name: 'Reset to default' }),
@@ -10,6 +11,7 @@ export default class AlertThresholdsPage extends BasePage {
       this.elements.modal.getByRole('row').filter({ has: this.page.getByRole('cell', { name: ruleTitle }) }),
     // An open MUI modal marks the snackbar's container aria-hidden, which getByRole skips.
     snackbar: (text: string | RegExp) => this.page.locator('[role="alert"]').filter({ hasText: text }),
+    unitCell: (ruleTitle: string) => this.builders.row(ruleTitle).getByRole('cell').nth(4),
   };
   buttons = {
     cancel: this.page.locator('.MuiModal-root').getByRole('button', { name: 'Cancel' }),
@@ -44,7 +46,8 @@ export default class AlertThresholdsPage extends BasePage {
 
   verifyDefault = async (ruleTitle: string, threshold: number, unit = '%'): Promise<void> => {
     await expect(this.builders.row(ruleTitle)).toContainText('threshold');
-    await expect(this.builders.row(ruleTitle)).toContainText(unit);
+    await expect(this.builders.defaultCell(ruleTitle)).toHaveText(String(threshold));
+    await expect(this.builders.unitCell(ruleTitle)).toHaveText(unit);
     await this.verifyOverride(ruleTitle, String(threshold));
   };
 

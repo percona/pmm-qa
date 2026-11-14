@@ -7,7 +7,6 @@ export interface NodeAgent {
 
 export interface InventoryAgent {
   agent_id: string;
-  disabled?: boolean;
   process_exec_path?: string;
   service_id?: string;
 }
