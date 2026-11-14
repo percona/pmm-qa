@@ -174,6 +174,7 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         mysql80: remoteMysql('mysql:8.0'),
         mysql840: remoteMysql('mysql:8.4.0'),
         mysql8037: remoteMysql('mysql:8.0.37'),
+        ps80: remoteMysql('percona/percona-server:8.0'),
         ps971: remoteMysql('percona/percona-server:9.7.1'),
       });
       const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
@@ -213,6 +214,26 @@ pmmTest.describe('Built-in Advisor version checks', () => {
           await expect(builders.detailsField('outcome')).not.toContainText('8.0.46');
           await expect(builders.detailsField('outcome')).not.toContainText('Release notes');
           await expect(builders.detailsField('outcome')).not.toContainText('can include security fixes');
+          await buttons.closeDetails.click();
+        },
+      );
+
+      await pmmTest.step(
+        'Percona Server 8.0 reached end of life on its Percona date, 2026-04-01',
+        async () => {
+          const eol = insightOf(databases.ps80.serviceId, versionCheck);
+
+          await advisorInsightsPage.selectFilter('serviceName', databases.ps80.name);
+          await expect(elements.rows).toHaveCount(1);
+          await expect(builders.rowsWithCell('Percona Server for MySQL 8.0 reached end of life')).toHaveCount(
+            1,
+          );
+          await expect(builders.rowsWithCell('Error')).toHaveCount(1);
+          await builders.row(eol.id).dblclick();
+          await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-04-01');
+          await expect(builders.detailsField('outcome')).toContainText(
+            'Lifecycle policy: https://www.percona.com/release-lifecycle-overview/.',
+          );
           await buttons.closeDetails.click();
         },
       );
@@ -283,7 +304,7 @@ pmmTest.describe('Built-in Advisor version checks', () => {
           /Current version is 11\.4\.2-MariaDB\S*, the latest release of MariaDB 11\.4 is 11\.4\.(?:[3-9]|[1-9]\d+)\./,
         );
         await expect(builders.detailsField('outcome')).toContainText(
-          'https://mariadb.org/about/security-policy/',
+          'https://mariadb.com/docs/server/security/cve/community-server',
         );
       });
     },

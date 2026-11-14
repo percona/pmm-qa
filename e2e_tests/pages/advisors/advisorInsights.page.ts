@@ -30,7 +30,7 @@ export default class AdvisorInsightsPage extends BasePage {
     row: (insightId: string) => this.page.getByTestId(`insight-row-${insightId}`),
     rowsWithCell: (text: string) =>
       this.elements.rows.filter({ has: this.page.getByRole('cell', { exact: true, name: text }) }),
-    rowsWithText: (text: RegExp | string) => this.elements.rows.filter({ hasText: text }),
+    rowsWithText: (text: string) => this.elements.rows.filter({ hasText: text }),
   };
   buttons = {
     clearFilters: this.page.getByTestId('clear-filters'),
