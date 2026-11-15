@@ -30,8 +30,6 @@ pmmTest(
     });
 
     const initialLeader = await pmmTest.step('Verify the dashboard names the pod that leads', async () => {
-      // The pods themselves, not /v1/ha/nodes: the dashboard and that API both
-      // render the same Raft state, so it cannot judge the dashboard.
       const leader = haClusterHelper.leaderFromPods(podNames);
 
       await haDashboard.verifyLeaderPmmInstance(leader);

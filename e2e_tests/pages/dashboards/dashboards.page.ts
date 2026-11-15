@@ -30,7 +30,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
-  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page);
+  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page, () => this.loadAllPanels());
   readonly home = new HomeDashboard(this.page);
   readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;

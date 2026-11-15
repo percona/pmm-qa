@@ -1,7 +1,7 @@
 import BasePage from '@pages/base.page';
 import DashboardInterface from '@interfaces/dashboard';
 import pmmTest from '@fixtures/pmmTest';
-import { expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { Timeouts } from '@helpers/timeouts';
 
@@ -17,10 +17,6 @@ export const haHealthOverviewPanels = {
   postgresqlPrimary: 'PostgreSQL Primary',
 };
 
-/**
- * "PMM HA Health Overview" (uid `pmm-ha-health-overview`), the GA dashboard of
- * PMM-13860.
- */
 export default class HaHealthOverviewDashboard extends BasePage implements DashboardInterface {
   url = 'graph/d/pmm-ha-health-overview/pmm-ha-health-overview';
   metrics: GrafanaPanel[] = [
@@ -56,6 +52,13 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
   elements = {};
   inputs = {};
   messages = {};
+
+  constructor(
+    page: Page,
+    private readonly loadAllPanels: () => Promise<void>,
+  ) {
+    super(page);
+  }
 
   /** The percentage the gauge renders, so the assertion is on the panel and not on its PromQL. */
   overallSystemHealth = async (): Promise<number> => {
@@ -143,28 +146,10 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
       },
     );
 
-  /**
-   * Grafana mounts a panel only once it has been scrolled to, so after a reload a
-   * panel below the fold is not in the DOM at all.
-   *
-   * @returns the panel's content element, the panel without its title
-   */
   private mountPanel = async (panelName: string, timeout: Timeouts) => {
     const header = this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`);
-    const gridItems = this.grafanaIframe().locator('.react-grid-item');
 
-    await gridItems.first().waitFor({ state: 'visible', timeout });
-
-    const itemCount = await gridItems.count();
-
-    for (let i = 0; i < itemCount && (await header.count()) === 0; i++) {
-      const expandRow = gridItems.nth(i).getByLabel('Expand row');
-
-      await gridItems.nth(i).scrollIntoViewIfNeeded();
-
-      if (await expandRow.isVisible()) await expandRow.click();
-    }
-
+    await this.loadAllPanels();
     await header.waitFor({ state: 'visible', timeout });
 
     return header.getByTestId('data-testid panel content');
