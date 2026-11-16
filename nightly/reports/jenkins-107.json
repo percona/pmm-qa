@@ -3736,22 +3736,20 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
-  "claims": [
+  "investigations": [
     {
-      "by": "Investigator routine",
-      "at": "2026-11-16T02:46:02Z",
       "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-16T02:46:02Z",
-      "suites": [
+        "CLI Integration",
         "CLI Integration Compatibility"
-      ]
-    },
+      ],
+      "verdict": "product bug",
+      "summary": "PSMDB Shard 7.x CLI (latest-tarball and 3.10.0 client): PMM-T2445 (mongoDb-psmdb-mongolog-change-agent.spec.ts) failed in both jobs: with the latest client the exporter showed Running but mongodb_up stayed 0 until the 120 s test timeout, and with 3.10.0 it stayed Starting for 90 s. Both happened after the test changed the agent with --skip-connection-check and then reset its credentials. This is the open PMM-15835 lost update (a ChangeAgent racing the agent's status report), which already lists PMM-T2435, PMM-T2446 and PMM-T2445. Deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+      "by": "Investigator routine",
+      "at": "2026-11-16T04:39:11Z"
+    }
+  ],
+  "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-16T02:46:02Z",
