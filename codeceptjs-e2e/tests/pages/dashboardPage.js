@@ -1130,9 +1130,10 @@ module.exports = {
     panelLoading: locate('div').withAttr({ class: 'panel-loading' }),
     postgreSQLServiceSummaryContent: locate('$pt-summary-fingerprint').withText('Detected PostgreSQL version:'),
     reportTitle: locate('$header-container').inside(locate('[class*="panel-container"]')),
+    // "No data." also starts a panel's own no-value text, e.g. "No data. InnoDB data file I/O is not reported on Amazon Aurora."
     reportTitleWithNA: locate('$header-container').inside(
       locate('[class*="panel-container"]').withDescendant(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+        '//*[(text()="No data") or starts-with(text(), "No data.") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
       ),
     ),
     reportTitleWithNoData: locate('$header-container').inside(
