@@ -1,3 +1,4 @@
+import { expect, test } from '@playwright/test';
 import { exec, shellQuote } from '@helpers/cli-helper';
 
 /**
@@ -29,6 +30,23 @@ export async function getServerAgent(agentId: string): Promise<Record<string, un
 }
 
 /**
+ * Wait until PMM Server reports a service as up or down
+ *
+ * @param   serviceName     service name
+ * @param   status          expected service status
+ * @param   timeout         how long to wait, in milliseconds
+ */
+export async function waitForServiceStatus(serviceName: string, status: 'STATUS_UP' | 'STATUS_DOWN', timeout: number) {
+  await test.step(`wait for "${serviceName}" service to be ${status}`, async () => {
+    await expect(async () => {
+      const { services } = await pmmServerApi('GET', '/v1/management/services') as { services: { service_name: string, status: string }[] };
+
+      expect(services.find((service) => service.service_name === serviceName)?.status).toEqual(status);
+    }).toPass({ intervals: [2_000], timeout });
+  });
+}
+
+/**
  * Run an instant PromQL query against PMM Server's VictoriaMetrics
  *
  * @param   query           PromQL query; must not contain single quotes
@@ -49,15 +67,16 @@ export async function queryVictoriaMetrics(query: string, adminPassword = proces
  * @param   serviceName     service the queries ran on
  * @param   database        database the queries ran in
  * @param   from            start of the period
+ * @param   databaseLabel   QAN label holding the database: MySQL agents report it as schema
  */
-export async function getQanQueries(serviceName: string, database: string, from: Date): Promise<{ queryId: string, fingerprint: string }[]> {
+export async function getQanQueries(serviceName: string, database: string, from: Date, databaseLabel: 'database' | 'schema' = 'database'): Promise<{ queryId: string, fingerprint: string }[]> {
   const report = await pmmServerApi('POST', '/v1/qan/metrics:getReport', {
     period_start_from: from.toISOString(),
     period_start_to: new Date(Date.now() + 60_000).toISOString(),
     group_by: 'queryid',
     columns: ['num_queries'],
     limit: 100,
-    labels: [{ key: 'service_name', value: [serviceName] }, { key: 'database', value: [database] }],
+    labels: [{ key: 'service_name', value: [serviceName] }, { key: databaseLabel, value: [database] }],
   }) as { rows?: { dimension?: string, fingerprint?: string }[] };
 
   return (report.rows ?? [])
