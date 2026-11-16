@@ -349,8 +349,10 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1`)).stdout.trim().split(/\s+/);
     serviceName = service[1];
     const serviceId = service[3];
-    mysqldExporterId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)).stdout.trim();
-    mysqldSlowlogAgentId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_slowlog_agent | awk -F' ' '{print $3}'`)).stdout.trim();
+    // Not the text columns: a disabled agent's "Done (disabled)" status shifts them.
+    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
+    mysqldExporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
+    mysqldSlowlogAgentId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT')?.agent_id ?? '';
     expect(mysqldExporterId, `mysqld_exporter of ${serviceName} not found`).toBeTruthy();
     expect(mysqldSlowlogAgentId, `mysql_slowlog_agent of ${serviceName} not found, is QUERY_SOURCE=slowlog set?`).toBeTruthy();
   });
@@ -436,17 +438,27 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       },
     ];
 
-    for (const enableCase of enableCases) {
-      for (const command of [
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
-      ]) {
-        const output = await cli.exec(command);
-        await output.assertSuccess();
-        await output.outContains(enableCase.response);
-      }
+    try {
+      for (const enableCase of enableCases) {
+        for (const command of [
+          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
+          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
+        ]) {
+          const output = await cli.exec(command);
+          await output.assertSuccess();
+          await output.outContains(enableCase.response);
+        }
 
-      await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldSlowlogAgentId], enableCase.running);
+        await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldSlowlogAgentId], enableCase.running);
+      }
+    } finally {
+      // The later tests change these agents and expect them running.
+      for (const command of [
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, '--enable'),
+        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, '--enable'),
+      ]) {
+        await (await cli.exec(command)).assertSuccess();
+      }
     }
   });
 
