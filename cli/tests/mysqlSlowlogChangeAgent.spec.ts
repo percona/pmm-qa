@@ -486,9 +486,6 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2532 - Verify Change agent disable collectors for mysqld-exporter', async ({}) => {
     const collectorsToDisable = ['info_schema.query_response_time', 'info_schema.processlist'];
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--disable-collectors=${collectorsToDisable.join(',')}`));
-    await output.assertSuccess();
-    await output.outContains(`- updated disabled collectors: [${collectorsToDisable.join(' ')}]`);
 
     await cli.execUntilPersisted(
       [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--disable-collectors=${collectorsToDisable.join(',')}`)],
@@ -576,9 +573,6 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2537 - Verify Change agent max query length for qan-mysql-slowlog-agent', async ({}) => {
     const maxQueryLength = 2_048;
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-query-length=${maxQueryLength}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed max query length to ${maxQueryLength}`);
 
     await cli.execUntilPersisted(
       [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-query-length=${maxQueryLength}`)],
@@ -592,9 +586,6 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2538 - Verify Change agent max slowlog file size for qan-mysql-slowlog-agent', async ({}) => {
     const maxSlowlogFileSize = '104857600';
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-slowlog-file-size=${maxSlowlogFileSize}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed max slowlog file size to ${maxSlowlogFileSize}`);
 
     await cli.execUntilPersisted(
       [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, `--max-slowlog-file-size=${maxSlowlogFileSize}`)],
