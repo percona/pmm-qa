@@ -13,8 +13,8 @@ const pmmAgentLog = '/tmp/pmm-agent.log';
 let containerName: string;
 
 test.beforeAll(async ({}) => {
-  const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep ps_pmm_ | head -1');
-  await result.outContains('ps_pmm', 'Percona Server docker container should exist. please run pmm-framework with --database ps');
+  const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep mysql_pmm_ | head -1');
+  await result.outContains('mysql_pmm', 'MySQL docker container should exist. please run pmm-framework with --database mysql');
   containerName = result.stdout.trim();
 });
 
@@ -337,7 +337,7 @@ test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@
   let mysqldPerfschemaAgentId: string;
 
   test.beforeAll(async ({}) => {
-    const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1`)).stdout.trim().split(/\s+/);
+    const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_pmm | head -1`)).stdout.trim().split(/\s+/);
     serviceName = service[1];
     const serviceId = service[3];
     mysqldExporterId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)).stdout.trim();
@@ -604,9 +604,8 @@ test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@
   test('PMM-T2667 - Verify Change agent pmm-agent listen port for mysqld-exporter and qan-mysql-perfschema-agent', async ({}) => {
     test.setTimeout(240_000);
     await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' ${pmmAgentConfig}`)).assertSuccess();
-    // Restarting the container stops pmm-agent, which pmm-framework runs without a supervisor.
-    await (await cli.exec(`docker restart ${containerName}`)).assertSuccess();
-    await (await cli.exec(`docker exec -d ${containerName} sh -c "exec pmm-agent --config-file=${pmmAgentConfig} >>${pmmAgentLog} 2>&1"`)).assertSuccess();
+    // pmm-framework runs pmm-agent as a systemd unit in the MySQL image.
+    await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
 
     await expect(async () => {
       for (const command of [
