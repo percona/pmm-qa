@@ -7,7 +7,6 @@ import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
-import DockerHelper from '@helpers/docker.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
 import TlsHelper from '@helpers/tls.helper';
@@ -80,7 +79,6 @@ const pmmTest = base.extend<{
   loginPage: LoginPage;
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
-  dockerHelper: DockerHelper;
   dumpPage: DumpPage;
   editServicePage: EditServicePage;
   externalPostgresHelper: ExternalPostgresHelper;
