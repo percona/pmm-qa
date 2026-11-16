@@ -93,9 +93,15 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
     // The first cell, not the grid: the grid is in the DOM while its rows still load.
     await table.getByRole('gridcell').first().waitFor({ state: 'visible', timeout });
 
-    const rows = (await table.getByRole('row').allInnerTexts())
-      .map((row) => row.replace(/\s+/g, ' ').trim())
-      .filter((row) => row.length > 0);
+    const rows: string[] = [];
+
+    // Cell by cell, not the row's innerText: Grafana's data-grid table renders rows
+    // as `display: contents`, whose innerText is empty in Chromium.
+    for (const row of await table.getByRole('row').all()) {
+      const text = (await row.getByRole('gridcell').allTextContents()).join(' ').replace(/\s+/g, ' ').trim();
+
+      if (text.length > 0) rows.push(text);
+    }
 
     if (rows.length === 0) throw new Error(`Table panel "${panelName}" rendered no rows`);
 
