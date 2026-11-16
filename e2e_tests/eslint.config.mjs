@@ -302,6 +302,8 @@ export default defineConfig([
             'verifyRowMetricsPresent',
             'verifyRowPanelsHaveData',
             'verifyMonitoringStatusesOk',
+            'verifyLocationFields',
+            'verifyBackupSuccess',
           ],
         },
       ],

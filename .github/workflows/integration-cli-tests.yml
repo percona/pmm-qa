@@ -153,8 +153,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@percona-server'
-      services_list: '--database ps=5.7'
+      cli_tag: '@percona-server|@ps-slowlog-change-agent'
+      services_list: '--database ps=5.7,QUERY_SOURCE=slowlog'
       test_name: 'Percona Server 5.7'
 
   ps-80-tests:
@@ -169,8 +169,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@percona-server'
-      services_list: '--database ps=8.0'
+      cli_tag: '@percona-server|@ps-slowlog-change-agent'
+      services_list: '--database ps=8.0,QUERY_SOURCE=slowlog'
       test_name: 'Percona Server 8.0'
 
   ps-84-tests:
@@ -185,8 +185,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@percona-server'
-      services_list: '--database ps=8.4'
+      cli_tag: '@percona-server|@ps-slowlog-change-agent'
+      services_list: '--database ps=8.4,QUERY_SOURCE=slowlog'
       test_name: 'Percona Server 8.4'
 
   ps-97-tests:
@@ -201,8 +201,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@percona-server'
-      services_list: '--database ps=9.7'
+      cli_tag: '@percona-server|@ps-slowlog-change-agent'
+      services_list: '--database ps=9.7,QUERY_SOURCE=slowlog'
       test_name: 'Percona Server 9.7'
 
   mysql-80-tests:
@@ -457,7 +457,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
       test_name: 'PSMDB Shard 7.x'
 
   psmdb-8-shard-tests:
@@ -473,7 +473,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
       test_name: 'PSMDB Shard 8.x'
 
   psmdb-7-arbiter-tests:
