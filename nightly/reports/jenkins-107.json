@@ -3736,5 +3736,28 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-11-16T02:46:02Z",
+      "suites": [
+        "CLI Integration"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-11-16T02:46:02Z",
+      "suites": [
+        "CLI Integration Compatibility"
+      ]
+    },
+    {
+      "by": "Investigator routine",
+      "at": "2026-11-16T02:46:02Z",
+      "suites": [
+        "E2E Tests"
+      ]
+    }
+  ]
 }
