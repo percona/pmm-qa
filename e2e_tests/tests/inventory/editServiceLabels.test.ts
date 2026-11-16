@@ -1,7 +1,7 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import { databaseServices, frameworkServices } from '@helpers/frameworkServices.helper';
-import { serviceEndpoints } from '@helpers/serviceMetrics.helper';
+import { removeEndpointService, serviceEndpoints } from '@helpers/serviceMetrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { GetService } from '@interfaces/inventory';
 import EditServicePage, { ServiceLabels } from '@pages/inventory/editService.page';
@@ -79,7 +79,7 @@ for (const { name, serviceRegex } of databaseServices) {
 
 // A service of the test's own is removed afterwards, so nothing has to be put back through the update API.
 for (const ownService of serviceEndpoints) {
-  const { serviceType: name } = ownService;
+  const { name } = ownService;
 
   pmmTest.describe(`Edit service labels | ${name}`, () => {
     let service: GetService;
@@ -91,13 +91,13 @@ for (const ownService of serviceEndpoints) {
         api,
         await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
       );
-      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
+      await removeEndpointService(api, cliHelper, container, ownService);
       cliHelper.execSilent(ownService.register(container)).assertSuccess();
       service = await api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
     });
 
-    pmmTest.afterEach(async ({ cliHelper }) => {
-      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
+    pmmTest.afterEach(async ({ api, cliHelper }) => {
+      await removeEndpointService(api, cliHelper, container, ownService);
     });
 
     pmmTest(

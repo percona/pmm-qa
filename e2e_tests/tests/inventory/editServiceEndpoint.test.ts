@@ -5,6 +5,7 @@ import {
   endpointExporterType,
   EndpointSettings,
   readEndpoint,
+  removeEndpointService,
   serviceEndpoints,
 } from '@helpers/serviceMetrics.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -15,8 +16,8 @@ const unreachablePort = '59999';
 const missingPath = '/pmm-missing-metrics';
 
 for (const ownService of serviceEndpoints) {
-  const { serviceType: name } = ownService;
-  const hasGroup = name === ServiceType.external;
+  const { name } = ownService;
+  const hasGroup = ownService.serviceType === ServiceType.external;
 
   pmmTest.describe(`Edit service metrics endpoint | ${name}`, () => {
     let service: GetService;
@@ -31,7 +32,7 @@ for (const ownService of serviceEndpoints) {
         api,
         await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
       );
-      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
+      await removeEndpointService(api, cliHelper, container, ownService);
       cliHelper.execSilent(ownService.register(container)).assertSuccess();
       service = await api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
       // The service is added again under the same name for every test, and the series of the one removed
@@ -44,8 +45,8 @@ for (const ownService of serviceEndpoints) {
       original = settings;
     });
 
-    pmmTest.afterEach(async ({ cliHelper }) => {
-      cliHelper.removeService(container, ownService.serviceType, ownService.serviceName);
+    pmmTest.afterEach(async ({ api, cliHelper }) => {
+      await removeEndpointService(api, cliHelper, container, ownService);
     });
 
     pmmTest(

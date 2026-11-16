@@ -1,4 +1,5 @@
 import Api from '@api/api';
+import CliHelper from '@helpers/cli.helper';
 import { FrameworkService, frameworkServices, OwnService } from '@helpers/frameworkServices.helper';
 import { ServiceAgent, ServiceType } from '@interfaces/inventory';
 
@@ -119,23 +120,53 @@ export interface EndpointSettings {
 export const endpointExporterType = frameworkServices.haproxy.exporterType;
 export const basicAuth = { password: 'Pmm9Scrape_Test4', username: 'pmm_scrape' };
 
+export interface EndpointService extends OwnService {
+  name: string;
+  // Added with a remote node of the service's name, which removing the service leaves behind.
+  remoteNode?: boolean;
+}
+
 // Each test registers a service of its own on HAProxy's metrics and removes it afterwards: the update API
 // refuses an empty username or password, so basic auth, once set, cannot be taken off a framework service.
-// EXTERNAL cannot share a host with VALKEY in pmm-framework, so the External service scrapes HAProxy's metrics too.
-export const serviceEndpoints: OwnService[] = [
+// EXTERNAL cannot share a host with VALKEY in pmm-framework, so the External services scrape HAProxy's metrics too.
+export const serviceEndpoints: EndpointService[] = [
   {
+    name: 'haproxy',
     register: (container) =>
       `docker exec ${container} pmm-admin add haproxy --listen-port=42100 pmm_edit_haproxy_check`,
     serviceName: 'pmm_edit_haproxy_check',
     serviceType: ServiceType.haproxy,
   },
   {
+    name: 'external',
     register: (container) =>
       `docker exec ${container} pmm-admin add external --listen-port=42100 --group=pmm_edit_external --service-name=pmm_edit_external_check`,
     serviceName: 'pmm_edit_external_check',
     serviceType: ServiceType.external,
   },
+  // Its exporter runs on PMM Server, which reaches HAProxy by container name on the pmm-qa network.
+  {
+    name: 'external-serverless',
+    register: (container) =>
+      `docker exec ${container} pmm-admin add external-serverless --url=http://${container}:42100/metrics --group=pmm_edit_external --external-name=pmm_edit_external_serverless_check`,
+    remoteNode: true,
+    serviceName: 'pmm_edit_external_serverless_check',
+    serviceType: ServiceType.external,
+  },
 ];
+
+export const removeEndpointService = async (
+  api: Api,
+  cliHelper: CliHelper,
+  container: string,
+  { remoteNode, serviceName, serviceType }: EndpointService,
+) => {
+  if (remoteNode) {
+    await api.inventoryApi.removeNodesByName([serviceName]);
+  } else {
+    cliHelper.removeService(container, serviceType, serviceName);
+  }
+};
 
 export const readEndpoint = async (api: Api, serviceId: string) => {
   const { agents, external_group, service_type } = await api.inventoryApi.getServiceById(serviceId);
