@@ -48,11 +48,11 @@ Run commands from `cli/`.
 - `@mongoDb`
 - `@mysql`
 - `@mysql-conf-file`
+- `@mysql-perfschema-change-agent`
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`
 - `@proxysql`
-- `@ps-perfschema-change-agent`
 - `@ps-slowlog-change-agent`
 - `@psmdb`
 - `@server-docker-generic`
