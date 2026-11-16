@@ -67,15 +67,16 @@ export async function queryVictoriaMetrics(query: string, adminPassword = proces
  * @param   serviceName     service the queries ran on
  * @param   database        database the queries ran in
  * @param   from            start of the period
+ * @param   databaseLabel   QAN label holding the database: MySQL agents report it as schema
  */
-export async function getQanQueries(serviceName: string, database: string, from: Date): Promise<{ queryId: string, fingerprint: string }[]> {
+export async function getQanQueries(serviceName: string, database: string, from: Date, databaseLabel: 'database' | 'schema' = 'database'): Promise<{ queryId: string, fingerprint: string }[]> {
   const report = await pmmServerApi('POST', '/v1/qan/metrics:getReport', {
     period_start_from: from.toISOString(),
     period_start_to: new Date(Date.now() + 60_000).toISOString(),
     group_by: 'queryid',
     columns: ['num_queries'],
     limit: 100,
-    labels: [{ key: 'service_name', value: [serviceName] }, { key: 'database', value: [database] }],
+    labels: [{ key: 'service_name', value: [serviceName] }, { key: databaseLabel, value: [database] }],
   }) as { rows?: { dimension?: string, fingerprint?: string }[] };
 
   return (report.rows ?? [])

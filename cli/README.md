@@ -52,6 +52,7 @@ Run commands from `cli/`.
 - `@percona-server`
 - `@pgsql`
 - `@proxysql`
+- `@ps-perfschema-change-agent`
 - `@ps-slowlog-change-agent`
 - `@psmdb`
 - `@server-docker-generic`
