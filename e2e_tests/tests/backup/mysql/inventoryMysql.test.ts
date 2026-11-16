@@ -148,6 +148,9 @@ pmmTest(
   'PMM-T810 - Verify user can restore MySQL backup from a scheduled backup @bm-mysql @not-ui-pipeline',
   async ({ api, backupInventoryPage, cliHelper, credentials }) => {
     const scheduleName = 'for_restore_mysql_test';
+
+    cliHelper.queryMysql(psContainer, credentials.perconaServer, 'DROP TABLE IF EXISTS sh_test');
+
     const scheduleId = await api.backupsApi.createScheduledBackup({
       cron_expression: '*/2 * * * *',
       data_model: 'DATA_MODEL_PHYSICAL',
@@ -162,7 +165,6 @@ pmmTest(
       service_id: serviceId,
     });
 
-    cliHelper.queryMysql(psContainer, credentials.perconaServer, 'DROP TABLE IF EXISTS sh_test');
     await api.backupsApi.verifyBackupStatus(scheduleName, 'BACKUP_STATUS_SUCCESS');
     await api.backupsApi.disableScheduledBackup(scheduleId);
 
