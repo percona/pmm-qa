@@ -26,7 +26,6 @@ export default class MysqlAmazonAuroraDetails implements DashboardInterface {
     { name: 'Forwarded Write Statements', type: 'timeSeries' },
     { name: 'Forwarding Open Sessions', type: 'timeSeries' },
     { name: 'Parallel Query Requests', type: 'timeSeries' },
-    { name: 'Serverless Capacity', type: 'timeSeries' },
   ];
   // The test cluster has no reader instance.
   noDataMetrics: string[] = ['Aurora Replica Lag'];
