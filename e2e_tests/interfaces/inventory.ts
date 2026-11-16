@@ -139,6 +139,7 @@ export interface AddRdsParameters {
   awsSecretKey: string;
   instanceId: string;
   password: string;
+  rdsExporter?: boolean;
   serviceName: string;
   username: string;
 }

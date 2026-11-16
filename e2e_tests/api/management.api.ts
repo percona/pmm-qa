@@ -24,6 +24,7 @@ export default class ManagementApi {
           password: parameters.password,
           port: rdsPort,
           qan_mysql_perfschema: true,
+          rds_exporter: !!parameters.rdsExporter,
           region: rdsRegion,
           service_name: parameters.serviceName,
           tls_skip_verify: true,

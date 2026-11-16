@@ -35,6 +35,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
         awsSecretKey: credentials.aws.secretKey,
         instanceId: rdsInstanceId(address),
         password,
+        rdsExporter: true,
         serviceName,
         username,
       })
