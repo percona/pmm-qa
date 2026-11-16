@@ -234,15 +234,19 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
 
       const from = new Date(Date.now() - 60_000);
       let queryId = '';
+      let found = { example: '', isTruncated: false };
 
       await expect(async () => {
-        await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -D ${database} -e "SELECT * FROM items WHERE ${where};"`)).assertSuccess();
+        // Examples come from the connection's statement history, which goes when it closes: keep it open for the agent's poll.
+        await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -D ${database} -e "SELECT * FROM items WHERE ${where}; DO SLEEP(2);"`)).assertSuccess();
         const queries = await pmmApi.getQanQueries(serviceName, database, from, 'schema');
         queryId = queries.find((q) => /items/i.test(q.fingerprint) && !otherQueryIds.includes(q.queryId))?.queryId ?? '';
         expect(queryId, `No SELECT on items in QAN for ${serviceName}/${database}: ${JSON.stringify(queries)}`).toBeTruthy();
+        found = await pmmApi.getQanExample(serviceName, queryId, from);
+        expect(found.example, `QAN has query ${queryId} but no example for it yet`).toBeTruthy();
       }).toPass({ intervals: [15_000], timeout: 4 * 60_000 });
 
-      return { queryId, ...(await pmmApi.getQanExample(serviceName, queryId, from)) };
+      return { queryId, ...found };
     };
 
     const truncated = await runAndFindInQan('pmm_qa_first_long_column = 1 AND pmm_qa_second_long_column = 2', 40);
