@@ -42,6 +42,7 @@ Run commands from `cli/`.
 
 - `@arbiter-psmdb`
 - `@client-docker`
+- `@external`
 - `@generic`
 - `@haproxy`
 - `@help-cli`
@@ -51,12 +52,14 @@ Run commands from `cli/`.
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`
+- `@pgsql-pgss`
 - `@proxysql`
 - `@psmdb`
 - `@server-docker-generic`
 - `@server-only`
 - `@service-removal`
 - `@shard-psmdb`
+- `@ssl-psmdb`
 - `@unregister`
 - `@valkey`
 
