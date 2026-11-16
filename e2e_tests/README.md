@@ -118,6 +118,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@bm-common`
 - `@bm-locations`
 - `@bm-mongo`
+- `@bm-mysql`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
