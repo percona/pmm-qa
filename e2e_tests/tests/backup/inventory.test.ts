@@ -13,18 +13,6 @@ const remoteServiceName = 'mongo-binary-test';
 const credentialsFlags = process.env.WIZARD_ARGS?.includes('GSSAPI')
   ? '--username="pmm@PERCONATEST.COM" --password=password1 --authentication-mechanism=GSSAPI --authentication-database="$external"'
   : '--username=pmm --password=pmmpass';
-// Stopping the primary while PBM swaps users and roles leaves only its own pbm user (swapUsers in pbm/restore/logical.go),
-// so PMM-T1562 saves them outside its backup and afterEach puts back any the restore deleted.
-const pbmShell = (js: string) =>
-  `docker exec rs101 mongo "mongodb://pbm:pbmpass@${replicaSetMembers.map((member) => `${member}:27017`).join(',')}/?replicaSet=rs&authSource=admin" --quiet --eval '${js}'`;
-const saveUsersAndRoles =
-  'const admin = db.getSiblingDB("admin"), copy = db.getSiblingDB("pmm_qa_auth"); copy.dropDatabase();' +
-  ' for (const name of ["roles", "users"]) copy.getCollection(name).insertMany(admin.getCollection("system." + name).find().toArray());';
-const restoreUsersAndRoles =
-  'const admin = db.getSiblingDB("admin"), copy = db.getSiblingDB("pmm_qa_auth");' +
-  ' for (const name of ["roles", "users"]) copy.getCollection(name).find().forEach((doc) => {' +
-  ' const live = admin.getCollection("system." + name); if (!live.findOne({ _id: doc._id })) live.insertOne(doc); });' +
-  ' copy.dropDatabase();';
 let backupManagementEnabled: boolean;
 let localLocationId: string;
 let s3LocationId: string;
@@ -66,13 +54,13 @@ pmmTest.beforeEach(async ({ api, backupInventoryPage, grafanaHelper, mongoDbHelp
   await backupInventoryPage.open();
 });
 
-pmmTest.afterEach(async ({ api, cliHelper }) => {
+pmmTest.afterEach(async ({ api, cliHelper, mongoDbHelper }) => {
   for (const member of replicaSetMembers) {
     cliHelper.execute(`docker exec ${member} systemctl start mongod`).assertSuccess();
   }
 
   if (usersAndRolesSaved) {
-    cliHelper.execute(pbmShell(restoreUsersAndRoles)).assertSuccess();
+    mongoDbHelper.restoreUsersAndRoles('rs', replicaSetMembers);
     usersAndRolesSaved = false;
   }
 
@@ -452,14 +440,14 @@ pmmTest(
 
 pmmTest(
   'PMM-T1562 - Verify Mongo restore error logs when replica primary down @bm-mongo',
-  async ({ api, backupInventoryPage, cliHelper }) => {
+  async ({ api, backupInventoryPage, cliHelper, mongoDbHelper }) => {
     const backupName = 'mongo_error_logs';
 
     await api.backupsApi.verifyBackupSuccess(
       await api.backupsApi.startBackup(backupName, serviceId, s3LocationId),
     );
     await backupInventoryPage.verifyBackupStatus(backupName, 'BACKUP_STATUS_SUCCESS');
-    cliHelper.execute(pbmShell(saveUsersAndRoles)).assertSuccess();
+    mongoDbHelper.saveUsersAndRoles('rs', replicaSetMembers);
     usersAndRolesSaved = true;
 
     await pmmTest.step('Stop the primary while the restore runs', async () => {
