@@ -48,9 +48,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
     expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
 
-    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
-    exporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
-    slowlogId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT')?.agent_id ?? '';
+    ({ exporterId, slowlogId } = await pmmAdmin.mysqlAgentIds(containerName, serviceId ?? ''));
     expect(exporterId, `mysqld_exporter for service ${serviceName} not found`).toBeTruthy();
     expect(slowlogId, `mysql_slowlog_agent for service ${serviceName} not found`).toBeTruthy();
 
@@ -350,9 +348,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     serviceName = service[1];
     const serviceId = service[3];
     // Not the text columns: a disabled agent's "Done (disabled)" status shifts them.
-    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
-    mysqldExporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
-    mysqldSlowlogAgentId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT')?.agent_id ?? '';
+    ({ exporterId: mysqldExporterId, slowlogId: mysqldSlowlogAgentId } = await pmmAdmin.mysqlAgentIds(containerName, serviceId));
     expect(mysqldExporterId, `mysqld_exporter of ${serviceName} not found`).toBeTruthy();
     expect(mysqldSlowlogAgentId, `mysql_slowlog_agent of ${serviceName} not found, is QUERY_SOURCE=slowlog set?`).toBeTruthy();
   });
