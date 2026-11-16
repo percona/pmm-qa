@@ -447,8 +447,8 @@ pmmTest(
       await api.backupsApi.startBackup(backupName, serviceId, s3LocationId),
     );
     await backupInventoryPage.verifyBackupStatus(backupName, 'BACKUP_STATUS_SUCCESS');
-    mongoDbHelper.saveUsersAndRoles('rs', replicaSetMembers);
     usersAndRolesSaved = true;
+    mongoDbHelper.saveUsersAndRoles('rs', replicaSetMembers);
 
     await pmmTest.step('Stop the primary while the restore runs', async () => {
       const restoreId = await backupInventoryPage.startRestore(backupName);
