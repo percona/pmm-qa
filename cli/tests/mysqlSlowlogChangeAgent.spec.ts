@@ -552,9 +552,6 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
 
   test('PMM-T2535 - Verify Change agent tablestats group table limit for mysqld-exporter', async ({}) => {
     const tablestatsGroupTableLimit = 2_000;
-    const output = await cli.exec(pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--tablestats-group-table-limit=${tablestatsGroupTableLimit}`));
-    await output.assertSuccess();
-    await output.outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
 
     await cli.execUntilPersisted(
       [pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, `--tablestats-group-table-limit=${tablestatsGroupTableLimit}`)],
