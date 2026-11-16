@@ -349,8 +349,10 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
     const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1`)).stdout.trim().split(/\s+/);
     serviceName = service[1];
     const serviceId = service[3];
-    mysqldExporterId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)).stdout.trim();
-    mysqldSlowlogAgentId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_slowlog_agent | awk -F' ' '{print $3}'`)).stdout.trim();
+    // Not "pmm-admin list" columns: a disabled agent's status is two words ("Done (disabled)"), which shifts the ID out of place.
+    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
+    mysqldExporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
+    mysqldSlowlogAgentId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT')?.agent_id ?? '';
     expect(mysqldExporterId, `mysqld_exporter of ${serviceName} not found`).toBeTruthy();
     expect(mysqldSlowlogAgentId, `mysql_slowlog_agent of ${serviceName} not found, is QUERY_SOURCE=slowlog set?`).toBeTruthy();
   });
@@ -435,18 +437,24 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
         flag: '--enable', response: '- enabled agent', running: true,
       },
     ];
+    const agentIds = [mysqldExporterId, mysqldSlowlogAgentId];
 
     for (const enableCase of enableCases) {
-      for (const command of [
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
-      ]) {
-        const output = await cli.exec(command);
-        await output.assertSuccess();
-        await output.outContains(enableCase.response);
-      }
+      // Each change restarts the agent, and a change saved while it restarts can be reverted (PMM-15835).
+      await cli.execUntilPersisted(
+        [
+          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
+          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
+        ],
+        [enableCase.response],
+        async () => {
+          for (const agentId of agentIds) {
+            expect((await pmmApi.getServerAgent(agentId)).disabled, `Enable state was not persisted on ${agentId}`).toBe(!enableCase.running);
+          }
+        },
+      );
 
-      await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldSlowlogAgentId], enableCase.running);
+      await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
     }
   });
 
