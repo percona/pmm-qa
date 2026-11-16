@@ -18,7 +18,7 @@ test.beforeAll(async ({}) => {
   containerName = result.stdout.trim();
 });
 
-test.describe('pmm-admin inventory change agent effects on mysqld_exporter and QAN perfschema agent', { tag: '@ps-perfschema-change-agent' }, () => {
+test.describe('pmm-admin inventory change agent effects on mysqld_exporter and QAN perfschema agent', { tag: '@mysql-perfschema-change-agent' }, () => {
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   const serviceName = 'mysql_perfschema_change_agent_effects';
@@ -329,7 +329,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
   });
 });
 
-test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@ps-perfschema-change-agent' }, () => {
+test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@mysql-perfschema-change-agent' }, () => {
   test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   let serviceName: string;

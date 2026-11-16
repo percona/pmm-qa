@@ -221,22 +221,6 @@ jobs:
       services_list: '--database ps=8.4,QUERY_SOURCE=slowlog'
       test_name: 'Percona Server 8.4 slowlog change agent'
 
-  ps-perfschema-change-agent-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets:
-      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@ps-perfschema-change-agent'
-      services_list: '--database ps=8.4'
-      test_name: 'Percona Server 8.4 perfschema change agent'
-
   mysql-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -249,7 +233,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@mysql-perfschema-change-agent'
       services_list: '--database mysql=8.0'
       test_name: 'MySQL 8.0'
 
@@ -265,7 +249,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@mysql-perfschema-change-agent'
       services_list: '--database mysql=8.4'
       test_name: 'MySQL 8.4'
 
@@ -281,7 +265,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@mysql|@mysql-conf-file'
+      cli_tag: '@mysql|@mysql-conf-file|@mysql-perfschema-change-agent'
       services_list: '--database mysql=9.7'
       test_name: 'MySQL 9.7'
 
