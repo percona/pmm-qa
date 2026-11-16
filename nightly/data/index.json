@@ -185813,16 +185813,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15835",
         "by": "Investigator routine",
         "at": "2026-11-16T04:39:11Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-16T02:46:02Z",
         "suites": [
           "E2E Tests"
-        ]
+        ],
+        "verdict": "test bug",
+        "summary": "@bm-mongo (ARM64 only): PMM-T1562 stops rs101's mongod during a logical restore. On the slower runner the stop landed inside PBM's swapUsers, which deletes every user but pbm before inserting the backed-up ones, so root and pmm were gone. PMM-T1563 + PMM-T1564 then failed with 'Authentication failed', and PMM-T2628 and the rest of scheduled.test.ts failed pmm-admin add's connection check. Reproduced on a CHAOS VM by forcing the stop into the swap: main went red the same way, the fix stayed green, and the full @bm-mongo suite on the fix passed 36/36 (1 skipped). The fix saves the users and roles after T1562's backup and puts back any the restore deleted, as the pbm user.",
+        "link": "https://github.com/percona/pmm-qa/pull/1775",
+        "by": "Investigator routine",
+        "at": "2026-11-16T04:39:24Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
