@@ -370,8 +370,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains(`- changed authentication mechanism to ${authMechanism}`);
     }
 
-    // PMM-15835 can revert the reset right after it is saved, leaving the exporter on SCRAM-SHA-256 with mongodb_up 0;
-    // re-applying a reset that did stick restarts nothing.
+    // PMM-15835 can revert the reset right after it is saved, leaving the exporter on SCRAM-SHA-256 with mongodb_up 0.
     await expect(async () => {
       for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--authentication-mechanism= --skip-connection-check')) {
         await (await cli.exec(command)).assertSuccess();
