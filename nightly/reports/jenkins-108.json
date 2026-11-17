@@ -3746,16 +3746,19 @@
       "link": "https://github.com/percona/pmm-qa/pull/1781",
       "by": "Investigator routine",
       "at": "2026-11-17T03:53:41Z"
+    },
+    {
+      "suites": [
+        "CLI Integration"
+      ],
+      "verdict": "test bug",
+      "summary": "Percona Server 9.7 (latest client): PMM-T2528's slowlog-agent disable was lost to the PMM-15835 status-report race ('Done (disabled)' never reported), and the spec's beforeAll then read agent IDs from shifted pmm-admin list columns ('(disabled)'), so T2529-T2541 failed too. Already covered by open pmm-qa#1778 (agent IDs from pmm-admin list --json plus a finally re-enable); the re-run was green (50 passed, job 133794781399). Deduped, not re-reproduced.",
+      "link": "https://github.com/percona/pmm-qa/pull/1778",
+      "by": "Investigator routine",
+      "at": "2026-11-17T03:53:57Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-17T02:52:21Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-11-17T02:52:21Z",
