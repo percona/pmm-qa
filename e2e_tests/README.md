@@ -118,8 +118,10 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ami-ovf-post-upgrade`
 - `@ami-ovf-pre-upgrade`
 - `@annotations`
+- `@bm-common`
 - `@bm-locations`
 - `@bm-mongo`
+- `@bm-mysql`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
