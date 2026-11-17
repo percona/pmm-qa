@@ -80,6 +80,10 @@ export default class StoredMetricsPage extends BasePage {
         .nth(columnNumber - 1),
     sortingValue: (columnNumber: number) => this.builders.sortControl(columnNumber).locator('span'),
     tab: (tabName: string) => this.grafanaIframe().getByRole('tab', { name: tabName }),
+    workloadRowStartingWith: (queryStart: string) =>
+      this.grafanaIframe()
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { name: new RegExp(`^${queryStart}`, 'i') }) }),
     workloadRowsWithoutText: (text: string) =>
       this.grafanaIframe().locator(workloadRows).filter({ hasNotText: text }),
   };
@@ -159,7 +163,9 @@ export default class StoredMetricsPage extends BasePage {
     filterBy: this.grafanaIframe().getByTestId('filters-search-field'),
     search: this.grafanaIframe().locator('input[name="search"]'),
   };
-  messages = {};
+  messages = {
+    notification: this.grafanaIframe().getByRole('alert').or(this.grafanaIframe().getByRole('status')),
+  };
 
   addColumn = async (columnName: string) => {
     await this.inputs.addColumn.fill(columnName, { timeout: Timeouts.THIRTY_SECONDS });
@@ -257,6 +263,31 @@ export default class StoredMetricsPage extends BasePage {
   hoverQueryInfo = async (rowNumber: number) => {
     await this.builders.queryInfoIcon(rowNumber).hover();
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openDetailsTab = async (tabName: 'Examples' | 'Explain' | 'Tables') => {
+    const {
+      classicExplainError,
+      codeBlock,
+      explainError,
+      noClassicExplain,
+      noExamples,
+      noJsonExplain,
+      noTable,
+    } = this.elements;
+
+    await this.builders.tab(tabName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(
+      codeBlock
+        .or(noExamples)
+        .or(noClassicExplain)
+        .or(noJsonExplain)
+        .or(explainError)
+        .or(classicExplainError)
+        .or(noTable)
+        .first(),
+    ).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
   openExamplesTab = async () => {
@@ -363,6 +394,12 @@ export default class StoredMetricsPage extends BasePage {
 
   selectRow = async (rowNumber: number) => {
     await this.builders.queryRow(rowNumber).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForLoad();
+    await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+  };
+
+  selectRowByQueryStart = async (queryStart: string) => {
+    await this.builders.workloadRowStartingWith(queryStart).click({ timeout: Timeouts.ONE_MINUTE });
     await this.waitForLoad();
     await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
   };

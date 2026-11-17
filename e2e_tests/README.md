@@ -128,6 +128,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-alerting`
 - `@fb-encryption`
 - `@fb-instances`
+- `@fb-pmm-ps-integration`
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`

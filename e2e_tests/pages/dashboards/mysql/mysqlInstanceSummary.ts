@@ -58,4 +58,19 @@ export default class MysqlInstanceSummary implements DashboardInterface {
     'Top Process States Hourly',
   ];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
+  remoteNoDataMetrics: string[] = [
+    ...this.noDataMetrics,
+    'Buffer Pool Size of Total RAM',
+    'System Uptime',
+    'Load Average',
+    'RAM',
+    'Memory Available',
+    'Virtual Memory',
+    'Disk Space',
+    'Min Space Available',
+    'CPU Usage',
+    'CPU Saturation and Max Core Usage',
+    'Disk I/O and Swap Activity',
+    'Network Traffic',
+  ];
 }
