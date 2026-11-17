@@ -3766,6 +3766,16 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/43987654904/job/133794784780",
       "by": "Investigator routine",
       "at": "2026-11-17T03:54:03Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "unstable",
+      "summary": "3.8.1 · PXC 8.4: PMM-T2222 (proxySql.spec.ts) didn't find 'timeout=4' in the container's pmm-agent log after a fixed 2 s sleep. It passed in the other 19 PXC lanes, 13/13 on a CHAOS VM with the 3.8.1 client (5 idle, 8 under full CPU load), and on the re-run (12 passed). A fixed sleep before a one-shot log grep is still a timing weakness worth replacing with polling.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/43987654904/job/133794786987",
+      "by": "Investigator routine",
+      "at": "2026-11-17T03:54:09Z"
     }
   ],
   "claims": [
