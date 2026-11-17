@@ -3756,6 +3756,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1778",
       "by": "Investigator routine",
       "at": "2026-11-17T03:53:57Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "unstable",
+      "summary": "3.10.0 · Percona Server 8.0: T2541 itself passed, but the spec file's afterAll (docker restart + relaunch pmm-agent) never got pmm-agent back on :7777 within 120 s, so all 21 perconaMySqlServer tests after it failed with 'connection refused'. The other 3.10.0 PS lanes passed, the CI artifact holds no in-container pmm-agent log to explain it, and the re-run passed 50/50 (2 skipped).",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/43987654904/job/133794784780",
+      "by": "Investigator routine",
+      "at": "2026-11-17T03:54:03Z"
     }
   ],
   "claims": [
