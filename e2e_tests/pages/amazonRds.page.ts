@@ -11,7 +11,7 @@ export default class AmazonRdsPage extends BasePage {
     oneInstanceConnected: '1 / 1',
     oneWriter: '1 writer',
     up: 'Up',
-    writer: 'writer',
+    writer: 'Writer',
   };
   builders = {
     expandGroupButton: (identifier: string) =>

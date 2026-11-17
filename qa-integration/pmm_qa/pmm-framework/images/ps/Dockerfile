@@ -28,7 +28,8 @@ RUN set -eux; \
     case $PS_VERSION in 8.4 | 9.*) percona-release enable "pxb-$v-lts" release ;; esac; \
     dnf install -y $pkgs systemd sudo sysbench qpress iproute openssl perl procps-ng findutils gzip tar; \
     dnf clean all; \
-    rm -rf /var/cache/dnf /var/lib/mysql/*; \
+    # Removed, not emptied: PMM's restore can rename only a datadir mysqld --initialize creates.
+    rm -rf /var/cache/dnf /var/lib/mysql; \
     systemctl disable mysqld; \
     # No telemetry from test containers, as in Percona's own images.
     if rpm -q percona-telemetry-agent; then systemctl disable percona-telemetry-agent; fi; \
