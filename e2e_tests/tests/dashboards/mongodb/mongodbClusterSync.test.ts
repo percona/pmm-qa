@@ -158,7 +158,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await pmmTest.step('Verify the replication pipeline row', async () => {
         await dashboard.verifyPanelValuesInView(clusterSync.pipelineMetrics);
 
-        for (const panelName of instances.flatMap(clusterSync.perWorkerPanels)) {
+        for (const panelName of instances.flatMap((instance) => clusterSync.perWorkerPanels(instance))) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeGreaterThan(0);
           expect(await dashboard.builders.panelLegendSeries(panelName).count()).toBeLessThanOrEqual(10);
@@ -258,7 +258,6 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
     'PMM-T2478 - Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, dashboard, page, pcsmHelper, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
-      const url = urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-15m' });
       const stopped = (await api.prometheusApi.getActiveClusterSyncInstance()).metric.service_name;
       const takeover = instances.find((instance) => instance !== stopped) as string;
       const leaseTerm = async () =>
@@ -270,8 +269,8 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           )?.[1],
         );
 
-      const reload = async () => {
-        await page.goto(url);
+      const reload = async (from = 'now-15m') => {
+        await page.goto(urlHelper.buildUrlWithParameters(clusterSync.url, { from }));
         await dashboard.loadAllPanels();
       };
 
@@ -280,9 +279,11 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       const termBefore = await leaseTerm();
       const transitionsBefore = await roleTransitions(takeover);
       let ordersBefore = 0;
+      let stoppedAt = 0;
 
       try {
         await pmmTest.step(`Stop PCSM on the ACTIVE instance ${stopped}`, async () => {
+          stoppedAt = Date.now();
           pcsmHelper.stop(stopped);
           ordersBefore = pcsmHelper.countTargetOrders();
         });
@@ -308,7 +309,8 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
         await pmmTest.step('Verify the sync panels follow the new ACTIVE instance', async () => {
           await expect(async () => {
-            await reload();
+            // From the stop on: with HANDOVER, every instance already charted these series before the failover.
+            await reload(String(stoppedAt));
             expect(
               clusterSync.convertToSeconds(await clusterSync.statText(dashboard, 'Replication Lag')),
             ).toBeLessThan(10);

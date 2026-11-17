@@ -118,6 +118,8 @@ preflight_run() {
   [[ $status -ne 0 && $output == *'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'* ]]
   preflight_run 'psmdb,SETUP_TYPE=sharding' 'pcsm,SOURCE=psmdb'
   [[ $status -ne 0 && $output == *'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'* ]]
+  preflight_run pcsm 'pcsm,SOURCE=psmdb' 'psmdb,SETUP_TYPE=pss'
+  [[ $status -ne 0 && $output == *'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'* ]]
 }
 
 @test "EXTERNAL and VALKEY each parallelize with other setups" {

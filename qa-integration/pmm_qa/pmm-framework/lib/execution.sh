@@ -18,6 +18,21 @@ preflight_database_setups() {
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
 
+    # SOURCE=psmdb syncs the replica set of a PSMDB setup, so it runs after one in this run.
+    # Checked for every PCSM spec, a second one included.
+    if [[ $DB_TYPE == PCSM ]]; then
+      pcsm_source=$(resolve_value PCSM SOURCE DB_CONFIG)
+      if [[ ${pcsm_source,,} == psmdb ]]; then
+        pcsm_from_psmdb=true
+        if [[ -n $psmdb_setup_type && $psmdb_setup_type != ps? ]]; then
+          die 'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'
+        fi
+        if [[ -n $psmdb_setup_type ]]; then
+          conflict='PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set)'
+        fi
+      fi
+    fi
+
     # Separate compose projects do not isolate PSMDB: both stacks pin
     # container_name rs101..rs203 and host port 27027.
     if [[ -v "seen_types[$DB_TYPE]" ]]; then
@@ -36,18 +51,6 @@ preflight_database_setups() {
       psmdb_setup_type=${psmdb_setup_type,,}
       if [[ $pcsm_from_psmdb == true ]]; then
         die 'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'
-      fi
-    # SOURCE=psmdb syncs the replica set of a PSMDB setup, so it runs after one in this run.
-    elif [[ $DB_TYPE == PCSM ]]; then
-      pcsm_source=$(resolve_value PCSM SOURCE DB_CONFIG)
-      if [[ ${pcsm_source,,} == psmdb ]]; then
-        pcsm_from_psmdb=true
-        if [[ -n $psmdb_setup_type && $psmdb_setup_type != ps? ]]; then
-          die 'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'
-        fi
-        if [[ -n $psmdb_setup_type ]]; then
-          conflict='PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set)'
-        fi
       fi
     elif [[ $DB_TYPE == PDPGSQL ]]; then
       setup_type=$(resolve_value PDPGSQL SETUP_TYPE DB_CONFIG)

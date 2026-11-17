@@ -821,7 +821,10 @@ recorded_config_dir() {
   grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
   ! grep -q '^exec pcsm-2 pcsm start$' "$DOCKER_CALLS" || false
   grep -q '^exec pcsm-1 sh -c pcsm status | jq -e ' "$DOCKER_CALLS"
-  grep -q '^exec --detach pcsm-src-1 mongo --quiet mongodb://root:root@127.0.0.1:27017/admin --eval .*while (true)' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec pcsm-src-1 sh -c [ -f /tmp/pcsm-workload.pid ] && kill "$(cat /tmp/pcsm-workload.pid)" 2>/dev/null; rm -f /tmp/pcsm-workload.pid' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec --detach pcsm-src-1 sh -c echo $$ >/tmp/pcsm-workload.pid; exec mongo --quiet "$0" --eval "$1" mongodb://root:root@127.0.0.1:27017/admin const orders = db.getSiblingDB("pcsm_qa").orders; while (true)' "$DOCKER_CALLS"
   ! grep -q 'pkill -x pcsm$' "$DOCKER_CALLS" || false
 }
 
@@ -834,7 +837,7 @@ recorded_config_dir() {
   parse_database_spec 'pcsm,INSTANCES=3,HANDOVER=true'
   dispatch_setup
 
-  mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 mongo .*while (true)/,$p' "$DOCKER_CALLS" |
+  mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 sh -c echo .*while (true)/,$p' "$DOCKER_CALLS" |
     grep -E '^(exec pcsm-[1-3] (pkill -x pcsm|pcsm reset|pcsm start)|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)|checkpoints\.findOne|dropDatabase' |
     sed -e 's/^exec -i pcsm-tgt-1 mongo .*checkpoints\.findOne.*/checkpoint/' -e 's/^exec -i pcsm-tgt-1 mongo .*dropDatabase.*/drop/')
   expected=(
@@ -881,6 +884,9 @@ recorded_config_dir() {
   parse_database_spec 'pcsm,NODES_COUNT=0'
   run dispatch_setup
   [[ $status -ne 0 && $output == *"Unsupported PCSM NODES_COUNT '0': use 1 to 3."* ]]
+  parse_database_spec 'pcsm,CLIENT_VERSION=pmm3-rc'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM installs PMM Client from a tarball (the pcsm image has no dnf): use a tarball CLIENT_VERSION, not 'pmm3-rc'."* ]]
   [[ ! -s $DOCKER_CALLS ]]
 }
 
@@ -899,7 +905,9 @@ recorded_config_dir() {
   ! grep -q -- '--cluster=rs-src' "$DOCKER_CALLS" || false
   grep -q -- '^exec pcsm-tgt-1 pmm-admin add mongodb .* --cluster=rs-tgt --replication-set=rs-tgt pcsm-tgt-1$' "$DOCKER_CALLS"
   grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
-  grep -Fq "exec --detach rs101 mongo --quiet $root_uri --eval const orders = db.getSiblingDB(\"pcsm_qa\").orders; while (true)" "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec rs101 sh -c [ -f /tmp/pcsm-workload.pid ] && kill "$(cat /tmp/pcsm-workload.pid)" 2>/dev/null; rm -f /tmp/pcsm-workload.pid' "$DOCKER_CALLS"
+  grep -Fq "exec --detach rs101 sh -c echo \$\$ >/tmp/pcsm-workload.pid; exec mongo --quiet \"\$0\" --eval \"\$1\" $root_uri const orders = db.getSiblingDB(\"pcsm_qa\").orders; while (true)" "$DOCKER_CALLS"
 }
 
 @test "PCSM with SOURCE=psmdb refuses a source it cannot sync before starting a container" {

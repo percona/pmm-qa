@@ -24,6 +24,8 @@ setup_pcsm() {
   if [[ $sync_source == psmdb && ( -v 'DB_CONFIG[SOURCE_VERSION]' || -n ${SOURCE_VERSION:-} ) ]]; then
     die "PCSM SOURCE_VERSION does not apply to SOURCE=psmdb, which syncs the PSMDB setup's version."
   fi
+  [[ $client == http* ]] ||
+    die "PCSM installs PMM Client from a tarball (the pcsm image has no dnf): use a tarball CLIENT_VERSION, not '$client'."
   pcsm_supported TARGET_VERSION "$target_version"
   [[ $nodes_count == [1-3] ]] || die "Unsupported PCSM NODES_COUNT '$nodes_count': use 1 to 3."
   [[ $instances == [1-3] ]] || die "Unsupported PCSM INSTANCES '$instances': use 1 to 3."
@@ -283,7 +285,11 @@ pcsm_take_lease() {
   done
 }
 
+# A retried SOURCE=psmdb setup reuses rs101, so the writer a failed attempt started is stopped first.
 pcsm_workload() {
-  must docker exec --detach "${src_nodes[0]}" mongo --quiet "$source_uri" --eval \
+  local pid=/tmp/pcsm-workload.pid
+  must docker exec "${src_nodes[0]}" sh -c "[ -f $pid ] && kill \"\$(cat $pid)\" 2>/dev/null; rm -f $pid"
+  # shellcheck disable=SC2016 # expanded by the container's shell
+  must docker exec --detach "${src_nodes[0]}" sh -c "echo \$\$ >$pid; exec mongo --quiet \"\$0\" --eval \"\$1\"" "$source_uri" \
     'const orders = db.getSiblingDB("pcsm_qa").orders; while (true) { orders.insertOne({ ts: new Date(), pad: "x".repeat(500) }); sleep(100); }'
 }
