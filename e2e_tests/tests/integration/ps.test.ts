@@ -155,7 +155,7 @@ pmmTest.describe(() => {
   });
 
   pmmTest(
-    'PMM-T2034 - Verify the same query on different tables for MySQL @fb-pmm-ps-integration',
+    'PMM-T2034 - Verify the same query on different tables for MySQL @pmm-ps-integration',
     async ({ clickHouseHelper, cliHelper, credentials, page, qanStoredMetrics, urlHelper }) => {
       const queryCount = qanStoredMetrics.builders.detailMetricValue('Query Count', 3);
 
@@ -200,7 +200,7 @@ pmmTest.describe(() => {
   );
 
   pmmTest(
-    'PMM-T2040 - Verify there is no error while clicking on Table or Examples or Explain @fb-pmm-ps-integration',
+    'PMM-T2040 - Verify there is no error while clicking on Table or Examples or Explain @pmm-ps-integration',
     async ({ clickHouseHelper, cliHelper, credentials, page, qanStoredMetrics, urlHelper }) => {
       clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
       cliHelper.queryMysql(
