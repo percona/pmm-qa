@@ -189605,16 +189605,18 @@
         "link": "https://github.com/percona/pmm-qa/actions/runs/43987654904/job/133794786987",
         "by": "Investigator routine",
         "at": "2026-11-17T03:54:09Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-17T02:52:21Z",
         "suites": [
           "Upgrade"
-        ]
+        ],
+        "verdict": "unstable",
+        "summary": "Upgrade 3.6.0 · UI: PMM-T2185 (RTA sort by Host) failed all 3 attempts because rs102's RTA session came back SESSION_STATUS_DOWN from sessions:start (rs101 RUNNING), so only rs101 'hello' queries arrived (trace network). pmm-managed logged no matching error. It passed in every other upgrade lane and on nights 106/107, and the re-run passed T2185 first try.",
+        "link": "https://github.com/percona/pmm-qa/actions/runs/43987654904/job/133794807907",
+        "by": "Investigator routine",
+        "at": "2026-11-17T03:54:15Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
