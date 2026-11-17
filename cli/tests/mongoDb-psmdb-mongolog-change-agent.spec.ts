@@ -298,10 +298,8 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains('agent configuration updated.');
     }
 
-    // The failed start's status reports can revert the valid credentials right after they are saved (PMM-15835): the
-    // mongolog agent then stays Done, and mongodb_exporter keeps Running with mongodb_up 0. Stored state cannot show it: the
-    // API never returns the password. Re-applying credentials that did stick restarts nothing, as pmm-agent skips agents
-    // whose parameters are unchanged.
+    // PMM-15835 can revert the valid credentials right after they are saved, leaving mongolog Done or mongodb_up 0;
+    // re-applying unchanged credentials restarts nothing.
     await expect(async () => {
       for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, `--username=${newUsername} --password=${newPassword}`)) {
         await (await cli.exec(command)).assertSuccess();
