@@ -48,6 +48,10 @@ export default class BackupInventoryPage extends BasePage {
     restore: this.grafanaIframe().getByTestId('restore-button'),
   };
   elements = {
+    backupErrors: this.grafanaIframe().getByTestId('backup-errors'),
+    backupErrorsReadMore: this.grafanaIframe()
+      .getByTestId('backup-errors')
+      .getByRole('link', { exact: true, name: 'Read more' }),
     backupModalError: this.grafanaIframe().getByTestId('backup-modal-error'),
     deleteMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     forceDeleteLabel: this.grafanaIframe().getByTestId('force-field-label'),
