@@ -136,7 +136,7 @@
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .b-done, .b-playwright { color: var(--pass); background: var(--pass-bg); }
-  .b-in-progress, .b-codeceptjs, .b-mixed { color: var(--warn); background: var(--warn-bg); }
+  .b-in-progress, .b-needs-decision, .b-codeceptjs, .b-mixed { color: var(--warn); background: var(--warn-bg); }
   .b-pending { color: var(--queue); background: var(--queue-bg); }
   .b-blocked-infra { color: var(--fail); background: var(--fail-bg); }
   .b-retired, .b-other { color: var(--idle); background: var(--idle-bg); }
@@ -218,6 +218,7 @@
 const STATUS = [
   ['done', 'Done', '--pass'], ['pending', 'Pending', '--queue'], ['in-progress', 'In progress', '--warn'],
   ['retired', 'Retired', '--retired'], ['blocked-infra', 'Blocked (infra)', '--fail'],
+  ['needs-decision', 'Needs decision', '--warn'],
 ];
 const FW = { playwright: 'Playwright', codeceptjs: 'CodeceptJS', mixed: 'CodeceptJS + Playwright', other: 'No CodeceptJS' };
 const REPO = 'https://github.com/percona/pmm-qa';
@@ -266,7 +267,7 @@ function render(d) {
 
   $('kpis').innerHTML = [
     ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope`],
-    ['Test files left', count('pending') + count('in-progress') + count('blocked-infra'), `${count('pending') + count('in-progress')} in the queue, ${count('blocked-infra')} blocked on infra`],
+    ['Test files left', count('pending') + count('in-progress') + count('blocked-infra') + count('needs-decision'), `${count('pending') + count('in-progress')} in the queue, ${count('needs-decision')} awaiting a decision, ${count('blocked-infra')} blocked on infra`],
     ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files`],
     ['Nightly jobs on CodeceptJS', `${ccJobs.length}<small> / ${d.jobs.length}</small>`, 'jobs whose grep still selects a CodeceptJS test'],
   ].map(([l, v, s]) => `<div class="panel kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
@@ -425,7 +426,7 @@ function showFile(f) {
 }
 
 function renderFiles(files) {
-  const tabs = [['pending', 'Queue'], ['done', 'Migrated'], ['blocked-infra', 'Blocked'], ['retired', 'Retired'], ['all', 'All']];
+  const tabs = [['pending', 'Queue'], ['done', 'Migrated'], ['needs-decision', 'To decide'], ['blocked-infra', 'Blocked'], ['retired', 'Retired'], ['all', 'All']];
   let tab = 'pending', page = 0;
   const tEl = $('fileTabs');
   const n = (k) => (k === 'all' ? files.length : k === 'pending' ? files.filter((f) => f.status === 'pending' || f.status === 'in-progress').length : files.filter((f) => f.status === k).length);
