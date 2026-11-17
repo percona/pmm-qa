@@ -1132,7 +1132,7 @@ module.exports = {
     reportTitle: locate('$header-container').inside(locate('[class*="panel-container"]')),
     reportTitleWithNA: locate('$header-container').inside(
       locate('[class*="panel-container"]').withDescendant(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+        '//*[(text()="No data") or starts-with(text(), "No data.") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
       ),
     ),
     reportTitleWithNoData: locate('$header-container').inside(
