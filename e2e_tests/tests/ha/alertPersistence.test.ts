@@ -13,7 +13,8 @@ const alertRule = {
   name: `PMM-T2135 node high CPU load ${suffix}`,
   pendingPeriod: '60s',
   templateName: 'pmm_node_high_cpu_load',
-  threshold: 1,
+  // The node of the client on the Jenkins agent idles at about 0.5% CPU once setup load ends.
+  threshold: 0,
 };
 const monitoredNodesQuery = 'count by (node_name) (node_cpu_seconds_total)';
 const alertingNodeNames = (rule?: AlertRule): string[] =>

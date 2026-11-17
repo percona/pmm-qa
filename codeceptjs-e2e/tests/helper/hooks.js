@@ -85,7 +85,7 @@ module.exports = function pmmGrafanaIframeHook() {
   const helper = container.helpers('Playwright');
   const navigationMethods = ['amOnPage', 'refreshPage', 'openNewTab', 'switchToNextTab', 'switchToPreviousTab'];
   const noIframeMethods = ['openNewTab'];
-  const noIframeUrls = ['login', 'logout', 'help', 'updates', '/pmm-ui/settings', 'pmm-ui/alerting'];
+  const noIframeUrls = ['login', 'logout', 'help', 'updates', '/pmm-ui/settings', 'pmm-ui/alerting', '/pmm-ui/inventory'];
 
   navigationMethods.forEach((methodName) => {
     applyOverride(helper, methodName, async function (original, ...args) {
@@ -94,7 +94,7 @@ module.exports = function pmmGrafanaIframeHook() {
 
       const currentUrl = helper.page && helper.page.url ? helper.page.url() : '';
 
-      if (currentUrl.includes('/pmm-ui/settings') || currentUrl.includes('/pmm-ui/alerting')) return;
+      if (['/pmm-ui/settings', '/pmm-ui/alerting', '/pmm-ui/inventory'].some((url) => currentUrl.includes(url))) return;
 
       if (methodName === 'amOnPage' && noIframeUrls.some((url) => args[0].includes(url))) return;
 
@@ -143,6 +143,13 @@ module.exports = function pmmGrafanaIframeHook() {
     await original.call(this, key);
   });
   applyOverride(helper, 'switchTo', async function (original, locator) {
+    // usePlaywrightTo inside the Grafana iframe leaves the frame as the helper's page
+    if (!locator && helper.browserContext) {
+      const pages = helper.browserContext.pages();
+
+      if (pages.length > 0) [helper.page] = pages;
+    }
+
     await original.apply(this, [locator]);
 
     if (!locator) {

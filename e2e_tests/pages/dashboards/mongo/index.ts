@@ -4,6 +4,7 @@ import MongodbCollectionsOverview from './mongodbCollectionsOverview';
 import MongodbClusterSyncDetails from './mongodbClusterSyncDetails';
 import MongodbInstanceSummary from './mongodbInstanceSummary';
 import MongodbInstancesCompare from './mongodbInstancesCompare';
+import MongodbInstancesOverview from './mongodbInstancesOverview';
 import MongodbOplogDetails from './mongodbOplogDetails';
 import MongodbUnusedIndexes from './mongodbUnusedIndexes';
 import MongodbRouterSummaryDashboard from '@pages/dashboards/mongo/mongodbRouterSummary';
@@ -15,6 +16,7 @@ export const MongoDashboards = {
   clusterSyncDetails: new MongodbClusterSyncDetails(),
   collectionsOverview: new MongodbCollectionsOverview(),
   instancesCompare: new MongodbInstancesCompare(),
+  instancesOverview: new MongodbInstancesOverview(),
   instanceSummary: new MongodbInstanceSummary(),
   oplogDetails: new MongodbOplogDetails(),
   replSetSummary: new MongodbReplSetSummary(),

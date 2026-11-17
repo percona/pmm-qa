@@ -1,58 +1,56 @@
 import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
 import { Timeouts } from '@helpers/timeouts';
+import { tableDataRows } from '@helpers/tableLocators';
 import { expect } from '@playwright/test';
 
 export default class ServicesPage extends BasePage {
-  readonly url = 'graph/inventory/services';
-  readonly pagination = new InventoryPagination(this.grafanaIframe());
+  readonly url = 'pmm-ui/inventory/services';
+  readonly pagination = new InventoryPagination(this.page);
   builders = {
     addressByServiceName: (serviceName: string) =>
-      this.grafanaIframe().getByRole('row', { name: serviceName }).getByRole('cell').nth(5),
-    hideServiceDetails: (serviceName: string) =>
-      this.builders.serviceRow(serviceName).getByTestId('hide-row-details'),
+      this.builders.serviceRow(serviceName).locator('td:nth-child(7)'),
     monitoringStatusByServiceName: (serviceName: string) =>
-      this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
+      this.builders.serviceRow(serviceName).getByTestId('monitoring-status-link'),
     selectServiceCheckbox: (serviceName: string) =>
-      this.builders.serviceRow(serviceName).getByTestId('select-row').locator('span'),
-    serviceDetailsLabel: (label: string) =>
-      this.grafanaIframe()
-        .getByTestId('details-row-content')
-        .getByRole('listitem')
-        .filter({ hasText: label }),
-    serviceNameCell: (serviceName: string) => this.grafanaIframe().locator(`td[title="${serviceName}"]`),
+      this.builders.serviceRow(serviceName).getByRole('checkbox', { name: 'Toggle select row' }),
+    serviceDetailsLabel: (label: string) => this.elements.serviceDetails.getByText(label, { exact: true }),
+    // Material React Table names the button "Expand" whether the row is expanded or not
+    serviceDetailsToggle: (serviceName: string) =>
+      this.builders.serviceRow(serviceName).getByRole('button', { exact: true, name: 'Expand' }),
+    serviceNameCell: (serviceName: string) =>
+      this.builders.serviceRow(serviceName).locator('td:nth-child(4)'),
     serviceRow: (serviceName: string) =>
-      this.elements.serviceRows.filter({ has: this.page.getByTitle(serviceName, { exact: true }) }),
+      this.elements.serviceRows.filter({
+        has: this.page.locator('td:nth-child(4)').getByText(serviceName, { exact: true }),
+      }),
     serviceRowActions: (serviceName: string) =>
-      this.builders.serviceRow(serviceName).getByTestId('dropdown-menu-toggle'),
-    showServiceDetails: (serviceName: string) =>
-      this.builders.serviceRow(serviceName).getByTestId('show-row-details'),
+      this.builders.serviceRow(serviceName).getByRole('button', { name: 'Row Actions' }),
     statusByServiceName: (serviceName: string) =>
-      this.grafanaIframe()
-        .getByRole('row', { name: serviceName })
-        .getByTitle(/^STATUS_/),
+      this.builders.serviceRow(serviceName).getByTestId('status-chip'),
   };
   buttons = {
-    addService: this.grafanaIframe().getByRole('button', { name: 'Add Service' }),
-    confirmDelete: this.grafanaIframe().getByTestId('delete-services-confirm'),
-    confirmLabelsChange: this.grafanaIframe().getByRole('button', { name: 'Confirm and save changes' }),
-    delete: this.grafanaIframe().getByRole('button', { exact: true, name: 'Delete' }),
-    editService: this.grafanaIframe().getByTestId('dropdown-button').filter({ hasText: 'Edit' }),
-    forceDelete: this.grafanaIframe().getByRole('dialog').getByText('Force mode', { exact: true }),
-    saveChanges: this.grafanaIframe().getByTestId('edit-instance-submit'),
+    addService: this.page.getByTestId('add-service-button'),
+    confirmDelete: this.page.getByTestId('inventory-delete-modal-confirm'),
+    confirmLabelsChange: this.page.getByTestId('confirm-changes-modal-confirm'),
+    delete: this.page.getByTestId('delete-services-button'),
+    editService: this.page.getByRole('menuitem', { name: 'Edit' }),
+    forceDelete: this.page.getByRole('checkbox', { name: 'Force mode' }),
+    saveChanges: this.page.getByTestId('edit-service-submit'),
   };
   elements = {
-    serviceNames: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr').locator('xpath=td[3]'),
-    serviceRows: this.grafanaIframe().locator('tbody').getByTestId('table-tbody-tr'),
-    unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
+    serviceDetails: this.page.getByTestId('service-details'),
+    serviceNames: this.page.locator(tableDataRows).locator('td:nth-child(4)'),
+    serviceRows: this.page.locator(tableDataRows),
+    unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {
-    cluster: this.grafanaIframe().getByTestId('cluster-text-input'),
-    environment: this.grafanaIframe().getByTestId('environment-text-input'),
-    replicationSet: this.grafanaIframe().getByTestId('replication_set-text-input'),
+    cluster: this.page.getByRole('textbox', { name: 'Cluster' }),
+    environment: this.page.getByRole('textbox', { name: 'Environment' }),
+    replicationSet: this.page.getByRole('textbox', { name: 'Replication set' }),
   };
   messages = {
-    deleteConfirmation: this.grafanaIframe().getByTestId('delete-services-description'),
+    deleteConfirmation: this.page.getByTestId('inventory-delete-modal-message'),
   };
 
   deleteService = async (serviceName: string, force: boolean) => {
@@ -96,7 +94,7 @@ export default class ServicesPage extends BasePage {
     ]);
 
   verifyServiceLabels = async (serviceName: string, labels: string[]) => {
-    await this.builders.showServiceDetails(serviceName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders.serviceDetailsToggle(serviceName).click({ timeout: Timeouts.THIRTY_SECONDS });
 
     for (const label of labels) {
       await expect(this.builders.serviceDetailsLabel(label)).toBeVisible({
@@ -104,7 +102,7 @@ export default class ServicesPage extends BasePage {
       });
     }
 
-    await this.builders.hideServiceDetails(serviceName).click();
+    await this.builders.serviceDetailsToggle(serviceName).click();
   };
 
   verifyServiceListedOnce = async (serviceName: string): Promise<void> => {

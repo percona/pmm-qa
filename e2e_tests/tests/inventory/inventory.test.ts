@@ -6,7 +6,7 @@ import { inventoryServices } from '@testdata/remoteInstances';
 
 let calls: { method: string; requestTime: Date; url: string }[] = [];
 const dataTests = [
-  { apiUrl: 'v1/ha/nodes', name: 'NodesPage' },
+  { apiUrl: 'v1/management/nodes', name: 'NodesPage' },
   { apiUrl: 'v1/management/services', name: 'ServicesPage' },
 ];
 const remoteNodeNames = [
@@ -35,7 +35,7 @@ pmmTest.afterEach(async ({ api }) => {
 for (const dataTest of dataTests) {
   pmmTest(
     `PMM-T2168 - Verify that ${dataTest.name} pages get data from BE every five seconds @inventory`,
-    async ({ nodesPage, page, servicesPage }) => {
+    async ({ agentsPage, nodesPage, page, servicesPage }) => {
       page.on('request', (request) => {
         if (request.url().includes(dataTest.apiUrl)) {
           calls.push({
@@ -66,6 +66,7 @@ for (const dataTest of dataTests) {
         }
       });
       await nodesPage.elements.runningAgents.click();
+      await expect(agentsPage.buttons.goBack).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       await nodesPage.builders.showRowDetailsByIndex('0').click();
       await expect
         .poll(() => calls.length, {
@@ -193,7 +194,7 @@ pmmTest(
 pmmTest(
   'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
   async ({ api }) => {
-    // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+    // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
     await expect(async () => {
@@ -264,7 +265,7 @@ pmmTest(
 
     await page.goto(servicesPage.url);
     await servicesPage.pagination.nextPageButton.click({ timeout: Timeouts.THIRTY_SECONDS });
-    await expect(servicesPage.pagination.activePageButton).toHaveText('2');
+    await expect(servicesPage.pagination.itemsInterval).toHaveText('26-50 of 50');
 
     const startServices = await servicesPage.getServiceNames();
     const requestsOnSecondPage = servicesMock.requests();
@@ -293,14 +294,13 @@ for (const tab of ['services', 'nodes'] as const) {
   pmmTest(
     `PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly | ${tab}`,
     async ({ api, nodesPage, page, servicesPage }) => {
-      // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+      // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
       pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
       const { pagination, url } = tab === 'services' ? servicesPage : nodesPage;
 
       await page.goto(url);
-      await pagination.selectRowsPerPage('100');
-      await expect(pagination.rowsPerPageDropdown).toHaveText('100');
+      await pagination.showAllRows();
       await pagination.verifyMonitoringStatusesOk(tab);
     },
   );

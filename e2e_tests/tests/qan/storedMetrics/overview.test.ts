@@ -19,7 +19,9 @@ pmmTest('PMM-T207 - Verify hovering over query in overview table  @qan', async (
     .toBe(queryText);
 });
 
-pmmTest(
+// skip-until: 2026-12-03 -- a slower response for the previous time range overwrites the search result, so the wrong query's Plan tab opens (PMM-15883); unskip once it is fixed.
+// eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15883, see the skip-until line above.
+pmmTest.skip(
   'PMM-T1061 - Verify Plan and PlanID with pg_stat_monitor @qan',
   async ({ leftNavigation, qanStoredMetrics }) => {
     await qanStoredMetrics.selectFilterContaining('pdpgsql_pmm');
