@@ -3777,6 +3777,16 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15794",
       "by": "Investigator routine",
       "at": "2026-11-18T23:10:41Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "product bug",
+      "summary": "compat client 3.7.1: PMM Server (3-dev-latest) missed pmm3-aws-staging-start's 100 s readyz budget on a slow EC2 instance (image pull 129 s against 35-45 s on its siblings). After Grafana's slow first start, pmm-managed restarted Grafana 'to apply alert rule changes' it had already loaded 26 s earlier (the PMM-14956 startup restart in managed/services/alerting/provisioning.go), which pushed readiness past the budget. Without that restart readyz would have been 200 about 7 s before the deadline. Reproduced the redundant restart on a CHAOS VM (8-17 s each time); the faithful re-run #1450 passed. The budget should not be raised.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15944",
+      "by": "Investigator routine",
+      "at": "2026-11-18T23:31:24Z"
     }
   ],
   "claims": [
@@ -3785,13 +3795,6 @@
       "at": "2026-11-18T21:58:08Z",
       "suites": [
         "Nightly"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-18T21:58:08Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
