@@ -5,7 +5,19 @@ import BasePage from '@pages/base.page';
 
 export default class HomeDashboard extends BasePage implements DashboardInterface {
   url = 'graph/d/pmm-home/home-dashboard';
-  noDataMetrics: string[] = [];
+  // Anomaly and previous-week panels need a week of history.
+  noDataMetrics: string[] = [
+    'CPU Anomaly',
+    'Disk Queue Anomaly',
+    'Read Latency Anomaly',
+    'Top 20 CPU Usage (prev week)',
+    'Top 20 Disk Queue  (prev week)',
+    'Top 20 Read Latency (prev week)',
+    'Top 20 Used Memory  (prev week)',
+    'Top 20 Write Latency  (prev week)',
+    'Used Memory Anomaly',
+    'Write Latency Anomaly',
+  ];
   builders = {};
   buttons = {};
   elements: Record<string, Locator>;

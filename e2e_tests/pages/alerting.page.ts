@@ -25,6 +25,11 @@ export default class AlertingPage extends BasePage {
         .filter({ hasText: text }),
     alertRow: (alertName: string) => this.page.getByRole('row').filter({ hasText: alertName }),
     columnHeader: (header: string) => this.page.getByRole('columnheader', { name: header }),
+    contactPointEdit: (name: string) =>
+      this.grafanaIframe()
+        .getByTestId('contact-point')
+        .filter({ has: this.page.getByText(name, { exact: true }) })
+        .getByTestId('edit-action'),
     createRuleFromTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('create-from-template-button'),
     deleteTemplate: (templateName: string) =>
@@ -108,6 +113,7 @@ export default class AlertingPage extends BasePage {
       'data-testid alert-rule new-evaluation-group-button',
     ),
     newSilence: this.grafanaIframe().getByRole('link', { name: /^(add|create) silence$/i }),
+    optionalWebhookSettings: this.grafanaIframe().getByText('Optional Webhook settings', { exact: true }),
     runQueries: this.grafanaIframe().getByRole('button', { exact: true, name: 'Run queries' }),
     save: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save' }),
     saveRule: this.grafanaIframe().getByTestId('save-rule'),
@@ -124,6 +130,11 @@ export default class AlertingPage extends BasePage {
   };
   elements = {
     alertingDisabled: this.page.getByTestId('empty-block-card'),
+    contactPointUrl: this.grafanaIframe().getByRole('textbox', { exact: true, name: 'URL' }),
+    // A stored secret shows as a disabled field with the value "configured", never the secret itself.
+    contactPointWebhookPassword: this.grafanaIframe().getByLabel('HTTP Basic Authentication - Password', {
+      exact: true,
+    }),
     dataSourcePicker: this.grafanaIframe().getByTestId('data-testid Data source picker select container'),
     deleteModalMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     dialog: this.grafanaIframe().getByRole('dialog'),
@@ -160,6 +171,7 @@ export default class AlertingPage extends BasePage {
     threshold: this.grafanaIframe().locator('input[name="threshold"]'),
   };
   messages = {
+    contactPointFetchFailed: this.grafanaIframe().getByText('Failed to fetch contact point'),
     popUp: this.grafanaIframe()
       .getByRole('status')
       .or(this.grafanaIframe().getByRole('alert'))

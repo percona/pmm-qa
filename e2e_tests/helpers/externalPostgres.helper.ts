@@ -14,6 +14,14 @@ const sslConfig = 'testdata/external-pgsql-ssl-config.cnf';
 export default class ExternalPostgresHelper {
   constructor(private readonly cliHelper: CliHelper) {}
 
+  // Runs SQL as the postgres superuser in the grafana database of the container.
+  psql = (postgresContainer: string, sql: string) =>
+    this.cliHelper
+      .execSilent(
+        `docker exec ${postgresContainer} psql -U postgres -d grafana -v ON_ERROR_STOP=1 -c "${sql}"`,
+      )
+      .assertSuccess();
+
   removeAll = () => {
     for (const container of [
       'external-postgres',
@@ -61,7 +69,7 @@ export default class ExternalPostgresHelper {
       .toBe('healthy');
   };
 
-  startPostgres = async (postgresContainer: string, ssl: boolean) => {
+  startPostgres = async (postgresContainer: string, ssl: boolean, password = 'pmm_password') => {
     this.cliHelper.execSilent('docker network create pmm-qa || true');
     this.cliHelper
       .execSilent(`mkdir -p ${workDir} && sudo install -d -o 26 -g 26 -m 0700 ${dataDir}`)
@@ -91,7 +99,7 @@ export default class ExternalPostgresHelper {
     this.cliHelper
       .execute(
         `docker run -d --name ${postgresContainer} --restart always --network=pmm-qa
-          -e POSTGRES_PASSWORD=pmm_password -e POSTGRES_DB=grafana
+          -e POSTGRES_PASSWORD=${password} -e POSTGRES_DB=grafana
           -v ${dataDir}:/var/lib/postgresql/data
           ${ssl ? `-v ${sslDir}:/var/lib/postgresql/ssl` : ''}
           ${postgresImage} postgres

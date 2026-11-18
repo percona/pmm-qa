@@ -9,6 +9,7 @@ import AccessControlHelper from '@helpers/accessControl.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
+import CredentialsFilesHelper from '@helpers/credentialsFiles.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -78,6 +79,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
+  credentialsFilesHelper: CredentialsFilesHelper;
   externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
@@ -163,6 +165,8 @@ const pmmTest = base.extend<{
 
     await use(credentials);
   },
+  credentialsFilesHelper: async ({ cliHelper, dockerHelper }, use) =>
+    await use(new CredentialsFilesHelper(cliHelper, dockerHelper)),
   dashboard: async ({ page }, use) => {
     const dashboardPage = new Dashboard(page);
 
