@@ -11,7 +11,8 @@ export type DropdownName =
   | 'Node Namegroup'
   | 'Cluster'
   | 'Node'
-  | 'Replication Set';
+  | 'Replication Set'
+  | 'Namespace';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
@@ -53,7 +54,8 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
+    // The wrapper's centre lands on its label when the selected value is short, which does not open the menu.
+    await combobox.click({ timeout: Timeouts.THIRTY_SECONDS });
 
     const options = frame.getByRole('option');
 
