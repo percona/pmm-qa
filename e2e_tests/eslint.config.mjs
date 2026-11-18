@@ -294,6 +294,8 @@ export default defineConfig([
             'verifyRTAAgentStatus',
             'verifyAllMenuItems',
             'verifyHaNodeRoles',
+            'verifyLeaderPmmInstance',
+            'verifyPodRoles',
             'verifyUiRenders',
             'verifyHaEnabled',
             'verifyServicesReportAgain',
