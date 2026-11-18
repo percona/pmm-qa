@@ -1,4 +1,4 @@
-import { AccessUserScenario } from '../../interfaces/accessControl';
+import { AccessServiceType, AccessUserScenario } from '../../interfaces/accessControl';
 import { GrafanaPanel } from '../../interfaces/grafanaPanel';
 
 export const dashboardTimeRange = 'now-1h';
@@ -55,3 +55,14 @@ export const accessControlScenarios: AccessUserScenario[] = [
     username: 'mongo',
   },
 ];
+
+const scenarioFor = (serviceType: AccessServiceType): AccessUserScenario => {
+  const scenario = accessControlScenarios.find((candidate) => candidate.serviceType === serviceType);
+
+  if (!scenario) throw new Error(`No access control scenario for ${serviceType}`);
+
+  return scenario;
+};
+
+export const mysqlScenario = scenarioFor('mysql');
+export const postgresScenario = scenarioFor('postgresql');

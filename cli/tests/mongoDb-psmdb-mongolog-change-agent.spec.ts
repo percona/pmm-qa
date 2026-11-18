@@ -370,11 +370,14 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains(`- changed authentication mechanism to ${authMechanism}`);
     }
 
-    for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--authentication-mechanism= --skip-connection-check')) {
-      await (await cli.exec(command)).assertSuccess();
-    }
+    // PMM-15835 can revert the reset right after it is saved, leaving the exporter on SCRAM-SHA-256 with mongodb_up 0.
+    await expect(async () => {
+      for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--authentication-mechanism= --skip-connection-check')) {
+        await (await cli.exec(command)).assertSuccess();
+      }
 
-    await mongo.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
+      await mongo.expectMongoUp(containerName, serviceName, agentPassword, 20_000);
+    }).toPass({ intervals: [5_000], timeout: 75_000 });
   });
 
   test('PMM-T2447 - Verify Change agent pmm-agent listen port for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
