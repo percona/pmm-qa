@@ -278,6 +278,16 @@ pmmTest.describe('PMM Server credentials from files', () => {
 
       const upgradeArgs = '-e GF_SECURITY_ADMIN_PASSWORD=UpgCanary1 -e GF_SECURITY_SECRET_KEY=UpgKeyCanary1';
       const authHeader = GrafanaHelper.getAuthHeader('admin', 'UpgCanary1');
+      const queryMinutes = (from: number, to: number) =>
+        clickHouseHelper
+          .query(
+            credentialsServer.container,
+            `SELECT DISTINCT toUnixTimestamp(toStartOfMinute(period_start)) AS minute FROM pmm.metrics
+              WHERE service_name = '${mysqlServiceName}' AND period_start >= toDateTime(${from})
+              AND period_start < toDateTime(${to}) ORDER BY minute`,
+          )
+          .getStdOutLines()
+          .map(Number);
 
       await pmmTest.step('Start PMM Server 3.10.0 with MySQL and a webhook contact point', async () => {
         await credentialsFilesHelper.startPmmServer(upgradeArgs, previousImage);
@@ -296,8 +306,20 @@ pmmTest.describe('PMM Server credentials from files', () => {
         expect(response.status(), await response.text()).toEqual(202);
       });
 
-      // QAN buckets are whole minutes; the check below starts two minutes before the upgrade.
-      const checkFrom = Math.floor(Date.now() / 60_000) * 60 - 120;
+      // QAN stores one-minute buckets. The gap check starts at the last minute with queries before the upgrade.
+      const checkFrom = await pmmTest.step(
+        'Wait for queries of the MySQL service before the upgrade',
+        async () => {
+          await expect
+            .poll(() => queryMinutes(0, 4_000_000_000).length, {
+              intervals: [Timeouts.TEN_SECONDS],
+              timeout: Timeouts.FIVE_MINUTES,
+            })
+            .toBeGreaterThan(1);
+
+          return queryMinutes(0, 4_000_000_000).at(-1) as number;
+        },
+      );
 
       await pmmTest.step('Replace the image on the same volume with the same variables', async () => {
         credentialsFilesHelper.stopPmmServer();
@@ -352,20 +374,11 @@ pmmTest.describe('PMM Server credentials from files', () => {
       );
 
       const checkTo = Math.floor(Date.now() / 60_000) * 60 - 120;
-      const minutesWithQueries = Number(
-        clickHouseHelper
-          .query(
-            credentialsServer.container,
-            `SELECT count(DISTINCT toStartOfMinute(period_start)) FROM pmm.metrics
-              WHERE service_name = '${mysqlServiceName}'
-              AND period_start >= toDateTime(${checkFrom}) AND period_start < toDateTime(${checkTo})`,
-          )
-          .stdout.trim(),
-      );
 
-      expect(minutesWithQueries, 'Every minute across the upgrade should have queries, with no gap').toEqual(
-        (checkTo - checkFrom) / 60,
-      );
+      expect(
+        queryMinutes(checkFrom, checkTo),
+        'Every minute across the upgrade should have queries, with no gap',
+      ).toEqual(Array.from({ length: (checkTo - checkFrom) / 60 }, (_, index) => checkFrom + index * 60));
 
       for (const value of ['UpgCanary1', 'UpgKeyCanary1']) {
         expect(
