@@ -3787,15 +3787,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15944",
       "by": "Investigator routine",
       "at": "2026-11-18T23:31:24Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-18T21:58:08Z",
       "suites": [
         "Nightly"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "nightly ha: the EKS PMM HA server was healthy at 20:03-20:06 (pods Ready, /ping and settings PUT 200), but the GitHub jobs sat queued about 18 min, and from 20:24 to 20:28 every shard's readiness check got /v1/server/readyz 500, so no tests ran. No server-side logs survived: the readiness step skips the log download, and cleanup deleted the cluster, so the cause can't be shown (spot nodegroup, PG pods rolled at 20:02, a pg backup pod in Error are unproven candidates). The faithful re-run #1451 stayed readyz 200 for 30+ min past install and its GitHub run passed 5/5 jobs with tests executed. Suggest saving the readyz body and logs.zip when that step fails.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/44416129188",
+      "by": "Investigator routine",
+      "at": "2026-11-18T23:32:53Z"
     }
-  ]
+  ],
+  "claims": []
 }
