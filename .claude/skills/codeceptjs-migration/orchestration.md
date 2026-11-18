@@ -31,6 +31,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `chaos-pmm.sh down` runs there. Then stop and hand the user the exact command; never reword it to get past the classifier.
 - Unattended, the parent runs step 7's `migration.sh publish` itself after `FINAL_REVIEW_PASS`; the runner returns once the publish branch is committed. Never re-run a command a subagent was refused: stop and report it.
 - Link every migration PR to the session. Attended, call `mcp__ccd_pr__bind_pr` (load it through `ToolSearch`); a scheduled session refuses it, and the cleanup switch to the publish branch links it instead. The report puts the PR URL first either way.
+- Subscribe to every migration PR the moment it opens, attended or scheduled: `mcp__claude-code-remote__subscribe_pr_activity` with owner `percona`, repo `pmm-qa` and the PR number. Load it through `ToolSearch` when deferred. Then read the PR's check runs and open review threads and work them (`SKILL.md` Review comments). A run ends subscribed: a PR nobody watches leaves its CI failures and review comments unanswered. A resumed run that addresses a PR's review subscribes first.
 - Each subagent appends its row to the timeline before returning. `.claude/hooks/migration-phase-observe.sh` fires at subagent launch, not completion, so treat it as a reminder; batch `skill-gardener` capture passes to the end of the migration while any subagent is live. Do not rely on the `PostToolUse`/`Skill` hook, which fires as soon as an inline skill loads.
 
 **Gates**
@@ -202,7 +203,7 @@ pending
 -> retire source + commit workflow coverage, there
 -> final review, over the publish branch
 -> revalidate in that worktree
--> push, PR opened
+-> push, PR opened, session subscribed to its activity
 -> tracker done on control, restore control's worktree clean
 -> tear down the CHAOS VM, the playwright-cli session and the publish worktree
 ```
