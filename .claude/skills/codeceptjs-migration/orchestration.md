@@ -60,18 +60,16 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 ## 1. Select and prepare
 
-Sync control first. A runner host's clone outlives its sessions, so its local `CodeceptJS-migration` can be weeks behind origin, or carry an unpushed commit from a session that was released mid-row:
+Sync control first. A runner host's clone outlives its sessions, so a local `CodeceptJS-migration` can be weeks behind origin, or carry an unpushed commit from a session that was released mid-row. Never check out the local branch as it stands; recreate it from origin:
 
 ```bash
 git fetch origin CodeceptJS-migration main
-git switch CodeceptJS-migration
+git log --oneline origin/CodeceptJS-migration..CodeceptJS-migration 2>/dev/null
+git switch -C CodeceptJS-migration origin/CodeceptJS-migration
 git branch -u origin/CodeceptJS-migration
-git log --oneline origin/CodeceptJS-migration..HEAD
-git branch -f "stale/CodeceptJS-migration-$(date +%m%d%H%M)" HEAD   # only when the log printed commits
-git reset --hard origin/CodeceptJS-migration
 ```
 
-Origin is authoritative: every control commit is pushed as soon as it is made, so an unpushed one belongs to a released session. Name any commits the log printed, and their `stale/` branch, in the run's report. `migration.sh preflight` stops on a control that is behind or ahead of origin.
+Origin is authoritative: every control commit is pushed as soon as it is made, so a commit the log printed belongs to a released session and is discarded. The next run usually lands on another runner, so keeping it on a local ref saves it for nobody: name each one (SHA and subject) in the run's report instead. `migration.sh preflight` stops on a control that is behind or ahead of origin.
 
 Four preflight checks on control, before the `origin/main` merge and the `in-progress` commit. Stop and name the one that tripped:
 
