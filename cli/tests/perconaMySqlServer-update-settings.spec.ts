@@ -58,10 +58,10 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
     expect(pmmAdmin.getSettingValue(limited, '--disable-tablestats-limit')).toEqual('500');
     expect((await pmmApi.getServerAgent(exporterId)).tablestats_group_table_limit, 'Tablestats limit is not changed on PMM Server').toEqual(500);
 
-    const dsn = await pmmAdmin.updateServiceOk(containerName, 'mysql', `${serviceName} --extra-dsn-params=timeout=5s`);
-    expect(pmmAdmin.getChangedSettings(dsn)).toEqual(['--extra-dsn-params=timeout=5s (was empty)']);
+    const dsn = await pmmAdmin.updateServiceOk(containerName, 'mysql', `${serviceName} --extra-dsn-params=allowCleartextPasswords=true`);
+    expect(pmmAdmin.getChangedSettings(dsn)).toEqual(['--extra-dsn-params=allowCleartextPasswords=true (was empty)']);
     const cleared = await pmmAdmin.updateServiceOk(containerName, 'mysql', `${serviceName} --extra-dsn-params=`);
-    expect(pmmAdmin.getChangedSettings(cleared)).toEqual(['--extra-dsn-params= (was timeout=5s)']);
+    expect(pmmAdmin.getChangedSettings(cleared)).toEqual(['--extra-dsn-params= (was allowCleartextPasswords=true)']);
 
     expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
     await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
