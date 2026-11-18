@@ -118,6 +118,14 @@ export default class RemoteInstanceApi {
     }
   };
 
+  ensureRemoteInstance = async (serviceName: string, remoteInstance: AddRemoteInstance) => {
+    const { services } = await new InventoryApi(this.request).getServices();
+
+    if (services.some(({ service_name }) => service_name === serviceName)) return;
+
+    await this.addRemoteInstance(remoteInstance);
+  };
+
   ensureRemoteService = async (instance: QanRemoteInstance) => {
     const { services } = await new InventoryApi(this.request).getServices();
 

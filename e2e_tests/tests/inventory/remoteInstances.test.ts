@@ -211,12 +211,7 @@ for (const filterName of qanFilters) {
 pmmTest(
   'PMM-T2504 - Verify Amazon RDS page lists the Aurora instance under its cluster @instances',
   async ({ amazonRdsPage, api, urlHelper }) => {
-    const { services } = await api.inventoryApi.getServices();
-
-    if (!services.some(({ service_name }) => service_name === auroraInstanceId)) {
-      await api.remoteInstanceApi.addRemoteInstance(auroraMysql);
-    }
-
+    await api.remoteInstanceApi.ensureRemoteInstance(auroraInstanceId, auroraMysql);
     await expect(async () => {
       await amazonRdsPage.openGroup(auroraClusterId);
       await expect(amazonRdsPage.elements.groupCount).toHaveText(amazonRdsPage.texts.oneGroupShown);
@@ -253,9 +248,10 @@ pmmTest(
 
 pmmTest(
   'PMM-T2505 - Verify MySQL Amazon Aurora Details lists Aurora MySQL services without URL variables @instances',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
     const auroraDetails = dashboard.mysql.mysqlAmazonAuroraDetails;
 
+    await api.remoteInstanceApi.ensureRemoteInstance(auroraInstanceId, auroraMysql);
     await expect(async () => {
       await page.goto(urlHelper.buildUrlWithParameters(auroraDetails.url, { from: 'now-5m' }));
 

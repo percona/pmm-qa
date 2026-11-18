@@ -16,8 +16,7 @@ export default class AmazonRdsPage extends BasePage {
   builders = {
     expandGroupButton: (identifier: string) =>
       this.page.getByRole('button', { exact: true, name: `Expand ${identifier}` }),
-    // An expanded group's detail row is named after the group too, through its nested table.
-    // A group cell can hold two values (Type over Engine), so a value is matched by its own text.
+    // An expanded group's detail row carries the group name too, so rows holding a table are skipped.
     groupValue: (identifier: string, text: string) =>
       this.page
         .getByRole('row')
