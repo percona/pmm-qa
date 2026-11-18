@@ -1,5 +1,6 @@
 import DashboardInterface from '@interfaces/dashboard';
 import PostgresqlInstanceSummary from './postgresqlInstanceSummary';
+import PostgresqlAmazonAuroraDetails from '@pages/dashboards/postgresql/postgresqlAmazonAuroraDetails';
 import PostgresqlInstancesCompareDashboard from '@pages/dashboards/postgresql/postgresqlInstancesCompare';
 import PostgresqlInstancesOverviewDashboard from '@pages/dashboards/postgresql/postgresqlInstancesOverview';
 import PostgresqlInstancesOverviewExtendedDashboard from '@pages/dashboards/postgresql/postgresqlInstancesOverviewExtended';
@@ -8,6 +9,7 @@ import PostgresqlReplicationOverviewDashboard from '@pages/dashboards/postgresql
 import PostgresqlTopQueriesDashboard from '@pages/dashboards/postgresql/postgresqlTopQueries';
 
 export const PostgresqlDashboards = {
+  postgresqlAmazonAuroraDetails: new PostgresqlAmazonAuroraDetails(),
   postgresqlInstancesCompare: new PostgresqlInstancesCompareDashboard(),
   postgresqlInstancesOverview: new PostgresqlInstancesOverviewDashboard(),
   postgresqlInstancesOverviewExtended: new PostgresqlInstancesOverviewExtendedDashboard(),

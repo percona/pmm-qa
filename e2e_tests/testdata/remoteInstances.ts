@@ -136,6 +136,33 @@ export const auroraMysql: AddRemoteInstance = {
   },
 };
 
+export const auroraPostgresqlInstanceId = 'pmm-qa-rds-aurora-15-instance-1';
+
+export const auroraPostgresql: AddRemoteInstance = {
+  rds: {
+    add_node: { node_name: auroraPostgresqlInstanceId, node_type: 'NODE_TYPE_REMOTE_NODE' },
+    address: process.env.PMM_QA_RDS_AURORA_PGSQL15_HOST ?? '',
+    aws_access_key: awsCredentials.accessKey,
+    aws_secret_key: awsCredentials.secretKey,
+    az: 'us-east-2b',
+    cluster: 'postgres15aws_aurora',
+    disable_basic_metrics: false,
+    disable_enhanced_metrics: false,
+    engine: 'DISCOVER_RDS_ENGINE_POSTGRESQL',
+    instance_id: auroraPostgresqlInstanceId,
+    isRDS: true,
+    password: process.env.PMM_QA_RDS_AURORA_PGSQL15_PASSWORD ?? '',
+    pmm_agent_id: 'pmm-server',
+    port: '5432',
+    qan_postgresql_pgstatements: true,
+    rds_exporter: true,
+    region: auroraRegion,
+    service_name: auroraPostgresqlInstanceId,
+    tls_skip_verify: true,
+    username: process.env.PMM_QA_RDS_AURORA_PGSQL15_USER ?? '',
+  },
+};
+
 export const editedLabels = (
   serviceName: string,
   labels: { cluster?: string; environment?: string; replicationSet?: string },

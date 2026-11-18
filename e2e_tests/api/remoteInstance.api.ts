@@ -65,7 +65,7 @@ interface RemoteInstanceBody {
   tls_certificate_key?: string;
   tls_skip_verify?: boolean;
   authentication_mechanism?: string;
-  engine?: 'DISCOVER_RDS_ENGINE_MYSQL';
+  engine?: 'DISCOVER_RDS_ENGINE_MYSQL' | 'DISCOVER_RDS_ENGINE_POSTGRESQL';
   aws_access_key?: string;
   aws_secret_key?: string;
   az?: string;
@@ -78,6 +78,7 @@ interface RemoteInstanceBody {
   replication_set?: string;
   qan_mysql_perfschema?: boolean;
   qan_postgresql_pgstatmonitor_agent?: boolean;
+  qan_postgresql_pgstatements?: boolean;
   qan_mongodb_profiler?: boolean;
 }
 
