@@ -38,10 +38,10 @@ for (const { name, serviceRegex } of formServices) {
       await expect(editServicePage.elements.serviceDetails).toContainText(
         endpoint ? `${endpoint.label}${endpoint.value}` : 'Node',
       );
-      await expect(
-        editServicePage.elements.readOnlyFields,
-        'no field edits the service name, node or endpoint',
-      ).toHaveCount(0);
+      await editServicePage.verifyServiceDetailsReadOnly([
+        service.node_name,
+        ...(endpoint ? [endpoint.value] : []),
+      ]);
     },
   );
 }
