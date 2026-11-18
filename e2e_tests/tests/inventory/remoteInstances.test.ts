@@ -270,12 +270,8 @@ pmmTest(
   'PMM-T2506 - Verify PostgreSQL Amazon Aurora Details lists Aurora PostgreSQL services and shows data @instances',
   async ({ api, dashboard, page, urlHelper }) => {
     const auroraDetails = dashboard.postgresql.postgresqlAmazonAuroraDetails;
-    const { services } = await api.inventoryApi.getServices();
 
-    if (!services.some(({ service_name }) => service_name === auroraPostgresqlInstanceId)) {
-      await api.remoteInstanceApi.addRemoteInstance(auroraPostgresql);
-    }
-
+    await api.remoteInstanceApi.ensureRemoteInstance(auroraPostgresqlInstanceId, auroraPostgresql);
     await expect(async () => {
       await page.goto(urlHelper.buildUrlWithParameters(auroraDetails.url, { from: 'now-5m' }));
 
