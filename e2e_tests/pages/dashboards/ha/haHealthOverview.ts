@@ -83,10 +83,7 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
     return await content.innerText();
   };
 
-  /**
-   * One string per rendered row, e.g. `pmm-ha-0 UP Leader`. Read row-wise rather
-   * than cell-wise so a row keeps its pod, status and role together.
-   */
+  /** One string per rendered row, e.g. `pmm-ha-0 UP Leader`: its pod, status and role together. */
   tableRows = async (panelName: string, timeout: Timeouts = Timeouts.ONE_MINUTE): Promise<string[]> => {
     const table = (await this.mountPanel(panelName, timeout)).getByRole('grid');
 
