@@ -30,13 +30,15 @@ pmmTest.afterEach(async ({ argoCdHelper, haBackupHelper, k8sHelper }, testInfo) 
     if (logs) await testInfo.attach(`${job}.log`, { body: logs, contentType: 'text/plain' });
   }
 
-  k8sHelper.exec(`delete job ${backupJob} ${restoreJob} --ignore-not-found`).assertSuccess();
+  try {
+    k8sHelper.exec(`delete job ${backupJob} ${restoreJob} --ignore-not-found`).assertSuccess();
+  } finally {
+    // @pmm-ha runs on this cluster next, so a failed self-heal or restore must not leave it scaled down.
+    const { pmm } = argoCdHelper.apps();
 
-  // @pmm-ha runs on this cluster next, so a failed self-heal or restore must not leave it scaled down.
-  const { pmm } = argoCdHelper.apps();
-
-  if (k8sHelper.getStatefulSetReplicas(pmm) !== defaultReplicas) {
-    k8sHelper.scaleStatefulSet(pmm, defaultReplicas).assertSuccess();
+    if (k8sHelper.getStatefulSetReplicas(pmm) !== defaultReplicas) {
+      k8sHelper.scaleStatefulSet(pmm, defaultReplicas).assertSuccess();
+    }
   }
 });
 
