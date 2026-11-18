@@ -141,13 +141,17 @@ preflight() {
   cd "$control" || exit 1
   [[ -z $(git status --short) ]] || die "control worktree not clean"
   git fetch -q origin || die "fetch failed"
+  local branch
+  branch=$(git branch --show-current)
+  git rev-parse -q --verify "origin/$branch" >/dev/null || die "no origin/$branch to sync control with"
+  [[ -z $(git rev-list "HEAD..origin/$branch") ]] || die "control is behind origin/$branch: sync it (orchestration.md step 1) before running this script"
   grep -qE '^\| [0-9]+ +\| in-progress' "$tracker" && die "row in progress: $(grep -E '^\| [0-9]+ +\| in-progress' "$tracker" | cut -c1-120)"
   local prs
   prs=$(gh pr list --repo "$repo" --state open --json number,title --jq '[.[] | select(.title | startswith("migrate(")) | .number] | join(" ")') ||
     die "gh pr list failed"
   [[ -z $prs || $prs == "$allow_pr" ]] || die "open migration PR(s): $prs"
   local ahead
-  ahead=$(git log --oneline '@{u}..HEAD')
+  ahead=$(git log --oneline "origin/$branch..HEAD")
   [[ -z $ahead || -n $allow_unpushed ]] || die "control has unpushed commits:"$'\n'"$ahead"
   node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a==22&&b>=18)?0:1)' || die "Node < 22.18"
   command -v playwright-cli >/dev/null || die "playwright-cli not on PATH: the review gates verify locators with it"
@@ -377,7 +381,7 @@ publish_pr() {
   git push -q -u origin HEAD || die "push failed"
   pr=$(gh pr view "$branch" --repo "$repo" --json number -q .number 2>/dev/null)
   if [[ -n $pr ]]; then
-    gh pr edit "$pr" --repo "$repo" --title "$title" --body-file "$body" >/dev/null || exit 1
+    gh api -X PATCH "repos/$repo/pulls/$pr" -f title="$title" -F body=@"$body" >/dev/null || die "PR $pr title/body update failed"
   else
     gh pr create --repo "$repo" --base main --head "$branch" --title "$title" --body-file "$body" >/dev/null || exit 1
     pr=$(gh pr view "$branch" --repo "$repo" --json number -q .number)
@@ -394,7 +398,7 @@ publish_pr() {
   done
   [[ -n ${job:-} ]] || die "no job found for the dispatched run"
   sed -i -E "s#^\*\*Run:\*\*.*#**Run:** $job#" "$body"
-  gh pr edit "$pr" --repo "$repo" --body-file "$body" >/dev/null
+  gh api -X PATCH "repos/$repo/pulls/$pr" -F body=@"$body" >/dev/null || die "PR $pr Run: line update failed; set it from $body"
   echo "PR https://github.com/$repo/pull/$pr"
   echo "job $job"
 }

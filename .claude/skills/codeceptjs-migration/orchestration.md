@@ -2,7 +2,7 @@
 
 The parent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Workers read `run.md`, not this file.
 
-Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one CHAOS VM from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout stays on control for the whole row, publication uses an isolated `git worktree`; only after cleanup is it switched to the publish branch so the app's PR panel shows the PR (`branch-workflow.md` Tracker completion and cleanup). The skill and scripts exist only on control, so a run starts with `git switch CodeceptJS-migration` on a clean tree. Run `.claude/scripts/*.sh` with bash on the runner host, keep them LF-only, and `bash -n` them after editing.
+Run exactly one row at a time; a batch from step 1b counts as one row. The row owns one CHAOS VM from the moment provisioning starts until PR creation; never clean or recreate it inside the workflow. Migration work happens uncommitted in control's worktree (`branch-workflow.md` What is committed where); control's checkout stays on control for the whole row, publication uses an isolated `git worktree`; only after cleanup is it switched to the publish branch so the app's PR panel shows the PR (`branch-workflow.md` Tracker completion and cleanup). The skill and scripts exist only on control, so a run starts by syncing control to origin on a clean tree (step 1), before `migration.sh` runs: the script is read from the checkout, so a stale branch runs a stale script. Run `.claude/scripts/*.sh` with bash on the runner host, keep them LF-only, and `bash -n` them after editing.
 
 `.claude/scripts/migration.sh` does the mechanical steps; the sections below say what each one checks and what stays judgement:
 
@@ -59,6 +59,19 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 
 ## 1. Select and prepare
 
+Sync control first. A runner host's clone outlives its sessions, so its local `CodeceptJS-migration` can be weeks behind origin, or carry an unpushed commit from a session that was released mid-row:
+
+```bash
+git fetch origin CodeceptJS-migration main
+git switch CodeceptJS-migration
+git branch -u origin/CodeceptJS-migration
+git log --oneline origin/CodeceptJS-migration..HEAD
+git branch -f "stale/CodeceptJS-migration-$(date +%m%d%H%M)" HEAD   # only when the log printed commits
+git reset --hard origin/CodeceptJS-migration
+```
+
+Origin is authoritative: every control commit is pushed as soon as it is made, so an unpushed one belongs to a released session. Name any commits the log printed, and their `stale/` branch, in the run's report. `migration.sh preflight` stops on a control that is behind or ahead of origin.
+
 Four preflight checks on control, before the `origin/main` merge and the `in-progress` commit. Stop and name the one that tripped:
 
 1. another tracker row `in-progress`;
@@ -93,7 +106,7 @@ State both counts. Append each untracked file as a `pending` row (Bucket/Env/Set
 
 Compare `@playwright/test` in `e2e_tests/package.json` with `verifiedAgainst` in `playwright-practices.md`; if they differ, an attended session refreshes that file against the release notes before migrating; an unattended run reports the drift and ends.
 
-Select the first `pending` row, mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), and record the SHA. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
+Select the first `pending` row, mark it `in-progress` in a tracker-only commit (`branch-workflow.md` Starting the migration), push control (`git push origin CodeceptJS-migration`), and record the SHA. Pushed, the marker stops the next run on any host; unpushed, it dies with the session. Create the timeline and gate-ledger files (`mkdir -p .migration-observations`, gitignored) recording the selection, confirmed bucket and marker commit.
 
 ## 1b. Batch small rows
 
@@ -168,11 +181,12 @@ Read `date -Is` before writing a row and truncate it to `HH:MM`; an estimated ti
 
 ```text
 pending
+-> sync control to origin/CodeceptJS-migration
 -> check no other row is in-progress
 -> check no migration PR is open
 -> merge main into control
 -> estimate the diff; under 200 lines, batch the next same-setup pending rows
--> in-progress (tracker-only commit; marks the active row)
+-> in-progress (tracker-only commit, pushed; marks the active row)
 -> linked-file discovery
 -> check CHAOS access, then start the CHAOS VM in the background
    |

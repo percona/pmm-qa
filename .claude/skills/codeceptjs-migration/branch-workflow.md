@@ -19,11 +19,9 @@ Nothing appears in both columns.
 
 ## Control branch preflight
 
-Stop if another tracker row is `in-progress`. Otherwise:
+Sync control to origin first (`orchestration.md` step 1): a local control branch is never trusted over `origin/CodeceptJS-migration`. Stop if another tracker row is `in-progress`. Otherwise:
 
 ```bash
-git switch <control-branch>
-git fetch origin main
 git merge origin/main
 git status --short        # must be empty before the migration starts
 ```
@@ -37,6 +35,7 @@ Mark the row on control in a tracker-only commit; it identifies the active row:
 ```bash
 git add migration/tracker.md
 git commit -m "chore(migration): mark <test-name> in progress"
+git push origin CodeceptJS-migration
 ```
 
 Everything the migration produces from here stays uncommitted in control's worktree until publication. Publish branch name: `PMM-7-migrate-<category>-<test-name>`, `<category>` and `<test-name>` one lowercase `[a-z0-9]` word each (`PMM-7-migrate-metrics-verifymongodb`); the runner hosts' branch guard refuses any other shape at commit, and `migration.sh publish-branch` refuses it before any work.
@@ -259,7 +258,7 @@ A later push cancels the jobs of the run it supersedes: after every push, re-tak
 
 On control's own checkout, after the PR exists:
 
-1. Run `migration.sh mark <row> done <pr-url>` (every row of a batch, same URL). It refuses without the URL, writes the PR number to `PR` and today's date to `Opened`, rebuilds `migration/dashboard/migration.json` and commits both. Never edit the tracker's `Status`, `PR`, `Opened` or `Merged` cells by hand, and never leave a `done` or `retired` row without them; `Merged` is filled by `migration.sh merged`, which preflight runs once the source has left `origin/main`. Before pushing, `git log --oneline --first-parent @{u}..HEAD` must list only that commit, this row's `in-progress` marker, a `record merge dates` commit and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
+1. Run `migration.sh mark <row> done <pr-url>` (every row of a batch, same URL). It refuses without the URL, writes the PR number to `PR` and today's date to `Opened`, rebuilds `migration/dashboard/migration.json` and commits both. Never edit the tracker's `Status`, `PR`, `Opened` or `Merged` cells by hand, and never leave a `done` or `retired` row without them; `Merged` is filled by `migration.sh merged`, which preflight runs once the source has left `origin/main`. Before pushing, `git log --oneline --first-parent origin/CodeceptJS-migration..HEAD` must list only that commit, this row's `in-progress` marker, a `record merge dates` commit and a `main` merge made for this row; if it lists anything else, stop and name those commits to the parent instead of pushing.
 2. Restore control's worktree:
 
 ```bash
