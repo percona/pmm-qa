@@ -3746,6 +3746,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1782",
       "by": "Investigator routine",
       "at": "2026-11-18T03:38:35Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "product bug",
+      "summary": "3.10.0 · Percona Server 8.4: only PMM-T2528 failed (49 passed): the slowlog agent disable returned OK but PMM Server kept it Running, the open PMM-15835 lost update (a ChangeAgent racing the agent's status report). Merged #1778 now keeps it from cascading, as intended; deduped, not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+      "by": "Investigator routine",
+      "at": "2026-11-18T03:38:41Z"
     }
   ],
   "claims": [
