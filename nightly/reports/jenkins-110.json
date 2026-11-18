@@ -3736,20 +3736,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T2663 (mysqlPerfschemaChangeAgent.spec.ts, added by #1777 the day before) failed in all 6 MySQL compat lanes on pmm-client 3.8.0/3.8.1 with 'unknown flag --skip-connection-check': the flag shipped in 3.9.0 (absent at percona/pmm v3.8.1), and the test had no version gate, the same defect #1781 fixed for PMM-T2534. Reproduced on a CHAOS VM with the 3.8.1 client and MySQL 8.4; the fix gates it at 3.9.0 (25 passed, T2663 skipped on the VM).",
+      "link": "https://github.com/percona/pmm-qa/pull/1791",
+      "by": "Investigator routine",
+      "at": "2026-11-18T22:40:03Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-18T21:58:08Z",
       "suites": [
         "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-18T21:58:08Z",
-      "suites": [
-        "CLI Integration Compatibility"
       ]
     },
     {
