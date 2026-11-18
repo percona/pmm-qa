@@ -1,3 +1,4 @@
+import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import { ServiceType } from '@interfaces/inventory';
 
@@ -44,6 +45,26 @@ export interface OwnService {
   start?: (container: string) => string;
   stop?: (container: string) => string;
 }
+
+export const startOwnService = (
+  cliHelper: CliHelper,
+  container: string,
+  { register, serviceName, serviceType, start, stop }: Required<OwnService>,
+) => {
+  cliHelper.removeService(container, serviceType, serviceName);
+  cliHelper.execSilent(stop(container)).assertSuccess();
+  cliHelper.execSilent(start(container)).assertSuccess();
+  cliHelper.execSilent(register(container)).assertSuccess();
+};
+
+export const stopOwnService = (
+  cliHelper: CliHelper,
+  container: string,
+  { serviceName, serviceType, stop }: Required<OwnService>,
+) => {
+  cliHelper.removeService(container, serviceType, serviceName);
+  cliHelper.execSilent(stop(container)).assertSuccess();
+};
 
 // A mongod of the test's own on 127.0.0.1, in a directory it removes again on stop.
 export const ownMongod = ({

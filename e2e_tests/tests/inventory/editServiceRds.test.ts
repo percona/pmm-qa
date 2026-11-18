@@ -85,13 +85,11 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
     'PMM-15674 - Verify a label change of an RDS service keeps its AWS credentials @aws',
     async ({ api, credentials, editServicePage }) => {
       await editServicePage.open(service.service_id);
-      await editServicePage.editEnvironment('pmm_edit_rds_check');
+      await editServicePage.inputs.environment.fill('pmm_edit_rds_check');
 
       const writes = editServicePage.recordApiWrites();
 
-      await editServicePage.expectSaved(
-        await editServicePage.saveChanges(service.service_id, { settingsChanged: false }),
-      );
+      await editServicePage.verifySaved(await editServicePage.saveChanges(service.service_id));
       expect(writes, 'untouched credentials are not sent').toEqual([
         `PUT /v1/management/services/${service.service_id}`,
       ]);
@@ -120,8 +118,8 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
 
       const writes = editServicePage.recordApiWrites();
 
-      await editServicePage.expectSaved(
-        await editServicePage.saveCredentials(rdsExporterId, { dropsCredentials: true }),
+      await editServicePage.verifySaved(
+        await editServicePage.saveChanges(service.service_id, { exporterId: rdsExporterId }),
       );
       await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
       expect(writes, 'the RDS exporter is updated and the service is not').toEqual([
@@ -138,7 +136,9 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
         awsSecretKey: secretKey,
         mode: RdsAuthMode.accessKey,
       });
-      await editServicePage.expectSaved(await editServicePage.saveCredentials(rdsExporterId));
+      await editServicePage.verifySaved(
+        await editServicePage.saveChanges(service.service_id, { exporterId: rdsExporterId }),
+      );
       await expect
         .poll(
           async () => {
@@ -169,7 +169,9 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
 
       const writes = editServicePage.recordApiWrites();
 
-      await editServicePage.expectSaved(await editServicePage.saveCredentials(rdsExporterId));
+      await editServicePage.verifySaved(
+        await editServicePage.saveChanges(service.service_id, { exporterId: rdsExporterId }),
+      );
       expect(writes, 'the RDS exporter is updated and the service is not').toEqual([
         `PUT /v1/inventory/agents/${rdsExporterId}`,
       ]);
@@ -180,6 +182,24 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
 
       await editServicePage.open(service.service_id);
       await editServicePage.verifyRdsCredentials(RdsAuthMode.iamRole, { awsRoleArn: roleArn });
+    },
+  );
+
+  pmmTest(
+    'PMM-15674 - Verify the confirmation dialog of a change of AWS credentials warns when none are stored @aws',
+    async ({ editServicePage }) => {
+      await editServicePage.open(service.service_id);
+      await editServicePage.editRdsCredentials({ mode: RdsAuthMode.hostCredentials });
+
+      const writes = editServicePage.recordApiWrites();
+
+      await editServicePage.buttons.saveChanges.click();
+      await editServicePage.verifyConfirmDialog({
+        credentialsChanged: true,
+        dropsCredentials: true,
+        settingsChanged: false,
+      });
+      expect(writes, 'the dialog sends nothing').toEqual([]);
     },
   );
 
@@ -206,9 +226,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
         await pmmTest.step(`${edit.mode}: ${message}`, async () => {
           await editServicePage.editRdsCredentials(edit);
           await editServicePage.buttons.saveChanges.click();
-          await expect(
-            editServicePage.elements.rdsCredentials.getByText(message, { exact: true }),
-          ).toBeVisible();
+          await expect(editServicePage.builders.rdsFieldError(message)).toBeVisible();
           await expect(editServicePage.elements.confirmModal).toBeHidden();
         });
       }
@@ -227,12 +245,9 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
       await editServicePage.editConnection({ password: 'wrong-password', username });
 
       const writes = editServicePage.recordApiWrites();
-      const response = await editServicePage.saveChanges(service.service_id, {
-        credentialsChanged: true,
-        dropsCredentials: true,
-      });
+      const response = await editServicePage.saveChanges(service.service_id);
 
-      await editServicePage.expectRefused(
+      await editServicePage.verifyRefused(
         response,
         service.service_id,
         'the connection check refuses a wrong password',

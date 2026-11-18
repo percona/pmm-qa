@@ -69,7 +69,7 @@ for (const {
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
 
         await expect
@@ -129,7 +129,7 @@ for (const {
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectRefused(
+        await editServicePage.verifyRefused(
           response,
           service.service_id,
           'connection check fails with a wrong password',

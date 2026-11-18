@@ -82,7 +82,7 @@ for (const settings of serviceTlsSettings) {
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectRefused(
+        await editServicePage.verifyRefused(
           response,
           service.service_id,
           'connection check fails when the server cannot be verified',
@@ -119,7 +119,7 @@ for (const settings of serviceTlsSettings) {
         // The service is monitored without TLS, so the connection check could refuse the change.
         const response = await editServicePage.saveChanges(service.service_id, { skipConnectionCheck: true });
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
 
         await expect
@@ -187,7 +187,7 @@ for (const settings of serviceTlsSettings) {
                 : 'Verify the server certificate against the CA',
               async () => {
                 await editServicePage.open(service.service_id);
-                await editServicePage.saveTls(
+                await editServicePage.verifyTlsChange(
                   service.service_id,
                   { tls: true, tlsSkipVerify },
                   tlsSkipVerify ? serverTls.certificates(cliHelper, container) : {},

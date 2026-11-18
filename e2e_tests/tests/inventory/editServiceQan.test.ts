@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { frameworkServices } from '@helpers/frameworkServices.helper';
+import { frameworkServices, startOwnService, stopOwnService } from '@helpers/frameworkServices.helper';
 import {
   currentQuerySource,
   offeredQuerySources,
@@ -78,11 +78,11 @@ for (const serviceQan of Object.values(serviceQanSources)) {
 
           await pmmTest.step(`Change query source to ${target}`, async () => {
             await editServicePage.open(service.service_id);
-            await editServicePage.editQuerySource(target);
+            await editServicePage.builders.querySourceOption(target).check();
 
             const response = await editServicePage.saveChanges(service.service_id);
 
-            await editServicePage.expectSaved(response);
+            await editServicePage.verifySaved(response);
 
             await expect
               .poll(
@@ -172,16 +172,12 @@ for (const instance of qanInstances) {
         api,
         await api.inventoryApi.getServiceDetailsByRegex(hostServiceRegex),
       );
-      cliHelper.removeService(container, instance.serviceType, instance.serviceName);
-      cliHelper.execSilent(instance.stop(container)).assertSuccess();
-      cliHelper.execSilent(instance.start(container)).assertSuccess();
-      cliHelper.execSilent(instance.register(container)).assertSuccess();
+      startOwnService(cliHelper, container, instance);
       service = await api.inventoryApi.getServiceDetailsByRegex(`^${instance.serviceName}$`);
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
-      cliHelper.removeService(container, instance.serviceType, instance.serviceName);
-      cliHelper.execSilent(instance.stop(container)).assertSuccess();
+      stopOwnService(cliHelper, container, instance);
     });
 
     pmmTest(
@@ -189,11 +185,11 @@ for (const instance of qanInstances) {
       async ({ api, clickHouseHelper, cliHelper, editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.builders.querySourceOption('none')).toBeChecked();
-        await editServicePage.editQuerySource(querySource);
+        await editServicePage.builders.querySourceOption(querySource).check();
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         await expect
           .poll(
             async () =>
@@ -217,11 +213,11 @@ for (const instance of qanInstances) {
         `PMM-15674 - Verify choosing ${fallbackFrom} for ${name} falls back to ${querySource} with the server's warning @inventory`,
         async ({ api, editServicePage }) => {
           await editServicePage.open(service.service_id);
-          await editServicePage.editQuerySource(fallbackFrom);
+          await editServicePage.builders.querySourceOption(fallbackFrom).check();
 
           const response = await editServicePage.saveChanges(service.service_id);
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
 
           const { warning } = (await response.json()) as { warning?: string };
 

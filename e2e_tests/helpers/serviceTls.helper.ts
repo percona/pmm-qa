@@ -43,6 +43,12 @@ interface ServiceTls extends FrameworkService {
   serverTls?: ServerTls;
 }
 
+export const exporterTlsState = ({ status, tls, tls_skip_verify }: ServiceAgent) => ({
+  status,
+  tls: !!tls,
+  tlsSkipVerify: !!tls_skip_verify,
+});
+
 export const storedTlsSecrets = ({ secretFlags, secretOptions }: ServiceTls, exporter: ServiceAgent) =>
   Object.fromEntries(
     secretFlags.map((flag) => [

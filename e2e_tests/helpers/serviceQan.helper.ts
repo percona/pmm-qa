@@ -181,7 +181,6 @@ export const qanInstances: QanInstance[] = [
       ),
   },
   {
-    // mongod logs an operation only when it takes longer than slowms, so the workload's query sleeps.
     ...ownMongod({
       dir: mongologDir,
       mongodFlags: '--slowms 0',
@@ -193,6 +192,6 @@ export const qanInstances: QanInstance[] = [
     name: 'MongoDB logging to a file',
     querySource: 'mongolog',
     workload: (container) =>
-      `docker exec ${container} mongo --quiet --port ${mongologPort} --eval 'const check = db.getSiblingDB("${qanCheckDatabase}"); check.checks.insertOne({ a: 1 }); check.checks.find({ $where: "sleep(5) || true" }).toArray()'`,
+      `docker exec ${container} mongo --quiet --port ${mongologPort} --eval 'const check = db.getSiblingDB("${qanCheckDatabase}"); check.checks.insertOne({ a: 1 }); check.checks.find({}).toArray()'`,
   },
 ];
