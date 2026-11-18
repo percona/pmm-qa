@@ -44,7 +44,7 @@ for (const ownService of serviceEndpoints) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Metrics endpoint section shows the current settings of ${name} service @inventory`,
+      `PMM-T2696 - Verify Metrics endpoint section shows the current settings of ${name} service @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.elements.connectionSection).toContainText('Metrics endpoint');
@@ -57,7 +57,7 @@ for (const ownService of serviceEndpoints) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify basic auth and skipped TLS verification of ${name} endpoint keep its metrics coming @inventory`,
+      `PMM-T2697 - Verify basic auth and skipped TLS verification of ${name} endpoint keep its metrics coming @inventory`,
       async ({ api, editServicePage }) => {
         const expected = { ...original, tlsSkipVerify: true, username: basicAuth.username };
 
@@ -83,7 +83,7 @@ for (const ownService of serviceEndpoints) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing listen port of ${name} endpoint @inventory`,
+      `PMM-T2698 - Verify changing listen port of ${name} endpoint @inventory`,
       async ({ api, editServicePage }) => {
         await pmmTest.step('An unreachable port is refused by the connection check', async () => {
           await editServicePage.open(service.service_id);
@@ -150,7 +150,7 @@ for (const ownService of serviceEndpoints) {
       { change: { scheme: 'https' as const }, label: 'scheme', stored: { scheme: 'https' as const } },
     ]) {
       pmmTest(
-        `PMM-15674 - Verify changing ${label} of ${name} endpoint @inventory`,
+        `PMM-T2699 - Verify changing ${label} of ${name} endpoint @inventory`,
         async ({ api, editServicePage }) => {
           const expected = { ...original, ...stored };
 
@@ -178,7 +178,7 @@ for (const ownService of serviceEndpoints) {
 
     if (hasGroup) {
       pmmTest(
-        `PMM-15674 - Verify changing group of ${name} service relabels its metrics @inventory`,
+        `PMM-T2700 - Verify changing group of ${name} service relabels its metrics @inventory`,
         async ({ api, editServicePage }) => {
           const expected = { ...original, group: 'pmm_edit_group' };
 

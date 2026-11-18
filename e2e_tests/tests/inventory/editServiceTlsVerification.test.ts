@@ -52,7 +52,7 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
     });
 
     pmmTest(
-      `PMM-15674 - Verify TLS verification refuses a server certificate from an untrusted CA for ${name} service ${tag}`,
+      `PMM-T2736 - Verify TLS verification refuses a server certificate from an untrusted CA for ${name} service ${tag}`,
       async ({ api, editServicePage, tlsHelper }) => {
         const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
@@ -75,7 +75,7 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
     );
 
     pmmTest(
-      `PMM-15674 - Verify skipping TLS verification accepts a server certificate from an untrusted CA for ${name} service ${tag}`,
+      `PMM-T2737 - Verify skipping TLS verification accepts a server certificate from an untrusted CA for ${name} service ${tag}`,
       async ({ api, editServicePage, tlsHelper }) => {
         const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 

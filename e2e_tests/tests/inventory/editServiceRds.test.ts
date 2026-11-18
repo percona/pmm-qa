@@ -55,7 +55,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   });
 
   pmmTest(
-    'PMM-15674 - Verify the edit page of an RDS service shows its access key and only the query source an RDS node allows @aws',
+    'PMM-T2725 - Verify the edit page of an RDS service shows its access key and only the query source an RDS node allows @aws',
     async ({ credentials, editServicePage }) => {
       const offered = offeredQuerySources(serviceQanSources.ps);
 
@@ -82,7 +82,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify a label change of an RDS service keeps its AWS credentials @aws',
+    'PMM-T2726 - Verify a label change of an RDS service keeps its AWS credentials @aws',
     async ({ api, credentials, editServicePage }) => {
       await editServicePage.open(service.service_id);
       await editServicePage.inputs.environment.fill('pmm_edit_rds_check');
@@ -102,7 +102,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify an RDS service switched to host credentials stores none, and an access key entered again is used @aws',
+    'PMM-T2727 - Verify an RDS service switched to host credentials stores none, and an access key entered again is used @aws',
     async ({ api, credentials, editServicePage }) => {
       const cloudWatchMetric = `${rdsCloudWatchMetric}{node_id="${service.node_id}"}`;
       const { accessKey, secretKey } = credentials.aws;
@@ -162,7 +162,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify an RDS service switched to an IAM role stores the role and no access key @aws',
+    'PMM-T2728 - Verify an RDS service switched to an IAM role stores the role and no access key @aws',
     async ({ api, editServicePage }) => {
       await editServicePage.open(service.service_id);
       await editServicePage.editRdsCredentials({ awsRoleArn: roleArn, mode: RdsAuthMode.iamRole });
@@ -186,7 +186,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify the confirmation dialog of a change of AWS credentials warns when none are stored @aws',
+    'PMM-T2729 - Verify the confirmation dialog of a change of AWS credentials warns when none are stored @aws',
     async ({ editServicePage }) => {
       await editServicePage.open(service.service_id);
       await editServicePage.editRdsCredentials({ mode: RdsAuthMode.hostCredentials });
@@ -204,7 +204,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify the form refuses AWS credentials an RDS service cannot use @aws',
+    'PMM-T2730 - Verify the form refuses AWS credentials an RDS service cannot use @aws',
     async ({ editServicePage }) => {
       await editServicePage.open(service.service_id);
 
@@ -236,7 +236,7 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
   );
 
   pmmTest(
-    'PMM-15674 - Verify AWS credentials of an RDS service are saved first, and kept when the rest of the update is refused @aws',
+    'PMM-T2731 - Verify AWS credentials of an RDS service are saved first, and kept when the rest of the update is refused @aws',
     async ({ api, editServicePage }) => {
       const { username } = await api.inventoryApi.getServiceExporter(service.service_id, 'mysqld_exporter');
 

@@ -36,7 +36,7 @@ for (const { name, serviceRegex } of databaseServices) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify changing labels of ${name} service in Inventory @inventory`,
+      `PMM-T2711 - Verify changing labels of ${name} service in Inventory @inventory`,
       async ({ api, editServicePage }) => {
         await editServicePage.verifyLabelsChange(service, labelEdits, () =>
           api.inventoryApi.getServiceById(service.service_id),
@@ -63,7 +63,7 @@ for (const ownService of serviceEndpoints) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify changing labels of ${name} service in Inventory @inventory`,
+      `PMM-T2711 - Verify changing labels of ${name} service in Inventory @inventory`,
       async ({ api, editServicePage }) => {
         await editServicePage.verifyLabelsChange(service, labelEdits, () =>
           api.inventoryApi.getServiceById(service.service_id),

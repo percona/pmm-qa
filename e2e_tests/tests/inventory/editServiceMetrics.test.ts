@@ -40,7 +40,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Metrics section shows the current settings of ${name} service @inventory`,
+      `PMM-T2712 - Verify Metrics section shows the current settings of ${name} service @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.elements.metricsSection).toBeVisible();
@@ -50,7 +50,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing metrics mode of ${name} service keeps its metrics reaching PMM Server @inventory`,
+      `PMM-T2713 - Verify changing metrics mode of ${name} service keeps its metrics reaching PMM Server @inventory`,
       async ({ api, editServicePage }) => {
         const otherMode: MetricsMode =
           original.metricsMode === 'METRICS_MODE_PUSH' ? 'METRICS_MODE_PULL' : 'METRICS_MODE_PUSH';
@@ -87,7 +87,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
+      `PMM-T2714 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         // A pushing exporter listens only on its own host's 127.0.0.1 until it is exposed.
         const pushing: ServiceMetricsSettings = {
@@ -125,7 +125,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing log level of ${name} exporter @inventory`,
+      `PMM-T2715 - Verify changing log level of ${name} exporter @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         const verbose: LogLevel =
           original.logLevel === 'LOG_LEVEL_DEBUG' ? 'LOG_LEVEL_INFO' : 'LOG_LEVEL_DEBUG';
@@ -158,7 +158,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing connection timeout of ${name} exporter @inventory`,
+      `PMM-T2716 - Verify changing connection timeout of ${name} exporter @inventory`,
       async ({ api, editServicePage }) => {
         const timeout = original.connectionTimeout === '7.5' ? '8.5' : '7.5';
 

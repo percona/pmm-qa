@@ -21,7 +21,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 for (const { name, serviceRegex } of formServices) {
   pmmTest(
-    `PMM-15674 - Verify Service block shows the type, node and address of ${name} service read-only @inventory`,
+    `PMM-T2701 - Verify Service block shows the type, node and address of ${name} service read-only @inventory`,
     async ({ api, editServicePage }) => {
       const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       const endpoint = serviceEndpoint(service);
@@ -47,7 +47,7 @@ for (const { name, serviceRegex } of formServices) {
 }
 
 pmmTest(
-  'PMM-15674 - Verify the label lookup of the read-only fields check finds an editable field @inventory',
+  'PMM-T2701 - Verify the label lookup of the read-only fields check finds an editable field @inventory',
   async ({ api, editServicePage }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -57,7 +57,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify Edit action in the services list opens the edit page @inventory',
+  'PMM-T2702 - Verify Edit action in the services list opens the edit page @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -68,7 +68,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify old edit-instance links redirect to the edit page @inventory',
+  'PMM-T2703 - Verify old edit-instance links redirect to the edit page @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -87,7 +87,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify Cancel leaves the edit page without saving @inventory',
+  'PMM-T2704 - Verify Cancel leaves the edit page without saving @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -106,7 +106,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify edit page of a service that does not exist says so @inventory',
+  'PMM-T2705 - Verify edit page of a service that does not exist says so @inventory',
   async ({ editServicePage, page }) => {
     await page.goto(`${editServicePage.url}/${missingServiceId}/edit`);
     await expect(editServicePage.elements.notFound).toBeVisible();
@@ -131,7 +131,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify ${role} cannot edit a service @inventory`,
+      `PMM-T2706 - Verify ${role} cannot edit a service @inventory`,
       async ({ api, editServicePage, grafanaHelper, page }) => {
         const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -154,7 +154,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
 }
 
 for (const { field, label, message, serviceRegex, value } of validationCases) {
-  pmmTest(`PMM-15674 - Verify the form refuses a ${label} @inventory`, async ({ api, editServicePage }) => {
+  pmmTest(`PMM-T2707 - Verify the form refuses a ${label} @inventory`, async ({ api, editServicePage }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
 
     await editServicePage.open(service.service_id);
@@ -187,7 +187,7 @@ for (const { dialog, edit, label } of [
   },
 ]) {
   pmmTest(
-    `PMM-15674 - Verify the confirmation dialog of a ${label} change says what saving does @inventory`,
+    `PMM-T2708 - Verify the confirmation dialog of a ${label} change says what saving does @inventory`,
     async ({ api, editServicePage }) => {
       const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -222,7 +222,7 @@ pmmTest.describe('Edit service requests', () => {
   });
 
   pmmTest(
-    "PMM-15674 - Verify a refused save shows the server's reason @inventory",
+    "PMM-T2709 - Verify a refused save shows the server's reason @inventory",
     async ({ api, editServicePage }) => {
       const { username } = await api.inventoryApi.getServiceExporter(
         service.service_id,
@@ -260,7 +260,7 @@ pmmTest.describe('Edit service requests', () => {
     },
   ]) {
     pmmTest(
-      `PMM-15674 - Verify a ${label} change sends only that change, in one update call @inventory`,
+      `PMM-T2710 - Verify a ${label} change sends only that change, in one update call @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await (edit.environment

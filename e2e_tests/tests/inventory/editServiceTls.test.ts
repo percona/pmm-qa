@@ -53,7 +53,7 @@ for (const settings of serviceTlsSettings) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify TLS section shows the current settings and the ${name} certificate fields @inventory`,
+      `PMM-T2732 - Verify TLS section shows the current settings and the ${name} certificate fields @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await editServicePage.verifyTls(tlsOff, certificateFields);
@@ -69,7 +69,7 @@ for (const settings of serviceTlsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify enabling TLS is rejected by the connection check when the ${name} server cannot be verified @inventory`,
+      `PMM-T2733 - Verify enabling TLS is rejected by the connection check when the ${name} server cannot be verified @inventory`,
       async ({ api, editServicePage, tlsHelper }) => {
         const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
@@ -98,7 +98,7 @@ for (const settings of serviceTlsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify enabling TLS with skipped verification and the ${name} certificates @inventory`,
+      `PMM-T2734 - Verify enabling TLS with skipped verification and the ${name} certificates @inventory`,
       async ({ api, editServicePage, tlsHelper }) => {
         const { cert, key } = tlsHelper.generateSelfSignedCertificate();
         const certificates = {
@@ -154,7 +154,7 @@ for (const settings of serviceTlsSettings) {
       if (!upMetric) throw new Error(`${name} has no up metric in serviceMetricsSettings`);
 
       pmmTest(
-        `PMM-15674 - Verify ${name} exporter works over TLS once enabled${verifiable ? ', with and without verification' : ''} @inventory`,
+        `PMM-T2735 - Verify ${name} exporter works over TLS once enabled${verifiable ? ', with and without verification' : ''} @inventory`,
         async ({ api, cliHelper, credentials, dockerHelper, editServicePage }) => {
           const container = await dockerHelper.getServiceContainer(api, service);
           const exporter = () => api.inventoryApi.getServiceExporter(service.service_id, exporterType);

@@ -45,7 +45,7 @@ for (const {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Connection section shows the current settings and hides passwords for ${name} service @inventory`,
+      `PMM-T2693 - Verify Connection section shows the current settings and hides passwords for ${name} service @inventory`,
       async ({ api, editServicePage }) => {
         const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
@@ -60,7 +60,7 @@ for (const {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing database, username, password and agent password of ${name} service @inventory`,
+      `PMM-T2694 - Verify changing database, username, password and agent password of ${name} service @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         const connection = { ...testUser, database: hasDatabase ? testDatabase : undefined };
 
@@ -120,7 +120,7 @@ for (const {
     );
 
     pmmTest(
-      `PMM-15674 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
+      `PMM-T2695 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
       async ({ api, credentials, editServicePage }) => {
         const { username } = original(credentials);
 

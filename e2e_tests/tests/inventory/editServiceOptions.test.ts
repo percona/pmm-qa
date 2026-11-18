@@ -47,7 +47,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
         });
 
         pmmTest(
-          `PMM-15674 - Verify changing ${option.label} of ${name} service @inventory`,
+          `PMM-T2717 - Verify changing ${option.label} of ${name} service @inventory`,
           async ({ api, dockerHelper, editServicePage }) => {
             const edited = option.edit(original);
 
@@ -118,7 +118,7 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
   });
 
   pmmTest(
-    'PMM-15674 - Verify changing slow log rotation size of ps service @inventory',
+    'PMM-T2718 - Verify changing slow log rotation size of ps service @inventory',
     async ({ api, editServicePage }) => {
       // The form takes MiB; the server stores bytes, and a disabled rotation (-1) as 0.
       for (const { mib, stored } of [
