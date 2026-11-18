@@ -92,13 +92,13 @@ pdpgsql_start_node() {
   pdpgsql_ready "$1"
   if [[ -n $pgsm_branch ]]; then
     retry 3 "pg_stat_monitor build tools on $1" docker exec --user root "$1" dnf install -y \
-      --enablerepo=ol9_codeready_builder git gcc-toolset-14 make redhat-rpm-config clang llvm openssl-devel krb5-devel \
+      --enablerepo=ol9_codeready_builder git gcc-toolset-14 make redhat-rpm-config openssl-devel krb5-devel \
       "percona-postgresql$version-devel" >/dev/null
     must docker exec --user root "$1" sh -ceu "rm -rf /pg_stat_monitor
       git clone --branch '$pgsm_branch' https://github.com/percona/pg_stat_monitor.git /pg_stat_monitor
       cd /pg_stat_monitor
-      make USE_PGXS=1 CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-      make USE_PGXS=1 CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc install" >/dev/null
+      make USE_PGXS=1 CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc with_llvm=no
+      make USE_PGXS=1 CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc with_llvm=no install" >/dev/null
     pdpgsql_restart "$1"
   fi
 }
