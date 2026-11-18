@@ -105,6 +105,7 @@ for (const service of services) {
           to: 'now',
         }),
       );
+      await dashboard.verifyMetricsPresent(instanceSummary.metrics);
       await dashboard.verifyAllPanelsHaveData(
         service === remoteServiceName ? instanceSummary.remoteNoDataMetrics : instanceSummary.noDataMetrics,
       );
@@ -134,6 +135,7 @@ for (const service of services) {
 
 pmmTest.describe(() => {
   let primary: string;
+  let schemas: string[] = [];
 
   pmmTest.beforeEach(({ cliHelper }) => {
     primary = cliHelper
@@ -145,13 +147,14 @@ pmmTest.describe(() => {
   });
 
   pmmTest.afterEach(({ cliHelper, credentials }) => {
-    if (!primary) return;
+    if (!primary || !schemas.length) return;
 
     cliHelper.queryMysql(
       primary,
       credentials.perconaServer.ps_84,
-      'DROP DATABASE IF EXISTS testdb1; DROP DATABASE IF EXISTS testdb2; DROP DATABASE IF EXISTS dbT2040;',
+      schemas.map((schema) => `DROP DATABASE IF EXISTS ${schema};`).join(' '),
     );
+    schemas = [];
   });
 
   pmmTest(
@@ -160,6 +163,7 @@ pmmTest.describe(() => {
       const queryCount = qanStoredMetrics.builders.detailMetricValue('Query Count', 3);
 
       clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
+      schemas = ['testdb1', 'testdb2'];
       cliHelper.queryMysql(
         primary,
         credentials.perconaServer.ps_84,
@@ -203,6 +207,7 @@ pmmTest.describe(() => {
     'PMM-T2040 - Verify there is no error while clicking on Table or Examples or Explain @pmm-ps-integration',
     async ({ clickHouseHelper, cliHelper, credentials, page, qanStoredMetrics, urlHelper }) => {
       clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
+      schemas = ['dbT2040'];
       cliHelper.queryMysql(
         primary,
         credentials.perconaServer.ps_84,
