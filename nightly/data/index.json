@@ -197170,16 +197170,19 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12328/",
         "by": "Investigator routine",
         "at": "2026-11-18T22:40:23Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "product bug",
+        "summary": "ha backup-restore #50: PMM-T2289 (new in #1624) found No data in the HA Health Overview 'PostgreSQL Pods' Role/Replication cells for pmm-ha-pg-db-instance1-vzcm-0, because that pod's PMM sidecar registered its PostgreSQL service at install but never its -patroni-external service. The gap was already there before the backup and restore, so the restore did not cause it, and the test is right to fail. This is the open, intermittent sidecar-registration race PMM-15794 (the operator's prerun script runs the add commands once with no retry, and sidecar mode does not re-run it); the evidence was added to the ticket. Diagnosed from the build's trace and inventory artifacts: 3 CHAOS HA clusters were tried and failed on infrastructure, so it was not reproduced.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-11-18T23:10:41Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-18T21:58:08Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-18T21:58:08Z",
