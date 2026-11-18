@@ -79,13 +79,13 @@ render() {
     render --external-access --backup-minio
     [ "$status" -eq 0 ]
     [[ "$output" == *"repoURL: https://github.com/KrisBuytaert/percona-helm-charts.git"* ]]
-    [[ "$output" == *"targetRevision: PMM-15826-pmm-ha-gitops"* ]]
-    [[ "$output" == *"targetRevision: PMM-15827-pmm-ha-dependencies-enabled"* ]]
+    [[ "$output" == *"targetRevision: 'PMM-15826-pmm-ha-gitops'"* ]]
+    [[ "$output" == *"targetRevision: 'PMM-15827-pmm-ha-dependencies-enabled'"* ]]
     [[ "$output" == *"path: charts/pmm-ha"$'\n'* ]]
     [[ "$output" == *"path: charts/pmm-ha-dependencies"* ]]
     [[ "$output" == *"ServerSideApply=true"* ]]
     [[ "$output" == *"CreateNamespace=true"* ]]
-    [[ "$output" == *"SkipDryRunOnMissingResource=true"* ]]
+    [[ "$output" == *"SkipDryRunOnMissingResource=true"$'\n'"      - RespectIgnoreDifferences=true"* ]]
     [[ "$output" == *"limit: 5"* ]]
     [[ "$output" == *"selfHeal: true"* ]]
     [[ "$output" == *"prune: true"* ]]
@@ -199,6 +199,12 @@ if [ "$1 $2" = "search repo" ]; then
         *"--version "*) all="$*"; v="${all#*--version }"; echo "[{\"name\":\"$3\",\"version\":\"${v%% *}\",\"app_version\":\"3.0\",\"description\":\"a, b {c}\"}]" ;;
         *"percona/pmm-ha-dependencies"*) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0","app_version":"3.0","description":"a, b {c}"}]' ;;
         *) echo '[{"name":"percona/pmm-ha-dependencies","version":"1.2.0","app_version":"3.0","description":"x, {y}"},{"name":"percona/pmm-ha","version":"1.8.0","app_version":"3.0","description":"a, b {c}"}]' ;;
+    esac
+fi
+if [ "$1 $2" = "show values" ]; then
+    case "$*" in
+        *"--version 1.5.0"*) printf 'gitops:\n  enabled: false\n' ;;
+        *) printf 'offlineRender:\n  enabled: false\n' ;;
     esac
 fi
 exit 0
@@ -346,16 +352,16 @@ released_render() {
     released_render
     [ "$status" -eq 0 ]
     [[ "$output" == *"repoURL: https://percona.github.io/percona-helm-charts/"* ]]
-    [[ "$output" == *"chart: pmm-ha"$'\n'"    targetRevision: 1.8.0"* ]]
-    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: 1.2.0"* ]]
+    [[ "$output" == *"chart: pmm-ha"$'\n'"    targetRevision: '1.8.0'"* ]]
+    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: '1.2.0'"* ]]
     [[ "$output" != *"path: charts/"* ]]
 }
 
 @test "argocd print mode pins --chart-version" {
     released_render --chart-version 1.6.1
     [ "$status" -eq 0 ]
-    [[ "$output" == *"targetRevision: 1.6.1"* ]]
-    [[ "$output" == *"targetRevision: 1.2.0"* ]]
+    [[ "$output" == *"targetRevision: '1.6.1'"* ]]
+    [[ "$output" == *"targetRevision: '1.2.0'"* ]]
 }
 
 @test "a chart version is refused with a chart branch" {
@@ -379,11 +385,34 @@ released_render() {
     refute grep -q "apply" "$FAKE/calls"
 }
 
+@test "a published pmm-ha without offlineRender.enabled is refused before any cluster change" {
+    fake_cluster
+    run "$SCRIPT" --platform eks --install-method argocd --image perconalab/pmm-server:3-dev-latest \
+        --chart-version 1.5.0
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"pmm-ha 1.5.0 has no offlineRender.enabled"* ]]
+    refute grep -q "apply" "$FAKE/calls"
+}
+
+@test "argocd print mode quotes a branch that YAML would read as a number" {
+    render --chart-branch KrisBuytaert:123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"targetRevision: '123'"* ]]
+}
+
+@test "argocd print mode splits a --set at the commas helm splits it at" {
+    render --set 'pmmEnv.A=1,pmmEnv.B=x\,y,pmmEnv.C={a,b}'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"- name: 'pmmEnv.A'"$'\n'"          value: '1'"* ]]
+    [[ "$output" == *"- name: 'pmmEnv.B'"$'\n'"          value: 'x\,y'"* ]]
+    [[ "$output" == *"- name: 'pmmEnv.C'"$'\n'"          value: '{a,b}'"* ]]
+}
+
 @test "argocd print mode with mixed sources renders a Helm repository and a Git source" {
     released_render --deps-chart-branch latest --chart-branch KrisBuytaert:PMM-15826-pmm-ha-gitops
     [ "$status" -eq 0 ]
-    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: 1.2.0"* ]]
-    [[ "$output" == *"repoURL: https://github.com/KrisBuytaert/percona-helm-charts.git"$'\n'"    targetRevision: PMM-15826-pmm-ha-gitops"$'\n'"    path: charts/pmm-ha"$'\n'* ]]
+    [[ "$output" == *"chart: pmm-ha-dependencies"$'\n'"    targetRevision: '1.2.0'"* ]]
+    [[ "$output" == *"repoURL: https://github.com/KrisBuytaert/percona-helm-charts.git"$'\n'"    targetRevision: 'PMM-15826-pmm-ha-gitops'"$'\n'"    path: charts/pmm-ha"$'\n'* ]]
 }
 
 @test "argocd print mode allows the Helm repository in the AppProject" {

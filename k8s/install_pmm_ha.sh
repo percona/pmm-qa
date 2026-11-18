@@ -155,7 +155,9 @@ usage() {
                                 the charts: --chart-branch latest (the default) is the
                                 published chart at --chart-version, a branch is cloned
                                 from Git; eks only, and not with --charts, --chart-dir
-                                or --pmm-secret-from
+                                or --pmm-secret-from. A published pmm-ha without
+                                offlineRender.enabled is refused before any cluster
+                                change
         --argocd-version VER    Argo CD release to install (default: v3.5.6)
         --clone-dir DIR         clone the chart branches under DIR and keep them,
                                 instead of a temp dir removed on success
@@ -378,6 +380,11 @@ if [ "$INSTALL_METHOD" = "argocd" ] && { [ "$PMM_CHART_SOURCE" = "released" ] ||
         || fail "could not add the Helm repository $CHART_HELM_REPO."
     if [ "$PMM_CHART_SOURCE" = "released" ]; then
         PMM_CHART_RESOLVED_VERSION="$(resolve_chart_version pmm-ha "$CHART_VERSION")"
+        # Without offlineRender the chart looks up pmm-secret while rendering, which Argo CD cannot do.
+        pmm_values="$(helm show values percona/pmm-ha --version "$PMM_CHART_RESOLVED_VERSION")" \
+            || fail "could not read the values of pmm-ha $PMM_CHART_RESOLVED_VERSION."
+        grep -q '^offlineRender:' <<<"$pmm_values" \
+            || fail "pmm-ha $PMM_CHART_RESOLVED_VERSION has no offlineRender.enabled, which --install-method argocd needs; pass a --chart-branch that has it."
     fi
     if [ "$DEPS_CHART_SOURCE" = "released" ]; then
         DEPS_CHART_RESOLVED_VERSION="$(resolve_chart_version pmm-ha-dependencies "$DEPS_CHART_VERSION")"
@@ -433,10 +440,10 @@ argocd_revision() {
 # <source> <chart> <resolved version> <branch spec> <default repo>
 argocd_chart_source() {
     if [ "$1" = "released" ]; then
-        printf "    repoURL: %s\n    chart: %s\n    targetRevision: %s" "$CHART_HELM_REPO" "$2" "$3"
+        printf "    repoURL: %s\n    chart: %s\n    targetRevision: %s" "$CHART_HELM_REPO" "$2" "$(yaml_quote "$3")"
     else
         printf "    repoURL: %s\n    targetRevision: %s\n    path: charts/%s" \
-            "$(argocd_repo_url "$4" "$5")" "$(argocd_revision "$4")" "$2"
+            "$(argocd_repo_url "$4" "$5")" "$(yaml_quote "$(argocd_revision "$4")")" "$2"
     fi
 }
 
@@ -454,18 +461,38 @@ argocd_param() {
     [ "$force" != "true" ] || printf "          forceString: true\n"
 }
 
+# Splits one --set value where helm does: at commas neither escaped nor inside {}. Argo CD
+# escapes the commas of each parameter value itself, except in a {} list.
+split_set_arg() {
+    local s="$1" part="" depth=0 c i
+    for ((i = 0; i < ${#s}; i++)); do
+        c="${s:i:1}"
+        case "$c" in
+            \\) part+="$c${s:i+1:1}"; i=$((i + 1)); continue ;;
+            "{") depth=$((depth + 1)) ;;
+            "}") depth=$((depth - 1)) ;;
+            ,) if [ "$depth" -eq 0 ]; then printf '%s\n' "$part"; part=""; continue; fi ;;
+        esac
+        part+="$c"
+    done
+    printf '%s\n' "$part"
+}
+
 # Takes helm's own --set / --set-string argument list.
 argocd_params_from_args() {
     local kind kv name force
     while [ $# -gt 0 ]; do
-        kind="$1"; kv="$2"; shift 2
-        name="${kv%%=*}"
-        force="false"
-        case "$kind" in
-            --set-string) force="true" ;;
-            *) case "$name" in image.repository|image.tag|*.image.tag) force="true" ;; esac ;;
-        esac
-        argocd_param "$name" "${kv#*=}" "$force"
+        kind="$1"
+        while IFS= read -r kv; do
+            name="${kv%%=*}"
+            force="false"
+            case "$kind" in
+                --set-string) force="true" ;;
+                *) case "$name" in image.repository|image.tag|*.image.tag) force="true" ;; esac ;;
+            esac
+            argocd_param "$name" "${kv#*=}" "$force"
+        done < <(split_set_arg "$2")
+        shift 2
     done
 }
 
@@ -567,6 +594,7 @@ $params
       selfHeal: true
     syncOptions:
       - SkipDryRunOnMissingResource=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:

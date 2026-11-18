@@ -43,7 +43,6 @@ export default class HelmHelper {
     return releases[0];
   };
 
-  /** Names of the Deployments `helm template` renders from a local chart directory with the given extra arguments. */
   renderedDeploymentNames = (chartDir: string, args: string): string[] =>
     this.cliHelper
       .execSilent(`helm template op ${chartDir} --namespace ${this.namespace} ${args}`)

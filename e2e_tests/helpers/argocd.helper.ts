@@ -30,7 +30,6 @@ interface ArgoCdApplication {
   };
 }
 
-/** Argo CD `Application`s, read and changed through kubectl rather than the argocd CLI. */
 export default class ArgoCdHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper('argocd')) {}
 

@@ -22,7 +22,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await haClusterHelper.ensureServing(api.haApi);
 });
 
-pmmTest.afterEach(async ({ haBackupHelper, k8sHelper }, testInfo) => {
+pmmTest.afterEach(async ({ argoCdHelper, haBackupHelper, k8sHelper }, testInfo) => {
   // The Jobs take their pods' logs with them when deleted.
   for (const job of [backupJob, restoreJob]) {
     const logs = haBackupHelper.jobLogs(job);
@@ -30,7 +30,14 @@ pmmTest.afterEach(async ({ haBackupHelper, k8sHelper }, testInfo) => {
     if (logs) await testInfo.attach(`${job}.log`, { body: logs, contentType: 'text/plain' });
   }
 
-  k8sHelper.exec(`delete job ${backupJob} ${restoreJob} --ignore-not-found`);
+  k8sHelper.exec(`delete job ${backupJob} ${restoreJob} --ignore-not-found`).assertSuccess();
+
+  // @pmm-ha runs on this cluster next, so a failed self-heal or restore must not leave it scaled down.
+  const { pmm } = argoCdHelper.apps();
+
+  if (k8sHelper.getStatefulSetReplicas(pmm) !== defaultReplicas) {
+    k8sHelper.scaleStatefulSet(pmm, defaultReplicas).assertSuccess();
+  }
 });
 
 pmmTest(
