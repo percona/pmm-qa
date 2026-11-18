@@ -228,11 +228,19 @@ export default class InventoryApi {
     }
   };
 
-  updateService = async (serviceId: string, serviceType: string, changes: Record<string, unknown>) => {
-    const response = await this.request.put(`${apiEndpoints.management.services}/${serviceId}`, {
+  requestServiceUpdate = (
+    serviceId: string,
+    serviceType: string,
+    changes: Record<string, unknown>,
+    headers = GrafanaHelper.getAuthHeader(),
+  ) =>
+    this.request.put(`${apiEndpoints.management.services}/${serviceId}`, {
       data: { [serviceType]: changes },
-      headers: GrafanaHelper.getAuthHeader(),
+      headers,
     });
+
+  updateService = async (serviceId: string, serviceType: string, changes: Record<string, unknown>) => {
+    const response = await this.requestServiceUpdate(serviceId, serviceType, changes);
 
     expect(response.status(), await response.text()).toEqual(200);
   };

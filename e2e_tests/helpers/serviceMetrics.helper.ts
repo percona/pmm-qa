@@ -1,7 +1,9 @@
 import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import { FrameworkService, frameworkServices, OwnService } from '@helpers/frameworkServices.helper';
-import { ServiceAgent, ServiceType } from '@interfaces/inventory';
+import { GetService, ServiceAgent, ServiceType } from '@interfaces/inventory';
+import { serverContainer } from '@testdata/datasourceProxy';
 
 export type MetricsMode = 'METRICS_MODE_PULL' | 'METRICS_MODE_PUSH';
 
@@ -166,6 +168,38 @@ export const removeEndpointService = async (
   } else {
     cliHelper.removeService(container, serviceType, serviceName);
   }
+};
+
+export const exporterHttpStatus = async (
+  api: Api,
+  dockerHelper: DockerHelper,
+  container: string,
+  { service_id }: GetService,
+  exporterType: string,
+) =>
+  dockerHelper.getHttpStatus(
+    serverContainer,
+    `http://${container}:${(await api.inventoryApi.getServiceExporter(service_id, exporterType)).listen_port}/metrics`,
+  );
+
+export const registerEndpointService = async (
+  api: Api,
+  cliHelper: CliHelper,
+  dockerHelper: DockerHelper,
+  endpointService: EndpointService,
+) => {
+  const container = await dockerHelper.getServiceContainer(
+    api,
+    await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
+  );
+
+  await removeEndpointService(api, cliHelper, container, endpointService);
+  cliHelper.execSilent(endpointService.register(container)).assertSuccess();
+
+  return {
+    container,
+    service: await api.inventoryApi.getServiceDetailsByRegex(`^${endpointService.serviceName}$`),
+  };
 };
 
 export const readEndpoint = async (api: Api, serviceId: string) => {

@@ -1,51 +1,18 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import { databaseServices, frameworkServices } from '@helpers/frameworkServices.helper';
-import { removeEndpointService, serviceEndpoints } from '@helpers/serviceMetrics.helper';
-import { Timeouts } from '@helpers/timeouts';
+import { databaseServices } from '@helpers/frameworkServices.helper';
+import {
+  registerEndpointService,
+  removeEndpointService,
+  serviceEndpoints,
+} from '@helpers/serviceMetrics.helper';
 import { GetService } from '@interfaces/inventory';
-import EditServicePage, { ServiceLabels } from '@pages/inventory/editService.page';
-import { expect } from '@playwright/test';
+import { ServiceLabels } from '@pages/inventory/editService.page';
 
 const labelEdits: ServiceLabels = {
   cluster: 'editCluster',
   customLabels: { edited_label_a: 'editCustomLabelA', edited_label_b: 'editCustomLabelB' },
   environment: 'editEnvironment',
   replicationSet: 'editReplicationSet',
-};
-const toLabels = ({ cluster, custom_labels, environment, replication_set }: GetService): ServiceLabels => ({
-  cluster: cluster ?? '',
-  customLabels: custom_labels ?? {},
-  environment: environment ?? '',
-  replicationSet: replication_set ?? '',
-});
-
-const changeLabels = async (api: Api, editServicePage: EditServicePage, service: GetService) => {
-  await editServicePage.open(service.service_id);
-  await editServicePage.verifyLabels(toLabels(service));
-
-  await editServicePage.editCluster(labelEdits.cluster);
-  await editServicePage.editEnvironment(labelEdits.environment);
-  await editServicePage.editReplicationSet(labelEdits.replicationSet);
-  await editServicePage.editCustomLabels(labelEdits.customLabels);
-
-  const response = await editServicePage.saveChanges(service.service_id, {
-    clusterChanged: true,
-    settingsChanged: false,
-  });
-
-  await editServicePage.expectSaved(response);
-  await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
-
-  await expect
-    .poll(async () => toLabels(await api.inventoryApi.getServiceById(service.service_id)), {
-      message: `${service.service_name} labels after edit`,
-      timeout: Timeouts.THIRTY_SECONDS,
-    })
-    .toEqual(labelEdits);
-
-  await editServicePage.open(service.service_id);
-  await editServicePage.verifyLabels(labelEdits);
 };
 
 for (const { name, serviceRegex } of databaseServices) {
@@ -57,8 +24,8 @@ for (const { name, serviceRegex } of databaseServices) {
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
     });
 
-    pmmTest.afterEach(async ({ api }) => {
-      const { cluster, customLabels, environment, replicationSet } = toLabels(service);
+    pmmTest.afterEach(async ({ api, editServicePage }) => {
+      const { cluster, customLabels, environment, replicationSet } = editServicePage.toLabels(service);
 
       await api.inventoryApi.updateService(service.service_id, service.service_type, {
         cluster,
@@ -69,15 +36,16 @@ for (const { name, serviceRegex } of databaseServices) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify changing labels of ${name} service in Inventory @inventory`,
+      `PMM-T2711 - Verify changing labels of ${name} service in Inventory @inventory`,
       async ({ api, editServicePage }) => {
-        await changeLabels(api, editServicePage, service);
+        await editServicePage.verifyLabelsChange(service, labelEdits, () =>
+          api.inventoryApi.getServiceById(service.service_id),
+        );
       },
     );
   });
 }
 
-// A service of the test's own is removed afterwards, so nothing has to be put back through the update API.
 for (const ownService of serviceEndpoints) {
   const { name } = ownService;
 
@@ -87,13 +55,7 @@ for (const ownService of serviceEndpoints) {
 
     pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
-      container = await dockerHelper.getServiceContainer(
-        api,
-        await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
-      );
-      await removeEndpointService(api, cliHelper, container, ownService);
-      cliHelper.execSilent(ownService.register(container)).assertSuccess();
-      service = await api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
+      ({ container, service } = await registerEndpointService(api, cliHelper, dockerHelper, ownService));
     });
 
     pmmTest.afterEach(async ({ api, cliHelper }) => {
@@ -101,9 +63,11 @@ for (const ownService of serviceEndpoints) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify changing labels of ${name} service in Inventory @inventory`,
+      `PMM-T2711 - Verify changing labels of ${name} service in Inventory @inventory`,
       async ({ api, editServicePage }) => {
-        await changeLabels(api, editServicePage, service);
+        await editServicePage.verifyLabelsChange(service, labelEdits, () =>
+          api.inventoryApi.getServiceById(service.service_id),
+        );
       },
     );
   });

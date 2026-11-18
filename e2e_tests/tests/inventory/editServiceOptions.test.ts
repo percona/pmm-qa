@@ -47,7 +47,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
         });
 
         pmmTest(
-          `PMM-15674 - Verify changing ${option.label} of ${name} service @inventory`,
+          `PMM-T2717 - Verify changing ${option.label} of ${name} service @inventory`,
           async ({ api, dockerHelper, editServicePage }) => {
             const edited = option.edit(original);
 
@@ -57,7 +57,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
 
             const response = await editServicePage.saveChanges(service.service_id);
 
-            await editServicePage.expectSaved(response);
+            await editServicePage.verifySaved(response);
             await expect
               .poll(
                 async () => readOption(option, await api.inventoryApi.getServiceById(service.service_id)),
@@ -80,7 +80,7 @@ for (const { exporterType, name, options, serviceRegex } of serviceOptionsSettin
             const commandLine = option.commandLine?.(edited);
 
             if (commandLine) {
-              await dockerHelper.waitForExporterCommandLine(container, exporter.listen_port, commandLine);
+              await dockerHelper.verifyExporterCommandLine(container, exporter.listen_port, commandLine);
             }
 
             await editServicePage.open(service.service_id);
@@ -118,7 +118,7 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
   });
 
   pmmTest(
-    'PMM-15674 - Verify changing slow log rotation size of ps service @inventory',
+    'PMM-T2718 - Verify changing slow log rotation size of ps service @inventory',
     async ({ api, editServicePage }) => {
       // The form takes MiB; the server stores bytes, and a disabled rotation (-1) as 0.
       for (const { mib, stored } of [
@@ -127,12 +127,12 @@ pmmTest.describe('Edit service slow log rotation | ps', () => {
       ]) {
         await pmmTest.step(`Change slow log rotation size to ${mib} MiB`, async () => {
           await editServicePage.open(service.service_id);
-          await editServicePage.editQuerySource('slowlog');
+          await editServicePage.builders.querySourceOption('slowlog').check();
           await editServicePage.inputs.maxSlowlogFileSize.fill(mib);
 
           const response = await editServicePage.saveChanges(service.service_id);
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
           await expect
             .poll(
               async () => {

@@ -10,6 +10,7 @@ import {
   validationCases,
 } from '@helpers/serviceForm.helper';
 import { GetService } from '@interfaces/inventory';
+import EditServicePage from '@pages/inventory/editService.page';
 import { expect } from '@playwright/test';
 
 const missingServiceId = '00000000-0000-4000-8000-000000000000';
@@ -20,7 +21,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 for (const { name, serviceRegex } of formServices) {
   pmmTest(
-    `PMM-15674 - Verify Service block shows the type, node and address of ${name} service read-only @inventory`,
+    `PMM-T2701 - Verify Service block shows the type, node and address of ${name} service read-only @inventory`,
     async ({ api, editServicePage }) => {
       const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
       const endpoint = serviceEndpoint(service);
@@ -37,16 +38,26 @@ for (const { name, serviceRegex } of formServices) {
       await expect(editServicePage.elements.serviceDetails).toContainText(
         endpoint ? `${endpoint.label}${endpoint.value}` : 'Node',
       );
-      await expect(
-        editServicePage.elements.form.getByLabel(/^(Service name|Name|Node|Address|Port|Socket)$/),
-        'no field edits the service name, node or endpoint',
-      ).toHaveCount(0);
+      await editServicePage.verifyServiceDetailsReadOnly([
+        service.node_name,
+        ...(endpoint ? [endpoint.value] : []),
+      ]);
     },
   );
 }
 
 pmmTest(
-  'PMM-15674 - Verify Edit action in the services list opens the edit page @inventory',
+  'PMM-T2701 - Verify the label lookup of the read-only fields check finds an editable field @inventory',
+  async ({ api, editServicePage }) => {
+    const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
+
+    await editServicePage.open(service.service_id);
+    await expect(editServicePage.builders.fieldByLabel('Connection timeout (seconds)')).toHaveCount(1);
+  },
+);
+
+pmmTest(
+  'PMM-T2702 - Verify Edit action in the services list opens the edit page @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -57,7 +68,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify old edit-instance links redirect to the edit page @inventory',
+  'PMM-T2703 - Verify old edit-instance links redirect to the edit page @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -76,12 +87,12 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify Cancel leaves the edit page without saving @inventory',
+  'PMM-T2704 - Verify Cancel leaves the edit page without saving @inventory',
   async ({ api, editServicePage, page }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
     await editServicePage.open(service.service_id);
-    await editServicePage.editEnvironment('pmm_edit_cancelled');
+    await editServicePage.inputs.environment.fill('pmm_edit_cancelled');
 
     const writes = editServicePage.recordApiWrites();
 
@@ -95,7 +106,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15674 - Verify edit page of a service that does not exist says so @inventory',
+  'PMM-T2705 - Verify edit page of a service that does not exist says so @inventory',
   async ({ editServicePage, page }) => {
     await page.goto(`${editServicePage.url}/${missingServiceId}/edit`);
     await expect(editServicePage.elements.notFound).toBeVisible();
@@ -120,7 +131,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify ${role} cannot edit a service @inventory`,
+      `PMM-T2706 - Verify ${role} cannot edit a service @inventory`,
       async ({ api, editServicePage, grafanaHelper, page }) => {
         const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
 
@@ -129,10 +140,12 @@ for (const role of ['Viewer', 'Editor'] as const) {
         await expect(editServicePage.elements.unauthorized).toHaveText('Insufficient access permissions.');
         await expect(editServicePage.elements.form).toBeHidden();
 
-        const response = await page.request.put(`v1/management/services/${service.service_id}`, {
-          data: { [service.service_type]: { environment: 'pmm_edit_unauthorized' } },
-          headers: GrafanaHelper.getAuthHeader(username, formUserPassword),
-        });
+        const response = await api.inventoryApi.requestServiceUpdate(
+          service.service_id,
+          service.service_type,
+          { environment: 'pmm_edit_unauthorized' },
+          GrafanaHelper.getAuthHeader(username, formUserPassword),
+        );
 
         expect([401, 403], `the update API refuses a ${role}`).toContain(response.status());
       },
@@ -141,7 +154,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
 }
 
 for (const { field, label, message, serviceRegex, value } of validationCases) {
-  pmmTest(`PMM-15674 - Verify the form refuses a ${label} @inventory`, async ({ api, editServicePage }) => {
+  pmmTest(`PMM-T2707 - Verify the form refuses a ${label} @inventory`, async ({ api, editServicePage }) => {
     const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
 
     await editServicePage.open(service.service_id);
@@ -154,6 +167,40 @@ for (const { field, label, message, serviceRegex, value } of validationCases) {
     await expect(editServicePage.elements.confirmModal).toBeHidden();
     expect(writes, 'an invalid form sends nothing').toEqual([]);
   });
+}
+
+for (const { dialog, edit, label } of [
+  {
+    dialog: { clusterChanged: true, settingsChanged: false },
+    edit: (page: EditServicePage) => page.inputs.cluster.fill('pmm_edit_dialog_cluster'),
+    label: 'cluster',
+  },
+  {
+    dialog: { settingsChanged: false },
+    edit: (page: EditServicePage) => page.inputs.environment.fill('pmm_edit_dialog_environment'),
+    label: 'label',
+  },
+  {
+    dialog: { settingsChanged: true },
+    edit: (page: EditServicePage) => page.editMetrics({ logLevel: 'LOG_LEVEL_DEBUG' }),
+    label: 'setting',
+  },
+]) {
+  pmmTest(
+    `PMM-T2708 - Verify the confirmation dialog of a ${label} change says what saving does @inventory`,
+    async ({ api, editServicePage }) => {
+      const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
+
+      await editServicePage.open(service.service_id);
+      await edit(editServicePage);
+
+      const writes = editServicePage.recordApiWrites();
+
+      await editServicePage.buttons.saveChanges.click();
+      await editServicePage.verifyConfirmDialog(dialog);
+      expect(writes, 'the dialog sends nothing').toEqual([]);
+    },
+  );
 }
 
 pmmTest.describe('Edit service requests', () => {
@@ -175,7 +222,7 @@ pmmTest.describe('Edit service requests', () => {
   });
 
   pmmTest(
-    "PMM-15674 - Verify a refused save shows the server's reason @inventory",
+    "PMM-T2709 - Verify a refused save shows the server's reason @inventory",
     async ({ api, editServicePage }) => {
       const { username } = await api.inventoryApi.getServiceExporter(
         service.service_id,
@@ -187,7 +234,7 @@ pmmTest.describe('Edit service requests', () => {
 
       const response = await editServicePage.saveChanges(service.service_id);
 
-      await editServicePage.expectRefused(
+      await editServicePage.verifyRefused(
         response,
         service.service_id,
         'the connection check refuses a wrong password',
@@ -200,32 +247,30 @@ pmmTest.describe('Edit service requests', () => {
   );
 
   // The service is monitored with a stored password, so a save that resent it would show here.
-  for (const { body, edit, label, settingsChanged } of [
+  for (const { body, edit, label } of [
     {
       body: { environment: 'pmm_edit_request_check' },
       edit: { environment: 'pmm_edit_request_check' },
       label: 'label',
-      settingsChanged: false,
     },
     {
       body: { log_level: 'LOG_LEVEL_DEBUG' },
       edit: { logLevel: 'LOG_LEVEL_DEBUG' as const },
       label: 'setting',
-      settingsChanged: true,
     },
   ]) {
     pmmTest(
-      `PMM-15674 - Verify a ${label} change sends only that change, in one update call @inventory`,
+      `PMM-T2710 - Verify a ${label} change sends only that change, in one update call @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await (edit.environment
-          ? editServicePage.editEnvironment(edit.environment)
+          ? editServicePage.inputs.environment.fill(edit.environment)
           : editServicePage.editMetrics({ logLevel: edit.logLevel }));
 
         const writes = editServicePage.recordApiWrites();
-        const response = await editServicePage.saveChanges(service.service_id, { settingsChanged });
+        const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         expect(response.request().postDataJSON(), 'untouched secrets stay out of the request').toEqual({
           [service.service_type]: body,
         });

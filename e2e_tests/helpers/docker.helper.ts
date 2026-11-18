@@ -59,7 +59,7 @@ export default class DockerHelper {
     this.cliHelper.execute(`docker exec ${container} supervisorctl ${action} ${program}`).assertSuccess();
 
   // A restarting exporter has no process for a moment, which counts as not yet rather than as a flag gone.
-  waitForExporterCommandLine = async (
+  verifyExporterCommandLine = async (
     container: string,
     listenPort: number,
     { matches, pattern }: { matches: boolean; pattern: RegExp },

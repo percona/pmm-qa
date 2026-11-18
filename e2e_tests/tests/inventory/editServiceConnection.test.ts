@@ -45,7 +45,7 @@ for (const {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Connection section shows the current settings and hides passwords for ${name} service @inventory`,
+      `PMM-T2693 - Verify Connection section shows the current settings and hides passwords for ${name} service @inventory`,
       async ({ api, editServicePage }) => {
         const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
@@ -60,7 +60,7 @@ for (const {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing database, username, password and agent password of ${name} service @inventory`,
+      `PMM-T2694 - Verify changing database, username, password and agent password of ${name} service @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         const connection = { ...testUser, database: hasDatabase ? testDatabase : undefined };
 
@@ -69,7 +69,7 @@ for (const {
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         await expect(editServicePage.builders.successMessage(service.service_name)).toBeVisible();
 
         await expect
@@ -120,7 +120,7 @@ for (const {
     );
 
     pmmTest(
-      `PMM-15674 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
+      `PMM-T2695 - Verify wrong password is rejected by the connection check for ${name} service @inventory`,
       async ({ api, credentials, editServicePage }) => {
         const { username } = original(credentials);
 
@@ -129,7 +129,7 @@ for (const {
 
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectRefused(
+        await editServicePage.verifyRefused(
           response,
           service.service_id,
           'connection check fails with a wrong password',

@@ -1,10 +1,10 @@
 import pmmTest from '@fixtures/pmmTest';
-import { frameworkServices } from '@helpers/frameworkServices.helper';
 import {
   basicAuth,
   endpointExporterType,
   EndpointSettings,
   readEndpoint,
+  registerEndpointService,
   removeEndpointService,
   serviceEndpoints,
 } from '@helpers/serviceMetrics.helper';
@@ -28,13 +28,7 @@ for (const ownService of serviceEndpoints) {
     pmmTest.beforeEach(async ({ api, cliHelper, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
 
-      container = await dockerHelper.getServiceContainer(
-        api,
-        await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.haproxy.serviceRegex),
-      );
-      await removeEndpointService(api, cliHelper, container, ownService);
-      cliHelper.execSilent(ownService.register(container)).assertSuccess();
-      service = await api.inventoryApi.getServiceDetailsByRegex(`^${ownService.serviceName}$`);
+      ({ container, service } = await registerEndpointService(api, cliHelper, dockerHelper, ownService));
       // The service is added again under the same name for every test, and the series of the one removed
       // before it can still be in the query window, so only the service ID tells them apart.
       up = `up{service_id="${service.service_id}"}`;
@@ -50,7 +44,7 @@ for (const ownService of serviceEndpoints) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Metrics endpoint section shows the current settings of ${name} service @inventory`,
+      `PMM-T2696 - Verify Metrics endpoint section shows the current settings of ${name} service @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.elements.connectionSection).toContainText('Metrics endpoint');
@@ -63,7 +57,7 @@ for (const ownService of serviceEndpoints) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify basic auth and skipped TLS verification of ${name} endpoint keep its metrics coming @inventory`,
+      `PMM-T2697 - Verify basic auth and skipped TLS verification of ${name} endpoint keep its metrics coming @inventory`,
       async ({ api, editServicePage }) => {
         const expected = { ...original, tlsSkipVerify: true, username: basicAuth.username };
 
@@ -73,7 +67,7 @@ for (const ownService of serviceEndpoints) {
         // The endpoint takes no auth, so the connection check passes with the credentials too.
         const response = await editServicePage.saveChanges(service.service_id);
 
-        await editServicePage.expectSaved(response);
+        await editServicePage.verifySaved(response);
         await expect
           .poll(() => readEndpoint(api, service.service_id), {
             message: `${endpointExporterType} endpoint stored`,
@@ -89,7 +83,7 @@ for (const ownService of serviceEndpoints) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing listen port of ${name} endpoint @inventory`,
+      `PMM-T2698 - Verify changing listen port of ${name} endpoint @inventory`,
       async ({ api, editServicePage }) => {
         await pmmTest.step('An unreachable port is refused by the connection check', async () => {
           await editServicePage.open(service.service_id);
@@ -97,7 +91,7 @@ for (const ownService of serviceEndpoints) {
 
           const response = await editServicePage.saveChanges(service.service_id);
 
-          await editServicePage.expectRefused(
+          await editServicePage.verifyRefused(
             response,
             service.service_id,
             'the connection check refuses a port nothing listens on',
@@ -113,7 +107,7 @@ for (const ownService of serviceEndpoints) {
             skipConnectionCheck: true,
           });
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
           await expect
             .poll(async () => (await readEndpoint(api, service.service_id)).listenPort, {
               message: 'listen port stored',
@@ -129,7 +123,7 @@ for (const ownService of serviceEndpoints) {
 
           const response = await editServicePage.saveChanges(service.service_id);
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
           await expect
             .poll(async () => (await readEndpoint(api, service.service_id)).listenPort, {
               message: 'listen port stored',
@@ -156,7 +150,7 @@ for (const ownService of serviceEndpoints) {
       { change: { scheme: 'https' as const }, label: 'scheme', stored: { scheme: 'https' as const } },
     ]) {
       pmmTest(
-        `PMM-15674 - Verify changing ${label} of ${name} endpoint @inventory`,
+        `PMM-T2699 - Verify changing ${label} of ${name} endpoint @inventory`,
         async ({ api, editServicePage }) => {
           const expected = { ...original, ...stored };
 
@@ -167,7 +161,7 @@ for (const ownService of serviceEndpoints) {
             skipConnectionCheck: true,
           });
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
           await expect
             .poll(() => readEndpoint(api, service.service_id), {
               message: `${label} stored`,
@@ -184,7 +178,7 @@ for (const ownService of serviceEndpoints) {
 
     if (hasGroup) {
       pmmTest(
-        `PMM-15674 - Verify changing group of ${name} service relabels its metrics @inventory`,
+        `PMM-T2700 - Verify changing group of ${name} service relabels its metrics @inventory`,
         async ({ api, editServicePage }) => {
           const expected = { ...original, group: 'pmm_edit_group' };
 
@@ -192,9 +186,9 @@ for (const ownService of serviceEndpoints) {
           await editServicePage.editEndpoint({ group: expected.group });
 
           // The group is a label, so the agents do not restart and no connection check runs.
-          const response = await editServicePage.saveChanges(service.service_id, { settingsChanged: false });
+          const response = await editServicePage.saveChanges(service.service_id);
 
-          await editServicePage.expectSaved(response);
+          await editServicePage.verifySaved(response);
           await expect
             .poll(() => readEndpoint(api, service.service_id), {
               message: 'group stored',

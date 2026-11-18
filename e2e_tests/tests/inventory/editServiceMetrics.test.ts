@@ -1,7 +1,6 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import DockerHelper from '@helpers/docker.helper';
 import {
+  exporterHttpStatus,
   LogLevel,
   logLevelFlag,
   MetricsMode,
@@ -14,7 +13,6 @@ import {
 import { Timeouts } from '@helpers/timeouts';
 import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
-import { serverContainer } from '@testdata/datasourceProxy';
 
 for (const serviceMetrics of serviceMetricsSettings) {
   const { exporterType, name, serviceRegex, upMetric } = serviceMetrics;
@@ -23,17 +21,13 @@ for (const serviceMetrics of serviceMetricsSettings) {
     let service: GetService;
     let original: ServiceMetricsSettings;
     let container: string;
-    const exporter = (api: Api) => api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-    const exporterHttpStatus = async (api: Api, dockerHelper: DockerHelper) =>
-      dockerHelper.getHttpStatus(
-        serverContainer,
-        `http://${container}:${(await exporter(api)).listen_port}/metrics`,
-      );
 
     pmmTest.beforeEach(async ({ api, dockerHelper, grafanaHelper }) => {
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-      original = toMetricsSettings(await exporter(api));
+      original = toMetricsSettings(
+        await api.inventoryApi.getServiceExporter(service.service_id, exporterType),
+      );
       container = await dockerHelper.getServiceContainer(api, service);
     });
 
@@ -46,7 +40,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     });
 
     pmmTest(
-      `PMM-15674 - Verify Metrics section shows the current settings of ${name} service @inventory`,
+      `PMM-T2712 - Verify Metrics section shows the current settings of ${name} service @inventory`,
       async ({ editServicePage }) => {
         await editServicePage.open(service.service_id);
         await expect(editServicePage.elements.metricsSection).toBeVisible();
@@ -56,11 +50,11 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing metrics mode of ${name} service keeps its metrics reaching PMM Server @inventory`,
+      `PMM-T2713 - Verify changing metrics mode of ${name} service keeps its metrics reaching PMM Server @inventory`,
       async ({ api, editServicePage }) => {
         const otherMode: MetricsMode =
           original.metricsMode === 'METRICS_MODE_PUSH' ? 'METRICS_MODE_PULL' : 'METRICS_MODE_PUSH';
-        const { agent_id } = await exporter(api);
+        const { agent_id } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
         const serverTargets = async () =>
           (await api.grafanaApi.getActiveTargets())
             .filter(({ labels }) => labels.instance === agent_id)
@@ -70,8 +64,8 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         for (const metricsMode of [otherMode, original.metricsMode]) {
           await pmmTest.step(`Change metrics mode to ${metricsMode}`, async () => {
-            await editServicePage.saveMetrics(service.service_id, original, { metricsMode }, () =>
-              exporter(api),
+            await editServicePage.verifyMetricsChange(service.service_id, original, { metricsMode }, () =>
+              api.inventoryApi.getServiceExporter(service.service_id, exporterType),
             );
 
             // PMM Server scrapes a pulled exporter, the client's vmagent sends a pushed one's metrics. A new
@@ -93,7 +87,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
+      `PMM-T2714 - Verify exposing the ${name} exporter makes it reachable from PMM Server @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         // A pushing exporter listens only on its own host's 127.0.0.1 until it is exposed.
         const pushing: ServiceMetricsSettings = {
@@ -108,7 +102,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
           metricsSettingsChanges(pushing),
         );
         await expect
-          .poll(() => exporterHttpStatus(api, dockerHelper), {
+          .poll(() => exporterHttpStatus(api, dockerHelper, container, service, exporterType), {
             message: 'an exporter that is not exposed cannot be reached',
             timeout: Timeouts.ONE_MINUTE,
           })
@@ -116,13 +110,13 @@ for (const serviceMetrics of serviceMetricsSettings) {
 
         await editServicePage.open(service.service_id);
         await editServicePage.verifyMetrics(pushing);
-        await editServicePage.saveMetrics(service.service_id, pushing, { exposeExporter: true }, () =>
-          exporter(api),
+        await editServicePage.verifyMetricsChange(service.service_id, pushing, { exposeExporter: true }, () =>
+          api.inventoryApi.getServiceExporter(service.service_id, exporterType),
         );
 
         // Any HTTP answer will do: the exporter asks for its agent password, or has none to ask for.
         await expect
-          .poll(() => exporterHttpStatus(api, dockerHelper), {
+          .poll(() => exporterHttpStatus(api, dockerHelper, container, service, exporterType), {
             message: 'an exposed exporter can be reached from PMM Server',
             timeout: Timeouts.ONE_MINUTE,
           })
@@ -131,7 +125,7 @@ for (const serviceMetrics of serviceMetricsSettings) {
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing log level of ${name} exporter @inventory`,
+      `PMM-T2715 - Verify changing log level of ${name} exporter @inventory`,
       async ({ api, dockerHelper, editServicePage }) => {
         const verbose: LogLevel =
           original.logLevel === 'LOG_LEVEL_DEBUG' ? 'LOG_LEVEL_INFO' : 'LOG_LEVEL_DEBUG';
@@ -139,28 +133,32 @@ for (const serviceMetrics of serviceMetricsSettings) {
         await editServicePage.open(service.service_id);
 
         await pmmTest.step(`Change log level to ${verbose}`, async () => {
-          await editServicePage.saveMetrics(service.service_id, original, { logLevel: verbose }, () =>
-            exporter(api),
+          await editServicePage.verifyMetricsChange(service.service_id, original, { logLevel: verbose }, () =>
+            api.inventoryApi.getServiceExporter(service.service_id, exporterType),
           );
-          await dockerHelper.waitForExporterCommandLine(container, (await exporter(api)).listen_port, {
-            matches: true,
-            pattern: logLevelFlag(verbose),
-          });
+          await dockerHelper.verifyExporterCommandLine(
+            container,
+            (await api.inventoryApi.getServiceExporter(service.service_id, exporterType)).listen_port,
+            {
+              matches: true,
+              pattern: logLevelFlag(verbose),
+            },
+          );
         });
 
         await pmmTest.step('Change log level back to Default', async () => {
-          await editServicePage.saveMetrics(
+          await editServicePage.verifyMetricsChange(
             service.service_id,
             original,
             { logLevel: 'LOG_LEVEL_UNSPECIFIED' },
-            () => exporter(api),
+            () => api.inventoryApi.getServiceExporter(service.service_id, exporterType),
           );
         });
       },
     );
 
     pmmTest(
-      `PMM-15674 - Verify changing connection timeout of ${name} exporter @inventory`,
+      `PMM-T2716 - Verify changing connection timeout of ${name} exporter @inventory`,
       async ({ api, editServicePage }) => {
         const timeout = original.connectionTimeout === '7.5' ? '8.5' : '7.5';
 
@@ -177,8 +175,11 @@ for (const serviceMetrics of serviceMetricsSettings) {
         // Clearing the field puts the server's default timeout back.
         for (const connectionTimeout of [timeout, '']) {
           await pmmTest.step(`Change connection timeout to "${connectionTimeout}"`, async () => {
-            await editServicePage.saveMetrics(service.service_id, original, { connectionTimeout }, () =>
-              exporter(api),
+            await editServicePage.verifyMetricsChange(
+              service.service_id,
+              original,
+              { connectionTimeout },
+              () => api.inventoryApi.getServiceExporter(service.service_id, exporterType),
             );
           });
         }
