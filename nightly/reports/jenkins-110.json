@@ -3746,16 +3746,20 @@
       "link": "https://github.com/percona/pmm-qa/pull/1791",
       "by": "Investigator routine",
       "at": "2026-11-18T22:40:03Z"
+    },
+    {
+      "suites": [
+        "CLI Integration",
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "product bug",
+      "summary": "PSMDB Shard 7.x (latest client): PMM-T2445 timed out because mongodb_up never reached 1 after the change agent call with --skip-connection-check. 3.8.1 · Percona Server 8.4: PMM-T2528's slowlog agent disable returned OK, but PMM Server kept the agent Running instead of 'Done (disabled)'. Both are the open PMM-15835 lost update (a ChangeAgent racing the agent's status report) that nights 107 and 109 already traced. Matched to the ticket from the job logs; not re-reproduced.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+      "by": "Investigator routine",
+      "at": "2026-11-18T22:40:17Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-18T21:58:08Z",
-      "suites": [
-        "CLI Integration"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-11-18T21:58:08Z",
