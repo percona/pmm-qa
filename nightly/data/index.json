@@ -193387,16 +193387,18 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12301/",
         "by": "Investigator routine",
         "at": "2026-11-18T03:38:46Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-18T02:52:29Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "ha #176: PMM-T2109's afterEach restore PUT /v1/server/settings got a bare nginx 500 at 01:36:29.8, about 10 s after its leader restart, after the API had already served the new leader. Its retries then failed the 'address not already changed' precondition because the restore never landed. Reproduced on a CHAOS k3s HA cluster (same pmm-managed ba6b74a): around a failover, HAProxy keeps routing to the terminating leader (22 nginx 500s over 3 s, auth_request 502) and marks a restarted pod UP before its first check ('UP/READY (resolves again)'), then sends it requests. Filed PMM-15938 against the pmm-ha chart.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15938",
+        "by": "Investigator routine",
+        "at": "2026-11-18T03:38:51Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
