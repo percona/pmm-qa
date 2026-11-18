@@ -193357,15 +193357,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-18T02:52:29Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
+        ],
+        "verdict": "test bug",
+        "summary": "3.9.0 · Percona Server 8.4: PMM-T2541 itself passed; the slowlog spec's afterAll restart left pmm-agent 'running, but not set up' (pmm-agent.yaml emptied by a second, hand-started pmm-agent racing the systemd unit), so all 21 @percona-server tests after it failed. Same failure and cause as the FB run that open pmm-qa#1782 fixes; deduped, not re-reproduced.",
+        "link": "https://github.com/percona/pmm-qa/pull/1782",
+        "by": "Investigator routine",
+        "at": "2026-11-18T03:38:35Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-18T02:52:29Z",
