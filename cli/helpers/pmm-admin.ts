@@ -99,6 +99,19 @@ export async function listAgents(containerName: string): Promise<ListAgent[]> {
 }
 
 /**
+ * IDs of a MySQL service's mysqld_exporter and QAN slowlog agent from "pmm-admin list --json", empty when absent
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the MySQL service
+ */
+export async function mysqlAgentIds(containerName: string, serviceId: string) {
+  const agents = (await listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
+  const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type)?.agent_id ?? '';
+
+  return { exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'), slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT') };
+}
+
+/**
  * Listen port of an agent from "pmm-admin list --json" in a client container
  *
  * @param   containerName   docker container running pmm-agent

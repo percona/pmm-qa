@@ -194,7 +194,7 @@ pmmTest(
 pmmTest(
   'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade',
   async ({ api }) => {
-    // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+    // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
     pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
     await expect(async () => {
@@ -294,7 +294,7 @@ for (const tab of ['services', 'nodes'] as const) {
   pmmTest(
     `PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly | ${tab}`,
     async ({ api, nodesPage, page, servicesPage }) => {
-      // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-11-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
+      // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-14 -- on HA, agent statuses go stale while pg-db restarts (PMM-15716); unskip once it is fixed.
       pmmTest.skip(await api.haApi.isEnabled(), 'Agent statuses go stale on HA, see PMM-15716');
 
       const { pagination, url } = tab === 'services' ? servicesPage : nodesPage;
