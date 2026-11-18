@@ -2,7 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-const newAdminPassword = 'pmm3admin!';
+const newAdminPassword = 'PMM3testuser!';
 
 pmmTest.describe('PMM upgrade tests for AMI/OVF', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
