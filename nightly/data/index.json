@@ -200942,15 +200942,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-19T02:55:37Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
+        ],
+        "verdict": "test bug",
+        "summary": "3.8.0/3.8.1 × MySQL 8.0, 8.4 and 9.7 (6 lanes): PMM-T2663 failed again with 'pmm-admin: error: unknown flag --skip-connection-check'. The test was added in #1777, the flag first shipped in pmm-client 3.9.0, and the test has no version gate. Night 110 found the same failure; open pmm-qa#1791 gates the test at 3.9.0 and has not merged yet. Deduped, not re-reproduced.",
+        "link": "https://github.com/percona/pmm-qa/pull/1791",
+        "by": "Investigator routine",
+        "at": "2026-11-19T02:59:31Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-19T02:55:37Z",
