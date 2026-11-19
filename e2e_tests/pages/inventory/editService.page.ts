@@ -481,7 +481,6 @@ export default class EditServicePage extends BasePage {
     await expect(this.page).toHaveURL(new RegExp(`${this.url}$`));
   };
 
-  // Certificates are never sent to the UI, so the fields shown always open empty.
   verifyServiceDetailsReadOnly = async (values: string[]) => {
     const { editableDetailFields, serviceDetails, serviceNameLabels } = this.elements;
 
@@ -506,6 +505,7 @@ export default class EditServicePage extends BasePage {
     await expect(this.buttons.saveChanges).toBeDisabled();
   };
 
+  // Certificates are never sent to the UI, so the fields shown always open empty.
   verifyTls = async (
     { tls, tlsSkipVerify }: ServiceTlsSettings,
     shownCertificates: TlsCertificateField[],

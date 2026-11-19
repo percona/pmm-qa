@@ -42,19 +42,12 @@ for (const { name, serviceRegex } of formServices) {
         service.node_name,
         ...(endpoint ? [endpoint.value] : []),
       ]);
+
+      await editServicePage.open(service.service_id);
+      await expect(editServicePage.builders.fieldByLabel('Connection timeout (seconds)')).toHaveCount(1);
     },
   );
 }
-
-pmmTest(
-  'PMM-T2701 - Verify the label lookup of the read-only fields check finds an editable field @inventory',
-  async ({ api, editServicePage }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegex(frameworkServices.ps.serviceRegex);
-
-    await editServicePage.open(service.service_id);
-    await expect(editServicePage.builders.fieldByLabel('Connection timeout (seconds)')).toHaveCount(1);
-  },
-);
 
 pmmTest(
   'PMM-T2702 - Verify Edit action in the services list opens the edit page @inventory',
