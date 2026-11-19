@@ -39,11 +39,16 @@ pmmTest.describe('Advisor metrics', () => {
     await api.advisorsApi.deleteAllSchedules();
   });
 
+  // Each restore runs even when another fails, so the shared server is not left half-changed.
   pmmTest.afterEach(async ({ api }) => {
-    for (const name of createdChecks.splice(0)) await api.advisorsApi.deleteCheck(name);
+    const restores = await Promise.allSettled([
+      ...createdChecks.splice(0).map((name) => api.advisorsApi.deleteCheck(name)),
+      api.settingsApi.updateSettings(notifications),
+      api.advisorsApi.restoreSchedules(schedules),
+    ]);
+    const errors = restores.flatMap((restore) => (restore.status === 'rejected' ? [restore.reason] : []));
 
-    await api.settingsApi.updateSettings(notifications);
-    await api.advisorsApi.restoreSchedules(schedules);
+    expect(errors, 'Restoring the Advisor state failed').toEqual([]);
   });
 
   pmmTest(
@@ -164,6 +169,7 @@ pmmTest.describe('Advisor metrics', () => {
 
 pmmTest.describe.serial('Advisor telemetry report', () => {
   const container = 'pmm-server-advisor-telemetry';
+  const intervalSeconds = 15;
   const port = 460;
   const cliHelper = new CliHelper();
   const telemetry = new TelemetryHelper(cliHelper, container);
@@ -191,8 +197,8 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
     // SMTP points at a closed port, so every Advisor email from this server fails.
     new DockerHelper(cliHelper).startContainer(
       container,
-      `--publish ${port}:8443 -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} -e PMM_DEBUG=1` +
-        ' -e PMM_DEV_TELEMETRY_INTERVAL=15s -e PMM_DEV_TELEMETRY_DISABLE_SEND=1' +
+      `--publish ${port}:8443 -e GF_SECURITY_ADMIN_PASSWORD=${CliHelper.shellQuote(adminPassword)} -e PMM_DEBUG=1` +
+        ` -e PMM_DEV_TELEMETRY_INTERVAL=${intervalSeconds}s -e PMM_DEV_TELEMETRY_DISABLE_SEND=1` +
         ' -e PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1' +
         ' -e GF_SMTP_ENABLED=true -e GF_SMTP_HOST=127.0.0.1:2525 -e GF_SMTP_FROM_ADDRESS=pmm@example.com' +
         ` ${dockerVersion}`,
@@ -231,12 +237,18 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   pmmTest(
     'PMM-T2756 - Verify PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1 makes telemetry report on start @advisor-telemetry',
     async () => {
+      const started = telemetry.entryTime('Sending telemetry on start is enabled');
+      const firstReport = telemetry.entryTime('^Telemetry captured:');
+
+      expect(started, 'pmm-managed did not start a telemetry report on start').not.toBeNaN();
+      // The ticker's first report comes a whole interval after start, so an earlier one is the report on start.
       expect(
-        cliHelper.execSilent(
-          `docker exec ${container} grep -F "Sending telemetry on start is enabled" /srv/logs/pmm-managed.log`,
-        ).code,
-        'pmm-managed did not collect a telemetry report on start',
-      ).toEqual(0);
+        firstReport - started,
+        'The first report is not the one collected on start',
+      ).toBeGreaterThanOrEqual(0);
+      expect(firstReport - started, 'The first report is not the one collected on start').toBeLessThan(
+        intervalSeconds * Timeouts.ONE_SECOND,
+      );
     },
   );
 

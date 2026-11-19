@@ -214,6 +214,10 @@ export default class CliHelper {
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
 

@@ -6,11 +6,7 @@ export type TelemetryCapture = Record<string, string>;
 
 const captureMarker = '@@CAPTURE@@';
 
-/**
- * Reads the reports pmm-managed logs as "Telemetry captured:" when it runs with PMM_DEBUG=1.
- * A report is one log entry of `key: value` lines, so it ends at the next `time=` line.
- * A key reported more than once keeps all its values, one per line, so it matches no single value.
- */
+/** A key reported more than once keeps all its values, one per line, so it matches no single value. */
 export default class TelemetryHelper {
   constructor(
     private readonly cliHelper: CliHelper,
@@ -40,6 +36,17 @@ export default class TelemetryHelper {
         return capture;
       });
   };
+
+  /** Milliseconds since the epoch of the first log entry with a line matching the awk regex `pattern`. */
+  entryTime = (pattern: string): number =>
+    Date.parse(
+      this.cliHelper
+        .execSilent(
+          `docker exec ${this.container} awk '/^time=/{t=$0} /${pattern}/{print t; exit}' /srv/logs/pmm-managed.log`,
+        )
+        .assertSuccess()
+        .stdout.match(/^time="?([^" ]+)/)?.[1] ?? '',
+    );
 
   /** `{"v":[{"1":"<label>","2":"<value>"}]}`, the shape of the JSON-transformed VictoriaMetrics keys. */
   static jsonEntries = (value: string | undefined): [string, string][] =>
