@@ -59,6 +59,28 @@ export default class MongoDBHelper {
     return { unusedIndex, usedIndex };
   };
 
+  /**
+   * Makes one replica set member a hidden, priority 0 member that applies the oplog delaySeconds late.
+   *
+   * @param   replicaSet    replica set name
+   * @param   members       containers running its mongod members on port 27017
+   * @param   memberIndex   index of the member in rs.conf().members
+   * @param   delaySeconds  secondaryDelaySecs to set
+   * @returns the delayed member's host name
+   */
+  delayReplicaSetMember = (
+    replicaSet: string,
+    members: string[],
+    memberIndex: number,
+    delaySeconds: number,
+  ) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      `const c = rs.conf(), m = c.members[${memberIndex}]; m.secondaryDelaySecs = ${delaySeconds};` +
+        ' m.priority = 0; m.hidden = true; rs.reconfig(c); print(m.host.split(":")[0]);',
+    ).stdout.trim();
+
   dropDatabase = async (dbName: string) => this.client.db(dbName).dropDatabase();
 
   dropUser = async (username: string) => this.client.db('admin').command({ dropUser: username });
@@ -103,6 +125,22 @@ export default class MongoDBHelper {
   getReplicaSetMemberStates = async () =>
     ((await this.client.db('admin').command({ replSetGetStatus: 1 })).members as { stateStr: string }[]).map(
       ({ stateStr }) => stateStr,
+    );
+
+  /**
+   * Undoes delayReplicaSetMember: every priority 0 data-bearing member gets back the priority 1, no delay
+   * and visibility pmm-framework starts it with. Safe when no member was delayed.
+   *
+   * @param   replicaSet   replica set name
+   * @param   members      containers running its mongod members on port 27017
+   */
+  resetDelayedReplicaSetMembers = (replicaSet: string, members: string[]) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      'const c = rs.conf(), delayed = c.members.filter((m) => !m.arbiterOnly && m.priority === 0);' +
+        ' delayed.forEach((m) => { m.secondaryDelaySecs = 0; m.priority = 1; m.hidden = false; });' +
+        ' if (delayed.length > 0) rs.reconfig(c);',
     );
 
   /**
