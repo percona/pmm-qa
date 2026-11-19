@@ -29,22 +29,25 @@ const checkMetrics = [
 
 pmmTest.describe('Advisor metrics', () => {
   const createdChecks: string[] = [];
-  let notifications: Record<string, unknown>;
-  let schedules: AdvisorSchedule[];
+  let notifications: Record<string, unknown> | undefined;
+  let schedules: AdvisorSchedule[] | undefined;
 
   // The default daily schedule would add a run, and an email, to a test that crosses 06:00 UTC.
   pmmTest.beforeEach(async ({ api }) => {
+    notifications = undefined;
+    schedules = undefined;
     notifications = await api.settingsApi.getAdvisorNotifications();
     schedules = await api.advisorsApi.listSchedules();
     await api.advisorsApi.deleteAllSchedules();
   });
 
   // Each restore runs even when another fails, so the shared server is not left half-changed.
+  // A snapshot beforeEach never captured is not restored: restoreSchedules deletes every schedule first.
   pmmTest.afterEach(async ({ api }) => {
     const restores = await Promise.allSettled([
       ...createdChecks.splice(0).map((name) => api.advisorsApi.deleteCheck(name)),
-      api.settingsApi.updateSettings(notifications),
-      api.advisorsApi.restoreSchedules(schedules),
+      ...(notifications ? [api.settingsApi.updateSettings(notifications)] : []),
+      ...(schedules ? [api.advisorsApi.restoreSchedules(schedules)] : []),
     ]);
     const errors = restores.flatMap((restore) => (restore.status === 'rejected' ? [restore.reason] : []));
 
