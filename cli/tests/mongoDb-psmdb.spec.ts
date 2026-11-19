@@ -843,4 +843,220 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
       expect(await pbm.pitrRangeEnd(pbmHost), 'pbm list still shows the PITR chunks').toBeDefined();
     });
   });
+
+  test.describe('restores', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    const restoreStatusMetric = 'mongodb_pbm_restore_status';
+    let backupName: string;
+
+    const restoreSeries = (series: pbm.Series[], name?: string) => series.filter((item) => item.name.startsWith('mongodb_pbm_restore_')
+      && item.name !== restoreStatusMetric && (!name || item.labels.name === name));
+
+    // The exporter cannot scrape while a restore replaces the users it logs in as.
+    const restoreStatus = async (member: string) => pbm.seriesValue(await pbm.scrapePbm(member), restoreStatusMetric);
+
+    const expectRestoreStatusOnEveryMember = async (expected: number, timeout = 180_000) => {
+      await everyMember(async (member) => {
+        await expect(async () => {
+          expect(await restoreStatus(member), `${restoreStatusMetric} on ${member}`).toEqual(expected);
+        }).toPass({ intervals: [3_000], timeout });
+      });
+    };
+
+    const restoreBackup = async () => {
+      let started: pbm.StartedOperation | undefined;
+
+      await expect(async () => {
+        started = await pbm.startOperation(pbmHost, `restore ${backupName}`);
+      }).toPass({ intervals: [3_000], timeout: 120_000 });
+
+      return started as pbm.StartedOperation;
+    };
+
+    test.beforeAll(async ({}) => {
+      test.setTimeout(10 * 60_000);
+      await pbm.setAgents(members, 'start');
+      await pbm.unpauseStorage();
+      await pbm.removeStoredRestores(pbmHost, bucket);
+      await pbm.fixStorage(pbmHost, bucket);
+      backupName = await pbm.takeBackup(pbmHost);
+    });
+
+    test.afterAll(async ({}) => {
+      test.setTimeout(10 * 60_000);
+      await pbm.setAgents(members, 'start');
+      for (const member of members) {
+        await pbm.recoverExporter(member);
+      }
+    });
+
+    test('PMM-15220 - Verify restore_status is 0 and there are no restore series before any restore', async ({}) => {
+      await everyMember(async (member) => {
+        await expect(async () => {
+          const series = await pbm.scrapePbm(member);
+
+          expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(0);
+          expect(pbm.seriesTexts(restoreSeries(series)), `restore series on ${member}`).toEqual([]);
+        }).toPass({ intervals: [3_000], timeout: 120_000 });
+      });
+    });
+
+    test('PMM-15220 - Verify a logical restore shows 1 while it runs and 3 when it is done, with its labels and duration', async ({}) => {
+      test.setTimeout(15 * 60_000);
+      const restore = await restoreBackup();
+      const seen = new Set<number | undefined>();
+      const finished = async () => (await pbm.describeRestore(pbmHost, restore.name).catch(() => undefined))?.status === 'done';
+
+      for (let attempt = 0; attempt < 600 && !(await finished()); attempt++) {
+        seen.add(await restoreStatus(members[attempt % members.length]).catch(() => undefined));
+      }
+      expect(seen.has(1), `${restoreStatusMetric} values seen while the restore ran: ${[...seen].join(', ')}`).toBeTruthy();
+
+      for (const member of members) {
+        await pbm.recoverExporter(member);
+      }
+      const info = await pbm.describeRestore(pbmHost, restore.name);
+      const duration = (Date.parse(info.finish) - Date.parse(info.start)) / 1000;
+
+      await everyMember(async (member) => {
+        await expect(async () => {
+          const series = await pbm.scrapePbm(member);
+          const labels = { name: restore.name, backup: backupName, type: 'logical', status: 'done' };
+
+          expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(3);
+          expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `last transition of ${restore.name} on ${member}`).toHaveLength(1);
+          const [seconds] = pbm.selectSeries(series, 'mongodb_pbm_restore_duration_seconds', labels);
+          expect(seconds?.value, `duration of ${restore.name} on ${member}`).toBeGreaterThanOrEqual(duration - 1);
+          expect(seconds?.value, `duration of ${restore.name} on ${member}`).toBeLessThanOrEqual(duration + 1);
+        }).toPass({ intervals: [3_000], timeout: 120_000 });
+      });
+    });
+
+    test('PMM-15220 - Verify a restore interrupted by stopping every pbm-agent shows 2 before the agents are started', async ({}) => {
+      test.setTimeout(15 * 60_000);
+
+      try {
+        const restore = await restoreBackup();
+        await pbm.setAgents(members, 'kill');
+
+        await expectRestoreStatusOnEveryMember(2);
+        expect((await pbm.describeRestore(pbmHost, restore.name)).status, 'the interrupted restore is not done').not.toEqual('done');
+      } finally {
+        await pbm.setAgents(members, 'start');
+        await pbm.expectAgentsOk(pbmHost);
+        for (const member of members) {
+          await pbm.recoverExporter(member);
+        }
+      }
+    });
+
+    test('PMM-15220 - Verify a restore PBM reports as failed shows 2 and status error', async ({}) => {
+      test.setTimeout(15 * 60_000);
+      const prefix = await pbm.pbmConfigValue(pbmHost, 'storage.s3.prefix');
+      const backupDir = `/backups/${bucket}/${prefix}/${backupName}/rs`;
+      const files = (await cli.exec(`docker exec minio ls ${backupDir}`)).getStdOutLines();
+      const dataFile = files.find((file) => file.endsWith('.s2') && !file.startsWith('admin.'));
+      expect(dataFile, `no collection file of ${backupName} in ${files.join(', ')}`).toBeTruthy();
+
+      let restore: pbm.StartedOperation | undefined;
+      try {
+        await (await cli.exec(`docker exec minio mv ${backupDir}/${dataFile} ${backupDir}/${dataFile}.moved`)).assertSuccess();
+        restore = await restoreBackup();
+        await pbm.expectRestoreStatus(pbmHost, restore.name, 'error');
+      } finally {
+        await cli.exec(`docker exec minio mv ${backupDir}/${dataFile}.moved ${backupDir}/${dataFile}`);
+        for (const member of members) {
+          await pbm.recoverExporter(member);
+        }
+      }
+
+      await everyMember(async (member) => {
+        await expect(async () => {
+          const series = await pbm.scrapePbm(member);
+          const labels = { name: restore?.name ?? '', backup: backupName, type: 'logical', status: 'error' };
+
+          expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(2);
+          expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `failed restore on ${member}`).toHaveLength(1);
+        }).toPass({ intervals: [3_000], timeout: 120_000 });
+      });
+    });
+
+    test('PMM-15220 - Verify only the 10 most recent restores have series after 11 restores and the status follows the latest', async ({}) => {
+      test.setTimeout(30 * 60_000);
+      const names: string[] = [];
+
+      for (let i = 0; i < 11; i++) {
+        const restore = await restoreBackup();
+        names.push(restore.name);
+        await pbm.expectRestoreStatus(pbmHost, restore.name, 'done');
+      }
+      for (const member of members) {
+        await pbm.recoverExporter(member);
+      }
+
+      await everyMember(async (member) => {
+        await expect(async () => {
+          const series = await pbm.scrapePbm(member);
+          const listed = pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts').map((item) => item.labels.name).sort();
+
+          expect(listed, `restores with series on ${member}`).toEqual(names.slice(1).sort());
+          expect(pbm.selectSeries(series, 'mongodb_pbm_restore_duration_seconds'), `restore durations on ${member}`).toHaveLength(10);
+          expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(3);
+        }).toPass({ intervals: [3_000], timeout: 120_000 });
+      });
+    });
+
+    test('PMM-15220 - Verify a physical restore appears only after a resync of the PBM configuration', async ({}) => {
+      test.setTimeout(40 * 60_000);
+      const physicalBackup = await pbm.takeBackup(pbmHost, 'physical');
+      const restore = await pbm.startOperation(pbmHost, `restore ${physicalBackup}`);
+
+      try {
+        // A physical restore ends every pbm-agent and leaves mongod stopped.
+        for (const member of members) {
+          await expect(async () => {
+            const state = await cli.exec(`docker exec ${member} systemctl is-active pbm-agent`);
+
+            expect(state.stdout.trim(), `pbm-agent on ${member}`).toEqual('inactive');
+          }).toPass({ intervals: [10_000], timeout: 10 * 60_000 });
+        }
+        for (const member of members) {
+          await (await cli.exec(`docker exec ${member} systemctl start mongod`)).assertSuccess();
+        }
+        await runOnPrimary(pbmHost, pbm.mongoRootUri, 'db.hello().isWritablePrimary');
+        await pbm.setAgents(members, 'start');
+        await pbm.expectAgentsOk(pbmHost);
+
+        await everyMember(async (member) => {
+          await expect(async () => {
+            const series = await pbm.scrapePbm(member);
+
+            expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member} before the resync`).toEqual(0);
+            expect(pbm.seriesTexts(restoreSeries(series, restore.name)), `series of the physical restore on ${member} before the resync`).toEqual([]);
+          }).toPass({ intervals: [3_000], timeout: 120_000 });
+        });
+
+        await pbm.resync(pbmHost);
+        const info = await pbm.describeRestore(pbmHost, restore.name);
+        const duration = (Date.parse(info.finish) - Date.parse(info.start)) / 1000;
+
+        await everyMember(async (member) => {
+          await expect(async () => {
+            const series = await pbm.scrapePbm(member);
+            const labels = { name: restore.name, backup: physicalBackup, type: 'physical', status: 'done' };
+
+            expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member} after the resync`).toEqual(3);
+            expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `physical restore on ${member}`).toHaveLength(1);
+            expect(pbm.selectSeries(series, 'mongodb_pbm_restore_duration_seconds', labels)[0]?.value, `duration of the physical restore on ${member}`)
+              .toBeGreaterThanOrEqual(duration - 1);
+          }).toPass({ intervals: [3_000], timeout: 120_000 });
+        });
+      } finally {
+        await pbm.setAgents(members, 'start');
+        await pbm.removeStoredRestores(pbmHost, bucket);
+        await pbm.resync(pbmHost);
+      }
+    });
+  });
 });
