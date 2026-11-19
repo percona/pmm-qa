@@ -76,6 +76,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
   test.describe('flags without a case key yet', () => {
     const monitorAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT';
     const exporterAgent = 'AGENT_TYPE_POSTGRES_EXPORTER';
+    const statementsAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATEMENTS_AGENT';
 
     test.beforeAll(async ({}) => {
       await skipWithoutUpdateCommand(containerName);
@@ -151,6 +152,55 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
         expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
       } finally {
         await (await cli.exec(`docker exec ${containerName} rm -rf ${certificate.dir}`)).assertSuccess();
+      }
+    });
+
+    test('PMM-TXXXX-pg-query-source-swap - Verify pmm-admin update postgresql swaps the pg_stat_monitor agent for the pg_stat_statements agent and back', async ({}) => {
+      const serviceId = await addService('pgstatmonitor');
+      const exporterId = await agentId(serviceId, exporterAgent);
+      const monitorId = await agentId(serviceId, monitorAgent);
+      expect(monitorId, 'postgresql_pgstatmonitor_agent not found').toBeTruthy();
+
+      // pmm-framework does not preload pg_stat_statements, so only the agents are checked, not the data they send.
+      const swapped = await update('--query-source=pgstatements');
+      expect(pmmAdmin.getChangedSettings(swapped)).toEqual(['--query-source=pgstatements (was pgstatmonitor)']);
+      expect(await agentId(serviceId, monitorAgent), 'postgresql_pgstatmonitor_agent is not removed').toBeUndefined();
+      expect(await agentId(serviceId, statementsAgent), 'postgresql_pgstatements_agent is not added').toBeTruthy();
+      expect(await agentId(serviceId, exporterAgent), 'postgres_exporter ID changed').toEqual(exporterId);
+
+      const back = await update('--query-source=pgstatmonitor');
+      expect(pmmAdmin.getChangedSettings(back)).toEqual(['--query-source=pgstatmonitor (was pgstatements)']);
+      expect(await agentId(serviceId, statementsAgent), 'postgresql_pgstatements_agent is not removed').toBeUndefined();
+      const restoredId = await agentId(serviceId, monitorAgent);
+      expect(restoredId, 'postgresql_pgstatmonitor_agent is not added again').toBeTruthy();
+      expect(restoredId, 'The removed QAN agent came back instead of a new one').not.toEqual(monitorId);
+      await pmmAdmin.expectAgentsRunning(containerName, [restoredId!], true);
+    });
+
+    test('PMM-TXXXX-pg-auto-discovery - Verify pmm-admin update postgresql turns database auto-discovery of the exporter off and on', async ({}) => {
+      const serviceId = await addService('none');
+      const exporterId = (await agentId(serviceId, exporterAgent))!;
+
+      const off = await updateJson('--auto-discovery-limit=-1');
+      expect(pmmAdmin.getSettingValue(off, '--auto-discovery-limit')).toEqual('-1');
+      await expect(async () => {
+        expect(await pmmCli.getExporterArgs(containerName, exporterId), 'Auto-discovery is still on').not.toContain('--auto-discover-databases');
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+
+      const on = await updateJson('--auto-discovery-limit=100');
+      expect(pmmAdmin.getSettingValue(on, '--auto-discovery-limit')).toEqual('100');
+      await expect(async () => {
+        expect(await pmmCli.getExporterArgs(containerName, exporterId), 'Auto-discovery is not on again').toContain('--auto-discover-databases');
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+    });
+
+    test('PMM-TXXXX-pg-metrics-mode - Verify pmm-admin update postgresql keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
+      await addService('none');
+
+      for (const mode of ['pull', 'push']) {
+        const since = new Date();
+        await update(`--metrics-mode=${mode}`);
+        await pmmApi.expectSampleSince(`pg_up{service_name="${serviceName}"}`, since);
       }
     });
   });

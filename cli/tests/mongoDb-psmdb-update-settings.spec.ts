@@ -255,7 +255,7 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
     test('PMM-TXXXX-auth-database - Verify pmm-admin update mongodb changes the authentication database', async ({}) => {
       const set = await update('--authentication-database=admin');
       expect(pmmAdmin.getChangedSettings(set)).toEqual(['--authentication-database=admin (was empty)']);
-      await pmmAdmin.expectAgentsRunning(containerName, [exporterId, profilerId], true);
+      await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
       await mongo.expectMongoUp(containerName, serviceName, agentPassword);
 
       const cleared = await update('--authentication-database=');
@@ -285,7 +285,7 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
       try {
         const output = await update(`--username=${user} --password=rename-password`);
         expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--password (new value)', `--username=${user} (was ${mongoConnection.username})`]);
-        await pmmAdmin.expectAgentsRunning(containerName, [exporterId, profilerId], true);
+        await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
         await mongo.expectMongoUp(containerName, serviceName, agentPassword);
       } finally {
         await update(`--username=${mongoConnection.username} --password=${mongoConnection.password}`);
@@ -307,7 +307,7 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
       } finally {
         await update(`--port=${port}`);
       }
-      await pmmAdmin.expectAgentsRunning(containerName, [exporterId, profilerId], true);
+      await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
       await mongo.expectMongoUp(containerName, serviceName, agentPassword);
     });
   });

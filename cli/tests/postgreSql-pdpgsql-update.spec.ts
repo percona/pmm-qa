@@ -2,6 +2,7 @@ import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
+import * as pmmCli from '@helpers/pmm-cli-helper';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
@@ -44,6 +45,9 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update', { tag: '@p
     expect(await pmmAdmin.getServiceId(containerName, serviceName), 'Service ID changed').toEqual(serviceId);
     expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
     expect((await pmmApi.getServerAgent(exporter!.agent_id)).max_exporter_connections).toEqual(3);
+    await expect(async () => {
+      expect(await pmmCli.getExporterArgs(containerName, exporter!.agent_id), 'The limit is not passed to the exporter').toContain('--max-connections=3');
+    }).toPass({ intervals: [3_000], timeout: 60_000 });
     await pmmAdmin.expectAgentsRunning(containerName, [exporter!.agent_id], true);
   });
 

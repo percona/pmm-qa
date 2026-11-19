@@ -47,6 +47,9 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
     expect(pmmAdmin.getSettingValue(disabled, '--disable-tablestats')).toEqual('true');
     expect(disabled.changes.map((change) => change.flag)).toContain('--disable-tablestats');
     expect((await pmmApi.getServerAgent(exporterId)).tablestats_group_table_limit, 'Tablestats are not disabled on PMM Server').toEqual(-1);
+    await expect(async () => {
+      expect(await pmmCli.getExporterArgs(containerName, exporterId), 'The tablestats collectors still run').not.toContain('--collect.info_schema.tablestats');
+    }).toPass({ intervals: [3_000], timeout: 60_000 });
 
     const limited = await updateJson('--no-disable-tablestats --disable-tablestats-limit=500');
     expect(pmmAdmin.getSettingValue(limited, '--disable-tablestats')).toEqual('false');
@@ -153,6 +156,16 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
       expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--comments-parsing=off (was on)', '--size-slow-logs=-1 (was 2MiB)']);
       expect(await agentId(serviceId, slowlogAgent), 'mysql_slowlog_agent is replaced by a change of its settings').toEqual(slowlogId);
       await pmmAdmin.expectAgentsRunning(containerName, [slowlogId], true);
+    });
+
+    test('PMM-TXXXX-mysql-metrics-mode - Verify pmm-admin update mysql keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
+      await addService();
+
+      for (const mode of ['pull', 'push']) {
+        const since = new Date();
+        await update(`--metrics-mode=${mode}`);
+        await pmmApi.expectSampleSince(`mysql_up{service_name="${serviceName}"}`, since);
+      }
     });
   });
 });

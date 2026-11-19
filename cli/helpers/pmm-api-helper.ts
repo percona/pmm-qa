@@ -64,6 +64,21 @@ export async function queryVictoriaMetrics(query: string, adminPassword = proces
 }
 
 /**
+ * Wait until PMM Server's VictoriaMetrics holds a sample of a series newer than a point in time, as proof that
+ * the metrics still arrive after a change
+ *
+ * @param   selector   series selector; must not contain single quotes
+ * @param   since      the sample has to be newer than this
+ * @param   timeout    milliseconds to wait
+ */
+export async function expectSampleSince(selector: string, since: Date, timeout = 90_000) {
+  await expect(async () => {
+    const series = await queryVictoriaMetrics(`timestamp(${selector}) > ${Math.floor(since.getTime() / 1000)}`);
+    expect(series.length, `No ${selector} sample since ${since.toISOString()}`).toBeGreaterThan(0);
+  }).toPass({ intervals: [5_000], timeout });
+}
+
+/**
  * Read a Service from the PMM Server inventory API through the pmm-server container
  *
  * @param   serviceId   ID of the Service

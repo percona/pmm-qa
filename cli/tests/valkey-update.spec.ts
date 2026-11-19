@@ -72,28 +72,85 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
       expect((await pmmApi.getServerService(serviceId)).custom_labels ?? {}, 'Custom labels are not cleared on PMM Server').toEqual({});
     });
 
-    test('PMM-TXXXX-valkey-tls-files - Verify pmm-admin update valkey stores the TLS flags and files', async ({}) => {
-      const serviceId = await addService();
-      const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, 'AGENT_TYPE_VALKEY_EXPORTER'))!;
-      const certificate = await pmmCli.createSelfSignedCertificate(containerName, 'valkey_update_tls');
+    test.describe('over TLS', () => {
+      const tlsServiceName = 'valkey_update_tls_cli';
+      const tlsDir = '/tmp/valkey_update_tls';
+      const tlsPort = 6390;
+      const untrusted = 'valkey_update_untrusted';
+      let tlsServiceAdded = false;
 
-      // This setup has no TLS server, so the connection check is skipped: the test covers what the update sends, not the handshake.
-      try {
+      // A TLS-only valkey-server of the test's own, next to the framework's, with a certificate that names 127.0.0.1.
+      test.beforeEach(async ({}) => {
+        await (await cli.exec(`docker exec ${containerName} sh -c 'rm -rf ${tlsDir} && mkdir -p ${tlsDir} && openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pmm-tls-server -addext subjectAltName=IP:127.0.0.1 -keyout ${tlsDir}/server.key -out ${tlsDir}/server.crt 2>/dev/null && valkey-server --port 0 --tls-port ${tlsPort} --bind 127.0.0.1 --tls-cert-file ${tlsDir}/server.crt --tls-key-file ${tlsDir}/server.key --tls-ca-cert-file ${tlsDir}/server.crt --tls-auth-clients no --dir ${tlsDir} --save "" --pidfile ${tlsDir}/valkey.pid --logfile ${tlsDir}/valkey.log --daemonize yes && timeout 30 sh -c "until valkey-cli --tls --insecure -p ${tlsPort} ping >/dev/null 2>&1; do sleep 0.2; done"'`)).assertSuccess();
+      });
+
+      test.afterEach(async ({}) => {
+        await pmmCli.runEach([
+          async () => {
+            if (tlsServiceAdded) await pmmAdmin.removeService(containerName, 'valkey', tlsServiceName);
+            tlsServiceAdded = false;
+          },
+          async () => {
+            await (await cli.exec(`docker exec ${containerName} sh -c 'pid=$(cat ${tlsDir}/valkey.pid 2>/dev/null) && kill $pid && while kill -0 $pid 2>/dev/null; do sleep 0.2; done; rm -rf ${tlsDir} /tmp/${untrusted}'`)).assertSuccess();
+          },
+        ]);
+      });
+
+      const addTlsService = async () => {
+        const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --service-name=${tlsServiceName} --host=127.0.0.1 --port=${tlsPort} --tls --tls-skip-verify`);
+        await output.assertSuccess();
+        tlsServiceAdded = true;
+        const serviceId = await pmmAdmin.getServiceId(containerName, tlsServiceName);
+        const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, 'AGENT_TYPE_VALKEY_EXPORTER'))!;
+        expect(exporterId, 'valkey_exporter not found').toBeTruthy();
+
+        return { serviceId, exporterId };
+      };
+
+      test('PMM-TXXXX-valkey-tls-verify - Verify pmm-admin update valkey verifies the server certificate against a CA and a client certificate', async ({}) => {
+        const { exporterId } = await addTlsService();
+        const since = new Date();
+
         const output = await pmmAdmin.updateServiceOk(
           containerName,
           'valkey',
-          `${serviceName} --tls --tls-skip-verify --tls-ca=${certificate.cert} --tls-cert=${certificate.cert} --tls-key=${certificate.key} --skip-connection-check`,
+          `${tlsServiceName} --no-tls-skip-verify --tls-ca=${tlsDir}/server.crt --tls-cert=${tlsDir}/server.crt --tls-key=${tlsDir}/server.key`,
         );
         expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
-          '--tls (was --no-tls)',
+          '--no-tls-skip-verify (was --tls-skip-verify)',
           '--tls-ca (new value)',
           '--tls-cert (new value)',
           '--tls-key (new value)',
-          '--tls-skip-verify (was --no-tls-skip-verify)',
         ]);
-        expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
-      } finally {
-        await (await cli.exec(`docker exec ${containerName} rm -rf ${certificate.dir}`)).assertSuccess();
+
+        const agent = await pmmApi.getServerAgent(exporterId);
+        expect(agent.tls, 'TLS is turned off on PMM Server').toBe(true);
+        expect(agent.tls_skip_verify, 'Certificate verification is not enabled on PMM Server').toBe(false);
+        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+        await pmmApi.expectSampleSince(`redis_up{service_name="${tlsServiceName}"}`, since);
+      });
+
+      test('PMM-TXXXX-valkey-tls-untrusted-ca - Verify pmm-admin update valkey refuses a server certificate the CA did not sign and changes nothing', async ({}) => {
+        const { exporterId } = await addTlsService();
+        const tlsBefore = await pmmApi.getServerAgent(exporterId);
+        const certificate = await pmmCli.createSelfSignedCertificate(containerName, untrusted);
+
+        const output = await pmmAdmin.updateService(containerName, 'valkey', `${tlsServiceName} --no-tls-skip-verify --tls-ca=${certificate.cert}`);
+        await cli.expectFailure(output, 'Connection check failed');
+
+        const tlsAfter = await pmmApi.getServerAgent(exporterId);
+        expect(tlsAfter.tls_skip_verify, 'Verification is enabled by a refused update').toEqual(tlsBefore.tls_skip_verify);
+        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+      });
+    });
+
+    test('PMM-TXXXX-valkey-metrics-mode - Verify pmm-admin update valkey keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
+      await addService();
+
+      for (const mode of ['pull', 'push']) {
+        const since = new Date();
+        await pmmAdmin.updateServiceOk(containerName, 'valkey', `${serviceName} --metrics-mode=${mode}`);
+        await pmmApi.expectSampleSince(`redis_up{service_name="${serviceName}"}`, since);
       }
     });
   });
