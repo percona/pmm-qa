@@ -78,9 +78,17 @@ export default class GrafanaHelper {
   findOrCreateUser = async (username: string, password: string) => {
     const existingUser = (await this.listUsers()).users.find((user) => user.login === username);
 
-    return existingUser
-      ? { created: false, id: existingUser.id }
-      : { created: true, id: await this.createUser(username, password) };
+    if (!existingUser) return { created: true, id: await this.createUser(username, password) };
+
+    // A user left by an earlier run keeps the password it was created with.
+    const response = await this.page.request.put(`graph/api/admin/users/${existingUser.id}/password`, {
+      data: { password },
+      headers: { Authorization: `Basic ${GrafanaHelper.getToken()}` },
+    });
+
+    expect(response.status(), `Reset password of user ${username}`).toEqual(200);
+
+    return { created: false, id: existingUser.id };
   };
 
   findUserByUsername = async (username: string): Promise<GrafanaUser> => {
