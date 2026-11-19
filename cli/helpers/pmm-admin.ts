@@ -195,13 +195,15 @@ export interface ListService {
 /**
  * Build a "pmm-admin update" command
  *
- * @param   containerName   docker container running pmm-agent
+ * @param   containerName   docker container running pmm-agent; empty for the pmm-admin of the host
  * @param   serviceType     type of the Service to update
  * @param   args            Service name and flags
  * @param   json            true for the JSON output
  */
 export function updateServiceCommand(containerName: string, serviceType: UpdateServiceType, args: string, json = false): string {
-  return `docker exec ${containerName} pmm-admin ${json ? '--json ' : ''}update ${serviceType} ${args}`;
+  const pmmAdmin = containerName ? `docker exec ${containerName} pmm-admin` : 'sudo pmm-admin';
+
+  return `${pmmAdmin} ${json ? '--json ' : ''}update ${serviceType} ${args}`;
 }
 
 /**
@@ -262,6 +264,16 @@ export function getChangedSettings(output: ExecReturn): string[] {
     ...settingsAfter(output.stdout, 'Changed settings:'),
     ...settingsAfter(output.stdout, 'Settings the update would change:'),
   ];
+}
+
+/**
+ * Value of a setting in the JSON result of pmm-admin update
+ *
+ * @param   result   result of pmm-admin --json update
+ * @param   flag     flag of the setting, e.g. --environment
+ */
+export function getSettingValue(result: UpdateResult, flag: string): string | undefined {
+  return result.settings.find((setting) => setting.flag === flag)?.value;
 }
 
 /**

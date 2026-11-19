@@ -62,6 +62,22 @@ export const minPmmClientVersion: Record<string, string> = {
   'PMM-T2655': '3.11.0',
   'PMM-T2656': '3.11.0',
   'PMM-T2672': '3.11.0',
+  'PMM-T2738': '3.11.0',
+  'PMM-T2739': '3.11.0',
+  'PMM-T2740': '3.11.0',
+  'PMM-T2741': '3.11.0',
+  'PMM-T2742': '3.11.0',
+  'PMM-T2743': '3.11.0',
+  'PMM-T2744': '3.11.0',
+  'PMM-T2745': '3.11.0',
+  'PMM-T2746': '3.11.0',
+  'PMM-T2747': '3.11.0',
+  'PMM-T2748': '3.11.0',
+  'PMM-T2749': '3.11.0',
+  'PMM-T2750': '3.11.0',
+  'PMM-T2751': '3.11.0',
+  'PMM-T2752': '3.11.0',
+  'PMM-T2753': '3.11.0',
 };
 
 export const versionBelow = (version: string, minVersion: string): boolean => {
