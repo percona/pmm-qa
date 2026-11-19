@@ -363,7 +363,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   });
 
   test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
-    const size = await cli.execSilent('docker exec psmdb-server sh -lc \'stat -c %s /usr/local/percona/pmm/exporters/mongodb_exporter | awk "{printf \\"%.2f \\n\\", \\$1/1024/1024}"\'');
+    const size = await cli.execSilent(`docker exec ${containerName} sh -lc 'stat -c %s /usr/local/percona/pmm/exporters/mongodb_exporter | awk "{printf \"%.2f \n\", \$1/1024/1024}"'`);
     const sizeMiB = parseFloat(size.stdout.trim());
 
     if (Number.isNaN(sizeMiB)) {
@@ -375,7 +375,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   });
 
     test('PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
-      const agentId = (await cli.execSilent('docker exec psmdb-server pmm-admin list | grep "mongodb_exporter" | awk -F\' \' \'{print $4}\'')).stdout.trim();
+      const agentId = (await cli.execSilent(`docker exec ${containerName} pmm-admin list | grep "mongodb_exporter" | awk -F' ' '{print $4}'`)).stdout.trim();
       console.log(`Agent id is: ${agentId}`);
       const usedMemoryValue = await pmmApi.queryVictoriaMetrics(`query=max(process_resident_memory_bytes{agent_id="${agentId}"})`);
       console.log(`Used memory value is: ${usedMemoryValue}`);
