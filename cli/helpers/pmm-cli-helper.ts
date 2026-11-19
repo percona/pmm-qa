@@ -55,7 +55,7 @@ export async function runEach(steps: (() => Promise<unknown>)[]) {
  * @param   logFile         pmm-agent's log file in the container
  */
 export async function countAgentRunningReports(containerName: string, agentId: string, logFile = '/var/log/pmm-agent.log'): Promise<number> {
-    const output = await exec(`docker exec ${containerName} grep -cE 'Sending status: AGENT_STATUS_RUNNING( \\(port [0-9]+\\))?\\." agentID=${agentId}' /var/log/pmm-agent.log`);
+  const output = await exec(`docker exec ${containerName} grep -cE 'Sending status: AGENT_STATUS_RUNNING( \\(port [0-9]+\\))?\\." agentID=${agentId}' ${logFile}`);
 
   return Number(output.stdout.trim()) || 0;
 }
