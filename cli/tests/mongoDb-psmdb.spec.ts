@@ -9,6 +9,7 @@ import { clientCredentialsFlags, mongoConnection } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
 import { faker } from '@faker-js/faker';
 import * as pmmApi from '@helpers/pmm-api-helper';
+import * as pmmAdmin from '@helpers/pmm-admin';
 
 const replIpPort = 'rs101:27017';
 const ip = replIpPort.split(':')[0];
@@ -365,16 +366,23 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
   });
 
   test('PMM-T9999 PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
-    const agentId = (
-      await cli.execSilent(
-        `docker exec ${containerName} pmm-admin list | grep "mongodb_exporter" | awk -F' ' '{print $4}'`,
-      )
-    ).stdout.trim();
+    const agentId = (await pmmAdmin.listAgents(containerName)).find(
+      (agent) => agent.agent_type === 'AGENT_TYPE_MONGODB_EXPORTER',
+    )?.agent_id ?? '';
+    expect(
+      agentId,
+      `No mongodb_exporter agent found in ${containerName}`,
+    ).toBeTruthy();
     console.log(`Agent id is: ${agentId}`);
-    const usedMemoryValue = await pmmApi.queryVictoriaMetrics(
-      `query=max(process_resident_memory_bytes{agent_id="${agentId}"})`,
-    );
-    console.log(`Used memory value is: ${usedMemoryValue}`);
+
+    let usedMemoryBytes: number | undefined;
+
+    await expect(async () => {
+      usedMemoryBytes = await pmmApi.getExporterResidentMemoryBytes(agentId);
+      expect(usedMemoryBytes, `No process_resident_memory_bytes for agent ${agentId} yet`).toBeDefined();
+    }).toPass({ intervals: [5_000], timeout: 30_000 });
+
+    console.log(`Used memory value is: ${(usedMemoryBytes! / 1024 / 1024).toFixed(2)} MiB`);
   });
 });
 
