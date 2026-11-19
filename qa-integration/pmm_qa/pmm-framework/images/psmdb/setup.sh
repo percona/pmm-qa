@@ -9,7 +9,8 @@
 # -- happens here, polling for readiness instead of sleeping 60 s per step.
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
-# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster.
+# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster; 'standalone'
+# is one mongod in its own container, with no replica set and no PBM.
 # QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
 setup_psmdb() {
   local version ol client setup_type profile gssapi minio query_source tarball='' suffix
@@ -26,21 +27,30 @@ setup_psmdb() {
   suffix=$RANDOM
 
   case $setup_type in
-    pss | psa | shards | sharding) ;;
+    pss | psa | shards | sharding | standalone) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
   esac
   case $query_source in
     profiler | mongolog | none) ;;
     *) die "Unsupported PSMDB QUERY_SOURCE '$query_source'." ;;
   esac
+  if [[ $setup_type == standalone && ($(bool_string "$gssapi") == true || $profile == extra ||
+    $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY]) ]]; then
+    die 'PSMDB SETUP_TYPE=standalone does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'
+  fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
-  must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
+  # The standalone runs the image by name: retagging would clobber the replica set running beside it.
+  if [[ $setup_type != standalone ]]; then
+    must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
+  fi
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
   (
     cd "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" || die 'pmm_psmdb-pbm_setup is missing.'
     export PMM_SERVER_CONTAINER_ADDRESS=$PMM_SERVER_HOST:$PMM_SERVER_PORT ADMIN_PASSWORD
     ADMIN_PASSWORD=$(admin_password)
-    if [[ $setup_type == ps? ]]; then
+    if [[ $setup_type == standalone ]]; then
+      psmdb_standalone "pmm-qa/psmdb:$version-ol$ol"
+    elif [[ $setup_type == ps? ]]; then
       psmdb_replica_set
     else
       psmdb_sharded
@@ -338,6 +348,10 @@ psmdb_sharded() {
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node clients psmdb_client
   step 'Configure PBM' each_node nodes psmdb_pbm_agent
+  # Storage for the PBM a person drives by hand; PMM's own backups set theirs.
+  if [[ $minio == true ]]; then
+    must docker exec rscfg01 pbm config --file /etc/pbm/minio.yaml >/dev/null
+  fi
 
   log_info '==> Register with PMM'
   for node in "${nodes[@]}"; do
@@ -366,6 +380,47 @@ psmdb_sharded() {
 
 psmdb_traffic() {
   COMPOSE_FILE=docker-compose-sharded.yaml must bash ./generate_opcountersrepl_traffic.sh >/dev/null
+}
+
+# One mongod with authentication and no replica set. Its pbm-agent is masked, so
+# the exporter sees a server PBM does not manage. No host port is published.
+# Usage: psmdb_standalone IMAGE
+psmdb_standalone() {
+  local image=$1 name=psmdb-standalone config_dir=$PWD/conf/mongod-standalone
+  local -x PMM_AGENT_SERVER_PASSWORD=$ADMIN_PASSWORD
+  if [[ $query_source == mongolog ]]; then
+    config_dir=$(psmdb_mongolog_config "$config_dir" mongod.conf /var/log/mongo/mongod.log)
+  fi
+  ensure_pmm_network
+  fresh_containers "$name"
+  log_info '==> Start the standalone container'
+  must docker run --detach --name "$name" --hostname "$name" --label pmm-qa.engine=psmdb --network pmm-qa \
+    -e "PMM_AGENT_SERVER_ADDRESS=$PMM_SERVER_CONTAINER_ADDRESS" -e PMM_AGENT_SERVER_USERNAME=admin \
+    -e PMM_AGENT_SERVER_PASSWORD -e PMM_AGENT_SERVER_INSECURE_TLS=1 \
+    --volume "$config_dir:/etc/mongod" --volume "$PWD/conf/datagen:/etc/datagen:ro" \
+    "${SYSTEMD_RUN[@]}" "$image" >/dev/null
+  step 'Wait for mongod' psmdb_wait_mongod "$name"
+  step 'Disable pbm-agent' docker exec "$name" systemctl mask --now pbm-agent
+  step 'Create users' psmdb_standalone_users "$name"
+  step 'Wait for PMM Server' wait_pmm_server_ready
+  step 'Install PMM Client' psmdb_client "$name"
+
+  log_info '==> Register with PMM'
+  psmdb_register "$name" "$name._$suffix" "${name}_$suffix" --environment=psmdb-dev --cluster=standalone \
+    --username=pmm --password=pmmpass "--host=$name" --port=27017
+  step 'Wait for exporters' wait_exporters "$name" /var/log/pmm-agent.log mongodb_exporter
+  step 'Load data' psmdb_standalone_data "$name"
+  report_agent_status "$name"
+}
+
+# The localhost exception sometimes refuses the first user just after mongod starts,
+# and creates nothing, so retrying that refusal is safe.
+psmdb_standalone_users() {
+  retry_on 'requires authentication' 30 "creating the users on $1" psmdb_js "$1" "$(psmdb_users_js false)" >/dev/null
+}
+
+psmdb_standalone_data() {
+  must docker exec "$1" mgodatagen -f /etc/datagen/replicaset.json --uri=mongodb://pmm:pmmpass@127.0.0.1:27017 >/dev/null
 }
 
 # TLS and LDAP from pmm_psmdb_diffauth_setup's compose stack. A throwaway compose override disables the stack's own pmm-server and kerberos

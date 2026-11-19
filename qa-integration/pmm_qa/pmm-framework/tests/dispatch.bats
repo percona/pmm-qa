@@ -499,12 +499,19 @@ stub_prebaked_docker() {
   grep -Eq '^exec rscfg02 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rscfg02_[0-9]+ --environment=mongo-sharded-dev --cluster=sharded --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg02 --port=27017$' "$DOCKER_CALLS"
   grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
   [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
-  ! grep -q 'pbm config' "$DOCKER_CALLS" || false
+  [[ $(grep -c 'pbm config' "$DOCKER_CALLS") -eq 1 ]]
+  grep -q '^exec rscfg01 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
   [[ $(grep -c 'keep_chunks_moving' "$DOCKER_CALLS") -eq 0 ]]
   grep -q '^traffic$' "$DOCKER_CALLS"
   grep -q '^config rs= rs1= rs2= cfg= mongos=$' "$DOCKER_CALLS"
   ! grep -q -- '--query-source' "$DOCKER_CALLS" || false
   grep -Fq 'diagnosticDataCollectionDirectoryPath: "/var/lib/mongo/mongos.diagnostic.data"' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards,MINIO=false'
+  dispatch_setup
+  [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
+  ! grep -q 'pbm config' "$DOCKER_CALLS" || false
 }
 
 # The stub logs arguments only, and compose reads the config directories it mounts from the environment.
@@ -585,6 +592,52 @@ recorded_config_dir() {
   [[ -f $mongos/mongos.service ]]
   [[ $(grep -Ec '^exec (rs[12]0[123]|rscfg0[123]|mongos) pmm-admin add mongodb --enable-all-collectors --query-source=mongolog --agent-password=mypass ' "$DOCKER_CALLS") -eq 10 ]]
   ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB standalone runs one mongod with no replica set or PBM and registers it" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone'
+  GLOBAL_CLIENT_VERSION=3-dev-latest
+  dispatch_setup
+
+  grep -Eq -- "^run --detach --name psmdb-standalone --hostname psmdb-standalone --label pmm-qa.engine=psmdb --network pmm-qa -e PMM_AGENT_SERVER_ADDRESS=pmm-server:8443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD -e PMM_AGENT_SERVER_INSECURE_TLS=1 --volume [^ ]*/conf/mongod-standalone:/etc/mongod --volume [^ ]*/conf/datagen:/etc/datagen:ro --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock pmm-qa/psmdb:8.0-ol9\$" "$DOCKER_CALLS"
+  ! grep -q -- '--privileged' "$DOCKER_CALLS" || false
+  ! grep -q '^tag ' "$DOCKER_CALLS" || false
+  ! grep -q '^compose ' "$DOCKER_CALLS" || false
+  grep -q '^exec psmdb-standalone systemctl mask --now pbm-agent$' "$DOCKER_CALLS"
+  ! grep -Eq 'pbm config|restart pbm-agent|sysconfig/pbm-agent' "$DOCKER_CALLS" || false
+  ! grep -q 'rs.initiate' "$DOCKER_CALLS" || false
+  grep -Fq 'admin.createUser({ user: "root", pwd: "root"' "$DOCKER_CALLS"
+  grep -Fq 'admin.createUser({ user: "pmm", pwd: "pmmpass"' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # a literal $external
+  ! grep -Fq '$external' "$DOCKER_CALLS" || false
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=psmdb-standalone\._[0-9]+ psmdb-standalone pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
+  grep -Eq '^exec psmdb-standalone pmm-admin add mongodb --enable-all-collectors --agent-password=mypass psmdb-standalone_[0-9]+ --environment=psmdb-dev --cluster=standalone --username=pmm --password=pmmpass --host=psmdb-standalone --port=27017$' "$DOCKER_CALLS"
+  grep -q '^exec psmdb-standalone mgodatagen -f /etc/datagen/replicaset.json --uri=mongodb://pmm:pmmpass@127.0.0.1:27017$' "$DOCKER_CALLS"
+}
+
+@test "PSMDB standalone gives mongod a file log for mongolog and rejects what it cannot honour" {
+  stub_prebaked_docker
+  TMPDIR=$BATS_TEST_TMPDIR
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone,QUERY_SOURCE=mongolog'
+  dispatch_setup
+
+  local dir
+  dir=$(sed -n 's/^run .* --volume \([^ ]*\):\/etc\/mongod .*/\1/p' "$DOCKER_CALLS")
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-standalone.* ]]
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+  ! grep -q '^  replSetName' "$dir/mongod.conf" || false
+  grep -Eq '^exec psmdb-standalone pmm-admin add mongodb --enable-all-collectors --query-source=mongolog ' "$DOCKER_CALLS"
+
+  local spec
+  for spec in 'GSSAPI=true' 'COMPOSE_PROFILES=extra' 'STORAGE_ENGINE=inmemory'; do
+    : >"$DOCKER_CALLS"
+    parse_database_spec "psmdb=8.0,SETUP_TYPE=standalone,$spec"
+    run dispatch_setup
+    [[ $status -ne 0 ]]
+    [[ $output == *'PSMDB SETUP_TYPE=standalone does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'* ]]
+    ! grep -q '^run ' "$DOCKER_CALLS" || false
+  done
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {

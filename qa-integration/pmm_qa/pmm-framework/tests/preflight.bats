@@ -67,6 +67,20 @@ preflight_run() {
   [[ $output == *'two PSMDB setups'* ]]
 }
 
+@test "a standalone PSMDB shares a host and a run with a replica set or sharded cluster" {
+  for other in psmdb 'psmdb,SETUP_TYPE=psa' 'psmdb,SETUP_TYPE=sharding'; do
+    [[ $(parallel_decision "$other" 'psmdb,SETUP_TYPE=standalone') == true ]]
+    [[ $(parallel_decision 'psmdb,SETUP_TYPE=standalone' "$other") == true ]]
+  done
+}
+
+@test "two standalone PSMDB setups cannot share a host" {
+  preflight_run 'psmdb,SETUP_TYPE=standalone' psmdb 'psmdb,SETUP_TYPE=Standalone'
+  [[ $status -eq 1 ]]
+  [[ $output == *'two standalone PSMDB setups (both pin container name psmdb-standalone)'* ]]
+  [[ $output == *'separate machines'* ]]
+}
+
 @test "a PSMDB host conflict is caught behind an unrelated spec" {
   preflight_run ps psmdb valkey 'psmdb,SETUP_TYPE=sharding'
   [[ $status -eq 1 ]]
