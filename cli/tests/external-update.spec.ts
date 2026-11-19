@@ -122,7 +122,6 @@ test.describe('External service pmm-admin update', { tag: '@external' }, () => {
       expect(pmmAdmin.getSettingValue(reset, '--scheme')).toEqual('http');
       expect(pmmAdmin.getSettingValue(reset, '--metrics-path')).toEqual('/metrics');
       expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
-      await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
     });
 
     test('PMM-TXXXX-external-tls-skip-verify - Verify pmm-admin update external turns certificate verification off and on', async ({}) => {

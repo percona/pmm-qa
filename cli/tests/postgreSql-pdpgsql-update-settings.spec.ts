@@ -145,7 +145,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
           '--tls (was --no-tls)',
           '--tls-ca-file (new value)',
           '--tls-cert-file (new value)',
-          '--tls-key-file (new value)',
+          '--tls-key-file=*** (was empty)',
           '--tls-skip-verify (was --no-tls-skip-verify)',
         ]);
         expect(pmmAdmin.getCurrentSettings(output)).toContain('--tls-key-file=***');

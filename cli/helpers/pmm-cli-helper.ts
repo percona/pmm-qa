@@ -10,8 +10,11 @@ import { getAgentPort } from '@helpers/pmm-admin';
  * @param   agentId         exporter agent ID
  */
 export async function getExporterArgs(containerName: string, agentId: string): Promise<string[]> {
-  const port = await getAgentPort(containerName, agentId);
-  expect(port, `Agent ${agentId} has no listen port yet`).toBeTruthy();
+  let port: number | undefined;
+  await expect(async () => {
+    port = await getAgentPort(containerName, agentId);
+    expect(port, `Agent ${agentId} has no listen port yet`).toBeTruthy();
+  }).toPass({ intervals: [2_000], timeout: 30_000 });
   const output = await exec(`docker exec ${containerName} sh -c 'for p in $(pgrep -f "[e]xporters/"); do tr "\\0" " " < /proc/$p/cmdline | grep -q ":${port} " && tr "\\0" "\\n" < /proc/$p/cmdline; done'`);
 
   return output.getStdOutLines();

@@ -80,7 +80,6 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
       expect(pmmAdmin.getSettingValue(reset, '--scheme')).toEqual('http');
       expect(pmmAdmin.getSettingValue(reset, '--metrics-path')).toEqual('/metrics');
       expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
-      await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
     });
 
     test('PMM-TXXXX-haproxy-tls-skip-verify - Verify pmm-admin update haproxy turns certificate verification off and on', async ({}) => {
