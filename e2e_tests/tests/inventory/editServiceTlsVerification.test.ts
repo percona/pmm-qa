@@ -74,11 +74,14 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
       },
     );
 
-    // skip-until: 2026-12-03 -- PMM-15940: PostgreSQL still verifies the server certificate against a stored CA when skip verification is on; unskip once it is fixed; unskip once it is fixed.
-    // eslint-disable-next-line playwright/no-skipped-test -- product bug PMM-15940, see the skip-until line above.
-    pmmTest.skip(
+    pmmTest(
       `PMM-T2737 - Verify skipping TLS verification accepts a server certificate from an untrusted CA for ${name} service ${tag}`,
       async ({ api, editServicePage, tlsHelper }) => {
+        pmmTest.skip(
+          name === 'ssl_pdpgsql',
+          'PostgreSQL verifies a stored CA even with skip verification on, see PMM-15940',
+        );
+
         const { cert } = tlsHelper.generateSelfSignedCertificate('pmm-untrusted-ca');
 
         await editServicePage.open(service.service_id);

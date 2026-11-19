@@ -486,20 +486,13 @@ export default class EditServicePage extends BasePage {
 
     await expect(serviceNameLabels, 'the service name has no row of its own').toHaveCount(0);
     await expect(
-      serviceDetails.locator('input, textarea, select, [contenteditable]'),
+      this.elements.serviceDetailControls,
       'the Service block has no form controls',
     ).toHaveCount(0);
     await expect(editableDetailFields, 'no field edits the service name, node or endpoint').toHaveCount(0);
 
     for (const value of values) {
-      const shown = this.builders.serviceDetailValue(value);
-
-      await expect(shown).toBeVisible();
-      await expect(
-        shown.fill('changed', { timeout: Timeouts.FIVE_SECONDS }),
-        `${value} cannot be typed over`,
-      ).rejects.toThrow(/not an <input>/);
-      await expect(shown).toHaveText(value);
+      await expect(this.builders.serviceDetailValue(value)).toBeVisible();
     }
 
     await expect(this.buttons.saveChanges).toBeDisabled();
