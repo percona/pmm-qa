@@ -636,6 +636,54 @@ jobs:
       services_list: '--database valkey=8'
       test_name: 'Valkey 8.x'
 
+  pgsql-14-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@pgsql-pgss'
+      services_list: '--database pgsql=14'
+      test_name: 'PostgreSQL 14'
+
+  pgsql-15-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@pgsql-pgss'
+      services_list: '--database pgsql=15'
+      test_name: 'PostgreSQL 15'
+
+  pgsql-16-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@pgsql-pgss'
+      services_list: '--database pgsql=16'
+      test_name: 'PostgreSQL 16'
+
   pgsql-17-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -651,6 +699,22 @@ jobs:
       cli_tag: '@pgsql-pgss'
       services_list: '--database pgsql=17'
       test_name: 'PostgreSQL 17'
+
+  pgsql-18-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@pgsql-pgss'
+      services_list: '--database pgsql=18'
+      test_name: 'PostgreSQL 18'
 
   external-tests:
     name: 'CLI / Integration'
@@ -668,6 +732,22 @@ jobs:
       services_list: '--database external'
       test_name: 'External'
 
+  ssl-psmdb-70-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@ssl-psmdb'
+      services_list: '--database ssl_psmdb=7.0'
+      test_name: 'TLS PSMDB 7.0'
+
   ssl-psmdb-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -682,7 +762,39 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@ssl-psmdb'
       services_list: '--database ssl_psmdb=8.0'
-      test_name: 'TLS PSMDB 8.x'
+      test_name: 'TLS PSMDB 8.0'
+
+  ssl-psmdb-83-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@ssl-psmdb'
+      services_list: '--database ssl_psmdb=8.3'
+      test_name: 'TLS PSMDB 8.3'
+
+  ssl-pdpgsql-15-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@ssl-pdpgsql'
+      services_list: '--database ssl_pdpgsql=15'
+      test_name: 'TLS PDPGSQL 15'
 
   ssl-pdpgsql-16-tests:
     name: 'CLI / Integration'
@@ -699,3 +811,35 @@ jobs:
       cli_tag: '@ssl-pdpgsql'
       services_list: '--database ssl_pdpgsql=16'
       test_name: 'TLS PDPGSQL 16'
+
+  ssl-pdpgsql-17-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@ssl-pdpgsql'
+      services_list: '--database ssl_pdpgsql=17'
+      test_name: 'TLS PDPGSQL 17'
+
+  ssl-pdpgsql-18-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@ssl-pdpgsql'
+      services_list: '--database ssl_pdpgsql=18'
+      test_name: 'TLS PDPGSQL 18'
