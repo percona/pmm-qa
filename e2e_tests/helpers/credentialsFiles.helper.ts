@@ -48,7 +48,7 @@ export default class CredentialsFilesHelper {
           this.cliHelper.execSilent(
             `docker exec ${mysqlContainer} mysql -uroot -p${mysqlPassword} -e "SELECT 1"`,
           ).code,
-        { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES },
+        { intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES },
       )
       .toBe(0);
     this.dockerHelper.startContainer(
