@@ -434,7 +434,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
     test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
       const size = await fileSize(exporterPath);
-      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB (3.10.0's was 38 MB)`;
+      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB`;
 
       expect(size, message).toBeGreaterThan(14 * megabyte);
       expect(size, message).toBeLessThan(22 * megabyte);
