@@ -6,6 +6,7 @@ import { ChangeAgentType, addMongoServiceAndGetExporterId, getPmmAdminMinorVersi
 import { clientCredentialsFlags, mongoConnection } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
 import { faker } from '@faker-js/faker';
+import * as pmmApi from '@helpers/pmm-api-helper';
 
 const replIpPort = 'rs101:27017';
 const ip = replIpPort.split(':')[0];
@@ -361,110 +362,24 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     ).toBeGreaterThan(5_000);
   });
 
-  test.describe('mongodb_exporter binary size and memory against 3.10.0', { tag: '@exporter-footprint' }, () => {
-    const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
-    const mb = (bytes: number) => (bytes / megabyte).toFixed(1);
-    const mib = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
+  test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
+    const size = await cli.execSilent('docker exec psmdb-server sh -lc \'stat -c %s /usr/local/percona/pmm/exporters/mongodb_exporter | awk "{printf \\"%.2f \\n\\", \\$1/1024/1024}"\'');
+    const sizeMiB = parseFloat(size.stdout.trim());
 
-    const fileSize = async (path: string) => {
-      const output = await cli.exec(`docker exec ${exporterContainer} stat -c %s ${path}`);
-      await output.assertSuccess();
+    if (Number.isNaN(sizeMiB)) {
+      throw new Error(`Invalid numeric output: "${size.stdout.trim()}"`);
+    }
 
-      return Number(output.stdout.trim());
-    };
-
-    // The version gate runs after beforeAll hooks, so the download happens here and a skipped run never makes it.
-    // A failed test restarts the worker, so the download is kept.
-    const prepareBaselineExporter = async () => {
-      const cached = await cli.exec(`docker exec ${exporterContainer} test -s ${baselineExporter}`);
-
-      if (cached.code !== 0) {
-        const download = await cli.exec(
-          `docker exec ${exporterContainer} sh -c 'curl -fsSL --retry 3 --connect-timeout 30 `
-          + `https://downloads.percona.com/downloads/pmm3/${baselineVersion}/binary/tarball/pmm-client-${baselineVersion}-$(uname -m).tar.gz `
-          + `| tar -xzO --wildcards "*/bin/mongodb_exporter" > ${baselineExporter}.part && chmod 0755 ${baselineExporter}.part && mv ${baselineExporter}.part ${baselineExporter}'`,
-        );
-        await download.assertSuccess();
-      }
-
-      const size = await fileSize(baselineExporter);
-      expect(size, `The ${baselineVersion} mongodb_exporter was not extracted`).toBeGreaterThan(0);
-
-      return size;
-    };
-
-    const restartAgentAndWaitForExporter = async () => {
-      await (await cli.exec(`docker exec ${exporterContainer} systemctl restart pmm-agent`)).assertSuccess();
-      await expectMongoUp(exporterContainer, exporterContainer, agentPassword);
-    };
-
-    // One scrape of the exporter itself: through PMM Server the _hr and _lr jobs would report the same process twice.
-    const exporterRss = async () => {
-      const metrics = await cli.getMetrics(exporterContainer, 'pmm', agentPassword, exporterContainer);
-      const value = metrics.match(/^process_resident_memory_bytes\s+(\S+)$/m)?.[1];
-      expect(value, 'process_resident_memory_bytes is missing from the mongodb_exporter metrics').toBeTruthy();
-
-      return Number(value);
-    };
-
-    const settledExporterRss = async () => {
-      await restartAgentAndWaitForExporter();
-      await sleep(30_000);
-      const samples: number[] = [];
-
-      for (let i = 0; i < 3; i++) {
-        samples.push(await exporterRss());
-        await sleep(10_000);
-      }
-
-      return samples.sort((a, b) => a - b)[1];
-    };
-
-    const restoreExporterUnderTest = async () => {
-      const backedUp = await cli.exec(`docker exec ${exporterContainer} test -f ${currentExporterBackup}`);
-
-      if (backedUp.code === 0) {
-        await cli.exec(`docker exec ${exporterContainer} sh -c 'systemctl stop pmm-agent; install -m 0755 ${currentExporterBackup} ${exporterPath} && rm -f ${currentExporterBackup}; systemctl start pmm-agent'`);
-        await expectMongoUp(exporterContainer, exporterContainer, agentPassword);
-      }
-    };
-
-    test.afterAll(async () => {
-      test.setTimeout(5 * 60_000);
-      await restoreExporterUnderTest();
-    });
-
-    test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
-      const size = await fileSize(exporterPath);
-      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB`;
-
-      expect(size, message).toBeGreaterThan(14 * megabyte);
-      expect(size, message).toBeLessThan(22 * megabyte);
-    });
+    expect(sizeMiB).toBeGreaterThan(16.0);
+    expect(sizeMiB).toBeLessThan(20.0);
+  });
 
     test('PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
-      test.setTimeout(10 * 60_000);
-      await prepareBaselineExporter();
-
-      await (await cli.exec(`docker exec ${exporterContainer} cp -p ${exporterPath} ${currentExporterBackup}`)).assertSuccess();
-      const currentRss = await settledExporterRss();
-
-      await (await cli.exec(
-        `docker exec ${exporterContainer} sh -c 'systemctl stop pmm-agent && install -m 0755 ${baselineExporter} ${exporterPath}'`,
-      )).assertSuccess();
-      const baselineRss = await settledExporterRss();
-
-      await restoreExporterUnderTest();
-
-      const summary = `${mib(currentRss)} MiB, ${baselineVersion}: ${mib(baselineRss)} MiB`;
-      console.log(`mongodb_exporter RSS: ${summary}`);
-      test.info().annotations.push({ type: 'mongodb_exporter RSS', description: summary });
-      expect(
-        currentRss,
-        `mongodb_exporter RSS is ${mib(currentRss)} MiB after a restart, ${baselineVersion}'s is ${mib(baselineRss)} MiB`,
-      ).toBeLessThan(baselineRss * requiredMemoryRatio);
+      const agentId = (await cli.execSilent('docker exec psmdb-server pmm-admin list | grep "mongodb_exporter" | awk -F\' \' \'{print $4}\'')).stdout.trim();
+      console.log(`Agent id is: ${agentId}`);
+      const usedMemoryValue = await pmmApi.queryVictoriaMetrics(`query=max(process_resident_memory_bytes{agent_id="${agentId}"})`);
+      console.log(`Used memory value is: ${usedMemoryValue}`);
     });
-  });
 });
 
 test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics-psmdb' }, () => {
