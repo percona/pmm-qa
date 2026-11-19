@@ -155,7 +155,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-ps-replica-integration`
+- `@pmm-psmdb-arbiter-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-psmdb-replica-integration`
 - `@pmm-psmdb-sharding-integration`
 - `@pmm-pxc-integration`
 - `@pmm-upgrade`

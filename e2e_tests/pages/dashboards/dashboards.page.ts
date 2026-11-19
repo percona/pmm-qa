@@ -51,6 +51,14 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    // Third cell of the series row: the Max column of a table legend whose calcs are mean, max, min.
+    legendMaxValue: (panelName: string, seriesName: string) =>
+      this.builders
+        .panelByExactName(panelName)
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('button', { name: seriesName }) })
+        .getByRole('cell')
+        .nth(2),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
