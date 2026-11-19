@@ -1,9 +1,5 @@
 name: FB merge gate
 
-# Holds a pmm-qa PR that a feature build lists in its ci.yml until that build's product
-# PRs have merged; see .github/scripts/fb-merge-gate.sh. Required on main, with
-# auto-merge on the PR, so the QA change lands right after the product change.
-
 on:
   # pull_request_target so fork PRs get their status too. Only the base branch's
   # script runs here; no PR code is checked out.

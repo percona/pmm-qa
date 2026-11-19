@@ -1,18 +1,5 @@
 #!/usr/bin/env bash
-# fb-merge-gate.sh
-#
 # Sets the "FB merge gate" commit status on every open pmm-qa PR into main.
-#
-# A pmm-qa branch that a feature build lists in its ci.yml (Percona-Lab/pmm-submodules)
-# tests behaviour of that build's product PRs (pmm, grafana, exporters...). Merged before
-# them, it turns main red against 3-dev-latest. So such a PR stays `pending` until every
-# product PR of at least one of its feature builds has merged into the branch the
-# submodule tracks; any other PR gets `success` at once. With the status required on
-# main and auto-merge on the PR, the QA PR lands minutes after the product.
-#
-# Every open feature build is read. Of the closed ones only the FB_CLOSED most recently
-# updated are: a closed build whose product PRs were all closed without merge was
-# abandoned and is ignored, one with a product PR still open keeps blocking.
 #
 # Environment:
 #   GH_TOKEN      required; statuses:write on QA_REPO, read on the product repos
@@ -43,7 +30,7 @@ refspecs=()
 while IFS=$'\t' read -r number _; do
   refspecs+=("+refs/pull/${number}/head:refs/fb/${number}")
 done <"${fb_list}"
-git -C "${work}" fetch -q --depth=1 origin "${refspecs[@]}"
+timeout 300 git -C "${work}" fetch -q --depth=1 origin "${refspecs[@]}"
 
 # owner/repo of a GitHub URL, without .git
 repo_of() {
