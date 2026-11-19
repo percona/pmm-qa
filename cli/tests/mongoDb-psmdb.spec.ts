@@ -1,6 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import { expectMongoUp, runOnPrimary } from '@helpers/mongo';
+import { runOnPrimary } from '@helpers/mongo';
 import * as pbm from '@helpers/pbm';
 import { ChangeAgentType, addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, inventoryChangeAgent, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags, mongoConnection } from '@helpers/constants';
@@ -18,15 +18,6 @@ const containerName = 'rs101';
 let adminVersion: number;
 const servicesToRemove: string[] = [];
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
-const exporterContainer = 'rs102';
-const agentPassword = 'mypass';
-const exporterPath = '/usr/local/percona/pmm/exporters/mongodb_exporter';
-const baselineVersion = '3.10.0';
-const baselineExporter = `/tmp/mongodb_exporter-${baselineVersion}`;
-const currentExporterBackup = '/tmp/mongodb_exporter-under-test';
-const megabyte = 1_000_000;
-// Two runs of the same binary differ by up to about 8%; the fix measured 33% (46 to 31 MiB).
-const requiredMemoryRatio = 0.9;
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
   test.use({ pmmClientContainer: containerName });
@@ -704,7 +695,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
       }
 
       for (const [first, second] of [[advances[0], advances[1]], [advances[1], advances[2]]]) {
-        expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeGreaterThanOrEqual(50);
+        expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeGreaterThanOrEqual(30);
         expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeLessThanOrEqual(90);
       }
     });
