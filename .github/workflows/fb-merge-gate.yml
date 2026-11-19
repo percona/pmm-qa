@@ -1,0 +1,40 @@
+name: FB merge gate
+
+# Holds a pmm-qa PR that a feature build lists in its ci.yml until that build's product
+# PRs have merged; see .github/scripts/fb-merge-gate.sh. Required on main, with
+# auto-merge on the PR, so the QA change lands right after the product change.
+
+on:
+  # pull_request_target so fork PRs get their status too. Only the base branch's
+  # script runs here; no PR code is checked out.
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: fb-merge-gate
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: FB merge gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Set FB merge gate status on open PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/fb-merge-gate.sh
