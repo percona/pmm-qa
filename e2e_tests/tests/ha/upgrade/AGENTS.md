@@ -15,7 +15,7 @@ The upgrade itself is **not** done by these tests. Every helm step is
 | # | Phase | Tag | What the test proves |
 |---|---|---|---|
 | 1 | `install_pmm_ha.sh` installs the **released** image from the **published** chart | — | — |
-| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader, UI renders. **Seeds a stray `pmm` ClickHouse database on the third ClickHouse server** (PMM-15785), then **records the baseline.** |
+| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader. **Seeds a stray `pmm` ClickHouse database on the third ClickHouse server** (PMM-15785), then **records the baseline.** |
 | 3 | `--charts deps --chart-branch <branch>` upgrades the operators | — | — |
 | 4 | | `@pmm-helm-mid-upgrade` | the dependencies release moved and the `pmm-ha` release did **not**: same revision, same pods, same version, still serving |
 | 5 | `--charts pmm-ha --chart-branch <branch> --image <target>` upgrades the server | — | — |
@@ -60,6 +60,10 @@ and **fail** when it is missing rather than skipping their comparisons.
 
 ## Rules that have already cost a run
 
+- **No UI in pre and mid.** They run against the released server, and the page
+  objects on `main` follow the server being built: the Nodes page object moved to
+  `pmm-ui/inventory/nodes`, which 3.10.0 does not serve. Check through the API,
+  `kubectl` and `helm` there; only post may use the UI.
 - **Never tag these `@pmm-ha`.** `--grep "@pmm-ha"` matches a nested tag by
   substring, and these mutate the cluster they run on - the whole HA suite would
   drag them in.

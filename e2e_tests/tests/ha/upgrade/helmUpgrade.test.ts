@@ -76,17 +76,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 // cluster they run on, and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
   'PMM-T2229 + PMM-TBD-4 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
-  async ({
-    api,
-    haClickHouseHelper,
-    haClusterHelper,
-    helmHelper,
-    highAvailabilityPage,
-    k8sHelper,
-    leftNavigation,
-    nodesPage,
-    page,
-  }) => {
+  async ({ api, haClickHouseHelper, haClusterHelper, helmHelper, k8sHelper }) => {
     await haClusterHelper.verifyHaEnabled(api.haApi);
 
     const baseline = await pmmTest.step('Baseline the release, images, version and services', async () => {
@@ -125,12 +115,7 @@ pmmTest(
       };
     });
 
-    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
-
-    const leader = await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
-
-    await page.goto(nodesPage.url);
-    await nodesPage.verifyHaNodeRoles(baseline.podNames, leader);
+    await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
 
     await pmmTest.step('Split the QAN database with a stray copy on one ClickHouse server', async () => {
       const clickHousePods = haClickHouseHelper.pods();
@@ -152,16 +137,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T2229 - Verify a PMM HA cluster keeps serving while its dependencies are upgraded @pmm-helm-mid-upgrade',
-  async ({
-    api,
-    haClusterHelper,
-    helmHelper,
-    highAvailabilityPage,
-    k8sHelper,
-    leftNavigation,
-    nodesPage,
-    page,
-  }) => {
+  async ({ api, haClusterHelper, helmHelper, k8sHelper }) => {
     const before = readBaseline();
 
     await haClusterHelper.verifyHaEnabled(api.haApi);
@@ -214,12 +190,7 @@ pmmTest(
     });
 
     await haClusterHelper.verifyServicesReportAgain(api, before.services);
-    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
-
-    const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
-
-    await page.goto(nodesPage.url);
-    await nodesPage.verifyHaNodeRoles(podNames, leader);
+    await haClusterHelper.verifySingleLeader(api.haApi, podNames);
   },
 );
 
