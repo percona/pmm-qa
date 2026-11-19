@@ -60,6 +60,7 @@ Run commands from `cli/`.
 - `@server-only`
 - `@service-removal`
 - `@shard-psmdb`
+- `@standalone-psmdb`
 - `@unregister`
 - `@valkey`
 
