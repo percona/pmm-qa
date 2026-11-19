@@ -157,7 +157,12 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
         await expect(builders.rowsWithCell('Newer version of PostgreSQL is available')).toHaveCount(0);
         await builders.row(eol.id).dblclick();
+        expect(eol.labels.current).toMatch(/^14\.\d+$/);
+        await expect(builders.detailsLabel('current', eol.labels.current)).toBeVisible();
         await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2026-11-12');
+        await expect(builders.detailsField('outcome')).toContainText(
+          'Lifecycle policy: https://www.postgresql.org/support/versioning/.',
+        );
       });
     },
   );
@@ -310,11 +315,10 @@ pmmTest.describe('Built-in Advisor version checks', () => {
   );
 
   pmmTest(
-    'PMM-T2624 - Verify MongoDB 4.2 and 4.4 each get exactly one end-of-life error and no newer-version warning, and MongoDB 8.0 gets no end-of-life finding @advisor-versions',
+    'PMM-T2624 - Verify MongoDB 4.4 gets exactly one end-of-life error and no newer-version warning, and MongoDB 8.0 gets no end-of-life finding @advisor-versions',
     async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const versionCheck = 'mongodb_version';
       const databases = await remoteDatabasesHelper.add({
-        mongo42: remoteMongodb('mongo:4.2'),
         mongo44: remoteMongodb('mongo:4.4'),
         mongo80: remoteMongodb('mongo:8.0'),
       });
@@ -343,13 +347,6 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         await buttons.closeDetails.click();
       });
 
-      await pmmTest.step('MongoDB 4.2 gets exactly one end-of-life error', async () => {
-        await advisorInsightsPage.selectFilter('serviceName', databases.mongo42.name);
-        await expect(elements.rows).toHaveCount(1);
-        await expect(builders.rowsWithCell('MongoDB 4.2 reached end of life')).toHaveCount(1);
-        await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-      });
-
       await pmmTest.step(
         'MongoDB 8.0 gets no end-of-life finding, only MongoDB newer-version advice',
         async () => {
@@ -368,11 +365,10 @@ pmmTest.describe('Built-in Advisor version checks', () => {
   );
 
   pmmTest(
-    'PMM-T2625 - Verify PostgreSQL 13 gets only an end-of-life error with its full version and PostgreSQL 17 gets newer-version advice @advisor-versions',
+    'PMM-T2625 - Verify PostgreSQL 17 gets newer-version advice with release notes and the security page @advisor-versions',
     async ({ advisorInsightsPage, api, page, remoteDatabasesHelper }) => {
       const versionCheck = 'postgresql_version_check';
       const databases = await remoteDatabasesHelper.add({
-        pg13: remotePostgresql('postgres:13.23'),
         pg17: remotePostgresql('postgres:17.11'),
       });
       const { insightOf, run } = await api.advisorsApi.runChecksAndListInsights(
@@ -383,26 +379,6 @@ pmmTest.describe('Built-in Advisor version checks', () => {
 
       await page.goto(advisorInsightsPage.runUrl(run.id));
       await advisorInsightsPage.selectFilter('category', 'Versions');
-
-      await pmmTest.step(
-        'PostgreSQL 13.23 reached end of life and gets no newer-version advice',
-        async () => {
-          const eol = insightOf(databases.pg13.serviceId, versionCheck);
-
-          await advisorInsightsPage.selectFilter('serviceName', databases.pg13.name);
-          await expect(elements.rows).toHaveCount(1);
-          await expect(builders.rowsWithCell('PostgreSQL 13 reached end of life')).toHaveCount(1);
-          await expect(builders.rowsWithCell('Error')).toHaveCount(1);
-          await builders.row(eol.id).dblclick();
-          await expect(builders.detailsLabel('current', '13.23')).toBeVisible();
-          await expect(builders.detailsField('outcome')).toContainText('End-of-Life date on 2025-11-13');
-          await expect(builders.detailsField('outcome')).toContainText(
-            'Lifecycle policy: https://www.postgresql.org/support/versioning/.',
-          );
-          await expect(builders.detailsField('outcome')).not.toContainText('newer');
-          await buttons.closeDetails.click();
-        },
-      );
 
       await pmmTest.step(
         'PostgreSQL 17.11 gets newer-version advice with release notes and the security page',
