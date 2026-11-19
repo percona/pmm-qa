@@ -30,6 +30,7 @@ export default class QueryAnalyticsPage extends BasePage {
     feedbackLink: this.page.getByRole('link', { name: 'Provide feedback' }),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
+    realTimePageTitle: this.page.getByRole('heading', { name: 'Real-time queries' }),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
   };
   inputs = {};
