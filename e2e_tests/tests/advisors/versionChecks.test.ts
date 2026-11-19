@@ -1,10 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import {
-  MonitoredDatabase,
-  remoteMongodb,
-  remoteMysql,
-  remotePostgresql,
-} from '@helpers/remoteDatabases.helper';
+import { remoteMongodb, remoteMysql, remotePostgresql } from '@helpers/remoteDatabases.helper';
 import { AdvisorCheckResultStatus, AdvisorCheckTechnology } from '@interfaces/advisors';
 import { expect } from '@playwright/test';
 
@@ -27,14 +22,12 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         'postgresql_eol_check',
         'postgresql_unsupported_check',
       ];
-      const monitored = (services: { service_id: string; service_name: string }[]): MonitoredDatabase[] =>
-        services.map(({ service_id, service_name }) => ({ name: service_name, serviceId: service_id }));
       // The services pmm-framework adds for ps=8.0, psmdb=6.0 and pgsql=14.
-      const [ps] = monitored([await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_0_')]);
-      const psmdb = monitored(await api.inventoryApi.getAllServiceDetailsByRegex('^rs10[1-3]_')).sort(
-        (a, b) => a.name.localeCompare(b.name),
+      const ps = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_0_');
+      const psmdb = (await api.inventoryApi.getAllServiceDetailsByRegex('^rs10[1-3]_')).sort((a, b) =>
+        a.service_name.localeCompare(b.service_name),
       );
-      const [pgsql] = monitored([await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_14_')]);
+      const pgsql = await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_14_');
       const services = [ps, ...psmdb, pgsql];
       const checks = await api.advisorsApi.listChecks();
       const { builders, buttons, elements } = advisorInsightsPage;
@@ -84,7 +77,7 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         .map(({ name }) => name);
       const { insightOf, insights, run } = await api.advisorsApi.runChecksAndListInsights(
         builtinChecks,
-        services.map(({ serviceId }) => serviceId),
+        services.map(({ service_id }) => service_id),
       );
 
       await pmmTest.step('Every planned check runs without an error', async () => {
@@ -105,9 +98,9 @@ pmmTest.describe('Built-in Advisor version checks', () => {
       await advisorInsightsPage.selectFilter('category', 'Versions');
 
       await pmmTest.step('Percona Server 8.0 reached end of life on 2026-04-01', async () => {
-        const eol = insightOf(ps.serviceId, 'mysql_version');
+        const eol = insightOf(ps.service_id, 'mysql_version');
 
-        await advisorInsightsPage.selectFilter('serviceName', ps.name);
+        await advisorInsightsPage.selectFilter('serviceName', ps.service_name);
         await expect(builders.rowsWithCell('Percona Server for MySQL 8.0 reached end of life')).toHaveCount(
           1,
         );
@@ -124,22 +117,23 @@ pmmTest.describe('Built-in Advisor version checks', () => {
         'Each PSMDB 6.0 member reached end of life and keeps its default journal and log level',
         async () => {
           for (const service of psmdb) {
-            expect(insightOf(service.serviceId, 'mongodb_version'), service.name).toMatchObject({
+            expect(insightOf(service.service_id, 'mongodb_version'), service.service_name).toMatchObject({
               severity: 'SEVERITY_ERROR',
               status: AdvisorCheckResultStatus.failed,
               summary: 'Percona Server for MongoDB 6.0 reached end of life',
             });
 
             for (const checkName of ['mongodb_journal', 'mongodb_loglevel']) {
-              expect(insightOf(service.serviceId, checkName).status, `${service.name} ${checkName}`).toEqual(
-                AdvisorCheckResultStatus.ok,
-              );
+              expect(
+                insightOf(service.service_id, checkName).status,
+                `${service.service_name} ${checkName}`,
+              ).toEqual(AdvisorCheckResultStatus.ok);
             }
           }
 
           const [member] = psmdb;
 
-          await advisorInsightsPage.selectFilter('serviceName', member.name);
+          await advisorInsightsPage.selectFilter('serviceName', member.service_name);
           await expect(
             builders.rowsWithCell('Percona Server for MongoDB 6.0 reached end of life'),
           ).toHaveCount(1);
@@ -148,17 +142,17 @@ pmmTest.describe('Built-in Advisor version checks', () => {
             builders.rowsWithCell('Newer version of Percona Server for MongoDB is available'),
           ).toHaveCount(0);
           await advisorInsightsPage.selectFilter('category', 'All');
-          await expect(builders.row(insightOf(member.serviceId, 'mongodb_journal').id)).toBeVisible();
+          await expect(builders.row(insightOf(member.service_id, 'mongodb_journal').id)).toBeVisible();
           await expect(builders.rowsWithText('MongoDB journaling is disabled')).toHaveCount(0);
           await expect(builders.rowsWithText('MongoDB is not using the default log level.')).toHaveCount(0);
         },
       );
 
       await pmmTest.step('PostgreSQL 14 reached end of life on 2026-11-12', async () => {
-        const eol = insightOf(pgsql.serviceId, 'postgresql_version_check');
+        const eol = insightOf(pgsql.service_id, 'postgresql_version_check');
 
         await advisorInsightsPage.selectFilter('category', 'Versions');
-        await advisorInsightsPage.selectFilter('serviceName', pgsql.name);
+        await advisorInsightsPage.selectFilter('serviceName', pgsql.service_name);
         await expect(builders.rowsWithCell('PostgreSQL 14 reached end of life')).toHaveCount(1);
         await expect(builders.rowsWithCell('Error')).toHaveCount(1);
         await expect(builders.rowsWithCell('Newer version of PostgreSQL is available')).toHaveCount(0);
