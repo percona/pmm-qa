@@ -51,6 +51,7 @@ Run commands from `cli/`.
 - `@mysql-conf-file`
 - `@mysql-perfschema-change-agent`
 - `@pbm-metrics-psmdb`
+- `@pbm-metrics-shard`
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`
