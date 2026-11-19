@@ -4,9 +4,6 @@ import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
 import * as pmmCli from '@helpers/pmm-cli-helper';
 
-const MYSQL_USER = 'root';
-const MYSQL_PASSWORD = 'GRgrO9301RuF';
-const ipPort = '127.0.0.1:3306';
 const slowlogAgent = 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT';
 const perfschemaAgent = 'AGENT_TYPE_QAN_MYSQL_PERFSCHEMA_AGENT';
 const exporterAgent = 'AGENT_TYPE_MYSQLD_EXPORTER';
@@ -20,18 +17,13 @@ test.describe('Percona Server pmm-admin update', { tag: '@percona-server' }, () 
   const database = 'pmm_qa_update';
   let serviceAdded = false;
 
-  const addService = async (querySource: string) => {
-    await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --query-source=${querySource} --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
-    await output.assertSuccess();
+  const addService = async (querySource: string) => pmmAdmin.addMySQLService(containerName, serviceName, querySource, () => {
     serviceAdded = true;
+  });
 
-    return pmmAdmin.getServiceId(containerName, serviceName);
-  };
-
-  const mysql = async (args: string) => cli.exec(`docker exec ${containerName} mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${args}`);
+  const mysql = async (args: string) => pmmAdmin.runMySQL(containerName, args);
   const update = async (args: string) => pmmAdmin.updateServiceOk(containerName, 'mysql', `${serviceName} ${args}`);
-  const agentId = async (serviceId: string, agentType: string) => (await pmmAdmin.findServiceAgent(containerName, serviceId, agentType))?.agent_id;
+  const agentId = async (serviceId: string, agentType: string) => pmmAdmin.findServiceAgentId(containerName, serviceId, agentType);
 
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');

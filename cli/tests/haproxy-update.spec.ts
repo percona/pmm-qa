@@ -1,6 +1,7 @@
-import { test, expect } from '@helpers/test';
+import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
+import * as pmmApi from '@helpers/pmm-api-helper';
 
 const exporterAgent = 'AGENT_TYPE_EXTERNAL_EXPORTER';
 
@@ -15,6 +16,15 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
   const unusedListenPort = 42102;
   let serviceAdded = false;
 
+  const addService = async () => {
+    // The HAProxy of the setup exposes its metrics on this port only.
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add haproxy --listen-port=${listenPort} ${serviceName}`);
+    await output.assertSuccess();
+    serviceAdded = true;
+
+    return pmmAdmin.getServiceId(containerName, serviceName);
+  };
+
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep haproxy_pmm | awk \'{print $NF}\'');
     await result.outContains('haproxy_pmm', 'HAPROXY docker container should exist. please run pmm-framework with --database haproxy');
@@ -23,18 +33,13 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
 
   test.afterEach(async ({}) => {
     if (serviceAdded) {
-      const output = await cli.exec(`docker exec ${containerName} pmm-admin remove haproxy ${serviceName}`);
-      await output.assertSuccess();
+      await pmmAdmin.removeService(containerName, 'haproxy', serviceName);
       serviceAdded = false;
     }
   });
 
   test('PMM-T2653 - Verify pmm-admin update haproxy changes the listen port in place', async ({}) => {
-    // The HAProxy of the setup exposes its metrics on this port only.
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add haproxy --listen-port=${listenPort} ${serviceName}`);
-    await output.assertSuccess();
-    serviceAdded = true;
-    const serviceId = await pmmAdmin.getServiceId(containerName, serviceName);
+    const serviceId = await addService();
     const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
     const exporterPort = async () => (await pmmAdmin.findServiceAgent(containerName, serviceId, exporterAgent))?.port;
     expect(await exporterPort()).toEqual(listenPort);
@@ -53,5 +58,42 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
     const restored = await pmmAdmin.updateServiceOk(containerName, 'haproxy', `${serviceName} --listen-port=${listenPort}`);
     expect(pmmAdmin.getChangedSettings(restored)).toEqual([`--listen-port=${listenPort} (was ${newListenPort})`]);
     expect(await exporterPort(), 'Listen port of the exporter is not restored').toEqual(listenPort);
+  });
+
+  test.describe('flags without a case key yet', () => {
+    test.beforeAll(async ({}) => {
+      await skipWithoutUpdateCommand(containerName);
+    });
+
+    test('PMM-TXXXX-haproxy-scheme-path - Verify pmm-admin update haproxy changes the scheme and the metrics path and resets them to the defaults', async ({}) => {
+      const serviceId = await addService();
+      const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
+
+      // The exporter does not serve this scheme and path, so the connection check is skipped.
+      const changed = await pmmAdmin.updateServiceJson(containerName, 'haproxy', `${serviceName} --scheme=https --metrics-path=custom-metrics --skip-connection-check`);
+      expect(pmmAdmin.getSettingValue(changed, '--scheme')).toEqual('https');
+      expect(pmmAdmin.getSettingValue(changed, '--metrics-path'), 'The leading slash is not added').toEqual('/custom-metrics');
+
+      // An empty value goes back to the default, which the exporter serves, so the connection check passes.
+      const reset = await pmmAdmin.updateServiceJson(containerName, 'haproxy', `${serviceName} --scheme= --metrics-path=`);
+      expect(reset.changes.map((change) => change.flag).sort()).toEqual(['--metrics-path', '--scheme']);
+      expect(pmmAdmin.getSettingValue(reset, '--scheme')).toEqual('http');
+      expect(pmmAdmin.getSettingValue(reset, '--metrics-path')).toEqual('/metrics');
+      expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
+      await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
+    });
+
+    test('PMM-TXXXX-haproxy-tls-skip-verify - Verify pmm-admin update haproxy turns certificate verification off and on', async ({}) => {
+      const serviceId = await addService();
+      const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, exporterAgent))!;
+
+      const skipped = await pmmAdmin.updateServiceOk(containerName, 'haproxy', `${serviceName} --tls-skip-verify`);
+      expect(pmmAdmin.getChangedSettings(skipped)).toEqual(['--tls-skip-verify (was --no-tls-skip-verify)']);
+      expect((await pmmApi.getServerAgent(exporterId)).tls_skip_verify, 'Certificate verification is not skipped on PMM Server').toBe(true);
+
+      const verified = await pmmAdmin.updateServiceOk(containerName, 'haproxy', `${serviceName} --no-tls-skip-verify`);
+      expect(pmmAdmin.getChangedSettings(verified)).toEqual(['--no-tls-skip-verify (was --tls-skip-verify)']);
+      expect((await pmmApi.getServerAgent(exporterId)).tls_skip_verify, 'Certificate verification is not enabled on PMM Server').toBe(false);
+    });
   });
 });

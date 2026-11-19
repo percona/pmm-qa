@@ -1,11 +1,9 @@
-import { test, expect } from '@helpers/test';
+import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
+import * as pmmCli from '@helpers/pmm-cli-helper';
 
-const MYSQL_USER = 'root';
-const MYSQL_PASSWORD = 'GRgrO9301RuF';
-const ipPort = '127.0.0.1:3306';
 const slowlogAgent = 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT';
 const exporterAgent = 'AGENT_TYPE_MYSQLD_EXPORTER';
 
@@ -17,17 +15,14 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
   const serviceName = 'mysql_update_settings_cli';
   let serviceAdded = false;
 
-  const addService = async () => {
-    await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --query-source=slowlog --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
-    await output.assertSuccess();
+  const addService = async () => pmmAdmin.addMySQLService(containerName, serviceName, 'slowlog', () => {
     serviceAdded = true;
+  });
 
-    return pmmAdmin.getServiceId(containerName, serviceName);
-  };
-
+  const update = async (args: string) => pmmAdmin.updateServiceOk(containerName, 'mysql', `${serviceName} ${args}`);
   const updateJson = async (args: string) => pmmAdmin.updateServiceJson(containerName, 'mysql', `${serviceName} ${args}`);
-  const agentId = async (serviceId: string, agentType: string) => (await pmmAdmin.findServiceAgent(containerName, serviceId, agentType))?.agent_id;
+  const mysqlValue = async (query: string) => (await pmmAdmin.runMySQL(containerName, `-N -e "${query}"`)).stdout.trim();
+  const agentId = async (serviceId: string, agentType: string) => pmmAdmin.findServiceAgentId(containerName, serviceId, agentType);
 
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
@@ -81,5 +76,83 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
 
     expect(await agentId(serviceId, slowlogAgent), 'mysql_slowlog_agent is replaced by a change of its settings').toEqual(slowlogId);
     await pmmAdmin.expectAgentsRunning(containerName, [slowlogId], true);
+  });
+
+  test.describe('flags without a case key yet', () => {
+    test.beforeAll(async ({}) => {
+      await skipWithoutUpdateCommand(containerName);
+    });
+
+    test('PMM-TXXXX-mysql-tls - Verify pmm-admin update mysql applies TLS and the client certificate files', async ({}) => {
+      const serviceId = await addService();
+      const exporterId = (await agentId(serviceId, exporterAgent))!;
+      const datadir = await mysqlValue('SELECT @@datadir');
+
+      // The server presents the certificates it generated at its first start; the connection check has to complete the TLS handshake with them.
+      const output = await update(`--tls --tls-skip-verify --tls-ca=${datadir}ca.pem --tls-cert=${datadir}client-cert.pem --tls-key=${datadir}client-key.pem`);
+      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
+        '--tls (was --no-tls)',
+        '--tls-ca (new value)',
+        '--tls-cert (new value)',
+        '--tls-key (new value)',
+        '--tls-skip-verify (was --no-tls-skip-verify)',
+      ]);
+      expect(pmmAdmin.getCurrentSettings(output)).toContain('--tls-key=***');
+
+      const agent = await pmmApi.getServerAgent(exporterId);
+      expect(agent.tls, 'TLS is not turned on on PMM Server').toBe(true);
+      expect(agent.tls_skip_verify, 'Certificate verification is not skipped on PMM Server').toBe(true);
+      await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+    });
+
+    test('PMM-TXXXX-mysql-collectors - Verify pmm-admin update mysql disables and enables a collector', async ({}) => {
+      const collector = '--collect.perf_schema.eventsstatements';
+      const serviceId = await addService();
+      const exporterId = (await agentId(serviceId, exporterAgent))!;
+      expect(await pmmCli.getExporterArgs(containerName, exporterId), 'The collector is not enabled by default').toContain(collector);
+
+      const disabled = await update('--disable-collectors=perf_schema.eventsstatements');
+      expect(pmmAdmin.getChangedSettings(disabled)).toEqual(['--disable-collectors=perf_schema.eventsstatements (was empty)']);
+      await expect(async () => {
+        expect(await pmmCli.getExporterArgs(containerName, exporterId), 'The collector is still enabled').not.toContain(collector);
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+
+      const enabled = await update('--disable-collectors=');
+      expect(pmmAdmin.getChangedSettings(enabled)).toEqual(['--disable-collectors= (was perf_schema.eventsstatements)']);
+      await expect(async () => {
+        expect(await pmmCli.getExporterArgs(containerName, exporterId), 'The collector is not enabled again').toContain(collector);
+      }).toPass({ intervals: [3_000], timeout: 60_000 });
+    });
+
+    test('PMM-TXXXX-mysql-socket - Verify pmm-admin update mysql switches between a socket and an address', async ({}) => {
+      const serviceId = await addService();
+      const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
+      const socket = await mysqlValue('SELECT @@socket');
+
+      const bySocket = await updateJson(`--socket=${socket}`);
+      expect(pmmAdmin.getSettingValue(bySocket, '--socket')).toEqual(socket);
+      expect(pmmAdmin.getSettingValue(bySocket, '--host'), 'The address stays next to the socket').toEqual('');
+      expect(pmmAdmin.getSettingValue(bySocket, '--port'), 'The port stays next to the socket').toEqual('');
+      expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
+      await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
+
+      const byAddress = await updateJson('--host=127.0.0.1 --port=3306');
+      expect(pmmAdmin.getSettingValue(byAddress, '--socket'), 'The socket stays next to the address').toEqual('');
+      expect(pmmAdmin.getSettingValue(byAddress, '--host')).toEqual('127.0.0.1');
+      expect(pmmAdmin.getSettingValue(byAddress, '--port')).toEqual('3306');
+      expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
+      await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
+    });
+
+    test('PMM-TXXXX-mysql-qan-off - Verify pmm-admin update mysql turns comments parsing off and disables slow log rotation', async ({}) => {
+      const serviceId = await addService();
+      const slowlogId = (await agentId(serviceId, slowlogAgent))!;
+      await update('--comments-parsing=on --size-slow-logs=2MiB');
+
+      const output = await update('--comments-parsing=off --size-slow-logs=-1');
+      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--comments-parsing=off (was on)', '--size-slow-logs=-1 (was 2MiB)']);
+      expect(await agentId(serviceId, slowlogAgent), 'mysql_slowlog_agent is replaced by a change of its settings').toEqual(slowlogId);
+      await pmmAdmin.expectAgentsRunning(containerName, [slowlogId], true);
+    });
   });
 });

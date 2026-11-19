@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { clientCredentialsFlags } from '@helpers/constants';
+import { clientCredentialsFlags, psConnection } from '@helpers/constants';
 import ExecReturn from '@support/types/exec-return.class';
 
 /**
@@ -26,29 +26,26 @@ export enum ChangeAgentType {
   RtaMongodbAgent = 'rta-mongodb-agent',
 }
 
-export const removePGService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove postgresql "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove postgresql ${serviceName}`);
+/**
+ * Remove a service with "pmm-admin remove"
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     pmm-admin service type, e.g. mongodb, mysql, postgresql, proxysql, valkey, haproxy, external
+ * @param   serviceName     service name
+ */
+export const removeService = async (containerName: string, serviceType: string, serviceName: string) => {
+  await test.step(`remove ${serviceType} "${serviceName}" service`, async () => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove ${serviceType} ${serviceName}`);
     await output.assertSuccess();
     await output.outContains('Service removed.');
   });
 };
 
-export const removeMySQLService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove mysql "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName}`);
-    await output.assertSuccess();
-    await output.outContains('Service removed.');
-  });
-};
+export const removePGService = (containerName: string, serviceName: string) => removeService(containerName, 'postgresql', serviceName);
 
-export const removeMongoService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove mongodb "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName}`);
-    await output.assertSuccess();
-    await output.outContains('Service removed.');
-  });
-};
+export const removeMySQLService = (containerName: string, serviceName: string) => removeService(containerName, 'mysql', serviceName);
+
+export const removeMongoService = (containerName: string, serviceName: string) => removeService(containerName, 'mongodb', serviceName);
 
 export const getPmmAdminVersion = async (containerName: string): Promise<string> => {
   return test.step('get pmm admin full version', async () => {
@@ -87,7 +84,6 @@ export interface ListAgent {
   agent_id: string;
   agent_type: string;
   service_id: string;
-  status?: string;
   port?: number;
 }
 
@@ -143,6 +139,36 @@ export async function addMongoServiceAgents(containerName: string, addFlags: str
   const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type && agent.service_id === serviceId)?.agent_id ?? '';
 
   return { exporterId: agentOfType('AGENT_TYPE_MONGODB_EXPORTER'), profilerId: agentOfType('AGENT_TYPE_QAN_MONGODB_PROFILER_AGENT') };
+}
+
+/**
+ * Add the MySQL service of the Percona Server setup, replacing one of the same name
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceName     service name
+ * @param   querySource     value of --query-source
+ * @param   onAdded         called once the service exists, so the caller can remember to remove it
+ * @return  ID of the service
+ */
+export async function addMySQLService(containerName: string, serviceName: string, querySource: string, onAdded: () => void): Promise<string> {
+  await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
+  const output = await cli.exec(
+    `docker exec ${containerName} pmm-admin add mysql --query-source=${querySource} --username=${psConnection.username} --password=${psConnection.password} ${serviceName} ${psConnection.address}`,
+  );
+  await output.assertSuccess();
+  onAdded();
+
+  return getServiceId(containerName, serviceName);
+}
+
+/**
+ * Run the mysql client as the root user of the Percona Server setup
+ *
+ * @param   containerName   docker container running mysqld
+ * @param   args            arguments of the mysql client
+ */
+export async function runMySQL(containerName: string, args: string): Promise<ExecReturn> {
+  return cli.exec(`docker exec ${containerName} mysql -u${psConnection.username} -p${psConnection.password} ${args}`);
 }
 
 /**
@@ -340,4 +366,16 @@ export async function getServiceAgentIds(containerName: string, serviceId: strin
  */
 export async function findServiceAgent(containerName: string, serviceId: string, agentType: string): Promise<ListAgent | undefined> {
   return (await listAgents(containerName)).find((agent) => agent.service_id === serviceId && agent.agent_type === agentType);
+}
+
+/**
+ * ID of the agent of a type that monitors a Service
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the Service
+ * @param   agentType       agent type as "pmm-admin list --json" shows it, e.g. AGENT_TYPE_MONGODB_EXPORTER
+ * @return  the agent ID, or undefined when the Service has none
+ */
+export async function findServiceAgentId(containerName: string, serviceId: string, agentType: string): Promise<string | undefined> {
+  return (await findServiceAgent(containerName, serviceId, agentType))?.agent_id;
 }

@@ -22,4 +22,13 @@ export const test = base.extend<{ pmmClientContainer: string; versionGate: void 
   ],
 });
 
+/**
+ * Skip the tests of the enclosing describe on a pmm-client that has no "pmm-admin update"; call it from the describe's beforeAll
+ *
+ * @param   containerName   docker container running pmm-agent; empty for the host's pmm-admin
+ */
+export async function skipWithoutUpdateCommand(containerName: string) {
+  test.skip(versionBelow(await getPmmAdminVersion(containerName), '3.11.0'), 'Requires pmm-client 3.11.0+');
+}
+
 export { expect };

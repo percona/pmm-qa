@@ -18,6 +18,22 @@ export async function getExporterArgs(containerName: string, agentId: string): P
 }
 
 /**
+ * Create a self-signed certificate and its key in a container, to give the TLS flags files to read
+ *
+ * @param   containerName   docker container with the openssl command
+ * @param   name            name of the directory under /tmp that holds the files
+ * @return  the directory and the paths of the certificate and the key
+ */
+export async function createSelfSignedCertificate(containerName: string, name: string) {
+  const dir = `/tmp/${name}`;
+  await (await exec(`docker exec ${containerName} sh -c 'mkdir -p ${dir} && openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pmm-update -keyout ${dir}/key.pem -out ${dir}/cert.pem'`)).assertSuccess();
+
+  return {
+    dir, cert: `${dir}/cert.pem`, key: `${dir}/key.pem`,
+  };
+}
+
+/**
  * Scrape an exporter's /metrics from the pmm-server container, the way an external scraper would reach it
  *
  * @param   containerName   docker container running pmm-agent

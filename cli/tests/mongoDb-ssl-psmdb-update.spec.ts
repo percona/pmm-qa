@@ -1,4 +1,4 @@
-import { test, expect } from '@helpers/test';
+import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -28,7 +28,7 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
     }
   });
 
-  test('PMM-T2672 - Verify pmm-admin update mongodb applies a TLS CA file and enables certificate verification', async ({}) => {
+  const addService = async () => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb --username=${username} --password='${password}' --agent-password=${agentPassword} --host=${containerName} --port=27017 --tls --tls-skip-verify --tls-certificate-key-file=${certsDir}/client.pem ${serviceName}`);
     await output.assertSuccess();
     serviceAdded = true;
@@ -37,22 +37,77 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
     const exporter = await pmmAdmin.findServiceAgent(containerName, serviceId, 'AGENT_TYPE_MONGODB_EXPORTER');
     expect(exporter, 'mongodb_exporter not found').toBeTruthy();
     await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
-    const reports = await pmmCli.countAgentRunningReports(containerName, exporter!.agent_id);
+
+    return {
+      serviceId, agentIds, exporterId: exporter!.agent_id,
+    };
+  };
+
+  const expectMongoUp = async () => expect(async () => {
+    expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'mongodb_exporter does not connect').toMatch(/^mongodb_up\{[^}]*\} 1$/m);
+  }).toPass({ intervals: [5_000], timeout: 60_000 });
+
+  test('PMM-T2672 - Verify pmm-admin update mongodb applies a TLS CA file and enables certificate verification', async ({}) => {
+    const { serviceId, agentIds, exporterId } = await addService();
+    const reports = await pmmCli.countAgentRunningReports(containerName, exporterId);
 
     const result = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --no-tls-skip-verify --tls-ca-file=${certsDir}/ca-certs.pem`);
     expect(pmmAdmin.getChangedSettings(result).sort()).toEqual(['--no-tls-skip-verify (was --tls-skip-verify)', '--tls-ca-file (new value)']);
 
     expect(await pmmAdmin.getServiceId(containerName, serviceName), 'Service ID changed').toEqual(serviceId);
     expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
-    expect((await pmmApi.getServerAgent(exporter!.agent_id)).tls_skip_verify, 'Certificate verification is not enabled').toBe(false);
+    expect((await pmmApi.getServerAgent(exporterId)).tls_skip_verify, 'Certificate verification is not enabled').toBe(false);
 
     // The exporter restarts and has to complete the TLS handshake again, now verifying the certificate against the CA.
     await expect(async () => {
-      expect(await pmmCli.countAgentRunningReports(containerName, exporter!.agent_id), 'pmm-agent has not restarted the exporter').toBeGreaterThan(reports);
+      expect(await pmmCli.countAgentRunningReports(containerName, exporterId), 'pmm-agent has not restarted the exporter').toBeGreaterThan(reports);
     }).toPass({ intervals: [2_000], timeout: 60_000 });
     await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
-    await expect(async () => {
-      expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'mongodb_exporter does not connect with the CA').toMatch(/^mongodb_up\{[^}]*\} 1$/m);
-    }).toPass({ intervals: [5_000], timeout: 60_000 });
+    await expectMongoUp();
+  });
+
+  test.describe('flags without a case key yet', () => {
+    test.beforeAll(async ({}) => {
+      await skipWithoutUpdateCommand(containerName);
+    });
+
+    test('PMM-TXXXX-tls-key-file - Verify pmm-admin update mongodb changes the client certificate key file and its password', async ({}) => {
+      const { exporterId } = await addService();
+      const keyCopy = `/tmp/${serviceName}-client.pem`;
+      await (await cli.exec(`docker exec ${containerName} cp ${certsDir}/client.pem ${keyCopy}`)).assertSuccess();
+
+      try {
+        const reports = await pmmCli.countAgentRunningReports(containerName, exporterId);
+        const key = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file=${keyCopy}`);
+        expect(pmmAdmin.getChangedSettings(key)).toEqual(['--tls-certificate-key-file (new value)']);
+        await expect(async () => {
+          expect(await pmmCli.countAgentRunningReports(containerName, exporterId), 'pmm-agent has not restarted the exporter').toBeGreaterThan(reports);
+        }).toPass({ intervals: [2_000], timeout: 60_000 });
+        await expectMongoUp();
+
+        // The key of this setup is not encrypted, so the driver ignores the password; the update still has to store and hide it.
+        const keyPassword = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file-password=unused-password`);
+        expect(pmmAdmin.getChangedSettings(keyPassword)).toEqual(['--tls-certificate-key-file-password (new value)']);
+        expect(pmmAdmin.getCurrentSettings(keyPassword)).toContain('--tls-certificate-key-file-password=***');
+        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+        await expectMongoUp();
+      } finally {
+        await (await cli.exec(`docker exec ${containerName} rm -f ${keyCopy}`)).assertSuccess();
+      }
+    });
+
+    test('PMM-TXXXX-tls-toggle - Verify pmm-admin update mongodb turns TLS off and on', async ({}) => {
+      const { exporterId } = await addService();
+
+      const off = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --no-tls --skip-connection-check`);
+      expect(pmmAdmin.getChangedSettings(off)).toEqual(['--no-tls (was --tls)']);
+      expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned off on PMM Server').toBe(false);
+
+      const on = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls`);
+      expect(pmmAdmin.getChangedSettings(on)).toEqual(['--tls (was --no-tls)']);
+      expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
+      await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+      await expectMongoUp();
+    });
   });
 });

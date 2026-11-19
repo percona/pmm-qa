@@ -226,11 +226,7 @@ test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
   test.describe('credentials', () => {
     const user = 'pmm_update_user';
     const credentialsService = 'mongo_update_cli_credentials';
-    const setPassword = (password: string) => mongo.runOnPrimary(
-      containerName,
-      mongoUri,
-      `db.getSiblingDB("admin").changeUserPassword("${user}", "${password}")`,
-    );
+    const adminUser = mongo.adminUser(containerName, mongoUri, user);
     let credentialsAgentIds: { exporterId: string, profilerId: string } | undefined;
     let userCreated = false;
 
@@ -240,17 +236,13 @@ test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
           if (credentialsAgentIds) await pmmAdmin.removeMongoService(containerName, credentialsService);
         },
         async () => {
-          if (userCreated) await mongo.runOnPrimary(containerName, mongoUri, `db.getSiblingDB("admin").dropUser("${user}")`);
+          if (userCreated) await adminUser.drop();
         },
       ]);
     });
 
     test('PMM-T2639 - Verify pmm-admin update mongodb applies a new password to the exporter and the QAN agent', async ({}) => {
-      await mongo.runOnPrimary(
-        containerName,
-        mongoUri,
-        `db.getSiblingDB("admin").createUser({ user: "${user}", pwd: "first-password", roles: [{ role: "root", db: "admin" }] })`,
-      );
+      await adminUser.create('first-password');
       userCreated = true;
       credentialsAgentIds = await pmmAdmin.addMongoServiceAgents(
         containerName,
@@ -263,7 +255,7 @@ test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
       expect(profilerId, `mongodb_profiler_agent for service ${credentialsService} not found`).toBeTruthy();
       await pmmAdmin.expectAgentsRunning(containerName, [userExporterId, profilerId], true);
 
-      await setPassword('second-password');
+      await adminUser.setPassword('second-password');
       const reports = {
         exporter: await pmmCli.countAgentRunningReports(containerName, userExporterId),
         profiler: await pmmCli.countAgentRunningReports(containerName, profilerId),
