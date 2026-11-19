@@ -303,7 +303,7 @@ pmmTest(
     const { settings } = await api.settingsApi.getSettings();
 
     await page.goto(dashboard.home.url);
-    await expect(leftNavigation.menuItemLocator('backups')).toBeVisible({
+    await expect(leftNavigation.menuItemLocator('apps.allBackups')).toBeAttached({
       timeout: Timeouts.THIRTY_SECONDS,
     });
     expect(settings.backup_management_enabled, 'Backup management should be turned on by default').toBe(true);

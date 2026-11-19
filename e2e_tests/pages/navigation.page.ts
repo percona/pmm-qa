@@ -45,33 +45,30 @@ export default class LeftNavigation extends BasePage {
       shared: { locator: this.page.getByTestId('navitem-dashboards-shared') },
       snapshots: { locator: this.page.getByTestId('navitem-dashboards-snapshots') },
     },
-    backups: {
+    apps: {
       allBackups: { locator: this.page.getByTestId('navitem-backup-inventory') },
-      locator: this.page.getByTestId('navitem-backups'),
+      locator: this.page.getByTestId('navitem-apps'),
       restores: { locator: this.page.getByTestId('navitem-restore-history') },
       scheduledJobs: { locator: this.page.getByTestId('navitem-scheduled-backups') },
       storageLocation: { locator: this.page.getByTestId('navitem-storage-locations') },
     },
     configuration: {
+      defaultPreferences: { locator: this.page.getByTestId('navitem-default-preferences') },
       locator: this.page.getByTestId('navitem-configuration'),
-      org: {
-        defaultPreferences: { locator: this.page.getByTestId('navitem-default-preferences') },
-        organizations: { locator: this.page.getByTestId('navitem-organizations') },
-        statsAndLicense: { locator: this.page.getByTestId('navitem-stats-and-licenses') },
-      },
-      orgManagement: { locator: this.page.getByTestId('navitem-org-management') },
+      organizations: { locator: this.page.getByTestId('navitem-organizations') },
+      serviceAccounts: { locator: this.page.getByTestId('navitem-service-accounts') },
       settings: { locator: this.page.getByTestId('navitem-configuration-settings') },
+      statsAndLicense: { locator: this.page.getByTestId('navitem-stats-and-licenses') },
+      teams: { locator: this.page.getByTestId('navitem-teams') },
       updates: { locator: this.page.getByTestId('navitem-updates') },
+      users: { locator: this.page.getByTestId('navitem-users') },
     },
-    explore: {
-      locator: this.page.getByTestId('navitem-explore'),
-      // metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
-      promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promql-builder') },
-    },
+    explore: this.page.getByTestId('navitem-explore'),
     help: { locator: this.page.getByTestId('navitem-help') },
-    home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
+    // The logo is the way home.
+    home: { locator: this.page.getByTestId('sidebar-logo-link'), verifyTimeRange: true },
     inventory: {
-      addServices: { locator: this.page.getByTestId('navitem-add-instance') },
+      addServices: { locator: this.page.getByTestId('navitem-inventory-services-action') },
       locator: this.page.getByTestId('navitem-inventory'),
       nodes: { locator: this.page.getByTestId('navitem-inventory-nodes') },
       services: { locator: this.page.getByTestId('navitem-inventory-services') },
@@ -141,12 +138,7 @@ export default class LeftNavigation extends BasePage {
       verifyTimeRange: true,
     },
     qan: this.page.getByTestId('navitem-qan'),
-    usersAndAccess: {
-      locator: this.page.getByTestId('navitem-users-and-access'),
-      serviceAccounts: { locator: this.page.getByTestId('navitem-service-accounts') },
-      teams: { locator: this.page.getByTestId('navitem-teams') },
-      users: { locator: this.page.getByTestId('navitem-users') },
-    },
+    realtimeQueries: this.page.getByTestId('navitem-realtime-queries'),
     valkey: {
       clients: { locator: this.page.getByTestId('navitem-valkey-clients') },
       clusterDetails: { locator: this.page.getByTestId('navitem-valkey-cluster-details') },
@@ -173,7 +165,7 @@ export default class LeftNavigation extends BasePage {
     closeButton: this.page.getByTestId('tour-close-button'),
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
-    homeMenuItem: this.page.getByTestId('navitem-home-page'),
+    homeMenuItem: this.page.getByTestId('sidebar-logo-link'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
@@ -201,7 +193,7 @@ export default class LeftNavigation extends BasePage {
 
   mouseHoverOnPmmLogo = async (): Promise<void> => {
     await pmmTest.step('Hover on PMM Logo', async () => {
-      const pmmLogo = this.elements.sidebar.locator('.css-127biie').first();
+      const pmmLogo = this.elements.homeMenuItem;
       const rectBox = await pmmLogo.boundingBox();
 
       if (rectBox) {
@@ -220,7 +212,7 @@ export default class LeftNavigation extends BasePage {
         const item = node[part];
 
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
-        if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
+        if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
 
           expandButton = this.getLocator(item as NestedLocator)
@@ -233,9 +225,8 @@ export default class LeftNavigation extends BasePage {
             await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           }
         }
-        if (part === 'ha' || part === 'org') {
-          const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
-          const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
+        if (part === 'ha') {
+          const expandLocator = this.getLocator(node.highAvailability as NestedLocator);
 
           await expandLocator?.click({ timeout: Timeouts.TEN_SECONDS });
 
