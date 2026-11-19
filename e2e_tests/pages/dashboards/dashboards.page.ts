@@ -53,12 +53,15 @@ export default class Dashboards extends BasePage {
       ),
     // Third cell of the series row: the Max column of a table legend whose calcs are mean, max, min.
     legendMaxValue: (panelName: string, seriesName: string) =>
-      this.builders
-        .panelByExactName(panelName)
-        .getByRole('row')
-        .filter({ has: this.page.getByRole('button', { name: seriesName }) })
+      this.grafanaIframe()
         .getByRole('cell')
-        .nth(2),
+        .nth(2)
+        .within(
+          this.builders
+            .panelByExactName(panelName)
+            .getByRole('row')
+            .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
+        ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
