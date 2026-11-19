@@ -56,7 +56,8 @@ case ${1:-} in
     if ! bash "$vm" dir "$id" >/dev/null 2>&1; then
       bash "$vm" up "$id"
       on_vm "{ curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs; } >/root/node-install.log 2>&1 || { tail -20 /root/node-install.log; exit 1; }"
-      on_vm "openssl rand -base64 18 | tr -d '/+=' > /root/admin_password"
+      # -Aa1 meets PMM's password policy (PMM-14023); change-admin-password rejects an alphanumeric one.
+      on_vm "echo \"\$(openssl rand -base64 18 | tr -d '/+=')-Aa1\" > /root/admin_password"
     fi
     sync_e2e "$repo"
     on_vm "set -e; cd $remote; export ADMIN_PASSWORD=\$(cat /root/admin_password) $(q DOCKER_VERSION="${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}" PMM_ENABLE_NOMAD="${PMM_ENABLE_NOMAD:-0}")
