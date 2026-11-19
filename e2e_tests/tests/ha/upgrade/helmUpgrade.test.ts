@@ -5,6 +5,7 @@ import { expect } from '@playwright/test';
 import { pmmServerPodSelector } from '@helpers/haCluster.helper';
 import { KubernetesPod } from '@interfaces/kubernetes';
 import { serverVersionBelow } from '@helpers/version.helper';
+import { Timeouts } from '@helpers/timeouts';
 
 const pmmHaChart = 'pmm-ha';
 const dependenciesChart = 'pmm-ha-dependencies';
@@ -74,9 +75,10 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 // Deliberately not tagged @pmm-ha: these two run either side of an upgrade of the
 // cluster they run on, and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
-  'PMM-T2229 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
+  'PMM-T2229 + PMM-TBD-4 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
   async ({
     api,
+    haClickHouseHelper,
     haClusterHelper,
     helmHelper,
     highAvailabilityPage,
@@ -131,6 +133,18 @@ pmmTest(
 
     await page.goto(nodesPage.url);
     await nodesPage.verifyHaNodeRoles(baseline.podNames, leader);
+
+    await pmmTest.step('Split the QAN database with a stray copy on one ClickHouse server', async () => {
+      const clickHousePods = haClickHouseHelper.pods();
+      const [, , serverTwo] = clickHousePods;
+
+      haClickHouseHelper.createStrayPmm(serverTwo);
+
+      // The released build can already be split at install, so only the stray copy made here is asserted.
+      const [zero, one, two] = haClickHouseHelper.pmmCopies(clickHousePods).map((copy) => copy.uuid);
+
+      expect([zero, one], `"${serverTwo}" must hold a pmm database of its own`).not.toContain(two);
+    });
 
     await pmmTest.step(`Record the baseline in "${baselineFile}"`, async () => {
       writeBaseline(baseline);
@@ -212,10 +226,11 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2229 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
+  'PMM-T2229 + PMM-TBD-4 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
   async ({
     api,
     grafanaHelper,
+    haClickHouseHelper,
     haClusterHelper,
     helmHelper,
     highAvailabilityPage,
@@ -224,6 +239,8 @@ pmmTest(
     nodesPage,
     page,
   }) => {
+    pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
+
     const before = readBaseline();
 
     await haClusterHelper.verifyHaEnabled(api.haApi);
@@ -277,5 +294,9 @@ pmmTest(
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
     await page.goto(nodesPage.url);
     await nodesPage.verifyHaNodeRoles(podNames, leader);
+
+    await pmmTest.step('Verify the stray QAN database copy made before the upgrade is repaired', async () => {
+      await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIFTEEN_MINUTES);
+    });
   },
 );

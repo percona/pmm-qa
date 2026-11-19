@@ -15,11 +15,11 @@ The upgrade itself is **not** done by these tests. Every helm step is
 | # | Phase | Tag | What the test proves |
 |---|---|---|---|
 | 1 | `install_pmm_ha.sh` installs the **released** image from the **published** chart | — | — |
-| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader, UI renders. **Records the baseline.** |
+| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader, UI renders. **Seeds a stray `pmm` ClickHouse database on the third ClickHouse server** (PMM-15785), then **records the baseline.** |
 | 3 | `--charts deps --chart-branch <branch>` upgrades the operators | — | — |
 | 4 | | `@pmm-helm-mid-upgrade` | the dependencies release moved and the `pmm-ha` release did **not**: same revision, same pods, same version, still serving |
 | 5 | `--charts pmm-ha --chart-branch <branch> --image <target>` upgrades the server | — | — |
-| 6 | | `@pmm-helm-post-upgrade` | revision advanced, every pod runs the target image and serves a version no older than the baseline, one leader, UI renders |
+| 6 | | `@pmm-helm-post-upgrade` | revision advanced, every pod runs the target image and serves a version no older than the baseline, one leader, UI renders, and within 15 minutes every ClickHouse server holds one `pmm` UUID again |
 | 7 | | `@pmm-ha` | the ordinary HA suite - failover, leader metrics, node inventory - run last on the upgraded cluster. A failure here is an HA regression, not a broken upgrade |
 
 ## The baseline file

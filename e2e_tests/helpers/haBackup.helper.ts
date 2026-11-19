@@ -1,12 +1,13 @@
 import K8sHelper from '@helpers/k8s.helper';
+import HaClickHouseHelper from '@helpers/haClickHouse.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { KubernetesJobState } from '@interfaces/kubernetes';
 import { expect } from '@playwright/test';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type Api from '@api/api';
 
 const backupToolsSelector = 'app.kubernetes.io/component=backup-tools';
 const backupCronJobSelector = 'app.kubernetes.io/component=backup-cronjob';
-const clickHouseSelector = 'clickhouse.altinity.com/chi';
 const vmInsertSelector = 'app.kubernetes.io/name=vminsert,!operator.victoriametrics.com/additional-service';
 const vmInsertPort = 8_480;
 const markerMetric = 'pmm_e2e_backup_marker';
@@ -46,19 +47,9 @@ export default class HaBackupHelper {
 
   /** As `clickhouse-client` in the first replica, the pod `pmm-backup.sh` restores into. */
   clickHouseQuery = (query: string): string => {
-    const pod = this.k8sHelper.getPodNames(clickHouseSelector).sort()[0];
-    const user = this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_USER');
-    const password = this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_PASSWORD');
-    const result = this.k8sHelper.execInPod(
-      pod,
-      `clickhouse-client --user '${user}' --password '${password}' --query "${query}"`,
-      { container: 'clickhouse', silent: true },
-    );
+    const clickHouse = new HaClickHouseHelper(this.k8sHelper);
 
-    // Not assertSuccess(): its message quotes the command, password and all.
-    if (result.code !== 0) throw new Error(`ClickHouse query "${query}" failed: ${result.stderr.trim()}`);
-
-    return result.stdout.trim();
+    return clickHouse.query(clickHouse.pods()[0], query);
   };
 
   cronJobName = (): string =>
@@ -115,7 +106,11 @@ export default class HaBackupHelper {
   };
 
   /** Only `args` change: `command` carries the tool bootstrap. */
-  runRestoreJob = async (name: string, backupId: string): Promise<void> => {
+  runRestoreJob = async (
+    name: string,
+    backupId: string,
+    expected: KubernetesJobState = 'Complete',
+  ): Promise<void> => {
     const job = JSON.parse(
       this.k8sHelper
         .execSilent(`create job ${name} --from=cronjob/${this.cronJobName()} --dry-run=client --output=json`)
@@ -128,7 +123,7 @@ export default class HaBackupHelper {
     delete job.metadata.ownerReferences;
 
     this.k8sHelper.apply(job).assertSuccess();
-    await this.waitForJob(name, Timeouts.SIXTY_MINUTES);
+    await this.waitForJob(name, Timeouts.SIXTY_MINUTES, expected);
   };
 
   srvFiles = (podName: string): string[] =>
@@ -138,7 +133,11 @@ export default class HaBackupHelper {
     this.k8sHelper.execInPod(podName, `touch /srv/${fileName}`, { silent: true }).assertSuccess();
   };
 
-  waitForJob = async (name: string, timeout: Timeouts): Promise<void> => {
+  waitForJob = async (
+    name: string,
+    timeout: Timeouts,
+    expected: KubernetesJobState = 'Complete',
+  ): Promise<void> => {
     let state = '';
 
     await expect(async () => {
@@ -149,8 +148,8 @@ export default class HaBackupHelper {
 
     expect(
       state,
-      `Job "${name}" failed:\n${this.k8sHelper.execSilent(`logs job/${name} --tail=80`).stdout}`,
-    ).toEqual('Complete');
+      `Job "${name}" ended ${state}, not ${expected}:\n${this.k8sHelper.execSilent(`logs job/${name} --tail=80`).stdout}`,
+    ).toEqual(expected);
   };
 }
 
