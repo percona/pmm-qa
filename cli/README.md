@@ -42,6 +42,7 @@ Run commands from `cli/`.
 
 - `@arbiter-psmdb`
 - `@client-docker`
+- `@exporter-footprint`
 - `@generic`
 - `@haproxy`
 - `@help-cli`
