@@ -1,3 +1,4 @@
+import { expect, test } from '@playwright/test';
 import { exec, shellQuote } from '@helpers/cli-helper';
 
 /**
@@ -26,6 +27,23 @@ export async function getServerAgent(agentId: string): Promise<Record<string, un
   const response = await pmmServerApi('GET', `/v1/inventory/agents/${agentId}`) as Record<string, Record<string, unknown> | undefined>;
 
   return Object.values(response)[0] ?? {};
+}
+
+/**
+ * Wait until PMM Server reports a service as up or down
+ *
+ * @param   serviceName     service name
+ * @param   status          expected service status
+ * @param   timeout         how long to wait, in milliseconds
+ */
+export async function waitForServiceStatus(serviceName: string, status: 'STATUS_UP' | 'STATUS_DOWN', timeout: number) {
+  await test.step(`wait for "${serviceName}" service to be ${status}`, async () => {
+    await expect(async () => {
+      const { services } = await pmmServerApi('GET', '/v1/management/services') as { services: { service_name: string, status: string }[] };
+
+      expect(services.find((service) => service.service_name === serviceName)?.status).toEqual(status);
+    }).toPass({ intervals: [2_000], timeout });
+  });
 }
 
 /**
@@ -166,7 +184,7 @@ export async function getScheduledBackupIds(serviceId: string): Promise<string[]
  * @param   from            start of the period
  * @param   databaseLabel   QAN label of the database: "database", or "schema" for MySQL
  */
-export async function getQanQueries(serviceName: string, database: string, from: Date, databaseLabel = 'database'): Promise<{ queryId: string, fingerprint: string }[]> {
+export async function getQanQueries(serviceName: string, database: string, from: Date, databaseLabel: 'database' | 'schema' = 'database'): Promise<{ queryId: string, fingerprint: string }[]> {
   const report = await pmmServerApi('POST', '/v1/qan/metrics:getReport', {
     period_start_from: from.toISOString(),
     period_start_to: new Date(Date.now() + 60_000).toISOString(),

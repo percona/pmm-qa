@@ -16,7 +16,7 @@ const edited = 'Alert rule template successfully edited';
 const failedToParse = 'Failed to parse rule template';
 const nameWarning = 'Name cannot be changed. If you need to change it, please create a new Template.';
 const uiSource = 'User Created (UI)';
-const editor = { password: 'password', username: 'test_editor' };
+const editor = { password: 'Password-123', username: 'test_editor' };
 const users = [{ password: undefined, username: 'admin' }, editor];
 let createdEditorId: number | undefined;
 
