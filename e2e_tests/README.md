@@ -146,6 +146,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@nomad`
 - `@not-ui-pipeline`
+- `@pbm-alerting`
 - `@pbm-nightly`
 - `@permissions-nightly`
 - `@pmm-ha`
