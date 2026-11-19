@@ -233,6 +233,7 @@ pmmTest.describe('PMM Server credentials from files', () => {
       });
 
       for (const name of [
+        'postgres-password',
         'clickhouse-password',
         'clickhouse-datasource-password',
         'grafana-db-password',
@@ -242,24 +243,6 @@ pmmTest.describe('PMM Server credentials from files', () => {
           `${name} should not be in any process environment or configuration file`,
         ).toEqual([]);
       }
-
-      pmmTest.info().annotations.push({
-        description:
-          'PMM-15891: postgres-password reaches the environment of postgres_exporter (DATA_SOURCE_NAME), as on 3.10.0. Not fixed yet.',
-        type: 'known issue',
-      });
-
-      const postgresLeaks = credentialsFilesHelper.findLeaks(passwords['postgres-password']);
-
-      // Expected failure: when the known issue is fixed, this list is empty; then assert toEqual([]) as above.
-      expect(
-        postgresLeaks,
-        'Known issue PMM-15891: postgres-password is in postgres_exporter',
-      ).not.toHaveLength(0);
-      expect(
-        postgresLeaks.filter((leak) => !/^\/proc\/\d+\/environ postgres_export/.test(leak)),
-        'postgres-password should be nowhere but in the postgres_exporter environment of the known issue',
-      ).toEqual([]);
     },
   );
 
