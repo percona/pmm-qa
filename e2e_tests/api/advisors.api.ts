@@ -336,6 +336,29 @@ export default class AdvisorsApi {
     }
   };
 
+  runChecksAndListInsights = async (
+    names: string[],
+    serviceIds: string[],
+    timeout = Timeouts.FIVE_MINUTES,
+  ) => {
+    const run = await this.runChecksAndWait(names, serviceIds, timeout);
+    const insights = await this.listInsights({ page_size: '500', run_id: run.id });
+
+    return {
+      insightOf: (serviceId: string, checkName: string): AdvisorInsight => {
+        const insight = insights.find(
+          ({ check_name, service_id }) => check_name === checkName && service_id === serviceId,
+        );
+
+        if (!insight) throw new Error(`No ${checkName} insight for service ${serviceId} in run ${run.id}`);
+
+        return insight;
+      },
+      insights,
+      run,
+    };
+  };
+
   runChecksAndWait = async (
     names: string[] = [],
     serviceIds: string[] = [],
