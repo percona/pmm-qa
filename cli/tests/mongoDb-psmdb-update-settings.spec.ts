@@ -100,11 +100,11 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
       expect((await pmmCli.scrapeExporterFromPmmServer(containerName, exporterId, agentPassword)).code, 'The exporter is reachable from PMM Server').not.toEqual(0);
     }).toPass({ intervals: [3_000], timeout: 60_000 });
 
-    const result = await updateJson('--connection-timeout=7s --expose-exporter --authentication-mechanism=SCRAM-SHA-256');
+    const result = await updateJson('--connection-timeout=7s --expose-exporter --authentication-mechanism=SCRAM-SHA-1');
     expect(result.changes.map((change) => change.flag).sort()).toEqual(['--authentication-mechanism', '--connection-timeout', '--expose-exporter']);
     expect(pmmAdmin.getSettingValue(result, '--connection-timeout')).toEqual('7s');
     expect(pmmAdmin.getSettingValue(result, '--expose-exporter')).toEqual('true');
-    expect(pmmAdmin.getSettingValue(result, '--authentication-mechanism')).toEqual('SCRAM-SHA-256');
+    expect(pmmAdmin.getSettingValue(result, '--authentication-mechanism')).toEqual('SCRAM-SHA-1');
     expect((await pmmApi.getServerAgent(exporterId)).expose_exporter, 'Exporter is not exposed on PMM Server').toBe(true);
 
     await expect(async () => {

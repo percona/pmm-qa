@@ -4,8 +4,9 @@ import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
 import { clientCredentialsFlags } from '@helpers/constants';
 
-const containerName = 'rs101';
-const replIpPort = 'rs101:27017';
+// No other spec adds Services on rs102, which has to hold only the Service of the pmm-framework setup.
+const containerName = 'rs102';
+const replIpPort = 'rs102:27017';
 
 test.describe('PSMDB pmm-admin update target selection', { tag: '@psmdb' }, () => {
   test.use({ pmmClientContainer: containerName });
@@ -28,7 +29,7 @@ test.describe('PSMDB pmm-admin update target selection', { tag: '@psmdb' }, () =
 
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
-    await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
+    await result.outContains(containerName, 'PSMDB rs102 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
 
     const services = await mongoServices();
     expect(services, 'The Node should have the one MongoDB Service of the pmm-framework setup').toHaveLength(1);
