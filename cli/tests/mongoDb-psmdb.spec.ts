@@ -544,7 +544,12 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
           const versions = pbm.selectSeries(await pbm.scrapePbm(member), 'mongodb_pbm_agent_version_info');
 
           expect(pbm.seriesTexts(versions), `${member}: agent version series`).toHaveLength(1);
-          expect(versions[0].labels).toEqual({ host, replica_set: replsetName, self: '1', version });
+          expect(versions[0].labels).toEqual({
+            host,
+            replica_set: replsetName,
+            self: '1',
+            version,
+          });
           expect(versions[0].value).toEqual(1);
         }).toPass({ intervals: [5_000], timeout: 120_000 });
       });
@@ -565,7 +570,11 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
 
       try {
         await runOnPrimary(pbmHost, pbm.mongoRootUri, reconfigure(true));
-        await expectRoles({ 'rs101:27017': 'P', 'rs102:27017': 'H', 'rs103:27017': 'D' });
+        await expectRoles({
+          'rs101:27017': 'P',
+          'rs102:27017': 'H',
+          'rs103:27017': 'D',
+        });
 
         await everyMember(async (member) => {
           await expect(async () => {
@@ -573,13 +582,21 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
             const versions = pbm.selectSeries(series, 'mongodb_pbm_agent_version_info');
 
             expect(pbm.seriesTexts(versions), `${member}: agent version series`).toHaveLength(1);
-            expect(versions[0].labels).toMatchObject({ host: `${member}:27017`, self: '1', version: '2.9.1' });
+            expect(versions[0].labels).toMatchObject({
+              host: `${member}:27017`,
+              self: '1',
+              version: '2.9.1',
+            });
             expect(pbm.seriesValue(series, 'mongodb_pbm_agent_status', { host: `${member}:27017` }), `${member}: agent status`).toEqual(0);
           }).toPass({ intervals: [5_000], timeout: 120_000 });
         });
       } finally {
         await runOnPrimary(pbmHost, pbm.mongoRootUri, reconfigure(false));
-        await expectRoles({ 'rs101:27017': 'P', 'rs102:27017': 'S', 'rs103:27017': 'S' });
+        await expectRoles({
+          'rs101:27017': 'P',
+          'rs102:27017': 'S',
+          'rs103:27017': 'S',
+        });
       }
     });
 
@@ -922,7 +939,12 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
       await everyMember(async (member) => {
         await expect(async () => {
           const series = await pbm.scrapePbm(member);
-          const labels = { name: restore.name, backup: backupName, type: 'logical', status: 'done' };
+          const labels = {
+            name: restore.name,
+            backup: backupName,
+            type: 'logical',
+            status: 'done',
+          };
 
           expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(3);
           expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `last transition of ${restore.name} on ${member}`).toHaveLength(1);
@@ -974,7 +996,12 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
       await everyMember(async (member) => {
         await expect(async () => {
           const series = await pbm.scrapePbm(member);
-          const labels = { name: restore?.name ?? '', backup: backupName, type: 'logical', status: 'error' };
+          const labels = {
+            name: restore?.name ?? '',
+            backup: backupName,
+            type: 'logical',
+            status: 'error',
+          };
 
           expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member}`).toEqual(2);
           expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `failed restore on ${member}`).toHaveLength(1);
@@ -1044,7 +1071,12 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
         await everyMember(async (member) => {
           await expect(async () => {
             const series = await pbm.scrapePbm(member);
-            const labels = { name: restore.name, backup: physicalBackup, type: 'physical', status: 'done' };
+            const labels = {
+              name: restore.name,
+              backup: physicalBackup,
+              type: 'physical',
+              status: 'done',
+            };
 
             expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} on ${member} after the resync`).toEqual(3);
             expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `physical restore on ${member}`).toHaveLength(1);
@@ -1056,6 +1088,107 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
         await pbm.setAgents(members, 'start');
         await pbm.removeStoredRestores(pbmHost, bucket);
         await pbm.resync(pbmHost);
+      }
+    });
+  });
+
+  test.describe('permissions and failures', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    const restrictedUser = 'pbm_metrics_restricted';
+    const restrictedRole = 'pbmMetricsFindOnly';
+    const restrictedPassword = 'RestrictedPass1';
+    const collectionsGranted = ['pbmBackups', 'pbmAgents', 'pbmConfig'];
+    const failuresMetric = 'mongodb_pbm_cluster_backup_failures_since_last_success';
+
+    const adminJs = (js: string) => `const admin = db.getSiblingDB("admin"); ${js}`;
+    const privileges = collectionsGranted.map((collection) => `{ resource: { db: "admin", collection: "${collection}" }, actions: ["find"] }`).join(', ');
+
+    const warnings = (log: string, message: string) => log.split('\n').filter((line) => line.includes('collector=pbm') && line.includes(message));
+
+    test.beforeAll(async ({}) => {
+      test.setTimeout(10 * 60_000);
+      await pbm.setAgents(members, 'start');
+      await pbm.expectAgentsOk(pbmHost);
+      await pbm.ensureBaselineExporter(members);
+    });
+
+    test('PMM-15232 - Verify a user with find only on pbmBackups, pbmAgents and pbmConfig gets no restore or PITR series and one warning per scrape for each', async ({}) => {
+      test.setTimeout(15 * 60_000);
+      const scrapes = 3;
+      const oplogSpan = await pbm.pbmConfigValue(pbmHost, 'pitr.oplogSpanMin');
+
+      try {
+        await runOnPrimary(pbmHost, pbm.mongoRootUri, adminJs(
+          `admin.createRole({ role: "${restrictedRole}", privileges: [${privileges}], roles: [] }); `
+          + `admin.createUser({ user: "${restrictedUser}", pwd: "${restrictedPassword}", roles: [{ role: "clusterMonitor", db: "admin" }, { role: "${restrictedRole}", db: "admin" }] })`,
+        ));
+        await (await pbm.pbm(pbmHost, 'config --set pitr.enabled=true')).assertSuccess();
+
+        for (const member of ['rs101', 'rs102']) {
+          const run = await pbm.spawnScrape(member, member, pbm.exporterPath, {
+            scrapes,
+            user: restrictedUser,
+            password: restrictedPassword,
+          });
+
+          for (const text of run.scrapes) {
+            const series = pbm.parseSeries(text);
+            const names = new Set(series.map((item) => item.name));
+
+            expect([...names].filter((name) => name.includes('restore') || name.includes('pitr_last_write') || name.includes('recovery_point')), `${member}: restore and PITR series`).toEqual([]);
+            for (const name of ['mongodb_pbm_agent_status', 'mongodb_pbm_agent_version_info', 'mongodb_pbm_backup_size_bytes', 'mongodb_pbm_cluster_backup_configured', failuresMetric]) {
+              expect(names.has(name), `${member}: ${name} is served`).toBeTruthy();
+            }
+            expect(pbm.seriesValue(series, 'mongodb_pbm_cluster_pitr_backup_enabled'), `${member}: PITR enabled flag`).toEqual(1);
+          }
+          expect(warnings(run.log, 'failed to get PBM restore list'), `${member}: restore warnings in ${scrapes} scrapes`).toHaveLength(scrapes);
+          expect(warnings(run.log, 'failed to get the last PITR chunk'), `${member}: PITR warnings in ${scrapes} scrapes`).toHaveLength(scrapes);
+          expect(run.log, `${member}: a log line contains the password`).not.toContain(restrictedPassword);
+        }
+      } finally {
+        await pbm.pbm(pbmHost, `config --set pitr.enabled=false --set pitr.oplogSpanMin=${oplogSpan}`);
+        await pbm.pbm(pbmHost, 'delete-pitr --all --force --wait');
+        await runOnPrimary(pbmHost, pbm.mongoRootUri, adminJs(`admin.dropUser("${restrictedUser}"); admin.dropRole("${restrictedRole}")`));
+      }
+    });
+
+    test('PMM-15232 - Verify the PBM metrics are the same as in 3.10.0 and the scrape succeeds when there is no primary', async ({}) => {
+      test.setTimeout(15 * 60_000);
+      const secondaries = ['rs102', 'rs103'];
+
+      try {
+        for (const member of secondaries) {
+          await (await cli.exec(`docker exec ${member} systemctl stop mongod`)).assertSuccess();
+        }
+        await expect(async () => {
+          const hello = await cli.exec(`docker exec ${pbmHost} mongo "${pbm.mongoRootUri}" --quiet --eval 'db.hello().isWritablePrimary'`);
+
+          expect(hello.stdout.trim(), `${pbmHost} is still a primary`).toEqual('false');
+        }).toPass({ intervals: [3_000], timeout: 120_000 });
+
+        const baseline = await pbm.spawnScrape(pbmHost, pbmHost, pbm.baselineExporterPath);
+        const current = await pbm.spawnScrape(pbmHost, pbmHost, pbm.exporterPath);
+
+        for (const run of [baseline, current]) {
+          expect(pbm.seriesValue(pbm.parseSeries(run.scrapes[0], 'mongodb_up'), 'mongodb_up'), 'mongodb_up').toEqual(1);
+          expect(run.log, 'a log line contains the password').not.toContain(mongoConnection.password);
+        }
+        expect(pbm.seriesTexts(pbm.parseSeries(current.scrapes[0])), 'PBM series without a primary').toEqual(pbm.seriesTexts(pbm.parseSeries(baseline.scrapes[0])));
+      } finally {
+        for (const member of secondaries) {
+          await cli.exec(`docker exec ${member} systemctl start mongod`);
+        }
+        await runOnPrimary(pbmHost, pbm.mongoRootUri, 'db.hello().isWritablePrimary');
+        await pbm.expectAgentsOk(pbmHost);
+      }
+    });
+
+    test('PMM-15232 - Verify no pmm-agent log line contains the connection password after the failures above', async ({}) => {
+      for (const member of members) {
+        const matches = await cli.exec(`docker exec ${member} grep -c -e ${mongoConnection.password} -e pbmpass ${pbm.agentLogPath}`);
+
+        expect(matches.stdout.trim(), `lines of ${pbm.agentLogPath} on ${member} with a password`).toEqual('0');
       }
     });
   });

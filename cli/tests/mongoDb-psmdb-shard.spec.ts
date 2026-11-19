@@ -78,7 +78,8 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     test.setTimeout(10 * 60_000);
 
     await expect(async () => {
-      const [reference, ...others] = await Promise.all(views.map(async (view) => pbm.seriesTexts(pbm.ignoreSelf(withoutVersions(await pbm.scrapePbm(view.container))))));
+      const scrapes = await Promise.all(views.map(async (view) => pbm.scrapePbm(view.container)));
+      const [reference, ...others] = scrapes.map((series) => pbm.seriesTexts(pbm.ignoreSelf(withoutVersions(series))));
 
       expect(reference.filter((text) => text.startsWith('mongodb_pbm_agent_status')), 'agent status series through mongos').toHaveLength(agents.length);
       expect(reference.some((text) => text.startsWith('mongodb_pbm_backup_size_bytes')), 'backup series through mongos').toBeTruthy();
@@ -214,7 +215,14 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
         const series = await pbm.scrapePbm(view.container);
 
         expect(pbm.seriesValue(series, restoreStatusMetric), `${restoreStatusMetric} through ${view.name}`).toEqual(3);
-        expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', { name, backup, type: 'logical', status: 'done' }), `restore through ${view.name}`).toHaveLength(1);
+        const labels = {
+          name,
+          backup,
+          type: 'logical',
+          status: 'done',
+        };
+
+        expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `restore through ${view.name}`).toHaveLength(1);
       }).toPass({ intervals: [3_000], timeout: 180_000 });
     });
   });

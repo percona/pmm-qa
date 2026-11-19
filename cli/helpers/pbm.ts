@@ -51,7 +51,11 @@ export function parseSeries(metrics: string, prefix = 'mongodb_pbm_'): Series[] 
     for (const [, key, value] of (match[2] ?? '').matchAll(labelPattern)) {
       labels[key] = value;
     }
-    series.push({ name: match[1], labels, value: Number(match[3]) });
+    series.push({
+      name: match[1],
+      labels,
+      value: Number(match[3]),
+    });
   }
 
   return series;
