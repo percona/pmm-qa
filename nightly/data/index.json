@@ -200972,16 +200972,18 @@
         "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12337/",
         "by": "Investigator routine",
         "at": "2026-11-19T02:59:42Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-19T02:55:37Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "ha #178 (OpenShift): PMM-T2289 found No data in the HA Health Overview 'PostgreSQL Pods' table, because pmm-ha-pg-db-instance1-lhml-0's sidecar never registered its services. pmm-managed.log shows why. At 01:18:50-52 PMM's own pg-db was switching primaries ('database system is shutting down', 'connection refused', then twice 'cannot set transaction read-write mode during recovery'), so all three AddService calls failed, and the sidecar's one-shot prerun never retried. This is the open PMM-15794, and its fix percona/pmm#6263 is still unmerged; the evidence was added to the ticket. Diagnosed from the build artifacts, not reproduced.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-11-19T02:59:47Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
