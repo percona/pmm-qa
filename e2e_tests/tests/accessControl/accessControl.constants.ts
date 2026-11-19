@@ -1,4 +1,4 @@
-import { AccessUserScenario } from '../../interfaces/accessControl';
+import { AccessServiceType, AccessUserScenario } from '../../interfaces/accessControl';
 import { GrafanaPanel } from '../../interfaces/grafanaPanel';
 
 export const dashboardTimeRange = 'now-1h';
@@ -27,7 +27,7 @@ export const accessControlScenarios: AccessUserScenario[] = [
       { menuItem: 'postgresql', panels: postgresDisallowedPanels },
       { menuItem: 'mongodb', panels: mongoDisallowedPanels },
     ],
-    password: 'mysql',
+    password: 'Mysql-pass-123',
     role: { filter: '{service_type="mysql"}', title: 'mysql' },
     serviceType: 'mysql',
     username: 'mysql',
@@ -38,7 +38,7 @@ export const accessControlScenarios: AccessUserScenario[] = [
       { menuItem: 'mysql', panels: mysqlDisallowedPanels },
       { menuItem: 'mongodb', panels: mongoDisallowedPanels },
     ],
-    password: 'postgres',
+    password: 'Postgres-pass-123',
     role: { filter: '{service_type="postgresql"}', title: 'postgres' },
     serviceType: 'postgresql',
     username: 'postgres',
@@ -49,9 +49,20 @@ export const accessControlScenarios: AccessUserScenario[] = [
       { menuItem: 'mysql', panels: mysqlDisallowedPanels },
       { menuItem: 'postgresql', panels: postgresDisallowedPanels },
     ],
-    password: 'mongo',
+    password: 'Mongo-pass-123',
     role: { filter: '{service_type="mongodb"}', title: 'mongo' },
     serviceType: 'mongodb',
     username: 'mongo',
   },
 ];
+
+const scenarioFor = (serviceType: AccessServiceType): AccessUserScenario => {
+  const scenario = accessControlScenarios.find((candidate) => candidate.serviceType === serviceType);
+
+  if (!scenario) throw new Error(`No access control scenario for ${serviceType}`);
+
+  return scenario;
+};
+
+export const mysqlScenario = scenarioFor('mysql');
+export const postgresScenario = scenarioFor('postgresql');

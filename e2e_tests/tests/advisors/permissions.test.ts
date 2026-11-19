@@ -8,7 +8,7 @@ import { expect } from '@playwright/test';
 
 pmmTest.describe.configure({ mode: 'default' });
 
-const password = 'password';
+const password = 'Advisors-pass-1';
 const suffix = Date.now();
 const users = { editor: `advisors_editor_${suffix}`, viewer: `advisors_viewer_${suffix}` } as const;
 const noAccess = 'Insufficient access permissions.';

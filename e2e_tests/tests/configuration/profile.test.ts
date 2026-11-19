@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
 const INITIAL_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
-const NEW_ADMIN_PASSWORD = 'admin1';
+const NEW_ADMIN_PASSWORD = 'Admin-pass-1';
 const MONITORED_METRICS = [
   'pg_stat_activity_count',
   'mysql_global_status_threads_connected',
