@@ -7,7 +7,7 @@ export const test = base.extend<{ pmmClientContainer: string; versionGate: void 
   pmmClientContainer: ['', { option: true }],
   versionGate: [
     async ({ pmmClientContainer }, use, testInfo) => {
-      const testId = testInfo.title.match(/PMM-T\d+/)?.[0];
+      const testId = testInfo.title.match(/PMM-T?\d+/)?.[0];
       const minVersion = testId ? minPmmClientVersion[testId] : undefined;
 
       if (minVersion) {

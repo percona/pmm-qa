@@ -1,5 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
+import { expectMongoUp } from '@helpers/mongo';
 import { ChangeAgentType, addMongoServiceAndGetExporterId, getPmmAdminMinorVersion, inventoryChangeAgent, removeMongoService } from '@root/helpers/pmm-admin';
 import { clientCredentialsFlags } from '@helpers/constants';
 import { faker } from '@faker-js/faker';
@@ -14,6 +15,15 @@ const containerName = 'rs101';
 let adminVersion: number;
 const servicesToRemove: string[] = [];
 const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
+const exporterContainer = 'rs102';
+const agentPassword = 'mypass';
+const exporterPath = '/usr/local/percona/pmm/exporters/mongodb_exporter';
+const baselineVersion = '3.10.0';
+const baselineExporter = `/tmp/mongodb_exporter-${baselineVersion}`;
+const currentExporterBackup = '/tmp/mongodb_exporter-under-test';
+const megabyte = 1_000_000;
+// Two runs of the same binary differ by up to about 8%; the fix measured 33% (46 to 31 MiB).
+const requiredMemoryRatio = 0.9;
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () => {
   test.use({ pmmClientContainer: containerName });
@@ -347,5 +357,113 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
       output.durationMs,
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
     ).toBeGreaterThan(5_000);
+  });
+
+  test.describe('mongodb_exporter binary size and memory against 3.10.0', { tag: '@exporter-footprint' }, () => {
+    const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
+    const mb = (bytes: number) => (bytes / megabyte).toFixed(1);
+    const mib = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
+
+    const fileSize = async (path: string) => {
+      const output = await cli.exec(`docker exec ${exporterContainer} stat -c %s ${path}`);
+      await output.assertSuccess();
+
+      return Number(output.stdout.trim());
+    };
+
+    // The version gate runs after beforeAll hooks, so the download happens here and a skipped run never makes it.
+    // A failed test restarts the worker, so the download is kept.
+    const prepareBaselineExporter = async () => {
+      const cached = await cli.exec(`docker exec ${exporterContainer} test -s ${baselineExporter}`);
+
+      if (cached.code !== 0) {
+        const download = await cli.exec(
+          `docker exec ${exporterContainer} sh -c 'curl -fsSL --retry 3 --connect-timeout 30 `
+          + `https://downloads.percona.com/downloads/pmm3/${baselineVersion}/binary/tarball/pmm-client-${baselineVersion}-$(uname -m).tar.gz `
+          + `| tar -xzO --wildcards "*/bin/mongodb_exporter" > ${baselineExporter}.part && chmod 0755 ${baselineExporter}.part && mv ${baselineExporter}.part ${baselineExporter}'`,
+        );
+        await download.assertSuccess();
+      }
+
+      const size = await fileSize(baselineExporter);
+      expect(size, `The ${baselineVersion} mongodb_exporter was not extracted`).toBeGreaterThan(0);
+
+      return size;
+    };
+
+    const restartAgentAndWaitForExporter = async () => {
+      await (await cli.exec(`docker exec ${exporterContainer} systemctl restart pmm-agent`)).assertSuccess();
+      await expectMongoUp(exporterContainer, exporterContainer, agentPassword);
+    };
+
+    // One scrape of the exporter itself: through PMM Server the _hr and _lr jobs would report the same process twice.
+    const exporterRss = async () => {
+      const metrics = await cli.getMetrics(exporterContainer, 'pmm', agentPassword, exporterContainer);
+      const value = metrics.match(/^process_resident_memory_bytes\s+(\S+)$/m)?.[1];
+      expect(value, 'process_resident_memory_bytes is missing from the mongodb_exporter metrics').toBeTruthy();
+
+      return Number(value);
+    };
+
+    const settledExporterRss = async () => {
+      await restartAgentAndWaitForExporter();
+      await sleep(30_000);
+      const samples: number[] = [];
+
+      for (let i = 0; i < 3; i++) {
+        samples.push(await exporterRss());
+        await sleep(10_000);
+      }
+
+      return samples.sort((a, b) => a - b)[1];
+    };
+
+    const restoreExporterUnderTest = async () => {
+      const backedUp = await cli.exec(`docker exec ${exporterContainer} test -f ${currentExporterBackup}`);
+
+      if (backedUp.code === 0) {
+        await cli.exec(`docker exec ${exporterContainer} sh -c 'systemctl stop pmm-agent; install -m 0755 ${currentExporterBackup} ${exporterPath} && rm -f ${currentExporterBackup}; systemctl start pmm-agent'`);
+        await expectMongoUp(exporterContainer, exporterContainer, agentPassword);
+      }
+    };
+
+    test.afterAll(async () => {
+      test.setTimeout(5 * 60_000);
+      await restoreExporterUnderTest();
+    });
+
+    test('PMM-15355 - Verify mongodb_exporter is about 18 MB, less than half the size it was in 3.10.0', async ({}) => {
+      test.setTimeout(10 * 60_000);
+      const baselineSize = await prepareBaselineExporter();
+      const size = await fileSize(exporterPath);
+      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB (${baselineVersion}'s is ${mb(baselineSize)} MB)`;
+
+      expect(size, message).toBeGreaterThan(14 * megabyte);
+      expect(size, message).toBeLessThan(22 * megabyte);
+      expect(size, message).toBeLessThan(baselineSize);
+    });
+
+    test('PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
+      test.setTimeout(10 * 60_000);
+      await prepareBaselineExporter();
+
+      await (await cli.exec(`docker exec ${exporterContainer} cp -p ${exporterPath} ${currentExporterBackup}`)).assertSuccess();
+      const currentRss = await settledExporterRss();
+
+      await (await cli.exec(
+        `docker exec ${exporterContainer} sh -c 'systemctl stop pmm-agent && install -m 0755 ${baselineExporter} ${exporterPath}'`,
+      )).assertSuccess();
+      const baselineRss = await settledExporterRss();
+
+      await restoreExporterUnderTest();
+
+      const summary = `${mib(currentRss)} MiB, ${baselineVersion}: ${mib(baselineRss)} MiB`;
+      console.log(`mongodb_exporter RSS: ${summary}`);
+      test.info().annotations.push({ type: 'mongodb_exporter RSS', description: summary });
+      expect(
+        currentRss,
+        `mongodb_exporter RSS is ${mib(currentRss)} MiB after a restart, ${baselineVersion}'s is ${mib(baselineRss)} MiB`,
+      ).toBeLessThan(baselineRss * requiredMemoryRatio);
+    });
   });
 });

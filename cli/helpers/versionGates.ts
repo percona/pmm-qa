@@ -1,4 +1,4 @@
-// Specs keyed by their PMM-T id skip when the pmm-client under test is below this version.
+// Specs keyed by their PMM-T id, or by a Jira key until the case has one, skip when the pmm-client under test is below this version.
 export const minPmmClientVersion: Record<string, string> = {
   'PMM-T2129': '3.10.0',
   'PMM-T2325': '3.10.0',
@@ -36,6 +36,7 @@ export const minPmmClientVersion: Record<string, string> = {
   'PMM-T2534': '3.9.0',
   'PMM-T2663': '3.9.0',
   'PMM-T2452': '3.10.0',
+  'PMM-15355': '3.11.0',
 };
 
 export const versionBelow = (version: string, minVersion: string): boolean => {
