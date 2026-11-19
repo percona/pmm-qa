@@ -18,11 +18,11 @@ preflight_database_setups() {
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
 
-    # A pbm_standalone PSMDB is its own kind: one container of its own name, no host port.
+    # A standalone_no_pbm PSMDB is its own kind: one container of its own name, no host port.
     kind=$DB_TYPE
     if [[ $DB_TYPE == PSMDB ]]; then
       setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
-      if [[ ${setup_type,,} == pbm_standalone ]]; then
+      if [[ ${setup_type,,} == standalone_no_pbm ]]; then
         kind=PSMDB_STANDALONE
       fi
     fi
@@ -33,7 +33,7 @@ preflight_database_setups() {
       if [[ $kind == PSMDB ]]; then
         host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
       elif [[ $kind == PSMDB_STANDALONE ]]; then
-        host_conflict='two pbm_standalone PSMDB setups (both pin container name psmdb-standalone)'
+        host_conflict='two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'
       else
         conflict="two $DB_TYPE setups"
       fi

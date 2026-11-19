@@ -9,7 +9,7 @@
 # -- happens here, polling for readiness instead of sleeping 60 s per step.
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
-# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster; 'pbm_standalone'
+# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster; 'standalone_no_pbm'
 # is one mongod in its own container, with no replica set and no PBM.
 # QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
 setup_psmdb() {
@@ -27,20 +27,20 @@ setup_psmdb() {
   suffix=$RANDOM
 
   case $setup_type in
-    pss | psa | shards | sharding | pbm_standalone) ;;
+    pss | psa | shards | sharding | standalone_no_pbm) ;;
     *) die "Unsupported PSMDB SETUP_TYPE '$setup_type'." ;;
   esac
   case $query_source in
     profiler | mongolog | none) ;;
     *) die "Unsupported PSMDB QUERY_SOURCE '$query_source'." ;;
   esac
-  if [[ $setup_type == pbm_standalone && ($(bool_string "$gssapi") == true || $profile == extra ||
+  if [[ $setup_type == standalone_no_pbm && ($(bool_string "$gssapi") == true || $profile == extra ||
     $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY]) ]]; then
-    die 'PSMDB SETUP_TYPE=pbm_standalone does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'
+    die 'PSMDB SETUP_TYPE=standalone_no_pbm does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'
   fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   # The standalone runs the image by name: retagging would clobber the replica set running beside it.
-  if [[ $setup_type != pbm_standalone ]]; then
+  if [[ $setup_type != standalone_no_pbm ]]; then
     must docker tag "pmm-qa/psmdb:$version-ol$ol" replica_member/local
   fi
   tarball=$(fetch_client_tarball "$client") || die "Could not fetch $client."
@@ -48,7 +48,7 @@ setup_psmdb() {
     cd "$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup" || die 'pmm_psmdb-pbm_setup is missing.'
     export PMM_SERVER_CONTAINER_ADDRESS=$PMM_SERVER_HOST:$PMM_SERVER_PORT ADMIN_PASSWORD
     ADMIN_PASSWORD=$(admin_password)
-    if [[ $setup_type == pbm_standalone ]]; then
+    if [[ $setup_type == standalone_no_pbm ]]; then
       psmdb_standalone "pmm-qa/psmdb:$version-ol$ol"
     elif [[ $setup_type == ps? ]]; then
       psmdb_replica_set

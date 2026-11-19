@@ -594,9 +594,9 @@ recorded_config_dir() {
   ! grep -q diagnosticDataCollection "$DOCKER_CALLS" || false
 }
 
-@test "PSMDB pbm_standalone runs one mongod with no replica set or PBM and registers it" {
+@test "PSMDB standalone_no_pbm runs one mongod with no replica set or PBM and registers it" {
   stub_prebaked_docker
-  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pbm_standalone'
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone_no_pbm'
   GLOBAL_CLIENT_VERSION=3-dev-latest
   dispatch_setup
 
@@ -616,10 +616,10 @@ recorded_config_dir() {
   grep -q '^exec psmdb-standalone mgodatagen -f /etc/datagen/replicaset.json --uri=mongodb://pmm:pmmpass@127.0.0.1:27017$' "$DOCKER_CALLS"
 }
 
-@test "PSMDB pbm_standalone gives mongod a file log for mongolog and rejects what it cannot honour" {
+@test "PSMDB standalone_no_pbm gives mongod a file log for mongolog and rejects what it cannot honour" {
   stub_prebaked_docker
   TMPDIR=$BATS_TEST_TMPDIR
-  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pbm_standalone,QUERY_SOURCE=mongolog'
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone_no_pbm,QUERY_SOURCE=mongolog'
   dispatch_setup
 
   local dir
@@ -632,17 +632,19 @@ recorded_config_dir() {
   local spec
   for spec in 'GSSAPI=true' 'COMPOSE_PROFILES=extra' 'STORAGE_ENGINE=inmemory'; do
     : >"$DOCKER_CALLS"
-    parse_database_spec "psmdb=8.0,SETUP_TYPE=pbm_standalone,$spec"
+    parse_database_spec "psmdb=8.0,SETUP_TYPE=standalone_no_pbm,$spec"
     run dispatch_setup
     [[ $status -ne 0 ]]
-    [[ $output == *'PSMDB SETUP_TYPE=pbm_standalone does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'* ]]
+    [[ $output == *'PSMDB SETUP_TYPE=standalone_no_pbm does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'* ]]
     ! grep -q '^run ' "$DOCKER_CALLS" || false
   done
 
-  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone'
-  run dispatch_setup
-  [[ $status -ne 0 ]]
-  [[ $output == *"Unsupported PSMDB SETUP_TYPE 'standalone'."* ]]
+  for spec in standalone pbm_standalone; do
+    parse_database_spec "psmdb=8.0,SETUP_TYPE=$spec"
+    run dispatch_setup
+    [[ $status -ne 0 ]]
+    [[ $output == *"Unsupported PSMDB SETUP_TYPE '$spec'."* ]]
+  done
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {

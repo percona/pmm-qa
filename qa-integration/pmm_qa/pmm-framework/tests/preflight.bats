@@ -67,17 +67,17 @@ preflight_run() {
   [[ $output == *'two PSMDB setups'* ]]
 }
 
-@test "a pbm_standalone PSMDB shares a host and a run with a replica set or sharded cluster" {
+@test "a standalone_no_pbm PSMDB shares a host and a run with a replica set or sharded cluster" {
   for other in psmdb 'psmdb,SETUP_TYPE=psa' 'psmdb,SETUP_TYPE=sharding'; do
-    [[ $(parallel_decision "$other" 'psmdb,SETUP_TYPE=pbm_standalone') == true ]]
-    [[ $(parallel_decision 'psmdb,SETUP_TYPE=pbm_standalone' "$other") == true ]]
+    [[ $(parallel_decision "$other" 'psmdb,SETUP_TYPE=standalone_no_pbm') == true ]]
+    [[ $(parallel_decision 'psmdb,SETUP_TYPE=standalone_no_pbm' "$other") == true ]]
   done
 }
 
-@test "two pbm_standalone PSMDB setups cannot share a host" {
-  preflight_run 'psmdb,SETUP_TYPE=pbm_standalone' psmdb 'psmdb,SETUP_TYPE=PBM_Standalone'
+@test "two standalone_no_pbm PSMDB setups cannot share a host" {
+  preflight_run 'psmdb,SETUP_TYPE=standalone_no_pbm' psmdb 'psmdb,SETUP_TYPE=Standalone_No_PBM'
   [[ $status -eq 1 ]]
-  [[ $output == *'two pbm_standalone PSMDB setups (both pin container name psmdb-standalone)'* ]]
+  [[ $output == *'two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'* ]]
   [[ $output == *'separate machines'* ]]
 }
 

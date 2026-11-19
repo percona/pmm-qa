@@ -91,8 +91,8 @@ of the MySQL family (PS/MySQL), fall back to sequential execution with a
 warning, so every requested setup still runs. Three pairs cannot share a host
 at all, and preflight refuses them: two PSMDB setups, EXTERNAL with VALKEY, and
 PDPGSQL patroni with PGSQL replication. Provision those on separate machines.
-A `PSMDB` with `SETUP_TYPE=pbm_standalone` is the exception to the PSMDB rule: it runs
-beside a replica set or sharded cluster, but not beside another `pbm_standalone`.
+A `PSMDB` with `SETUP_TYPE=standalone_no_pbm` is the exception to the PSMDB rule: it runs
+beside a replica set or sharded cluster, but not beside another `standalone_no_pbm`.
 
 `--database` values use this grammar:
 
@@ -113,7 +113,7 @@ type's default and supported versions, without needing Docker. `VERSION`
 `latest` means the type's default, in a spec and in a `<TYPE>_VERSION`
 variable. `shards`/`sharding` are aliases for PSMDB, and `sentinel`/`sentinels`
 for Valkey. `PSMDB` takes `SETUP_TYPE` `pss` (default), `psa`, `sharding` or
-`pbm_standalone`: one authenticated mongod in the container `psmdb-standalone`, with
+`standalone_no_pbm`: one authenticated mongod in the container `psmdb-standalone`, with
 no replica set, its `pbm-agent` masked, and no host port published. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
