@@ -50,6 +50,7 @@ Run commands from `cli/`.
 - `@mysql`
 - `@mysql-conf-file`
 - `@mysql-perfschema-change-agent`
+- `@pbm-metrics-psmdb`
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`
