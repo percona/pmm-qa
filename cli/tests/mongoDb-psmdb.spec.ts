@@ -355,6 +355,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
 
   test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
     const size = await cli.execSilent(`docker exec ${containerName} sh -lc 'stat -c %s /usr/local/percona/pmm/exporters/mongodb_exporter | awk "{printf \"%.2f \n\", \$1/1024/1024}"'`);
+    console.log(`Size is: ${size}`);
     const sizeMiB = parseFloat(size.stdout.trim());
 
     if (Number.isNaN(sizeMiB)) {
