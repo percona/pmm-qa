@@ -49,7 +49,6 @@ Scenario(
     I.fillField(remoteInstancesPage.fields.cluster, details.cluster);
     I.click(remoteInstancesPage.fields.useQANMongoDBProfiler);
     await remoteInstancesPage.clickAddInstanceAndWaitForSuccess();
-    I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
     await inventoryAPI.verifyServiceExistsAndHasRunningStatus(
       {
         serviceType: SERVICE_TYPE.MONGODB,

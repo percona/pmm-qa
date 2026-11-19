@@ -1,6 +1,7 @@
 import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage, { DropdownName } from '@pages/base.page';
@@ -10,6 +11,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import HaHealthOverviewDashboard from '@pages/dashboards/ha/haHealthOverview';
 import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
 import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
@@ -28,6 +30,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
+  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page, () => this.loadAllPanels());
   readonly home = new HomeDashboard(this.page);
   readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
@@ -48,6 +51,17 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    // Third cell of the series row: the Max column of a table legend whose calcs are mean, max, min.
+    legendMaxValue: (panelName: string, seriesName: string) =>
+      this.grafanaIframe()
+        .getByRole('cell')
+        .nth(2)
+        .within(
+          this.builders
+            .panelByExactName(panelName)
+            .getByRole('row')
+            .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
+        ),
     legendSeries: (panelName: string) =>
       this.builders.panelContentByExactName(panelName).locator('tbody').getByRole('button'),
     noDataMarkerInPanel: (panelName: string) =>
@@ -62,9 +76,13 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('data-testid panel content'),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelInfoIconByName: (panelName: string) =>
+      this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+    removeAdHocFilter: (key: string) =>
+      this.grafanaIframe().getByRole('button', { name: `Remove filter with key ${key}` }),
     removeSelectedVariableValue: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -75,22 +93,28 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: dropDownName })
         .locator('[class*="multi-value-container"], [class*="singleValue"]'),
-    tableCell: (panelName: string, rowText: string, columnIndex: number) =>
-      this.builders.tableRow(panelName, rowText).locator(`[aria-colindex="${columnIndex}"]`),
-    tableLink: (panelName: string, linkText: string) =>
-      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
-    tableRow: (panelName: string, rowText: string) =>
-      this.builders.tableRows(panelName).filter({ hasText: rowText }),
-    tableRows: (panelName: string) =>
+    tableCell: (panelName: string, rowIndex: number, columnIndex: number) =>
       this.builders
-        .panelContentByExactName(panelName)
-        .getByRole('row')
-        .filter({ has: this.grafanaIframe().getByRole('gridcell') }),
+        .tableRows(panelName)
+        .nth(rowIndex)
+        .locator(`[role="gridcell"][aria-colindex="${columnIndex + 1}"]`),
+    tableCellFilterForValue: (panelName: string, rowIndex: number, columnIndex: number) =>
+      this.builders
+        .tableCell(panelName, rowIndex, columnIndex)
+        .getByRole('button', { name: 'Filter for value' }),
+    tableCellLink: (panelName: string, rowIndex: number, columnIndex: number) =>
+      this.builders.tableCell(panelName, rowIndex, columnIndex).getByRole('link'),
+    tableRows: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('[role="row"]:has([role="gridcell"])'),
     templateVariableCombobox: (variableName: DropdownName) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('combobox'),
+    tableLink: (panelName: string, linkText: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
+    tableRow: (panelName: string, rowText: string) =>
+      this.builders.tableRows(panelName).filter({ hasText: rowText }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
@@ -121,6 +145,7 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+    tooltip: this.grafanaIframe().getByTestId('data-testid tooltip'),
     variableOptions: this.grafanaIframe().getByTestId('data-testid Select option'),
   };
   inputs = {};
@@ -226,6 +251,18 @@ export default class Dashboards extends BasePage {
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
 
+  getLegendMaxSeconds = async (panelName: string, seriesName: string) => {
+    const cell = this.builders.legendMaxValue(panelName, seriesName);
+
+    if (!(await cell.isVisible())) return NaN;
+
+    const seconds = /^(\d+(?:\.\d+)?) s$/.exec(
+      (await cell.innerText({ timeout: Timeouts.FIVE_SECONDS })).trim(),
+    );
+
+    return seconds ? Number(seconds[1]) : NaN;
+  };
+
   /** The threshold color a stat panel in background color mode shows. */
   getStatColor = async (panelName: string): Promise<'green' | 'orange' | 'red'> => {
     const background = await this.builders
@@ -242,6 +279,35 @@ export default class Dashboards extends BasePage {
     if (green > red) return 'green';
 
     return green >= 100 ? 'orange' : 'red';
+  };
+
+  getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
+    // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
+    const queried = this.page.waitForResponse(
+      (response) =>
+        response.url().includes(apiEndpoints.grafana.dsQuery) && response.request().method() === 'POST',
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+
+    await this.elements.refreshButton.click();
+    await queried;
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.THIRTY_SECONDS });
+
+    const headers = await this.builders
+      .panelContentByExactName(panelName)
+      .getByRole('columnheader')
+      .allInnerTexts();
+    const rows = await this.builders.tableRows(panelName).all();
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const cells = await row.getByRole('gridcell').allInnerTexts();
+
+        return Object.fromEntries(
+          headers.map((header, index) => [header.trim(), cells[index]?.trim() ?? '']),
+        );
+      }),
+    );
   };
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {

@@ -1,7 +1,7 @@
 Feature('PMM Server Role Based Access Control (RBAC)');
 
-const newPsUser = { username: 'rbac_ps_test_user', password: 'Test1234!' };
-const newPgUser = { username: 'rbac_pg_test_user', password: 'Test1234!' };
+const newPsUser = { username: 'rbac_ps_test_user', password: 'Test1234!pass' };
+const newPgUser = { username: 'rbac_pg_test_user', password: 'Test1234!pass' };
 const dashboardTimeRange = { from: 'now-5m' };
 let rbacPsUserId;
 let rbacPgUserId;
