@@ -251,16 +251,6 @@ export async function expectAgentsOk(container: string, timeout = 120_000) {
   }).toPass({ intervals: [3_000], timeout });
 }
 
-/**
- * Wait for PBM to have no operation running, such as the resync a storage change starts, but not for good: a restore that was
- * interrupted by stopping its agents stays listed as running, so the commands that follow retry while PBM is busy instead.
- */
-export async function waitForPbmIdle(container: string, timeout = 30_000) {
-  await expect(async () => {
-    expect((await pbmStatus(container)).running, 'pbm still runs an operation').toEqual({});
-  }).toPass({ intervals: [2_000], timeout }).catch(() => undefined);
-}
-
 export interface StartedOperation {
   name: string;
   output: string;
@@ -338,12 +328,23 @@ export async function expectRestoreStatus(container: string, name: string, statu
 
 export const pbmStorageBucket = async (container: string) => pbmConfigValue(container, 'storage.s3.bucket');
 
+const resyncOutcome = /^(\S+Z) (?:I .*\[resync\] succeed|E .*\[resync\] resync:)/;
+
 /**
- * Point the PBM storage at a bucket that does not exist, which makes every backup fail at once
+ * Wait until a resync has ended since a time, whether it succeeded or failed, which PBM's log tells and its status does not:
+ * a restore that was interrupted by stopping its agents stays listed as running there for good.
  */
-export async function breakStorage(container: string) {
-  await (await pbm(container, 'config --set storage.s3.bucket=pbm-metrics-missing-bucket')).assertSuccess();
-  await waitForPbmIdle(container);
+async function expectResyncEnded(container: string, since: number) {
+  await expect(async () => {
+    const logs = await pbm(container, 'logs --event=resync --tail=30 --severity=E');
+    const ended = logs.stdout.split('\n').some((line) => {
+      const logged = line.match(resyncOutcome)?.[1];
+
+      return logged !== undefined && Date.parse(logged) >= since;
+    });
+
+    expect(ended, 'no resync has ended since it was requested').toBeTruthy();
+  }).toPass({ intervals: [2_000], timeout: 120_000 });
 }
 
 /**
@@ -356,25 +357,27 @@ export async function resync(container: string) {
   await expect(async () => {
     await (await pbm(container, 'config --force-resync')).assertSuccess();
   }).toPass({ intervals: [3_000], timeout: 120_000 });
-  await expect(async () => {
-    const logs = await pbm(container, 'logs --event=resync --tail=30');
-    const succeeded = logs.stdout.split('\n').some((line) => {
-      const logged = line.match(/^(\S+Z) I .*\[resync\] succeed/)?.[1];
+  await expectResyncEnded(container, startedAt);
+}
 
-      return logged !== undefined && Date.parse(logged) >= startedAt;
-    });
+/**
+ * Point the PBM storage at a bucket that does not exist, which makes every backup fail at once
+ */
+export async function breakStorage(container: string) {
+  const startedAt = Date.now() - 2_000;
 
-    expect(succeeded, 'no resync has succeeded since it was requested').toBeTruthy();
-  }).toPass({ intervals: [2_000], timeout: 120_000 });
-  await waitForPbmIdle(container);
+  await (await pbm(container, 'config --set storage.s3.bucket=pbm-metrics-missing-bucket')).assertSuccess();
+  await expectResyncEnded(container, startedAt);
 }
 
 /**
  * Point the PBM storage back at its bucket and resync
  */
 export async function fixStorage(container: string, bucket: string) {
+  const startedAt = Date.now() - 2_000;
+
   await (await pbm(container, `config --set storage.s3.bucket=${bucket}`)).assertSuccess();
-  await waitForPbmIdle(container);
+  await expectResyncEnded(container, startedAt);
   await resync(container);
   await expectAgentsOk(container);
 }

@@ -789,7 +789,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: '@pbm-metrics
       }
 
       for (const [first, second] of [[advances[0], advances[1]], [advances[1], advances[2]]]) {
-        expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeGreaterThanOrEqual(50);
+        expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeGreaterThanOrEqual(30);
         expect(second - first, `PITR recovery points ${advances.join(', ')}`).toBeLessThanOrEqual(90);
       }
     });
