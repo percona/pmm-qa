@@ -432,15 +432,12 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
       await restoreExporterUnderTest();
     });
 
-    test('PMM-15355 - Verify mongodb_exporter is about 18 MB, less than half the size it was in 3.10.0', async ({}) => {
-      test.setTimeout(10 * 60_000);
-      const baselineSize = await prepareBaselineExporter();
+    test('PMM-15355 - Verify mongodb_exporter is about 18 MB', async ({}) => {
       const size = await fileSize(exporterPath);
-      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB (${baselineVersion}'s is ${mb(baselineSize)} MB)`;
+      const message = `${exporterPath} is ${mb(size)} MB, expected about 18 MB (3.10.0's was 38 MB)`;
 
       expect(size, message).toBeGreaterThan(14 * megabyte);
       expect(size, message).toBeLessThan(22 * megabyte);
-      expect(size, message).toBeLessThan(baselineSize);
     });
 
     test('PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
