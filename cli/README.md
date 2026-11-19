@@ -48,6 +48,7 @@ Run commands from `cli/`.
 - `@mongoDb`
 - `@mysql`
 - `@mysql-conf-file`
+- `@mysql-perfschema-change-agent`
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`

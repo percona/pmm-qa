@@ -134,13 +134,14 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ha-argocd`
 - `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
 - `@instances`
 - `@inventory`
 - `@inventory-fb`
-- `@LBAC`
+- `@lbac`
 - `@max-length`
 - `@menu`
 - `@mongodb-exporter`
@@ -157,7 +158,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-ps-replica-integration`
+- `@pmm-psmdb-arbiter-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-psmdb-replica-integration`
 - `@pmm-psmdb-sharding-integration`
 - `@pmm-pxc-integration`
 - `@pmm-upgrade`
