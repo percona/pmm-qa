@@ -246,12 +246,12 @@ export default class Dashboards extends BasePage {
     );
 
   getLegendMaxSeconds = async (panelName: string, seriesName: string) => {
+    const cell = this.builders.legendMaxValue(panelName, seriesName);
+
+    if (!(await cell.isVisible())) return NaN;
+
     const seconds = /^(\d+(?:\.\d+)?) s$/.exec(
-      (
-        await this.builders
-          .legendMaxValue(panelName, seriesName)
-          .innerText({ timeout: Timeouts.FIVE_SECONDS })
-      ).trim(),
+      (await cell.innerText({ timeout: Timeouts.FIVE_SECONDS })).trim(),
     );
 
     return seconds ? Number(seconds[1]) : NaN;
