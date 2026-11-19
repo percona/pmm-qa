@@ -200962,6 +200962,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15835",
         "by": "Investigator routine",
         "at": "2026-11-19T02:59:37Z"
+      },
+      {
+        "suites": [
+          "UI"
+        ],
+        "verdict": "setup bug",
+        "summary": "ui @gcp: fourth night running, only the GCP Cloud SQL PostgreSQL 13 fixture (gc-postgres13) failed. Add service got 'Connection check failed: dial tcp 34.71.152.234:5432: i/o timeout', and the 3 tests that depend on it failed after it. The other GCP instances passed (38/42). 34.71.152.234:5432 still times out from the runner host. No re-run was attempted because the host is unreachable. No pmm-qa change can fix this and no ticket tracks it: someone with GCP access must restore the instance or its authorized networks, or drop pgsql13 from verifyGCRemoteInstance_test.js if it was retired.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12337/",
+        "by": "Investigator routine",
+        "at": "2026-11-19T02:59:42Z"
       }
     ],
     "claims": [
@@ -200970,13 +200980,6 @@
         "at": "2026-11-19T02:55:37Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-19T02:55:37Z",
-        "suites": [
-          "UI"
         ]
       }
     ]
