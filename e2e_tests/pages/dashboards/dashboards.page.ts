@@ -245,6 +245,18 @@ export default class Dashboards extends BasePage {
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
 
+  getLegendMaxSeconds = async (panelName: string, seriesName: string) => {
+    const seconds = /^(\d+(?:\.\d+)?) s$/.exec(
+      (
+        await this.builders
+          .legendMaxValue(panelName, seriesName)
+          .innerText({ timeout: Timeouts.FIVE_SECONDS })
+      ).trim(),
+    );
+
+    return seconds ? Number(seconds[1]) : NaN;
+  };
+
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
     // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
     const queried = this.page.waitForResponse(

@@ -6,7 +6,7 @@ const replicaSet = 'rs';
 const members = ['rs101', 'rs102', 'rs103'];
 const arbiterLog = (level: string) =>
   `docker exec rs103 grep -q "level=${level}.*some metrics might be unavailable on arbiter nodes" /var/log/pmm-agent.log`;
-const secondsAboveOne = /^[1-9]\d*(\.\d+)? s$/;
+const delaySeconds = 10;
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -38,21 +38,23 @@ pmmTest(
     );
     await dashboard.loadAllPanels();
 
-    const secondary = mongoDbHelper.delayReplicaSetMember(replicaSet, members, 1, 10);
+    const secondary = mongoDbHelper.delayReplicaSetMember(replicaSet, members, 1, delaySeconds);
 
     expect(secondary, 'The delayed member host name should be read from rs.conf()').toMatch(/^rs\d+$/);
     await dashboard.builders.panelByExactName('Replication Lag').scrollIntoViewIfNeeded();
-    await expect(dashboard.builders.legendMaxValue('Replication Lag', secondary)).toHaveText(
-      secondsAboveOne,
-      { timeout: Timeouts.FIVE_MINUTES },
-    );
+    await expect
+      .poll(() => dashboard.getLegendMaxSeconds('Replication Lag', secondary), {
+        message: `Replication Lag Max for ${secondary} should reach the ${delaySeconds} s delay and be shown in seconds`,
+        timeout: Timeouts.FIVE_MINUTES,
+      })
+      .toBeGreaterThanOrEqual(delaySeconds);
   },
 );
 
 pmmTest(
   'PMM-T1889 - Verify Mongo replication lag graph shows correct info @pmm-psmdb-replica-integration',
   async ({ dashboard, mongoDbHelper, page, urlHelper }) => {
-    const delayed = mongoDbHelper.delayReplicaSetMember(replicaSet, members, 2, 10);
+    const delayed = mongoDbHelper.delayReplicaSetMember(replicaSet, members, 2, delaySeconds);
 
     expect(delayed, 'The delayed member host name should be read from rs.conf()').toMatch(/^rs\d+$/);
     await page.goto(
@@ -64,8 +66,11 @@ pmmTest(
     );
     await dashboard.loadAllPanels();
     await dashboard.builders.panelByExactName('Replication Lag').scrollIntoViewIfNeeded();
-    await expect(dashboard.builders.legendMaxValue('Replication Lag', delayed)).toHaveText(secondsAboveOne, {
-      timeout: Timeouts.FIVE_MINUTES,
-    });
+    await expect
+      .poll(() => dashboard.getLegendMaxSeconds('Replication Lag', delayed), {
+        message: `Replication Lag Max for ${delayed} should reach the ${delaySeconds} s delay and be shown in seconds`,
+        timeout: Timeouts.FIVE_MINUTES,
+      })
+      .toBeGreaterThanOrEqual(delaySeconds);
   },
 );
