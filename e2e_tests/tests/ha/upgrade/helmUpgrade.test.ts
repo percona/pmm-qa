@@ -111,12 +111,10 @@ pmmTest(
         repositoryAndTag(releaseImage),
       ]);
 
-      const services = await haClusterHelper.servicesRunningAndReporting(
+      const services = await haClusterHelper.waitForRunningServicesReporting(
         api,
         (await api.prometheusApi.waitForServerTime()) - 120,
       );
-
-      expect(services.length, 'At least one service must be monitored').toBeGreaterThan(0);
 
       return {
         images,
