@@ -47,7 +47,7 @@ pmmTest.describe('Advisor metrics', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify the Advisor check metrics label each check with its source @advisor-telemetry',
+    'PMM-T2754 - Verify the Advisor check metrics label each check with its source @advisor-telemetry',
     async ({ api }) => {
       const check = await api.advisorsApi.createCustomCheck();
 
@@ -83,7 +83,7 @@ pmmTest.describe('Advisor metrics', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the Advisor email metric counts sent emails by kind @advisor-telemetry',
+    'PMM-T2755 - Verify the Advisor email metric counts sent emails by kind @advisor-telemetry',
     async ({ api }) => {
       const recipient = MailpitApi.recipient('telemetry');
       const counter = (kind: string, result: string) =>
@@ -229,7 +229,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   });
 
   pmmTest(
-    'PMM-Txxxx - Verify PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1 makes telemetry report on start @advisor-telemetry',
+    'PMM-T2756 - Verify PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1 makes telemetry report on start @advisor-telemetry',
     async () => {
       expect(
         cliHelper.execSilent(
@@ -241,7 +241,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify Advisor telemetry leaves out the names of user checks @advisor-telemetry',
+    'PMM-T2757 - Verify Advisor telemetry leaves out the names of user checks @advisor-telemetry',
     async () => {
       await pmmTest.step('The user check has series in every check metric', async () => {
         for (const metric of checkMetrics) {
@@ -303,7 +303,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify advisor_check_insights reports one entry per built-in check @advisor-telemetry',
+    'PMM-T2759 - Verify advisor_check_insights reports one entry per built-in check @advisor-telemetry',
     async () => {
       const run = await api.advisorsApi.runChecksAndWait([], [], Timeouts.FIVE_MINUTES);
       const insights = (await api.advisorsApi.listInsights({ page_size: '1000', run_id: run.id })).filter(
@@ -342,7 +342,7 @@ pmmTest.describe.serial('Advisor telemetry report', () => {
   );
 
   pmmTest(
-    'PMM-Txxxx - Verify the Advisor usage telemetry keys match the server state @advisor-telemetry',
+    'PMM-T2760 - Verify the Advisor usage telemetry keys match the server state @advisor-telemetry',
     async () => {
       const recipients = ['qa-telemetry-1@example.com', 'qa-telemetry-2@example.com'];
       const erroring = await api.advisorsApi.createCustomCheck({
