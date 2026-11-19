@@ -200952,6 +200952,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1791",
         "by": "Investigator routine",
         "at": "2026-11-19T02:59:31Z"
+      },
+      {
+        "suites": [
+          "CLI Integration Compatibility"
+        ],
+        "verdict": "product bug",
+        "summary": "3.10.0 · Percona Server 8.0: only PMM-T2528 failed (49 passed). The slowlog agent disable returned OK, but PMM Server kept mysqld_exporter 'Running' for 60 s instead of 'Done (disabled)'. That is the open PMM-15835 lost update (a ChangeAgent racing the agent's status report), the same failure nights 109 and 110 traced. Deduped, not re-reproduced.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+        "by": "Investigator routine",
+        "at": "2026-11-19T02:59:37Z"
       }
     ],
     "claims": [
