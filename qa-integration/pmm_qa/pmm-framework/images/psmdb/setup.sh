@@ -165,8 +165,10 @@ psmdb_register() {
   if [[ $(bool_string "$CLIENT_DEBUG") == true ]]; then
     debug=(--debug)
   fi
+  # The containers join PSMDB_NETWORKS, and the address pmm-agent would detect can be on one PMM Server
+  # is not on, which breaks pull mode. The container name resolves on pmm-qa, which both share.
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
-    docker exec -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup \
+    docker exec -e "PMM_AGENT_SETUP_NODE_ADDRESS=$node" -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup \
     --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml "${debug[@]}" >/dev/null
   # Started only now: `pmm-agent setup` skips the reload of an agent not yet listening,
   # and needs --config-file when none is running.
