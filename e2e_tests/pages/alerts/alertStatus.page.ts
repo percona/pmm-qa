@@ -6,7 +6,10 @@ export default class AlertStatusPage extends BasePage {
   url = 'pmm-ui/alerting/status';
   builders = {
     alertRow: (alertName: string, serviceName: string) =>
-      this.page.getByRole('row').filter({ hasText: alertName }).filter({ hasText: serviceName }),
+      this.page
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { exact: true, name: alertName }) })
+        .filter({ has: this.page.getByRole('cell', { exact: true, name: serviceName }) }),
     detailsParagraph: (text: RegExp) =>
       this.elements.detailsPane.getByRole('paragraph').filter({ hasText: text }),
     firingAlert: (alertName: string) =>
