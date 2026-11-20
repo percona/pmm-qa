@@ -3,11 +3,11 @@ import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
-const database = 'pgss_t1312';
 const fallbackService = 'pgss_default_query_source';
 const inventoryService = 'pgsql_pgss_inventory_service';
 const pgssMax = 5_000;
 let container: string;
+let database: string;
 let pmmAdmin: string;
 let addPostgresql: string;
 
@@ -20,6 +20,7 @@ pmmTest.beforeEach(async ({ cliHelper, grafanaHelper }) => {
     .getStdOutLines()[0];
 
   expect(container, 'pgsql_pgss_pmm docker container should exist').toMatch(/^pgsql_pgss_pmm_/);
+  database = `pgss_t1312_${Date.now()}`;
   pmmAdmin = `docker exec ${container} pmm-admin`;
   addPostgresql = `${pmmAdmin} add postgresql --password=pass+this --username=postgres`;
   await grafanaHelper.authorize();
