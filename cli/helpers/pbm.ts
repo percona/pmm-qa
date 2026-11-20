@@ -336,7 +336,7 @@ const resyncOutcome = /^(\S+Z) (?:I .*\[resync\] succeed|E .*\[resync\] resync:)
  */
 async function expectResyncEnded(container: string, since: number) {
   await expect(async () => {
-    const logs = await pbm(container, 'logs --event=resync --tail=30 --severity=E');
+    const logs = await pbm(container, 'logs --event=resync --tail=30');
     const ended = logs.stdout.split('\n').some((line) => {
       const logged = line.match(resyncOutcome)?.[1];
 
