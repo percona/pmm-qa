@@ -121,7 +121,7 @@ jobs:
       WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-      ADMIN_PASSWORD: 'admin-password'
+      ADMIN_PASSWORD: 'PMM3testuser!'
       PMM_ENABLE_NOMAD: ${{ inputs.enable_nomad && '1' || '0' }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}

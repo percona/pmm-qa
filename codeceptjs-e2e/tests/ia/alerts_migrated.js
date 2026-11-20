@@ -14,7 +14,7 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_NOTICE',
-    text: 'Notice',
+    text: 'Info',
   },
   {
     severity: 'SEVERITY_WARNING',
@@ -22,7 +22,7 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_ALERT',
-    text: 'Alert',
+    text: 'Critical',
   },
   {
     severity: 'SEVERITY_INFO',
@@ -30,11 +30,11 @@ const rulesForAlerts = [
   },
   {
     severity: 'SEVERITY_DEBUG',
-    text: 'Debug',
+    text: 'Info',
   },
   {
     severity: 'SEVERITY_EMERGENCY',
-    text: 'Emergency',
+    text: 'Critical',
   },
 ];
 

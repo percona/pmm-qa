@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { AgentStatus } from '@interfaces/inventory';
+import { AgentStatus, NodeAgent } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 
 const nodeMetric = 'node_cpu_seconds_total';
@@ -25,21 +25,27 @@ pmmTest(
 
     for (const podName of standbys) {
       await pmmTest.step(`Verify standby "${podName}" monitors itself`, async () => {
-        const node = (await api.inventoryApi.getAllNodes()).find((node) => node.node_name === podName);
+        let exporter: NodeAgent | undefined;
 
-        expect(node, `"${podName}" must be registered as its own node`).toBeDefined();
+        await expect(async () => {
+          const node = (await api.inventoryApi.getAllNodes()).find((node) => node.node_name === podName);
 
-        const agentOfType = (agentType: string) =>
-          node?.agents?.find((agent) => agent.agent_type === agentType);
+          expect(node, `"${podName}" must be registered as its own node`).toBeDefined();
 
-        expect(
-          agentOfType('pmm-agent')?.is_connected,
-          `"${podName}" must run its own pmm-agent, connected to the cluster`,
-        ).toBe(true);
+          const agentOfType = (agentType: string) =>
+            node?.agents?.find((agent) => agent.agent_type === agentType);
 
-        const exporter = agentOfType('node_exporter');
+          expect(
+            agentOfType('pmm-agent')?.is_connected,
+            `"${podName}" must run its own pmm-agent, connected to the cluster`,
+          ).toBe(true);
 
-        expect(exporter?.status, `"${podName}" must run its own node_exporter`).toEqual(AgentStatus.running);
+          exporter = agentOfType('node_exporter');
+
+          expect(exporter?.status, `"${podName}" must run its own node_exporter`).toEqual(
+            AgentStatus.running,
+          );
+        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
 
         await expect(async () => {
           const samples = await api.prometheusApi.instantQuery(

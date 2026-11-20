@@ -1,31 +1,44 @@
-# Three PXC nodes and ProxySQL in one container, driven by pmm_pxc. Built by
-# build_pxc_proxysql_image in lib/images.sh; PMM Client is installed at run time.
-ARG PXC_VERSION
+# check=skip=InvalidDefaultArgInFrom
+# Three PXC nodes and ProxySQL in one container, driven by pmm_pxc, on systemd.
+# Built by build_pxc_proxysql_image in lib/images.sh; PMM Client is installed
+# at run time.
+ARG BASE_OS
 
-FROM percona/percona-xtradb-cluster:${PXC_VERSION}
+FROM ${BASE_OS}
 ARG PXC_VERSION
 # Empty installs Percona's proxysql2 2.7.3, as the Ansible setup pinned; a URL
 # installs that ProxySQL rpm instead.
 ARG PROXYSQL_PACKAGE
 ARG PXC_TARBALL
 
-USER root
 RUN set -eux; \
-    . /etc/os-release; \
-    curl -fL "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" \
-        -o /tmp/epel-release.rpm; \
-    rpm -Uvh /tmp/epel-release.rpm; \
-    rm /tmp/epel-release.rpm; \
+    : "${PXC_VERSION:?PXC_VERSION build-arg is required}"; \
+    v=${PXC_VERSION/./}; \
+    case $PXC_VERSION in \
+      5.7) repo=pxc-57 pkg=Percona-XtraDB-Cluster-57 ;; \
+      8.0) repo=pxc-80 pkg=percona-xtradb-cluster ;; \
+      *) repo=pxc-$v-lts pkg=percona-xtradb-cluster ;; \
+    esac; \
+    dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
+        "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"; \
+    # EPEL's master, not its mirror list: lagging mirrors fail the metadata checksum.
+    sed -i 's|^metalink=.*|baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/$basearch/|' /etc/yum.repos.d/epel.repo; \
+    percona-release enable-only "$repo" release; \
+    percona-release enable tools release; \
     if [ -n "$PROXYSQL_PACKAGE" ]; then \
-        curl -fL "$PROXYSQL_PACKAGE" -o /tmp/proxysql.rpm; \
-        rpm -Uvh /tmp/proxysql.rpm; \
-        rm /tmp/proxysql.rpm; \
+        dnf install -y "$PROXYSQL_PACKAGE"; \
     else \
-        percona-release enable-only proxysql release; \
-        microdnf install -y proxysql2-2.7.3; \
+        percona-release enable proxysql release; \
+        dnf install -y proxysql2-2.7.3; \
     fi; \
-    microdnf install -y sysbench findutils gzip openssl tar; \
-    microdnf clean all; \
+    dnf install -y "$pkg" systemd sudo sysbench iproute findutils gzip openssl procps-ng tar; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf; \
+    # pmm_pxc runs the nodes and ProxySQL, so their packaged units must not start at boot.
+    systemctl disable mysql; \
+    if systemctl is-enabled -q proxysql; then systemctl disable proxysql; fi; \
+    # No telemetry from test containers, as in Percona's own images.
+    if rpm -q percona-telemetry-agent; then systemctl disable percona-telemetry-agent; fi; \
     proxysql --version; \
     sysbench --version
 
@@ -54,4 +67,5 @@ RUN set -eux; \
 COPY --chmod=0755 pmm_pxc /usr/local/bin/pmm_pxc
 RUN pmm_pxc prepare "$PXC_VERSION"
 
-ENTRYPOINT ["sleep", "infinity"]
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

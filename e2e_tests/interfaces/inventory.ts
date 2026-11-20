@@ -5,6 +5,14 @@ export interface NodeAgent {
   status: string;
 }
 
+export interface InventoryAgent {
+  agent_id: string;
+  process_exec_path?: string;
+  service_id?: string;
+}
+
+export type GetAgents = Record<string, InventoryAgent[]>;
+
 export interface GetNode {
   agents?: NodeAgent[];
   node_id: string;
@@ -26,6 +34,11 @@ export enum ServiceType {
 
 export enum AgentStatus {
   running = 'AGENT_STATUS_RUNNING',
+}
+
+export enum QanAgentType {
+  mysqlSlowlog = 'qan-mysql-slowlog-agent',
+  postgresqlPgStatements = 'qan-postgresql-pgstatements-agent',
 }
 
 export interface GetService {
@@ -69,7 +82,7 @@ export interface GetService {
         additionalProp2: string;
         additionalProp3: string;
       };
-      disabled: true;
+      disabled: boolean;
       disabled_collectors: [string];
       listen_port: 0;
       log_level: string;
@@ -137,6 +150,7 @@ export interface AddRdsParameters {
 }
 
 export interface AddServiceResponse {
+  mongodb?: { service: { node_id: string; service_id: string } };
   mysql?: { service: { node_id: string; service_id: string } };
   postgresql?: { service: { node_id: string; service_id: string } };
 }

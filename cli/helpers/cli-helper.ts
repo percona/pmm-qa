@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from 'node:perf_hooks';
@@ -110,6 +110,7 @@ export async function getMetrics(
   // TODO: parse into map(k => v) or json
   return output.stdout;
 }
+
 /**
  * Execute command and verify output contains expected content
  * Wrapper around {@link execute} that automatically asserts success and optionally verifies output
@@ -131,4 +132,55 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     }
     return output.stdout;
   });
+}
+
+/**
+ * Assert a command failed and its stdout or stderr contains the expected message
+ *
+ * @param   output    result of the failed command
+ * @param   message   expected error message
+ */
+export async function expectFailure(output: ExecReturn, message: string) {
+  expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
+  expect(`${output.stdout}${output.stderr.text}`).toContain(message);
+}
+
+/**
+ * Quote a value as one shell word, so spaces, $, & or ' in it reach the command unchanged
+ *
+ * @param   value   value to quote
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
+ * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
+ * so a change that succeeded can be silently reverted (PMM-15835).
+ * Each retry restarts the agent, so an assertion on runtime state must wait for the restart within itself.
+ *
+ * @param   commands          change agent commands to run
+ * @param   expectedOutput    strings every command's output must contain
+ * @param   persisted         assertion on the stored state; throws while the change is missing
+ * @param   timeout           milliseconds to keep re-applying
+ */
+export async function execUntilPersisted(
+  commands: string[],
+  expectedOutput: string[],
+  persisted: () => Promise<void>,
+  timeout = 60_000,
+) {
+  await expect(async () => {
+    for (const command of commands) {
+      const output = await exec(command);
+      await output.assertSuccess();
+
+      for (const value of expectedOutput) {
+        await output.outContains(value);
+      }
+    }
+
+    await persisted();
+  }).toPass({ intervals: [5_000], timeout });
 }

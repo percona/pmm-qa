@@ -80,6 +80,10 @@ export default class StoredMetricsPage extends BasePage {
         .nth(columnNumber - 1),
     sortingValue: (columnNumber: number) => this.builders.sortControl(columnNumber).locator('span'),
     tab: (tabName: string) => this.grafanaIframe().getByRole('tab', { name: tabName }),
+    workloadRowStartingWith: (queryStart: string) =>
+      this.grafanaIframe()
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { name: new RegExp(`^${queryStart}`, 'i') }) }),
     workloadRowsWithoutText: (text: string) =>
       this.grafanaIframe().locator(workloadRows).filter({ hasNotText: text }),
   };
@@ -106,6 +110,7 @@ export default class StoredMetricsPage extends BasePage {
     codeBlock: this.grafanaIframe()
       .getByTestId('highlight-code')
       .or(this.grafanaIframe().locator('.pretty-json-container')),
+    detailsNoData: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('table-no-data'),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
@@ -129,6 +134,7 @@ export default class StoredMetricsPage extends BasePage {
       .locator('pre')
       .filter({ hasText: 'No table info from example nor explain' }),
     overviewColumnTooltip: this.grafanaIframe().locator('.overview-column-tooltip'),
+    overviewNoData: this.grafanaIframe().getByRole('rowgroup').getByTestId('table-no-data'),
     pageProgressBar: this.page.getByRole('progressbar'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
     planInfoIcon: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('icon-info-circle'),
@@ -159,7 +165,9 @@ export default class StoredMetricsPage extends BasePage {
     filterBy: this.grafanaIframe().getByTestId('filters-search-field'),
     search: this.grafanaIframe().locator('input[name="search"]'),
   };
-  messages = {};
+  messages = {
+    notification: this.grafanaIframe().getByRole('alert').or(this.grafanaIframe().getByRole('status')),
+  };
 
   addColumn = async (columnName: string) => {
     await this.inputs.addColumn.fill(columnName, { timeout: Timeouts.THIRTY_SECONDS });
@@ -192,6 +200,26 @@ export default class StoredMetricsPage extends BasePage {
 
       return parseFloat(value) * (magnitudes[value.slice(-1)] ?? 1) * (timeUnits[unit] ?? 1);
     });
+
+  /** Rate, sum and per-query values of each metric in the Details tab, without the share of the total. */
+  getDetailMetricValues = async (metricNames: string[]) => {
+    const values: Record<string, string[]> = {};
+
+    for (const metricName of metricNames) {
+      await expect(this.builders.detailMetricValue(metricName, 3)).not.toBeEmpty({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      values[metricName] = [];
+
+      for (const columnNumber of [2, 3, 4]) {
+        values[metricName].push(
+          ((await this.builders.detailMetricValue(metricName, columnNumber).textContent()) ?? '').trim(),
+        );
+      }
+    }
+
+    return values;
+  };
 
   getPlanId = async () => {
     await this.elements.planInfoIcon.hover();
@@ -259,10 +287,45 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openDetailsTab = async (tabName: 'Examples' | 'Explain' | 'Tables') => {
+    const {
+      classicExplainError,
+      codeBlock,
+      explainError,
+      noClassicExplain,
+      noExamples,
+      noJsonExplain,
+      noTable,
+    } = this.elements;
+
+    await this.builders.tab(tabName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(
+      codeBlock
+        .or(noExamples)
+        .or(noClassicExplain)
+        .or(noJsonExplain)
+        .or(explainError)
+        .or(classicExplainError)
+        .or(noTable)
+        .first(),
+    ).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   openExamplesTab = async () => {
     await this.builders.tab('Examples').click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.waitForLoad();
     await expect(this.elements.codeBlock.first()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openFilteredByService = async (url: string, serviceName: string) => {
+    await this.page.goto(url);
+    await this.waitForLoad();
+    await this.selectFilter(serviceName, this.builders.filterCheckboxInGroup(serviceName, 'Service Name'));
+    await expect(this.page).toHaveURL((pageUrl) =>
+      pageUrl.searchParams.getAll('var-service_name').includes(serviceName),
+    );
+    await this.waitForLoad();
   };
 
   openInNewTab = async (url: string) => {
@@ -316,6 +379,13 @@ export default class StoredMetricsPage extends BasePage {
     await this.inputs.search.press('Enter');
   };
 
+  searchFilteredByService = async (url: string, serviceName: string, query: string) => {
+    await expect(async () => {
+      await this.openFilteredByService(url, serviceName);
+      await this.searchByQueryText(query);
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
   selectFilter = async (value: string, checkbox: Locator) => {
     await this.inputs.filterBy.fill(value, { timeout: Timeouts.THIRTY_SECONDS });
     await checkbox.click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -346,6 +416,12 @@ export default class StoredMetricsPage extends BasePage {
 
   selectRow = async (rowNumber: number) => {
     await this.builders.queryRow(rowNumber).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForLoad();
+    await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+  };
+
+  selectRowByQueryStart = async (queryStart: string) => {
+    await this.builders.workloadRowStartingWith(queryStart).click({ timeout: Timeouts.ONE_MINUTE });
     await this.waitForLoad();
     await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
   };

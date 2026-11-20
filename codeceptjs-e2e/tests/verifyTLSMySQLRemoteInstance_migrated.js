@@ -278,7 +278,8 @@ Data(maxQueryLengthInstances).Scenario(
     if (maxQueryLength === '' || maxQueryLength === '-1') {
       // QAN has an Example only while the digest is still in performance_schema.events_statements_history,
       // which holds live threads only, so the client holds the connection open and idles on stdin.
-      await I.verifyCommand(`docker exec -d ${container} bash -c '{ echo "SELECT COUNT(*) FROM information_schema.${exampleQueryMarker};"; sleep 120; } | mysql -upmm -ppmm'`);
+      // No function call: without an Example, QAN explains the digest (PMM-12069), and `COUNT ( * )` there is a syntax error.
+      await I.verifyCommand(`docker exec -d ${container} bash -c '{ echo "SELECT * FROM information_schema.${exampleQueryMarker};"; sleep 120; } | mysql -upmm -ppmm'`);
     }
 
     // This extra time is needed for queries to appear in QAN

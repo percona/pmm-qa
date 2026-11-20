@@ -1,5 +1,7 @@
+import AdmZip from 'adm-zip';
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -117,6 +119,82 @@ export default class CliHelper {
     ).stdout;
   };
 
+  getPmmAdminField = (output: string, field: string): string => {
+    const value = output
+      .split('\n')
+      .find((line) => line.startsWith(field))
+      ?.split(':')[1]
+      ?.trim();
+
+    if (!value) throw new Error(`Failed to find '${field}' in pmm-admin output:\n${output}`);
+
+    return value;
+  };
+
+  getPmmAdminServiceAgents = (container: string, serviceId: string) =>
+    (
+      JSON.parse(
+        this.execSilent(`docker exec ${container} pmm-admin list --json`).assertSuccess().stdout,
+      ) as {
+        agent: { agent_type: string; service_id?: string; status: string }[];
+      }
+    ).agent.filter((agent) => agent.service_id === serviceId);
+
+  getPmmAdminStatusField = (container: string, field: string): string =>
+    this.getPmmAdminField(
+      this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
+      field,
+    );
+
+  getSummaryAgentsInfo = (container: string, archivePath: string) => {
+    const archive = this.execute(`docker exec ${container} pmm-admin summary`)
+      .assertSuccess()
+      .stdout.split(' ')[0];
+
+    this.execute(`docker cp ${container}:/${archive} "${archivePath}"`).assertSuccess();
+
+    return (
+      JSON.parse(new AdmZip(archivePath).readAsText('client/status.json')) as {
+        agents_info: { agent_type: string; process_exec_path?: string }[];
+      }
+    ).agents_info;
+  };
+
+  queryMysql = (container: string, user: { password: string; username: string }, query: string) =>
+    this.execute(
+      `docker exec ${container} mysql -u${user.username} -p${user.password} --batch --skip-column-names mysql -e "${query}"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
+  queryPostgresql = (container: string, query: string) =>
+    this.execute(`docker exec ${container} psql -U postgres -tAc "${query}"`).assertSuccess().stdout.trim();
+
+  readMongodbTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca-certs.pem'), key: read('client.pem') };
+  };
+
+  readMysqlTlsCertificates = (container: string) => {
+    // mysqld's auto-generated PEM files end in a NUL byte.
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /var/lib/mysql/${file}`)
+        .assertSuccess()
+        .stdout.replace(/\0+$/, '')
+        .trim();
+
+    return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
+  };
+
+  readTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat certificates/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca.crt'), cert: read('client.crt'), key: read('client.pem') };
+  };
+
   /**
    * Stops and removes a docker container, ignoring one that does not exist. Any other removal
    * failure is reported here, since the name would stay taken for the next `docker run`.
@@ -132,6 +210,30 @@ export default class CliHelper {
 
     if (!removal.stderr.includes('No such container')) removal.assertSuccess();
   };
+
+  /**
+   * Removes a service through a container's pmm-admin, ignoring one that is not registered.
+   *
+   * @param   container     container whose pmm-agent registered the service
+   * @param   serviceType   pmm-admin service type
+   * @param   serviceName   name of the service to remove
+   */
+  removeService = (container: string, serviceType: ServiceType, serviceName: string) => {
+    const removal = this.execSilent(
+      `docker exec ${container} pmm-admin remove ${serviceType} ${serviceName}`,
+    );
+
+    if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
+  };
+
+  setPgStatStatementsMax = (container: string, max: number) => {
+    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_statements.max = ${max};`);
+    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
+  };
+
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
@@ -149,5 +251,16 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+  };
+
+  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
+  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
+    const allTls = this.execSilent(
+      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
+    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }

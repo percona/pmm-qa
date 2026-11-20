@@ -24,7 +24,11 @@ to pull the latest published image anyway, e.g. on a long-lived machine. Set
 `PREBAKED_REGISTRY=` to always build locally, e.g. to try a Dockerfile change,
 or prebake them with `./build_images ps=8.4 pdpgsql=17`.
 
-PS and MySQL keep the official database container unprivileged. Their
+Every image runs Oracle Linux 9 with systemd as PID 1 (MySQL 5.7, PSMDB and
+the KDC excepted; see [ARCHITECTURE.md](ARCHITECTURE.md)). `pmm-agent` runs
+as a systemd unit, so `dnf install pmm-client` restarts the agent on its own.
+
+PS and MySQL keep the database container unprivileged. Their
 `pmm-agent` runs there too, unless `--nomad` is passed; then it runs in a
 companion container that shares the database container's
 network, PID namespace, PMM installation, data volumes and temporary files.

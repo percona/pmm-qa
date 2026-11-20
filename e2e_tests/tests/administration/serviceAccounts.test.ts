@@ -90,11 +90,8 @@ pmmTest(
     const status = cliHelper
       .execute(`docker exec ${psContainerName} pmm-admin status`)
       .assertSuccess().stdout;
-    const agentId = /^Agent ID\s*:\s*(\S+)/m.exec(status)?.[1];
-    const nodeName = /^Node name\s*:\s*(\S+)/m.exec(status)?.[1];
-
-    if (!agentId || !nodeName) throw new Error(`No Agent ID or Node name in pmm-admin status:\n${status}`);
-
+    const agentId = cliHelper.getPmmAdminField(status, 'Agent ID');
+    const nodeName = cliHelper.getPmmAdminField(status, 'Node name');
     const nodeServiceAccount = `pmm-agent-sa-${nodeName}`;
 
     try {
