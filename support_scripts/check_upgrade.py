@@ -114,6 +114,10 @@ class PmmServerComponents(unittest.TestCase):
     def test_victoria_metrics_alert_status(self):
         if test_mode != "post":
             self.skipTest(POST_UPGRADE)
+        if expected_pmm_minor_version >= 11:
+            # PMM-15182: vmalert was removed in 3.11.0.
+            self.assertEqual('0', server_command("sh -c 'supervisorctl status | grep -c vmalert || true'"))
+            return
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
 
     def test_vertamedia_clickhouse_plugin_absent(self):
