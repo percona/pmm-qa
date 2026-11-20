@@ -62,6 +62,8 @@ export default class Dashboards extends BasePage {
             .getByRole('row')
             .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
         ),
+    legendSeries: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('tbody').getByRole('button'),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -109,6 +111,10 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('combobox'),
+    tableLink: (panelName: string, linkText: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
+    tableRow: (panelName: string, rowText: string) =>
+      this.builders.tableRows(panelName).filter({ hasText: rowText }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
@@ -255,6 +261,24 @@ export default class Dashboards extends BasePage {
     );
 
     return seconds ? Number(seconds[1]) : NaN;
+  };
+
+  /** The threshold color a stat panel in background color mode shows. */
+  getStatColor = async (panelName: string): Promise<'green' | 'orange' | 'red'> => {
+    const background = await this.builders
+      .panelContentByExactName(panelName)
+      .locator('[style*="background"]')
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
+    const color = /rgba?\((\d+), (\d+)/.exec(background);
+
+    if (!color) throw new Error(`${panelName} has no background color: ${background}`);
+
+    const [red, green] = [Number(color[1]), Number(color[2])];
+
+    if (green > red) return 'green';
+
+    return green >= 100 ? 'orange' : 'red';
   };
 
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {

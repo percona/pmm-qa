@@ -12,7 +12,8 @@ export type DropdownName =
   | 'Cluster'
   | 'Node'
   | 'Replication Set'
-  | 'Namespace';
+  | 'Namespace'
+  | 'Search Service';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;

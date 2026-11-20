@@ -25,6 +25,7 @@ export interface GetServices {
 }
 
 export enum ServiceType {
+  external = 'external',
   mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
