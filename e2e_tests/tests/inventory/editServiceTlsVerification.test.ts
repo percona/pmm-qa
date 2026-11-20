@@ -77,6 +77,7 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
     pmmTest(
       `PMM-T2737 - Verify skipping TLS verification accepts a server certificate from an untrusted CA for ${name} service ${tag}`,
       async ({ api, editServicePage, tlsHelper }) => {
+        // eslint-disable-next-line playwright/no-skipped-test -- skip-until: 2026-12-03 -- PostgreSQL verifies a stored CA even with skip verification on (PMM-15940); unskip once it is fixed.
         pmmTest.skip(
           name === 'ssl_pdpgsql',
           'PostgreSQL verifies a stored CA even with skip verification on, see PMM-15940',

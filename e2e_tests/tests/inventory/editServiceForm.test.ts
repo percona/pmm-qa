@@ -43,8 +43,7 @@ for (const { name, serviceRegex } of formServices) {
         ...(endpoint ? [endpoint.value] : []),
       ]);
 
-      await editServicePage.open(service.service_id);
-      await expect(editServicePage.builders.fieldByLabel('Connection timeout (seconds)')).toHaveCount(1);
+      await expect(editServicePage.builders.fieldByLabel(/^Environment$/)).toHaveCount(1);
     },
   );
 }
