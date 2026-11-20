@@ -103,10 +103,8 @@ export default class K8sHelper {
     const before = this.getVolumeUsage(pod, dir, container);
     const fillMb = Math.floor((before.sizeMb * percent) / 100 - before.usedMb);
 
-    // dd truncates the file first, so a repeat leaves the same fill.
     this.execInPod(pod, `dd if=/dev/zero of=${dir}/${fileName} bs=1M count=${fillMb}`, {
       container,
-      retryIfKilled: true,
     }).assertSuccess();
 
     return this.getVolumeUsage(pod, dir, container);
