@@ -3788,15 +3788,17 @@
       "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12355/",
       "by": "Investigator routine",
       "at": "2026-11-20T02:56:26Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-20T02:50:05Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "ha backup-restore #53: PMM-T2387/T2388 failed because kubectl exec into pods hung until the helper's 120 s kill: the trace shows the fill pod's 875 MB dd finishing in 6.4 s, then 'df -Pm /data' hanging 120.1 s; on retry #1 the pmm-client dd hung the same way, while plain kubectl gets kept working. Cluster events show ROSA hosted-control-plane trouble in that window (pg-operator lease re-election ~02:04, then pod sandbox creation failing with 'context deadline exceeded' against the hypershift API server). Retry #2 only failed because retry #1's alert for the 90%-full pmm-agent-pmm-ha-client-0 was still Pending, a retry-isolation weakness: afterEach removes the file but never waits for the alert to clear. The test passed on pmm3-ha-tests #179 the same night and first try on the identical re-run #54 (dd 4.7 s).",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/54/",
+      "by": "Investigator routine",
+      "at": "2026-11-20T04:15:31Z"
     }
-  ]
+  ],
+  "claims": []
 }
