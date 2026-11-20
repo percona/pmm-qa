@@ -51,6 +51,15 @@ export default class HaBackupHelper {
   /** As `clickhouse-client` in the first replica, the pod `pmm-backup.sh` restores into. */
   clickHouseQuery = (query: string): string => this.clickHouse.query(this.clickHouse.pods()[0], query);
 
+  /** The `[ClickHouse]` lines of a restore Job's log, and the index of the first line matching each stage (-1 if none). */
+  clickHouseRestoreStages = (job: string, stages: RegExp[]): { lines: string[]; order: number[] } => {
+    const lines = this.jobLogs(job)
+      .split('\n')
+      .filter((line) => line.includes('[ClickHouse]'));
+
+    return { lines, order: stages.map((stage) => lines.findIndex((line) => stage.test(line))) };
+  };
+
   cronJobName = (): string =>
     single(this.k8sHelper.getNames('cronjob', backupCronJobSelector), 'backup CronJob');
 

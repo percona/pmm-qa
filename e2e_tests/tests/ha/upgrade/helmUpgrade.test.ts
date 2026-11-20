@@ -271,10 +271,23 @@ pmmTest(
     await nodesPage.verifyHaNodeRoles(podNames, leader);
 
     await pmmTest.step('Verify the stray QAN database copy made before the upgrade is repaired', async () => {
+      const clickHousePods = haClickHouseHelper.pods();
+
       expect(
-        await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIFTEEN_MINUTES),
+        await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIFTEEN_MINUTES),
         'The repair must keep the copy holding QAN data, not the empty stray one',
       ).not.toEqual(before.strayUuid);
+
+      const rowsBefore = new Date(Date.now() - Timeouts.FIVE_MINUTES);
+
+      await expect(async () => {
+        const rows = haClickHouseHelper.syncedRowsBefore(clickHousePods, rowsBefore);
+
+        expect(
+          new Set(rows).size,
+          `Rows before ${rowsBefore.toISOString()} per server: ${rows.join(', ')}`,
+        ).toEqual(1);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
     });
   },
 );

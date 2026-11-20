@@ -9,10 +9,8 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2131 + PMM-T2773 Verify every PMM HA node reports the same cluster status and every ClickHouse server holds one QAN database @pmm-ha',
+  'PMM-T2131 + PMM-T2773 - Verify every PMM HA node reports the same cluster status and every ClickHouse server holds one QAN database @pmm-ha',
   async ({ api, haClickHouseHelper, haClusterHelper }) => {
-    pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
-
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
@@ -58,8 +56,8 @@ pmmTest(
       const clickHousePods = haClickHouseHelper.pods();
 
       expect(clickHousePods, 'PMM HA runs three ClickHouse servers').toHaveLength(3);
-      // The leader repairs an install-time split within its 10-minute check interval.
-      await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIFTEEN_MINUTES);
+      // Shorter than the leader's 10-minute repair interval, so an install that split fails here.
+      await haClickHouseHelper.waitForOnePmm(clickHousePods);
     });
   },
 );

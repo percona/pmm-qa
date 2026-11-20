@@ -126,9 +126,7 @@ pmmTest(
 
     await pmmTest.step('Verify every server holds the same QAN rows', async () => {
       await expect(async () => {
-        haClickHouseHelper.syncMetrics(serverTwo);
-
-        const rows = clickHousePods.map((pod) => haClickHouseHelper.metricsRowsBefore(pod, windowEnd));
+        const rows = haClickHouseHelper.syncedRowsBefore(clickHousePods, windowEnd);
 
         expect(
           new Set(rows).size,

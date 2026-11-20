@@ -162,18 +162,13 @@ pmmTest(
     await pmmTest.step(
       'Verify the restore recreated one QAN database on every ClickHouse server',
       async () => {
-        const lines = haBackupHelper
-          .jobLogs(restoreJob)
-          .split('\n')
-          .filter((line) => line.includes('[ClickHouse]'));
-        const at = (pattern: RegExp) => lines.findIndex((line) => pattern.test(line));
-        const [, restoredUuid] = /Recreated pmm with UUID (\S+) on every pod/.exec(lines.join('\n')) ?? [];
-        const order = [
+        const { lines, order } = haBackupHelper.clickHouseRestoreStages(restoreJob, [
           /\] (download|untar) /,
           /Recreated pmm with UUID/,
           /restore --rm /,
           /Restore complete/,
-        ].map(at);
+        ]);
+        const [, restoredUuid] = /Recreated pmm with UUID (\S+) on every pod/.exec(lines.join('\n')) ?? [];
 
         expect(order, `Every ClickHouse restore stage must be logged:\n${lines.join('\n')}`).not.toContain(
           -1,
@@ -184,6 +179,17 @@ pmmTest(
         expect(await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIVE_MINUTES)).toEqual(
           restoredUuid,
         );
+
+        const before = new Date(Date.now() - Timeouts.FIVE_MINUTES);
+
+        await expect(async () => {
+          const rows = haClickHouseHelper.syncedRowsBefore(clickHousePods, before);
+
+          expect(
+            new Set(rows).size,
+            `Rows before ${before.toISOString()} per server: ${rows.join(', ')}`,
+          ).toEqual(1);
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
       },
     );
 

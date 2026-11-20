@@ -134,6 +134,13 @@ export default class HaClickHouseHelper {
       .not.toContain(pod);
   };
 
+  syncedRowsBefore = (pods: string[], before: Date): number[] =>
+    pods.map((pod) => {
+      this.syncMetrics(pod);
+
+      return this.metricsRowsBefore(pod, before);
+    });
+
   syncMetrics = (pod: string): void => {
     this.query(pod, 'SYSTEM SYNC REPLICA pmm.metrics');
   };
