@@ -62,6 +62,10 @@ through its `GF_SMTP_*` variables. Open `http://localhost:8025` to see the messa
 and restart pmm-managed in the `pmm-server` container, so they run in their own CI job. Its tag must
 not start with `@advisors`, which `--grep` would also match.
 
+`@advisor-telemetry` tests start a second PMM Server, `pmm-server-advisor-telemetry` on port 460,
+with debug telemetry every 15 s, and read the reports it logs as "Telemetry captured". It monitors the
+`ps_pmm_*` container from `pmm-framework --database ps=8.4` twice, as two remote services.
+
 `@advisor-databases` tests start their own `mysql:5.7`, `mongo:8.2` and `postgres:17` containers on the
 `pmm-qa` network and add them as remote services that PMM Server's own agent monitors. `mysql:5.7` has no
 arm64 image, so their CI job runs on amd64 only. `@advisor-versions` tests do the same with pinned MySQL,
@@ -112,6 +116,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 - `@advisor-databases`
 - `@advisor-scheduling`
+- `@advisor-telemetry`
 - `@advisor-versions`
 - `@advisors`
 - `@alerting`
@@ -150,7 +155,9 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nomad`
 - `@not-ui-pipeline`
 - `@pbm-nightly`
+- `@pdpgsql-pmm-integration`
 - `@permissions-nightly`
+- `@pgss-pmm-integration`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
