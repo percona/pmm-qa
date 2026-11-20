@@ -1,15 +1,19 @@
+import { readFile } from 'node:fs/promises';
+import { expect } from '@playwright/test';
 import BasePage from '../base.page';
 import InventoryPagination from '@components/inventoryPagination.component';
 import { Timeouts } from '@helpers/timeouts';
 import { tableDataRows } from '@helpers/tableLocators';
-import { expect } from '@playwright/test';
 
 export default class ServicesPage extends BasePage {
   readonly url = 'pmm-ui/inventory/services';
+  readonly exportFileName = /^inventory_services_export_\d{8}_\d{6}\.csv$/;
   readonly pagination = new InventoryPagination(this.page);
   builders = {
     addressByServiceName: (serviceName: string) =>
       this.builders.serviceRow(serviceName).locator('td:nth-child(7)'),
+    // A cluster row's expand button keeps the name "Expand" either way, only its tooltip changes
+    expandRowButton: (name: string) => this.builders.serviceRow(name).getByRole('button', { name: 'Expand' }),
     monitoringStatusByServiceName: (serviceName: string) =>
       this.builders.serviceRow(serviceName).getByTestId('monitoring-status-link'),
     selectServiceCheckbox: (serviceName: string) =>
@@ -35,8 +39,11 @@ export default class ServicesPage extends BasePage {
     confirmLabelsChange: this.page.getByTestId('confirm-changes-modal-confirm'),
     delete: this.page.getByTestId('delete-services-button'),
     editService: this.page.getByRole('menuitem', { name: 'Edit' }),
+    export: this.page.getByTestId('export-services-button'),
     forceDelete: this.page.getByRole('checkbox', { name: 'Force mode' }),
+    organizeByClusters: this.page.getByTestId('organize-by-clusters-switch'),
     saveChanges: this.page.getByTestId('edit-service-submit'),
+    showFilters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
   };
   elements = {
     serviceDetails: this.page.getByTestId('service-details'),
@@ -48,6 +55,7 @@ export default class ServicesPage extends BasePage {
     cluster: this.page.getByRole('textbox', { name: 'Cluster' }),
     environment: this.page.getByRole('textbox', { name: 'Environment' }),
     replicationSet: this.page.getByRole('textbox', { name: 'Replication set' }),
+    serviceNameFilter: this.page.getByPlaceholder('Filter by Service Name', { exact: true }),
   };
   messages = {
     deleteConfirmation: this.page.getByTestId('inventory-delete-modal-message'),
@@ -79,6 +87,35 @@ export default class ServicesPage extends BasePage {
     await this.inputs.cluster.fill(labels.cluster);
     await this.buttons.saveChanges.click();
     await this.buttons.confirmLabelsChange.click();
+  };
+
+  // Each exported row keyed by its CSV header
+  exportServices = async (): Promise<Record<string, string>[]> => {
+    const downloadPromise = this.page.waitForEvent('download');
+
+    await this.buttons.export.click();
+
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toMatch(this.exportFileName);
+
+    const [header, ...rows] = (await readFile(await download.path(), 'utf8'))
+      .split(/\r?\n/)
+      .filter(Boolean)
+      // export-to-csv quotes strings but not numbers, so split on the commas outside quotes
+      .map((line) =>
+        line
+          .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+          .map((cell) => cell.replace(/^"(.*)"$/, '$1').replaceAll('""', '"')),
+      );
+
+    return rows.map((row) => Object.fromEntries(header.map((column, index) => [column, row[index]])));
+  };
+
+  filterByServiceName = async (text: string) => {
+    if (!(await this.inputs.serviceNameFilter.isVisible())) await this.buttons.showFilters.click();
+
+    await this.inputs.serviceNameFilter.fill(text);
   };
 
   getServiceNames = async () => (await this.elements.serviceNames.allTextContents()).toSorted();
