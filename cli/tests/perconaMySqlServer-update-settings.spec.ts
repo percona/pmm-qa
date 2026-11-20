@@ -166,6 +166,9 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
     });
 
     test('PMM-T2798 - Verify pmm-admin update mysql turns comments parsing off and disables slow log rotation', async ({}) => {
+      // The service starts in the state the update changes, so one update is enough: with two in a row PMM Server can lose the first one
+      // when the restarted agent's status report is saved at the same moment, and the second would report a wrong "before":
+      // https://perconadev.atlassian.net/browse/PMM-15835
       const serviceId = await addService('--comments-parsing=on --size-slow-logs=2MiB');
       const slowlogId = (await agentId(serviceId, slowlogAgent))!;
 
@@ -180,6 +183,8 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
       await pmmAdmin.expectAgentsRunning(containerName, [slowlogId], true);
     });
 
+    // PMM Server writes the whole agent row back when it saves a pmm-agent status report, so a report saved at the same moment as an update
+    // restores the old settings and the update, reported as changed, is lost: https://perconadev.atlassian.net/browse/PMM-15835
     test('PMM-T2824 - Verify pmm-admin update mysql stores the comments parsing and slow log size settings while the slowlog Agent reports its status', async ({}) => {
       test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15835');
 
