@@ -160,7 +160,7 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
       const stored = async () => {
         const agent = await pmmApi.getServerAgent(slowlogId);
 
-        return { commentsParsingDisabled: agent.comments_parsing_disabled, maxQueryLogSize: Number(agent.max_query_log_size) };
+        return { commentsParsingDisabled: agent.disable_comments_parsing, maxQueryLogSize: Number(agent.max_slowlog_file_size) };
       };
 
       const on = await updateJson('--comments-parsing=on --size-slow-logs=2MiB');
