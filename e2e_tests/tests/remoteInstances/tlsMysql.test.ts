@@ -167,13 +167,15 @@ pmmTest(
   },
 );
 
-for (const maxQueryLength of ['---;', 'aa', '^', '`', '"']) {
+// The field is a number input, so text can't be typed into it; values below -1 are the invalid ones.
+for (const maxQueryLength of ['-2', '-100']) {
   pmmTest(
     `PMM-T1405 - Verify validation of Max Query Length option on Add remote MySQL page @max-length @ssl @ssl-mysql @ssl-remote @not-ui-pipeline | ${maxQueryLength}`,
     async ({ addInstancePage, page }) => {
       await page.goto(addInstancePage.url);
       await addInstancePage.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
       await addInstancePage.inputs.maxQueryLength.fill(maxQueryLength, { timeout: Timeouts.ONE_MINUTE });
+      await addInstancePage.inputs.maxQueryLength.blur();
       await expect(addInstancePage.messages.maxQueryLengthError).toContainText(
         'Value should be greater or equal to -1',
         { timeout: Timeouts.THIRTY_SECONDS },
