@@ -37,7 +37,11 @@ pmmTest.afterEach(
     await haClusterHelper.ensureServing(api.haApi);
     // A failed step can leave the QAN database split; the restart repairs it now instead of within 10 minutes.
     haClickHouseHelper.restartQanApi(haClusterHelper.leaderFromPods());
-    await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIVE_MINUTES);
+
+    const clickHousePods = haClickHouseHelper.pods();
+
+    expect(clickHousePods, 'PMM HA runs three ClickHouse servers').toHaveLength(3);
+    await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIVE_MINUTES);
     await markers?.remove();
   },
 );
