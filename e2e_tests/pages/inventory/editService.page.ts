@@ -109,6 +109,10 @@ export default class EditServicePage extends BasePage {
     querySourceRestriction: this.page.getByTestId('query-source-restriction'),
     rdsCredentials: this.page.getByTestId('rds-credentials'),
     rdsHostCredentialsNote: this.page.getByTestId('rds-host-credentials-note'),
+    serviceDetailControls: this.page
+      .getByTestId('edit-service-form')
+      .getByTestId('service-details')
+      .locator('input, textarea, select, [contenteditable]'),
     serviceDetails: this.page.getByTestId('edit-service-form').getByTestId('service-details'),
     serviceNameLabels: this.page.getByTestId('edit-service-form').getByText(/^(Service name|Name)$/),
     settingsChangedInfo: this.page.getByTestId('settings-changed-info'),
@@ -482,13 +486,10 @@ export default class EditServicePage extends BasePage {
   };
 
   verifyServiceDetailsReadOnly = async (values: string[]) => {
-    const { editableDetailFields, serviceDetails, serviceNameLabels } = this.elements;
+    const { editableDetailFields, serviceDetailControls, serviceNameLabels } = this.elements;
 
     await expect(serviceNameLabels, 'the service name has no row of its own').toHaveCount(0);
-    await expect(
-      this.elements.serviceDetailControls,
-      'the Service block has no form controls',
-    ).toHaveCount(0);
+    await expect(serviceDetailControls, 'the Service block has no form controls').toHaveCount(0);
     await expect(editableDetailFields, 'no field edits the service name, node or endpoint').toHaveCount(0);
 
     for (const value of values) {
