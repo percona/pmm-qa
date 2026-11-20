@@ -417,6 +417,8 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   });
 
   test('PMM-T2528 - Verify Change agent enable and disable for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
+    // skip-until: 2026-12-04
+    test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15835');
     test.setTimeout(5 * 60_000);
     const enableCases = [
       {
