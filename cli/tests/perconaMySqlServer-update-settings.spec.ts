@@ -82,37 +82,38 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
   });
 
   test.describe('flags without a case key yet', () => {
+    const filesDir = '/tmp/mysql_update_tls';
+
     test.beforeAll(async ({}) => {
       await skipWithoutUpdateCommand(containerName);
+    });
+
+    test.afterEach(async ({}) => {
+      await (await cli.exec(`docker exec ${containerName} rm -rf ${filesDir}`)).assertSuccess();
     });
 
     test('PMM-TXXXX-mysql-tls - Verify pmm-admin update mysql applies TLS and the client certificate files', async ({}) => {
       const serviceId = await addService();
       const exporterId = (await agentId(serviceId, exporterAgent))!;
       const datadir = await mysqlValue('SELECT @@datadir');
-      const filesDir = '/tmp/mysql_update_tls';
 
       // The server presents the certificates it generated at its first start, so the connection check completes the TLS handshake with them.
       // Its PEM files end in a NUL byte, which UpdateService stores as is and PostgreSQL refuses, so the update gets copies without it.
       await (await cli.exec(`docker exec ${containerName} sh -c 'rm -rf ${filesDir} && mkdir ${filesDir} && for f in ca.pem client-cert.pem client-key.pem; do tr -d "\\000" < ${datadir}$f > ${filesDir}/$f; done'`)).assertSuccess();
 
-      try {
-        const output = await update(`--tls --tls-skip-verify --tls-ca=${filesDir}/ca.pem --tls-cert=${filesDir}/client-cert.pem --tls-key=${filesDir}/client-key.pem`);
-        expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
-          '--tls (was --no-tls)',
-          '--tls-ca (new value)',
-          '--tls-cert (new value)',
-          '--tls-key=*** (was empty)',
-          '--tls-skip-verify (was --no-tls-skip-verify)',
-        ]);
+      const output = await update(`--tls --tls-skip-verify --tls-ca=${filesDir}/ca.pem --tls-cert=${filesDir}/client-cert.pem --tls-key=${filesDir}/client-key.pem`);
+      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
+        '--tls (was --no-tls)',
+        '--tls-ca (new value)',
+        '--tls-cert (new value)',
+        '--tls-key=*** (was empty)',
+        '--tls-skip-verify (was --no-tls-skip-verify)',
+      ]);
 
-        const agent = await pmmApi.getServerAgent(exporterId);
-        expect(agent.tls, 'TLS is not turned on on PMM Server').toBe(true);
-        expect(agent.tls_skip_verify, 'Certificate verification is not skipped on PMM Server').toBe(true);
-        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
-      } finally {
-        await (await cli.exec(`docker exec ${containerName} rm -rf ${filesDir}`)).assertSuccess();
-      }
+      const agent = await pmmApi.getServerAgent(exporterId);
+      expect(agent.tls, 'TLS is not turned on on PMM Server').toBe(true);
+      expect(agent.tls_skip_verify, 'Certificate verification is not skipped on PMM Server').toBe(true);
+      await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
     });
 
     test('PMM-TXXXX-mysql-collectors - Verify pmm-admin update mysql disables and enables a collector', async ({}) => {

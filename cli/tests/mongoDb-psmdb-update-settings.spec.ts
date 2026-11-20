@@ -234,8 +234,24 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
   });
 
   test.describe('flags without a case key yet', () => {
+    const renameUser = 'pmm_update_rename_user';
+    const adminUser = mongo.adminUser(containerName, mongoUri, renameUser);
+    let renameUserCreated = false;
+
     test.beforeAll(async ({}) => {
       await skipWithoutUpdateCommand(containerName);
+    });
+
+    test.afterEach(async ({}) => {
+      await pmmCli.runEach([
+        async () => {
+          await update(`--agent-password=${agentPassword} --username=${mongoConnection.username} --password=${mongoConnection.password} --port=27017`);
+        },
+        async () => {
+          if (renameUserCreated) await adminUser.drop();
+          renameUserCreated = false;
+        },
+      ]);
     });
 
     test('PMM-TXXXX-histograms - Verify pmm-admin update mongodb turns the diagnostic data histograms on and off', async ({}) => {
@@ -266,31 +282,20 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
     test('PMM-TXXXX-agent-password - Verify pmm-admin update mongodb changes the password of the exporter endpoint', async ({}) => {
       const newPassword = 'newpass';
 
-      try {
-        const output = await update(`--agent-password=${newPassword}`);
-        expect(pmmAdmin.getChangedSettings(output)).toEqual(['--agent-password (new value)']);
-        await mongo.expectMongoUp(containerName, serviceName, newPassword);
-        expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'The old password still opens the endpoint').not.toContain('mongodb_up');
-      } finally {
-        await update(`--agent-password=${agentPassword}`);
-      }
-      await mongo.expectMongoUp(containerName, serviceName, agentPassword);
+      const output = await update(`--agent-password=${newPassword}`);
+      expect(pmmAdmin.getChangedSettings(output)).toEqual(['--agent-password (new value)']);
+      await mongo.expectMongoUp(containerName, serviceName, newPassword);
+      expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'The old password still opens the endpoint').not.toContain('mongodb_up');
     });
 
     test('PMM-TXXXX-username - Verify pmm-admin update mongodb changes the user of the exporter and the QAN agent', async ({}) => {
-      const user = 'pmm_update_rename_user';
-      const adminUser = mongo.adminUser(containerName, mongoUri, user);
       await adminUser.create('rename-password');
+      renameUserCreated = true;
 
-      try {
-        const output = await update(`--username=${user} --password=rename-password`);
-        expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--password (new value)', `--username=${user} (was ${mongoConnection.username})`]);
-        await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
-        await mongo.expectMongoUp(containerName, serviceName, agentPassword);
-      } finally {
-        await update(`--username=${mongoConnection.username} --password=${mongoConnection.password}`);
-        await adminUser.drop();
-      }
+      const output = await update(`--username=${renameUser} --password=rename-password`);
+      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--password (new value)', `--username=${renameUser} (was ${mongoConnection.username})`]);
+      await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
+      await mongo.expectMongoUp(containerName, serviceName, agentPassword);
     });
 
     test('PMM-TXXXX-port - Verify pmm-admin update mongodb changes the port only when the connection works or is not checked', async ({}) => {
@@ -300,13 +305,12 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
       await cli.expectFailure(rejected, 'Connection check failed');
       expect((await pmmApi.getServerService(serviceId)).port, 'Port changed by a failed update').toEqual(port);
 
-      try {
-        const moved = await update('--port=27018 --skip-connection-check');
-        expect(pmmAdmin.getChangedSettings(moved)).toEqual([`--port=27018 (was ${port})`]);
-        expect((await pmmApi.getServerService(serviceId)).port, 'Port is not changed on PMM Server').toEqual(27018);
-      } finally {
-        await update(`--port=${port}`);
-      }
+      const moved = await update('--port=27018 --skip-connection-check');
+      expect(pmmAdmin.getChangedSettings(moved)).toEqual([`--port=27018 (was ${port})`]);
+      expect((await pmmApi.getServerService(serviceId)).port, 'Port is not changed on PMM Server').toEqual(27018);
+
+      const restored = await update(`--port=${port}`);
+      expect(pmmAdmin.getChangedSettings(restored)).toEqual([`--port=${port} (was 27018)`]);
       await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
       await mongo.expectMongoUp(containerName, serviceName, agentPassword);
     });

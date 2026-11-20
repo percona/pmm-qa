@@ -92,14 +92,22 @@ test.describe('ProxySQL pmm-admin update', { tag: '@proxysql' }, () => {
       expect(cleared.custom_labels ?? {}, 'Custom labels are not cleared on PMM Server').toEqual({});
     });
 
-    test('PMM-TXXXX-proxysql-tls - Verify pmm-admin update proxysql turns TLS on and off over a TLS connection', async ({}) => {
+    test.describe('over TLS', () => {
       const admin = async (sql: string, flags = '') => cli.exec(`docker exec -e MYSQL_PWD=${PXC_PASSWORD} ${containerName} mysql -u${PXC_USER} -h127.0.0.1 -P6032 ${flags} -e "${sql}"`);
       const haveSsl = async (value: string) => (await admin(`UPDATE global_variables SET variable_value = '${value}' WHERE variable_name = 'mysql-have_ssl'; LOAD MYSQL VARIABLES TO RUNTIME`)).assertSuccess();
-      const original = (await admin("SELECT variable_value FROM global_variables WHERE variable_name = 'mysql-have_ssl'", '-NB')).stdout.trim();
+      let originalHaveSsl = '';
 
       // With mysql-have_ssl on, the admin interface the exporter reads offers TLS with ProxySQL's own certificate.
-      try {
+      test.beforeEach(async ({}) => {
+        originalHaveSsl = (await admin("SELECT variable_value FROM global_variables WHERE variable_name = 'mysql-have_ssl'", '-NB')).stdout.trim();
         await haveSsl('true');
+      });
+
+      test.afterEach(async ({}) => {
+        if (originalHaveSsl) await haveSsl(originalHaveSsl);
+      });
+
+      test('PMM-TXXXX-proxysql-tls - Verify pmm-admin update proxysql turns TLS on and off over a TLS connection', async ({}) => {
         await (await admin('SELECT 1', '--ssl-mode=REQUIRED')).assertSuccess();
         const serviceId = await addService();
         const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, 'AGENT_TYPE_PROXYSQL_EXPORTER'))!;
@@ -115,9 +123,7 @@ test.describe('ProxySQL pmm-admin update', { tag: '@proxysql' }, () => {
         expect(pmmAdmin.getChangedSettings(off).sort()).toEqual(['--no-tls (was --tls)', '--no-tls-skip-verify (was --tls-skip-verify)']);
         expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned off on PMM Server').toBe(false);
         await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
-      } finally {
-        await haveSsl(original);
-      }
+      });
     });
 
     test('PMM-TXXXX-proxysql-metrics-mode - Verify pmm-admin update proxysql keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {

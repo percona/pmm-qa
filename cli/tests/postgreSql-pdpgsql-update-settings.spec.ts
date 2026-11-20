@@ -77,9 +77,14 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
     const monitorAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT';
     const exporterAgent = 'AGENT_TYPE_POSTGRES_EXPORTER';
     const statementsAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATEMENTS_AGENT';
+    const tlsFilesName = 'pgsql_update_tls';
 
     test.beforeAll(async ({}) => {
       await skipWithoutUpdateCommand(containerName);
+    });
+
+    test.afterEach(async ({}) => {
+      await (await cli.exec(`docker exec ${containerName} rm -rf /tmp/${tlsFilesName}`)).assertSuccess();
     });
 
     test('PMM-TXXXX-pg-qan - Verify pmm-admin update postgresql changes the max query length and the query examples of the QAN agent', async ({}) => {
@@ -136,23 +141,19 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
     test('PMM-TXXXX-pg-tls-files - Verify pmm-admin update postgresql stores the TLS flags and files', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const exporterId = (await agentId(serviceId, exporterAgent))!;
-      const certificate = await pmmCli.createSelfSignedCertificate(containerName, 'pgsql_update_tls');
+      const certificate = await pmmCli.createSelfSignedCertificate(containerName, tlsFilesName);
 
       // This setup has no TLS server, so the connection check is skipped: the test covers what the update sends and hides, not the handshake.
-      try {
-        const output = await update(`--tls --tls-skip-verify --tls-ca-file=${certificate.cert} --tls-cert-file=${certificate.cert} --tls-key-file=${certificate.key} --skip-connection-check`);
-        expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
-          '--tls (was --no-tls)',
-          '--tls-ca-file (new value)',
-          '--tls-cert-file (new value)',
-          '--tls-key-file=*** (was empty)',
-          '--tls-skip-verify (was --no-tls-skip-verify)',
-        ]);
-        expect(pmmAdmin.getCurrentSettings(output)).toContain('--tls-key-file=***');
-        expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
-      } finally {
-        await (await cli.exec(`docker exec ${containerName} rm -rf ${certificate.dir}`)).assertSuccess();
-      }
+      const output = await update(`--tls --tls-skip-verify --tls-ca-file=${certificate.cert} --tls-cert-file=${certificate.cert} --tls-key-file=${certificate.key} --skip-connection-check`);
+      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual([
+        '--tls (was --no-tls)',
+        '--tls-ca-file (new value)',
+        '--tls-cert-file (new value)',
+        '--tls-key-file=*** (was empty)',
+        '--tls-skip-verify (was --no-tls-skip-verify)',
+      ]);
+      expect(pmmAdmin.getCurrentSettings(output)).toContain('--tls-key-file=***');
+      expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
     });
 
     test('PMM-TXXXX-pg-query-source-swap - Verify pmm-admin update postgresql swaps the pg_stat_monitor agent for the pg_stat_statements agent and back', async ({}) => {
