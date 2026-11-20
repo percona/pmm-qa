@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -66,34 +66,31 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
     await expectMongoUp();
   });
 
-  test.describe('flags without a case key yet', () => {
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
+  test.describe('more update flags', () => {
+    const keyCopy = `/tmp/${serviceName}-client.pem`;
+
+    test.afterEach(async ({}) => {
+      await (await cli.exec(`docker exec ${containerName} rm -f ${keyCopy}`)).assertSuccess();
     });
 
-    test('PMM-TXXXX-tls-key-file - Verify pmm-admin update mongodb changes the client certificate key file and its password', async ({}) => {
+    test('PMM-T2793 - Verify pmm-admin update mongodb changes the client certificate key file and its password', async ({}) => {
       const { exporterId } = await addService();
-      const keyCopy = `/tmp/${serviceName}-client.pem`;
       await (await cli.exec(`docker exec ${containerName} cp ${certsDir}/client.pem ${keyCopy}`)).assertSuccess();
 
-      try {
-        const key = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file=${keyCopy}`);
-        expect(pmmAdmin.getChangedSettings(key)).toEqual(['--tls-certificate-key-file (new value)']);
-        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
-        await expectMongoUp();
+      const key = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file=${keyCopy}`);
+      expect(pmmAdmin.getChangedSettings(key)).toEqual(['--tls-certificate-key-file (new value)']);
+      await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+      await expectMongoUp();
 
-        // The key of this setup is not encrypted, so the driver ignores the password; the update still has to store and hide it.
-        const keyPassword = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file-password=unused-password`);
-        expect(pmmAdmin.getChangedSettings(keyPassword)).toEqual(['--tls-certificate-key-file-password=*** (was empty)']);
-        expect(pmmAdmin.getCurrentSettings(keyPassword)).toContain('--tls-certificate-key-file-password=***');
-        await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
-        await expectMongoUp();
-      } finally {
-        await (await cli.exec(`docker exec ${containerName} rm -f ${keyCopy}`)).assertSuccess();
-      }
+      // The key of this setup is not encrypted, so the driver ignores the password; the update still has to store and hide it.
+      const keyPassword = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --tls-certificate-key-file-password=unused-password`);
+      expect(pmmAdmin.getChangedSettings(keyPassword)).toEqual(['--tls-certificate-key-file-password=*** (was empty)']);
+      expect(pmmAdmin.getCurrentSettings(keyPassword)).toContain('--tls-certificate-key-file-password=***');
+      await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
+      await expectMongoUp();
     });
 
-    test('PMM-TXXXX-tls-toggle - Verify pmm-admin update mongodb turns TLS off and on', async ({}) => {
+    test('PMM-T2794 - Verify pmm-admin update mongodb turns TLS off and on', async ({}) => {
       const { exporterId } = await addService();
 
       const off = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --no-tls --skip-connection-check`);

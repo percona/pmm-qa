@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -60,12 +60,8 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
     expect(await exporterPort(), 'Listen port of the exporter is not restored').toEqual(listenPort);
   });
 
-  test.describe('flags without a case key yet', () => {
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
-
-    test('PMM-TXXXX-haproxy-scheme-path - Verify pmm-admin update haproxy changes the scheme and the metrics path and resets them to the defaults', async ({}) => {
+  test.describe('more update flags', () => {
+    test('PMM-T2804 - Verify pmm-admin update haproxy changes the scheme and the metrics path and resets them to the defaults', async ({}) => {
       const serviceId = await addService();
       const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
 
@@ -82,7 +78,7 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
       expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
     });
 
-    test('PMM-TXXXX-haproxy-tls-skip-verify - Verify pmm-admin update haproxy turns certificate verification off and on', async ({}) => {
+    test('PMM-T2805 - Verify pmm-admin update haproxy turns certificate verification off and on', async ({}) => {
       const serviceId = await addService();
       const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, exporterAgent))!;
 

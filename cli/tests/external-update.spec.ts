@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -81,15 +81,11 @@ test.describe('External service pmm-admin update', { tag: '@external' }, () => {
     expect(await pmmAdmin.listServices(containerName), 'Services changed').toEqual(servicesBefore);
   });
 
-  test.describe('flags without a case key yet', () => {
+  test.describe('more update flags', () => {
     const exporterAgent = 'AGENT_TYPE_EXTERNAL_EXPORTER';
     const newListenPort = 42201;
 
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
-
-    test('PMM-TXXXX-external-listen-port - Verify pmm-admin update external changes the listen port only when the connection works or is not checked', async ({}) => {
+    test('PMM-T2800 - Verify pmm-admin update external changes the listen port only when the connection works or is not checked', async ({}) => {
       const serviceId = await addService();
       const exporterPort = async () => (await pmmAdmin.findServiceAgent(containerName, serviceId, exporterAgent))?.port;
       expect(await exporterPort()).toEqual(redisExporterPort);
@@ -107,7 +103,7 @@ test.describe('External service pmm-admin update', { tag: '@external' }, () => {
       expect(await exporterPort(), 'Listen port of the exporter is not restored').toEqual(redisExporterPort);
     });
 
-    test('PMM-TXXXX-external-scheme-path - Verify pmm-admin update external changes the scheme and the metrics path and resets them to the defaults', async ({}) => {
+    test('PMM-T2801 - Verify pmm-admin update external changes the scheme and the metrics path and resets them to the defaults', async ({}) => {
       const serviceId = await addService();
       const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
 
@@ -124,7 +120,7 @@ test.describe('External service pmm-admin update', { tag: '@external' }, () => {
       expect(await pmmAdmin.getServiceAgentIds(containerName, serviceId), 'Agent IDs changed').toEqual(agentIds);
     });
 
-    test('PMM-TXXXX-external-tls-skip-verify - Verify pmm-admin update external turns certificate verification off and on', async ({}) => {
+    test('PMM-T2802 - Verify pmm-admin update external turns certificate verification off and on', async ({}) => {
       const serviceId = await addService();
       const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, exporterAgent))!;
 
