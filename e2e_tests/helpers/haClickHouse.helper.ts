@@ -6,6 +6,10 @@ const clickHouseSelector = 'clickhouse.altinity.com/chi';
 const qanApiLog = '/srv/logs/qan-api2.log';
 const replicatedEngine = "ENGINE = Replicated('/clickhouse/databases/{uuid}', '{shard}', '{replica}')";
 
+export const pmmDbCreated = 'Created the missing pmm database with the UUID of the copy with the most rows.';
+export const pmmDbRecreated = 'Recreated the pmm database with the UUID of the copy with the most rows.';
+export const pmmDbSkipped = 'Skipped the pmm database check.';
+
 /** One ClickHouse server's `pmm` database: its UUID ('' when it has none) and `pmm.metrics` rows. */
 export interface PmmCopy {
   pod: string;

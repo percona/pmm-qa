@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import { RestoreMarkers } from '@helpers/haBackup.helper';
+import { pmmDbCreated } from '@helpers/haClickHouse.helper';
 
 const run = Date.now();
 const backupJob = `pmm-e2e-backup-${run}`;
@@ -65,6 +66,24 @@ pmmTest(
       );
     });
 
+    const leader = haClusterHelper.leaderFromPods();
+
+    // The backup takes the first pod on a tie, so server 0 loses its copy to tell "most rows" from "first".
+    await pmmTest.step('Drop the QAN database on server 0 right after a leader check', async () => {
+      const since = haClickHouseHelper.pmmDbLog(leader).length;
+
+      haClickHouseHelper.dropPmm(serverZero);
+      haClickHouseHelper.restartQanApi(leader);
+      await expect
+        .poll(() => haClickHouseHelper.pmmDbLogged(leader, since, pmmDbCreated), {
+          message: `The leader must log "${pmmDbCreated}"`,
+          timeout: Timeouts.TWO_MINUTES,
+        })
+        .toBe(true);
+      // The leader's next check is 10 minutes out now, after the backup has picked its pod.
+      haClickHouseHelper.dropPmm(serverZero);
+    });
+
     const backupId = await pmmTest.step('Back up with a Job cloned from the backup CronJob', async () => {
       const mostRows = Math.max(...haClickHouseHelper.pmmCopies(clickHousePods).map((copy) => copy.rows));
 
@@ -75,7 +94,7 @@ pmmTest(
           haBackupHelper.jobLogs(backupJob),
         ) ?? [];
 
-      expect(clickHousePods, 'The backup must name the ClickHouse pod it used').toContain(pod);
+      expect([serverOne, serverTwo], 'The backup must skip the server without QAN data').toContain(pod);
       expect(
         Number(rows),
         'The backup must use the ClickHouse server with the most QAN rows',
@@ -94,6 +113,14 @@ pmmTest(
       ]);
 
       return latest.id;
+    });
+
+    await pmmTest.step('Verify server 0 gets the QAN database and the marker back', async () => {
+      haClickHouseHelper.restartQanApi(leader);
+      expect(await haClickHouseHelper.waitForOnePmm(clickHousePods)).toEqual(sharedUuid);
+      await expect(async () => {
+        expect(await restoreMarkers.found()).toEqual(restoreMarkers.everywhere(['before']));
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
     });
 
     await pmmTest.step(

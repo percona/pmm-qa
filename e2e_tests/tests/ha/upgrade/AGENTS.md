@@ -32,6 +32,7 @@ so nothing survives in memory. Phase 2 writes what phases 4 and 6 compare agains
   "images": ["reg-19jf01na.percona.com/dockerhub-cache/percona/pmm-server:3.9.1"],
   "podNames": ["pmm-ha-0", "pmm-ha-1", "pmm-ha-2"],
   "revision": 1,
+  "strayUuid": "0b6f2c1e-5d4a-4c1f-9a63-2f1e7d8c4b90",
   "version": "3.9.1"
 }
 ```
@@ -42,6 +43,7 @@ so nothing survives in memory. Phase 2 writes what phases 4 and 6 compare agains
 | `podNames` | pod names, sorted | mid and post: **unchanged** - a StatefulSet rolling upgrade reuses names, and both compare this against `/v1/ha/nodes` to prove every pod rejoined |
 | `version` | `/v1/version` from the cluster API | mid: **identical**. post: **not older** (`serverVersionBelow`) - a dev build can report the same version as the release it was cut from, so equality is not required |
 | `images` | deduped `spec.containers[].image` | evidence only; the image assertions compare against the env vars below |
+| `strayUuid` | the UUID of the stray `pmm` copy pre seeds on the third ClickHouse server | post: the one UUID every server ends up with must **not** be this one - the repair keeps the copy holding QAN data |
 
 Path: `$HA_UPGRADE_BASELINE`, defaulting to `output/ha-upgrade-baseline.json`
 relative to `e2e_tests/`. Only the pre-upgrade test writes it; mid and post read it

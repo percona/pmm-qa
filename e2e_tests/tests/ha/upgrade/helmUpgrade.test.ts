@@ -46,6 +46,7 @@ interface Baseline {
   podNames: string[];
   revision: number;
   services: string[];
+  strayUuid: string;
   version: string;
 }
 
@@ -117,20 +118,25 @@ pmmTest(
 
     await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
 
-    await pmmTest.step('Split the QAN database with a stray copy on one ClickHouse server', async () => {
-      const clickHousePods = haClickHouseHelper.pods();
-      const [, , serverTwo] = clickHousePods;
+    const strayUuid = await pmmTest.step(
+      'Split the QAN database with a stray copy on one ClickHouse server',
+      async () => {
+        const clickHousePods = haClickHouseHelper.pods();
+        const [, , serverTwo] = clickHousePods;
 
-      haClickHouseHelper.createStrayPmm(serverTwo);
+        haClickHouseHelper.createStrayPmm(serverTwo);
 
-      // The released build can already be split at install, so only the stray copy made here is asserted.
-      const [zero, one, two] = haClickHouseHelper.pmmCopies(clickHousePods).map((copy) => copy.uuid);
+        // The released build can already be split at install, so only the stray copy made here is asserted.
+        const [zero, one, two] = haClickHouseHelper.pmmCopies(clickHousePods).map((copy) => copy.uuid);
 
-      expect([zero, one], `"${serverTwo}" must hold a pmm database of its own`).not.toContain(two);
-    });
+        expect([zero, one], `"${serverTwo}" must hold a pmm database of its own`).not.toContain(two);
+
+        return two;
+      },
+    );
 
     await pmmTest.step(`Record the baseline in "${baselineFile}"`, async () => {
-      writeBaseline(baseline);
+      writeBaseline({ ...baseline, strayUuid });
     });
   },
 );
@@ -265,7 +271,10 @@ pmmTest(
     await nodesPage.verifyHaNodeRoles(podNames, leader);
 
     await pmmTest.step('Verify the stray QAN database copy made before the upgrade is repaired', async () => {
-      await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIFTEEN_MINUTES);
+      expect(
+        await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIFTEEN_MINUTES),
+        'The repair must keep the copy holding QAN data, not the empty stray one',
+      ).not.toEqual(before.strayUuid);
     });
   },
 );

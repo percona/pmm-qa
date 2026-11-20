@@ -1,10 +1,12 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import {
+  pmmDbCreated as created,
+  pmmDbRecreated as recreated,
+  pmmDbSkipped as skipped,
+} from '@helpers/haClickHouse.helper';
 
-const created = 'Created the missing pmm database with the UUID of the copy with the most rows.';
-const recreated = 'Recreated the pmm database with the UUID of the copy with the most rows.';
-const skipped = 'Skipped the pmm database check.';
 let clickHousePods: string[] = [];
 let stoppedServer: string | undefined;
 
@@ -40,6 +42,9 @@ pmmTest(
       to: String(windowEnd.getTime()),
     });
     const leader = haClusterHelper.leaderFromPods();
+
+    haClickHouseHelper.restartQanApi(leader);
+
     const sharedUuid = await haClickHouseHelper.waitForOnePmm(clickHousePods);
     let queryCount: number | null = null;
 
