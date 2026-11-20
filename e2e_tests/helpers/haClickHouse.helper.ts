@@ -136,14 +136,10 @@ export default class HaClickHouseHelper {
 
   syncedRowsBefore = (pods: string[], before: Date): number[] =>
     pods.map((pod) => {
-      this.syncMetrics(pod);
+      this.query(pod, 'SYSTEM SYNC REPLICA pmm.metrics');
 
       return this.metricsRowsBefore(pod, before);
     });
-
-  syncMetrics = (pod: string): void => {
-    this.query(pod, 'SYSTEM SYNC REPLICA pmm.metrics');
-  };
 
   /** @returns the one `pmm` UUID every server holds, once they all hold it */
   waitForOnePmm = async (pods: string[], timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<string> => {
