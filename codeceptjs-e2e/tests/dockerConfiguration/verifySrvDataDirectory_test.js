@@ -52,8 +52,10 @@ Scenario(
     const qanRows = await I.grabNumberOfVisibleElements(queryAnalyticsPage.data.elements.queryRows);
 
     assert.ok(qanRows > 0, 'Query Analytics are empty');
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1`);
     dashboardPage.waitForDashboardOpened();
+    // System Summary runs pt-summary, which samples vmstat for 5s: under a 5s refresh it never stops loading.
+    dashboardPage.selectRefreshTimeInterval('5s');
     await dashboardPage.waitForGraphsToHaveData(0, 300);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
 
@@ -72,8 +74,9 @@ Scenario(
 
     assert.ok(qanRowsAfterRestart > 0, 'Query Analytics are empty after restart of docker container');
 
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1`);
     dashboardPage.waitForDashboardOpened();
+    dashboardPage.selectRefreshTimeInterval('5s');
     await dashboardPage.waitForGraphsToHaveData(0, 180);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
     I.say(await I.verifyCommand('docker logs pmm-server-empty-data-container'));
