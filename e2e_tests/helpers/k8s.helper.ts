@@ -20,6 +20,12 @@ const kubectlTimeout = Timeouts.TWO_MINUTES;
 
 interface ExecInPodOptions {
   container?: string;
+  /**
+   * Run the command once more when {@link kubectlTimeout} killed it. An exec stream can hang
+   * after the command itself is done while plain API calls still work, as `df` did right after a
+   * 6 s `dd` in pmm3-ha-backup-restore-tests #53. Only for commands that are safe to repeat.
+   */
+  retryIfKilled?: boolean;
   /** Skip logging - kubectl warns about defaulted containers on every call. */
   silent?: boolean;
 }
@@ -75,8 +81,15 @@ export default class K8sHelper {
   execInPod = (podName: string, command: string, options: ExecInPodOptions = {}): ExecReturn => {
     const container = options.container ? `--container=${options.container} ` : '';
     const args = `exec ${podName} ${container}-- ${command}`;
+    const run = (): ExecReturn => (options.silent ? this.execSilent(args) : this.exec(args));
+    const started = Date.now();
+    const result = run();
 
-    return options.silent ? this.execSilent(args) : this.exec(args);
+    if (!options.retryIfKilled || result.code === 0 || Date.now() - started < kubectlTimeout) return result;
+
+    console.log(`"kubectl ${args}" was killed after ${kubectlTimeout / 1_000} s, running it once more`);
+
+    return run();
   };
 
   /** {@link exec} without logging - for reads whose output would flood the report. */
@@ -94,8 +107,10 @@ export default class K8sHelper {
     const before = this.getVolumeUsage(pod, dir, container);
     const fillMb = Math.floor((before.sizeMb * percent) / 100 - before.usedMb);
 
+    // dd truncates the file first, so a repeat leaves the same fill.
     this.execInPod(pod, `dd if=/dev/zero of=${dir}/${fileName} bs=1M count=${fillMb}`, {
       container,
+      retryIfKilled: true,
     }).assertSuccess();
 
     return this.getVolumeUsage(pod, dir, container);
@@ -192,7 +207,11 @@ export default class K8sHelper {
     );
 
   getVolumeUsage = (pod: string, dir: string, container?: string): VolumeUsage => {
-    const result = this.execInPod(pod, `df -Pm ${dir}`, { container, silent: true }).assertSuccess();
+    const result = this.execInPod(pod, `df -Pm ${dir}`, {
+      container,
+      retryIfKilled: true,
+      silent: true,
+    }).assertSuccess();
     const [, sizeMb, usedMb, availableMb] = (result.getStdOutLines()[1] ?? '')
       .trim()
       .split(/\s+/)
