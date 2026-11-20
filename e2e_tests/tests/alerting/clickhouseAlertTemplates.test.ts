@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AlertRuleFilter } from '@interfaces/alerting';
+import { QanAgentType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 import {
   qanAlertLabels,
@@ -18,8 +19,6 @@ pmmTest.describe.configure({ mode: 'default' });
 const folderTitle = 'PMM-15193 ClickHouse alert templates';
 const qanFiringTimeout = Timeouts.FIVE_MINUTES;
 const qanResolveTimeout = Timeouts.FIVE_MINUTES + Timeouts.TWO_MINUTES + Timeouts.ONE_MINUTE;
-const mysqlQan = 'qan-mysql-slowlog-agent';
-const postgresqlQan = 'qan-postgresql-pgstatements-agent';
 let folderUid: string;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
@@ -115,8 +114,8 @@ pmmTest(
   'PMM-T2816 - Verify a QAN slow queries rule fires only for services with a slow query, shows its steps on the Alerts page and resolves on its own @fb-alerting',
   async ({ alertingPage, alertStatusPage, api, dockerHelper }) => {
     const ruleName = 'qan-slow-5';
-    const mysql = await api.inventoryApi.getQanService(mysqlQan);
-    const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
+    const mysql = await api.inventoryApi.getQanService(QanAgentType.mysqlSlowlog);
+    const postgresql = await api.inventoryApi.getQanService(QanAgentType.postgresqlPgStatements);
     const slowServices = [mysql.service_name, postgresql.service_name].sort();
 
     await api.alertingApi.createFastRuleFromTemplate({
@@ -244,8 +243,8 @@ pmmTest(
 pmmTest(
   'PMM-T2817 - Verify filters narrow QAN slow queries alerts by the labels the query returns @fb-alerting',
   async ({ api, dockerHelper }) => {
-    const mysql = await api.inventoryApi.getQanService(mysqlQan);
-    const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
+    const mysql = await api.inventoryApi.getQanService(QanAgentType.mysqlSlowlog);
+    const postgresql = await api.inventoryApi.getQanService(QanAgentType.postgresqlPgStatements);
 
     expect(mysql.environment, 'pmm-framework gives the MySQL service an environment').not.toBe('');
     expect(postgresql.environment, 'and leaves the PostgreSQL service without one').toBe('');
@@ -404,8 +403,8 @@ pmmTest(
   'PMM-T2819 - Verify a node threshold override applies to a QAN slow queries rule only on that node @fb-alerting',
   async ({ alertThresholdsPage, api, dockerHelper, nodesPage, page }) => {
     const ruleName = 'qan-slow-15';
-    const mysql = await api.inventoryApi.getQanService(mysqlQan);
-    const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
+    const mysql = await api.inventoryApi.getQanService(QanAgentType.mysqlSlowlog);
+    const postgresql = await api.inventoryApi.getQanService(QanAgentType.postgresqlPgStatements);
 
     expect(mysql.node_id, 'the services must run on different nodes').not.toBe(postgresql.node_id);
     await api.alertingApi.createFastRuleFromTemplate({
@@ -484,8 +483,8 @@ pmmTest(
 pmmTest(
   'PMM-T2820 - Verify a user template with a ClickHouse query can be added and its rules fire @fb-alerting',
   async ({ alertingPage, api }) => {
-    const mysql = await api.inventoryApi.getQanService(mysqlQan);
-    const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
+    const mysql = await api.inventoryApi.getQanService(QanAgentType.mysqlSlowlog);
+    const postgresql = await api.inventoryApi.getQanService(QanAgentType.postgresqlPgStatements);
 
     await pmmTest.step('Add the template', async () => {
       await alertingPage.openTemplates();
