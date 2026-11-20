@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -66,18 +66,14 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
     await expectMongoUp();
   });
 
-  test.describe('flags without a case key yet', () => {
+  test.describe('more update flags', () => {
     const keyCopy = `/tmp/${serviceName}-client.pem`;
-
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
 
     test.afterEach(async ({}) => {
       await (await cli.exec(`docker exec ${containerName} rm -f ${keyCopy}`)).assertSuccess();
     });
 
-    test('PMM-TXXXX-tls-key-file - Verify pmm-admin update mongodb changes the client certificate key file and its password', async ({}) => {
+    test('PMM-T2793 - Verify pmm-admin update mongodb changes the client certificate key file and its password', async ({}) => {
       const { exporterId } = await addService();
       await (await cli.exec(`docker exec ${containerName} cp ${certsDir}/client.pem ${keyCopy}`)).assertSuccess();
 
@@ -94,7 +90,7 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
       await expectMongoUp();
     });
 
-    test('PMM-TXXXX-tls-toggle - Verify pmm-admin update mongodb turns TLS off and on', async ({}) => {
+    test('PMM-T2794 - Verify pmm-admin update mongodb turns TLS off and on', async ({}) => {
       const { exporterId } = await addService();
 
       const off = await pmmAdmin.updateServiceOk(containerName, 'mongodb', `${serviceName} --no-tls --skip-connection-check`);

@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -73,21 +73,17 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
     await pmmAdmin.expectAgentsRunning(containerName, agentIds, true);
   });
 
-  test.describe('flags without a case key yet', () => {
+  test.describe('more update flags', () => {
     const monitorAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT';
     const exporterAgent = 'AGENT_TYPE_POSTGRES_EXPORTER';
     const statementsAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATEMENTS_AGENT';
     const tlsFilesName = 'pgsql_update_tls';
 
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
-
     test.afterEach(async ({}) => {
       await (await cli.exec(`docker exec ${containerName} rm -rf /tmp/${tlsFilesName}`)).assertSuccess();
     });
 
-    test('PMM-TXXXX-pg-qan - Verify pmm-admin update postgresql changes the max query length and the query examples of the QAN agent', async ({}) => {
+    test('PMM-T2781 - Verify pmm-admin update postgresql changes the max query length and the query examples of the QAN agent', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const monitorId = (await agentId(serviceId, monitorAgent))!;
       expect(monitorId, 'postgresql_pgstatmonitor_agent not found').toBeTruthy();
@@ -101,7 +97,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       await pmmAdmin.expectAgentsRunning(containerName, [monitorId], true);
     });
 
-    test('PMM-TXXXX-pg-query-source-none - Verify pmm-admin update postgresql removes and restores the QAN agent with --query-source', async ({}) => {
+    test('PMM-T2782 - Verify pmm-admin update postgresql removes and restores the QAN agent with --query-source', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const exporterId = await agentId(serviceId, exporterAgent);
       const monitorId = await agentId(serviceId, monitorAgent);
@@ -120,7 +116,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       await pmmAdmin.expectAgentsRunning(containerName, [restoredId!], true);
     });
 
-    test('PMM-TXXXX-pg-collectors - Verify pmm-admin update postgresql disables and enables a collector', async ({}) => {
+    test('PMM-T2783 - Verify pmm-admin update postgresql disables and enables a collector', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const exporterId = (await agentId(serviceId, exporterAgent))!;
       expect(await pmmCli.getExporterArgs(containerName, exporterId), 'The collector is disabled by default').not.toContain('--no-collector.locks');
@@ -138,7 +134,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       }).toPass({ intervals: [3_000], timeout: 60_000 });
     });
 
-    test('PMM-TXXXX-pg-tls-files - Verify pmm-admin update postgresql stores the TLS flags and files', async ({}) => {
+    test('PMM-T2784 - Verify pmm-admin update postgresql stores the TLS flags and files', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const exporterId = (await agentId(serviceId, exporterAgent))!;
       const certificate = await pmmCli.createSelfSignedCertificate(containerName, tlsFilesName);
@@ -156,7 +152,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
     });
 
-    test('PMM-TXXXX-pg-query-source-swap - Verify pmm-admin update postgresql swaps the pg_stat_monitor agent for the pg_stat_statements agent and back', async ({}) => {
+    test('PMM-T2785 - Verify pmm-admin update postgresql swaps the pg_stat_monitor agent for the pg_stat_statements agent and back', async ({}) => {
       const serviceId = await addService('pgstatmonitor');
       const exporterId = await agentId(serviceId, exporterAgent);
       const monitorId = await agentId(serviceId, monitorAgent);
@@ -178,7 +174,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       await pmmAdmin.expectAgentsRunning(containerName, [restoredId!], true);
     });
 
-    test('PMM-TXXXX-pg-auto-discovery - Verify pmm-admin update postgresql turns database auto-discovery of the exporter off and on', async ({}) => {
+    test('PMM-T2786 - Verify pmm-admin update postgresql turns database auto-discovery of the exporter off and on', async ({}) => {
       const serviceId = await addService('none');
       const exporterId = (await agentId(serviceId, exporterAgent))!;
 
@@ -195,7 +191,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
       }).toPass({ intervals: [3_000], timeout: 60_000 });
     });
 
-    test('PMM-TXXXX-pg-metrics-mode - Verify pmm-admin update postgresql keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
+    test('PMM-T2787 - Verify pmm-admin update postgresql keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
       await addService('none');
 
       for (const mode of ['pull', 'push']) {

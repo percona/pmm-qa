@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -52,12 +52,8 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
     }).toPass({ intervals: [3_000], timeout: 60_000 });
   });
 
-  test.describe('flags without a case key yet', () => {
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
-
-    test('PMM-TXXXX-valkey-labels - Verify pmm-admin update valkey sets and clears the labels', async ({}) => {
+  test.describe('more update flags', () => {
+    test('PMM-T2777 - Verify pmm-admin update valkey sets and clears the labels', async ({}) => {
       const serviceId = await addService();
 
       const result = await pmmAdmin.updateServiceJson(containerName, 'valkey', `${serviceName} --environment=qa --cluster=valkey_cluster --replication-set=valkey_rs --custom-labels=update_a=1`);
@@ -107,7 +103,7 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
         return { serviceId, exporterId };
       };
 
-      test('PMM-TXXXX-valkey-tls-verify - Verify pmm-admin update valkey verifies the server certificate against a CA and a client certificate', async ({}) => {
+      test('PMM-T2778 - Verify pmm-admin update valkey verifies the server certificate against a CA and a client certificate', async ({}) => {
         const { exporterId } = await addTlsService();
         const since = new Date();
 
@@ -130,7 +126,7 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
         await pmmApi.expectSampleSince(`redis_up{service_name="${tlsServiceName}"}`, since);
       });
 
-      test('PMM-TXXXX-valkey-tls-untrusted-ca - Verify pmm-admin update valkey refuses a server certificate the CA did not sign and changes nothing', async ({}) => {
+      test('PMM-T2779 - Verify pmm-admin update valkey refuses a server certificate the CA did not sign and changes nothing', async ({}) => {
         const { exporterId } = await addTlsService();
         const tlsBefore = await pmmApi.getServerAgent(exporterId);
         const certificate = await pmmCli.createSelfSignedCertificate(containerName, untrusted);
@@ -144,7 +140,7 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
       });
     });
 
-    test('PMM-TXXXX-valkey-metrics-mode - Verify pmm-admin update valkey keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
+    test('PMM-T2780 - Verify pmm-admin update valkey keeps the metrics reaching PMM Server in pull and push mode', async ({}) => {
       await addService();
 
       for (const mode of ['pull', 'push']) {

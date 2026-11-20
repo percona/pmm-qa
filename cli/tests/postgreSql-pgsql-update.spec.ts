@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 
@@ -51,12 +51,8 @@ test.describe('PostgreSQL without pg_stat_monitor pmm-admin update', { tag: '@pg
     await pmmAdmin.expectAgentsRunning(containerName, [statementsId!], true);
   });
 
-  test.describe('flags without a case key yet', () => {
-    test.beforeAll(async ({}) => {
-      await skipWithoutUpdateCommand(containerName);
-    });
-
-    test('PMM-TXXXX-pgss-query-source-none - Verify pmm-admin update postgresql removes and restores the pg_stat_statements agent', async ({}) => {
+  test.describe('more update flags', () => {
+    test('PMM-T2803 - Verify pmm-admin update postgresql removes and restores the pg_stat_statements agent', async ({}) => {
       const serviceId = await addService('pgstatements');
       const statementsId = await pmmAdmin.findServiceAgentId(containerName, serviceId, statementsAgent);
       expect(statementsId, 'postgresql_pgstatements_agent not found').toBeTruthy();

@@ -1,4 +1,4 @@
-import { test, expect, skipWithoutUpdateCommand } from '@helpers/test';
+import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -32,7 +32,6 @@ test.describe('TLS Percona Distribution for PostgreSQL pmm-admin update', { tag:
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pgsm_ssl_\'');
     await result.outContains('pdpgsql_pgsm_ssl_', 'TLS PDPGSQL docker container should exist. please run pmm-framework with --database ssl_pdpgsql');
     containerName = result.stdout.trim();
-    await skipWithoutUpdateCommand(containerName);
   });
 
   test.afterEach(async ({}) => {
@@ -47,7 +46,7 @@ test.describe('TLS Percona Distribution for PostgreSQL pmm-admin update', { tag:
     ]);
   });
 
-  test('PMM-TXXXX-ssl-pg-certificates - Verify pmm-admin update postgresql applies the CA, client certificate and key over a TLS connection', async ({}) => {
+  test('PMM-T2806 - Verify pmm-admin update postgresql applies the CA, client certificate and key over a TLS connection', async ({}) => {
     const exporterId = await addService();
     const since = new Date();
 
@@ -60,7 +59,7 @@ test.describe('TLS Percona Distribution for PostgreSQL pmm-admin update', { tag:
     await pmmApi.expectSampleSince(`pg_up{service_name="${serviceName}"}`, since);
   });
 
-  test('PMM-TXXXX-ssl-pg-skip-verify - Verify pmm-admin update postgresql turns certificate verification off and on over a TLS connection', async ({}) => {
+  test('PMM-T2807 - Verify pmm-admin update postgresql turns certificate verification off and on over a TLS connection', async ({}) => {
     const exporterId = await addService();
 
     const skipped = await pmmAdmin.updateServiceOk(containerName, 'postgresql', `${serviceName} --tls-skip-verify`);
@@ -75,7 +74,7 @@ test.describe('TLS Percona Distribution for PostgreSQL pmm-admin update', { tag:
     await pmmApi.expectSampleSince(`pg_up{service_name="${serviceName}"}`, since);
   });
 
-  test('PMM-TXXXX-ssl-pg-skip-verify-untrusted-ca - Verify pmm-admin update postgresql with --tls-skip-verify accepts a CA that did not sign the server certificate', async ({}) => {
+  test('PMM-T2808 - Verify pmm-admin update postgresql with --tls-skip-verify accepts a CA that did not sign the server certificate', async ({}) => {
     test.skip(true, 'Skipping this test, bug https://perconadev.atlassian.net/browse/PMM-15940');
 
     const exporterId = await addService();
@@ -86,7 +85,7 @@ test.describe('TLS Percona Distribution for PostgreSQL pmm-admin update', { tag:
     await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
   });
 
-  test('PMM-TXXXX-ssl-pg-untrusted-ca - Verify pmm-admin update postgresql refuses a server certificate the CA did not sign and changes nothing', async ({}) => {
+  test('PMM-T2809 - Verify pmm-admin update postgresql refuses a server certificate the CA did not sign and changes nothing', async ({}) => {
     const exporterId = await addService();
     const before = await pmmApi.getServerAgent(exporterId);
     const certificate = await pmmCli.createSelfSignedCertificate(containerName, untrusted);
