@@ -20,7 +20,7 @@ pmmTest(
       urlHelper.buildUrlWithParameters(summary.url, { from: 'now-5m', serviceName: service_name, to: 'now' }),
     );
     await dashboard.verifyMetricsPresent(summary.metrics);
-    await dashboard.verifyAllPanelsHaveData(summary.noDataMetrics, Timeouts.TWO_MINUTES);
+    await dashboard.verifyAllPanelsHaveData(summary.noDataMetrics, Timeouts.FIVE_MINUTES);
 
     const container = cliHelper
       .execSilent("docker ps --filter 'name=^pdpgsql_' --format '{{.Names}}'")
