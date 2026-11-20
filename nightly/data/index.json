@@ -204756,15 +204756,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-20T02:50:05Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
+        ],
+        "verdict": "product bug",
+        "summary": "3.10.0 · Percona Server 8.4: only PMM-T2528 failed (49 passed, 2 skipped). The slowlog agent disable returned OK, but PMM Server still reported mysql_slowlog_agent 'Running' after the 60 s wait, instead of 'Done (disabled)'. That is the open PMM-15835 lost update (a ChangeAgent racing the agent's status report), the same failure nights 109, 110 and 111 traced; the ticket is still To Do. Deduped, not re-reproduced.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+        "by": "Investigator routine",
+        "at": "2026-11-20T02:56:20Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-20T02:50:05Z",
