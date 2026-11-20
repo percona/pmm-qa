@@ -20,6 +20,8 @@ const kubectlTimeout = Timeouts.TWO_MINUTES;
 
 interface ExecInPodOptions {
   container?: string;
+  /** Run the command once more when {@link kubectlTimeout} killed it. Only for commands that are safe to repeat. */
+  retryIfKilled?: boolean;
   /** Skip logging - kubectl warns about defaulted containers on every call. */
   silent?: boolean;
 }
@@ -32,7 +34,7 @@ export default class K8sHelper {
   readonly namespace: string;
   private cliHelper = new CliHelper();
 
-  constructor(namespace = 'pmm') {
+  constructor(namespace = process.env.PMM_KUBERNETES_NAMESPACE || 'pmm') {
     this.namespace = namespace;
   }
 
@@ -75,8 +77,15 @@ export default class K8sHelper {
   execInPod = (podName: string, command: string, options: ExecInPodOptions = {}): ExecReturn => {
     const container = options.container ? `--container=${options.container} ` : '';
     const args = `exec ${podName} ${container}-- ${command}`;
+    const run = (): ExecReturn => (options.silent ? this.execSilent(args) : this.exec(args));
+    const started = Date.now();
+    const result = run();
 
-    return options.silent ? this.execSilent(args) : this.exec(args);
+    if (!options.retryIfKilled || result.code === 0 || Date.now() - started < kubectlTimeout) return result;
+
+    console.log(`"kubectl ${args}" was killed after ${kubectlTimeout / 1_000} s, running it once more`);
+
+    return run();
   };
 
   /** {@link exec} without logging - for reads whose output would flood the report. */
@@ -100,6 +109,20 @@ export default class K8sHelper {
 
     return this.getVolumeUsage(pod, dir, container);
   };
+
+  /** Name to uid of every ReplicaSet or StatefulSet pod. A Job pod, such as a scheduled backup, comes and goes on its own. */
+  getControllerPodUids = (): Record<string, string> =>
+    Object.fromEntries(
+      (
+        JSON.parse(
+          this.execSilent('get pods --output=json').assertSuccess().stdout,
+        ) as KubernetesResourceList<KubernetesPodResource>
+      ).items
+        .filter((pod) =>
+          ['ReplicaSet', 'StatefulSet'].includes(pod.metadata.ownerReferences?.[0]?.kind ?? ''),
+        )
+        .map((pod) => [pod.metadata.name, pod.metadata.uid]),
+    );
 
   getEventMessages = (objectName: string): string[] =>
     (
@@ -178,7 +201,11 @@ export default class K8sHelper {
     );
 
   getVolumeUsage = (pod: string, dir: string, container?: string): VolumeUsage => {
-    const result = this.execInPod(pod, `df -Pm ${dir}`, { container, silent: true }).assertSuccess();
+    const result = this.execInPod(pod, `df -Pm ${dir}`, {
+      container,
+      retryIfKilled: true,
+      silent: true,
+    }).assertSuccess();
     const [, sizeMb, usedMb, availableMb] = (result.getStdOutLines()[1] ?? '')
       .trim()
       .split(/\s+/)

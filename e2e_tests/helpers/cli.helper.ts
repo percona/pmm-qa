@@ -151,6 +151,13 @@ export default class CliHelper {
     ).agents_info;
   };
 
+  queryMysql = (container: string, user: { password: string; username: string }, query: string) =>
+    this.execute(
+      `docker exec ${container} mysql -u${user.username} -p${user.password} --batch --skip-column-names mysql -e "${query}"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
       this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
@@ -206,6 +213,10 @@ export default class CliHelper {
 
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
+
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;

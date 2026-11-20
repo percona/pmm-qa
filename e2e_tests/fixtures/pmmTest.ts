@@ -4,7 +4,9 @@ import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
@@ -19,6 +21,7 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
@@ -43,23 +46,36 @@ import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
 import AddInstancePage from '@pages/inventory/addInstance.page';
 import ScheduledBackupsPage from '@pages/backup/scheduledBackups.page';
+import StorageLocationsPage from '@pages/backup/storageLocations.page';
+import BackupInventoryPage from '@pages/backup/backupInventory.page';
 import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AlertThresholdsPage from '@pages/alerts/alertThresholds.page';
+import AdvisorsCatalogPage from '@pages/advisors/advisorsCatalog.page';
+import AdvisorInsightsPage from '@pages/advisors/advisorInsights.page';
+import AdvisorRunsPage from '@pages/advisors/advisorRuns.page';
+import AdvisorSchedulerPage from '@pages/advisors/advisorScheduler.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
+  advisorInsightsPage: AdvisorInsightsPage;
+  advisorRunsPage: AdvisorRunsPage;
+  advisorSchedulerPage: AdvisorSchedulerPage;
+  advisorsCatalogPage: AdvisorsCatalogPage;
   settingsPage: SettingsPage;
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
+  argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
+  backupInventoryPage: BackupInventoryPage;
   changePasswordPage: ChangePasswordPage;
   clickHouseHelper: ClickHouseHelper;
   cliHelper: CliHelper;
+  dockerHelper: DockerHelper;
   credentials: Credentials;
   loginPage: LoginPage;
   dashboard: Dashboard;
@@ -89,8 +105,10 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  remoteDatabasesHelper: RemoteDatabasesHelper;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
+  storageLocationsPage: StorageLocationsPage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
@@ -100,11 +118,17 @@ const pmmTest = base.extend<{
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
+  advisorInsightsPage: async ({ page }, use) => await use(new AdvisorInsightsPage(page)),
+  advisorRunsPage: async ({ page }, use) => await use(new AdvisorRunsPage(page)),
+  advisorsCatalogPage: async ({ page }, use) => await use(new AdvisorsCatalogPage(page)),
+  advisorSchedulerPage: async ({ page }, use) => await use(new AdvisorSchedulerPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
+  argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
+  backupInventoryPage: async ({ page }, use) => await use(new BackupInventoryPage(page)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
   cliHelper: async ({}, use) => {
@@ -150,6 +174,7 @@ const pmmTest = base.extend<{
     await use(dashboardPage);
   },
   dataSourcesPage: async ({ page }, use) => await use(new DataSourcesPage(page)),
+  dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
@@ -207,6 +232,12 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  remoteDatabasesHelper: async ({ api, cliHelper, dockerHelper }, use) => {
+    const remoteDatabasesHelper = new RemoteDatabasesHelper(api, cliHelper, dockerHelper);
+
+    await use(remoteDatabasesHelper);
+    await remoteDatabasesHelper.removeAll();
+  },
   scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
@@ -214,6 +245,7 @@ const pmmTest = base.extend<{
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
+  storageLocationsPage: async ({ page }, use) => await use(new StorageLocationsPage(page)),
   testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);

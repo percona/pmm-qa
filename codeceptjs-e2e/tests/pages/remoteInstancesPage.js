@@ -214,7 +214,6 @@ module.exports = {
     doNotTrack: radioLabel('tracking', 'none'),
     environment: '$text-input-environment',
     hostName: '$text-input-address',
-    iframe: '#grafana-iframe',
     metricsPath: '$text-input-metrics-path',
     noCredentialsError: locate('#notistack-snackbar').withText('No credentials provided and IAM role is not defined'),
     pageHeaderText: 'Select service type',
@@ -693,10 +692,8 @@ module.exports = {
         args.page.locator(this.fields.addService).click(),
       ]);
     });
-
-    // A successful add opens the inventory, which is a Grafana page in the iframe.
-    I.waitForElement(this.fields.iframe, 30);
-    I.switchTo(this.fields.iframe);
+    I.switchTo();
+    I.waitInUrl(pmmInventoryPage.servicesTab.url, 30);
   },
 
   openAddAzure() {

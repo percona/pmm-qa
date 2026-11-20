@@ -1,5 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { AddRdsParameters, AddRdsResponse, AddServiceResponse } from '@interfaces/inventory';
 
@@ -40,6 +41,33 @@ export default class ManagementApi {
     return (await response.json()) as AddRdsResponse;
   };
 
+  // PMM connects to the database before adding it, so this retries until the database accepts connections.
+  addRemoteDatabase = async (
+    type: keyof AddServiceResponse,
+    name: string,
+    port: number,
+    credentials: Record<string, string> = {},
+  ): Promise<{ node_id: string; service_id: string }> => {
+    let service = { node_id: '', service_id: '' };
+
+    await expect(async () => {
+      const response = await this.addService({
+        [type]: {
+          add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE' },
+          address: name,
+          pmm_agent_id: 'pmm-server',
+          port,
+          service_name: name,
+          ...credentials,
+        },
+      });
+
+      service = response[type]?.service ?? service;
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+    return service;
+  };
+
   addService = async (service: object): Promise<AddServiceResponse> => {
     const response = await this.request.post(apiEndpoints.management.services, {
       data: service,
@@ -49,6 +77,30 @@ export default class ManagementApi {
     expect(response.status(), `Adding service failed: ${await response.text()}`).toEqual(200);
 
     return (await response.json()) as AddServiceResponse;
+  };
+
+  // A MySQL service on a port nothing listens on, on its own remote node: every query to it fails,
+  // while checks that only read metrics still run on it.
+  addUnreachableMysql = async (
+    name: string,
+    topology: Record<string, unknown> = {},
+    node: Record<string, unknown> = {},
+  ): Promise<{ node_id: string; service_id: string }> => {
+    const { mysql } = await this.addService({
+      mysql: {
+        add_node: { node_name: name, node_type: 'NODE_TYPE_REMOTE_NODE', ...node },
+        address: '127.0.0.1',
+        password: 'qa',
+        pmm_agent_id: 'pmm-server',
+        port: 1,
+        service_name: name,
+        skip_connection_check: true,
+        username: 'qa',
+        ...topology,
+      },
+    });
+
+    return mysql?.service as { node_id: string; service_id: string };
   };
 
   removeService = async (serviceId: string): Promise<void> => {
