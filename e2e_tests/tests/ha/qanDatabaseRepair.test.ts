@@ -59,7 +59,7 @@ pmmTest(
     await pmmTest.step(
       'Verify a server that lost the pmm database gets it back with the shared UUID',
       async () => {
-        const since = haClickHouseHelper.pmmDbLog(leader).length;
+        const since = haClickHouseHelper.podTime(leader);
 
         haClickHouseHelper.dropPmm(serverTwo);
         haClickHouseHelper.restartQanApi(leader);
@@ -84,7 +84,7 @@ pmmTest(
 
         expect(stray, 'The stray copy must have a UUID of its own').not.toEqual(sharedUuid);
 
-        const since = haClickHouseHelper.pmmDbLog(leader).length;
+        const since = haClickHouseHelper.podTime(leader);
 
         haClickHouseHelper.restartQanApi(leader);
         await expect
@@ -107,7 +107,7 @@ pmmTest(
       await haClickHouseHelper.startServer(serverOne);
       stoppedServer = undefined;
 
-      const since = haClickHouseHelper.pmmDbLog(leader).length;
+      const since = haClickHouseHelper.podTime(leader);
 
       haClickHouseHelper.restartQanApi(leader);
 

@@ -70,7 +70,7 @@ pmmTest(
 
     // The backup takes the first pod on a tie, so server 0 loses its copy to tell "most rows" from "first".
     await pmmTest.step('Drop the QAN database on server 0 right after a leader check', async () => {
-      const since = haClickHouseHelper.pmmDbLog(leader).length;
+      const since = haClickHouseHelper.podTime(leader);
 
       haClickHouseHelper.dropPmm(serverZero);
       haClickHouseHelper.restartQanApi(leader);

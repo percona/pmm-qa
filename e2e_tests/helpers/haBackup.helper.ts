@@ -37,7 +37,10 @@ const single = (names: string[], what: string): string => {
 };
 
 export default class HaBackupHelper {
-  constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
+  constructor(
+    private k8sHelper: K8sHelper = new K8sHelper(),
+    private clickHouse: HaClickHouseHelper = new HaClickHouseHelper(k8sHelper),
+  ) {}
 
   backupToolsDeployment = (): string =>
     single(
@@ -46,11 +49,7 @@ export default class HaBackupHelper {
     );
 
   /** As `clickhouse-client` in the first replica, the pod `pmm-backup.sh` restores into. */
-  clickHouseQuery = (query: string): string => {
-    const clickHouse = new HaClickHouseHelper(this.k8sHelper);
-
-    return clickHouse.query(clickHouse.pods()[0], query);
-  };
+  clickHouseQuery = (query: string): string => this.clickHouse.query(this.clickHouse.pods()[0], query);
 
   cronJobName = (): string =>
     single(this.k8sHelper.getNames('cronjob', backupCronJobSelector), 'backup CronJob');

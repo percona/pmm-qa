@@ -18,6 +18,8 @@ export interface PmmCopy {
 }
 
 export default class HaClickHouseHelper {
+  private credentials?: { password: string; user: string };
+
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
 
   /** A Replicated `pmm` under a fresh UUID, the split PMM-15785 repairs. */
@@ -51,35 +53,49 @@ export default class HaClickHouseHelper {
       uuid: this.query(pod, "SELECT toString(uuid) FROM system.databases WHERE name = 'pmm'"),
     }));
 
-  /** The `component=pmm-db` lines qan-api2 has logged on a PMM Server pod; the log is on a PVC and keeps old runs. */
+  /** The `component=pmm-db` lines qan-api2 has logged on a PMM Server pod, from the rotated logs too. */
   pmmDbLog = (pmmPod: string): string[] =>
     this.k8sHelper
-      .execInPod(pmmPod, `grep -a component=pmm-db ${qanApiLog}`, { silent: true })
+      .execInPod(pmmPod, `sh -c 'grep -ah component=pmm-db ${qanApiLog}*'`, { silent: true })
       .stdout.split('\n')
       .filter(Boolean);
 
-  /** Whether a `pmm-db` line after the first `since` has `message` and every `fields` value, e.g. `uuid`. */
+  /** Whether a `pmm-db` line logged at or after `since` ({@link podTime}) has `message` and every `fields` value. */
   pmmDbLogged = (
     pmmPod: string,
     since: number,
     message: string,
     fields: Record<string, string> = {},
   ): boolean =>
-    this.pmmDbLog(pmmPod)
-      .slice(since)
-      .some(
-        (line) =>
-          line.includes(message) &&
-          Object.entries(fields).every(([name, value]) =>
-            new RegExp(`(^|\\s)${name}=${value}(\\s|$)`).test(line),
-          ),
-      );
+    this.pmmDbLog(pmmPod).some(
+      (line) =>
+        Date.parse(/(?:^|\s)time="?([^"\s]+)/.exec(line)?.[1] ?? '') >= since &&
+        line.includes(message) &&
+        Object.entries(fields).every(([name, value]) =>
+          new RegExp(`(^|\\s)${name}=${value}(\\s|$)`).test(line),
+        ),
+    );
 
   pods = (): string[] => this.k8sHelper.getPodNames(clickHouseSelector).sort();
 
+  /** Epoch milliseconds on the pod's own clock, the one its log lines are stamped with. */
+  podTime = (pmmPod: string): number => {
+    const time = Number(
+      this.k8sHelper.execInPod(pmmPod, 'date +%s%3N', { silent: true }).assertSuccess().stdout.trim(),
+    );
+
+    if (!Number.isFinite(time)) throw new Error(`Cannot read the clock of ${pmmPod}`);
+
+    return time;
+  };
+
   query = (pod: string, query: string): string => {
-    const user = this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_USER');
-    const password = this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_PASSWORD');
+    this.credentials ??= {
+      password: this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_PASSWORD'),
+      user: this.k8sHelper.getSecretValue('pmm-secret', 'PMM_CLICKHOUSE_USER'),
+    };
+
+    const { password, user } = this.credentials;
     const result = this.k8sHelper.execInPod(
       pod,
       `clickhouse-client --user '${user}' --password '${password}' --query "${query}"`,
