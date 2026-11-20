@@ -188,6 +188,22 @@ export default class CredentialsFilesHelper {
     }
   };
 
+  // Stops the server before removing it, so PostgreSQL does not find a stale postmaster.pid on the same volume.
+  stopPmmServer = () => this.cliHelper.removeContainer(credentialsServer.container);
+
+  // Writes each credential to its own file, owned by UID 1000 with mode 0400, as PMM Server reads them.
+  writeSecrets = (secrets: Record<string, string>, dir = secretsDir) => {
+    this.cliHelper.execSilent(`sudo rm -rf ${dir} && mkdir -p ${dir}`).assertSuccess();
+
+    for (const [name, value] of Object.entries(secrets)) {
+      this.cliHelper.execSilent(`printf '%s' '${value}' > ${dir}/${name}`).assertSuccess();
+    }
+
+    this.cliHelper
+      .execSilent(`sudo chown -R 1000:1000 ${dir} && sudo chmod 0400 ${dir}/* && sudo chmod 0500 ${dir}`)
+      .assertSuccess();
+  };
+
   // PMM-15944: pmm-managed restarts Grafana right after it first becomes ready, so a single healthy check
   // can land just before that restart. Wait until readyz stays 200 for 30 seconds.
   private waitForStableReadiness = async () => {
@@ -212,21 +228,5 @@ export default class CredentialsFilesHelper {
         },
       )
       .toBeGreaterThanOrEqual(7);
-  };
-
-  // Stops the server before removing it, so PostgreSQL does not find a stale postmaster.pid on the same volume.
-  stopPmmServer = () => this.cliHelper.removeContainer(credentialsServer.container);
-
-  // Writes each credential to its own file, owned by UID 1000 with mode 0400, as PMM Server reads them.
-  writeSecrets = (secrets: Record<string, string>, dir = secretsDir) => {
-    this.cliHelper.execSilent(`sudo rm -rf ${dir} && mkdir -p ${dir}`).assertSuccess();
-
-    for (const [name, value] of Object.entries(secrets)) {
-      this.cliHelper.execSilent(`printf '%s' '${value}' > ${dir}/${name}`).assertSuccess();
-    }
-
-    this.cliHelper
-      .execSilent(`sudo chown -R 1000:1000 ${dir} && sudo chmod 0400 ${dir}/* && sudo chmod 0500 ${dir}`)
-      .assertSuccess();
   };
 }
