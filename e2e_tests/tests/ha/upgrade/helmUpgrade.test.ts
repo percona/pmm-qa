@@ -273,6 +273,7 @@ pmmTest(
     await pmmTest.step('Verify the stray QAN database copy made before the upgrade is repaired', async () => {
       const clickHousePods = haClickHouseHelper.pods();
 
+      expect(clickHousePods, 'PMM HA runs three ClickHouse servers').toHaveLength(3);
       expect(
         await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIFTEEN_MINUTES),
         'The repair must keep the copy holding QAN data, not the empty stray one',

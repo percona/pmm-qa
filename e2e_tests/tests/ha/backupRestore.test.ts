@@ -35,6 +35,9 @@ pmmTest.afterEach(
 
     stoppedClickHouse = undefined;
     await haClusterHelper.ensureServing(api.haApi);
+    // A failed step can leave the QAN database split; the restart repairs it now instead of within 10 minutes.
+    haClickHouseHelper.restartQanApi(haClusterHelper.leaderFromPods());
+    await haClickHouseHelper.waitForOnePmm(haClickHouseHelper.pods(), Timeouts.FIVE_MINUTES);
     await markers?.remove();
   },
 );
@@ -97,7 +100,7 @@ pmmTest(
       expect([serverOne, serverTwo], 'The backup must skip the server without QAN data').toContain(pod);
       expect(
         Number(rows),
-        'The backup must use the ClickHouse server with the most QAN rows',
+        'The backup must use a ClickHouse server with at least the most QAN rows any server held before it',
       ).toBeGreaterThanOrEqual(mostRows);
 
       const latest = haBackupHelper.latestBackup();
