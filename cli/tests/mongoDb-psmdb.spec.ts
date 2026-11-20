@@ -754,6 +754,7 @@ test.describe(
           'the interrupted physical backup is not done',
         ).not.toEqual('done');
 
+        await pbm.restartMongod(members);
         await pbm.setAgents(members, 'start');
         await pbm.expectAgentsOk(pbmHost);
         await pbm.takeBackup(pbmHost);

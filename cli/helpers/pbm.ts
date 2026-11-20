@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import { runOnPrimary } from '@helpers/mongo';
 import { getPmmAdminVersion } from '@helpers/pmm-admin';
 import { versionBelow } from '@helpers/versionGates';
 
@@ -236,6 +237,17 @@ export async function setAgents(containers: string[], action: 'start' | 'stop' |
     // A killed unit is failed, and stopping a failed one is not an error worth failing a cleanup for.
     if (action !== 'stop') await output.assertSuccess();
   }
+}
+
+/**
+ * Restart mongod on the members and wait for the first one to be primary again. A physical backup that was cut short by killing
+ * pbm-agent leaves its backup cursor open, which only a restart closes, and until then the next physical backup fails on that member.
+ */
+export async function restartMongod(containers: string[]) {
+  for (const container of containers) {
+    await (await cli.exec(`docker exec ${container} systemctl restart mongod`)).assertSuccess();
+  }
+  await runOnPrimary(containers[0], mongoRootUri, 'db.hello().isWritablePrimary');
 }
 
 /**
