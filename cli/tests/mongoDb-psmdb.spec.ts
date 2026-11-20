@@ -1277,6 +1277,13 @@ test.describe(
 
           await pbm.resync(pbmHost);
           const info = await pbm.describeRestore(pbmHost, restore.name);
+          const restoreLogs = await pbm.pbm(pbmHost, 'logs --event=restore --tail=40');
+
+          expect(
+            info.status,
+            `PBM status of the physical restore ${restore.name}\n${restoreLogs.stdout}`,
+          ).toEqual('done');
+
           const duration = (Date.parse(info.finish) - Date.parse(info.start)) / 1000;
 
           await everyMember(async (member) => {
