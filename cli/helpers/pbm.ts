@@ -289,10 +289,35 @@ export async function backupStatus(container: string, name: string): Promise<str
   return backup.status;
 }
 
+/**
+ * Wait until a backup has a status. A backup that ends in error stops the wait, and a failure carries what PBM says about it.
+ */
 export async function expectBackupStatus(container: string, name: string, status: 'done' | 'error', timeout = 300_000) {
-  await expect(async () => {
-    expect(await backupStatus(container, name), `status of backup ${name}`).toEqual(status);
-  }).toPass({ intervals: [5_000], timeout });
+  const deadline = Date.now() + timeout;
+  let current = 'not found';
+  let detail = '';
+
+  do {
+    const output = await pbm(container, `describe-backup ${name} -o json`);
+
+    if (output.code === 0) {
+      const meta = JSON.parse(output.stdout) as { status: string, error?: string };
+
+      current = meta.status;
+      detail = meta.error ?? '';
+    } else {
+      current = 'not found';
+      detail = `${output.stdout}${output.stderr.text}`.trim();
+    }
+    if (current === status || current === 'error') break;
+    await sleep(5_000);
+  } while (Date.now() < deadline);
+
+  if (current !== status) {
+    const logs = await pbm(container, 'logs --tail=40');
+
+    expect(current, `status of backup ${name}: ${detail}\n${logs.stdout}`).toEqual(status);
+  }
 }
 
 /**
