@@ -26,7 +26,7 @@ pmmTest.afterEach(async ({ api, haClickHouseHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-TBD-2 - Verify a missing or stray QAN database copy is repaired and QAN totals stay the same after failover @pmm-ha',
+  'PMM-T2774 - Verify a missing or stray QAN database copy is repaired and QAN totals stay the same after failover @pmm-ha',
   async ({ api, haClickHouseHelper, haClusterHelper, page, qanStoredMetrics, urlHelper }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
 

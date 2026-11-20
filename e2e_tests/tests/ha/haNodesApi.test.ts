@@ -9,7 +9,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2131 + PMM-TBD-1 Verify every PMM HA node reports the same cluster status and every ClickHouse server holds one QAN database @pmm-ha',
+  'PMM-T2131 + PMM-T2773 Verify every PMM HA node reports the same cluster status and every ClickHouse server holds one QAN database @pmm-ha',
   async ({ api, haClickHouseHelper, haClusterHelper }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
 

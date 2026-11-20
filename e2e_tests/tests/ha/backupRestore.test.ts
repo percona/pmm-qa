@@ -39,7 +39,7 @@ pmmTest.afterEach(
 );
 
 pmmTest(
-  'PMM-T2377 + PMM-TBD-3 - Verify an in-place restore brings back PostgreSQL, ClickHouse, VictoriaMetrics, /srv and the monitored services as backed up, with one QAN database on every ClickHouse server @ha-backup-restore',
+  'PMM-T2377 + PMM-T2775 - Verify an in-place restore brings back PostgreSQL, ClickHouse, VictoriaMetrics, /srv and the monitored services as backed up, with one QAN database on every ClickHouse server @ha-backup-restore',
   async ({ api, haBackupHelper, haClickHouseHelper, haClusterHelper }) => {
     pmmTest.setTimeout(Timeouts.SIXTY_MINUTES);
 

@@ -75,7 +75,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 // Deliberately not tagged @pmm-ha: these two run either side of an upgrade of the
 // cluster they run on, and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
-  'PMM-T2229 + PMM-TBD-4 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
+  'PMM-T2229 + PMM-T2776 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
   async ({ api, haClickHouseHelper, haClusterHelper, helmHelper, k8sHelper }) => {
     await haClusterHelper.verifyHaEnabled(api.haApi);
 
@@ -195,7 +195,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T2229 + PMM-TBD-4 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
+  'PMM-T2229 + PMM-T2776 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
   async ({
     api,
     grafanaHelper,
