@@ -98,8 +98,9 @@ export const onlyExisting = (series: Series[]): Series[] => series.filter((item)
  *
  * @param   container   docker container running pmm-agent
  * @param   service     name of the MongoDB service, or a part of it
+ * @param   prefix      metric name prefix to keep, mongodb_up to read the exporter's connection state
  */
-export async function scrapePbm(container: string, service: string = container): Promise<Series[]> {
+export async function scrapePbm(container: string, service: string = container, prefix = 'mongodb_pbm_'): Promise<Series[]> {
   const port = await exporterPort(container, service);
   const scrape = '/tmp/pbm-metrics-scrape.txt';
   const output = await cli.exec(
@@ -107,7 +108,7 @@ export async function scrapePbm(container: string, service: string = container):
   );
   await output.assertSuccess();
 
-  return parseSeries(output.stdout);
+  return parseSeries(output.stdout, prefix);
 }
 
 export async function exporterPort(container: string, serviceName: string): Promise<number> {
@@ -415,7 +416,7 @@ export const pbmLogProblems = (log: string): string[] => log.split('\n').filter(
 
 async function expectExporterUp(container: string, service: string, timeout: number) {
   await expect(async () => {
-    const series = await scrapePbm(container, service);
+    const series = await scrapePbm(container, service, 'mongodb_up');
 
     expect(seriesValue(series, 'mongodb_up'), `mongodb_up of ${service}`).toEqual(1);
   }).toPass({ intervals: [5_000], timeout });
