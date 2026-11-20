@@ -148,12 +148,13 @@ export async function addMongoServiceAgents(containerName: string, addFlags: str
  * @param   serviceName     service name
  * @param   querySource     value of --query-source
  * @param   onAdded         called once the service exists, so the caller can remember to remove it
+ * @param   flags           more flags of pmm-admin add mysql
  * @return  ID of the service
  */
-export async function addMySQLService(containerName: string, serviceName: string, querySource: string, onAdded: () => void): Promise<string> {
+export async function addMySQLService(containerName: string, serviceName: string, querySource: string, onAdded: () => void, flags = ''): Promise<string> {
   await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
   const output = await cli.exec(
-    `docker exec ${containerName} pmm-admin add mysql --query-source=${querySource} --username=${psConnection.username} --password=${psConnection.password} ${serviceName} ${psConnection.address}`,
+    `docker exec ${containerName} pmm-admin add mysql --query-source=${querySource} ${flags} --username=${psConnection.username} --password=${psConnection.password} ${serviceName} ${psConnection.address}`,
   );
   await output.assertSuccess();
   onAdded();
