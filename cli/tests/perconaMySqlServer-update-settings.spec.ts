@@ -157,10 +157,22 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
     test('PMM-TXXXX-mysql-qan-off - Verify pmm-admin update mysql turns comments parsing off and disables slow log rotation', async ({}) => {
       const serviceId = await addService();
       const slowlogId = (await agentId(serviceId, slowlogAgent))!;
-      await update('--comments-parsing=on --size-slow-logs=2MiB');
+      const stored = async () => {
+        const agent = await pmmApi.getServerAgent(slowlogId);
 
-      const output = await update('--comments-parsing=off --size-slow-logs=-1B');
-      expect(pmmAdmin.getChangedSettings(output).sort()).toEqual(['--comments-parsing=off (was on)', '--size-slow-logs=-1 (was 2MiB)']);
+        return { commentsParsingDisabled: agent.comments_parsing_disabled, maxQueryLogSize: Number(agent.max_query_log_size) };
+      };
+
+      const on = await updateJson('--comments-parsing=on --size-slow-logs=2MiB');
+      expect(pmmAdmin.getSettingValue(on, '--comments-parsing')).toEqual('on');
+      expect(pmmAdmin.getSettingValue(on, '--size-slow-logs')).toEqual('2MiB');
+      expect(await stored(), 'The settings are not stored on PMM Server').toEqual({ commentsParsingDisabled: false, maxQueryLogSize: 2 * 1_024 * 1_024 });
+
+      const off = await updateJson('--comments-parsing=off --size-slow-logs=-1B');
+      expect(off.changes.map((change) => change.flag).sort()).toEqual(['--comments-parsing', '--size-slow-logs']);
+      expect(pmmAdmin.getSettingValue(off, '--comments-parsing')).toEqual('off');
+      expect(pmmAdmin.getSettingValue(off, '--size-slow-logs')).toEqual('-1');
+      expect(await stored(), 'The server stores a disabled rotation as 0').toEqual({ commentsParsingDisabled: true, maxQueryLogSize: 0 });
       expect(await agentId(serviceId, slowlogAgent), 'mysql_slowlog_agent is replaced by a change of its settings').toEqual(slowlogId);
       await pmmAdmin.expectAgentsRunning(containerName, [slowlogId], true);
     });
