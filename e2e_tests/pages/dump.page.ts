@@ -1,31 +1,33 @@
 import BasePage from '@pages/base.page';
 
 export default class DumpPage extends BasePage {
-  url = 'graph/pmm-dump';
+  url = '/pmm-ui/pmm-dump';
+  newUrl = '/pmm-ui/pmm-dump/new';
   builders = {
-    menuItem: (name: string) => this.grafanaIframe().getByTestId('dropdown-button').filter({ hasText: name }),
-    row: (dumpId: string) =>
-      this.grafanaIframe()
-        .getByTestId('table-tbody-tr')
-        .filter({ has: this.page.getByTestId(`table-select-${dumpId}-field-container`) }),
-    rowDetails: (dumpId: string) => this.builders.row(dumpId).getByTestId('show-row-details'),
-    rowMenu: (dumpId: string) => this.builders.row(dumpId).getByTestId('dropdown-menu-toggle'),
-    serviceName: (name: string) => this.grafanaIframe().getByText(name, { exact: true }),
+    menuItem: (name: string) => this.page.getByRole('menuitem', { name }),
+    row: (dumpId: string) => this.page.getByTestId(`dump-row-${dumpId}`),
+    rowDetails: (dumpId: string) => this.builders.row(dumpId).getByRole('button', { name: 'Expand' }),
+    rowMenu: (dumpId: string) => this.builders.row(dumpId).getByRole('button', { name: 'Row Actions' }),
+    serviceName: (name: string) => this.page.getByText(name, { exact: true }),
   };
   buttons = {
-    send: this.grafanaIframe().getByRole('button', { exact: true, name: 'Send' }),
+    createDataset: this.page.getByTestId('create-dataset'),
+    send: this.page
+      .getByTestId('dump-send-to-support-dialog')
+      .getByRole('button', { exact: true, name: 'Send' }),
+    submitDataset: this.page.getByTestId('create-dataset-submit-button'),
   };
   elements = {
-    modalHeader: this.grafanaIframe().getByTestId('modal-header'),
-    sendToSupportHeading: this.grafanaIframe().getByRole('heading', { name: 'Send to Support' }),
+    logsDialog: this.page.getByTestId('dump-logs-modal'),
+    sendToSupportHeading: this.page.getByRole('heading', { name: 'Send to Support' }),
   };
   inputs = {
-    address: this.grafanaIframe().getByLabel('Address *'),
-    directory: this.grafanaIframe().getByLabel('Directory'),
-    name: this.grafanaIframe().getByLabel('Name *'),
-    password: this.grafanaIframe().getByTestId('data-testid Password input field'),
+    address: this.page.getByTestId('dump-support-address'),
+    directory: this.page.getByTestId('dump-support-directory'),
+    name: this.page.getByTestId('dump-support-user'),
+    password: this.page.getByTestId('dump-support-password'),
   };
   messages = {
-    sentToSupport: this.grafanaIframe().getByText('The message was send successfully!'),
+    sentToSupport: this.page.getByText('Datasets were sent to Support.'),
   };
 }
