@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { expectMongoUp } from '@helpers/mongo';
 import { getPmmAdminVersion } from '@helpers/pmm-admin';
 import { versionBelow } from '@helpers/versionGates';
 
@@ -414,15 +413,24 @@ export async function logSince(container: string, mark: number): Promise<string>
  */
 export const pbmLogProblems = (log: string): string[] => log.split('\n').filter((line) => /collector=pbm/.test(line) && /level=(WARN|ERROR)/.test(line));
 
+async function expectExporterUp(container: string, service: string, timeout: number) {
+  await expect(async () => {
+    const series = await scrapePbm(container, service);
+
+    expect(seriesValue(series, 'mongodb_up'), `mongodb_up of ${service}`).toEqual(1);
+  }).toPass({ intervals: [5_000], timeout });
+}
+
 /**
- * Wait until a service's exporter reports mongodb_up 1 again, restarting pmm-agent once when it does not recover by itself
+ * Wait until a service's exporter reports mongodb_up 1 again, restarting pmm-agent once when it does not recover by itself.
+ * The exporter is found by service name as scrapePbm does: another service on the same host can match a text lookup first.
  */
 export async function recoverExporter(container: string, service: string = container) {
   try {
-    await expectMongoUp(container, service, exporterPassword, 60_000);
+    await expectExporterUp(container, service, 60_000);
   } catch {
     await (await cli.exec(`docker exec ${container} systemctl restart pmm-agent`)).assertSuccess();
-    await expectMongoUp(container, service, exporterPassword);
+    await expectExporterUp(container, service, 120_000);
   }
 }
 
