@@ -5,6 +5,9 @@ Feature('Test PMM server with srv volume and password enw variable');
 
 let testCaseName = '';
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+// System Summary's pt-summary action takes ~5 s where vmstat exists and the UI first sees it done at 7.5 s;
+// a shorter refresh restarts it before then, so its loading bar never clears.
+const nodeSummaryQuery = '?orgId=1&refresh=30s';
 
 const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('mkdir $HOME/srvPasswordUpgrade || true');
@@ -52,7 +55,7 @@ Scenario(
     const qanRows = await I.grabNumberOfVisibleElements(queryAnalyticsPage.data.elements.queryRows);
 
     assert.ok(qanRows > 0, 'Query Analytics are empty');
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}${nodeSummaryQuery}`);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(0, 300);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
@@ -72,7 +75,7 @@ Scenario(
 
     assert.ok(qanRowsAfterRestart > 0, 'Query Analytics are empty after restart of docker container');
 
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}${nodeSummaryQuery}`);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(0, 180);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();

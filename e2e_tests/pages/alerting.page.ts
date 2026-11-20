@@ -4,6 +4,11 @@ import BasePage from '@pages/base.page';
 import { AlertSeverity } from '@interfaces/alerting';
 import { expect, Locator } from '@playwright/test';
 
+type EvalResults = Record<
+  string,
+  { error?: string; frames?: { data?: { values?: unknown[][] } }[]; status: number }
+>;
+
 export default class AlertingPage extends BasePage {
   url = 'pmm-ui/alerting/status';
   urls = {
@@ -27,6 +32,7 @@ export default class AlertingPage extends BasePage {
     columnHeader: (header: string) => this.page.getByRole('columnheader', { name: header }),
     createRuleFromTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('create-from-template-button'),
+    dataSource: (name: string) => this.elements.dataSourcePicker.getByPlaceholder(name, { exact: true }),
     deleteTemplate: (templateName: string) =>
       this.builders.templateRow(templateName).getByTestId('delete-template-button'),
     dynamicBadge: (templateName: string) =>
@@ -35,6 +41,9 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByTestId('edit-template-button'),
     evaluationIntervalOption: (interval: string) =>
       this.grafanaIframe().getByRole('option', { exact: true, name: interval }),
+    filterLabel: (index: number) => this.elements.filterRows.nth(index).getByPlaceholder('Label'),
+    filterOperator: (index: number) => this.elements.filterRows.nth(index).getByRole('combobox'),
+    filterRegex: (index: number) => this.elements.filterRows.nth(index).getByPlaceholder('Regex'),
     folderOption: (folder: string) =>
       this.grafanaIframe().getByTestId('folder-picker').getByRole('treeitem', { exact: true, name: folder }),
     rowActions: (alertName: string) =>
@@ -64,6 +73,10 @@ export default class AlertingPage extends BasePage {
     stateOption: (state: string) => this.page.getByRole('option', { exact: true, name: state }),
     templateColumnHeader: (header: string) =>
       this.grafanaIframe().getByRole('columnheader', { exact: true, name: header }),
+    templateExpression: (refId: string) => this.grafanaIframe().getByTestId(`template-expression-${refId}`),
+    templateQuery: (refId: string) => this.grafanaIframe().getByTestId(`template-query-${refId}`),
+    templateQueryDatasource: (refId: string) =>
+      this.grafanaIframe().getByTestId(`template-query-${refId}-datasource`),
     templateRow: (templateName: string) =>
       this.grafanaIframe()
         .getByRole('row')
@@ -76,6 +89,7 @@ export default class AlertingPage extends BasePage {
       this.builders.templateRow(templateName).getByRole('button', { name: 'View' }),
   };
   buttons = {
+    addFilter: this.grafanaIframe().getByTestId('add-filter-button'),
     addTemplate: this.grafanaIframe().getByTestId('alert-rule-template-add-modal-button'),
     cancelModal: this.grafanaIframe().getByRole('dialog').getByRole('button', { name: 'Cancel' }),
     cancelTemplate: this.grafanaIframe().getByTestId('alert-rule-template-cancel-button'),
@@ -108,6 +122,7 @@ export default class AlertingPage extends BasePage {
       'data-testid alert-rule new-evaluation-group-button',
     ),
     newSilence: this.grafanaIframe().getByRole('link', { name: /^(add|create) silence$/i }),
+    preview: this.grafanaIframe().getByRole('button', { exact: true, name: 'Preview' }),
     runQueries: this.grafanaIframe().getByRole('button', { exact: true, name: 'Run queries' }),
     save: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save' }),
     saveRule: this.grafanaIframe().getByTestId('save-rule'),
@@ -123,11 +138,15 @@ export default class AlertingPage extends BasePage {
     viewConfiguration: this.grafanaIframe().getByRole('button', { name: 'View configuration' }),
   };
   elements = {
+    advancedToggle: this.grafanaIframe()
+      .getByTestId('alert-rule-advanced-section')
+      .getByTestId('collapse-clickable'),
     alertingDisabled: this.page.getByTestId('empty-block-card'),
     dataSourcePicker: this.grafanaIframe().getByTestId('data-testid Data source picker select container'),
     deleteModalMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     dialog: this.grafanaIframe().getByRole('dialog'),
     dynamicBadges: this.grafanaIframe().getByTestId('table-tbody').getByText('Dynamic', { exact: true }),
+    filterRows: this.grafanaIframe().getByTestId('filter-fields-row'),
     groupByContainer: this.grafanaIframe().getByTestId('group-by-container'),
     labelSearch: this.grafanaIframe().getByTestId('search-query-input'),
     modalHeader: this.grafanaIframe().getByTestId('modal-header'),
@@ -138,6 +157,8 @@ export default class AlertingPage extends BasePage {
     ruleDetails: this.grafanaIframe().getByTestId('data-testid expanded-content'),
     ruleGroupHeaders: this.grafanaIframe().getByTestId('rule-group-header'),
     ruleName: this.grafanaIframe().locator('[data-column="Name"]'),
+    templateCondition: this.grafanaIframe().getByTestId('template-condition'),
+    templateConditionValue: this.grafanaIframe().getByTestId('template-condition').locator('pre'),
     templateNames: this.grafanaIframe().locator('//tr/td[1]'),
     templatesLoader: this.grafanaIframe().getByTestId('template-select-input').getByText('Choose'),
     templatesTable: this.grafanaIframe().getByTestId('table-tbody'),
@@ -164,12 +185,27 @@ export default class AlertingPage extends BasePage {
       .getByRole('status')
       .or(this.grafanaIframe().getByRole('alert'))
       .and(this.grafanaIframe().locator(':not([aria-label="Loading"])')),
+    qanFiltersHint: this.grafanaIframe().getByText(
+      "For Query Analytics (ClickHouse) templates, filters apply to the columns the query returns, e.g. service_name, node_name, region, environment. A label the query doesn't return counts as empty, as for metrics. Custom labels aren't available.",
+    ),
   };
 
   addDynamicTemplate = async (yaml: string, templateName: string) => {
     await this.createTemplate(yaml);
     await expect(this.messages.popUp).toContainText('Alert rule template successfully added');
     await expect(this.builders.dynamicBadge(templateName)).toBeVisible();
+  };
+
+  addFilter = async (label: string, operator: 'MATCH' | 'MISMATCH', regexp: string) => {
+    const index = await this.elements.filterRows.count();
+
+    await this.buttons.addFilter.click();
+    await this.builders.filterLabel(index).fill(label);
+    // The select's placeholder overlays its input and intercepts clicks, so open it from the keyboard.
+    await this.builders.filterOperator(index).focus();
+    await this.builders.filterOperator(index).press('ArrowDown');
+    await this.builders.selectOption(operator).click();
+    await this.builders.filterRegex(index).fill(regexp);
   };
 
   attachTemplateFile = async (path: string) => {
@@ -227,9 +263,22 @@ export default class AlertingPage extends BasePage {
     await expect(this.builders.deleteTemplate(summary)).toBeHidden();
   };
 
+  evaluate = async (button: Locator): Promise<EvalResults> => {
+    const response = this.page.waitForResponse((r) => r.url().includes('/api/v1/eval'));
+
+    await button.click();
+
+    return ((await (await response).json()) as { results: EvalResults }).results;
+  };
+
   filterByState = async (state: string) => {
     await this.inputs.stateSelect.click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.builders.stateOption(state).click();
+  };
+
+  openAdvancedDetails = async () => {
+    await this.elements.advancedToggle.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.templateCondition).toBeVisible();
   };
 
   openNewRuleWithQuery = async (datasourceUid: string, expr: string) => {
@@ -252,6 +301,11 @@ export default class AlertingPage extends BasePage {
     await expect(this.buttons.runQueries).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openRuleEditor = async (uid: string) => {
+    await this.page.goto(`graph/alerting/${uid}/edit`);
+    await expect(this.buttons.preview).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
   openRuleGroupEditor = async (folderUid: string, group: string) => {
     await this.page.goto(
       `graph/alerting/grafana/namespaces/${folderUid}/groups/${encodeURIComponent(group)}/edit`,
@@ -268,16 +322,12 @@ export default class AlertingPage extends BasePage {
     });
   };
 
+  previewRule = async (): Promise<EvalResults> => this.evaluate(this.buttons.preview);
+
   runQueries = async (): Promise<number> => {
-    const response = this.page.waitForResponse((r) => r.url().includes('/api/v1/eval'));
+    const results = await this.evaluate(this.buttons.runQueries);
 
-    await this.buttons.runQueries.click();
-
-    const body = (await (await response).json()) as {
-      results: Record<string, { frames?: { data?: { values?: unknown[][] } }[] }>;
-    };
-
-    return Object.values(body.results)
+    return Object.values(results)
       .flatMap((result) => result.frames ?? [])
       .filter((frame) => (frame.data?.values?.[0]?.length ?? 0) > 0).length;
   };
@@ -294,9 +344,11 @@ export default class AlertingPage extends BasePage {
     await this.buttons.cancelTemplate.click();
   };
 
-  verifyTemplateText = async (templateName: string, text: RegExp) => {
+  verifyTemplateText = async (templateName: string, text: RegExp | RegExp[]) => {
     await this.builders.viewTemplate(templateName).click();
-    await expect(this.elements.templateText).toHaveValue(text);
+
+    for (const pattern of [text].flat()) await expect(this.elements.templateText).toHaveValue(pattern);
+
     await expect(this.buttons.copyToClipboard).toBeVisible();
     await this.buttons.closeDialog.click();
   };

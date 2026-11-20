@@ -277,6 +277,16 @@ export default class AdvisorsApi {
   requestDeleteCheck = async (name: string, headers = GrafanaHelper.getAuthHeader()): Promise<APIResponse> =>
     await this.request.delete(`${apiEndpoints.advisors.checks}/${name}`, { headers });
 
+  requestEmailInsights = async (
+    emails: string[],
+    filters: Record<string, string> = {},
+    headers = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> =>
+    await this.request.post(apiEndpoints.advisors.emailInsights, {
+      data: { email_addresses: emails, ...filters },
+      headers,
+    });
+
   requestGet = async (endpoint: string, headers = GrafanaHelper.getAuthHeader()): Promise<APIResponse> =>
     await this.request.get(endpoint, { headers });
 

@@ -433,18 +433,24 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       },
     ];
 
+    const agentIds = [mysqldExporterId, mysqldSlowlogAgentId];
+
     try {
       for (const enableCase of enableCases) {
-        for (const command of [
-          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
-        ]) {
-          const output = await cli.exec(command);
-          await output.assertSuccess();
-          await output.outContains(enableCase.response);
-        }
+        await cli.execUntilPersisted(
+          [
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
+          ],
+          [enableCase.response],
+          async () => {
+            for (const agentId of agentIds) {
+              expect((await pmmApi.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!enableCase.running);
+            }
+          },
+        );
 
-        await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldSlowlogAgentId], enableCase.running);
+        await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
       }
     } finally {
       // The later tests change these agents and expect them running.
