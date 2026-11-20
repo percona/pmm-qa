@@ -184,6 +184,7 @@ module.exports = {
   },
   fields: {
     accessKeyInput: '$text-input-aws-access-key',
+    accessKeyMode: radioLabel('rdsAuthMode', 'access_key'),
     addAWSRDSMySQLbtn: '$rds-instance',
     addAzureMySQLPostgreSQL: '$azure-instance',
     addExternalServiceRemote: '$external-instance',
@@ -713,6 +714,8 @@ module.exports = {
 
   openAddAWSRDSMySQLPage() {
     I.click(this.fields.addAWSRDSMySQLbtn);
+    I.waitForVisible(this.fields.accessKeyMode, 30);
+    I.click(this.fields.accessKeyMode);
     I.waitForVisible(this.fields.accessKeyInput, 30);
     I.waitForVisible(this.fields.secretKeyInput, 30);
   },

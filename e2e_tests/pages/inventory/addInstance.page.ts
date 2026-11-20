@@ -24,6 +24,7 @@ export default class AddInstancePage extends BasePage {
     nodeOption: (nodeName: string) => this.page.getByRole('option', { exact: true, name: nodeName }),
   };
   buttons = {
+    accessKeyMode: this.page.getByRole('radio', { exact: true, name: 'Access key' }),
     addService: this.page.getByTestId('add-service-submit'),
     azure: this.page.getByTestId('azure-instance'),
     discover: this.page.getByTestId('add-service-submit'),
@@ -147,6 +148,7 @@ export default class AddInstancePage extends BasePage {
 
   discoverRds = async (accessKey: string, secretKey: string) => {
     await this.buttons.rds.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.accessKeyMode.check({ timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.accessKey.fill(accessKey, { timeout: Timeouts.THIRTY_SECONDS });
     await this.inputs.secretKey.fill(secretKey);
     await this.buttons.discover.click();
