@@ -56,6 +56,7 @@ import AdvisorsCatalogPage from '@pages/advisors/advisorsCatalog.page';
 import AdvisorInsightsPage from '@pages/advisors/advisorInsights.page';
 import AdvisorRunsPage from '@pages/advisors/advisorRuns.page';
 import AdvisorSchedulerPage from '@pages/advisors/advisorScheduler.page';
+import AmazonRdsPage from '@pages/amazonRds.page';
 import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
@@ -68,6 +69,7 @@ const pmmTest = base.extend<{
   addInstancePage: AddInstancePage;
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
+  amazonRdsPage: AmazonRdsPage;
   agentsPage: AgentsPage;
   argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
@@ -126,6 +128,7 @@ const pmmTest = base.extend<{
   alertingPage: async ({ page }, use) => await use(new AlertingPage(page)),
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
+  amazonRdsPage: async ({ page }, use) => await use(new AmazonRdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
   argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
   backupInventoryPage: async ({ page }, use) => await use(new BackupInventoryPage(page)),
