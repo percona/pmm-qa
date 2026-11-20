@@ -168,7 +168,8 @@ export default class CredentialsFilesHelper {
     );
 
     try {
-      await this.dockerHelper.waitForHealthy(credentialsServer.container);
+      await this.dockerHelper.waitForHealthy(credentialsServer.container, Timeouts.TEN_MINUTES);
+      await this.waitForStableReadiness();
     } catch (error) {
       console.log(
         this.cliHelper.execSilent(`docker logs --tail 200 ${credentialsServer.container} 2>&1`).stdout,
@@ -185,6 +186,32 @@ export default class CredentialsFilesHelper {
 
       throw error;
     }
+  };
+
+  // PMM-15944: pmm-managed restarts Grafana right after it first becomes ready, so a single healthy check
+  // can land just before that restart. Wait until readyz stays 200 for 30 seconds.
+  private waitForStableReadiness = async () => {
+    let consecutive = 0;
+
+    await expect
+      .poll(
+        () => {
+          const ready =
+            this.cliHelper.execSilent(
+              `docker exec ${credentialsServer.container} curl -sf http://127.0.0.1:8080/v1/server/readyz`,
+            ).code === 0;
+
+          consecutive = ready ? consecutive + 1 : 0;
+
+          return consecutive;
+        },
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: `${credentialsServer.container} should stay ready`,
+          timeout: Timeouts.FIVE_MINUTES,
+        },
+      )
+      .toBeGreaterThanOrEqual(7);
   };
 
   // Stops the server before removing it, so PostgreSQL does not find a stale postmaster.pid on the same volume.
