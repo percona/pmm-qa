@@ -43,7 +43,7 @@ pmmTest.afterEach(async ({ api }) => {
 });
 
 pmmTest(
-  'PMM-Txxxx - Verify the QAN slow queries built-in template is listed as Dynamic and its create form shows the ClickHouse query steps @fb-alerting',
+  'PMM-T2815 - Verify the QAN slow queries built-in template is listed as Dynamic and its create form shows the ClickHouse query steps @fb-alerting',
   async ({ alertingPage, api }) => {
     await pmmTest.step('The template is a Dynamic built-in template', async () => {
       await alertingPage.openTemplates();
@@ -112,7 +112,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify a QAN slow queries rule fires only for services with a slow query, shows its steps on the Alerts page and resolves on its own @fb-alerting',
+  'PMM-T2816 - Verify a QAN slow queries rule fires only for services with a slow query, shows its steps on the Alerts page and resolves on its own @fb-alerting',
   async ({ alertingPage, alertStatusPage, api, dockerHelper }) => {
     const ruleName = 'qan-slow-5';
     const mysql = await api.inventoryApi.getQanService(mysqlQan);
@@ -242,7 +242,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify filters narrow QAN slow queries alerts by the labels the query returns @fb-alerting',
+  'PMM-T2817 - Verify filters narrow QAN slow queries alerts by the labels the query returns @fb-alerting',
   async ({ api, dockerHelper }) => {
     const mysql = await api.inventoryApi.getQanService(mysqlQan);
     const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
@@ -349,7 +349,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify a rule with an invalid filter label or regular expression is refused @fb-alerting',
+  'PMM-T2818 - Verify a rule with an invalid filter label or regular expression is refused @fb-alerting',
   async ({ alertingPage, api, page }) => {
     const invalidLabel = "Invalid filter: filter label 'service name' is not a valid label name.";
     const invalidRegexp = "Invalid filter: filter regexp for label 'service_name' is invalid:";
@@ -401,7 +401,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify a node threshold override applies to a QAN slow queries rule only on that node @fb-alerting',
+  'PMM-T2819 - Verify a node threshold override applies to a QAN slow queries rule only on that node @fb-alerting',
   async ({ alertThresholdsPage, api, dockerHelper, nodesPage, page }) => {
     const ruleName = 'qan-slow-15';
     const mysql = await api.inventoryApi.getQanService(mysqlQan);
@@ -482,7 +482,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify a user template with a ClickHouse query can be added and its rules fire @fb-alerting',
+  'PMM-T2820 - Verify a user template with a ClickHouse query can be added and its rules fire @fb-alerting',
   async ({ alertingPage, api }) => {
     const mysql = await api.inventoryApi.getQanService(mysqlQan);
     const postgresql = await api.inventoryApi.getQanService(postgresqlQan);
@@ -544,7 +544,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify user templates that misuse a ClickHouse query are refused with a clear message @fb-alerting',
+  'PMM-T2821 - Verify user templates that misuse a ClickHouse query are refused with a clear message @fb-alerting',
   async ({ alertingPage, page }) => {
     await alertingPage.openTemplates();
 
@@ -568,7 +568,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-Txxxx - Verify an edit that breaks a ClickHouse user template is refused and the template is kept @fb-alerting',
+  'PMM-T2822 - Verify an edit that breaks a ClickHouse user template is refused and the template is kept @fb-alerting',
   async ({ alertingPage, api }) => {
     await api.alertingApi.uploadTemplate(userTemplate.yaml);
     await alertingPage.openTemplates();
