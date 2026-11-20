@@ -20,11 +20,7 @@ const kubectlTimeout = Timeouts.TWO_MINUTES;
 
 interface ExecInPodOptions {
   container?: string;
-  /**
-   * Run the command once more when {@link kubectlTimeout} killed it. An exec stream can hang
-   * after the command itself is done while plain API calls still work, as `df` did right after a
-   * 6 s `dd` in pmm3-ha-backup-restore-tests #53. Only for commands that are safe to repeat.
-   */
+  /** Run the command once more when {@link kubectlTimeout} killed it. Only for commands that are safe to repeat. */
   retryIfKilled?: boolean;
   /** Skip logging - kubectl warns about defaulted containers on every call. */
   silent?: boolean;
