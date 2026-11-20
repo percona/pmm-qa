@@ -11,6 +11,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import HaHealthOverviewDashboard from '@pages/dashboards/ha/haHealthOverview';
 import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
 import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
@@ -29,6 +30,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
+  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page, () => this.loadAllPanels());
   readonly home = new HomeDashboard(this.page);
   readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
@@ -49,6 +51,17 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    // Third cell of the series row: the Max column of a table legend whose calcs are mean, max, min.
+    legendMaxValue: (panelName: string, seriesName: string) =>
+      this.grafanaIframe()
+        .getByRole('cell')
+        .nth(2)
+        .within(
+          this.builders
+            .panelByExactName(panelName)
+            .getByRole('row')
+            .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
+        ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -236,6 +249,18 @@ export default class Dashboards extends BasePage {
         .panelContentByExactName('Feature Compatibility Version')
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
+
+  getLegendMaxSeconds = async (panelName: string, seriesName: string) => {
+    const cell = this.builders.legendMaxValue(panelName, seriesName);
+
+    if (!(await cell.isVisible())) return NaN;
+
+    const seconds = /^(\d+(?:\.\d+)?) s$/.exec(
+      (await cell.innerText({ timeout: Timeouts.FIVE_SECONDS })).trim(),
+    );
+
+    return seconds ? Number(seconds[1]) : NaN;
+  };
 
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
     // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.

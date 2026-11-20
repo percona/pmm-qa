@@ -19,11 +19,10 @@ test.beforeAll(async ({}) => {
 });
 
 // The @percona-server specs run next in the same container, so give them back pmm-agent on its default port and a mysqld
-// without require_secure_transport. A restart clears the latter and stops pmm-agent, which pmm-framework runs unsupervised.
+// without require_secure_transport. A restart clears the latter.
 test.afterAll(async ({}) => {
   await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
-  await (await cli.exec(`docker restart ${containerName}`)).assertSuccess();
-  await (await cli.exec(`docker exec -d ${containerName} sh -c "exec pmm-agent --config-file=${pmmAgentConfig} >>${pmmAgentLog} 2>&1"`)).assertSuccess();
+  await pmmCli.restartContainerWithPmmAgent(containerName, pmmAgentConfig, pmmAgentLog);
 
   await expect(async () => {
     await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SELECT 1;"`)).assertSuccess();
@@ -434,18 +433,24 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       },
     ];
 
+    const agentIds = [mysqldExporterId, mysqldSlowlogAgentId];
+
     try {
       for (const enableCase of enableCases) {
-        for (const command of [
-          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-          pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
-        ]) {
-          const output = await cli.exec(command);
-          await output.assertSuccess();
-          await output.outContains(enableCase.response);
-        }
+        await cli.execUntilPersisted(
+          [
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
+          ],
+          [enableCase.response],
+          async () => {
+            for (const agentId of agentIds) {
+              expect((await pmmApi.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!enableCase.running);
+            }
+          },
+        );
 
-        await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldSlowlogAgentId], enableCase.running);
+        await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
       }
     } finally {
       // The later tests change these agents and expect them running.
@@ -640,9 +645,7 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
   test('PMM-T2540 - Verify Change agent pmm-agent listen port for mysqld-exporter and qan-mysql-slowlog-agent', async ({}) => {
     test.setTimeout(240_000);
     await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' ${pmmAgentConfig}`)).assertSuccess();
-    // Restarting the container stops pmm-agent, which pmm-framework runs without a supervisor.
-    await (await cli.exec(`docker restart ${containerName}`)).assertSuccess();
-    await (await cli.exec(`docker exec -d ${containerName} sh -c "exec pmm-agent --config-file=${pmmAgentConfig} >>${pmmAgentLog} 2>&1"`)).assertSuccess();
+    await pmmCli.restartContainerWithPmmAgent(containerName, pmmAgentConfig, pmmAgentLog);
 
     await expect(async () => {
       for (const command of [

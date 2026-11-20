@@ -95,7 +95,7 @@ jobs:
       CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag || '@settings-fb' }}
-      ADMIN_PASSWORD: 'admin-password'
+      ADMIN_PASSWORD: 'PMM3testuser!'
 
     steps:
       - name: Create status check

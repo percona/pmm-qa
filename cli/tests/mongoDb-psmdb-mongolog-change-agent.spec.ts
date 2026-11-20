@@ -298,8 +298,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains('agent configuration updated.');
     }
 
-    // The failed start's status reports can revert the valid credentials right after they are saved (PMM-15835), and the
-    // mongolog agent stays Done until it gets them. Stored state cannot show it: the API never returns the password.
+    // PMM-15835 can revert the valid credentials right after they are saved, leaving mongolog Done and the exporter with mongodb_up 0.
     // Re-applying credentials that did stick restarts nothing, as pmm-agent skips agents whose parameters are unchanged.
     await expect(async () => {
       for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, `--username=${newUsername} --password=${newPassword}`)) {
@@ -307,9 +306,8 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       }
 
       await pmmAdmin.expectAgentsRunning(containerName, [exporterId, mongologId], true, 30_000);
-    }).toPass({ intervals: [5_000], timeout: 90_000 });
-
-    await mongo.expectMongoUp(containerName, serviceName, agentPassword);
+      await mongo.expectMongoUp(containerName, serviceName, agentPassword, 20_000);
+    }).toPass({ intervals: [5_000], timeout: 100_000 });
   });
 
   test('PMM-T2446 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
@@ -370,11 +368,14 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
       await output.outContains(`- changed authentication mechanism to ${authMechanism}`);
     }
 
-    for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--authentication-mechanism= --skip-connection-check')) {
-      await (await cli.exec(command)).assertSuccess();
-    }
+    // PMM-15835 can revert the reset right after it is saved, leaving the exporter on SCRAM-SHA-256 with mongodb_up 0.
+    await expect(async () => {
+      for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, '--authentication-mechanism= --skip-connection-check')) {
+        await (await cli.exec(command)).assertSuccess();
+      }
 
-    await mongo.expectMongoUp(containerName, serviceName, agentPassword, 300_000);
+      await mongo.expectMongoUp(containerName, serviceName, agentPassword, 20_000);
+    }).toPass({ intervals: [5_000], timeout: 75_000 });
   });
 
   test('PMM-T2447 - Verify Change agent pmm-agent listen port for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
@@ -401,7 +402,7 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
   });
 
   test('PMM-T2448 - Verify Change agent server URL and server insecure TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
-    const serverUrl = cli.shellQuote(`https://admin:${adminPassword}@pmm-server:8443/`);
+    const serverUrl = cli.shellQuote(`https://admin:${encodeURIComponent(adminPassword)}@pmm-server:8443/`);
 
     for (const command of mongo.changeMongoMongologAgents(containerName, exporterId, mongologId, `--server-url=${serverUrl} --pmm-agent-listen-port=7778`)) {
       await cli.expectFailure(await cli.exec(command), 'tls: failed to verify certificate:');

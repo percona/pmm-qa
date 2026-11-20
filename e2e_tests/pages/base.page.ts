@@ -12,6 +12,7 @@ export type DropdownName =
   | 'Cluster'
   | 'Node'
   | 'Replication Set'
+  | 'Namespace'
   | 'Source Cluster'
   | 'Target Cluster'
   | 'ClusterSync Cluster'
@@ -57,7 +58,7 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    // Clicking the wrapper can land on a multi-value chip's Remove button instead of opening the list.
+    // The wrapper's centre lands on its label when the selected value is short, which does not open the menu.
     await combobox.click({ timeout: Timeouts.THIRTY_SECONDS });
 
     const options = frame.getByRole('option');

@@ -6,6 +6,7 @@ import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
@@ -20,6 +21,7 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import PcsmHelper from '@helpers/pcsm.helper';
@@ -68,6 +70,7 @@ const pmmTest = base.extend<{
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
+  argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
   backupInventoryPage: BackupInventoryPage;
   changePasswordPage: ChangePasswordPage;
@@ -104,6 +107,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  remoteDatabasesHelper: RemoteDatabasesHelper;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
   storageLocationsPage: StorageLocationsPage;
@@ -125,6 +129,7 @@ const pmmTest = base.extend<{
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
+  argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
   backupInventoryPage: async ({ page }, use) => await use(new BackupInventoryPage(page)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
@@ -230,6 +235,12 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  remoteDatabasesHelper: async ({ api, cliHelper, dockerHelper }, use) => {
+    const remoteDatabasesHelper = new RemoteDatabasesHelper(api, cliHelper, dockerHelper);
+
+    await use(remoteDatabasesHelper);
+    await remoteDatabasesHelper.removeAll();
+  },
   scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),

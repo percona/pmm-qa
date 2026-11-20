@@ -216,50 +216,32 @@ jobs:
 
   pgss:
     name: PGSS UI tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database pgsql'
-      tags_for_tests: '@pgss-pmm-integration'
-
-# Unskip once it will be possible to find ARBITER element on the replset summary dashboard
-  # psmdb_arbiter:
-  #   name: PSMDB Arbiter Replica UI tests
-  #   uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-  #   secrets:
-  #    LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-  #   with:
-  #     pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-  #     pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-  #     pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-  #     pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-  #     sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-  #     setup_services: '--database psmdb,SETUP_TYPE=psa'
-  #     tags_for_tests: '@pmm-psmdb-arbiter-integration'
+      pmm_test_flag: '@pgss-pmm-integration'
 
   psmdb_replica:
     name: PSMDB Replica UI tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
-      tags_for_tests: '@pmm-psmdb-replica-integration'
+      pmm_test_flag: '@pmm-psmdb-replica-integration'
 
   user_and_password_podman:
     name: User with changed password UI tests
@@ -336,19 +318,17 @@ jobs:
 
   psmdb_arbiter:
     name: PSMDB Arbiter Replica UI tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       arch: ${{ inputs.arch || 'amd64' }}
       setup_services: '--database psmdb,SETUP_TYPE=psa'
-      tags_for_tests: '@pmm-psmdb-arbiter-integration'
+      pmm_test_flag: '@pmm-psmdb-arbiter-integration'
 
   ps_integration:
     name: Percona Server for MySQL UI integration tests
@@ -482,6 +462,21 @@ jobs:
       # not @advisors-…: --grep matches substrings, so the advisors job would run these slow tests too
       pmm_test_flag: '@advisor-scheduling'
 
+  advisor_telemetry:
+    name: Advisor telemetry tests
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      arch: ${{ inputs.arch }}
+      setup_services: '--database ps=8.4'
+      pmm_test_flag: '@advisor-telemetry'
+
   advisor_databases:
     name: Advisor checks on other databases
     if: (inputs.arch || 'amd64') == 'amd64'
@@ -496,3 +491,19 @@ jobs:
       arch: amd64
       setup_services: '-h'
       pmm_test_flag: '@advisor-databases'
+
+  advisor_versions:
+    name: Advisor version checks
+    if: (inputs.arch || 'amd64') == 'amd64'
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
+      arch: amd64
+      # PMM-T2622 needs these series past end of life, so they must stay in pmm-framework's supported versions.
+      setup_services: '--database ps=8.0 --database psmdb=6.0 --database pgsql=14'
+      pmm_test_flag: '@advisor-versions'
