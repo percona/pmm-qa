@@ -2,6 +2,13 @@ import { Document, MongoClient } from 'mongodb';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from './timeouts';
 
+const evalAsPbm = (replicaSet: string, members: string[], js: string) =>
+  new CliHelper()
+    .execute(
+      `docker exec ${members[0]} mongo "mongodb://pbm:pbmpass@${members.map((member) => `${member}:27017`).join(',')}/?replicaSet=${replicaSet}&authSource=admin" --quiet --eval '${js}'`,
+    )
+    .assertSuccess();
+
 interface MongoConfig {
   host?: string;
   port: number;
@@ -52,6 +59,28 @@ export default class MongoDBHelper {
     return { unusedIndex, usedIndex };
   };
 
+  /**
+   * Makes one replica set member a hidden, priority 0 member that applies the oplog delaySeconds late.
+   *
+   * @param   replicaSet    replica set name
+   * @param   members       containers running its mongod members on port 27017
+   * @param   memberIndex   index of the member in rs.conf().members
+   * @param   delaySeconds  secondaryDelaySecs to set
+   * @returns the delayed member's host name
+   */
+  delayReplicaSetMember = (
+    replicaSet: string,
+    members: string[],
+    memberIndex: number,
+    delaySeconds: number,
+  ) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      `const c = rs.conf(), m = c.members[${memberIndex}]; m.secondaryDelaySecs = ${delaySeconds};` +
+        ' m.priority = 0; m.hidden = true; rs.reconfig(c); print(m.host.split(":")[0]);',
+    ).stdout.trim();
+
   dropDatabase = async (dbName: string) => this.client.db(dbName).dropDatabase();
 
   dropUser = async (username: string) => this.client.db('admin').command({ dropUser: username });
@@ -96,6 +125,55 @@ export default class MongoDBHelper {
   getReplicaSetMemberStates = async () =>
     ((await this.client.db('admin').command({ replSetGetStatus: 1 })).members as { stateStr: string }[]).map(
       ({ stateStr }) => stateStr,
+    );
+
+  /**
+   * Undoes delayReplicaSetMember: every priority 0 data-bearing member gets back the priority 1, no delay
+   * and visibility pmm-framework starts it with. Safe when no member was delayed.
+   *
+   * @param   replicaSet   replica set name
+   * @param   members      containers running its mongod members on port 27017
+   */
+  resetDelayedReplicaSetMembers = (replicaSet: string, members: string[]) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      'const c = rs.conf(), delayed = c.members.filter((m) => !m.arbiterOnly && m.priority === 0);' +
+        ' delayed.forEach((m) => { m.secondaryDelaySecs = 0; m.priority = 1; m.hidden = false; });' +
+        ' if (delayed.length > 0) rs.reconfig(c);',
+    );
+
+  /**
+   * Puts back the users and roles saveUsersAndRoles copied that are now missing, then drops the copy.
+   * Stopping the primary while PBM swaps users and roles leaves only the pbm user PBM connects as
+   * (swapUsers in pbm/restore/logical.go), so this runs as that user.
+   *
+   * @param   replicaSet   replica set name
+   * @param   members      containers running its mongod members on port 27017
+   */
+  restoreUsersAndRoles = (replicaSet: string, members: string[]) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      'const admin = db.getSiblingDB("admin"), copy = db.getSiblingDB("pmm_qa_auth");' +
+        ' for (const name of ["roles", "users"]) copy.getCollection(name).find().forEach((doc) => {' +
+        ' const live = admin.getCollection("system." + name); if (!live.findOne({ _id: doc._id })) live.insertOne(doc); });' +
+        ' copy.dropDatabase();',
+    );
+
+  /**
+   * Copies admin.system.users and admin.system.roles into the pmm_qa_auth database. Take the copy after
+   * the backup a restore will use, so the restore does not drop it.
+   *
+   * @param   replicaSet   replica set name
+   * @param   members      containers running its mongod members on port 27017
+   */
+  saveUsersAndRoles = (replicaSet: string, members: string[]) =>
+    evalAsPbm(
+      replicaSet,
+      members,
+      'const admin = db.getSiblingDB("admin"), copy = db.getSiblingDB("pmm_qa_auth"); copy.dropDatabase();' +
+        ' for (const name of ["roles", "users"]) copy.getCollection(name).insertMany(admin.getCollection("system." + name).find().toArray());',
     );
 
   /**

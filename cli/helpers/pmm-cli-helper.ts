@@ -52,9 +52,25 @@ export async function runEach(steps: (() => Promise<unknown>)[]) {
  *
  * @param   containerName   docker container running pmm-agent
  * @param   agentId         agent ID
+ * @param   logFile         pmm-agent's log file in the container
  */
-export async function countAgentRunningReports(containerName: string, agentId: string): Promise<number> {
-  const output = await exec(`docker exec ${containerName} grep -cF 'Sending status: AGENT_STATUS_RUNNING." agentID=${agentId}' /var/log/pmm-agent.log`);
+export async function countAgentRunningReports(containerName: string, agentId: string, logFile = '/var/log/pmm-agent.log'): Promise<number> {
+  const output = await exec(`docker exec ${containerName} grep -cF 'Sending status: AGENT_STATUS_RUNNING." agentID=${agentId}' ${logFile}`);
 
   return Number(output.stdout.trim()) || 0;
+}
+
+/**
+ * Restart a container and bring its pmm-agent back. Where pmm-framework installed a pmm-agent systemd unit, a second
+ * hand-started pmm-agent can leave its config empty, so pmm-agent is started here only in a container without the unit.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   configFile      pmm-agent's config file in the container
+ * @param   logFile         pmm-agent's log file in the container
+ */
+export async function restartContainerWithPmmAgent(containerName: string, configFile: string, logFile: string) {
+  await (await exec(`docker restart ${containerName}`)).assertSuccess();
+  await (await exec(
+    `docker exec -d ${containerName} sh -c "test -f /etc/systemd/system/pmm-agent.service || exec pmm-agent --config-file=${configFile} >>${logFile} 2>&1"`,
+  )).assertSuccess();
 }

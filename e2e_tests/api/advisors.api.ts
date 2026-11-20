@@ -277,6 +277,16 @@ export default class AdvisorsApi {
   requestDeleteCheck = async (name: string, headers = GrafanaHelper.getAuthHeader()): Promise<APIResponse> =>
     await this.request.delete(`${apiEndpoints.advisors.checks}/${name}`, { headers });
 
+  requestEmailInsights = async (
+    emails: string[],
+    filters: Record<string, string> = {},
+    headers = GrafanaHelper.getAuthHeader(),
+  ): Promise<APIResponse> =>
+    await this.request.post(apiEndpoints.advisors.emailInsights, {
+      data: { email_addresses: emails, ...filters },
+      headers,
+    });
+
   requestGet = async (endpoint: string, headers = GrafanaHelper.getAuthHeader()): Promise<APIResponse> =>
     await this.request.get(endpoint, { headers });
 
@@ -334,6 +344,29 @@ export default class AdvisorsApi {
         time_of_day: schedule.time_of_day,
       });
     }
+  };
+
+  runChecksAndListInsights = async (
+    names: string[],
+    serviceIds: string[],
+    timeout = Timeouts.FIVE_MINUTES,
+  ) => {
+    const run = await this.runChecksAndWait(names, serviceIds, timeout);
+    const insights = await this.listInsights({ page_size: '500', run_id: run.id });
+
+    return {
+      insightOf: (serviceId: string, checkName: string): AdvisorInsight => {
+        const insight = insights.find(
+          ({ check_name, service_id }) => check_name === checkName && service_id === serviceId,
+        );
+
+        if (!insight) throw new Error(`No ${checkName} insight for service ${serviceId} in run ${run.id}`);
+
+        return insight;
+      },
+      insights,
+      run,
+    };
   };
 
   runChecksAndWait = async (

@@ -38,6 +38,7 @@ export default class BackupInventoryPage extends BasePage {
   };
   buttons = {
     advancedSettings: this.grafanaIframe().getByTestId('add-backup-advanced-settings'),
+    closeAlert: this.grafanaIframe().getByRole('button', { exact: true, name: 'Close alert' }),
     confirmDelete: this.grafanaIframe().getByTestId('confirm-delete-modal-button'),
     copyToClipboard: this.grafanaIframe()
       .getByTestId('modal-content')
@@ -47,6 +48,10 @@ export default class BackupInventoryPage extends BasePage {
     restore: this.grafanaIframe().getByTestId('restore-button'),
   };
   elements = {
+    backupErrors: this.grafanaIframe().getByTestId('backup-errors'),
+    backupErrorsReadMore: this.grafanaIframe()
+      .getByTestId('backup-errors')
+      .getByRole('link', { exact: true, name: 'Read more' }),
     backupModalError: this.grafanaIframe().getByTestId('backup-modal-error'),
     deleteMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     forceDeleteLabel: this.grafanaIframe().getByTestId('force-field-label'),
