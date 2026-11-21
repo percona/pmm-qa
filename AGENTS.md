@@ -43,8 +43,6 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite), and the lint dispatcher | [agent_status.py](support_scripts/agent_status.py) · [check_upgrade.py](support_scripts/check_upgrade.py) · [lint/](support_scripts/lint/) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
 | Claude Code agents & skills | Test Runner, Investigator, FB Reporter, `qa-code-review`, the `@pmm-ai` Slack listener and their hooks and settings live in [percona/pmm-ai](https://github.com/percona/pmm-ai) (`plugins/pmm-qa`, `environment/`); CI loads the plugin from there | [AUTOMATIONS.md](https://github.com/percona/pmm-ai/blob/main/docs/AUTOMATIONS.md) |
-| [.claude/](.claude/) | CodeceptJS-to-Playwright migration skill, its agents and scripts (migration control branch only) | [skills/codeceptjs-migration/](.claude/skills/codeceptjs-migration/SKILL.md) |
-| [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 
 ## Cross-Suite Architecture
@@ -83,8 +81,6 @@ flowchart LR
 ```
 
 `pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
-
-CodeceptJS-to-Playwright migration verification runs on a throwaway CHAOS VM through [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on the prebaked images CI pulls, Playwright on the VM. Never Docker on the runner host.
 
 ## CI / Pipelines
 
@@ -281,40 +277,14 @@ Agents working here capture reusable lessons with the `skill-gardener` skill; le
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |
 | `HEADLESS` | `true` | Browser visibility (`false` for headed) |
-| `PMM_DEBUG` | `1` in CHAOS VM provisioning | Enable verbose PMM Server logging; override with `--server-env PMM_DEBUG=0` |
 | `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose) |
-| `CLIENT_VERSION` | framework default | PMM Client version or tarball URL for pmm-framework |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |
-
-## Shell and tooling notes (Windows / Git Bash)
-
-Agents in this repository run under Git Bash on Windows. These bite whatever you are working on.
-
-- **Search with the Grep tool and an explicit path scope**, never a repo-wide `grep -rn` from the root: it exceeds the 120s Bash timeout and the retry has to be scoped anyway. Set `output_mode` explicitly.
-- **`grep -P` is unavailable.** It fails with "grep: -P supports only unibyte and UTF-8 locales" on every invocation; inside a per-file loop that reads as N file failures rather than one unusable matcher. To scan added lines for non-ASCII punctuation:
-
-  ```bash
-  git diff -U0 origin/main..HEAD -- '*.md' | grep '^+' | grep -v '^+++'     | python -c "import sys; [print(repr(l)) for l in sys.stdin if any(ord(c) > 127 for c in l)]"
-  ```
-
-  Scan added lines, not whole files - a file-scoped scan flags pre-existing punctuation the change never touched.
-- **Count carriage returns with a byte count, not a `grep` pattern.** A CR literal does not survive its own heredoc and reaches the file as an empty pattern, which matches every line and reports a whole-file CRLF flip on a pure-LF file:
-
-  ```bash
-  python -c "print(open('<path>','rb').read().count(bytes([13])))"
-  ```
-
-- **`git show <ref>:<path>` is path-mangled** - `origin/main:.github/workflows/x.yml` reaches git as `origin\main;.github\workflows\x.yml` and dies with "Not a valid object name". Quoting the argument does not help. Use `git ls-tree --name-only <ref> -- <path>`, which takes the ref and the path separately. Wrapped in the obvious loop that maps a non-zero exit to "absent", the mangled form reports **every** path as absent.
-- **Write a patch with `git diff --output=<file>`, never `>` or a pipe.** Both re-encode the bytes with a UTF-8 BOM and CRLF, and `git apply` then accepts the corrupted patch silently.
-- **A fresh `git worktree` has no `node_modules`** - run `npm ci` in its `e2e_tests/` first. Without it `npx tsc`/`eslint` report a missing-package error that reads like a clean run, and `.husky/pre-commit` aborts **every** commit from that worktree with a `lint-staged` MODULE_NOT_FOUND, including a docs-only one staging no `.ts`. Install rather than reaching for `--no-verify`.
-- **Do not read `$?` after a pipe**: `cmd | tail; echo $?` reports `tail`'s status, so a failed command looks like a pass. Put the check on its own line, or use `PIPESTATUS`.
 
 ## Key Files to Reference
 
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
 - [e2e_tests/fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) — shared test fixtures
 - [e2e_tests/docker-compose.yml](e2e_tests/docker-compose.yml) — local PMM Server environment
-- [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh) — migration PMM Server plus pmm-framework databases on a throwaway CHAOS VM
 - [k8s/helm-test.bats](k8s/helm-test.bats) — Helm chart test suite
 - [.github/workflows/runner-e2e-tests-playwright.yml](.github/workflows/runner-e2e-tests-playwright.yml) — reusable Playwright CI runner
 - [.agents/README.md](.agents/README.md) — LLM workflow prompts and MCP config
