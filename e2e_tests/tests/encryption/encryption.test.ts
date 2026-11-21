@@ -8,11 +8,9 @@ const serverKeyCommand = 'docker exec pmm-server cat /srv/pmm-encryption.key';
 const nonDefaultKeyCommand = 'docker exec pmm-server-encryption cat /srv/non-default.key';
 const serverRotationCommand = 'docker exec pmm-server pmm-encryption-rotation';
 const rotationMessages = [
-  'DB pmm-managed is successfully decrypted',
-  'Rotating encryption key',
-  'New encryption key generated',
-  'DB pmm-managed is successfully encrypted',
-  'Starting PMM Server',
+  'Added new primary encryption key',
+  'Restarting PMM Server',
+  'All stored secrets are re-encrypted with the new key',
 ];
 let nodeId = '';
 
