@@ -45,8 +45,10 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
   }
 
   if (
-    cliHelper.queryPostgresql(container, 'SHOW pg_stat_monitor.pgsm_bucket_time;') !==
-    String(defaultBucketTime)
+    cliHelper.queryPostgresql(
+      container,
+      "SELECT setting FROM pg_settings WHERE name = 'pg_stat_monitor.pgsm_bucket_time';",
+    ) !== String(defaultBucketTime)
   ) {
     cliHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
   }
@@ -134,7 +136,7 @@ pmmTest(
       total_exec_time: number;
     }>(
       container,
-      `SELECT query, pgsm_query_id::text AS pgsm_query_id, calls, total_exec_time, mean_exec_time FROM pg_stat_monitor WHERE datname = '${database}' AND query NOT IN ('SELECT version()', 'SELECT /* pmm-agent:pgstatmonitor */ version()') AND query NOT LIKE '%current_database() datname%'`,
+      `SELECT min(query) AS query, pgsm_query_id::text AS pgsm_query_id, sum(calls) AS calls, sum(total_exec_time) AS total_exec_time, sum(mean_exec_time) AS mean_exec_time FROM pg_stat_monitor WHERE datname = '${database}' AND query NOT IN ('SELECT version()', 'SELECT /* pmm-agent:pgstatmonitor */ version()') AND query NOT LIKE '%current_database() datname%' GROUP BY pgsm_query_id HAVING count(*) = 1`,
     );
 
     expect(rows, `pg_stat_monitor should record the ${database} load`).not.toHaveLength(0);
