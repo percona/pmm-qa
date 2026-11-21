@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs on the CHAOS VM, through `chaos-pmm.sh test`: wait for the PMM environment
-# chaos-pmm.sh up created there, then run one Playwright test file or an anchored
+# chaos-pmm.sh prepare created there, then run one Playwright test file or an anchored
 # grep-filtered subset. This script does not create or tear down that environment.
 # Usage:
 #   run-migration-single-test.sh <tests/file.test.ts> [--prepare-only] [--grep regex]
@@ -126,7 +126,7 @@ wait_readyz() {
 
 if ! readyz_once; then
   wait_readyz || {
-    echo "ERROR: could not reach the PMM environment at ${PMM_UI_URL}. Provision it first with chaos-pmm.sh up <run_id>." >&2
+    echo "ERROR: could not reach the PMM environment at ${PMM_UI_URL}. Provision it first: chaos-vm.sh up <run_id>, then chaos-pmm.sh prepare <run_id>." >&2
     exit 2
   }
 fi

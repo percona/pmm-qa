@@ -102,11 +102,11 @@ When a human reviewer names a concrete end state, ship it in this PR; do not off
 
 ## Provisioning rule
 
-One throwaway CHAOS VM per migration through `.claude/scripts/chaos-pmm.sh` (`orchestration.md` steps 2a and 3): pmm-server from `e2e_tests/docker-compose.yml`, databases from `qa-integration/pmm_qa/pmm-framework` on the prebaked images CI pulls. Never Docker, PMM or a database on the runner host. Playwright runs on the VM (`chaos-pmm.sh test`), so a test's `docker exec` reaches the containers; `playwright-cli` and API checks run from the runner host against the VM's URL. Started in the background once the bucket is confirmed, reused through both reviews and execution, torn down with `chaos-pmm.sh down <run_id>`. No Linode provisioner.
+One throwaway CHAOS VM per migration, created, reached and torn down with the pmm-qa plugin's `chaos-vm.sh` (`VM=$(bash .claude/scripts/chaos-pmm.sh vm)`) and prepared with `.claude/scripts/chaos-pmm.sh prepare` (`orchestration.md` steps 2a and 3): pmm-server from `e2e_tests/docker-compose.yml`, databases from `qa-integration/pmm_qa/pmm-framework` over `$VM ssh`, on the prebaked images CI pulls. Never Docker, PMM or a database on the runner host. Playwright runs on the VM (`chaos-pmm.sh test`), so a test's `docker exec` reaches the containers; `playwright-cli` and API checks run from the runner host against the VM's URL. Started in the background once the bucket is confirmed, reused through both reviews and execution, torn down with `$VM down <run_id>`. No Linode provisioner.
 
 ## Reading files
 
-Read a file with the Read, Grep or Glob tool. To read one function of a script, Grep its name with `-n`, then Read with `offset` and `limit`. The shell stays for output only a command produces (`git show`, `git diff`, `gh`, `chaos-pmm.sh ssh`, a test run).
+Read a file with the Read, Grep or Glob tool. To read one function of a script, Grep its name with `-n`, then Read with `offset` and `limit`. The shell stays for output only a command produces (`git show`, `git diff`, `gh`, `$VM ssh`, a test run).
 
 ## Editing this skill
 

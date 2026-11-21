@@ -12,11 +12,11 @@ Full procedure: `run.md`. This tracker only owns row selection and the `Env`/`Se
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
 - The `Tags` cell is a per-file union and is not what CI selects on. Before provisioning, expand it to a per-scenario mapping (`scenario title -> exact tag set`, from a scoped grep of `Scenario(`/`Data(` in the source), correct the cell if the union was wrong, and record the expansion on the timeline.
-- `Setup` is the planned `--database` argument set for `.claude/scripts/chaos-pmm.sh up <run_id>` (`orchestration.md` step 3); empty means server only. `migration.sh setup <source>` derives it from the CI jobs the source's tags select and wins over this cell (`orchestration.md` step 2a). `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
+- `Setup` is the planned `--database` argument set for pmm-framework on the row's VM (`orchestration.md` steps 2a and 3); empty means server only. `migration.sh setup <source>` derives it from the CI jobs the source's tags select and wins over this cell (`orchestration.md` step 2a). `setupClient` is not a column: derive it from the source each run; it is not a provisioner argument.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
   each migration still owns and tears down its own CHAOS VM. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
-- A throwaway CHAOS VM through `.claude/scripts/chaos-pmm.sh` is the execution environment, except for B13 rows: they execute in the Jenkins job that runs their tag today, on the publish branch (`run.md` step 5, CI-only rows).
+- A throwaway CHAOS VM (`chaos-vm.sh`, prepared by `.claude/scripts/chaos-pmm.sh`) is the execution environment, except for B13 rows: they execute in the Jenkins job that runs their tag today, on the publish branch (`run.md` step 5, CI-only rows).
 
 Target selection, source rename, branch and PR mechanics, and what is committed where: `orchestration.md` and `branch-workflow.md`. Columns `PR`, `Opened` and `Merged` belong to the scripts: `migration.sh mark <row> done|retired <pr-url>` writes the PR that retires the source and the day it was opened, and `migration.sh merged` (run by preflight) writes the day that PR's change reached `origin/main`. A `done` or `retired` row is never left without them. The gh-pages Migration tab (https://percona.github.io/pmm-qa/migration/) reads `migration/dashboard/migration.json`, which `mark` and `merged` rebuild.
 
@@ -28,7 +28,7 @@ Row selection only ever picks a `pending` row. A row in any other status is not 
 
 ## Env bucket summary
 
-| Bucket | Env                          | Setup (`chaos-pmm.sh up` arguments)                     |
+| Bucket | Env                          | Setup (pmm-framework arguments)                         |
 | ------ | ---------------------------- | ------------------------------------------------------- |
 | B1     | none (UI/server only)        | (none); omit legacy `-h` / `--help`                    |
 | B2     | pgsql / pdpgsql              | `--database pgsql` or `--database pdpgsql`              |

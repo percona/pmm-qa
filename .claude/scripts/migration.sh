@@ -56,7 +56,7 @@ EOF
 # Setup from CI: each source scenario's tags pick the Playwright job that runs it, and that job's
 # setup_services become the CHAOS VM's --database list. A job with its own setup is copied whole; on the shared
 # nightly server only the shard argument for each engine the scenario names is taken (shortest variant).
-# --args prints only the list, for `chaos-pmm.sh up <run_id> $(migration.sh setup --args <source>)`.
+# --args prints only the list, for the pmm-framework call on the row's VM (`orchestration.md` step 2a).
 setup() {
   local only_args=''
   [[ ${1:-} == --args ]] && { only_args=1; shift; }

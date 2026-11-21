@@ -11,7 +11,7 @@ Follow `.claude/skills/codeceptjs-migration/run.md` (steps 5, 5b, 7, and 8 are y
 
 Never edit anything under `.claude/` (skills, agents, scripts, hooks). If a rule or script there blocks you, return the blocker to the parent instead.
 
-Input: tracker row, source path, target path/mode, setup, migrated titles or already-covered titles, `READY_TO_RUN`, worktree paths, the CHAOS run id and its exact `chaos-pmm.sh up` command, and the prepared PMM environment.
+Input: tracker row, source path, target path/mode, setup, migrated titles or already-covered titles, `READY_TO_RUN`, worktree paths, the CHAOS run id and its exact provisioning command (`$VM up`, `chaos-pmm.sh prepare` and the pmm-framework arguments), and the prepared PMM environment.
 
 Stop unless the reviewer result is `READY_TO_RUN`. After step 5b, return `READY_FOR_FINAL_REVIEW` and stop; the parent spawns the final review, never you. Push and open the PR only after the parent hands you `FINAL_REVIEW_PASS`.
 

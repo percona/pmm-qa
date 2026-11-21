@@ -84,7 +84,7 @@ flowchart LR
 
 `pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
 
-CodeceptJS-to-Playwright migration verification runs on a throwaway CHAOS VM through [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on the prebaked images CI pulls, Playwright on the VM. Never Docker on the runner host.
+CodeceptJS-to-Playwright migration verification runs on a throwaway CHAOS VM created with the pmm-qa plugin's `chaos-vm.sh` and prepared with [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh): pmm-server from `e2e_tests/docker-compose.yml`, databases from pmm-framework on the prebaked images CI pulls, Playwright on the VM. Never Docker on the runner host.
 
 ## CI / Pipelines
 
@@ -314,7 +314,7 @@ Agents in this repository run under Git Bash on Windows. These bite whatever you
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
 - [e2e_tests/fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) — shared test fixtures
 - [e2e_tests/docker-compose.yml](e2e_tests/docker-compose.yml) — local PMM Server environment
-- [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh) — migration PMM Server plus pmm-framework databases on a throwaway CHAOS VM
+- [.claude/scripts/chaos-pmm.sh](.claude/scripts/chaos-pmm.sh) — migration PMM Server and Playwright runs on a CHAOS VM that `chaos-vm.sh` created
 - [k8s/helm-test.bats](k8s/helm-test.bats) — Helm chart test suite
 - [.github/workflows/runner-e2e-tests-playwright.yml](.github/workflows/runner-e2e-tests-playwright.yml) — reusable Playwright CI runner
 - [.agents/README.md](.agents/README.md) — LLM workflow prompts and MCP config

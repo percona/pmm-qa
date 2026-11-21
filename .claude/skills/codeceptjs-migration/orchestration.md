@@ -28,8 +28,8 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Launch each subagent and wait on its completion notification; no long sleeps polling terminal output.
 - A subagent with no transcript progress for 10 minutes is likely parked on a permission prompt: in row 37 a read-only `git rev-parse` sat 60 minutes on one. Unattended, stop the row and report the command instead of waiting.
 - Only the parent spawns review gates. A worker that spawns a subagent and waits on it deadlocks: the runner returns its evidence and stops, the parent spawns the reviewer.
-- `chaos-pmm.sh`, every subcommand and from any checkout path, is pre-approved routine work in the auto-mode `allow` list of `percona/pmm-ai` `environment/settings.json`, including a second `up <run_id> --database <db>` that adds a database to the row's live VM. A refusal of it is a gap in that list, not a reason to skip the run: fix the entry there (attended), or name the refused command and the proposed entry in the `PushNotification` (unattended).
-- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `chaos-pmm.sh down` runs there. Then stop and hand the user the exact command; never reword it to get past the classifier.
+- The VM's lifecycle and its databases go through the pmm-qa plugin's `chaos-vm.sh` (`VM=$(bash .claude/scripts/chaos-pmm.sh vm)`), the provisioning script the runner's auto-mode `allow` list (`percona/pmm-ai` `environment/settings.json`) already names: `$VM up`, `$VM ssh` (pmm-framework, `docker exec`, `pmm-admin`), `$VM down`. `chaos-pmm.sh` keeps only `prepare`, `env` and `test`; never wrap a `chaos-vm.sh` operation in a new script, since the classifier judges an unlisted wrapper as an unknown action. A refusal of a `chaos-vm.sh` call is a gap in that list: fix it there (attended), or name the refused command in the `PushNotification` (unattended).
+- Operations the permission classifier refuses inside a subagent (environment teardown, test-state resets such as emptying the Grafana annotation table) are the parent's. The subagent stops and asks; the parent performs it and resumes the subagent. The parent is refused too for some of them: in row 12 `DELETE /v1/inventory/nodes/<id>?force=true` and `pmm-admin config --force` were both denied in the parent session, while `$VM down` runs there. Then stop and hand the user the exact command; never reword it to get past the classifier.
 - Unattended, the parent runs step 7's `migration.sh publish` itself after `FINAL_REVIEW_PASS`; the runner returns once the publish branch is committed. Never re-run a command a subagent was refused: stop and report it.
 - Link every migration PR to the session. Attended, call `mcp__ccd_pr__bind_pr` (load it through `ToolSearch`); a scheduled session refuses it, and the cleanup switch to the publish branch links it instead. The report puts the PR URL first either way.
 - Subscribe to every migration PR the moment it opens, attended or scheduled: `mcp__claude-code-remote__subscribe_pr_activity` with owner `percona`, repo `pmm-qa` and the PR number. Load it through `ToolSearch` when deferred. Then read the PR's check runs and open review threads and work them (`SKILL.md` Review comments). A run ends subscribed: a PR nobody watches leaves its CI failures and review comments unanswered. A resumed run that addresses a PR's review subscribes first.
@@ -55,7 +55,7 @@ Run exactly one row at a time; a batch from step 1b counts as one row. The row o
 - Every phase uses only tools the runner host provides to an unattended session; never one that loads from the checkout (a browser MCP server, a skill or agent type defined only on control), since a scheduled session starts on a branch cut from `main` and switching to control later loads nothing. Locator verification uses `playwright-cli` (`locator-fix.md` Live DOM checks), which `migration.sh preflight` requires. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is one preset only (hardcodes `/pmm-ui/help`, `getByRole` plus optional `a[href=...]`).
 - The `pmm-migration-*` agent types are defined only on control, so a session that started elsewhere has no such `subagent_type`. Spawn `general-purpose` instead, with the brief opening: read `.claude/agents/pmm-migration-<role>.md` from control's worktree and follow it as your agent definition.
 - If a subagent reports a commit SHA on control for migration code, have it reset the commit and leave the change in the worktree.
-- Once provisioning starts, any terminal path before the runner is invoked runs `bash .claude/scripts/chaos-pmm.sh down <run_id>` from the parent and closes the browser session (`playwright-cli -s=<run_id> close`). The runner owns cleanup on every path it reaches.
+- Once provisioning starts, any terminal path before the runner is invoked runs `bash "$VM" down <run_id>` from the parent and closes the browser session (`playwright-cli -s=<run_id> close`). The runner owns cleanup on every path it reaches.
 - Record the tracker `in-progress` commit SHA in the handoff as the active-row marker.
 - Restore control's worktree to clean after publication (`branch-workflow.md` Tracker completion and cleanup).
 
@@ -129,26 +129,33 @@ When the parent designates a dry run, skip only: tracker status writes, step 5b 
 
 Before launching the writer, take the setup from CI, not from the tracker's `Setup` (a planned default that is regularly wrong): `bash .claude/scripts/migration.sh setup <source>` matches each scenario's tags to the Playwright job that selects it (else the CodeceptJS job that runs it today), takes one job per scenario, copies that job's `setup_services` whole, and on the shared nightly server takes one shard argument per service the scenario names. Read its per-scenario lines, then add by hand only a database for a scenario it marks `NO job selects it` and one an existing target file you will modify needs (the services it filters on, `docker exec`s into or registers). Run it before step 1's `in-progress` commit and write the final list into the row's `Setup` with `migration.sh set-setup`.
 
-Name the run `mig-<row>-$(date +%m%d%H%M)` (a batch takes its first row). Start `bash .claude/scripts/chaos-pmm.sh up <run_id> $(bash .claude/scripts/migration.sh setup --args <source>) <hand-added args>` with `run_in_background`: VM creation, cloud-init, Node and the server image took 16 minutes on the first measured run, databases extra. A failed `up` is retried once under a new run id, after `chaos-pmm.sh down` on the failed one. Then launch the writer immediately, and record the run id, exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
+Name the run `mig-<row>-$(date +%m%d%H%M)` (a batch takes its first row). Start, with `run_in_background`:
+
+```bash
+VM=$(bash .claude/scripts/chaos-pmm.sh vm)
+bash "$VM" up <run_id> && bash .claude/scripts/chaos-pmm.sh prepare <run_id> \
+  && bash "$VM" ssh <run_id> "cd /root/pmm-qa/qa-integration/pmm_qa/pmm-framework && ADMIN_PASSWORD=\$(cat /root/admin_password) ./pmm-framework --parallel $(bash .claude/scripts/migration.sh setup --args <source>) <hand-added args>"
+```
+
+VM creation, cloud-init, Node and the server image took 16 minutes on the first measured run, databases extra. A failed `up` or `prepare` is retried once under a new run id, after `$VM down` on the failed one. Then launch the writer immediately, and record the run id, exact command and start time on the timeline. From this moment the teardown obligation is live. If the writer's `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision, and record the mismatch on the timeline.
 
 ## 3. Wait for the environment and verify it
 
-After `MIGRATION_READY`, wait for the step 2a provision; never start a second one. The command runs from control's worktree with the tracker's `--database` grammar; no database arguments means server-only:
+After `MIGRATION_READY`, wait for the step 2a provision; never start a second one. Databases take the tracker's `--database` grammar through pmm-framework on the VM; no database arguments means server-only, so the pmm-framework step is skipped. Adding one to the live VM later is the same call:
 
 ```bash
-bash .claude/scripts/chaos-pmm.sh up <run_id>
-bash .claude/scripts/chaos-pmm.sh up <run_id> --database ps=8.4 --database psmdb
+bash "$VM" ssh <run_id> 'cd /root/pmm-qa/qa-integration/pmm_qa/pmm-framework && ADMIN_PASSWORD=$(cat /root/admin_password) ./pmm-framework --parallel --database ps=8.4 --database psmdb'
 ```
 
-`pmm-framework --help` and `--list-databases` are the authority for arguments (`chaos-pmm.sh ssh <run_id> /root/pmm-qa/qa-integration/pmm_qa/pmm-framework/pmm-framework --help`). The VM pulls the prebaked database images from GHCR, as CI does. A Nomad test needs `PMM_ENABLE_NOMAD=1` in the environment and `--nomad` in the arguments. A source with `setupClient: true` (host `pmm-admin`/`pmm-agent`) needs the CI client install on the VM:
+`pmm-framework --help` and `--list-databases` are the authority for arguments (`bash "$VM" ssh <run_id> /root/pmm-qa/qa-integration/pmm_qa/pmm-framework/pmm-framework --help`). The VM pulls the prebaked database images from GHCR, as CI does. A Nomad test needs `PMM_ENABLE_NOMAD=1` in the environment and `--nomad` in the arguments. A source with `setupClient: true` (host `pmm-admin`/`pmm-agent`) needs the CI client install on the VM:
 
 ```bash
-bash .claude/scripts/chaos-pmm.sh ssh <run_id> 'cd /root/pmm-qa/qa-integration/pmm_qa && bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password "$(cat /root/admin_password)" --use_metrics_mode no'
+bash "$VM" ssh <run_id> 'cd /root/pmm-qa/qa-integration/pmm_qa && bash pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version <v> --admin_password "$(cat /root/admin_password)" --use_metrics_mode no'
 ```
 
 That script registers the node as `PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))` (line 66) while an argument-less `pmm-admin config` registers under the machine hostname, so the two create different nodes and a conflict predicted from the script's name is wrong. The hostname node never pre-exists on a fresh runner, which is why such a test is green in CI and still fails its own second run on the same VM.
 
-A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial and the login page objects time out. `chaos-pmm.sh up` sets a random per-run password (kept on the VM at `/root/admin_password`) and passes it to pmm-framework. `eval "$(bash .claude/scripts/chaos-pmm.sh env <run_id>)"` exports it with the VM's `PMM_UI_URL` on the runner host; verify once with `/v1/users/me` and hand the same pair to every later phase.
+A test that logs in through the UI needs a non-default admin password: with `admin`, PMM shows an "Update your password" interstitial and the login page objects time out. `chaos-pmm.sh prepare` sets a random per-run password (kept on the VM at `/root/admin_password`), and every pmm-framework call reads it from there. `eval "$(bash .claude/scripts/chaos-pmm.sh env <run_id>)"` exports it with the VM's `PMM_UI_URL` on the runner host; verify once with `/v1/users/me` and hand the same pair to every later phase.
 
 Verify:
 
@@ -156,9 +163,9 @@ Verify:
 bash .claude/scripts/chaos-pmm.sh test <run_id> '<target-test-file>' --prepare-only   # path relative to e2e_tests/, not the repo root
 ```
 
-`--prepare-only` proves only the server. Then prove the agents and data: in every provisioned container (`chaos-pmm.sh ssh <run_id> docker exec <container> pmm-admin status`) `pmm-admin status` shows `Connected : true` and `pmm-admin list` shows every agent `Running`. For a QAN row, poll `POST /v1/qan/metrics:getReport` (`group_by: queryid`, the test's time range) until `total_rows` exceeds the source's largest item-count branch, and record the count on the timeline. A poll whose own command fails stops with that error; it never reads as "no data yet".
+`--prepare-only` proves only the server. Then prove the agents and data: in every provisioned container (`bash "$VM" ssh <run_id> docker exec <container> pmm-admin status`) `pmm-admin status` shows `Connected : true` and `pmm-admin list` shows every agent `Running`. For a QAN row, poll `POST /v1/qan/metrics:getReport` (`group_by: queryid`, the test's time range) until `total_rows` exceeds the source's largest item-count branch, and record the count on the timeline. A poll whose own command fails stops with that error; it never reads as "no data yet".
 
-When the writer returns `targetMode: appended` on a file whose other tests need databases not yet provisioned (the services they filter on or `docker exec` into), add them to the running VM with `chaos-pmm.sh up <run_id> --database ...` before spawning the runner: the runner's whole-file run needs them, and pmm-framework picks free host ports, so a second PS topology joins cleanly. The tracker `Setup` and the CI dispatch carry the union.
+When the writer returns `targetMode: appended` on a file whose other tests need databases not yet provisioned (the services they filter on or `docker exec` into), add them to the running VM with the pmm-framework call above before spawning the runner: the runner's whole-file run needs them, and pmm-framework picks free host ports, so a second PS topology joins cleanly. The tracker `Setup` and the CI dispatch carry the union.
 
 Every later command reuses this pair. If the environment becomes unreachable, keep the row `in-progress`, record the blocker and the framework log directory it printed on the timeline, and stop.
 
