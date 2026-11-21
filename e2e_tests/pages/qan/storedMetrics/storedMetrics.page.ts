@@ -120,6 +120,7 @@ export default class StoredMetricsPage extends BasePage {
       .locator(workloadRows)
       .filter({ hasNot: this.page.getByRole('cell', { name: /^explain\b/i }) })
       .first(),
+    histograms: this.grafanaIframe().getByTestId('histogram-collapse-container'),
     iframe: this.page.locator('iframe').first(),
     latencyChart: this.grafanaIframe().locator('.latency-chart-container'),
     metricTooltip: this.grafanaIframe().locator('.ant-tooltip-content'),
@@ -158,7 +159,9 @@ export default class StoredMetricsPage extends BasePage {
       .getByRole('tablist')
       .filter({ hasNot: this.page.getByRole('tab', { exact: true, name: 'Details' }) })
       .getByRole('tab'),
+    topQuery: this.grafanaIframe().getByTestId('top-query'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
+    workloadRows: this.grafanaIframe().locator(workloadRows),
   };
   inputs = {
     addColumn: this.grafanaIframe().locator('.add-columns-selector input'),
@@ -182,6 +185,19 @@ export default class StoredMetricsPage extends BasePage {
   changeMainMetric = async (metricName: string) => {
     await this.buttons.mainMetric.click();
     await this.builders.mainMetricOption(metricName).click();
+  };
+
+  countHistograms = async (firstRow: number) => {
+    const rowCount = await this.elements.workloadRows.count();
+    let histograms = 0;
+
+    for (let row = firstRow; row <= rowCount; row++) {
+      await this.selectRow(row);
+      await this.buttons.closeDetails.waitFor({ timeout: Timeouts.THIRTY_SECONDS });
+      histograms += await this.elements.histograms.visible().count();
+    }
+
+    return histograms;
   };
 
   expandFilterGroup = async (groupName: string) => {

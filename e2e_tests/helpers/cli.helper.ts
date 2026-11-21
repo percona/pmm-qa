@@ -168,7 +168,14 @@ export default class CliHelper {
       .stdout.trim();
 
   queryPostgresql = (container: string, query: string) =>
-    this.execute(`docker exec ${container} psql -U postgres -tAc "${query}"`).assertSuccess().stdout.trim();
+    this.execute(`docker exec ${container} psql -U postgres -tAc ${CliHelper.shellQuote(query)}`)
+      .assertSuccess()
+      .stdout.trim();
+
+  queryPostgresqlRows = <T>(container: string, query: string) =>
+    JSON.parse(
+      this.queryPostgresql(container, `SELECT coalesce(json_agg(t), '[]') FROM (${query}) t;`),
+    ) as T[];
 
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
@@ -224,6 +231,11 @@ export default class CliHelper {
     );
 
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
+  };
+
+  setPgStatMonitorBucketTime = (container: string, seconds: number) => {
+    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_monitor.pgsm_bucket_time = ${seconds};`);
+    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
   };
 
   setPgStatStatementsMax = (container: string, max: number) => {
