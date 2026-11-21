@@ -24,6 +24,16 @@ export default class PostgresqlHelper {
       `SELECT setting, reset_val FROM pg_settings WHERE name = '${name}'`,
     )[0];
 
+  loadFile = (container: string, file: string, database?: string) =>
+    this.cliHelper
+      .execute(
+        `docker exec -i ${container} psql -U postgres${database ? ` -d ${database}` : ''} -v ON_ERROR_STOP=1 < ${file}`,
+      )
+      .assertSuccess();
+
+  pgbench = (container: string, args: string) =>
+    this.cliHelper.execute(`docker exec ${container} pgbench ${args}`).assertSuccess();
+
   query = (container: string, query: string) =>
     this.cliHelper
       .execute(`docker exec ${container} psql -U postgres -tAc ${CliHelper.shellQuote(query)}`)

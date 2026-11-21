@@ -122,11 +122,7 @@ pmmTest(
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
     postgresqlHelper.createDatabaseIfMissing(container, database);
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_load.sql`,
-      )
-      .assertSuccess();
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgsm_load.sql', database);
     expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
       expect.objectContaining({
         agent_type: pgStatMonitorAgent,
@@ -253,12 +249,8 @@ pmmTest.skip(
     postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
     postgresqlHelper.createDatabaseIfMissing(container, pgbenchDatabase);
     postgresqlHelper.query(container, `ALTER DATABASE ${pgbenchDatabase} OWNER TO pmm;`);
-    cliHelper
-      .execute(`docker exec ${container} pgbench -i -s 100 --username=pmm ${pgbenchDatabase}`)
-      .assertSuccess();
-    cliHelper
-      .execute(`docker exec ${container} pgbench -c 2 -j 2 -T 60 --username=pmm ${pgbenchDatabase}`)
-      .assertSuccess();
+    postgresqlHelper.pgbench(container, `-i -s 100 --username=pmm ${pgbenchDatabase}`);
+    postgresqlHelper.pgbench(container, `-c 2 -j 2 -T 60 --username=pmm ${pgbenchDatabase}`);
     expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
       expect.objectContaining({
         agent_type: pgStatMonitorAgent,
@@ -322,11 +314,7 @@ pmmTest(
 
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_applicationName.sql`,
-      )
-      .assertSuccess();
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgsm_applicationName.sql');
 
     await expect(async () => {
       await page.goto(urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' }));
@@ -353,15 +341,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T1063 - Verify Top Query and Top QueryID with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ clickHouseHelper, cliHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
+  async ({ clickHouseHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
     postgresqlHelper.createDatabaseIfMissing(container, topQueryDatabase);
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -d ${topQueryDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_topQuery.sql`,
-      )
-      .assertSuccess();
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgsm_topQuery.sql', topQueryDatabase);
 
     const rows = postgresqlHelper.queryRows<{ pgsm_query_id: string }>(
       container,
@@ -391,15 +375,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T1071 - Verify Histogram is displayed for each query with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ clickHouseHelper, cliHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
+  async ({ clickHouseHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
     postgresqlHelper.createDatabaseIfMissing(container, histogramDatabase);
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -d ${histogramDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_Histogram.sql`,
-      )
-      .assertSuccess();
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgsm_Histogram.sql', histogramDatabase);
 
     await expect(async () => {
       await page.goto(

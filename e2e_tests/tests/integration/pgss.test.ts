@@ -76,11 +76,7 @@ pmmTest(
   async ({ clickHouseHelper, cliHelper, postgresqlHelper }) => {
     postgresqlHelper.query(container, `CREATE DATABASE ${database};`);
     postgresqlHelper.query(container, `ALTER DATABASE ${database} OWNER TO pmm;`);
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgss_load.sql`,
-      )
-      .assertSuccess();
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgss_load.sql', database);
 
     await expect
       .poll(() => clickHouseHelper.countQanRowsWhere('pmm-server', `database = '${database}'`), {
@@ -94,7 +90,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T2037 - Verify QPS after changing pg_statements.max value @not-ui-pipeline @pgss-pmm-integration',
-  async ({ api, clickHouseHelper, cliHelper, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
+  async ({ api, clickHouseHelper, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_\\d');
     const queryCount = qanStoredMetrics.builders.queryValue(0, 2);
 
@@ -103,11 +99,7 @@ pmmTest(
 
     for (const max of [20_000, pgssMax]) {
       postgresqlHelper.setPgStatStatementsMax(container, max);
-      cliHelper
-        .execute(
-          `docker exec -i ${container} psql -U postgres -v ON_ERROR_STOP=1 < testdata/pgsql/pgss_pmm_t2037.sql`,
-        )
-        .assertSuccess();
+      postgresqlHelper.loadFile(container, 'testdata/pgsql/pgss_pmm_t2037.sql');
     }
 
     const loadedAt = Math.floor(Date.now() / 1_000);
