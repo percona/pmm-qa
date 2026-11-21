@@ -24,6 +24,14 @@ export default class CliHelper {
     shell.echo(content).to(pathToFile);
   };
 
+  createPostgresqlDatabaseIfMissing = (container: string, name: string) => {
+    if (
+      this.queryPostgresql(container, `SELECT count(*) FROM pg_database WHERE datname = '${name}';`) === '0'
+    ) {
+      this.queryPostgresql(container, `CREATE DATABASE ${name};`);
+    }
+  };
+
   /**
    * Silent Shell(sh) exec() wrapper to return handy {@link ExecReturn} object.
    * Provides no logs to skip huge outputs.

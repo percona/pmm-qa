@@ -38,10 +38,6 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
     cliHelper.removeService(container, ServiceType.postgresql, service);
   }
 
-  for (const name of [database, topQueryDatabase, histogramDatabase, pgbenchDatabase]) {
-    cliHelper.queryPostgresql(container, `DROP DATABASE IF EXISTS ${name} WITH (FORCE);`);
-  }
-
   cliHelper.queryPostgresql(container, 'DROP TABLE IF EXISTS pmmt1063;');
 
   if (
@@ -52,6 +48,12 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
   }
 
   await api.inventoryApi.removeNodesByName([disableExamplesService]);
+});
+
+pmmTest.afterAll(({ cliHelper }) => {
+  for (const name of [database, topQueryDatabase, histogramDatabase, pgbenchDatabase]) {
+    cliHelper.queryPostgresql(container, `DROP DATABASE IF EXISTS ${name} WITH (FORCE);`);
+  }
 });
 
 pmmTest(
@@ -116,7 +118,7 @@ pmmTest(
   async ({ api, clickHouseHelper, cliHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.queryPostgresql(container, `CREATE DATABASE ${database};`);
+    cliHelper.createPostgresqlDatabaseIfMissing(container, database);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_load.sql`,
@@ -243,7 +245,7 @@ pmmTest.skip(
 
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.queryPostgresql(container, `CREATE DATABASE ${pgbenchDatabase};`);
+    cliHelper.createPostgresqlDatabaseIfMissing(container, pgbenchDatabase);
     cliHelper.queryPostgresql(container, `ALTER DATABASE ${pgbenchDatabase} OWNER TO pmm;`);
     cliHelper
       .execute(`docker exec ${container} pgbench -i -s 100 --username=pmm ${pgbenchDatabase}`)
@@ -342,7 +344,7 @@ pmmTest(
   async ({ clickHouseHelper, cliHelper, page, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.queryPostgresql(container, `CREATE DATABASE ${topQueryDatabase};`);
+    cliHelper.createPostgresqlDatabaseIfMissing(container, topQueryDatabase);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${topQueryDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_topQuery.sql`,
@@ -380,7 +382,7 @@ pmmTest(
   async ({ clickHouseHelper, cliHelper, page, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
     cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.queryPostgresql(container, `CREATE DATABASE ${histogramDatabase};`);
+    cliHelper.createPostgresqlDatabaseIfMissing(container, histogramDatabase);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${histogramDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_Histogram.sql`,
