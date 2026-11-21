@@ -43,8 +43,16 @@ export default class QanApi {
   getLabels = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
     await this.send<QanLabelsBody>('POST', apiEndpoints.qan.getLabels, user, byQueryId(queryId, period));
 
-  getMetrics = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
-    await this.send<QanMetricsBody>('POST', apiEndpoints.qan.getMetrics, user, byQueryId(queryId, period));
+  getMetrics = async (
+    user: ProxyUser | undefined,
+    queryId: string,
+    period: QanPeriod,
+    labels?: { key: string; value: string[] }[],
+  ) =>
+    await this.send<QanMetricsBody>('POST', apiEndpoints.qan.getMetrics, user, {
+      ...byQueryId(queryId, period),
+      ...(labels && { labels }),
+    });
 
   getPlan = async (user: ProxyUser | undefined, queryId: string) =>
     await this.send<QanPlanBody>('GET', `${apiEndpoints.qan.query}/${queryId}/plan`, user);

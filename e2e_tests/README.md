@@ -157,6 +157,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pbm-nightly`
 - `@pdpgsql-pmm-integration`
 - `@permissions-nightly`
+- `@pgsm-pmm-integration`
 - `@pgss-pmm-integration`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`

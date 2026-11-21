@@ -167,9 +167,6 @@ export default class CliHelper {
       .assertSuccess()
       .stdout.trim();
 
-  queryPostgresql = (container: string, query: string) =>
-    this.execute(`docker exec ${container} psql -U postgres -tAc "${query}"`).assertSuccess().stdout.trim();
-
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
       this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
@@ -226,14 +223,12 @@ export default class CliHelper {
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
-  setPgStatStatementsMax = (container: string, max: number) => {
-    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_statements.max = ${max};`);
-    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
-  };
-
   // POSIX single-quote escaping, so a value containing a quote cannot end the
   // quoted string: close, escape the quote, reopen.
   static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+
+  tailContainerFile = (container: string, file: string) =>
+    this.execSilent(`docker exec ${container} tail -n100 ${file}`).assertSuccess().stdout;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
@@ -251,16 +246,5 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
-  };
-
-  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
-  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
-    const allTls = this.execSilent(
-      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
-    )
-      .assertSuccess()
-      .stdout.trim();
-
-    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }
