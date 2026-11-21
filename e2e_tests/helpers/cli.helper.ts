@@ -24,14 +24,6 @@ export default class CliHelper {
     shell.echo(content).to(pathToFile);
   };
 
-  createPostgresqlDatabaseIfMissing = (container: string, name: string) => {
-    if (
-      this.queryPostgresql(container, `SELECT count(*) FROM pg_database WHERE datname = '${name}';`) === '0'
-    ) {
-      this.queryPostgresql(container, `CREATE DATABASE ${name};`);
-    }
-  };
-
   /**
    * Silent Shell(sh) exec() wrapper to return handy {@link ExecReturn} object.
    * Provides no logs to skip huge outputs.
@@ -154,12 +146,6 @@ export default class CliHelper {
       field,
     );
 
-  getPostgresqlSetting = (container: string, name: string) =>
-    this.queryPostgresqlRows<{ reset_val: string; setting: string }>(
-      container,
-      `SELECT setting, reset_val FROM pg_settings WHERE name = '${name}'`,
-    )[0];
-
   getSummaryAgentsInfo = (container: string, archivePath: string) => {
     const archive = this.execute(`docker exec ${container} pmm-admin summary`)
       .assertSuccess()
@@ -180,16 +166,6 @@ export default class CliHelper {
     )
       .assertSuccess()
       .stdout.trim();
-
-  queryPostgresql = (container: string, query: string) =>
-    this.execute(`docker exec ${container} psql -U postgres -tAc ${CliHelper.shellQuote(query)}`)
-      .assertSuccess()
-      .stdout.trim();
-
-  queryPostgresqlRows = <T>(container: string, query: string) =>
-    JSON.parse(
-      this.queryPostgresql(container, `SELECT coalesce(json_agg(t), '[]') FROM (${query}) t;`),
-    ) as T[];
 
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
@@ -247,16 +223,6 @@ export default class CliHelper {
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
-  setPgStatMonitorBucketTime = (container: string, seconds: number) => {
-    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_monitor.pgsm_bucket_time = ${seconds};`);
-    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
-  };
-
-  setPgStatStatementsMax = (container: string, max: number) => {
-    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_statements.max = ${max};`);
-    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
-  };
-
   // POSIX single-quote escaping, so a value containing a quote cannot end the
   // quoted string: close, escape the quote, reopen.
   static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
@@ -280,16 +246,5 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
-  };
-
-  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
-  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
-    const allTls = this.execSilent(
-      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
-    )
-      .assertSuccess()
-      .stdout.trim();
-
-    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }

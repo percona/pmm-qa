@@ -11,6 +11,7 @@ const defaultQuerySourceService = 'pgsm_default_query_source';
 const inventoryService = 'pgsql_pgsm_inventory_service';
 const disableExamplesService = 'pg_disable_examples';
 const agentLog = '/var/log/pmm-agent.log';
+const pgStatMonitorAgent = 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT';
 const defaultBucketTime = 60;
 const waitingMessage = 'non default bucket time value is not supported, status changed to WAITING';
 let container: string;
@@ -35,32 +36,32 @@ pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterEach(async ({ api, cliHelper }) => {
+pmmTest.afterEach(async ({ api, cliHelper, postgresqlHelper }) => {
   for (const service of [defaultQuerySourceService, inventoryService]) {
     cliHelper.removeService(container, ServiceType.postgresql, service);
   }
 
-  cliHelper.queryPostgresql(container, 'DROP TABLE IF EXISTS pmmt1063;');
+  postgresqlHelper.query(container, 'DROP TABLE IF EXISTS pmmt1063;');
 
   if (
-    cliHelper.getPostgresqlSetting(container, 'pg_stat_monitor.pgsm_bucket_time').setting !==
+    postgresqlHelper.getSetting(container, 'pg_stat_monitor.pgsm_bucket_time').setting !==
     String(defaultBucketTime)
   ) {
-    cliHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
+    postgresqlHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
   }
 
   await api.inventoryApi.removeNodesByName([disableExamplesService]);
 });
 
-pmmTest.afterAll(({ cliHelper }) => {
+pmmTest.afterAll(({ postgresqlHelper }) => {
   for (const name of [database, topQueryDatabase, histogramDatabase, pgbenchDatabase]) {
-    cliHelper.queryPostgresql(container, `DROP DATABASE IF EXISTS ${name} WITH (FORCE);`);
+    postgresqlHelper.query(container, `DROP DATABASE IF EXISTS ${name} WITH (FORCE);`);
   }
 });
 
 pmmTest(
   'PMM-T1728 - pg_stat_monitor agent does not continuously try to create pg_stat_monitor_settings view @not-ui-pipeline @pgsm-pmm-integration',
-  ({ cliHelper }) => {
+  ({ cliHelper, postgresqlHelper }) => {
     for (const line of [
       'ERROR: +relation "pg_stat_monitor_settings" already exists',
       'STATEMENT: +CREATE VIEW pg_stat_monitor_settings AS SELECT \\* FROM pg_settings WHERE name like',
@@ -73,7 +74,7 @@ pmmTest(
     }
 
     expect(
-      cliHelper.queryPostgresql(
+      postgresqlHelper.query(
         container,
         "SELECT count(*) FROM information_schema.views WHERE table_name = 'pg_stat_monitor_settings';",
       ),
@@ -102,7 +103,7 @@ pmmTest(
       })
       .toContainEqual(
         expect.objectContaining({
-          agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+          agent_type: pgStatMonitorAgent,
           status: 'RUNNING',
         }),
       );
@@ -117,10 +118,10 @@ pmmTest(
 
 pmmTest(
   'PMM-T1260 - Verifying data in Clickhouse and comparing with PGSM output @not-ui-pipeline @pgsm-pmm-integration',
-  async ({ api, clickHouseHelper, cliHelper }) => {
+  async ({ api, clickHouseHelper, cliHelper, postgresqlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.createPostgresqlDatabaseIfMissing(container, database);
+    postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
+    postgresqlHelper.createDatabaseIfMissing(container, database);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_load.sql`,
@@ -128,12 +129,12 @@ pmmTest(
       .assertSuccess();
     expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
       expect.objectContaining({
-        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        agent_type: pgStatMonitorAgent,
         status: 'RUNNING',
       }),
     );
 
-    const rows = cliHelper.queryPostgresqlRows<{
+    const rows = postgresqlHelper.queryRows<{
       calls: number;
       mean_exec_time: number;
       pgsm_query_id: string;
@@ -237,7 +238,7 @@ pmmTest(
 // eslint-disable-next-line playwright/no-skipped-test -- PMM-13544: ClickHouse and pg_stat_monitor totals diverge under pgbench load; unskip once PMM-13544 is fixed.
 pmmTest.skip(
   'PMM-T1259 - Verifying data in Clickhouse and comparing with PGSM output @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ api, clickHouseHelper, cliHelper }) => {
+  async ({ api, clickHouseHelper, cliHelper, postgresqlHelper }) => {
     const excludedQueries = [
       'SELECT version()',
       'SELECT /* pmm-agent:pgstatmonitor */ version()',
@@ -249,9 +250,9 @@ pmmTest.skip(
     ];
 
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.createPostgresqlDatabaseIfMissing(container, pgbenchDatabase);
-    cliHelper.queryPostgresql(container, `ALTER DATABASE ${pgbenchDatabase} OWNER TO pmm;`);
+    postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
+    postgresqlHelper.createDatabaseIfMissing(container, pgbenchDatabase);
+    postgresqlHelper.query(container, `ALTER DATABASE ${pgbenchDatabase} OWNER TO pmm;`);
     cliHelper
       .execute(`docker exec ${container} pgbench -i -s 100 --username=pmm ${pgbenchDatabase}`)
       .assertSuccess();
@@ -260,13 +261,13 @@ pmmTest.skip(
       .assertSuccess();
     expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
       expect.objectContaining({
-        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        agent_type: pgStatMonitorAgent,
         status: 'RUNNING',
       }),
     );
 
-    const rows = cliHelper
-      .queryPostgresqlRows<{ pgsm_query_id: string; query: string }>(
+    const rows = postgresqlHelper
+      .queryRows<{ pgsm_query_id: string; query: string }>(
         container,
         `SELECT query, pgsm_query_id::text AS pgsm_query_id FROM pg_stat_monitor WHERE queryid IS NOT NULL AND query IS NOT NULL AND datname = '${pgbenchDatabase}' AND bucket_done`,
       )
@@ -288,7 +289,7 @@ pmmTest.skip(
         expect(status, `QAN metrics of "${query}" (${pgsm_query_id}): ${text}`).toBe(200);
 
         const queryTime = body.metrics?.query_time;
-        const [pgsm] = cliHelper.queryPostgresqlRows<{ calls: number; mean: number; total: number }>(
+        const [pgsm] = postgresqlHelper.queryRows<{ calls: number; mean: number; total: number }>(
           container,
           `SELECT sum(total_exec_time) AS total, avg(mean_exec_time) AS mean, sum(calls) AS calls FROM pg_stat_monitor WHERE datname = '${pgbenchDatabase}' AND pgsm_query_id = ${pgsm_query_id}`,
         );
@@ -316,11 +317,11 @@ pmmTest.skip(
 
 pmmTest(
   'PMM-T1063 - Verify Application Name with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ clickHouseHelper, cliHelper, page, qanStoredMetrics, urlHelper }) => {
+  async ({ clickHouseHelper, cliHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     const applicationName = 'PMMT1063';
 
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
+    postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_applicationName.sql`,
@@ -343,7 +344,7 @@ pmmTest(
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
       expect.objectContaining({
-        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        agent_type: pgStatMonitorAgent,
         status: 'RUNNING',
       }),
     );
@@ -352,17 +353,17 @@ pmmTest(
 
 pmmTest(
   'PMM-T1063 - Verify Top Query and Top QueryID with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ clickHouseHelper, cliHelper, page, qanStoredMetrics, urlHelper }) => {
+  async ({ clickHouseHelper, cliHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.createPostgresqlDatabaseIfMissing(container, topQueryDatabase);
+    postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
+    postgresqlHelper.createDatabaseIfMissing(container, topQueryDatabase);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${topQueryDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_topQuery.sql`,
       )
       .assertSuccess();
 
-    const rows = cliHelper.queryPostgresqlRows<{ pgsm_query_id: string }>(
+    const rows = postgresqlHelper.queryRows<{ pgsm_query_id: string }>(
       container,
       `WITH top AS (SELECT pgsm_query_id::text AS pgsm_query_id, query FROM pg_stat_monitor WHERE datname = '${topQueryDatabase}' AND top_query IS NOT NULL) SELECT pgsm_query_id FROM top WHERE query LIKE '(select $1 + $2)' OR (query LIKE '<insufficient disk/shared space' AND NOT EXISTS (SELECT 1 FROM top WHERE query LIKE '(select $1 + $2)'))`,
     );
@@ -390,10 +391,10 @@ pmmTest(
 
 pmmTest(
   'PMM-T1071 - Verify Histogram is displayed for each query with pg_stat_monitor @pgsm-pmm-integration @not-ui-pipeline',
-  async ({ clickHouseHelper, cliHelper, page, qanStoredMetrics, urlHelper }) => {
+  async ({ clickHouseHelper, cliHelper, page, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'SELECT pg_stat_monitor_reset();');
-    cliHelper.createPostgresqlDatabaseIfMissing(container, histogramDatabase);
+    postgresqlHelper.query(container, 'SELECT pg_stat_monitor_reset();');
+    postgresqlHelper.createDatabaseIfMissing(container, histogramDatabase);
     cliHelper
       .execute(
         `docker exec -i ${container} psql -U postgres -d ${histogramDatabase} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_Histogram.sql`,
@@ -466,22 +467,22 @@ pmmTest(
 
 pmmTest(
   'PMM-T1254 - Verify pg_stat_monitor.pgsm_bucket_time settings @not-ui-pipeline @pgsm-pmm-integration',
-  async ({ cliHelper, page }) => {
+  async ({ cliHelper, page, postgresqlHelper }) => {
     const alteredBucketTime = 61;
     const bucketTime = 'pg_stat_monitor.pgsm_bucket_time';
 
-    cliHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
-    expect(cliHelper.getPostgresqlSetting(container, bucketTime)).toEqual({
+    postgresqlHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
+    expect(postgresqlHelper.getSetting(container, bucketTime)).toEqual({
       reset_val: String(defaultBucketTime),
       setting: String(defaultBucketTime),
     });
     cliHelper.execute(`docker exec ${container} truncate -s 0 ${agentLog}`).assertSuccess();
-    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
-      expect.objectContaining({
-        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
-        status: 'RUNNING',
-      }),
-    );
+    await expect
+      .poll(() => cliHelper.getPmmAdminServiceAgents(container, serviceId), {
+        message: 'pg_stat_monitor agent should be Running after the restart',
+        timeout: Timeouts.THIRTY_SECONDS,
+      })
+      .toContainEqual(expect.objectContaining({ agent_type: pgStatMonitorAgent, status: 'RUNNING' }));
     // eslint-disable-next-line playwright/no-wait-for-timeout -- one default bucket for the agent to log a WAITING status it must not log
     await page.waitForTimeout(Timeouts.ONE_MINUTE);
     expect(
@@ -489,20 +490,17 @@ pmmTest(
       'The log was not supposed to contain errors regarding bucket time',
     ).not.toContain(waitingMessage);
 
-    cliHelper.setPgStatMonitorBucketTime(container, alteredBucketTime);
-    expect(cliHelper.getPostgresqlSetting(container, bucketTime).setting).toBe(String(alteredBucketTime));
-    await expect
-      .poll(() => cliHelper.tailContainerFile(container, agentLog), {
-        message: 'The log was supposed to contain errors regarding bucket time',
-        timeout: Timeouts.TWO_MINUTES,
-      })
-      .toContain(waitingMessage);
-    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
-      expect.objectContaining({
-        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
-        status: 'WAITING',
-      }),
-    );
+    postgresqlHelper.setPgStatMonitorBucketTime(container, alteredBucketTime);
+    expect(postgresqlHelper.getSetting(container, bucketTime).setting).toBe(String(alteredBucketTime));
+    await expect(() => {
+      expect(
+        cliHelper.tailContainerFile(container, agentLog),
+        'The log was supposed to contain errors regarding bucket time',
+      ).toContain(waitingMessage);
+      expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+        expect.objectContaining({ agent_type: pgStatMonitorAgent, status: 'WAITING' }),
+      );
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
   },
 );
 
