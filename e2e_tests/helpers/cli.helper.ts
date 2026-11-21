@@ -146,6 +146,12 @@ export default class CliHelper {
       field,
     );
 
+  getPostgresqlSetting = (container: string, name: string) =>
+    this.queryPostgresqlRows<{ reset_val: string; setting: string }>(
+      container,
+      `SELECT setting, reset_val FROM pg_settings WHERE name = '${name}'`,
+    )[0];
+
   getSummaryAgentsInfo = (container: string, archivePath: string) => {
     const archive = this.execute(`docker exec ${container} pmm-admin summary`)
       .assertSuccess()
@@ -246,6 +252,9 @@ export default class CliHelper {
   // POSIX single-quote escaping, so a value containing a quote cannot end the
   // quoted string: close, escape the quote, reopen.
   static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+
+  tailContainerFile = (container: string, file: string) =>
+    this.execSilent(`docker exec ${container} tail -n100 ${file}`).assertSuccess().stdout;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;

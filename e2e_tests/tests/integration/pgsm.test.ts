@@ -14,7 +14,6 @@ const agentLog = '/var/log/pmm-agent.log';
 const defaultBucketTime = 60;
 const waitingMessage = 'non default bucket time value is not supported, status changed to WAITING';
 let container: string;
-let version: string;
 let pmmAdmin: string;
 let serviceName: string;
 let socketServiceName: string;
@@ -28,7 +27,6 @@ pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
     .getStdOutLines()[0];
 
   expect(container, 'pdpgsql docker container should exist').toMatch(/^pdpgsql_pmm_\d+_1$/);
-  version = container.split('_')[2];
   pmmAdmin = `docker exec ${container} pmm-admin`;
   ({ service_name: serviceName } = await api.inventoryApi.getServiceDetailsByRegex('^pdpgsql_'));
   ({ service_name: socketServiceName } = await api.inventoryApi.getServiceDetailsByRegex('^socket_pdpgsql_'));
@@ -44,11 +42,11 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
     cliHelper.queryPostgresql(container, `DROP DATABASE IF EXISTS ${name} WITH (FORCE);`);
   }
 
+  cliHelper.queryPostgresql(container, 'DROP TABLE IF EXISTS pmmt1063;');
+
   if (
-    cliHelper.queryPostgresql(
-      container,
-      "SELECT setting FROM pg_settings WHERE name = 'pg_stat_monitor.pgsm_bucket_time';",
-    ) !== String(defaultBucketTime)
+    cliHelper.getPostgresqlSetting(container, 'pg_stat_monitor.pgsm_bucket_time').setting !==
+    String(defaultBucketTime)
   ) {
     cliHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
   }
@@ -65,7 +63,7 @@ pmmTest(
     ] as const) {
       cliHelper
         .execute(
-          `docker exec ${container} grep -E '${line}' /var/log/postgresql/postgresql-${version}-main.log`,
+          `docker exec ${container} grep -E '${line}' /var/log/postgresql/postgresql-${container.split('_')[2]}-main.log`,
         )
         .exitCodeEquals(1);
     }
@@ -147,12 +145,12 @@ pmmTest(
       };
 
       for (const { calls, mean_exec_time, pgsm_query_id, query, total_exec_time } of rows) {
-        const { body, status } = await api.qanApi.getMetrics(undefined, pgsm_query_id, period, [
+        const { body, status, text } = await api.qanApi.getMetrics(undefined, pgsm_query_id, period, [
           { key: 'database', value: [database] },
           { key: 'service_name', value: [serviceName] },
         ]);
 
-        if (status !== 200) continue;
+        expect(status, `QAN metrics of "${query}" (${pgsm_query_id}): ${text}`).toBe(200);
 
         const queryTime = body.metrics?.query_time;
 
@@ -231,7 +229,7 @@ pmmTest(
 
 // eslint-disable-next-line playwright/no-skipped-test -- PMM-13544: ClickHouse and pg_stat_monitor totals diverge under pgbench load; unskip once PMM-13544 is fixed.
 pmmTest.skip(
-  'PMM-T1259 - Verifying data in Clickhouse and comparing with PGSM output under pgbench load @pgsm-pmm-integration @not-ui-pipeline',
+  'PMM-T1259 - Verifying data in Clickhouse and comparing with PGSM output @pgsm-pmm-integration @not-ui-pipeline',
   async ({ api, clickHouseHelper, cliHelper }) => {
     const excludedQueries = [
       'SELECT version()',
@@ -351,14 +349,10 @@ pmmTest(
       )
       .assertSuccess();
 
-    const topQueryRows = (query: string) =>
-      cliHelper.queryPostgresqlRows<{ pgsm_query_id: string }>(
-        container,
-        `SELECT pgsm_query_id::text AS pgsm_query_id FROM pg_stat_monitor WHERE datname = '${topQueryDatabase}' AND query LIKE '${query}' AND top_query IS NOT NULL`,
-      );
-    let rows = topQueryRows('(select $1 + $2)');
-
-    if (rows.length === 0) rows = topQueryRows('<insufficient disk/shared space');
+    const rows = cliHelper.queryPostgresqlRows<{ pgsm_query_id: string }>(
+      container,
+      `WITH top AS (SELECT pgsm_query_id::text AS pgsm_query_id, query FROM pg_stat_monitor WHERE datname = '${topQueryDatabase}' AND top_query IS NOT NULL) SELECT pgsm_query_id FROM top WHERE query LIKE '(select $1 + $2)' OR (query LIKE '<insufficient disk/shared space' AND NOT EXISTS (SELECT 1 FROM top WHERE query LIKE '(select $1 + $2)'))`,
+    );
 
     expect(rows, 'pg_stat_monitor should record a top query for (select $1 + $2)').not.toHaveLength(0);
 
@@ -461,32 +455,28 @@ pmmTest(
   'PMM-T1254 - Verify pg_stat_monitor.pgsm_bucket_time settings @not-ui-pipeline @pgsm-pmm-integration',
   async ({ cliHelper, page }) => {
     const alteredBucketTime = 61;
-    const bucketTimeSetting = () =>
-      cliHelper.queryPostgresqlRows<{ reset_val: string; setting: string }>(
-        container,
-        "SELECT setting, reset_val FROM pg_settings WHERE name = 'pg_stat_monitor.pgsm_bucket_time'",
-      );
-    const agentLogTail = () =>
-      cliHelper.execSilent(`docker exec ${container} tail -n100 ${agentLog}`).assertSuccess().stdout;
+    const bucketTime = 'pg_stat_monitor.pgsm_bucket_time';
 
     cliHelper.setPgStatMonitorBucketTime(container, defaultBucketTime);
-    expect(bucketTimeSetting()).toEqual([
-      { reset_val: String(defaultBucketTime), setting: String(defaultBucketTime) },
-    ]);
+    expect(cliHelper.getPostgresqlSetting(container, bucketTime)).toEqual({
+      reset_val: String(defaultBucketTime),
+      setting: String(defaultBucketTime),
+    });
     cliHelper.execute(`docker exec ${container} truncate -s 0 ${agentLog}`).assertSuccess();
     cliHelper
       .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Running`)
       .assertSuccess();
     // eslint-disable-next-line playwright/no-wait-for-timeout -- one default bucket for the agent to log a WAITING status it must not log
     await page.waitForTimeout(Timeouts.ONE_MINUTE);
-    expect(agentLogTail(), 'The log was not supposed to contain errors regarding bucket time').not.toContain(
-      waitingMessage,
-    );
+    expect(
+      cliHelper.tailContainerFile(container, agentLog),
+      'The log was not supposed to contain errors regarding bucket time',
+    ).not.toContain(waitingMessage);
 
     cliHelper.setPgStatMonitorBucketTime(container, alteredBucketTime);
-    expect(bucketTimeSetting()).toEqual([expect.objectContaining({ setting: String(alteredBucketTime) })]);
+    expect(cliHelper.getPostgresqlSetting(container, bucketTime).setting).toBe(String(alteredBucketTime));
     await expect
-      .poll(agentLogTail, {
+      .poll(() => cliHelper.tailContainerFile(container, agentLog), {
         message: 'The log was supposed to contain errors regarding bucket time',
         timeout: Timeouts.TWO_MINUTES,
       })
