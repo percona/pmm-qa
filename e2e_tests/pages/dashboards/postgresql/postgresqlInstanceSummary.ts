@@ -45,4 +45,9 @@ export default class PostgresqlInstanceSummary implements DashboardInterface {
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
   noDataMetrics: string[] = [];
+  // Section headings of the pt-pg-summary report (percona-toolkit src/go/pt-pg-summary/templates/templates.go).
+  serviceSummaryReport = {
+    databaseRow: (database: string) => new RegExp(`##### --- Databases --- ####[^#]*\\| ${database} +\\|`),
+    portAndDataDirectoryHeading: '##### --- Database Port and Data_Directory --- ####',
+  };
 }
