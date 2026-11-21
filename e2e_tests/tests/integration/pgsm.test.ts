@@ -15,6 +15,7 @@ const defaultBucketTime = 60;
 const waitingMessage = 'non default bucket time value is not supported, status changed to WAITING';
 let container: string;
 let pmmAdmin: string;
+let serviceId: string;
 let serviceName: string;
 let socketServiceName: string;
 
@@ -28,7 +29,8 @@ pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
 
   expect(container, 'pdpgsql docker container should exist').toMatch(/^pdpgsql_pmm_\d+_1$/);
   pmmAdmin = `docker exec ${container} pmm-admin`;
-  ({ service_name: serviceName } = await api.inventoryApi.getServiceDetailsByRegex('^pdpgsql_'));
+  ({ service_id: serviceId, service_name: serviceName } =
+    await api.inventoryApi.getServiceDetailsByRegex('^pdpgsql_'));
   ({ service_name: socketServiceName } = await api.inventoryApi.getServiceDetailsByRegex('^socket_pdpgsql_'));
   await grafanaHelper.authorize();
 });
@@ -124,9 +126,12 @@ pmmTest(
         `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgsm_load.sql`,
       )
       .assertSuccess();
-    cliHelper
-      .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Running`)
-      .assertSuccess();
+    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+      expect.objectContaining({
+        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        status: 'RUNNING',
+      }),
+    );
 
     const rows = cliHelper.queryPostgresqlRows<{
       calls: number;
@@ -253,9 +258,12 @@ pmmTest.skip(
     cliHelper
       .execute(`docker exec ${container} pgbench -c 2 -j 2 -T 60 --username=pmm ${pgbenchDatabase}`)
       .assertSuccess();
-    cliHelper
-      .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Running`)
-      .assertSuccess();
+    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+      expect.objectContaining({
+        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        status: 'RUNNING',
+      }),
+    );
 
     const rows = cliHelper
       .queryPostgresqlRows<{ pgsm_query_id: string; query: string }>(
@@ -333,9 +341,12 @@ pmmTest(
         `Only the 4 statements after SET application_name should show up for ${applicationName}`,
       ).toHaveCount(4);
     }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
-    cliHelper
-      .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Running`)
-      .assertSuccess();
+    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+      expect.objectContaining({
+        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        status: 'RUNNING',
+      }),
+    );
   },
 );
 
@@ -465,9 +476,12 @@ pmmTest(
       setting: String(defaultBucketTime),
     });
     cliHelper.execute(`docker exec ${container} truncate -s 0 ${agentLog}`).assertSuccess();
-    cliHelper
-      .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Running`)
-      .assertSuccess();
+    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+      expect.objectContaining({
+        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        status: 'RUNNING',
+      }),
+    );
     // eslint-disable-next-line playwright/no-wait-for-timeout -- one default bucket for the agent to log a WAITING status it must not log
     await page.waitForTimeout(Timeouts.ONE_MINUTE);
     expect(
@@ -483,9 +497,12 @@ pmmTest(
         timeout: Timeouts.TWO_MINUTES,
       })
       .toContain(waitingMessage);
-    cliHelper
-      .execute(`${pmmAdmin} list | grep postgresql_pgstatmonitor_agent | grep Waiting`)
-      .assertSuccess();
+    expect(cliHelper.getPmmAdminServiceAgents(container, serviceId)).toContainEqual(
+      expect.objectContaining({
+        agent_type: 'AGENT_TYPE_QAN_POSTGRESQL_PGSTATMONITOR_AGENT',
+        status: 'WAITING',
+      }),
+    );
   },
 );
 
