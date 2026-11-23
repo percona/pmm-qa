@@ -31,7 +31,7 @@ test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbit
     await removeMongoService(containerName, serviceName);
   });
 
-  test('PMM-15222 - Verify the arbiter has no pbm agent version series while each data-bearing member has one for its own agent', async ({}) => {
+  test('PMM-15222 - Verify the arbiter has no pbm agent version series while each data-bearing member has one for its own agent', { tag: '@pbm-arbiter-external' }, async ({}) => {
     const nodes = (await pbm.pbmStatus('rs101')).cluster.flatMap((replset) => replset.nodes);
 
     for (const member of ['rs101', 'rs102']) {
