@@ -73,6 +73,9 @@ pmmTest(
       await expect
         .poll(
           async () => {
+            // Grafana renders a table's rows only once its panel is in view.
+            await dashboard.builders.panelByExactName('Backup history').scrollIntoViewIfNeeded();
+
             const rows = await dashboard.getTableRowsAfterRefresh('Backup history');
 
             return rows.filter((row) => backups.includes(row['Backup Name']));
