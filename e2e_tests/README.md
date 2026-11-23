@@ -155,7 +155,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nomad`
 - `@not-ui-pipeline`
 - `@pbm-alerting`
-- `@pbm-external`
 - `@pbm-nightly`
 - `@pdpgsql-pmm-integration`
 - `@permissions-nightly`

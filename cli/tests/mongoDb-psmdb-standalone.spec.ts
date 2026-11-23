@@ -5,7 +5,7 @@ import * as pbm from '@helpers/pbm';
 
 const containerName = 'psmdb-standalone';
 
-test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests', { tag: '@standalone-psmdb' }, () => {
+test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests', { tag: ['@standalone-psmdb', '@pbm-external'] }, () => {
   test.use({ pmmClientContainer: containerName });
 
   test.beforeAll(async ({}) => {

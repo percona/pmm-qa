@@ -43,7 +43,6 @@ Run commands from `cli/`.
 - `@arbiter-psmdb`
 - `@client-docker`
 - `@external`
-- `@exporter-footprint`
 - `@generic`
 - `@haproxy`
 - `@help-cli`
@@ -51,7 +50,7 @@ Run commands from `cli/`.
 - `@mysql`
 - `@mysql-conf-file`
 - `@mysql-perfschema-change-agent`
-- `@pbm-metrics-psmdb`
+- `@pbm-external`
 - `@pbm-metrics-shard`
 - `@pdpgsql`
 - `@percona-server`

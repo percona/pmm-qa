@@ -37,7 +37,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@shard-psmdb' 
   });
 });
 
-test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster', { tag: '@pbm-metrics-shard' }, () => {
+test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster', { tag: ['@pbm-metrics-shard', '@pbm-external'] }, () => {
   test.use({ pmmClientContainer: 'rscfg01' });
 
   const pbmHost = 'rscfg01';

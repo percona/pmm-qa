@@ -17,7 +17,7 @@ const everyMember = async (check: (member: string) => Promise<void>) => {
 
 test.describe(
   'Percona Server MongoDB (PSMDB) PBM PITR freshness metrics',
-  { tag: '@psmdb' },
+  { tag: ['@psmdb', '@pbm-external'] },
   () => {
     test.use({ pmmClientContainer: containerName });
     const replsetName = 'rs';
@@ -235,7 +235,7 @@ test.describe(
 
 test.describe(
   'Percona Server MongoDB (PSMDB) PBM restore metrics',
-  { tag: '@psmdb' },
+  { tag: ['@psmdb', '@pbm-external'] },
   () => {
     test.use({ pmmClientContainer: containerName });
 
