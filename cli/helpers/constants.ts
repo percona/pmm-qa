@@ -3,6 +3,12 @@ export const mongoConnection = {
   password: 'pmmpass',
 };
 
+export const psConnection = {
+  username: 'root',
+  password: 'GRgrO9301RuF',
+  address: '127.0.0.1:3306',
+};
+
 export const gssapi = {
   enabled: process.env.GSSAPI_ENABLED === 'true' ? 'true' : 'false',
   credentials_flags: '--username="pmm@PERCONATEST.COM" --password=password1 --authentication-mechanism=GSSAPI --authentication-database="$external"',

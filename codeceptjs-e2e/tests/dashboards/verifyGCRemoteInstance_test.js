@@ -6,7 +6,6 @@ Feature('Monitoring Mysql and Postgresql DB running on Google Cloud');
 
 const instances = new DataTable(['instance', 'instanceType', 'metric']);
 
-instances.add(['pgsql13', 'postgresql', 'pg_stat_database_xact_rollback']);
 instances.add(['pgsql14', 'postgresql', 'pg_stat_database_xact_rollback']);
 instances.add(['pgsql15', 'postgresql', 'pg_stat_database_xact_rollback']);
 instances.add(['pgsql16', 'postgresql', 'pg_stat_database_xact_rollback']);
@@ -17,7 +16,6 @@ instances.add(['mysql84', 'mysql', 'mysql_global_status_max_used_connections']);
 
 // Mapping here to avoid datatables to add those details to test names in allure report
 const remoteInstance = {
-  pgsql13: remoteInstancesHelper.remote_instance.gc.gc_pgsql_13,
   pgsql14: remoteInstancesHelper.remote_instance.gc.gc_pgsql_14,
   pgsql15: remoteInstancesHelper.remote_instance.gc.gc_pgsql_15,
   pgsql16: remoteInstancesHelper.remote_instance.gc.gc_pgsql_16,
