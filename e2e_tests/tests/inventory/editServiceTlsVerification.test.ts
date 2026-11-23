@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { startOwnService, stopOwnService } from '@helpers/frameworkServices.helper';
+import { serviceMetricsSettings } from '@helpers/serviceMetrics.helper';
 import { exporterTlsState, TlsServerName, tlsServers } from '@helpers/serviceTls.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AgentStatus, GetService, ServiceAgent } from '@interfaces/inventory';
@@ -103,6 +104,15 @@ for (const { exporterType, instance, name, original, serverTlsCheck, serviceRege
             },
           )
           .toEqual({ status: AgentStatus.running, tls: true, tlsSkipVerify: true });
+
+        // A running exporter has only started; its up metric says it reached the database.
+        const upMetric = serviceMetricsSettings.find(
+          (metrics) => metrics.exporterType === exporterType,
+        )?.upMetric;
+
+        if (!upMetric) throw new Error(`${exporterType} has no up metric in serviceMetricsSettings`);
+
+        await api.prometheusApi.waitForNewValue(`${upMetric}{service_id="${service.service_id}"}`, 1);
       },
     );
   });

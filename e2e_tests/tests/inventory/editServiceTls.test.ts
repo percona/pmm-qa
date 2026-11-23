@@ -19,8 +19,10 @@ for (const settings of serviceTlsSettings) {
   pmmTest.describe(`Edit service TLS | ${name}`, () => {
     let service: GetService;
     let tlsServerContainer: string | undefined;
+    let restoreTlsOff: boolean;
 
     pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+      restoreTlsOff = false;
       await grafanaHelper.authorize();
       service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
 
@@ -28,6 +30,7 @@ for (const settings of serviceTlsSettings) {
 
       // Stored certificates are never returned, so only a service without TLS can be put back as it was.
       expect(!!tls, `${service.service_name} must be monitored without TLS`).toBe(false);
+      restoreTlsOff = true;
     });
 
     pmmTest.afterEach(async ({ api, cliHelper, credentials }) => {
@@ -44,12 +47,13 @@ for (const settings of serviceTlsSettings) {
           })
           .toEqual(0);
       }
-
-      await api.inventoryApi.updateService(
-        service.service_id,
-        service.service_type,
-        tlsOffChanges(certificateFields),
-      );
+      if (restoreTlsOff) {
+        await api.inventoryApi.updateService(
+          service.service_id,
+          service.service_type,
+          tlsOffChanges(certificateFields),
+        );
+      }
     });
 
     pmmTest(

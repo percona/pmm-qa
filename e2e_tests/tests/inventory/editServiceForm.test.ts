@@ -119,7 +119,7 @@ for (const role of ['Viewer', 'Editor'] as const) {
     });
 
     pmmTest.afterEach(async ({ grafanaHelper }) => {
-      await grafanaHelper.deleteUser(userId);
+      expect((await grafanaHelper.deleteUser(userId)).status(), `delete user ${username}`).toEqual(200);
     });
 
     pmmTest(

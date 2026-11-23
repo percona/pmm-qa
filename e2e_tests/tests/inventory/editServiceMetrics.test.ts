@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import {
   exporterHttpStatus,
+  exporterLocalHttpStatus,
   LogLevel,
   logLevelFlag,
   MetricsMode,
@@ -101,6 +102,13 @@ for (const serviceMetrics of serviceMetricsSettings) {
           service.service_type,
           metricsSettingsChanges(pushing),
         );
+        // A restarting exporter refuses every connection, so only one that answers locally shows the refusal is its own.
+        await expect
+          .poll(() => exporterLocalHttpStatus(api, dockerHelper, container, service, exporterType), {
+            message: 'the exporter answers on its own host',
+            timeout: Timeouts.ONE_MINUTE,
+          })
+          .toMatch(/^(200|401)$/);
         await expect
           .poll(() => exporterHttpStatus(api, dockerHelper, container, service, exporterType), {
             message: 'an exporter that is not exposed cannot be reached',
