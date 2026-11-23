@@ -238,12 +238,18 @@ export const isExternalPbm = async () => (await cli.exec(`docker ps -q -f 'name=
 
 /**
  * Stop or start the cron job of an external PBM. It takes a backup every 15 minutes, which would fall into the middle of a test that
- * counts backups or watches PITR. Without an external PBM there is none.
+ * counts backups or watches PITR, or hold the lock a test's own backup needs. Without an external PBM there is none.
  */
-export async function setExternalCron(action: 'start' | 'stop') {
+export async function setExternalCron(container: string, action: 'start' | 'stop') {
   if (!(await isExternalPbm())) return;
 
   await (await cli.exec(`docker exec ${externalPbmContainer} systemctl ${action} crond`)).assertSuccess();
+  if (action === 'start') return;
+
+  // Stopping crond leaves a backup it has just started running, and PBM refuses any other operation until that one ends.
+  await expect(async () => {
+    expect((await pbmStatus(container)).running?.type, 'operation PBM is running').toBeUndefined();
+  }).toPass({ intervals: [3_000], timeout: 120_000 });
 }
 
 export async function setAgents(containers: string[], action: 'start' | 'stop' | 'kill') {

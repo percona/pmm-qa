@@ -18,6 +18,11 @@ test.beforeAll(async ({}) => {
   await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
   await pbm.skipBelowClient(containerName, '3.11.0');
   bucket = await pbm.pbmConfigValue(pbmHost, 'storage.s3.bucket');
+  await pbm.setExternalCron(pbmHost, 'stop');
+});
+
+test.afterAll(async ({}) => {
+  await pbm.setExternalCron(pbmHost, 'start');
 });
 
 test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag: ['@psmdb', '@pbm-external'] }, () => {
@@ -39,7 +44,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
 
   test.beforeAll(async ({}) => {
     test.setTimeout(10 * 60_000);
-    await pbm.setExternalCron('stop');
     await pbm.setAgents(members, 'start');
     await pbm.unpauseStorage();
     await pbm.fixStorage(pbmHost, bucket);
@@ -58,7 +62,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     await pbm.pbm(pbmHost, `config --set pitr.enabled=false --set pitr.oplogSpanMin=${oplogSpan}`);
     await pbm.pbm(pbmHost, 'delete-pitr --all --force --wait');
     await runOnPrimary(pbmHost, pbm.mongoRootUri, 'db.getSiblingDB("pbm_metrics_test").dropDatabase()');
-    await pbm.setExternalCron('start');
   });
 
   test('PMM-T2837 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances with each oplog chunk', async ({}) => {
@@ -179,7 +182,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
 
     test.beforeAll(async ({}) => {
       test.setTimeout(10 * 60_000);
-      await pbm.setExternalCron('stop');
       await pbm.setAgents(members, 'start');
       await pbm.unpauseStorage();
       await pbm.removeStoredRestores(pbmHost, bucket);
@@ -193,7 +195,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       for (const member of members) {
         await pbm.recoverExporter(member);
       }
-      await pbm.setExternalCron('start');
     });
 
     test('PMM-T2841 - Verify restore_status is 0 and there are no restore series before any restore', async ({}) => {

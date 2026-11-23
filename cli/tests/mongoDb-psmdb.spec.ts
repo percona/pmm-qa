@@ -380,6 +380,11 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
     await pbm.skipBelowClient(containerName, '3.11.0');
     bucket = await pbm.pbmConfigValue(pbmHost, 'storage.s3.bucket');
+    await pbm.setExternalCron(pbmHost, 'stop');
+  });
+
+  test.afterAll(async ({}) => {
+    await pbm.setExternalCron(pbmHost, 'start');
   });
 
   test.describe('existing metrics and agent version', () => {
@@ -540,7 +545,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
 
     test.beforeAll(async ({}) => {
       test.setTimeout(10 * 60_000);
-      await pbm.setExternalCron('stop');
       await pbm.setAgents(members, 'start');
       await pbm.unpauseStorage();
       await pbm.fixStorage(pbmHost, bucket);
@@ -551,7 +555,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       await pbm.unpauseStorage();
       await pbm.setAgents(members, 'start');
       await pbm.fixStorage(pbmHost, bucket);
-      await pbm.setExternalCron('start');
     });
 
     test('PMM-T2832 - Verify failures since the last successful backup are counted per type until a backup succeeds', async ({}) => {

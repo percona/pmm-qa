@@ -62,9 +62,14 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     const result = await cli.exec(`docker ps | grep ${pbmHost} | awk '{print $NF}'`);
     await result.outContains(pbmHost, 'PSMDB rscfg01 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding');
     await pbm.skipBelowClient(pbmHost, '3.11.0');
+    await pbm.setExternalCron(pbmHost, 'stop');
     await pbm.setAgents(dataMembers, 'start');
     await pbm.expectAgentsOk(pbmHost);
     await pbm.takeBackup(pbmHost);
+  });
+
+  test.afterAll(async ({}) => {
+    await pbm.setExternalCron(pbmHost, 'start');
   });
 
   test('PMM-T2847 - Verify the PBM metrics are the same through mongos, a shard member and a config server member, but for the agent versions', async ({}) => {
