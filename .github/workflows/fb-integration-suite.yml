@@ -86,7 +86,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pbm-external|@standalone-psmdb'
-      services_list: '--database psmdb,SETUP_TYPE=pss --database psmdb,SETUP_TYPE=standalone_no_pbm'
+      services_list: '--database psmdb,SETUP_TYPE=pss,EXTERNAL_PBM=true --database psmdb,SETUP_TYPE=standalone_no_pbm'
       test_name: 'PBM external: replica set and standalone'
 
   pbm-external-shard-tests:
@@ -102,5 +102,5 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pbm-metrics-shard'
-      services_list: '--database psmdb,SETUP_TYPE=sharding'
+      services_list: '--database psmdb,SETUP_TYPE=sharding,EXTERNAL_PBM=true'
       test_name: 'PBM external: sharded cluster'
