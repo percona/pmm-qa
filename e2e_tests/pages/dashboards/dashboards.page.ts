@@ -76,6 +76,8 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelInfoIconByName: (panelName: string) =>
       this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
+    panelLegendSeries: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator('button[class*="LegendLabel"]'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -86,6 +88,8 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('button', { name: 'Remove' }),
+    rowTitle: (rowName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid dashboard-row-title-${rowName}`),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -109,6 +113,7 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('combobox'),
+    textInDashboard: (text: string) => this.grafanaIframe().getByText(text, { exact: true }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
