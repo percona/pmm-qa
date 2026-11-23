@@ -20,6 +20,8 @@ const kubectlTimeout = Timeouts.TWO_MINUTES;
 
 interface ExecInPodOptions {
   container?: string;
+  /** Run the command once more when {@link kubectlTimeout} killed it. Only for commands that are safe to repeat. */
+  retryIfKilled?: boolean;
   /** Skip logging - kubectl warns about defaulted containers on every call. */
   silent?: boolean;
 }
@@ -75,8 +77,15 @@ export default class K8sHelper {
   execInPod = (podName: string, command: string, options: ExecInPodOptions = {}): ExecReturn => {
     const container = options.container ? `--container=${options.container} ` : '';
     const args = `exec ${podName} ${container}-- ${command}`;
+    const run = (): ExecReturn => (options.silent ? this.execSilent(args) : this.exec(args));
+    const started = Date.now();
+    const result = run();
 
-    return options.silent ? this.execSilent(args) : this.exec(args);
+    if (!options.retryIfKilled || result.code === 0 || Date.now() - started < kubectlTimeout) return result;
+
+    console.log(`"kubectl ${args}" was killed after ${kubectlTimeout / 1_000} s, running it once more`);
+
+    return run();
   };
 
   /** {@link exec} without logging - for reads whose output would flood the report. */
@@ -192,7 +201,11 @@ export default class K8sHelper {
     );
 
   getVolumeUsage = (pod: string, dir: string, container?: string): VolumeUsage => {
-    const result = this.execInPod(pod, `df -Pm ${dir}`, { container, silent: true }).assertSuccess();
+    const result = this.execInPod(pod, `df -Pm ${dir}`, {
+      container,
+      retryIfKilled: true,
+      silent: true,
+    }).assertSuccess();
     const [, sizeMb, usedMb, availableMb] = (result.getStdOutLines()[1] ?? '')
       .trim()
       .split(/\s+/)

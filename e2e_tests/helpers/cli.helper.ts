@@ -131,6 +131,15 @@ export default class CliHelper {
     return value;
   };
 
+  getPmmAdminServiceAgents = (container: string, serviceId: string) =>
+    (
+      JSON.parse(
+        this.execSilent(`docker exec ${container} pmm-admin list --json`).assertSuccess().stdout,
+      ) as {
+        agent: { agent_type: string; service_id?: string; status: string }[];
+      }
+    ).agent.filter((agent) => agent.service_id === serviceId);
+
   getPmmAdminStatusField = (container: string, field: string): string =>
     this.getPmmAdminField(
       this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
@@ -157,6 +166,9 @@ export default class CliHelper {
     )
       .assertSuccess()
       .stdout.trim();
+
+  queryPostgresql = (container: string, query: string) =>
+    this.execute(`docker exec ${container} psql -U postgres -tAc "${query}"`).assertSuccess().stdout.trim();
 
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
@@ -213,6 +225,15 @@ export default class CliHelper {
 
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
+
+  setPgStatStatementsMax = (container: string, max: number) => {
+    this.queryPostgresql(container, `ALTER SYSTEM SET pg_stat_statements.max = ${max};`);
+    this.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
+  };
+
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;

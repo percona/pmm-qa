@@ -1,14 +1,33 @@
 import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { GetService } from '@interfaces/inventory';
+import Credentials from '@helpers/credentials.helper';
+import { GetService, ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 // Containers keep their name and address for the whole run.
 const containersByAddress = new Map<string, string>();
+const { perconaServer } = new Credentials();
+// 'qa_slow' gives the PostgreSQL query its own query ID: pmm-framework's load runs pg_sleep() in another
+// database, pg_stat_statements gives both the same ID, and Query Analytics keeps one row per ID.
+const slowQueries: Partial<Record<string, string>> = {
+  [ServiceType.mysql]: `mysql -u${perconaServer.username} -p${perconaServer.password} -e "SELECT SLEEP(12)"`,
+  [ServiceType.postgresql]: `psql -U postgres -c "SELECT 'qa_slow', pg_sleep(12)"`,
+};
 
 export default class DockerHelper {
   constructor(private readonly cliHelper: CliHelper) {}
+
+  // pmm-framework names each client node after its database container.
+  runSlowQueries = (services: GetService[]) => {
+    for (const { node_name, service_type } of services) {
+      const query = slowQueries[service_type];
+
+      if (!query) throw new Error(`No slow query for service type ${service_type}`);
+
+      this.cliHelper.execute(`docker exec --detach ${node_name} ${query}`).assertSuccess();
+    }
+  };
 
   // pmm-agent registers a node under its container name, or under its IP when set up with one.
   getContainerByAddress = (address: string): string => {

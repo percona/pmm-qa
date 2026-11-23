@@ -45,6 +45,9 @@ export default class ClickHouseHelper {
       ).stdout.trim(),
     );
 
+  countQanRowsWhere = (containerName: string, condition: string) =>
+    Number(this.query(containerName, `SELECT count() FROM pmm.metrics WHERE ${condition}`).stdout.trim());
+
   query = (containerName: string, query: string) =>
     this.cliHelper
       .execSilent(`docker exec ${containerName} clickhouse-client --password clickhouse --query "${query}"`)

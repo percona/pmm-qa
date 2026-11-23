@@ -39,6 +39,11 @@ export enum AgentStatus {
   running = 'AGENT_STATUS_RUNNING',
 }
 
+export enum QanAgentType {
+  mysqlSlowlog = 'qan-mysql-slowlog-agent',
+  postgresqlPgStatements = 'qan-postgresql-pgstatements-agent',
+}
+
 export interface GetService {
   service_id: string;
   service_type: string;
