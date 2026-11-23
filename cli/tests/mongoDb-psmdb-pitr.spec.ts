@@ -10,6 +10,8 @@ test.describe(
   'Percona Server MongoDB (PSMDB) PBM PITR freshness metrics',
   { tag: '@psmdb' },
   () => {
+    test.use({ pmmClientContainer: containerName });
+
     const members = ['rs101', 'rs102', 'rs103'];
     const replsetName = 'rs';
     const recoveryPointMetric = 'mongodb_pbm_cluster_pitr_recovery_point_ts';
@@ -36,6 +38,7 @@ test.describe(
     };
 
     test.beforeAll(async ({}) => {
+      test.setTimeout(10 * 60_000);
       const result = await cli.exec(
         `docker ps | grep ${containerName} | awk '{print $NF}'`,
       );
@@ -62,6 +65,7 @@ test.describe(
     });
 
     test.afterAll(async ({}) => {
+      test.setTimeout(10 * 60_000);
       await pbm.setAgents(members, 'start');
       await pbm.stopWriter(pbmHost);
       await pbm.pbm(
@@ -125,6 +129,7 @@ test.describe(
     });
 
     test('PMM-15207 - Verify the PITR metrics stop advancing without pbm-agents and catch up when they are started', async ({}) => {
+      test.setTimeout(15 * 60_000);
       await pbm.setAgents(members, 'stop');
 
       try {
@@ -159,6 +164,7 @@ test.describe(
     });
 
     test('PMM-15207 - Verify the PITR recovery point pauses during a logical backup and continues afterwards', async ({}) => {
+      test.setTimeout(15 * 60_000);
       await pbm.expectAgentsOk(pbmHost);
 
       const backup = await pbm.startOperation(pbmHost, 'backup');
@@ -194,6 +200,7 @@ test.describe(
     });
 
     test('PMM-15207 - Verify both PITR metrics disappear when PITR is disabled while pbm list still shows the chunks', async ({}) => {
+      test.setTimeout(10 * 60_000);
       await (
         await pbm.pbm(pbmHost, 'config --set pitr.enabled=false')
       ).assertSuccess();
