@@ -120,9 +120,9 @@ const postgresConnection = ({ pdpgsql }: Credentials, ssl: string) =>
 const valkeyServerTlsDir = '/tmp/pmm_tls_valkey_server';
 const valkeyPort = 6_379;
 const valkeyTlsCli = `valkey-cli --tls --cacert ${valkeyServerTlsDir}/ca.crt --cert ${valkeyServerTlsDir}/client.crt --key ${valkeyServerTlsDir}/client.key`;
-// Fails unless valkey answers OK to every setting.
+// Fails unless valkey-cli succeeds and valkey answers OK to every setting.
 const valkeyConfig = (cli: string, { valkey }: Credentials, settings: string[]) =>
-  `printf "${settings.map((setting) => `CONFIG SET ${setting}`).join('\\n')}\\n" | ${cli} -a ${valkey.password} --no-auth-warning | { ! grep -v "^OK$"; }`;
+  `(replies=$(printf "${settings.map((setting) => `CONFIG SET ${setting}`).join('\\n')}\\n" | ${cli} -a ${valkey.password} --no-auth-warning) && [ "$(echo "$replies" | grep -cx OK)" -eq ${settings.length} ])`;
 const proxysqlSslBackup = '/tmp/pmm_tls_proxysql.orig';
 const proxysqlAdmin = ({ proxysql }: Credentials, sql: string, flags = '') =>
   `mysql -u${proxysql.username} -h127.0.0.1 -P6032 ${flags} -e "${sql}"`;
@@ -241,9 +241,10 @@ export const serviceTlsSettings: ServiceTls[] = [
     serverTls: {
       certificates: (cliHelper, container) =>
         readCertificates(cliHelper, container, valkeyServerTlsDir, pemFiles),
-      // Over TLS when the port serves it, else over the plain one an unfinished `enable` left.
+      // Over TLS when the port serves it, else over the plain one an unfinished `enable` left. The certificates
+      // stay while valkey may still need them.
       disable: (container, credentials) =>
-        `docker exec ${container} sh -c '${valkeyConfig(valkeyTlsCli, credentials, ['tls-port 0', `port ${valkeyPort}`])} || ${valkeyConfig('valkey-cli', credentials, ['tls-port 0', `port ${valkeyPort}`])}; rm -rf ${valkeyServerTlsDir}'`,
+        `docker exec ${container} sh -c '{ ${valkeyConfig(valkeyTlsCli, credentials, ['tls-port 0', `port ${valkeyPort}`])} || ${valkeyConfig('valkey-cli', credentials, ['tls-port 0', `port ${valkeyPort}`])}; } && rm -rf ${valkeyServerTlsDir}'`,
       // At runtime, as a restart would take the node out of its cluster: the plain port gives way to a TLS
       // one with the number the service is registered with.
       enable: (container, credentials) =>

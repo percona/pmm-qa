@@ -45,13 +45,9 @@ pmmTest.describe('Edit service | Amazon RDS', () => {
     rdsExporterId = (await api.managementApi.getRdsExporter(service.node_id)).agent_id;
   });
 
-  // Removing an RDS service removes its node and RDS exporter too.
+  // addRds names the node after the service; deleting it removes the service and agents too.
   pmmTest.afterEach(async ({ api }) => {
-    const { services } = await api.inventoryApi.getServices();
-
-    for (const { service_id } of services.filter((added) => added.service_name === serviceName)) {
-      await api.managementApi.removeService(service_id);
-    }
+    await api.inventoryApi.removeNodesByName([serviceName]);
   });
 
   pmmTest(

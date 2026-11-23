@@ -97,18 +97,28 @@ const psQan = serviceQanSources.ps;
 pmmTest.describe('Edit service slow log rotation | ps', () => {
   let service: GetService;
   let originalSource: QuerySource;
+  let originalRotation: number;
 
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     await grafanaHelper.authorize();
     service = await api.inventoryApi.getServiceDetailsByRegex(psQan.serviceRegex);
     originalSource = currentQuerySource(psQan, service);
+    originalRotation = Number(
+      service.agents.find(({ agent_type }) => agent_type === 'qan-mysql-slowlog-agent')?.max_query_log_size ??
+        0,
+    );
   });
 
-  // Puts the original QAN agent back, which drops the slow log agent and its rotation size.
+  // A slow log agent the service had keeps its rotation size, stored 0 for disabled, which the API takes as -1.
+  // Any other source is put back, which drops the slow log agent and its rotation size with it.
   pmmTest.afterEach(async ({ api }) => {
     const current = currentQuerySource(psQan, await api.inventoryApi.getServiceById(service.service_id));
 
-    if (current !== originalSource) {
+    if (originalSource === 'slowlog') {
+      await api.inventoryApi.updateService(service.service_id, service.service_type, {
+        max_slowlog_file_size: originalRotation || -1,
+      });
+    } else if (current !== originalSource) {
       await api.inventoryApi.updateService(
         service.service_id,
         service.service_type,

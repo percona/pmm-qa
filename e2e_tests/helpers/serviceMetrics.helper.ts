@@ -182,6 +182,19 @@ export const exporterHttpStatus = async (
     `http://${container}:${(await api.inventoryApi.getServiceExporter(service_id, exporterType)).listen_port}/metrics`,
   );
 
+// From the exporter's own host, which reaches it whether or not it is exposed.
+export const exporterLocalHttpStatus = async (
+  api: Api,
+  dockerHelper: DockerHelper,
+  container: string,
+  { service_id }: GetService,
+  exporterType: string,
+) =>
+  dockerHelper.getHttpStatus(
+    container,
+    `http://127.0.0.1:${(await api.inventoryApi.getServiceExporter(service_id, exporterType)).listen_port}/metrics`,
+  );
+
 export const registerEndpointService = async (
   api: Api,
   cliHelper: CliHelper,

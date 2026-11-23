@@ -123,19 +123,17 @@ export default class PrometheusApi {
       .toBeGreaterThan(since);
   };
 
-  /** Waits until the latest samples of `selector` are newer than the server's time now, and equal `value`. */
+  /** Waits until the series of `selector` with a sample newer than the server's time now equal `value`. */
   waitForNewValue = async (selector: string, value: number, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     const since = await this.waitForServerTime();
 
+    // One query, so the freshness and the value come from the same series.
     await expect
-      .poll(
-        async () => {
-          const latest = (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0;
-
-          return latest > since ? this.instantQueryValue(`max(${selector})`) : undefined;
-        },
-        { intervals: [Timeouts.ONE_SECOND], message: `${selector} after ${since}`, timeout },
-      )
+      .poll(() => this.instantQueryValue(`max(${selector} and (timestamp(${selector}) > ${since}))`), {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} after ${since}`,
+        timeout,
+      })
       .toEqual(value);
   };
 

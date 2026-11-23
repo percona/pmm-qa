@@ -28,20 +28,17 @@ for (const {
 
     pmmTest.afterEach(async ({ api, cliHelper, credentials }) => {
       const { agentPassword, password, username } = original(credentials);
+      const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
 
-      try {
-        const exporter = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
-
-        // Without a custom agent password the exporter's endpoint takes its agent ID.
-        await api.inventoryApi.updateService(service.service_id, service.service_type, {
-          agent_password: agentPassword ?? exporter.agent_id,
-          password,
-          username,
-          ...(hasDatabase && { database: service.database_name }),
-        });
-      } finally {
-        cliHelper.execSilent(dropUser(container, credentials)).assertSuccess();
-      }
+      // Without a custom agent password the exporter's endpoint takes its agent ID.
+      await api.inventoryApi.updateService(service.service_id, service.service_type, {
+        agent_password: agentPassword ?? exporter.agent_id,
+        password,
+        username,
+        ...(hasDatabase && { database: service.database_name }),
+      });
+      // Only once the service is back on its own credentials, which a failed restore leaves on the test user.
+      cliHelper.execSilent(dropUser(container, credentials)).assertSuccess();
     });
 
     pmmTest(
