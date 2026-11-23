@@ -355,7 +355,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     ).toBeGreaterThan(5_000);
   });
 
-  test('PMM-15355 - Verify mongodb_exporter is about 18 MB', { tag: '@pbm-external' }, async ({}) => {
+  test('PMM-T2826 - Verify mongodb_exporter is about 18 MB', { tag: '@pbm-external' }, async ({}) => {
     const size = await cli.execSilent(`docker exec ${containerName} stat -c %s /usr/local/percona/pmm/exporters/mongodb_exporter`);
     const sizeMb = Number(size.stdout.trim()) / 1024 / 1024;
 
@@ -392,7 +392,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       await pbm.takeBackup(pbmHost);
     });
 
-    test('PMM-15232 - Verify the existing PBM metrics have the same series and values as in 3.10.0 on every member', async ({}) => {
+    test('PMM-T2827 - Verify the existing PBM metrics have the same series and values as in 3.10.0 on every member', async ({}) => {
       test.setTimeout(10 * 60_000);
       await pbm.ensureBaselineExporter(members);
 
@@ -406,7 +406,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15232 - Verify the exporter logs no PBM warnings or errors and no password in normal operation', async ({}) => {
+    test('PMM-T2828 - Verify the exporter logs no PBM warnings or errors and no password in normal operation', async ({}) => {
       for (const member of members) {
         const mark = await pbm.logLineCount(member);
         const spawned = await pbm.spawnScrape(member, member, pbm.exporterPath, { scrapes: 3 });
@@ -424,7 +424,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15222 - Verify each member has one pbm agent version series for its own agent', async ({}) => {
+    test('PMM-T2829 - Verify each member has one pbm agent version series for its own agent', async ({}) => {
       const nodes = (await pbm.pbmStatus(pbmHost)).cluster.flatMap((replset) => replset.nodes);
       expect(nodes, 'pbm status lists every member').toHaveLength(members.length);
 
@@ -447,7 +447,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15222 - Verify hidden and delayed members report their pbm agent version', async ({}) => {
+    test('PMM-T2830 - Verify hidden and delayed members report their pbm agent version', async ({}) => {
       test.setTimeout(10 * 60_000);
       const reconfigure = (special: boolean) => 'cfg = rs.conf(); '
         + `cfg.members[1].priority = ${special ? 0 : 1}; cfg.members[1].hidden = ${special}; `
@@ -492,7 +492,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15222 - Verify the agent version label changes after the pbm-agent of one member is replaced', async ({}) => {
+    test('PMM-T2831 - Verify the agent version label changes after the pbm-agent of one member is replaced', async ({}) => {
       test.setTimeout(10 * 60_000);
       const member = 'rs103';
       const host = `${member}:27017`;
@@ -554,7 +554,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       await pbm.setExternalCron('start');
     });
 
-    test('PMM-15219 - Verify failures since the last successful backup are counted per type until a backup succeeds', async ({}) => {
+    test('PMM-T2832 - Verify failures since the last successful backup are counted per type until a backup succeeds', async ({}) => {
       test.setTimeout(15 * 60_000);
 
       await test.step('a successful backup leaves the logical count at 0 on every member', async () => {
@@ -593,7 +593,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       });
     });
 
-    test('PMM-15219 - Verify a failed physical backup counts under physical only and a logical success does not reset it', async ({}) => {
+    test('PMM-T2833 - Verify a failed physical backup counts under physical only and a logical success does not reset it', async ({}) => {
       test.skip(await pbm.isExternalPbm(), 'A physical backup needs the pbm-agent beside mongod, and an external PBM runs it elsewhere');
       test.setTimeout(15 * 60_000);
       await pbm.takeBackup(pbmHost);
@@ -638,7 +638,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       await pbm.ensureBaselineExporter(members);
     });
 
-    test('PMM-15232 - Verify a user with find only on pbmBackups, pbmAgents and pbmConfig gets no restore or PITR series and one warning per scrape for each', async ({}) => {
+    test('PMM-T2834 - Verify a user with find only on pbmBackups, pbmAgents and pbmConfig gets no restore or PITR series and one warning per scrape for each', async ({}) => {
       const scrapes = 3;
       const oplogSpan = await pbm.pbmConfigValue(pbmHost, 'pitr.oplogSpanMin');
 
@@ -681,7 +681,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15232 - Verify the PBM metrics are the same as in 3.10.0 and the scrape succeeds when there is no primary', async ({}) => {
+    test('PMM-T2835 - Verify the PBM metrics are the same as in 3.10.0 and the scrape succeeds when there is no primary', async ({}) => {
       test.setTimeout(15 * 60_000);
       const secondaries = ['rs102', 'rs103'];
 
@@ -713,7 +713,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
       }
     });
 
-    test('PMM-15232 - Verify no pmm-agent log line contains the connection password after the failures above', async ({}) => {
+    test('PMM-T2836 - Verify no pmm-agent log line contains the connection password after the failures above', async ({}) => {
       for (const member of members) {
         const matches = await cli.exec(`docker exec ${member} grep -c -e ${mongoConnection.password} -e pbmpass ${pbm.agentLogPath}`);
 

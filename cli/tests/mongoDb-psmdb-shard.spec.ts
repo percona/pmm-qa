@@ -67,7 +67,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     await pbm.takeBackup(pbmHost);
   });
 
-  test('PMM-15232 - Verify the PBM metrics are the same through mongos, a shard member and a config server member, but for the agent versions', async ({}) => {
+  test('PMM-T2847 - Verify the PBM metrics are the same through mongos, a shard member and a config server member, but for the agent versions', async ({}) => {
     test.setTimeout(10 * 60_000);
 
     await expect(async () => {
@@ -82,7 +82,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     }).toPass({ intervals: [5_000], timeout: 180_000 });
   });
 
-  test('PMM-15222 - Verify mongos lists the agent version of every member with self 0 while a member lists only its own', async ({}) => {
+  test('PMM-T2848 - Verify mongos lists the agent version of every member with self 0 while a member lists only its own', async ({}) => {
     const own: string[] = [];
 
     for (const member of dataMembers) {
@@ -137,7 +137,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       await cli.exec(mongoEval('mongos', rootUri, `db.getSiblingDB("${database}").dropDatabase()`));
     });
 
-    test('PMM-15207 - Verify the cluster recovery point and the last write of every replica set are the same through mongos, a shard member and a config server member', async ({}) => {
+    test('PMM-T2849 - Verify the cluster recovery point and the last write of every replica set are the same through mongos, a shard member and a config server member', async ({}) => {
       test.setTimeout(15 * 60_000);
 
       for (const view of views) {
@@ -152,7 +152,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       }
     });
 
-    test('PMM-15207 - Verify the cluster recovery point stops at the last write of a shard whose pbm-agents are stopped while the other replica sets advance', async ({}) => {
+    test('PMM-T2850 - Verify the cluster recovery point stops at the last write of a shard whose pbm-agents are stopped while the other replica sets advance', async ({}) => {
       test.setTimeout(15 * 60_000);
       await pbm.setAgents(shards.rs2, 'stop');
 
@@ -180,7 +180,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     });
   });
 
-  test('PMM-15220 - Verify a logical restore shows 1 and then 3 through mongos, a shard member and a config server member', async ({}) => {
+  test('PMM-T2851 - Verify a logical restore shows 1 and then 3 through mongos, a shard member and a config server member', async ({}) => {
     test.setTimeout(20 * 60_000);
     await pbm.expectAgentsOk(pbmHost);
     const backup = await pbm.takeBackup(pbmHost);
@@ -215,7 +215,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     }
   });
 
-  test('PMM-15232 - Verify the PBM metrics of shard members are the same as in 3.10.0 and the scrape succeeds with the config servers down', async ({}) => {
+  test('PMM-T2852 - Verify the PBM metrics of shard members are the same as in 3.10.0 and the scrape succeeds with the config servers down', async ({}) => {
     test.setTimeout(15 * 60_000);
     await pbm.ensureBaselineExporter(['rs101', 'rs201']);
 

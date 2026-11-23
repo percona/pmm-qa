@@ -61,7 +61,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     await pbm.setExternalCron('start');
   });
 
-  test('PMM-15207 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances once a minute', async ({}) => {
+  test('PMM-T2837 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances once a minute', async ({}) => {
     test.setTimeout(6 * 60_000);
     for (const member of members) {
       await expect(async () => {
@@ -91,7 +91,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     expect(gaps.every((gap) => gap >= 30 && gap <= 90), `PITR recovery points ${advances.join(', ')}`).toBeTruthy();
   });
 
-  test('PMM-15207 - Verify the PITR metrics stop advancing without pbm-agents and catch up when they are started', async ({}) => {
+  test('PMM-T2838 - Verify the PITR metrics stop advancing without pbm-agents and catch up when they are started', async ({}) => {
     test.setTimeout(10 * 60_000);
     await pbm.setAgents(members, 'stop');
 
@@ -117,7 +117,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     }
   });
 
-  test('PMM-15207 - Verify the PITR recovery point pauses during a logical backup and continues afterwards', async ({}) => {
+  test('PMM-T2839 - Verify the PITR recovery point pauses during a logical backup and continues afterwards', async ({}) => {
     test.setTimeout(10 * 60_000);
     await pbm.expectAgentsOk(pbmHost);
 
@@ -141,7 +141,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     }).toPass({ intervals: [3_000], timeout: 3 * 60_000 });
   });
 
-  test('PMM-15207 - Verify both PITR metrics disappear when PITR is disabled while pbm list still shows the chunks', async ({}) => {
+  test('PMM-T2840 - Verify both PITR metrics disappear when PITR is disabled while pbm list still shows the chunks', async ({}) => {
     test.setTimeout(10 * 60_000);
     await (await pbm.pbm(pbmHost, 'config --set pitr.enabled=false')).assertSuccess();
 
@@ -199,7 +199,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       await pbm.setExternalCron('start');
     });
 
-    test('PMM-15220 - Verify restore_status is 0 and there are no restore series before any restore', async ({}) => {
+    test('PMM-T2841 - Verify restore_status is 0 and there are no restore series before any restore', async ({}) => {
       for (const member of members) {
         await expect(async () => {
           const series = await pbm.scrapePbm(member);
@@ -210,7 +210,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       }
     });
 
-    test('PMM-15220 - Verify a logical restore shows 1 while it runs and 3 when it is done, with its labels and duration', async ({}) => {
+    test('PMM-T2842 - Verify a logical restore shows 1 while it runs and 3 when it is done, with its labels and duration', async ({}) => {
       const restore = await pbm.startOperation(pbmHost, `restore ${backupName}`);
       const seen = new Set<number | undefined>();
       const finished = async () => (await pbm.describeRestore(pbmHost, restore).catch(() => undefined))?.status === 'done';
@@ -245,7 +245,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       }
     });
 
-    test('PMM-15220 - Verify a restore interrupted by stopping every pbm-agent shows 2 before the agents are started', async ({}) => {
+    test('PMM-T2843 - Verify a restore interrupted by stopping every pbm-agent shows 2 before the agents are started', async ({}) => {
       try {
         const restore = await pbm.startOperation(pbmHost, `restore ${backupName}`);
         await pbm.setAgents(members, 'kill');
@@ -261,7 +261,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       }
     });
 
-    test('PMM-15220 - Verify a restore PBM reports as failed shows 2 and status error', async ({}) => {
+    test('PMM-T2844 - Verify a restore PBM reports as failed shows 2 and status error', async ({}) => {
       test.setTimeout(15 * 60_000);
       const prefix = await pbm.pbmConfigValue(pbmHost, 'storage.s3.prefix');
       const backupDir = `/backups/${bucket}/${prefix}/${backupName}/rs`;
@@ -298,7 +298,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       }
     });
 
-    test('PMM-15220 - Verify only the 10 most recent restores have series after 11 restores and the status follows the latest', async ({}) => {
+    test('PMM-T2845 - Verify only the 10 most recent restores have series after 11 restores and the status follows the latest', async ({}) => {
       test.setTimeout(30 * 60_000);
       const names: string[] = [];
 
@@ -326,7 +326,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM restore metrics', { tag: ['@ps
       }
     });
 
-    test('PMM-15220 - Verify a physical restore appears only after a resync of the PBM configuration', async ({}) => {
+    test('PMM-T2846 - Verify a physical restore appears only after a resync of the PBM configuration', async ({}) => {
       test.skip(await pbm.isExternalPbm(), 'A physical restore needs the pbm-agent beside mongod, and an external PBM runs it elsewhere');
       test.setTimeout(40 * 60_000);
       const physicalBackup = await pbm.takeBackup(pbmHost, 'physical');

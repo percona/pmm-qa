@@ -46,7 +46,7 @@ pmmTest.afterEach(async ({ api, cliHelper }) => {
 });
 
 pmmTest(
-  'PMM-15232 - Verify the PBM agent down alert fires when a pbm-agent is stopped and clears when it is started @pbm-alerting',
+  'PMM-T2855 - Verify the PBM agent down alert fires when a pbm-agent is stopped and clears when it is started @pbm-alerting',
   async ({ api, cliHelper }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 
@@ -78,7 +78,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-15232 - Verify the PBM backup failed alert fires for a backup that fails once it is running @pbm-alerting',
+  'PMM-T2856 - Verify the PBM backup failed alert fires for a backup that fails once it is running @pbm-alerting',
   async ({ api, cliHelper }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 
