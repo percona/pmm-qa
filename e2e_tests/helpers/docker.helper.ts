@@ -18,17 +18,6 @@ const slowQueries: Partial<Record<string, string>> = {
 export default class DockerHelper {
   constructor(private readonly cliHelper: CliHelper) {}
 
-  // pmm-framework names each client node after its database container.
-  runSlowQueries = (services: GetService[]) => {
-    for (const { node_name, service_type } of services) {
-      const query = slowQueries[service_type];
-
-      if (!query) throw new Error(`No slow query for service type ${service_type}`);
-
-      this.cliHelper.execute(`docker exec --detach ${node_name} ${query}`).assertSuccess();
-    }
-  };
-
   // pmm-agent registers a node under its container name, or under its IP when set up with one.
   getContainerByAddress = (address: string): string => {
     const cached = containersByAddress.get(address);
@@ -68,6 +57,17 @@ export default class DockerHelper {
 
   getServiceContainer = async (api: Api, { node_id }: GetService) =>
     this.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
+
+  // pmm-framework names each client node after its database container.
+  runSlowQueries = (services: GetService[]) => {
+    for (const { node_name, service_type } of services) {
+      const query = slowQueries[service_type];
+
+      if (!query) throw new Error(`No slow query for service type ${service_type}`);
+
+      this.cliHelper.execute(`docker exec --detach ${node_name} ${query}`).assertSuccess();
+    }
+  };
 
   startContainer = (name: string, dockerArgs: string, network = 'pmm-qa') =>
     this.cliHelper
