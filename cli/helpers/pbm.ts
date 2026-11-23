@@ -11,6 +11,7 @@ export const baselineVersion = '3.10.0';
 export const baselineExporterPath = `/tmp/mongodb_exporter-${baselineVersion}`;
 export const agentLogPath = '/var/log/pmm-agent.log';
 export const mongoRootUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
+export const pitrSpanSeconds = 15;
 
 // The PBM metrics 3.10.0 already has: their series and values must not change.
 export const existingPbmMetrics = [
