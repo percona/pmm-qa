@@ -568,9 +568,10 @@ test.describe(
         test.setTimeout(10 * 60_000);
         const member = 'rs103';
         const host = `${member}:27017`;
+        const packageHost = await pbm.pbmPackageHost(member);
         const installed = (
           await cli.exec(
-            `docker exec ${member} rpm -q --qf "%{VERSION}-%{RELEASE}" percona-backup-mongodb`,
+            `docker exec ${packageHost} rpm -q --qf "%{VERSION}-%{RELEASE}" percona-backup-mongodb`,
           )
         ).stdout.trim();
         const original = installed.split('-')[0];
@@ -581,7 +582,7 @@ test.describe(
         ) => {
           await (
             await cli.exec(
-              `docker exec ${member} dnf ${action} -y percona-backup-mongodb-${version}-${installed.split('-').slice(1).join('-')}`,
+              `docker exec ${packageHost} dnf ${action} -y percona-backup-mongodb-${version}-${installed.split('-').slice(1).join('-')}`,
             )
           ).assertSuccess();
           await pbm.setAgents([member], 'stop');
@@ -707,6 +708,7 @@ test.describe(
       });
 
       test('PMM-15219 - Verify a failed physical backup counts under physical only and a logical success does not reset it', async ({}) => {
+        test.skip(await pbm.isExternalPbm(), 'A physical backup needs the pbm-agent beside mongod, and an external PBM runs it elsewhere');
         test.setTimeout(15 * 60_000);
         await pbm.takeBackup(pbmHost);
 

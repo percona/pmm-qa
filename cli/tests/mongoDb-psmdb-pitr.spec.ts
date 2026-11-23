@@ -508,6 +508,7 @@ test.describe(
       });
 
       test('PMM-15220 - Verify a physical restore appears only after a resync of the PBM configuration', async ({}) => {
+        test.skip(await pbm.isExternalPbm(), 'A physical restore needs the pbm-agent beside mongod, and an external PBM runs it elsewhere');
         test.setTimeout(40 * 60_000);
         const physicalBackup = await pbm.takeBackup(pbmHost, 'physical');
         const restore = await pbm.startOperation(
