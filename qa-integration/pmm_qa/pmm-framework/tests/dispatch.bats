@@ -516,10 +516,11 @@ stub_prebaked_docker() {
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards,EXTERNAL_PBM=true'
   dispatch_setup
-  grep -q '^exec rscfg01 pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1$' "$DOCKER_CALLS"
-  grep -q '^exec rscfg01 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
-  [[ $(grep -c 'pbm-external-backup.timer$' "$DOCKER_CALLS") -eq 2 ]]
-  ! grep -q 'pbm-external-backup' <(grep -E '^exec (rs[12]0|mongos)' "$DOCKER_CALLS") || false
+  [[ $(grep -c '^exec [a-z0-9]* systemctl mask --now pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
+  [[ $(grep -c '^exec pbm-external systemctl enable --now pbm-agent@' "$DOCKER_CALLS") -eq 9 ]]
+  grep -q '^exec pbm-external systemctl enable --now pbm-agent@rscfg03$' "$DOCKER_CALLS"
+  grep -Fq 'exec -e PBM_MONGODB_URI=mongodb://pbm:pbmpass@rscfg01:27017,rscfg02:27017,rscfg03:27017/?replicaSet=rscfg pbm-external pbm config --file /etc/pbm/minio.yaml' "$DOCKER_CALLS"
+  ! grep -q 'restart pbm-agent' "$DOCKER_CALLS" || false
 }
 
 # The stub logs arguments only, and compose reads the config directories it mounts from the environment.
@@ -655,32 +656,46 @@ recorded_config_dir() {
   done
 }
 
-@test "PSMDB EXTERNAL_PBM turns PITR on and schedules a backup on the node that holds the storage, and the default does not" {
+@test "PSMDB EXTERNAL_PBM runs PBM from packages in an empty container, and the default does not" {
   stub_prebaked_docker
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss'
   dispatch_setup
-  ! grep -Eq 'pitr|pbm-external-backup' "$DOCKER_CALLS" || false
+  ! grep -Eq 'pbm-external|cron.d' "$DOCKER_CALLS" || false
+  grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
 
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true'
   dispatch_setup
-  grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
-  grep -q '^exec rs101 pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1$' "$DOCKER_CALLS"
-  grep -Fq 'ExecStart=/usr/bin/pbm backup --type=logical" >/etc/systemd/system/pbm-external-backup.service' "$DOCKER_CALLS"
-  grep -Fq 'OnUnitActiveSec=15min" "[Install]" "WantedBy=timers.target" >/etc/systemd/system/pbm-external-backup.timer' "$DOCKER_CALLS"
-  grep -q '^exec rs101 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
-  [[ $(grep -c 'pbm-external-backup.timer$' "$DOCKER_CALLS") -eq 2 ]]
-  ! grep -Eq '^exec rs10[23] .*(pitr|pbm-external-backup)' "$DOCKER_CALLS" || false
-  [[ $(grep -n 'pbm config --file' "$DOCKER_CALLS" | cut -d: -f1) -lt $(grep -n 'pitr.enabled' "$DOCKER_CALLS" | cut -d: -f1) ]]
+  local uri='mongodb://pbm:pbmpass@rs101:27017,rs102:27017,rs103:27017/?replicaSet=rs'
+  grep -Eq -- "^run --detach --name pbm-external --hostname pbm-external --label pmm-qa.engine=psmdb --network pmm-qa --volume [^ ]*/conf/pbm:/etc/pbm:ro --cgroupns=host --volume /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock oraclelinux:9 /usr/sbin/init\$" "$DOCKER_CALLS"
+  grep -Fq 'exec --user root pbm-external sh -ceu' "$DOCKER_CALLS"
+  grep -Fq 'percona-release enable pbm release' "$DOCKER_CALLS"
+  grep -Fq 'dnf install -y percona-backup-mongodb-2.9.1-1.el9 cronie' "$DOCKER_CALLS"
+  grep -Fq "sed 's#/etc/sysconfig/pbm-agent#&-%i#' /usr/lib/systemd/system/pbm-agent.service >/etc/systemd/system/pbm-agent@.service" "$DOCKER_CALLS"
+  [[ $(grep -c '^exec rs10[123] systemctl mask --now pbm-agent$' "$DOCKER_CALLS") -eq 3 ]]
+  ! grep -Eq 'restart pbm-agent|^exec rs101 pbm config' "$DOCKER_CALLS" || false
+  local node
+  for node in rs101 rs102 rs103; do
+    grep -Fq "exec pbm-external sh -c echo 'PBM_MONGODB_URI=mongodb://pbm:pbmpass@$node:27017' >/etc/sysconfig/pbm-agent-$node" "$DOCKER_CALLS"
+    grep -q "^exec pbm-external systemctl enable --now pbm-agent@$node\$" "$DOCKER_CALLS"
+  done
+  grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external pbm config --file /etc/pbm/minio.yaml" "$DOCKER_CALLS"
+  grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1" "$DOCKER_CALLS"
+  grep -Fq "'PBM_MONGODB_URI=$uri' '*/15 * * * * root /usr/bin/pbm backup --type=logical >>/var/log/pbm-external-backup.log 2>&1' >/etc/cron.d/pbm-external-backup" "$DOCKER_CALLS"
+  grep -q '^exec pbm-external systemctl enable --now crond$' "$DOCKER_CALLS"
+  grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external pbm backup --type=logical --wait" "$DOCKER_CALLS"
+  [[ $(grep -n 'pbm config --file' "$DOCKER_CALLS" | cut -d: -f1) -gt $(grep -n 'systemctl enable --now pbm-agent@rs103' "$DOCKER_CALLS" | cut -d: -f1) ]]
 
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=psa,EXTERNAL_PBM=true'
   dispatch_setup
-  grep -q '^exec rs101 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
-  ! grep -q '^exec rs103 systemctl enable' "$DOCKER_CALLS" || false
+  [[ $(grep -c '^exec rs10[123] systemctl mask --now pbm-agent$' "$DOCKER_CALLS") -eq 3 ]]
+  [[ $(grep -c '^exec pbm-external systemctl enable --now pbm-agent@' "$DOCKER_CALLS") -eq 2 ]]
+  ! grep -q 'pbm-agent@rs103' "$DOCKER_CALLS" || false
+  grep -Fq 'PBM_MONGODB_URI=mongodb://pbm:pbmpass@rs101:27017,rs102:27017/?replicaSet=rs pbm-external pbm backup' "$DOCKER_CALLS"
 }
 
-@test "PSMDB EXTERNAL_PBM needs the storage and a PBM setup, and says so before it starts anything" {
+@test "PSMDB EXTERNAL_PBM needs the storage, a PBM setup and no extra set, and says so before it starts anything" {
   stub_prebaked_docker
   local spec message
   while IFS='|' read -r spec message; do
@@ -690,10 +705,11 @@ recorded_config_dir() {
     [[ $status -ne 0 ]]
     [[ $output == *"$message"* ]]
     ! grep -Eq '^(run|compose|tag) ' "$DOCKER_CALLS" || false
-  done <<'EOF'
+  done <<'SPECS'
 psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true,MINIO=false|PSMDB EXTERNAL_PBM=true needs MINIO=true: the backups go to its storage.
 psmdb=8.0,SETUP_TYPE=standalone_no_pbm,EXTERNAL_PBM=true|PSMDB EXTERNAL_PBM=true needs PBM, which SETUP_TYPE=standalone_no_pbm does not run.
-EOF
+psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true,COMPOSE_PROFILES=extra|PSMDB EXTERNAL_PBM=true does not support the extra compose profile.
+SPECS
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {
