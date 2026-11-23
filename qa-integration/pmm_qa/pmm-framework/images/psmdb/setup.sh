@@ -13,7 +13,7 @@
 # is one mongod in its own container, with no replica set and no PBM.
 # QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio query_source tarball='' suffix
+  local version ol client setup_type profile gssapi minio query_source external_pbm tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -24,6 +24,7 @@ setup_psmdb() {
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
   query_source=$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)
   query_source=${query_source,,}
+  external_pbm=$(bool_string "$(resolve_value PSMDB EXTERNAL_PBM DB_CONFIG)")
   suffix=$RANDOM
 
   case $setup_type in
@@ -37,6 +38,11 @@ setup_psmdb() {
   if [[ $setup_type == standalone_no_pbm && ($(bool_string "$gssapi") == true || $profile == extra ||
     $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY]) ]]; then
     die 'PSMDB SETUP_TYPE=standalone_no_pbm does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'
+  fi
+  if [[ $external_pbm == true ]]; then
+    [[ $setup_type != standalone_no_pbm ]] ||
+      die 'PSMDB EXTERNAL_PBM=true needs PBM, which SETUP_TYPE=standalone_no_pbm does not run.'
+    [[ $minio == true ]] || die 'PSMDB EXTERNAL_PBM=true needs MINIO=true: the backups go to its storage.'
   fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   # The standalone runs the image by name: retagging would clobber the replica set running beside it.
@@ -141,6 +147,16 @@ psmdb_replset() {
 psmdb_pbm_agent() {
   must docker exec "$1" sh -c 'echo "PBM_MONGODB_URI=mongodb://pbm:pbmpass@127.0.0.1:27017" > /etc/sysconfig/pbm-agent'
   must docker exec "$1" systemctl restart pbm-agent
+}
+
+# PBM driven by its owner, not by PMM Backup Management: PITR on, and a timer standing in for
+# a cron job takes a logical backup every 15 minutes. NODE holds the PBM storage configuration.
+psmdb_external_pbm() {
+  must docker exec "$1" pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1 >/dev/null
+  must docker exec "$1" sh -c 'printf "%s\n" "[Service]" "Type=oneshot" "EnvironmentFile=/etc/sysconfig/pbm-agent" "ExecStart=/usr/bin/pbm backup --type=logical" >/etc/systemd/system/pbm-external-backup.service'
+  must docker exec "$1" sh -c 'printf "%s\n" "[Timer]" "OnActiveSec=1min" "OnUnitActiveSec=15min" "[Install]" "WantedBy=timers.target" >/etc/systemd/system/pbm-external-backup.timer'
+  must docker exec "$1" systemctl daemon-reload
+  must docker exec "$1" systemctl enable --now pbm-external-backup.timer
 }
 
 # Install PMM Client and run pmm-agent under systemd, logging to
@@ -262,6 +278,9 @@ psmdb_replica_set() {
   step 'Install PMM Client' each_node nodes psmdb_client
   step 'Configure PBM' each_node nodes psmdb_pbm_agent
   must docker exec rs101 pbm config --file /etc/pbm/minio.yaml >/dev/null
+  if [[ $external_pbm == true ]]; then
+    psmdb_external_pbm rs101
+  fi
   if [[ -n $arbiter ]]; then
     must docker exec rs103 systemctl stop pbm-agent
     if [[ $profile == extra ]]; then
@@ -351,6 +370,9 @@ psmdb_sharded() {
   # Storage for the PBM a person drives by hand; PMM's own backups set theirs.
   if [[ $minio == true ]]; then
     must docker exec rscfg01 pbm config --file /etc/pbm/minio.yaml >/dev/null
+    if [[ $external_pbm == true ]]; then
+      psmdb_external_pbm rscfg01
+    fi
   fi
 
   log_info '==> Register with PMM'

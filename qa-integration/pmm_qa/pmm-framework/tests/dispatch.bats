@@ -512,6 +512,14 @@ stub_prebaked_docker() {
   dispatch_setup
   [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
   ! grep -q 'pbm config' "$DOCKER_CALLS" || false
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=shards,EXTERNAL_PBM=true'
+  dispatch_setup
+  grep -q '^exec rscfg01 pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1$' "$DOCKER_CALLS"
+  grep -q '^exec rscfg01 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
+  [[ $(grep -c 'pbm-external-backup.timer$' "$DOCKER_CALLS") -eq 2 ]]
+  ! grep -q 'pbm-external-backup' <(grep -E '^exec (rs[12]0|mongos)' "$DOCKER_CALLS") || false
 }
 
 # The stub logs arguments only, and compose reads the config directories it mounts from the environment.
@@ -645,6 +653,47 @@ recorded_config_dir() {
     [[ $status -ne 0 ]]
     [[ $output == *"Unsupported PSMDB SETUP_TYPE '$spec'."* ]]
   done
+}
+
+@test "PSMDB EXTERNAL_PBM turns PITR on and schedules a backup on the node that holds the storage, and the default does not" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss'
+  dispatch_setup
+  ! grep -Eq 'pitr|pbm-external-backup' "$DOCKER_CALLS" || false
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true'
+  dispatch_setup
+  grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
+  grep -q '^exec rs101 pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1$' "$DOCKER_CALLS"
+  grep -Fq 'ExecStart=/usr/bin/pbm backup --type=logical" >/etc/systemd/system/pbm-external-backup.service' "$DOCKER_CALLS"
+  grep -Fq 'OnUnitActiveSec=15min" "[Install]" "WantedBy=timers.target" >/etc/systemd/system/pbm-external-backup.timer' "$DOCKER_CALLS"
+  grep -q '^exec rs101 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
+  [[ $(grep -c 'pbm-external-backup.timer$' "$DOCKER_CALLS") -eq 2 ]]
+  ! grep -Eq '^exec rs10[23] .*(pitr|pbm-external-backup)' "$DOCKER_CALLS" || false
+  [[ $(grep -n 'pbm config --file' "$DOCKER_CALLS" | cut -d: -f1) -lt $(grep -n 'pitr.enabled' "$DOCKER_CALLS" | cut -d: -f1) ]]
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=psa,EXTERNAL_PBM=true'
+  dispatch_setup
+  grep -q '^exec rs101 systemctl enable --now pbm-external-backup.timer$' "$DOCKER_CALLS"
+  ! grep -q '^exec rs103 systemctl enable' "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB EXTERNAL_PBM needs the storage and a PBM setup, and says so before it starts anything" {
+  stub_prebaked_docker
+  local spec message
+  while IFS='|' read -r spec message; do
+    : >"$DOCKER_CALLS"
+    parse_database_spec "$spec"
+    run dispatch_setup
+    [[ $status -ne 0 ]]
+    [[ $output == *"$message"* ]]
+    ! grep -Eq '^(run|compose|tag) ' "$DOCKER_CALLS" || false
+  done <<'EOF'
+psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true,MINIO=false|PSMDB EXTERNAL_PBM=true needs MINIO=true: the backups go to its storage.
+psmdb=8.0,SETUP_TYPE=standalone_no_pbm,EXTERNAL_PBM=true|PSMDB EXTERNAL_PBM=true needs PBM, which SETUP_TYPE=standalone_no_pbm does not run.
+EOF
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {

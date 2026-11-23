@@ -114,7 +114,11 @@ type's default and supported versions, without needing Docker. `VERSION`
 variable. `shards`/`sharding` are aliases for PSMDB, and `sentinel`/`sentinels`
 for Valkey. `PSMDB` takes `SETUP_TYPE` `pss` (default), `psa`, `sharding` or
 `standalone_no_pbm`: one authenticated mongod in the container `psmdb-standalone`, with
-no replica set, its `pbm-agent` masked, and no host port published. A version or option not registered there is refused, so a typo
+no replica set, its `pbm-agent` masked, and no host port published. `PSMDB` also takes
+`EXTERNAL_PBM=true` (default `false`) to run PBM the way a customer who drives it from their own cron does,
+not through PMM Backup Management: PITR on (`pitr.oplogSpanMin=1`) and a `pbm-external-backup`
+systemd timer that takes a logical backup every 15 minutes, on `rs101` or, in a sharded cluster, `rscfg01`.
+It needs `MINIO=true` and a setup with PBM, so not `standalone_no_pbm`. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
 Configuration precedence is:
