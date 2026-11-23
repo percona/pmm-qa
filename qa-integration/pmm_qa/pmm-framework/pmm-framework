@@ -49,6 +49,8 @@ source "$FRAMEWORK_DIR/images/pdpgsql/setup.sh"
 source "$FRAMEWORK_DIR/images/pgsql/setup.sh"
 # shellcheck source=images/psmdb/setup.sh
 source "$FRAMEWORK_DIR/images/psmdb/setup.sh"
+# shellcheck source=images/pcsm/setup.sh
+source "$FRAMEWORK_DIR/images/pcsm/setup.sh"
 # shellcheck source=images/haproxy/setup.sh
 source "$FRAMEWORK_DIR/images/haproxy/setup.sh"
 # shellcheck source=images/external/setup.sh

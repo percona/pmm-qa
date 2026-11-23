@@ -3,6 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
+import { ScrapeTarget } from '@interfaces/prometheus';
 
 export default class GrafanaApi {
   constructor(private request: APIRequestContext) {}
@@ -109,7 +110,10 @@ export default class GrafanaApi {
     expect(response.status(), await response.text()).toEqual(200);
   };
 
-  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+  getActiveTargetByExternalGroup = async (externalGroup: string) =>
+    (await this.getActiveTargets()).find(({ labels }) => labels.external_group === externalGroup);
+
+  getActiveTargets = async (): Promise<ScrapeTarget[]> => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
 
@@ -118,11 +122,7 @@ export default class GrafanaApi {
       `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
 
-    const body = await response.json();
-
-    return body.data.activeTargets.find(
-      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
-    );
+    return (await response.json()).data.activeTargets;
   };
 
   getDataSourceByName = async (name = 'Metrics') => {

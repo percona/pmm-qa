@@ -10,6 +10,7 @@ import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
+import TlsHelper from '@helpers/tls.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -17,6 +18,7 @@ import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
+import EditServicePage from '@pages/inventory/editService.page';
 import PortalRemoval from '@pages/portalRemoval.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
@@ -25,6 +27,7 @@ import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import PostgresqlHelper from '@helpers/postgresql.helper';
+import PcsmHelper from '@helpers/pcsm.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClickHouseHelper from '@helpers/haClickHouse.helper';
@@ -83,6 +86,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
+  editServicePage: EditServicePage;
   externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
@@ -105,6 +109,7 @@ const pmmTest = base.extend<{
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   pageNotFoundPage: PageNotFoundPage;
+  pcsmHelper: PcsmHelper;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -118,6 +123,7 @@ const pmmTest = base.extend<{
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
   testState: TestState;
+  tlsHelper: TlsHelper;
 }>({
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
@@ -181,6 +187,7 @@ const pmmTest = base.extend<{
   dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
+  editServicePage: async ({ page }, use) => await use(new EditServicePage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
@@ -221,6 +228,7 @@ const pmmTest = base.extend<{
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
+  pcsmHelper: async ({ cliHelper }, use) => await use(new PcsmHelper(cliHelper)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
@@ -253,6 +261,7 @@ const pmmTest = base.extend<{
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   storageLocationsPage: async ({ page }, use) => await use(new StorageLocationsPage(page)),
   testState: async ({}, use) => await use(new TestState()),
+  tlsHelper: async ({ cliHelper }, use) => await use(new TlsHelper(cliHelper)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 

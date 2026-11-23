@@ -20,11 +20,6 @@ const runContainerWithPublicAddressVariable = async (I, publicAddress) => {
 
 const runContainerWithPublicAddressVariableUpgrade = async (I, publicAddress) => {
   await I.verifyCommand(`docker run -d --restart always -e PMM_ENABLE_TELEMETRY=0 -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=${publicAddress} --publish 8085:8080 --publish 8443:8443 --name ${contanerName} percona/pmm-server:latest`);
-  await I.verifyCommand(`docker exec --user root ${contanerName} yum update -y percona-release`);
-  await I.verifyCommand(`docker exec ${contanerName} sed -i'' -e 's^/release/^/experimental/^' /etc/yum.repos.d/pmm2-server.repo`);
-  await I.verifyCommand(`docker exec ${contanerName} percona-release enable percona experimental`);
-  await I.verifyCommand(`docker exec ${contanerName} yum clean all`);
-  await I.verifyCommand(`docker restart ${contanerName}`);
   await I.wait(30);
 };
 
