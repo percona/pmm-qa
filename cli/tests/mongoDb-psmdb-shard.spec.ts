@@ -124,7 +124,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       test.setTimeout(10 * 60_000);
       oplogSpan = await pbm.pbmConfigValue(pbmHost, 'pitr.oplogSpanMin');
       await (await cli.exec(mongoEval('mongos', rootUri, `sh.enableSharding("${database}"); sh.shardCollection("${database}.data", { _id: "hashed" })`))).assertSuccess();
-      await (await pbm.pbm(pbmHost, 'config --set pitr.enabled=true --set pitr.oplogSpanMin=1')).assertSuccess();
+      await (await pbm.pbm(pbmHost, `config --set pitr.enabled=true --set pitr.oplogSpanMin=${pbm.pitrSpanSeconds / 60}`)).assertSuccess();
       await pbm.startWriter('mongos', rootUri);
     });
 

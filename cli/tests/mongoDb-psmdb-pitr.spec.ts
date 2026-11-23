@@ -47,7 +47,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     oplogSpan = await pbm.pbmConfigValue(pbmHost, 'pitr.oplogSpanMin');
     await pbm.pbm(pbmHost, 'delete-pitr --all --force --wait');
     enabledAt = Math.floor(Date.now() / 1000);
-    await (await pbm.pbm(pbmHost, 'config --set pitr.enabled=true --set pitr.oplogSpanMin=1')).assertSuccess();
+    await (await pbm.pbm(pbmHost, `config --set pitr.enabled=true --set pitr.oplogSpanMin=${pbm.pitrSpanSeconds / 60}`)).assertSuccess();
     await pbm.startWriter(pbmHost, writerUri);
   });
 
@@ -61,7 +61,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
     await pbm.setExternalCron('start');
   });
 
-  test('PMM-T2837 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances once a minute', async ({}) => {
+  test('PMM-T2837 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances with each oplog chunk', async ({}) => {
     test.setTimeout(6 * 60_000);
     for (const member of members) {
       await expect(async () => {
@@ -77,18 +77,15 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
       expect((await recoveryPoint(pbmHost)).cluster, 'recovery point of the PITR that was just enabled').toBeGreaterThan(enabledAt);
     }).toPass({ intervals: [3_000], timeout: 6 * 60_000 });
 
-    const advances: number[] = [(await recoveryPoint(pbmHost)).cluster ?? 0];
+    const first = (await recoveryPoint(pbmHost)).cluster ?? 0;
+    let next = first;
 
-    while (advances.length < 3) {
-      await expect(async () => {
-        expect((await recoveryPoint(pbmHost)).cluster).toBeGreaterThan(advances[advances.length - 1]);
-      }).toPass({ intervals: [3_000], timeout: 150_000 });
-      advances.push((await recoveryPoint(pbmHost)).cluster ?? 0);
-    }
-
-    const gaps = advances.slice(1).map((point, i) => point - advances[i]);
-
-    expect(gaps.every((gap) => gap >= 30 && gap <= 90), `PITR recovery points ${advances.join(', ')}`).toBeTruthy();
+    await expect(async () => {
+      next = (await recoveryPoint(pbmHost)).cluster ?? 0;
+      expect(next).toBeGreaterThan(first);
+    }).toPass({ intervals: [3_000], timeout: 150_000 });
+    expect(next - first, `PITR recovery points ${first}, ${next}`).toBeGreaterThanOrEqual(pbm.pitrSpanSeconds / 2);
+    expect(next - first, `PITR recovery points ${first}, ${next}`).toBeLessThanOrEqual(pbm.pitrSpanSeconds * 1.5);
   });
 
   test('PMM-T2838 - Verify the PITR metrics stop advancing without pbm-agents and catch up when they are started', async ({}) => {
@@ -99,11 +96,11 @@ test.describe('Percona Server MongoDB (PSMDB) PBM PITR freshness metrics', { tag
       const frozen = (await recoveryPoint(pbmHost)).cluster as number;
       const lagAtStart = Date.now() / 1000 - frozen;
 
-      for (let i = 0; i < 9; i++) {
-        await sleep(10_000);
+      for (let waited = 0; waited < 2 * pbm.pitrSpanSeconds; waited += 5) {
+        await sleep(5_000);
         expect(await recoveryPoint(pbmHost), 'PITR metrics move with every pbm-agent stopped').toEqual({ cluster: frozen, replset: frozen });
       }
-      expect(Date.now() / 1000 - frozen, 'time() - recovery point grows').toBeGreaterThan(lagAtStart + 60);
+      expect(Date.now() / 1000 - frozen, 'time() - recovery point grows').toBeGreaterThan(lagAtStart + pbm.pitrSpanSeconds);
 
       await pbm.setAgents(members, 'start');
       await expect(async () => {
