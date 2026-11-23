@@ -57,9 +57,11 @@ export async function waitForServiceStatus(serviceName: string, status: 'STATUS_
 export async function queryVictoriaMetricsSamples(
   query: string,
   adminPassword = process.env.ADMIN_PASSWORD || 'admin',
+  time?: Date,
 ): Promise<{ metric: Record<string, string>; value: number }[]> {
+  const at = time ? ` --data-urlencode 'time=${time.toISOString()}'` : '';
   const output = await exec(
-    `docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'`,
+    `docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'${at}`,
   );
   await output.assertSuccess();
   const response = JSON.parse(output.stdout) as {
@@ -79,13 +81,15 @@ export async function queryVictoriaMetricsSamples(
  *
  * @param   query           PromQL query; must not contain single quotes
  * @param   adminPassword   PMM Server admin password
+ * @param   time            evaluate the query at this time, default now
  * @return  label sets of the returned series
  */
 export async function queryVictoriaMetrics(
   query: string,
   adminPassword = process.env.ADMIN_PASSWORD || 'admin',
+  time?: Date,
 ): Promise<Record<string, string>[]> {
-  return (await queryVictoriaMetricsSamples(query, adminPassword)).map(
+  return (await queryVictoriaMetricsSamples(query, adminPassword, time)).map(
     (series) => series.metric,
   );
 }
