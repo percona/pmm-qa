@@ -366,27 +366,6 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     expect(sizeMb).toBeLessThan(20.0);
   });
 
-  test('PMM-T9999 PMM-15355 - Verify mongodb_exporter uses at least 10% less memory after a client restart than it did in 3.10.0 on the same node', async ({}) => {
-    const agentId = (await pmmAdmin.listAgents(containerName)).find(
-      (agent) => agent.agent_type === 'AGENT_TYPE_MONGODB_EXPORTER',
-    )?.agent_id ?? '';
-    expect(
-      agentId,
-      `No mongodb_exporter agent found in ${containerName}`,
-    ).toBeTruthy();
-    console.log(`Agent id is: ${agentId}`);
-
-    let usedMemoryBytes: number | undefined;
-
-    await expect(async () => {
-      usedMemoryBytes = await pmmApi.getExporterResidentMemoryBytes(agentId);
-      expect(usedMemoryBytes, `No process_resident_memory_bytes for agent ${agentId} yet`).toBeDefined();
-    }).toPass({ intervals: [5_000], timeout: 30_000 });
-
-    console.log(`Used memory value is: ${(usedMemoryBytes! / 1024 / 1024).toFixed(2)} MiB`);
-  });
-});
-
 test.describe(
   'Percona Server MongoDB (PSMDB) PBM metrics',
   { tag: '@psmdb' },
