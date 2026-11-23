@@ -24,6 +24,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import PcsmHelper from '@helpers/pcsm.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
 import HaClickHouseHelper from '@helpers/haClickHouse.helper';
@@ -103,6 +104,7 @@ const pmmTest = base.extend<{
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   pageNotFoundPage: PageNotFoundPage;
+  pcsmHelper: PcsmHelper;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -219,6 +221,7 @@ const pmmTest = base.extend<{
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
+  pcsmHelper: async ({ cliHelper }, use) => await use(new PcsmHelper(cliHelper)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
