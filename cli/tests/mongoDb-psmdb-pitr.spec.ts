@@ -20,7 +20,6 @@ test.describe(
   { tag: '@psmdb' },
   () => {
     test.use({ pmmClientContainer: containerName });
-
     const replsetName = 'rs';
     const recoveryPointMetric = 'mongodb_pbm_cluster_pitr_recovery_point_ts';
     const lastWriteMetric = 'mongodb_pbm_pitr_last_write_ts';
@@ -130,7 +129,7 @@ test.describe(
     });
 
     test('PMM-15207 - Verify the PITR metrics stop advancing without pbm-agents and catch up when they are started', async ({}) => {
-      test.setTimeout(15 * 60_000);
+      test.setTimeout(10 * 60_000);
       await pbm.setAgents(members, 'stop');
 
       try {
@@ -165,7 +164,7 @@ test.describe(
     });
 
     test('PMM-15207 - Verify the PITR recovery point pauses during a logical backup and continues afterwards', async ({}) => {
-      test.setTimeout(15 * 60_000);
+      test.setTimeout(10 * 60_000);
       await pbm.expectAgentsOk(pbmHost);
 
       const backup = await pbm.startOperation(pbmHost, 'backup');
@@ -328,7 +327,7 @@ test.describe(
       });
 
       test('PMM-15220 - Verify a logical restore shows 1 while it runs and 3 when it is done, with its labels and duration', async ({}) => {
-        test.setTimeout(15 * 60_000);
+        // test.setTimeout(15 * 60_000);
         const restore = await restoreBackup();
         const seen = new Set<number | undefined>();
         const finished = async () => (
@@ -395,8 +394,6 @@ test.describe(
       });
 
       test('PMM-15220 - Verify a restore interrupted by stopping every pbm-agent shows 2 before the agents are started', async ({}) => {
-        test.setTimeout(15 * 60_000);
-
         try {
           const restore = await restoreBackup();
           await pbm.setAgents(members, 'kill');
