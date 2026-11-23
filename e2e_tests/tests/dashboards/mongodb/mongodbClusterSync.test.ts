@@ -9,7 +9,7 @@ const targetCluster = 'rs-tgt';
 
 pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
   // The failover test runs last: it leaves an ACTIVE instance that never ran the initial clone.
-  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
+  pmmTest.describe.configure({ mode: 'default', retries: 0 });
 
   pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
     await grafanaHelper.authorize();
@@ -47,10 +47,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await pmmTest.step('Open the dashboard from the MongoDB folder', async () => {
         await page.goto(searchDashboardsPage.url);
         await searchDashboardsPage.builders.expandFolderButton('MongoDB').click();
-        await searchDashboardsPage.builders
-          .dashboardRow(dashboard.mongo.clusterSyncDetails.title)
-          .getByRole('link')
-          .click();
+        await searchDashboardsPage.builders.dashboardLink(dashboard.mongo.clusterSyncDetails.title).click();
         await expect(page).toHaveURL(new RegExp(dashboard.mongo.clusterSyncDetails.url));
         await dashboard.loadAllPanels();
 
@@ -63,7 +60,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
   pmmTest(
     'PMM-T2475 - Verify the ClusterSync dashboard filters list the source, target and PCSM instances only @pmm-pcsm-psmdb-integration',
-    async ({ dashboard, page, urlHelper }) => {
+    async ({ dashboard, page }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
 
       await page.goto(clusterSync.url);
@@ -83,32 +80,40 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
       await pmmTest.step('Verify the target list leaves out the selected source', async () => {
         expect(await dashboard.getVariableValues('Target Cluster')).toEqual([targetCluster]);
         await dashboard.selectVariableValue('Source Cluster', targetCluster);
-        expect(await dashboard.getVariableValues('Target Cluster')).toEqual([sourceCluster]);
-      });
-
-      await pmmTest.step('Verify one selected instance limits the instance row to it', async () => {
-        for (const serviceName of instances) {
-          await expect(async () => {
-            await page.goto(
-              urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: serviceName }),
-            );
-            await dashboard.loadAllPanels();
-            expect(await clusterSync.statText(dashboard, 'Instances Up')).toMatch(
-              new RegExp(`^${serviceName}\\s+UP$`),
-            );
-            expect(await clusterSync.statText(dashboard, 'Role Transitions')).toMatch(
-              new RegExp(`^${serviceName}\\s+\\d+$`),
-            );
-
-            for (const panelName of ['CPU Usage', 'Resident Memory']) {
-              await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
-              await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText([serviceName]);
-            }
-          }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.ONE_MINUTE });
-        }
+        // The Target Cluster query runs after the source changes, so the menu can still list the old options.
+        await expect
+          .poll(() => dashboard.getVariableValues('Target Cluster'), { timeout: Timeouts.ONE_MINUTE })
+          .toEqual([sourceCluster]);
       });
     },
   );
+
+  for (const serviceName of instances) {
+    pmmTest(
+      `PMM-T2475 - Verify selecting ${serviceName} limits the ClusterSync instance row to it @pmm-pcsm-psmdb-integration`,
+      async ({ dashboard, page, urlHelper }) => {
+        const clusterSync = dashboard.mongo.clusterSyncDetails;
+
+        await expect(async () => {
+          await page.goto(
+            urlHelper.buildUrlWithParameters(clusterSync.url, { from: 'now-1h', serviceName: serviceName }),
+          );
+          await dashboard.loadAllPanels();
+          expect(await clusterSync.statText(dashboard, 'Instances Up')).toMatch(
+            new RegExp(`^${serviceName}\\s+UP$`),
+          );
+          expect(await clusterSync.statText(dashboard, 'Role Transitions')).toMatch(
+            new RegExp(`^${serviceName}\\s+\\d+$`),
+          );
+
+          for (const panelName of ['CPU Usage', 'Resident Memory']) {
+            await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
+            await expect(dashboard.builders.panelLegendSeries(panelName)).toHaveText([serviceName]);
+          }
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.ONE_MINUTE });
+      },
+    );
+  }
 
   pmmTest(
     'PMM-T2476 - Verify a running PCSM migration shows data in the health and progress rows, and the pipeline and instance rows show only PCSM data labelled by service name @pmm-pcsm-psmdb-integration',
@@ -175,15 +180,18 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           await api.prometheusApi.instantQuery('percona_clustersync_mongodb_ha_active == 0'),
         ).toHaveLength(1);
 
-        for (const panelName of clusterSync.processPanels) {
+        for (const [panelName, prefixes] of Object.entries(clusterSync.processPanels)) {
           await dashboard.builders.panelByExactName(panelName).scrollIntoViewIfNeeded();
 
-          const series = await dashboard.builders.panelLegendSeries(panelName).allTextContents();
+          const series = (await dashboard.builders.panelLegendSeries(panelName).allTextContents()).map(
+            (name) => name.trim(),
+          );
+          const allowed = instances.flatMap((instance) => prefixes.map((prefix) => `${prefix}${instance}`));
 
           expect(series.length, `${panelName} must chart the PCSM instances`).toBeGreaterThan(0);
 
           for (const name of series) {
-            expect(name.trim(), `${panelName} must chart only PCSM instances`).toMatch(/pcsm-[12]$/);
+            expect(allowed, `${panelName} must chart only PCSM instances`).toContain(name);
           }
         }
       });
@@ -258,8 +266,15 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
     'PMM-T2478 - Verify the ClusterSync dashboard follows the new active instance after a PCSM failover @pmm-pcsm-psmdb-integration',
     async ({ api, dashboard, page, pcsmHelper, urlHelper }) => {
       const clusterSync = dashboard.mongo.clusterSyncDetails;
-      const stopped = (await api.prometheusApi.getActiveClusterSyncInstance()).metric.service_name;
+      const active: string = (await api.prometheusApi.getActiveClusterSyncInstance()).metric.service_name;
+      // The label is only matched, never used: a docker target comes from `instances`.
+      const stopped = instances.find((instance) => instance === active);
+
+      if (!stopped) throw new Error(`The ACTIVE instance "${active}" is not one of ${instances.join(', ')}`);
+
       const takeover = instances.find((instance) => instance !== stopped) as string;
+      // Role Transitions counts inside the selected range: a sliding start drops the HANDOVER transition while the takeover adds one.
+      const rangeStart = String(Date.now() - Timeouts.FIFTEEN_MINUTES);
       const leaseTerm = async () =>
         Number((await clusterSync.statText(dashboard, 'Lease Term')).split(/\s+/).pop());
       const roleTransitions = async (instance: string) =>
@@ -269,7 +284,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
           )?.[1],
         );
 
-      const reload = async (from = 'now-15m') => {
+      const reload = async (from = rangeStart) => {
         await page.goto(urlHelper.buildUrlWithParameters(clusterSync.url, { from }));
         await dashboard.loadAllPanels();
       };
@@ -302,6 +317,7 @@ pmmTest.describe('MongoDB ClusterSync Details dashboard', () => {
 
         await pmmTest.step('Verify the lease term and role transitions moved on', async () => {
           await expect(async () => {
+            await reload();
             expect(await leaseTerm()).toBe(termBefore + 1);
             expect(await roleTransitions(takeover)).toBeGreaterThan(transitionsBefore);
           }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.ONE_MINUTE });

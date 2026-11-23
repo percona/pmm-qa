@@ -1,5 +1,7 @@
 import CliHelper from '@helpers/cli.helper';
 
+const EXIT_WAIT_SECONDS = 30;
+
 export default class PcsmHelper {
   constructor(private readonly cliHelper: CliHelper) {}
 
@@ -24,6 +26,14 @@ export default class PcsmHelper {
     }
   };
 
-  stop = (instance: string) =>
+  /** pkill only reports the signal delivered: wait for the exit, or a `start` right after sees the dying process and skips. */
+  stop = (instance: string) => {
     this.cliHelper.execSilent(`docker exec ${instance} pkill -x pcsm`).assertSuccess();
+    this.cliHelper
+      .execSilent(
+        `docker exec ${instance} sh -c 'i=0; while pgrep -x pcsm >/dev/null; do i=$((i+1)); [ $i -gt ${EXIT_WAIT_SECONDS} ] && exit 1; sleep 1; done'`,
+        (EXIT_WAIT_SECONDS + 10) * 1_000,
+      )
+      .assertSuccess();
+  };
 }

@@ -22,14 +22,15 @@ export default class MongodbClusterSyncDetails implements DashboardInterface {
     { name: 'Flush Duration (p99)', type: 'timeSeries' },
     { name: 'Flush Batch Size (p99)', type: 'timeSeries' },
   ];
-  processPanels = [
-    'CPU Usage',
-    'Resident Memory',
-    'File Descriptors',
-    'Goroutines and Threads',
-    'Go Heap',
-    'GC Pause Duration',
-  ];
+  // The legend prefixes of each panel: its series are named `<prefix><service name>`.
+  processPanels: Record<string, string[]> = {
+    'CPU Usage': [''],
+    'File Descriptors': ['Open - ', 'Max - '],
+    'GC Pause Duration': ['p50 - ', 'Max - '],
+    'Go Heap': ['In use - ', 'Idle - ', 'Obtained from OS - '],
+    'Goroutines and Threads': ['Goroutines - ', 'Threads - '],
+    'Resident Memory': [''],
+  };
   progressMetrics: GrafanaPanel[] = [
     { name: 'Copied vs Estimated Size', type: 'timeSeries' },
     { name: 'Copy Throughput', type: 'timeSeries' },
