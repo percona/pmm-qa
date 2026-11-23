@@ -38,6 +38,11 @@ on:
         required: false
         default: 'main'
         type: string
+      pmm_chart_branch:
+        description: 'percona-helm-charts branch for the helm tests, or latest for the released chart'
+        required: false
+        default: 'latest'
+        type: string
       pxc_version:
         description: 'PMM_PROXYSQL: PXC version or VERSIONS URL'
         required: false
@@ -189,7 +194,7 @@ jobs:
     with:
       server_image: ${{ needs.resolve.outputs.server_image }}
       client_image: ${{ needs.resolve.outputs.client_image }}
-      pmm_chart_branch: latest
+      pmm_chart_branch: ${{ inputs.pmm_chart_branch }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
 
   gssapi_tests:
