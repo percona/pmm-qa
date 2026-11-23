@@ -44,7 +44,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
   const shards = { rs1: ['rs101', 'rs102', 'rs103'], rs2: ['rs201', 'rs202', 'rs203'] };
   const configServers = ['rscfg01', 'rscfg02', 'rscfg03'];
   const dataMembers = [...shards.rs1, ...shards.rs2, ...configServers];
-  const agents = dataMembers;
   const views = [
     { name: 'mongos', container: 'mongos' },
     { name: 'a shard member', container: 'rs101' },
@@ -56,12 +55,6 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
   const lastWriteMetric = 'mongodb_pbm_pitr_last_write_ts';
   const restoreStatusMetric = 'mongodb_pbm_restore_status';
 
-  const everyView = async (check: (view: { name: string, container: string }) => Promise<void>) => {
-    for (const view of views) {
-      await check(view);
-    }
-  };
-
   const withoutVersions = (series: pbm.Series[]) => series.filter((item) => item.name !== versionMetric);
 
   test.beforeAll(async ({}) => {
@@ -69,7 +62,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     const result = await cli.exec(`docker ps | grep ${pbmHost} | awk '{print $NF}'`);
     await result.outContains(pbmHost, 'PSMDB rscfg01 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding');
     await pbm.skipBelowClient(pbmHost, '3.11.0');
-    await pbm.setAgents(agents, 'start');
+    await pbm.setAgents(dataMembers, 'start');
     await pbm.expectAgentsOk(pbmHost);
     await pbm.takeBackup(pbmHost);
   });
@@ -81,7 +74,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       const scrapes = await Promise.all(views.map(async (view) => pbm.scrapePbm(view.container)));
       const [reference, ...others] = scrapes.map((series) => pbm.seriesTexts(pbm.ignoreSelf(withoutVersions(series))));
 
-      expect(reference.filter((text) => text.startsWith('mongodb_pbm_agent_status')), 'agent status series through mongos').toHaveLength(agents.length);
+      expect(reference.filter((text) => text.startsWith('mongodb_pbm_agent_status')), 'agent status series through mongos').toHaveLength(dataMembers.length);
       expect(reference.some((text) => text.startsWith('mongodb_pbm_backup_size_bytes')), 'backup series through mongos').toBeTruthy();
       for (const [index, series] of others.entries()) {
         expect(series, `PBM series through ${views[index + 1].name} and through ${views[0].name}`).toEqual(reference);
@@ -105,7 +98,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     await expect(async () => {
       const versions = pbm.selectSeries(await pbm.scrapePbm('mongos'), versionMetric);
 
-      expect(versions.map((item) => item.labels.self), 'self labels of the agent versions through mongos').toEqual(agents.map(() => '0'));
+      expect(versions.map((item) => item.labels.self), 'self labels of the agent versions through mongos').toEqual(dataMembers.map(() => '0'));
       expect(pbm.seriesTexts(pbm.ignoreSelf(versions)), 'agent versions through mongos').toEqual(own.sort());
     }).toPass({ intervals: [5_000], timeout: 120_000 });
   });
@@ -137,7 +130,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
 
     test.afterAll(async ({}) => {
       test.setTimeout(10 * 60_000);
-      await pbm.setAgents(agents, 'start');
+      await pbm.setAgents(dataMembers, 'start');
       await pbm.stopWriter('mongos');
       await pbm.pbm(pbmHost, `config --set pitr.enabled=false --set pitr.oplogSpanMin=${oplogSpan}`);
       await pbm.pbm(pbmHost, 'delete-pitr --all --force --wait');
@@ -147,7 +140,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     test('PMM-15207 - Verify the cluster recovery point and the last write of every replica set are the same through mongos, a shard member and a config server member', async ({}) => {
       test.setTimeout(15 * 60_000);
 
-      await everyView(async (view) => {
+      for (const view of views) {
         await expect(async () => {
           const end = await pbm.pitrRangeEnd(pbmHost);
           const writes = await lastWrites(view.container);
@@ -156,7 +149,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
           expect(writes.cluster, `${recoveryPointMetric} through ${view.name}`).toEqual(end);
           expect(Math.min(writes.rs1 ?? 0, writes.rs2 ?? 0, writes.rscfg ?? 0), `oldest ${lastWriteMetric} through ${view.name}`).toEqual(end);
         }).toPass({ intervals: [3_000], timeout: 8 * 60_000 });
-      });
+      }
     });
 
     test('PMM-15207 - Verify the cluster recovery point stops at the last write of a shard whose pbm-agents are stopped while the other replica sets advance', async ({}) => {
@@ -166,7 +159,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       try {
         const stopped = (await lastWrites('mongos')).rs2 as number;
 
-        await everyView(async (view) => {
+        for (const view of views) {
           await expect(async () => {
             const writes = await lastWrites(view.container);
 
@@ -175,7 +168,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
             expect(writes.rscfg, `${lastWriteMetric} of rscfg through ${view.name}`).toBeGreaterThan(stopped);
             expect(writes.cluster, `${recoveryPointMetric} through ${view.name}`).toEqual(stopped);
           }).toPass({ intervals: [5_000], timeout: 6 * 60_000 });
-        });
+        }
         // PBM can end the range one second before the chunk's last write.
         const end = await pbm.pitrRangeEnd(pbmHost);
 
@@ -192,12 +185,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     await pbm.expectAgentsOk(pbmHost);
     const backup = await pbm.takeBackup(pbmHost);
     const seen = new Map<string, Set<number | undefined>>(views.map((view) => [view.name, new Set()]));
-    let restore: pbm.StartedOperation | undefined;
-
-    await expect(async () => {
-      restore = await pbm.startOperation(pbmHost, `restore ${backup}`);
-    }).toPass({ intervals: [3_000], timeout: 120_000 });
-    const name = restore?.name ?? '';
+    const name = await pbm.startOperation(pbmHost, `restore ${backup}`);
     const finished = async () => (await pbm.describeRestore(pbmHost, name).catch(() => undefined))?.status === 'done';
 
     for (let attempt = 0; attempt < 300 && !(await finished()); attempt++) {
@@ -210,7 +198,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
       await pbm.recoverExporter(view.container);
     }
 
-    await everyView(async (view) => {
+    for (const view of views) {
       await expect(async () => {
         const series = await pbm.scrapePbm(view.container);
 
@@ -224,7 +212,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
 
         expect(pbm.selectSeries(series, 'mongodb_pbm_restore_last_transition_ts', labels), `restore through ${view.name}`).toHaveLength(1);
       }).toPass({ intervals: [3_000], timeout: 180_000 });
-    });
+    }
   });
 
   test('PMM-15232 - Verify the PBM metrics of shard members are the same as in 3.10.0 and the scrape succeeds with the config servers down', async ({}) => {
