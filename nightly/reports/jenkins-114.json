@@ -3778,15 +3778,17 @@
       "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests/12403/",
       "by": "Investigator routine",
       "at": "2026-11-23T03:04:40Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-23T02:58:44Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "setup bug",
+      "summary": "ha backup-restore #62: PMM-T2775 (new in #1797) failed because the nightly installs percona-helm-charts main (pmm-ha 1.8.0), but the PMM-15785 backup fix (percona-helm-charts#1011, back up from the ClickHouse pod with the most pmm.metrics rows) merged only into the pmm-3.11.0 chart integration branch. On main, pmm-backup.sh took the first pod, pmm-ha-pmmdb-0-0-0, which the test had just emptied, so the ClickHouse backup was 0.00 B and its log had no '(N rows in pmm.metrics)'. The test is right. Control #63 used the same 3-dev-latest server, pmm-qa main and parameters with HELM_CHART_BRANCH=pmm-3.11.0, and PMM-T2377 + PMM-T2775 passed (17.4 min). Fix: point the nightly HA lanes (HELM_CHART_BRANCH 'main' in pmm3-nightly-orchestrator.groovy) at pmm-3.11.0 until it merges to main. Until then they skip all 18 chart commits made for 3.11.0.",
+      "link": "https://pmm.cd.percona.com/job/pmm3-ha-backup-restore-tests/63/",
+      "by": "Investigator routine",
+      "at": "2026-11-23T03:55:32Z"
     }
-  ]
+  ],
+  "claims": []
 }
