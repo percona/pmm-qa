@@ -50,6 +50,7 @@ Run commands from `cli/`.
 - `@mysql`
 - `@mysql-conf-file`
 - `@mysql-perfschema-change-agent`
+- `@pbm-arbiter-external`
 - `@pbm-external`
 - `@pbm-metrics-shard`
 - `@pdpgsql`

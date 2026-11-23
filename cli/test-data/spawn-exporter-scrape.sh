@@ -34,6 +34,11 @@ for i in $(seq 1 "$scrapes"); do
     body=''
     sleep 1
   done
+  if [[ -z $body ]]; then
+    echo "No scrape of the exporter on ${spawn_port}; its log:" >&2
+    cat "$log" >&2
+    exit 3
+  fi
   grep -E '^(mongodb_pbm_|mongodb_up)' <<<"$body"
 done
 echo '---LOG---'

@@ -47,6 +47,7 @@ test.describe(
         'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss',
       );
       await pbm.skipBelowClient(containerName, '3.11.0');
+      await pbm.setExternalCron('stop');
       bucket = await pbm.pbmStorageBucket(pbmHost);
       await pbm.setAgents(members, 'start');
       await pbm.unpauseStorage();
@@ -78,6 +79,7 @@ test.describe(
         pbm.mongoRootUri,
         'db.getSiblingDB("pbm_metrics_test").dropDatabase()',
       );
+      await pbm.setExternalCron('start');
     });
 
     test('PMM-15207 - Verify the PITR recovery point equals the end of the PITR range in pbm list and advances once a minute', async ({}) => {
@@ -294,6 +296,7 @@ test.describe(
 
       test.beforeAll(async ({}) => {
         test.setTimeout(10 * 60_000);
+        await pbm.setExternalCron('stop');
         await pbm.setAgents(members, 'start');
         await pbm.unpauseStorage();
         await pbm.removeStoredRestores(pbmHost, bucket);
@@ -307,6 +310,7 @@ test.describe(
         for (const member of members) {
           await pbm.recoverExporter(member);
         }
+        await pbm.setExternalCron('start');
       });
 
       test('PMM-15220 - Verify restore_status is 0 and there are no restore series before any restore', async ({}) => {
@@ -508,6 +512,7 @@ test.describe(
       });
 
       test('PMM-15220 - Verify a physical restore appears only after a resync of the PBM configuration', async ({}) => {
+        test.skip(await pbm.isExternalPbm(), 'A physical restore needs the pbm-agent beside mongod, and an external PBM runs it elsewhere');
         test.setTimeout(40 * 60_000);
         const physicalBackup = await pbm.takeBackup(pbmHost, 'physical');
         const restore = await pbm.startOperation(

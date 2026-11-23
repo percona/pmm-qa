@@ -229,11 +229,50 @@ export async function pitrRangeEnd(container: string): Promise<number | undefine
   return ends.length ? Math.max(...ends) : undefined;
 }
 
+export const externalPbmContainer = 'pbm-external';
+
+let externalPbm: boolean | undefined;
+
+/**
+ * Whether PBM runs in the pbm-external container of pmm-framework's EXTERNAL_PBM=true, with a pbm-agent@<member> unit for each member
+ * there and the members' own pbm-agent masked
+ */
+export async function isExternalPbm(): Promise<boolean> {
+  if (externalPbm === undefined) {
+    externalPbm = (await cli.exec(`docker ps -q -f 'name=^${externalPbmContainer}$'`)).stdout.trim() !== '';
+  }
+
+  return externalPbm;
+}
+
+/**
+ * The container PBM's package is installed in for a member: the pbm-external container, or the member itself
+ */
+export async function pbmPackageHost(member: string): Promise<string> {
+  return (await isExternalPbm()) ? externalPbmContainer : member;
+}
+
+/**
+ * Stop or start the cron job of an external PBM. It takes a backup every 15 minutes, which would fall into the middle of a test that
+ * counts backups or watches PITR. Without an external PBM there is none.
+ */
+export async function setExternalCron(action: 'start' | 'stop') {
+  if (!(await isExternalPbm())) return;
+
+  await (await cli.exec(`docker exec ${externalPbmContainer} systemctl ${action} crond`)).assertSuccess();
+}
+
 export async function setAgents(containers: string[], action: 'start' | 'stop' | 'kill') {
+  const external = await isExternalPbm();
+
   for (const container of containers) {
     // Only the main process: signalling the rest of the unit's cgroup fails with an I/O error on some Docker hosts, Docker Desktop among them.
     const command = action === 'kill' ? 'systemctl kill --kill-whom=main --signal=SIGKILL' : `systemctl ${action}`;
-    const output = await cli.exec(`docker exec ${container} ${command} pbm-agent`);
+    const output = await cli.exec(
+      external
+        ? `docker exec ${externalPbmContainer} ${command} pbm-agent@${container}`
+        : `docker exec ${container} ${command} pbm-agent`,
+    );
 
     // A killed unit is failed, and stopping a failed one is not an error worth failing a cleanup for.
     if (action !== 'stop') await output.assertSuccess();

@@ -5,7 +5,7 @@ import * as pbm from '@helpers/pbm';
 
 const containerName = 'psmdb-standalone';
 
-test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests', { tag: ['@standalone-psmdb', '@pbm-external'] }, () => {
+test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests', { tag: '@standalone-psmdb' }, () => {
   test.use({ pmmClientContainer: containerName });
 
   test.beforeAll(async ({}) => {
@@ -25,7 +25,8 @@ test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests',
     }
 
     expect(spawned.log, 'a second exporter logs about PBM').not.toMatch(/pbm/i);
-    const logged = await cli.exec(`docker exec ${containerName} grep -ci pbm ${pbm.agentLogPath}`);
-    expect(logged.stdout.trim(), `lines of ${pbm.agentLogPath} that mention PBM`).toEqual('0');
+    // With --client-debug pmm-agent also logs the messages of PMM Server, which ask for the PBM version and start the exporter with --collector.pbm.
+    const logged = await cli.exec(`docker exec ${containerName} grep -iE 'collector=pbm|pbm_collector' ${pbm.agentLogPath}`);
+    expect(logged.stdout.trim().split('\n').filter(Boolean).slice(0, 10), `first lines of the exporter in ${pbm.agentLogPath} that mention PBM`).toEqual([]);
   });
 });
