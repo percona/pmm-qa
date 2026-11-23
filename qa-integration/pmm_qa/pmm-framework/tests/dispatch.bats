@@ -683,7 +683,9 @@ recorded_config_dir() {
   grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1" "$DOCKER_CALLS"
   grep -Fq "'PBM_MONGODB_URI=$uri' '*/15 * * * * root /usr/bin/pbm backup --type=logical >>/var/log/pbm-external-backup.log 2>&1' >/etc/cron.d/pbm-external-backup" "$DOCKER_CALLS"
   grep -q '^exec pbm-external systemctl enable --now crond$' "$DOCKER_CALLS"
+  grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external sh -c [ \"\$(pbm status | grep -c 'pbm-agent.*OK')\" -eq 3 ]" "$DOCKER_CALLS"
   grep -Fq "exec -e PBM_MONGODB_URI=$uri pbm-external pbm backup --type=logical --wait" "$DOCKER_CALLS"
+  [[ $(grep -n 'pbm status' "$DOCKER_CALLS" | cut -d: -f1) -lt $(grep -n 'pbm backup --type=logical --wait' "$DOCKER_CALLS" | cut -d: -f1) ]]
   [[ $(grep -n 'pbm config --file' "$DOCKER_CALLS" | cut -d: -f1) -gt $(grep -n 'systemctl enable --now pbm-agent@rs103' "$DOCKER_CALLS" | cut -d: -f1) ]]
 
   : >"$DOCKER_CALLS"

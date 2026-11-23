@@ -195,6 +195,8 @@ psmdb_external_pbm() {
   must docker exec -e "PBM_MONGODB_URI=$uri" "$name" pbm config --set pitr.enabled=true --set pitr.oplogSpanMin=1 >/dev/null
   must docker exec "$name" sh -c "printf '%s\n' 'PBM_MONGODB_URI=$uri' '*/15 * * * * root /usr/bin/pbm backup --type=logical >>/var/log/pbm-external-backup.log 2>&1' >/etc/cron.d/pbm-external-backup"
   must docker exec "$name" systemctl enable --now crond
+  # Until every agent passes its storage check PBM nominates no node for it, and a backup started now stalls.
+  retry 60 'every pbm-agent to be OK' docker exec -e "PBM_MONGODB_URI=$uri" "$name" sh -c "[ \"\$(pbm status | grep -c 'pbm-agent.*OK')\" -eq $# ]" >/dev/null
   # The base PITR needs, and something to show before the cron job's first run.
   retry 60 'the first backup' docker exec -e "PBM_MONGODB_URI=$uri" "$name" pbm backup --type=logical --wait >/dev/null
 }
