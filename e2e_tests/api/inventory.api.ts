@@ -1,6 +1,14 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetAgents, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import {
+  AgentStatus,
+  GetAgents,
+  GetNode,
+  GetService,
+  GetServices,
+  QanAgentType,
+  ServiceType,
+} from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -93,6 +101,16 @@ export default class InventoryApi {
       serviceId: services[0].service_id,
       serviceName: services[0].service_name,
     };
+  };
+
+  getQanService = async (agentType: QanAgentType): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ agents }) =>
+      agents?.some((agent) => agent.agent_type === agentType && !agent.disabled),
+    );
+
+    if (!service) throw new Error(`No service has an enabled ${agentType}`);
+
+    return service;
   };
 
   getServiceAgent = async (serviceType: ServiceType, partialServiceName: string, agentType: string) => {
