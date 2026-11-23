@@ -164,7 +164,7 @@ psmdb_pbm_uri() {
 
 # PBM from the Percona repository, as the PBM documentation installs it.
 psmdb_pbm_install() {
-  retry_on "$PMM_REPO_ERRORS" 3 "PBM install on $1" docker exec --user root "$1" sh -ceu "
+  retry_on "$PMM_REPO_ERRORS|metadata_lock" 3 "PBM install on $1" docker exec --user root "$1" sh -ceu "
     dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
     percona-release enable pbm release
     dnf install -y percona-backup-mongodb-$PBM_VERSION.el9 cronie" >/dev/null

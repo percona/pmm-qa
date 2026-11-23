@@ -697,6 +697,30 @@ recorded_config_dir() {
   grep -Fq 'PBM_MONGODB_URI=mongodb://pbm:pbmpass@rs101:27017,rs102:27017/?replicaSet=rs pbm-external pbm backup' "$DOCKER_CALLS"
 }
 
+@test "the external PBM install retries a dnf metadata lock error and stops on any other" {
+  local calls=$BATS_TEST_TMPDIR/install.calls message
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    printf 'x\n' >>"$calls"
+    if (( $(wc -l <"$calls") == 1 )); then
+      printf '%s\n' "$message" >&2
+      return 1
+    fi
+  }
+
+  : >"$calls"
+  message="[Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'"
+  run psmdb_pbm_install pbm-external
+  [[ $status -eq 0 ]]
+  [[ $(wc -l <"$calls") -eq 2 ]]
+
+  : >"$calls"
+  message='Error: Unable to find a match: percona-backup-mongodb'
+  run psmdb_pbm_install pbm-external
+  [[ $status -ne 0 ]]
+  [[ $(wc -l <"$calls") -eq 1 ]]
+}
+
 @test "PSMDB EXTERNAL_PBM needs the storage, a PBM setup and no extra set, and says so before it starts anything" {
   stub_prebaked_docker
   local spec message
