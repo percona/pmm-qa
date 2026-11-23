@@ -644,6 +644,7 @@ test.describe(
 
       test.beforeAll(async ({}) => {
         test.setTimeout(10 * 60_000);
+        await pbm.setExternalCron('stop');
         await pbm.setAgents(members, 'start');
         await pbm.unpauseStorage();
         await pbm.fixStorage(pbmHost, bucket);
@@ -654,6 +655,7 @@ test.describe(
         await pbm.unpauseStorage();
         await pbm.setAgents(members, 'start');
         await pbm.fixStorage(pbmHost, bucket);
+        await pbm.setExternalCron('start');
       });
 
       test('PMM-15219 - Verify failures since the last successful backup are counted per type until a backup succeeds', async ({}) => {

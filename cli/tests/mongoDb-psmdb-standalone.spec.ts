@@ -25,7 +25,7 @@ test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests',
     }
 
     expect(spawned.log, 'a second exporter logs about PBM').not.toMatch(/pbm/i);
-    const logged = await cli.exec(`docker exec ${containerName} grep -ci pbm ${pbm.agentLogPath}`);
-    expect(logged.stdout.trim(), `lines of ${pbm.agentLogPath} that mention PBM`).toEqual('0');
+    const logged = await cli.exec(`docker exec ${containerName} grep -i pbm ${pbm.agentLogPath}`);
+    expect(logged.stdout.trim().split('\n').filter(Boolean).slice(0, 10), `first lines of ${pbm.agentLogPath} that mention PBM`).toEqual([]);
   });
 });
