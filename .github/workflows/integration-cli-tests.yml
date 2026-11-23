@@ -701,7 +701,7 @@ jobs:
       test_name: 'TLS PDPGSQL 16'
 
   pbm-external-replica-tests:
-    name: 'PBM external: replica set and standalone'
+    name: 'PBM external / Replica set and standalone'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -717,7 +717,7 @@ jobs:
       test_name: 'PBM external: replica set and standalone'
 
   pbm-external-shard-tests:
-    name: 'PBM external: sharded cluster'
+    name: 'PBM external / Sharded cluster'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -733,7 +733,7 @@ jobs:
       test_name: 'PBM external: sharded cluster'
 
   pbm-arbiter-external-tests:
-    name: 'PBM external: arbiter'
+    name: 'PBM external / Arbiter'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
