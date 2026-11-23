@@ -61,7 +61,6 @@ test.describe(
       await pbm.startWriter(pbmHost, writerUri);
     });
 
-
     test.afterAll(async ({}) => {
       await pbm.setAgents(members, 'start');
       await pbm.stopWriter(pbmHost);
@@ -179,7 +178,8 @@ test.describe(
       const paused = during[0] as number;
 
       await expect(async () => {
-        expect((await recoveryPoint(pbmHost)).cluster,
+        expect(
+          (await recoveryPoint(pbmHost)).cluster,
           'recovery point after the backup',
         ).toBeGreaterThan(paused);
       }).toPass({ intervals: [5_000], timeout: 5 * 60_000 });

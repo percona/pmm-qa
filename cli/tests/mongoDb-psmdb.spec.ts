@@ -8,8 +8,6 @@ import {
 import { clientCredentialsFlags, mongoConnection } from '@helpers/constants';
 import { versionBelow } from '@helpers/versionGates';
 import { faker } from '@faker-js/faker';
-import * as pmmApi from '@helpers/pmm-api-helper';
-import * as pmmAdmin from '@helpers/pmm-admin';
 
 const replIpPort = 'rs101:27017';
 const ip = replIpPort.split(':')[0];
@@ -365,6 +363,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, () 
     expect(sizeMb).toBeGreaterThan(16.0);
     expect(sizeMb).toBeLessThan(20.0);
   });
+});
 
 test.describe(
   'Percona Server MongoDB (PSMDB) PBM metrics',
