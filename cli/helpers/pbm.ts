@@ -231,7 +231,8 @@ export async function pitrRangeEnd(container: string): Promise<number | undefine
 
 export async function setAgents(containers: string[], action: 'start' | 'stop' | 'kill') {
   for (const container of containers) {
-    const command = action === 'kill' ? 'systemctl kill --signal=SIGKILL' : `systemctl ${action}`;
+    // Only the main process: signalling the rest of the unit's cgroup fails with an I/O error on some Docker hosts, Docker Desktop among them.
+    const command = action === 'kill' ? 'systemctl kill --kill-whom=main --signal=SIGKILL' : `systemctl ${action}`;
     const output = await cli.exec(`docker exec ${container} ${command} pbm-agent`);
 
     // A killed unit is failed, and stopping a failed one is not an error worth failing a cleanup for.
