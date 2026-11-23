@@ -772,7 +772,6 @@ test.describe(
       });
 
       test('PMM-15232 - Verify a user with find only on pbmBackups, pbmAgents and pbmConfig gets no restore or PITR series and one warning per scrape for each', async ({}) => {
-        test.setTimeout(15 * 60_000);
         const scrapes = 3;
         const oplogSpan = await pbm.pbmConfigValue(
           pbmHost,
