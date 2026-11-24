@@ -4045,16 +4045,19 @@
       "link": "https://github.com/percona/pmm-qa/pull/1818",
       "by": "Investigator routine",
       "at": "2026-11-24T09:20:35Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "client 3.9.1: PMM-T188 pressed Enter in the QAN search 150 ms after picking 'Last 1 hour', before QAN requested the 1 h report. The search's getReport still used the 30 min window and wrote it back to the URL, so 'Last 30 minutes' stayed on all 3 attempts (it passed in the docker and other client lanes). Not reproduced on a CHAOS VM in 8 runs; the fix waits for the 1 h getReport and passed 4/4 under load.",
+      "link": "https://github.com/percona/pmm-qa/pull/1818",
+      "by": "Investigator routine",
+      "at": "2026-11-24T09:20:41Z"
     }
   ],
   "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-24T08:19:14Z",
-      "suites": [
-        "Nightly Compatibility"
-      ]
-    },
     {
       "by": "Investigator routine",
       "at": "2026-11-24T08:19:14Z",
