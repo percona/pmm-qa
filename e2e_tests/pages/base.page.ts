@@ -13,6 +13,10 @@ export type DropdownName =
   | 'Node'
   | 'Replication Set'
   | 'Namespace'
+  | 'Source Cluster'
+  | 'Target Cluster'
+  | 'ClusterSync Cluster'
+  | 'ClusterSync Instance'
   | 'Search Service';
 
 export interface NestedLocators {

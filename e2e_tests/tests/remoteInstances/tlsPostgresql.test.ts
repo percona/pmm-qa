@@ -76,12 +76,15 @@ pmmTest.describe('SSL PostgreSQL services monitored over TLS', () => {
 
   pmmTest(
     'PMM-T2492 - Verify metrics from SSL instances on PMM-Server @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
-    async ({ api, cliHelper }) => {
+    async ({ api, postgresqlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(`^${localServicePrefix}`);
 
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${service_name}"}`);
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${remoteServiceName}"}`, Timeouts.TWO_MINUTES);
-      cliHelper.verifyPostgresqlConnectionsUseTls(container, 'pmm');
+      expect(
+        postgresqlHelper.allConnectionsUseTls(container, 'pmm'),
+        `every pmm connection to ${container} uses TLS`,
+      ).toEqual('t');
     },
   );
 
@@ -133,7 +136,7 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
 
   pmmTest(
     'PMM-T948 + PMM-T947 - Verify Adding SSL services remotely @ssl @ssl-postgres @ssl-remote @not-ui-pipeline',
-    async ({ addInstancePage, api, cliHelper, page, servicesPage }) => {
+    async ({ addInstancePage, api, cliHelper, page, postgresqlHelper, servicesPage }) => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
         await page.goto(addInstancePage.url);
         await addInstancePage.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -155,7 +158,10 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
         timeout: Timeouts.THIRTY_SECONDS,
       });
       await api.grafanaApi.waitForMetric(`pg_up{service_name="${uiServiceName}"}`, Timeouts.TWO_MINUTES);
-      cliHelper.verifyPostgresqlConnectionsUseTls(container, 'pmm');
+      expect(
+        postgresqlHelper.allConnectionsUseTls(container, 'pmm'),
+        `every pmm connection to ${container} uses TLS`,
+      ).toEqual('t');
     },
   );
 

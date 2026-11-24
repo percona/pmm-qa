@@ -138,7 +138,7 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T188 - Verify dashboard refresh @qan', async ({ leftNavigation, qanStoredMetrics }) => {
+pmmTest('PMM-T188 - Verify dashboard refresh @qan', async ({ leftNavigation, page, qanStoredMetrics }) => {
   await expect(qanStoredMetrics.elements.spinner).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   await qanStoredMetrics.changeMainMetric('Database');
   await expect(qanStoredMetrics.elements.selectedMainMetric).toContainText('Database', {
@@ -152,7 +152,18 @@ pmmTest('PMM-T188 - Verify dashboard refresh @qan', async ({ leftNavigation, qan
     qanStoredMetrics.builders.filterCheckboxInGroup('postgres', 'Database'),
   );
   await qanStoredMetrics.addColumn('Bytes Sent');
+
+  // A search submitted before QAN applies the new range writes the old range back to the URL.
+  const lastHourReport = page.waitForRequest((request) => {
+    if (!request.url().includes('/v1/qan/metrics:getReport')) return false;
+
+    const { period_start_from: from, period_start_to: to } = request.postDataJSON() ?? {};
+
+    return Date.parse(to) - Date.parse(from) === 3_600_000;
+  });
+
   await leftNavigation.selectTimeRange('Last 1 hour');
+  await lastHourReport;
   await qanStoredMetrics.searchByValue('postgres');
   await qanStoredMetrics.builders.queryRow(0).click();
   await qanStoredMetrics.selectRefreshInterval('5s');

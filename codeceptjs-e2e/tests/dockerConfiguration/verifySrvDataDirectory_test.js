@@ -5,17 +5,15 @@ Feature('Test PMM server with srv volume and password enw variable');
 
 let testCaseName = '';
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+// System Summary's pt-summary action takes ~5 s where vmstat exists and the UI first sees it done at 7.5 s;
+// a shorter refresh restarts it before then, so its loading bar never clears.
+const nodeSummaryQuery = '?orgId=1&refresh=30s';
 
 const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('mkdir $HOME/srvPasswordUpgrade || true');
   await I.verifyCommand('chmod -R 777 $HOME/srvPasswordUpgrade/ || true');
   await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${dockerVersion}`);
   I.wait(30);
-  await I.verifyCommand('docker exec pmm-server-password-upgrade yum update -y percona-release');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade sed -i\'\' -e \'s^/release/^/experimental/^\' /etc/yum.repos.d/pmm3-server.repo');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade percona-release enable percona experimental');
-  await I.verifyCommand('docker exec pmm-server-password-upgrade yum clean all');
-  await I.verifyCommand('docker restart pmm-server-password-upgrade');
 };
 
 const runContainerWithDataContainer = async (I) => {
@@ -52,7 +50,7 @@ Scenario(
     const qanRows = await I.grabNumberOfVisibleElements(queryAnalyticsPage.data.elements.queryRows);
 
     assert.ok(qanRows > 0, 'Query Analytics are empty');
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}${nodeSummaryQuery}`);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(0, 300);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
@@ -72,7 +70,7 @@ Scenario(
 
     assert.ok(qanRowsAfterRestart > 0, 'Query Analytics are empty after restart of docker container');
 
-    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}?orgId=1&refresh=5s`);
+    await I.amOnPage(`${basePmmUrl + dashboardPage.nodeSummaryDashboard.url}${nodeSummaryQuery}`);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.waitForGraphsToHaveData(0, 180);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();

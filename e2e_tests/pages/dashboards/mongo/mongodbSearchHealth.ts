@@ -3,8 +3,8 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 
 export default class MongodbSearchHealth implements DashboardInterface {
   url = 'graph/d/mongodb-search-health/mongodb-search-health';
-  // aria-colindex of the Health by Service columns.
-  healthColumns = { health: 4, replicaSet: 3, up: 5 };
+  // Zero-based, as tableRowCell takes them.
+  healthColumns = { health: 3, replicaSet: 2, up: 4 };
   healthTable = 'Health by Service';
   tiles = [
     'Overall',

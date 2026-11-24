@@ -109,14 +109,14 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
         for (const service of services) {
           const { health, replicaSet, up } = searchHealth.healthColumns;
 
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, service, health)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, service, health)).toHaveText(
             searchHealth.texts.ok,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, service, up)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, service, up)).toHaveText(
             searchHealth.texts.up,
           );
           await expect(
-            dashboard.builders.tableCell(searchHealth.healthTable, service, replicaSet),
+            dashboard.builders.tableRowCell(searchHealth.healthTable, service, replicaSet),
           ).toHaveText('rs');
         }
       });
@@ -186,7 +186,11 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
 
       for (const { id } of indexes) {
         await expect(
-          dashboard.builders.tableCell(searchDetails.indexesTable, id, searchDetails.indexesColumns.status),
+          dashboard.builders.tableRowCell(
+            searchDetails.indexesTable,
+            id,
+            searchDetails.indexesColumns.status,
+          ),
         ).toHaveText(searchDetails.steady);
       }
 
@@ -245,17 +249,17 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
             searchHealth.texts.oneNeedsAttention,
           );
           await expect(dashboard.builders.tableRows(searchHealth.healthTable).first()).toContainText(mongot2);
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, health)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, health)).toHaveText(
             searchHealth.texts.attention,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, up)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, up)).toHaveText(
             searchHealth.texts.down,
           );
 
           for (const service of [services[0], services[2]]) {
-            await expect(dashboard.builders.tableCell(searchHealth.healthTable, service, health)).toHaveText(
-              searchHealth.texts.ok,
-            );
+            await expect(
+              dashboard.builders.tableRowCell(searchHealth.healthTable, service, health),
+            ).toHaveText(searchHealth.texts.ok);
           }
         });
 
@@ -273,7 +277,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           await expect(dashboard.builders.panelContentByExactName('Overall')).toHaveText(
             searchHealth.texts.allHealthy,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, health)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, health)).toHaveText(
             searchHealth.texts.ok,
           );
         });
@@ -335,7 +339,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           ).toEqual(['rs-other']);
           await expect(dashboard.builders.tableRows(searchHealth.healthTable)).toHaveCount(1);
           await expect(
-            dashboard.builders.tableCell(
+            dashboard.builders.tableRowCell(
               searchHealth.healthTable,
               otherService,
               searchHealth.healthColumns.health,
@@ -407,10 +411,10 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           await expect(dashboard.builders.panelContentByExactName('Overall')).toHaveText(
             searchHealth.texts.oneNeedsAttention,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, health)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, health)).toHaveText(
             searchHealth.texts.attention,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, up)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, up)).toHaveText(
             searchHealth.texts.down,
           );
         });
@@ -427,7 +431,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           await expect(dashboard.builders.panelContentByExactName('Availability')).toHaveText(
             searchHealth.texts.allUp,
           );
-          await expect(dashboard.builders.tableCell(searchHealth.healthTable, mongot2, health)).toHaveText(
+          await expect(dashboard.builders.tableRowCell(searchHealth.healthTable, mongot2, health)).toHaveText(
             searchHealth.texts.ok,
           );
         });

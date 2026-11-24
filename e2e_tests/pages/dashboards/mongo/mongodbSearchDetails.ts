@@ -3,8 +3,8 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 
 export default class MongodbSearchDetails implements DashboardInterface {
   url = 'graph/d/mongodb-search-details/mongodb-search-details';
-  // aria-colindex of the Search Indexes columns.
-  indexesColumns = { status: 4 };
+  // Zero-based, as tableRowCell takes them.
+  indexesColumns = { status: 3 };
   indexesTable = 'Search Indexes';
   overviewTiles = [
     'mongot Services Down',

@@ -78,6 +78,8 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelInfoIconByName: (panelName: string) =>
       this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
+    panelLegendSeries: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator('button[class*="LegendLabel"]'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -88,6 +90,8 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('button', { name: 'Remove' }),
+    rowTitle: (rowName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid dashboard-row-title-${rowName}`),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -104,6 +108,14 @@ export default class Dashboards extends BasePage {
         .getByRole('button', { name: 'Filter for value' }),
     tableCellLink: (panelName: string, rowIndex: number, columnIndex: number) =>
       this.builders.tableCell(panelName, rowIndex, columnIndex).getByRole('link'),
+    tableLink: (panelName: string, linkText: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
+    tableRow: (panelName: string, rowText: string) =>
+      this.builders.tableRows(panelName).filter({ hasText: rowText }),
+    tableRowCell: (panelName: string, rowText: string, columnIndex: number) =>
+      this.builders
+        .tableRow(panelName, rowText)
+        .locator(`[role="gridcell"][aria-colindex="${columnIndex + 1}"]`),
     tableRows: (panelName: string) =>
       this.builders.panelContentByExactName(panelName).locator('[role="row"]:has([role="gridcell"])'),
     templateVariableCombobox: (variableName: DropdownName) =>
@@ -111,10 +123,7 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('combobox'),
-    tableLink: (panelName: string, linkText: string) =>
-      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
-    tableRow: (panelName: string, rowText: string) =>
-      this.builders.tableRows(panelName).filter({ hasText: rowText }),
+    textInDashboard: (text: string) => this.grafanaIframe().getByText(text, { exact: true }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
@@ -515,6 +524,20 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPanelsWithDataInViewAtMost = async (url: string, maxPanelsWithData: number) => {
+    await this.page.goto(url);
+    await this.waitForPanelsInView();
+    await expect
+      .poll(
+        async () => (await this.elements.panelName.count()) - (await this.elements.noDataPanelName.count()),
+        {
+          message: `${url} should show at most ${maxPanelsWithData} panels with data`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
+      )
+      .toBeLessThanOrEqual(maxPanelsWithData);
+  };
+
   verifyPanelTextAfterRefresh = async (panelName: string, expected: string | RegExp, timeout: Timeouts) => {
     const panelContent = this.builders.panelContentByExactName(panelName);
 
@@ -647,12 +670,13 @@ export default class Dashboards extends BasePage {
     url: string,
     maxNoDataPanels: number,
     timeout = Timeouts.FIVE_MINUTES,
+    loadPanels = this.loadAllPanels,
   ) => {
     await expect
       .poll(
         async () => {
           await this.page.goto(url);
-          await this.loadAllPanels();
+          await loadPanels();
 
           return this.elements.noDataPanelName.count();
         },
@@ -663,6 +687,12 @@ export default class Dashboards extends BasePage {
         },
       )
       .toBeLessThanOrEqual(maxNoDataPanels);
+  };
+
+  waitForPanelsInView = async () => {
+    await this.waitForDashboardToLoad();
+    await expect(this.elements.panelName).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   };
 
   private changeRow = async (locator: Locator, error: string) => {
