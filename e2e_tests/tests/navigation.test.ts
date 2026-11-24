@@ -55,8 +55,7 @@ pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, le
   await pmmTest.step('Sign out as admin and login as non-admin', async () => {
     await leftNavigation.selectMenuItem('accounts');
     await leftNavigation.selectMenuItem('accounts.signOut');
-    // The admin Basic header outlives the sign-out, so the page bounces between /graph/login and the UI,
-    // and each 401 from auth-tokens/rotate clears the session cookie. signInAs stops that page first.
+    // authorize() alone races the admin session's rotate 401s, which clear the new cookie.
     await grafanaHelper.signInAs(login, password);
     await page.goto('pmm-ui/help');
   });
