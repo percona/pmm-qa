@@ -3,9 +3,19 @@ import { expect } from '@playwright/test';
 import { type NestedLocators } from '@pages/base.page';
 import { Timeouts } from '@helpers/timeouts';
 
+let nonAdminId: number | undefined;
+
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
   await page.goto('pmm-ui/help');
+});
+
+pmmTest.afterEach(async ({ grafanaHelper }) => {
+  if (!nonAdminId) return;
+
+  await grafanaHelper.authorize();
+  await grafanaHelper.deleteUser(nonAdminId);
+  nonAdminId = undefined;
 });
 
 pmmTest(
@@ -34,15 +44,21 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigation }) => {
+pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigation, page }) => {
+  const login = `nonadmin_${Date.now()}`;
+  const password = 'Nonadmin-pass-1';
+
   await pmmTest.step('Create non-admin user', async () => {
-    await grafanaHelper.createUser('nonadmin', 'Nonadmin-pass-1');
+    nonAdminId = await grafanaHelper.createUser(login, password);
   });
 
   await pmmTest.step('Sign out as admin and login as non-admin', async () => {
     await leftNavigation.selectMenuItem('accounts');
     await leftNavigation.selectMenuItem('accounts.signOut');
-    await grafanaHelper.authorize('nonadmin', 'Nonadmin-pass-1');
+    // The admin Basic header outlives the sign-out, so the page bounces between /graph/login and the UI,
+    // and each 401 from auth-tokens/rotate clears the session cookie. signInAs stops that page first.
+    await grafanaHelper.signInAs(login, password);
+    await page.goto('pmm-ui/help');
   });
 
   await pmmTest.step('verify permissions', async () => {
