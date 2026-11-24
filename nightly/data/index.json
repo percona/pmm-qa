@@ -212631,16 +212631,18 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15794",
         "by": "Investigator routine",
         "at": "2026-11-24T01:04:52Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-23T23:07:24Z",
         "suites": [
           "Nightly"
-        ]
+        ],
+        "verdict": "unstable",
+        "summary": "nightly / docker #1482: the 'Trigger nightly GH Actions matrix' stage got HTTP 500 from GitHub's workflow dispatch API, so no tests ran. The identical re-run #1492 (same image, client and branch) dispatched and passed.",
+        "link": "https://pmm.cd.percona.com/job/pmm3-ui-tests-nightly-gha/1492/",
+        "by": "Investigator routine",
+        "at": "2026-11-24T01:04:58Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
