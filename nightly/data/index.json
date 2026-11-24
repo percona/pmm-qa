@@ -216653,16 +216653,18 @@
         "link": "https://github.com/percona/pmm-qa/pull/1816",
         "by": "Investigator routine",
         "at": "2026-11-24T03:21:30Z"
-      }
-    ],
-    "claims": [
+      },
       {
-        "by": "Investigator routine",
-        "at": "2026-11-24T02:58:52Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
+        ],
+        "verdict": "product bug",
+        "summary": "ha backup-restore #65: backup and restore passed. PMM-T2289 failed on the restored cluster with 'Metrics without data: PostgreSQL Pods', the open PMM-15794. pmm-managed.log shows the sidecar's AddService failing with 'cannot set transaction read-write mode during recovery' at 01:24:09, during the install (not the restore). Diagnosed from artifacts; recurrence added to the ticket.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-11-24T03:21:36Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
