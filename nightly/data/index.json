@@ -212580,16 +212580,19 @@
         "link": "https://github.com/percona/pmm-qa/pull/1815",
         "by": "Investigator routine",
         "at": "2026-11-24T01:04:24Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "test bug",
+        "summary": "help tests (pmm3-rc): PMM-T2751-T2753 failed with 'Unexpected end of JSON input'. getPmmAdminVersion ran the host's pmm-admin without sudo, and the pmm-client package leaves /usr/local/percona at 0750. Reproduced as a non-root sudo user; the fix uses sudo pmm-admin and passes.",
+        "link": "https://github.com/percona/pmm-qa/pull/1815",
+        "by": "Investigator routine",
+        "at": "2026-11-24T01:04:30Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-23T23:07:24Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-23T23:07:24Z",
