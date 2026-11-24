@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -6,9 +7,7 @@ import * as pmmApi from '@helpers/pmm-api-helper';
 const exporterAgent = 'AGENT_TYPE_EXTERNAL_EXPORTER';
 
 test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
-  // containerName is discovered in beforeAll, so it is read when each test starts.
   let containerName: string;
-  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   const serviceName = 'haproxy_update_cli';
   const listenPort = 42100;
@@ -29,6 +28,7 @@ test.describe('HAProxy service pmm-admin update', { tag: '@haproxy' }, () => {
     const result = await cli.exec('docker ps | grep haproxy_pmm | awk \'{print $NF}\'');
     await result.outContains('haproxy_pmm', 'HAPROXY docker container should exist. please run pmm-framework with --database haproxy');
     containerName = result.stdout.trim();
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
   });
 
   test.afterEach(async ({}) => {

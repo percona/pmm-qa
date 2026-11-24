@@ -6,6 +6,7 @@ import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import AccessRolesPage from '@pages/accessRoles.page';
 import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
@@ -47,6 +48,7 @@ import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
+import UsersPage from '@pages/users.page';
 import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
 import AddInstancePage from '@pages/inventory/addInstance.page';
@@ -65,6 +67,7 @@ import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
+  accessRolesPage: AccessRolesPage;
   advisorInsightsPage: AdvisorInsightsPage;
   advisorRunsPage: AdvisorRunsPage;
   advisorSchedulerPage: AdvisorSchedulerPage;
@@ -121,12 +124,14 @@ const pmmTest = base.extend<{
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
+  usersPage: UsersPage;
   downloadsPage: DownloadsPage;
   testState: TestState;
   tlsHelper: TlsHelper;
 }>({
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
+  accessRolesPage: async ({ page }, use) => await use(new AccessRolesPage(page)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   advisorInsightsPage: async ({ page }, use) => await use(new AdvisorInsightsPage(page)),
   advisorRunsPage: async ({ page }, use) => await use(new AdvisorRunsPage(page)),
@@ -273,6 +278,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  usersPage: async ({ page }, use) => await use(new UsersPage(page)),
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   // Registering this as a beforeEach hook would only gate the first spec file that imports this
   // module, since the module is evaluated once and the hook attaches to the file loading at that
