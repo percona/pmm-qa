@@ -204,6 +204,9 @@ export default class InventoryApi {
     return exporter;
   };
 
+  getServiceNamesByRegex = async (regexString: string): Promise<string[]> =>
+    (await this.getAllServiceDetailsByRegex(regexString)).map((service) => service.service_name).sort();
+
   getServices = async (): Promise<GetServices> => {
     const authToken = GrafanaHelper.getToken();
     const services = await this.request.get(apiEndpoints.management.services, {

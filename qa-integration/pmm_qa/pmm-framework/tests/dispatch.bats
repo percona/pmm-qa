@@ -543,7 +543,9 @@ stub_prebaked_docker() {
   ! grep -q -- '--name mongot3' "$DOCKER_CALLS" || false
   ! grep -q '^exec rs103 pmm-admin add external' "$DOCKER_CALLS" || false
   grep -Fq 'createSearchIndexes: "movies"' "$DOCKER_CALLS"
-  # shellcheck disable=SC2016 # a literal $vectorSearch
+  # shellcheck disable=SC2016 # literal $search and $vectorSearch
+  grep -Fq '$search: { index: "default", text: { query: "space", path: "plot" } }' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016
   grep -Fq '$vectorSearch' "$DOCKER_CALLS"
 }
 
@@ -635,6 +637,13 @@ recorded_config_dir() {
   dispatch_setup
   dir=$(recorded_config_dir rs)
   [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-inmemory.* ]]
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.3,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,MONGOT=true,MINIO=false'
+  dispatch_setup
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-mongot.* ]]
   assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
 }
 

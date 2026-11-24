@@ -1,5 +1,3 @@
-# Percona Search for MongoDB, one per replica set member, run by setup_psmdb
-# with MONGOT=true in that member's network namespace.
 syncSource:
   replicaSet:
     hostAndPort: "localhost:27017"

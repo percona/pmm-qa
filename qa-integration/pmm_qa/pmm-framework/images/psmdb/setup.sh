@@ -240,20 +240,16 @@ psmdb_replica_set() {
     name_part=_gssapi
   fi
   export COMPOSE_PROJECT_NAME=psmdb_pss COMPOSE_PROFILES=$profile
-  if [[ $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY] ]]; then
+  if [[ $storage == inmemory ]]; then
     config_dir=./conf/mongod-rs-inmemory
+  elif [[ $mongot == true ]]; then
+    config_dir=./conf/mongod-rs-mongot
   fi
   if [[ $query_source == mongolog ]]; then
     config_dir=$(psmdb_mongolog_config "$config_dir" mongod.conf /var/log/mongo/mongod.log)
   fi
   if [[ $config_dir != ./conf/mongod-rs ]]; then
     export MONGOD_RS_CONFIG_DIR=$config_dir
-  fi
-
-  if [[ $storage == inmemory ]]; then
-    export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-inmemory
-  elif [[ $mongot == true ]]; then
-    export MONGOD_RS_CONFIG_DIR=./conf/mongod-rs-mongot
   fi
 
   step 'Prepare image pmm-qa/kerberos:latest' ensure_image kerberos latest
@@ -336,10 +332,8 @@ psmdb_mongot_user() {
     die 'Creating the mongotUser failed.'
 }
 
-# Run mongot in NODE's network namespace, where its mongod reaches it on
-# localhost:27028 and its pmm-agent scrapes :9946. mongot refuses a password
-# file others can read, and the bind-mounted file would be owned by the host
-# user, so it is written inside the container at each start.
+# mongot refuses a password file others can read, and a bind mount would be owned
+# by the host user, so it is written inside the container at each start.
 # Usage: psmdb_mongot_start NODE  (rs10N runs mongotN)
 psmdb_mongot_start() {
   local name=mongot${1: -1}

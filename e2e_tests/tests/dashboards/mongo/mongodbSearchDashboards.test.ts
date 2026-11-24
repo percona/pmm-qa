@@ -1,56 +1,18 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import CliHelper from '@helpers/cli.helper';
-import Api from '@api/api';
 import { ServiceType } from '@interfaces/inventory';
 
-const rootUri = 'mongodb://root:root@127.0.0.1:27017/admin';
-const loadPidFile = '/tmp/pmm-qa-search-load.pid';
-// The client the cases need: one $search and one $vectorSearch a second on rs101, stopping itself after an hour.
-// A second $vectorSearch reads from a secondary: queries on the primary reach only mongot1, and a mongot that
-// served no $vectorSearch shows No data in HNSW Nodes Visited per Query.
-const vectorSearch =
-  "[{ $vectorSearch: { index: 'vector_index', path: 'embedding', queryVector: [1, 0, 0], numCandidates: 4, limit: 2 } }]";
-const searchLoad = [
-  "const movies = db.getSiblingDB('search').movies;",
-  "const secondary = new Mongo('mongodb://root:root@rs101:27017,rs102:27017,rs103:27017/admin?replicaSet=rs&readPreference=secondary')",
-  "  .getDB('search').movies;",
-  'const end = Date.now() + 3600000;',
-  'while (Date.now() < end) {',
-  "  try { movies.aggregate([{ $search: { index: 'default', text: { query: 'space', path: 'plot' } } }]).toArray();",
-  `    movies.aggregate(${vectorSearch}).toArray(); } catch (e) { print(e); }`,
-  `  try { secondary.aggregate(${vectorSearch}, { maxTimeMS: 2000 }).toArray(); } catch (e) { print(e); }`,
-  '  sleep(1000);',
-  '}',
-].join(' ');
-
-const searchLoadSeconds = (cliHelper: CliHelper) => {
-  const ps = cliHelper.execSilent(`docker exec rs101 sh -c 'ps -o etimes= -p "$(cat ${loadPidFile})"'`);
-
-  return ps.code === 0 ? Number(ps.stdout.trim()) : -1;
-};
-
-const mongotServiceNames = async (api: Api) =>
-  (await api.inventoryApi.getAllServiceDetailsByRegex('^mongot\\d_'))
-    .map((service) => service.service_name)
-    .sort();
+const mongotServices = '^mongot\\d_';
 const timeRange = { from: 'now-15m', refresh: '5s' };
 
 pmmTest.describe('MongoDB Search dashboards with mongot', () => {
-  pmmTest.beforeEach(async ({ cliHelper, grafanaHelper }) => {
-    if (searchLoadSeconds(cliHelper) < 0) {
-      const script = Buffer.from(searchLoad).toString('base64');
+  pmmTest.describe.configure({ mode: 'default' });
 
-      cliHelper
-        .execute(
-          `docker exec -d rs101 sh -c 'echo $$ > ${loadPidFile} && exec mongo --quiet ${rootUri} --eval "$(echo ${script} | base64 -d)"'`,
-        )
-        .assertSuccess();
-    }
-
+  pmmTest.beforeEach(async ({ grafanaHelper, mongotHelper }) => {
+    mongotHelper.startSearchLoad();
     await expect
-      .poll(() => searchLoadSeconds(cliHelper), {
+      .poll(() => mongotHelper.searchLoadSeconds(), {
         intervals: [Timeouts.TEN_SECONDS],
         message: 'The search query load on rs101 must run for 5 minutes',
         timeout: Timeouts.TEN_MINUTES,
@@ -63,7 +25,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
     'PMM-T2479 - Verify Search health and Search details open from the MongoDB menu and show every mongot service healthy @pmm-mongot-integration',
     async ({ api, dashboard, leftNavigation, page, urlHelper }) => {
       const searchHealth = dashboard.mongo.searchHealth;
-      const services = await mongotServiceNames(api);
+      const services = await api.inventoryApi.getServiceNamesByRegex(mongotServices);
 
       expect(services).toHaveLength(3);
       await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, { from: 'now-15m' }));
@@ -144,9 +106,9 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
 
   pmmTest(
     "PMM-T2480 - Verify Search details opened from a Search health row shows that mongot's indexes, queries, replication and mongod-side data @pmm-mongot-integration",
-    async ({ api, cliHelper, dashboard, leftNavigation, page, urlHelper }) => {
+    async ({ api, dashboard, leftNavigation, mongotHelper, page, urlHelper }) => {
       const { searchDetails, searchHealth } = dashboard.mongo;
-      const services = await mongotServiceNames(api);
+      const services = await api.inventoryApi.getServiceNamesByRegex(mongotServices);
       const mongot2 = services[1];
       const rs101 = (await api.inventoryApi.getServiceDetailsByPartialName('rs101')).service_name;
 
@@ -173,14 +135,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
         await expect(dashboard.builders.panelContentByExactName('Indexes Not STEADY')).toHaveText('0');
       });
 
-      const indexes = JSON.parse(
-        cliHelper
-          .execute(
-            `docker exec rs101 mongo --quiet ${rootUri} --eval 'print(JSON.stringify(db.getSiblingDB("search").movies.getSearchIndexes().map((i) => ({ id: i.id, name: i.name }))))'`,
-          )
-          .assertSuccess()
-          .stdout.trim(),
-      ) as { id: string; name: string }[];
+      const indexes = mongotHelper.getSearchIndexes();
 
       expect(indexes.map((index) => index.name).sort()).toEqual(['default', 'vector_index']);
 
@@ -227,7 +182,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const searchHealth = dashboard.mongo.searchHealth;
       const { health, up } = searchHealth.healthColumns;
-      const services = await mongotServiceNames(api);
+      const services = await api.inventoryApi.getServiceNamesByRegex(mongotServices);
       const mongot2 = services[1];
 
       await page.goto(urlHelper.buildUrlWithParameters(searchHealth.url, timeRange));
@@ -293,8 +248,9 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
     'PMM-T2486 - Verify the Environment, Cluster and Replication Set filters limit the Search dashboards to the chosen mongot services @pmm-mongot-integration',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const { searchDetails, searchHealth } = dashboard.mongo;
-      const services = await mongotServiceNames(api);
+      const services = await api.inventoryApi.getServiceNamesByRegex(mongotServices);
       const otherService = 'mongot1-other';
+      let otherServiceAdded = false;
 
       try {
         await pmmTest.step('Add mongot1 a second time with other labels', async () => {
@@ -303,6 +259,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
               `docker exec rs101 pmm-admin add external --listen-port=9946 --service-name=${otherService} --environment=psmdb-other --cluster=other-cluster --replication-set=rs-other`,
             )
             .assertSuccess();
+          otherServiceAdded = true;
           await expect
             .poll(() => api.prometheusApi.instantQueryValue(`up{service_name="${otherService}"}`), {
               intervals: [Timeouts.TEN_SECONDS],
@@ -383,7 +340,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           }
         });
       } finally {
-        cliHelper.removeService('rs101', ServiceType.external, otherService);
+        if (otherServiceAdded) cliHelper.removeService('rs101', ServiceType.external, otherService);
       }
     },
   );
@@ -395,7 +352,7 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
 
       const searchHealth = dashboard.mongo.searchHealth;
       const { health, up } = searchHealth.healthColumns;
-      const mongot2 = (await mongotServiceNames(api))[1];
+      const mongot2 = (await api.inventoryApi.getServiceNamesByRegex(mongotServices))[1];
 
       try {
         cliHelper.execute('docker stop mongot2').assertSuccess();
@@ -436,8 +393,11 @@ pmmTest.describe('MongoDB Search dashboards with mongot', () => {
           );
         });
       } finally {
-        cliHelper.execute('docker exec rs102 systemctl start pmm-agent').assertSuccess();
-        cliHelper.execute('docker start mongot2').assertSuccess();
+        const agentStart = cliHelper.execute('docker exec rs102 systemctl start pmm-agent');
+        const mongotStart = cliHelper.execute('docker start mongot2');
+
+        agentStart.assertSuccess();
+        mongotStart.assertSuccess();
       }
     },
   );

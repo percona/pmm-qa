@@ -272,7 +272,6 @@ export default class Dashboards extends BasePage {
     return seconds ? Number(seconds[1]) : NaN;
   };
 
-  /** The threshold color a stat panel in background color mode shows. */
   getStatColor = async (panelName: string): Promise<'green' | 'orange' | 'red'> => {
     const background = await this.builders
       .panelContentByExactName(panelName)

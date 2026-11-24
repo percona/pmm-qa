@@ -2,6 +2,9 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { type NestedLocators } from '@pages/base.page';
 import { Timeouts } from '@helpers/timeouts';
+import ServerApi from '@api/server.api';
+import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
+import { menuItemMinPmmVersion } from '@helpers/versionGates';
 
 let nonAdminId: number | undefined;
 
@@ -185,9 +188,14 @@ pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNaviga
 
 pmmTest(
   'PMM-T2202 Traverse all the menu items in left menu sidebar @new-navigation',
-  async ({ leftNavigation }) => {
+  async ({ leftNavigation, request }) => {
+    const version = await getServerVersion(new ServerApi(request));
+    const skippedPaths = Object.entries(menuItemMinPmmVersion)
+      .filter(([, minVersion]) => serverVersionBelow(version, minVersion))
+      .map(([path]) => path);
+
     await pmmTest.step('Traverse menu items', async () => {
-      await leftNavigation.verifyAllMenuItems();
+      await leftNavigation.verifyAllMenuItems(skippedPaths);
     });
   },
 );
