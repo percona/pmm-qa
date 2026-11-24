@@ -220653,22 +220653,20 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-24T08:19:14Z",
         "suites": [
+          "CLI Integration Compatibility",
           "CLI Integration"
-        ]
-      },
-      {
+        ],
+        "verdict": "test bug",
+        "summary": "PSMDB Replica 6.x/7.x/8.x on clients 3.8.0-3.10.0 (15 lanes) failed the same 8 update tests as nights 115 and 116 ('pmm-admin: error: unexpected argument update'), and help tests failed PMM-T2751-T2753 with 'Unexpected end of JSON input' again. Both are fixed by pmm-qa#1815, which merged after this night started (the run used main 7271e147). No new cause.",
+        "link": "https://github.com/percona/pmm-qa/pull/1815",
         "by": "Investigator routine",
-        "at": "2026-11-24T08:19:14Z",
-        "suites": [
-          "CLI Integration Compatibility"
-        ]
-      },
+        "at": "2026-11-24T09:20:06Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-24T08:19:14Z",
