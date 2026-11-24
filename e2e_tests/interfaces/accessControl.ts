@@ -10,7 +10,7 @@ export interface AccessRole {
 export interface AccessRoleForm {
   description: string;
   label: string;
-  operator: string;
+  operator: '!=' | '!~' | '=' | '=~';
   title: string;
   value: string;
 }
