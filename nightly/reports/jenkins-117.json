@@ -4015,6 +4015,16 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15835",
       "by": "Investigator routine",
       "at": "2026-11-24T09:20:18Z"
+    },
+    {
+      "suites": [
+        "Integrations"
+      ],
+      "verdict": "product bug",
+      "summary": "GSSAPI OL9 CLI PSMDB Replica 6.x: PMM-T2792 waited 60 s for mongodb_exporter Running after pmm-admin update; PMM Server kept 'Starting' (74 passed). That is the open PMM-15962 (UpdateService overwrites a concurrent status report); the RC ships without its fix, percona/pmm#6394. Diagnosed from the job log; recurrence added to the ticket.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15962",
+      "by": "Investigator routine",
+      "at": "2026-11-24T09:20:24Z"
     }
   ],
   "claims": [
@@ -4030,13 +4040,6 @@
       "at": "2026-11-24T08:19:14Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-24T08:19:14Z",
-      "suites": [
-        "Integrations"
       ]
     },
     {
