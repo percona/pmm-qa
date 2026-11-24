@@ -655,7 +655,7 @@ recorded_config_dir() {
   grep -Fq 'admin.createUser({ user: "pmm", pwd: "pmmpass"' "$DOCKER_CALLS"
   # shellcheck disable=SC2016 # a literal $external
   ! grep -Fq '$external' "$DOCKER_CALLS" || false
-  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=psmdb-standalone\._[0-9]+ psmdb-standalone pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=psmdb-standalone -e PMM_AGENT_SETUP_NODE_NAME=psmdb-standalone\._[0-9]+ psmdb-standalone pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
   grep -Eq '^exec psmdb-standalone pmm-admin add mongodb --enable-all-collectors --agent-password=mypass psmdb-standalone_[0-9]+ --environment=psmdb-dev --cluster=standalone --username=pmm --password=pmmpass --host=psmdb-standalone --port=27017$' "$DOCKER_CALLS"
   grep -q '^exec psmdb-standalone mgodatagen -f /etc/datagen/replicaset.json --uri=mongodb://pmm:pmmpass@127.0.0.1:27017$' "$DOCKER_CALLS"
 }
