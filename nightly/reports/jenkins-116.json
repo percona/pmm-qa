@@ -3986,6 +3986,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1815",
       "by": "Investigator routine",
       "at": "2026-11-24T03:21:19Z"
+    },
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "unstable",
+      "summary": "3.9.0 · PXC 8.4: setup failed at 'Run workload' (sysbench prepare still running after 60 attempts). That one GitHub-hosted runner was slow at every step: docker pull took 15m21s (31 s on a sibling), PXC image prepare 393 s, the whole setup 11m40s. The other 4 PXC 8.4 lanes finished setup in about 1.5 min. Re-running only that job passed: setup 1m38s, 12 passed, 5 version-gated skips.",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/45296780533/job/138186279532",
+      "by": "Investigator routine",
+      "at": "2026-11-24T03:21:25Z"
     }
   ],
   "claims": [
