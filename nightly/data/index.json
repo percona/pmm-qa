@@ -220704,16 +220704,19 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15794",
         "by": "Investigator routine",
         "at": "2026-11-24T09:20:29Z"
+      },
+      {
+        "suites": [
+          "E2E Tests"
+        ],
+        "verdict": "test bug",
+        "summary": "amd64 E2E on the same RC digest that passed on night 115: PMM-T1946 waited only the default 5 s for the panel title, but the PMM UI loads the Grafana iframe twice (3.10.0 too), so it renders about 4 s after goto. PMM-T2197: after the UI sign-out the admin Basic header makes the page loop through auth-tokens/rotate (401 clears pmm_session); one landed 3 ms after the non-admin login and cleared it, and retries then hit 412 on the fixed user name. On a loaded CHAOS VM main failed PMM-T1946 4/4 with CI's error; the fix passed 10/10.",
+        "link": "https://github.com/percona/pmm-qa/pull/1818",
+        "by": "Investigator routine",
+        "at": "2026-11-24T09:20:35Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-24T08:19:14Z",
-        "suites": [
-          "E2E Tests"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-24T08:19:14Z",
