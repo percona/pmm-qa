@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as mongo from '@helpers/mongo';
@@ -11,8 +12,6 @@ const replIpPort = 'rs101:27017';
 const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
 
 test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
-  test.use({ pmmClientContainer: containerName });
-
   const serviceName = 'mongo_update_cli';
   const database = 'pmm_qa_update';
   const agentPassword = 'mypass';
@@ -47,6 +46,7 @@ test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
 
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
 
     // collstats and the profiler only see a database that already exists.
     await mongo.runOnPrimary(containerName, mongoUri, `db.getSiblingDB("${database}").items.insertOne({ created: new Date() })`);

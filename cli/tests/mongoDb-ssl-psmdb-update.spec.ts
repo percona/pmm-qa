@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -10,8 +11,6 @@ const username = 'pmm_mongodb';
 const password = '5M](Q%q/U+YQ<^m';
 
 test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
-  test.use({ pmmClientContainer: containerName });
-
   const serviceName = 'mongo_tls_update_cli';
   const agentPassword = 'mypass';
   let serviceAdded = false;
@@ -19,6 +18,7 @@ test.describe('TLS PSMDB pmm-admin update', { tag: '@ssl-psmdb' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'TLS PSMDB psmdb-server docker container should exist. please run pmm-framework with --database ssl_psmdb');
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
   });
 
   test.afterEach(async ({}) => {
