@@ -1,4 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
+import apiEndpoints from '@helpers/apiEndpoints';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -16,19 +18,26 @@ const psRole = {
 const pgRole = { filter: '{service_type="postgresql"}', title: `pgRole_${Date.now()}` };
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+  accessControlFound = (await api.settingsApi.getSettings()).settings.enable_access_control;
   userIds.ps = await grafanaHelper.createUser(users.ps, password);
   userIds.pg = await grafanaHelper.createUser(users.pg, password);
   await grafanaHelper.authorize();
-  accessControlFound = (await api.settingsApi.getSettings()).settings.enable_access_control;
   await api.settingsApi.enableAccessControl();
 });
 
-pmmTest.afterEach(async ({ api, grafanaHelper }) => {
+pmmTest.afterEach(async ({ api, grafanaHelper, request }) => {
   const roles = (await api.accessControlApi.getRoles()).filter(({ title }) =>
     [psRole.title, pgRole.title].includes(title),
   );
 
-  for (const { role_id } of roles) await api.accessControlApi.deleteRole(role_id);
+  for (const { role_id } of roles) {
+    const response = await request.delete(`${apiEndpoints.accessControl.roles}/${role_id}`, {
+      data: { replacement_role_id: 1, role_id },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), `Delete role ${role_id}`).toEqual(200);
+  }
 
   for (const userId of Object.values(userIds)) {
     expect((await grafanaHelper.deleteUser(userId)).status(), `Delete user ${userId}`).toEqual(200);
