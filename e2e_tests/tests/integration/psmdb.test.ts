@@ -7,6 +7,9 @@ const members = ['rs101', 'rs102', 'rs103'];
 const arbiterLog = (level: string) =>
   `docker exec rs103 grep -q "level=${level}.*some metrics might be unavailable on arbiter nodes" /var/log/pmm-agent.log`;
 const delaySeconds = 10;
+// The lag is reported in whole seconds between the delayed member's applies, so with a 10 s delay it moves between 8 and 10 s;
+// an undelayed member stays at 0-3 s.
+const minLagSeconds = delaySeconds / 2;
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -44,10 +47,10 @@ pmmTest(
     await dashboard.builders.panelByExactName('Replication Lag').scrollIntoViewIfNeeded();
     await expect
       .poll(() => dashboard.getLegendMaxSeconds('Replication Lag', secondary), {
-        message: `Replication Lag Max for ${secondary} should reach the ${delaySeconds} s delay and be shown in seconds`,
+        message: `Replication Lag Max for ${secondary} should show the ${delaySeconds} s delay (at least ${minLagSeconds} s) in seconds`,
         timeout: Timeouts.FIVE_MINUTES,
       })
-      .toBeGreaterThanOrEqual(delaySeconds);
+      .toBeGreaterThanOrEqual(minLagSeconds);
   },
 );
 
@@ -68,9 +71,9 @@ pmmTest(
     await dashboard.builders.panelByExactName('Replication Lag').scrollIntoViewIfNeeded();
     await expect
       .poll(() => dashboard.getLegendMaxSeconds('Replication Lag', delayed), {
-        message: `Replication Lag Max for ${delayed} should reach the ${delaySeconds} s delay and be shown in seconds`,
+        message: `Replication Lag Max for ${delayed} should show the ${delaySeconds} s delay (at least ${minLagSeconds} s) in seconds`,
         timeout: Timeouts.FIVE_MINUTES,
       })
-      .toBeGreaterThanOrEqual(delaySeconds);
+      .toBeGreaterThanOrEqual(minLagSeconds);
   },
 );
