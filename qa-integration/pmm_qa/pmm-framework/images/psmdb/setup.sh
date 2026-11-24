@@ -162,7 +162,6 @@ psmdb_pbm_uri() {
   printf 'mongodb://pbm:pbmpass@%s/?replicaSet=%s' "${hosts%,}" "$set"
 }
 
-# PBM from the Percona repository, as the PBM documentation installs it.
 psmdb_pbm_install() {
   retry_on "$PMM_REPO_ERRORS|metadata_lock" 3 "PBM install on $1" docker exec --user root "$1" sh -ceu "
     dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
@@ -170,9 +169,6 @@ psmdb_pbm_install() {
     dnf install -y percona-backup-mongodb-$PBM_VERSION.el9 cronie" >/dev/null
 }
 
-# PBM run the way a customer does who drives it from a host of their own, not through PMM Backup
-# Management: an empty container on the setups' base, one pbm-agent per member reaching its mongod
-# over the network, PITR on and a cron job taking a logical backup every 15 minutes.
 # Usage: psmdb_external_pbm CLUSTER_URI NODE...
 psmdb_external_pbm() {
   local uri=$1 name=pbm-external node
