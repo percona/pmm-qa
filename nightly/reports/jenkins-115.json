@@ -4015,6 +4015,16 @@
       "link": "https://github.com/percona/pmm-qa/pull/1815",
       "by": "Investigator routine",
       "at": "2026-11-24T01:04:36Z"
+    },
+    {
+      "suites": [
+        "Integrations"
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T1889 (GSSAPI OL9 PSMDB e2e): Replication Lag Max stayed at 8 s on all 3 attempts. #1794 requires Max >= the 10 s delay, but the whole-second lag of a 10 s delayed member moves between 8 and 10 s (measured on the VM). Fix requires half the delay; PMM-T1775 has the same assertion and gets the same fix.",
+      "link": "https://github.com/percona/pmm-qa/pull/1815",
+      "by": "Investigator routine",
+      "at": "2026-11-24T01:04:41Z"
     }
   ],
   "claims": [
