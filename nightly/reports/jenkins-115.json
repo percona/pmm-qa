@@ -3984,20 +3984,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "PSMDB Replica 6.x/7.x/8.x on clients 3.8.0-3.10.0 (15 lanes): 8 tests failed with 'pmm-admin: error: unexpected argument update'. versionGate skipped them, but the afterEach hooks of 'more update flags' and update-target (new in #1793) still ran pmm-admin update. Reproduced on a VM with the 3.8.0 client: main 8 failed, fix 15 skipped.",
+      "link": "https://github.com/percona/pmm-qa/pull/1815",
+      "by": "Investigator routine",
+      "at": "2026-11-24T01:04:24Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-23T23:07:24Z",
       "suites": [
         "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-23T23:07:24Z",
-      "suites": [
-        "CLI Integration Compatibility"
       ]
     },
     {
