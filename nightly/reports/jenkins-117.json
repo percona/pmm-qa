@@ -4055,15 +4055,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1818",
       "by": "Investigator routine",
       "at": "2026-11-24T09:20:41Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-24T08:19:14Z",
       "suites": [
         "Package ARM"
-      ]
+      ],
+      "verdict": "unstable",
+      "summary": "debian12-arm64 / pmm3-client_integration_auth_config: on one GitHub-hosted ubuntu-22.04-arm runner both attempts failed to start PMM Server with 'listen tcp4 :443: bind: address already in use' on the host. The other 7 debian12-arm64 cells passed, and re-running only that job on a fresh runner passed (08:28-08:31).",
+      "link": "https://github.com/percona/pmm-qa/actions/runs/45336895112/job/138315050751",
+      "by": "Investigator routine",
+      "at": "2026-11-24T09:20:47Z"
     }
-  ]
+  ],
+  "claims": []
 }
