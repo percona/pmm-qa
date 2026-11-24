@@ -35,8 +35,6 @@ URL="https://api.github.com/repos/${REPO}/actions/runs/${RUN_ID}"
 
 start_ts=$(date +%s)
 while true; do
-    # One 5xx from the API ended a nightly lane, whose teardown then stopped the PMM
-    # Server under the run it was waiting on; --retry rides out 408/429/5xx and timeouts.
     response=$(curl -fsSL --max-time 30 --retry 10 --retry-delay 15 --retry-max-time 300 \
         -H "Authorization: token ${GH_TOKEN}" \
         -H "Accept: application/vnd.github+json" \

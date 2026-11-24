@@ -59,8 +59,6 @@ URL="https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/run
 
 start_ts=$(date +%s)
 while true; do
-    # A single 5xx here fails the Jenkins lane, whose teardown stops the PMM Server the
-    # just-dispatched run is about to test; --retry rides out 408/429/5xx and timeouts.
     response=$(curl -fsSL --max-time 30 --retry 10 --retry-delay 15 --retry-max-time 300 \
         -H "Authorization: token ${GH_TOKEN}" \
         -H "Accept: application/vnd.github+json" \
