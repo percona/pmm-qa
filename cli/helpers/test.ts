@@ -23,3 +23,16 @@ export const test = base.extend<{ pmmClientContainer: string; versionGate: void 
 });
 
 export { expect };
+
+/**
+ * Skips the calling describe group before its setup runs when the pmm-client of containerName is older than minVersion.
+ * Call it from the group's beforeAll: unlike a skip from versionGate, no beforeEach or afterEach hook then runs.
+ *
+ * @param   containerName   docker container running pmm-agent; empty for the pmm-admin of the host
+ * @param   minVersion      first pmm-client version the group can run against
+ */
+export const requirePmmClient = async (containerName: string, minVersion: string) => {
+  const version = await getPmmAdminVersion(containerName);
+
+  test.skip(versionBelow(version, minVersion), `Requires pmm-client ${minVersion}+`);
+};

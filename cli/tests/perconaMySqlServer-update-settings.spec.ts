@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -8,9 +9,7 @@ const slowlogAgent = 'AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT';
 const exporterAgent = 'AGENT_TYPE_MYSQLD_EXPORTER';
 
 test.describe('Percona Server pmm-admin update settings', { tag: '@percona-server' }, () => {
-  // containerName is discovered in beforeAll, so it is read when each test starts.
   let containerName: string;
-  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   const serviceName = 'mysql_update_settings_cli';
   let serviceAdded = false;
@@ -28,6 +27,7 @@ test.describe('Percona Server pmm-admin update settings', { tag: '@percona-serve
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
     await result.outContains('ps_pmm', 'Percona MySQL docker container should exist. please run pmm-framework with --database ps');
     containerName = result.stdout.trim();
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
   });
 
   test.afterEach(async ({}) => {

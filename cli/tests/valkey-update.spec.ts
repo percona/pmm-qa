@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -10,8 +11,6 @@ const username = 'default';
 const password = 'VKvl41568AsE';
 
 test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
-  test.use({ pmmClientContainer: containerName });
-
   const serviceName = 'valkey_update_cli';
   let serviceAdded = false;
 
@@ -26,6 +25,7 @@ test.describe('Valkey pmm-admin update', { tag: '@valkey' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'Valkey valkey-primary-1 docker container should exist. please run pmm-framework with --database valkey');
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
   });
 
   test.afterEach(async ({}) => {
