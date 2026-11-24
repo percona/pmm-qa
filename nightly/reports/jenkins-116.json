@@ -3996,6 +3996,16 @@
       "link": "https://github.com/percona/pmm-qa/actions/runs/45296780533/job/138186279532",
       "by": "Investigator routine",
       "at": "2026-11-24T03:21:25Z"
+    },
+    {
+      "suites": [
+        "Nightly Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "client 3.8.1 (#1501): wait-for-gh-run-completion.sh got one HTTP 502 from api.github.com at 01:31:14 and exited (curl -f, no retry). The Jenkins post action then ran aws-staging-stop on the PMM Server while the dispatched GH run 45298813191 was still testing it. That run's first test got ECONNREFUSED at 01:31:30, and all 143 tests in its 5 shards failed. Reproduced on a VM: one 502 makes main exit 22. The fix (curl --retry, at most 300 s) survives it.",
+      "link": "https://github.com/percona/pmm-qa/pull/1816",
+      "by": "Investigator routine",
+      "at": "2026-11-24T03:21:30Z"
     }
   ],
   "claims": [
@@ -4004,13 +4014,6 @@
       "at": "2026-11-24T02:58:52Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-24T02:58:52Z",
-      "suites": [
-        "Nightly Compatibility"
       ]
     }
   ]
