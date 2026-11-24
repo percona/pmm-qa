@@ -24,6 +24,15 @@ export default class AccessControlApi {
     throw new Error(`Assign role failed with status ${response.status()} and body: ${body}`);
   };
 
+  deleteRole = async (roleId: number | string) => {
+    const response = await this.request.delete(`${apiEndpoints.accessControl.roles}/${roleId}`, {
+      data: { replacement_role_id: 1, role_id: roleId },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), `Delete role ${roleId}`).toEqual(200);
+  };
+
   ensureRole = async (role: AccessRole): Promise<AccessRoleDetails> => {
     const roles = await this.getRoles();
     const existingRole = roles.find((existingRole) => existingRole.title === role.title);

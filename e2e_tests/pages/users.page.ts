@@ -9,10 +9,6 @@ export default class UsersPage extends BasePage {
         .getByRole('row')
         .filter({ has: this.page.getByRole('cell', { exact: true, name: username }) })
         .getByRole('combobox', { name: 'Access Roles' }),
-    alert: (title: string) =>
-      this.grafanaIframe()
-        .getByRole('status', { exact: true, name: title })
-        .or(this.grafanaIframe().getByRole('alert', { exact: true, name: title })),
     option: (name: string) => this.grafanaIframe().getByRole('option', { exact: true, name }),
   };
   buttons = {

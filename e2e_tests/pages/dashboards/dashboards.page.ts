@@ -359,13 +359,6 @@ export default class Dashboards extends BasePage {
     }
   };
 
-  openDashboard = async (url: string) => {
-    await this.page.goto(url);
-    await this.waitForDashboardToLoad();
-    await expect(this.elements.panelName).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
-    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
-  };
-
   openPanelMenu = async (panelName: string) => {
     await pmmTest.step(`Open ${panelName} panel menu`, async () => {
       await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
@@ -503,9 +496,9 @@ export default class Dashboards extends BasePage {
     }
   };
 
-  // No loadAllPanels() here: rows stay collapsed, so only the panels a dashboard opens with are counted.
   verifyPanelsWithDataInViewAtMost = async (url: string, maxPanelsWithData: number) => {
-    await this.openDashboard(url);
+    await this.page.goto(url);
+    await this.waitForPanelsInView();
     await expect
       .poll(
         async () => (await this.elements.panelName.count()) - (await this.elements.noDataPanelName.count()),
@@ -649,12 +642,13 @@ export default class Dashboards extends BasePage {
     url: string,
     maxNoDataPanels: number,
     timeout = Timeouts.FIVE_MINUTES,
+    loadPanels = this.loadAllPanels,
   ) => {
     await expect
       .poll(
         async () => {
           await this.page.goto(url);
-          await this.loadAllPanels();
+          await loadPanels();
 
           return this.elements.noDataPanelName.count();
         },
@@ -667,21 +661,10 @@ export default class Dashboards extends BasePage {
       .toBeLessThanOrEqual(maxNoDataPanels);
   };
 
-  waitForNoDataPanelsInViewAtMost = async (url: string, maxNoDataPanels: number, timeout: Timeouts) => {
-    await expect
-      .poll(
-        async () => {
-          await this.openDashboard(url);
-
-          return this.elements.noDataPanelName.count();
-        },
-        {
-          intervals: [Timeouts.TEN_SECONDS],
-          message: `${url} should show at most ${maxNoDataPanels} panels without data`,
-          timeout,
-        },
-      )
-      .toBeLessThanOrEqual(maxNoDataPanels);
+  waitForPanelsInView = async () => {
+    await this.waitForDashboardToLoad();
+    await expect(this.elements.panelName).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   };
 
   private changeRow = async (locator: Locator, error: string) => {

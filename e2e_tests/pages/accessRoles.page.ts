@@ -5,10 +5,6 @@ import { AccessRoleForm } from '@interfaces/accessControl';
 export default class AccessRolesPage extends BasePage {
   url = 'graph/roles';
   builders = {
-    alert: (title: string) =>
-      this.grafanaIframe()
-        .getByRole('status', { exact: true, name: title })
-        .or(this.grafanaIframe().getByRole('alert', { exact: true, name: title })),
     option: (label: string) =>
       this.grafanaIframe()
         .getByRole('option')
