@@ -33,13 +33,20 @@ fi
 
 URL="https://api.github.com/repos/${REPO}/actions/runs/${RUN_ID}"
 
+# A file, not stdout: curl clears it before a retry, so a body cut off mid-transfer
+# can't be left in front of the retried one.
+response_file=$(mktemp)
+trap 'rm -f "${response_file}"' EXIT
+
 start_ts=$(date +%s)
 while true; do
-    response=$(curl -fsSL --max-time 30 --retry 10 --retry-delay 15 --retry-max-time 300 \
+    curl -fsSL --max-time 30 --retry 10 --retry-delay 15 --retry-max-time 300 \
+        -o "${response_file}" \
         -H "Authorization: token ${GH_TOKEN}" \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
-        "${URL}")
+        "${URL}"
+    response=$(<"${response_file}")
 
     status=$(echo "${response}" | jq -r '.status // empty')
     conclusion=$(echo "${response}" | jq -r '.conclusion // empty')
