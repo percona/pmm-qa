@@ -35,9 +35,7 @@ test.describe('pmm-admin inventory change agent effects on mysqld_exporter and Q
     const serviceId = output.stdout.match(/Service ID\s*:\s*(\S+)/)?.[1];
     expect(serviceId, `Service ID not found in: ${output.stdout}`).toBeTruthy();
 
-    const agents = (await pmmAdmin.listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
-    exporterId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_MYSQLD_EXPORTER')?.agent_id ?? '';
-    perfschemaId = agents.find((agent) => agent.agent_type === 'AGENT_TYPE_QAN_MYSQL_PERFSCHEMA_AGENT')?.agent_id ?? '';
+    ({ exporterId, perfschemaId } = await pmmAdmin.mysqlAgentIds(containerName, serviceId ?? ''));
     expect(exporterId, `mysqld_exporter for service ${serviceName} not found`).toBeTruthy();
     expect(perfschemaId, `mysql_perfschema_agent for service ${serviceName} not found`).toBeTruthy();
 
@@ -340,8 +338,8 @@ test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@
     const service = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_pmm | head -1`)).stdout.trim().split(/\s+/);
     serviceName = service[1];
     const serviceId = service[3];
-    mysqldExporterId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)).stdout.trim();
-    mysqldPerfschemaAgentId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_perfschema_agent | awk -F' ' '{print $3}'`)).stdout.trim();
+    // Not the text columns: a disabled agent's "Done (disabled)" status shifts them.
+    ({ exporterId: mysqldExporterId, perfschemaId: mysqldPerfschemaAgentId } = await pmmAdmin.mysqlAgentIds(containerName, serviceId));
     expect(mysqldExporterId, `mysqld_exporter of ${serviceName} not found`).toBeTruthy();
     expect(mysqldPerfschemaAgentId, `mysql_perfschema_agent of ${serviceName} not found`).toBeTruthy();
   });
@@ -427,17 +425,39 @@ test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@
       },
     ];
 
-    for (const enableCase of enableCases) {
-      for (const command of [
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-        pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlPerfschemaAgent, mysqldPerfschemaAgentId, enableCase.flag),
-      ]) {
-        const output = await cli.exec(command);
-        await output.assertSuccess();
-        await output.outContains(enableCase.response);
-      }
+    const agentIds = [mysqldExporterId, mysqldPerfschemaAgentId];
 
-      await pmmAdmin.expectAgentsRunning(containerName, [mysqldExporterId, mysqldPerfschemaAgentId], enableCase.running);
+    try {
+      for (const enableCase of enableCases) {
+        await cli.execUntilPersisted(
+          [
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
+            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlPerfschemaAgent, mysqldPerfschemaAgentId, enableCase.flag),
+          ],
+          [enableCase.response],
+          async () => {
+            for (const agentId of agentIds) {
+              expect((await pmmApi.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!enableCase.running);
+            }
+          },
+        );
+
+        await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
+      }
+    } finally {
+      // The later tests change these agents and expect them running.
+      const enableUntilPersisted = (agentType: pmmAdmin.ChangeAgentType, agentId: string) => () => cli.execUntilPersisted(
+        [pmmAdmin.inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
+        [],
+        async () => {
+          expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
+        },
+      );
+
+      await pmmCli.runEach([
+        enableUntilPersisted(pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId),
+        enableUntilPersisted(pmmAdmin.ChangeAgentType.QanMysqlPerfschemaAgent, mysqldPerfschemaAgentId),
+      ]);
     }
   });
 
