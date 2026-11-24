@@ -17,6 +17,17 @@ export default class PrometheusApi {
 
   constructor(private request: APIRequestContext) {}
 
+  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> => {
+    const active = await this.getActiveClusterSyncInstances();
+
+    expect(active, 'Exactly one PCSM instance must hold the HA lease').toHaveLength(1);
+
+    return active[0];
+  };
+
+  getActiveClusterSyncInstances = async (): Promise<PrometheusSample[]> =>
+    await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`);
+
   /** Looked up rather than hardcoded - the UID is generated per deployment. */
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
@@ -108,6 +119,33 @@ export default class PrometheusApi {
     return this.instantQueryValue(
       `max(100 * (1 - kubelet_volume_stats_available_bytes{${selector}} / kubelet_volume_stats_capacity_bytes{${selector}}))`,
     );
+  };
+
+  /** For a series that already exists, waits for a sample newer than the server's time now. */
+  waitForNewSample = async (selector: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    await expect
+      .poll(async () => (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0, {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} has no sample after ${since}`,
+        timeout,
+      })
+      .toBeGreaterThan(since);
+  };
+
+  /** Waits until the series of `selector` with a sample newer than the server's time now equal `value`. */
+  waitForNewValue = async (selector: string, value: number, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    // One query, so the freshness and the value come from the same series.
+    await expect
+      .poll(() => this.instantQueryValue(`max(${selector} and (timestamp(${selector}) > ${since}))`), {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} after ${since}`,
+        timeout,
+      })
+      .toEqual(value);
   };
 
   waitForQueryValue = async (

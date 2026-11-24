@@ -7,6 +7,9 @@ const psContainer = 'ps_pmm_8_4_1';
 const locationName = 'mysql_backups';
 const serviceName = 'mysql-with-backup-inventory';
 const preCheckServiceName = 'mysql-backup-pre-checks';
+// PMM Server images without dnf, EPEL and the Percona repositories need them for the package commands below.
+const installPackageTools =
+  "docker exec --user root pmm-server sh -c '(command -v dnf || microdnf install -y dnf) && dnf install -y epel-release https://repo.percona.com/yum/percona-release-latest.noarch.rpm'";
 const removePreCheckPackages =
   "docker exec --user root pmm-server sh -c 'dnf remove -y Percona-Server-server-57 percona-xtrabackup-24 qpress && percona-release disable ps-57 release && percona-release disable tools release'";
 let backupManagementEnabled: boolean;
@@ -21,6 +24,7 @@ pmmTest.beforeAll(async ({ api, cliHelper, credentials }) => {
   await api.backupsApi.removeAllLocations();
   locationId = await api.backupsApi.addS3Location(locationName, 'MySQL backup location');
   await api.inventoryApi.removeNodesByName([preCheckServiceName]);
+  cliHelper.execute(installPackageTools).assertSuccess();
   cliHelper.execute(removePreCheckPackages).assertSuccess();
   cliHelper.removeService(psContainer, ServiceType.mysql, serviceName);
   cliHelper

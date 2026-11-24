@@ -14,6 +14,7 @@ export interface InventoryAgent {
 export type GetAgents = Record<string, InventoryAgent[]>;
 
 export interface GetNode {
+  address?: string;
   agents?: NodeAgent[];
   node_id: string;
   node_name: string;
@@ -26,6 +27,7 @@ export interface GetServices {
 
 export enum ServiceType {
   external = 'external',
+  haproxy = 'haproxy',
   mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
@@ -35,6 +37,11 @@ export enum ServiceType {
 
 export enum AgentStatus {
   running = 'AGENT_STATUS_RUNNING',
+}
+
+export enum QanAgentType {
+  mysqlSlowlog = 'qan-mysql-slowlog-agent',
+  postgresqlPgStatements = 'qan-postgresql-pgstatements-agent',
 }
 
 export interface GetService {
@@ -47,11 +54,7 @@ export interface GetService {
   environment: string;
   cluster: string;
   replication_set: string;
-  custom_labels: {
-    additionalProp1: string;
-    additionalProp2: string;
-    additionalProp3: string;
-  };
+  custom_labels?: Record<string, string>;
   external_group: string;
   address: string;
   port: 0;
@@ -79,7 +82,7 @@ export interface GetService {
         additionalProp3: string;
       };
       disabled: boolean;
-      disabled_collectors: [string];
+      disabled_collectors: string[];
       listen_port: 0;
       log_level: string;
       max_query_length: 0;
@@ -91,17 +94,14 @@ export interface GetService {
         is_tls_certificate_key_file_password_set: true;
         authentication_mechanism: string;
         authentication_database: string;
-        stats_collections: [string];
+        stats_collections: string[];
         collections_limit: 0;
         enable_all_collectors: true;
+        enable_diagnostic_data_histograms?: boolean;
       };
       mysql_options: {
         is_tls_key_set: true;
-        extra_dsn_params: {
-          additionalProp1: string;
-          additionalProp2: string;
-          additionalProp3: string;
-        };
+        extra_dsn_params: Record<string, string>;
       };
       node_id: string;
       is_password_set: true;
@@ -115,6 +115,7 @@ export interface GetService {
       push_metrics: true;
       query_examples_disabled: true;
       comments_parsing_disabled: true;
+      connection_timeout?: string | null;
       rds_basic_metrics_disabled: true;
       rds_enhanced_metrics_disabled: true;
       runs_on_node_id: string;
@@ -135,12 +136,15 @@ export interface GetService {
   version: string;
 }
 
+export type ServiceAgent = GetService['agents'][number];
+
 export interface AddRdsParameters {
   address: string;
   awsAccessKey: string;
   awsSecretKey: string;
   instanceId: string;
   password: string;
+  rdsExporter?: boolean;
   serviceName: string;
   username: string;
 }
@@ -149,6 +153,15 @@ export interface AddServiceResponse {
   mongodb?: { service: { node_id: string; service_id: string } };
   mysql?: { service: { node_id: string; service_id: string } };
   postgresql?: { service: { node_id: string; service_id: string } };
+}
+
+export interface RdsExporter {
+  agent_id: string;
+  agent_type: string;
+  aws_access_key?: string;
+  aws_role_arn?: string;
+  is_aws_secret_key_set?: boolean;
+  status: string;
 }
 
 export interface AddRdsResponse {

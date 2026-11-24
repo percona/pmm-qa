@@ -4,6 +4,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 import { rejectedTemplates, thresholdTemplates } from '@testdata/alertThresholds';
+import { qanTemplate } from '@testdata/clickhouseAlertTemplates';
 
 pmmTest.describe.configure({ mode: 'default' });
 
@@ -43,22 +44,24 @@ pmmTest.afterEach(async ({ api, grafanaHelper }) => {
 pmmTest(
   'PMM-T2364 - Verify a node threshold override makes the alert fire only for that node, and clearing it restores the default @fb-alerting',
   async ({ alertingPage, alertStatusPage, alertThresholdsPage, api, nodesPage, page }) => {
-    const ruleName = 'dt-cpu-80';
+    // CPU load never exceeds 100%, so the client nodes, which report the runner's CPU, can't fire on the default.
+    const ruleName = 'dt-cpu-100';
 
-    await pmmTest.step('Only Node high CPU load is a Dynamic built-in template', async () => {
+    await pmmTest.step('Only CPU load and QAN slow queries are Dynamic templates', async () => {
       await alertingPage.openTemplates();
       await expect(alertingPage.builders.dynamicBadge('Node high CPU load')).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
-      await expect(alertingPage.elements.dynamicBadges).toHaveCount(1);
+      await expect(alertingPage.builders.dynamicBadge(qanTemplate.summary)).toBeVisible();
+      await expect(alertingPage.elements.dynamicBadges).toHaveCount(2);
     });
 
-    await pmmTest.step('Create a rule from the template with the default of 80', async () => {
+    await pmmTest.step('Create a rule from the template with the default of 100', async () => {
       await api.alertingApi.createFastRuleFromTemplate({
         folderUid,
         name: ruleName,
         templateName: 'pmm_node_high_cpu_load',
-        threshold: 80,
+        threshold: 100,
       });
     });
 
@@ -66,7 +69,7 @@ pmmTest(
       await page.goto(nodesPage.url);
       await nodesPage.openAlertThresholds('pmm-server');
       await expect(alertThresholdsPage.elements.title).toHaveText('Alert thresholds: pmm-server');
-      await alertThresholdsPage.verifyDefault(ruleName, 80);
+      await alertThresholdsPage.verifyDefault(ruleName, 100);
     });
 
     await pmmTest.step('Set an override of 1 on pmm-server', async () => {
@@ -79,7 +82,7 @@ pmmTest(
       await alertThresholdsPage.verifyOverride(ruleName, '1');
       await alertThresholdsPage.buttons.cancel.click();
       await nodesPage.openAlertThresholds(otherNode);
-      await alertThresholdsPage.verifyOverride(ruleName, '80');
+      await alertThresholdsPage.verifyOverride(ruleName, '100');
       await alertThresholdsPage.buttons.cancel.click();
     });
 
@@ -87,11 +90,27 @@ pmmTest(
       await alertStatusPage.verifyAlertFiring(ruleName);
 
       const firing = ((await api.alertingApi.getRule(ruleName))?.alerts ?? []).filter(
-        ({ state }) => state === 'Alerting',
+        ({ state }) => !state.startsWith('Normal'),
       );
 
       expect(firing.map(({ labels }) => labels.node_name)).toEqual(['pmm-server']);
       expect(firing[0].annotations?.description).toContain('CPU load is more than 1%');
+    });
+
+    await pmmTest.step('The Alerts page lists the query, threshold and condition steps', async () => {
+      await alertStatusPage.openAlertDetails(ruleName, 'pmm-server');
+      await expect(alertStatusPage.elements.ruleSteps).toHaveCount(3);
+      await expect(alertStatusPage.builders.ruleStepHeading('A')).toHaveText('A · Query');
+      await expect(alertStatusPage.builders.ruleStep('A')).toContainText('node_cpu_seconds_total');
+      await expect(alertStatusPage.builders.ruleStepHeading('T_threshold')).toHaveText(
+        'T_threshold · Threshold',
+      );
+      await expect(alertStatusPage.builders.ruleStep('T_threshold')).toContainText(
+        'Per-target threshold: the override set for the target, or the rule default.',
+      );
+      await expect(alertStatusPage.builders.ruleStepHeading('C')).toHaveText('C · Math · condition');
+      await expect(alertStatusPage.builders.ruleStep('C')).toContainText('$A > $T_threshold');
+      await expect(alertStatusPage.builders.detailsParagraph(/ \/ 1 \((\d+% )?over\)$/)).toBeVisible();
     });
 
     await pmmTest.step('Reset to default clears the override', async () => {
@@ -99,7 +118,7 @@ pmmTest(
       await nodesPage.openAlertThresholds('pmm-server');
       await alertThresholdsPage.resetOverride(ruleName);
       await nodesPage.openAlertThresholds('pmm-server');
-      await alertThresholdsPage.verifyOverride(ruleName, '80');
+      await alertThresholdsPage.verifyOverride(ruleName, '100');
       await alertThresholdsPage.buttons.cancel.click();
     });
 
