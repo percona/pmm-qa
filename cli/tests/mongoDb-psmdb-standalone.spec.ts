@@ -13,7 +13,7 @@ test.describe('Percona Server MongoDB (PSMDB) standalone without PBM CLI tests',
     await result.outContains(containerName, 'PSMDB standalone container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=standalone_no_pbm');
   });
 
-  test('PMM-15232 - Verify a standalone without PBM serves only mongodb_pbm_cluster_backup_configured 0 and its exporter logs nothing about PBM', async ({}) => {
+  test('PMM-T2854 - Verify a standalone without PBM serves only mongodb_pbm_cluster_backup_configured 0 and its exporter logs nothing about PBM', async ({}) => {
     await expectMongoUp(containerName, containerName, pbm.exporterPassword);
 
     const spawned = await pbm.spawnScrape(containerName, containerName, pbm.exporterPath, { scrapes: 3 });

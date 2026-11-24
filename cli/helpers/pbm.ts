@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import { runOnPrimary } from '@helpers/mongo';
@@ -10,6 +11,7 @@ export const baselineVersion = '3.10.0';
 export const baselineExporterPath = `/tmp/mongodb_exporter-${baselineVersion}`;
 export const agentLogPath = '/var/log/pmm-agent.log';
 export const mongoRootUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
+export const pitrSpanSeconds = 15;
 
 // The PBM metrics 3.10.0 already has: their series and values must not change.
 export const existingPbmMetrics = [
@@ -29,8 +31,6 @@ export interface Series {
 
 const samplePattern = /^([a-zA-Z_:][a-zA-Z0-9_:]*)(?:\{(.*)\})?\s+(\S+)$/;
 const labelPattern = /([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"/g;
-
-export const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
 /**
  * Parse the samples of an exporter scrape whose metric name starts with a prefix
@@ -159,7 +159,6 @@ export async function spawnScrape(
 
 /**
  * Put the 3.10.0 mongodb_exporter into containers, downloading it into the first one only when no run has before.
- * The path is the one the exporter size and memory test caches it at.
  */
 export async function ensureBaselineExporter(containers: string[]) {
   const [first, ...others] = containers;
@@ -231,35 +230,26 @@ export async function pitrRangeEnd(container: string): Promise<number | undefine
 
 export const externalPbmContainer = 'pbm-external';
 
-let externalPbm: boolean | undefined;
-
 /**
  * Whether PBM runs in the pbm-external container of pmm-framework's EXTERNAL_PBM=true, with a pbm-agent@<member> unit for each member
  * there and the members' own pbm-agent masked
  */
-export async function isExternalPbm(): Promise<boolean> {
-  if (externalPbm === undefined) {
-    externalPbm = (await cli.exec(`docker ps -q -f 'name=^${externalPbmContainer}$'`)).stdout.trim() !== '';
-  }
-
-  return externalPbm;
-}
-
-/**
- * The container PBM's package is installed in for a member: the pbm-external container, or the member itself
- */
-export async function pbmPackageHost(member: string): Promise<string> {
-  return (await isExternalPbm()) ? externalPbmContainer : member;
-}
+export const isExternalPbm = async () => (await cli.exec(`docker ps -q -f 'name=^${externalPbmContainer}$'`)).stdout.trim() !== '';
 
 /**
  * Stop or start the cron job of an external PBM. It takes a backup every 15 minutes, which would fall into the middle of a test that
- * counts backups or watches PITR. Without an external PBM there is none.
+ * counts backups or watches PITR, or hold the lock a test's own backup needs. Without an external PBM there is none.
  */
-export async function setExternalCron(action: 'start' | 'stop') {
+export async function setExternalCron(container: string, action: 'start' | 'stop') {
   if (!(await isExternalPbm())) return;
 
   await (await cli.exec(`docker exec ${externalPbmContainer} systemctl ${action} crond`)).assertSuccess();
+  if (action === 'start') return;
+
+  // Stopping crond leaves a backup it has just started running, and PBM refuses any other operation until that one ends.
+  await expect(async () => {
+    expect((await pbmStatus(container)).running?.type, 'operation PBM is running').toBeUndefined();
+  }).toPass({ intervals: [3_000], timeout: 120_000 });
 }
 
 export async function setAgents(containers: string[], action: 'start' | 'stop' | 'kill') {
@@ -303,29 +293,23 @@ export async function expectAgentsOk(container: string, timeout = 120_000) {
   }).toPass({ intervals: [3_000], timeout });
 }
 
-export interface StartedOperation {
-  name: string;
-  output: string;
-}
-
 /**
  * Start a PBM backup or restore and return its name. The CLI gives up waiting for the agents' first answer after 30 seconds,
  * which a physical backup can take longer than, but the operation goes on, so its error is ignored once the name is known.
  */
-export async function startOperation(container: string, args: string): Promise<StartedOperation> {
-  let started: StartedOperation | undefined;
+export async function startOperation(container: string, args: string): Promise<string> {
+  let name = '';
 
   await expect(async () => {
     const output = await pbm(container, args);
     const text = `${output.stdout}${output.stderr.text}`;
-    const name = text.match(/Starting (?:backup|restore) '?([^'\s]+)/)?.[1];
 
+    name = text.match(/Starting (?:backup|restore) '?([^'\s]+)/)?.[1] ?? '';
     // Another operation, such as the resync a configuration change starts, can still hold PBM's lock.
     expect(name, `pbm ${args} did not start an operation: ${text}`).toBeTruthy();
-    started = { name: name ?? '', output: text };
   }).toPass({ intervals: [3_000], timeout: 120_000 });
 
-  return started as StartedOperation;
+  return name;
 }
 
 export async function countBackupRecords(container: string, filter: string): Promise<number> {
@@ -342,46 +326,24 @@ export async function backupStatus(container: string, name: string): Promise<str
 }
 
 /**
- * Wait until a backup has a status. A backup that ends in error stops the wait, and a failure carries what PBM says about it.
- */
-export async function expectBackupStatus(container: string, name: string, status: 'done' | 'error', timeout = 300_000) {
-  const deadline = Date.now() + timeout;
-  let current = 'not found';
-  let detail = '';
-
-  do {
-    const output = await pbm(container, `describe-backup ${name} -o json`);
-
-    if (output.code === 0) {
-      const meta = JSON.parse(output.stdout) as { status: string, error?: string };
-
-      current = meta.status;
-      detail = meta.error ?? '';
-    } else {
-      current = 'not found';
-      detail = `${output.stdout}${output.stderr.text}`.trim();
-    }
-    if (current === status || current === 'error') break;
-    await sleep(5_000);
-  } while (Date.now() < deadline);
-
-  if (current !== status) {
-    const logs = await pbm(container, 'logs --tail=40');
-
-    expect(current, `status of backup ${name}: ${detail}\n${logs.stdout}`).toEqual(status);
-  }
-}
-
-/**
- * Take a backup and wait until it is done
+ * Take a backup and wait until it is done. A backup that ends in error stops the wait, and a failure carries what PBM says about it.
  *
  * @param   container   docker container to run pbm in
  * @param   type        backup type
  * @return  name of the backup
  */
 export async function takeBackup(container: string, type: 'logical' | 'physical' = 'logical'): Promise<string> {
-  const { name } = await startOperation(container, `backup --type=${type}`);
-  await expectBackupStatus(container, name, 'done', type === 'physical' ? 600_000 : 300_000);
+  const name = await startOperation(container, `backup --type=${type}`);
+  const deadline = Date.now() + (type === 'physical' ? 600_000 : 300_000);
+  let meta: { status: string, error?: string } = { status: 'not found' };
+
+  while (!['done', 'error'].includes(meta.status) && Date.now() < deadline) {
+    await sleep(5_000);
+    meta = await pbmJson<typeof meta>(container, `describe-backup ${name}`).catch(() => ({ status: 'not found' }));
+  }
+  if (meta.status !== 'done') {
+    expect(meta.status, `status of backup ${name}: ${meta.error ?? ''}\n${(await pbm(container, 'logs --tail=40')).stdout}`).toEqual('done');
+  }
 
   return name;
 }
@@ -402,8 +364,6 @@ export async function expectRestoreStatus(container: string, name: string, statu
     expect((await describeRestore(container, name)).status, `status of restore ${name}`).toEqual(status);
   }).toPass({ intervals: [2_000], timeout });
 }
-
-export const pbmStorageBucket = async (container: string) => pbmConfigValue(container, 'storage.s3.bucket');
 
 const resyncOutcome = /^(\S+Z) (?:I .*\[resync\] succeed|E .*\[resync\] resync:)/;
 
@@ -458,8 +418,6 @@ export async function fixStorage(container: string, bucket: string) {
   await resync(container);
   await expectAgentsOk(container);
 }
-
-export const pauseStorage = async () => (await cli.exec('docker pause minio')).assertSuccess();
 
 /**
  * Delete the restore history PBM keeps in the storage and imports into pbmRestores on a resync, which only a
