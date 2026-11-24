@@ -8,8 +8,14 @@ const environment = 'psmdb-dev';
 const cluster = 'replicaset';
 const pbmUri = 'mongodb://pbm:pbmpass@rs101:27017,rs102:27017,rs103:27017/?replicaSet=rs';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, mongoDbHelper }) => {
   await grafanaHelper.authorize();
+  // A backup the cron job takes during the test would replace the test's own as the latest one.
+  await mongoDbHelper.setExternalPbmCron(pbmUri, 'stop');
+});
+
+pmmTest.afterEach(async ({ mongoDbHelper }) => {
+  await mongoDbHelper.setExternalPbmCron(pbmUri, 'start');
 });
 
 pmmTest(
