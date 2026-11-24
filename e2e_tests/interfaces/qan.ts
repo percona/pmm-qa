@@ -10,7 +10,7 @@ export interface QanResponse<T = Record<string, unknown>> {
 }
 
 export interface QanMetricsBody {
-  metrics?: Record<string, { sum?: number }>;
+  metrics?: Record<string, { avg?: number; cnt?: number; sum?: number }>;
 }
 
 export interface QanLabelsBody {

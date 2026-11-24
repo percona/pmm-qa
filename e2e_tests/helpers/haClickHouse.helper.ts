@@ -1,6 +1,7 @@
 import K8sHelper from '@helpers/k8s.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 
 const clickHouseSelector = 'clickhouse.altinity.com/chi';
 const qanApiLog = '/srv/logs/qan-api2.log';
@@ -25,7 +26,8 @@ export default class HaClickHouseHelper {
   /** A Replicated `pmm` under a fresh UUID, the split PMM-15785 repairs. */
   createStrayPmm = (pod: string): void => {
     this.dropPmm(pod);
-    this.query(pod, `CREATE DATABASE pmm ${replicatedEngine}`);
+    // ClickHouse 26.3 accepts the {uuid} macro only with an explicit UUID or ON CLUSTER.
+    this.query(pod, `CREATE DATABASE pmm UUID '${randomUUID()}' ${replicatedEngine}`);
   };
 
   dropPmm = (pod: string): void => {

@@ -27,6 +27,7 @@ export default class AddInstancePage extends BasePage {
     accessKeyMode: this.page.getByRole('radio', { exact: true, name: 'Access key' }),
     addService: this.page.getByTestId('add-service-submit'),
     azure: this.page.getByTestId('azure-instance'),
+    disableQueryExamples: this.page.getByTestId('switch-input-disable-query-examples').getByRole('switch'),
     discover: this.page.getByTestId('add-service-submit'),
     mongodbProfiler: this.page.getByTestId('switch-input-qan-mongodb-profiler').getByRole('switch'),
     mysql: this.page.getByTestId('mysql-instance'),

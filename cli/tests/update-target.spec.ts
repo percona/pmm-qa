@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -10,8 +11,6 @@ const containerName = 'rs102';
 const replIpPort = 'rs102:27017';
 
 test.describe('PSMDB pmm-admin update target selection', { tag: '@psmdb' }, () => {
-  test.use({ pmmClientContainer: containerName });
-
   const ownServiceName = 'mongo_update_target_cli';
   let setupService: pmmAdmin.ListService;
   let setupEnvironment: string;
@@ -22,6 +21,7 @@ test.describe('PSMDB pmm-admin update target selection', { tag: '@psmdb' }, () =
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs102 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
 
     const services = await mongoServices();
     expect(services, 'The Node should have the one MongoDB Service of the pmm-framework setup').toHaveLength(1);
