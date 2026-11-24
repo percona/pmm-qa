@@ -259,6 +259,16 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  openAndWaitForReport = async (url: string) => {
+    const report = this.page.waitForResponse((response) =>
+      response.url().includes('/v1/qan/metrics:getReport'),
+    );
+
+    await this.page.goto(url);
+    await report;
+    await this.waitForLoad();
+  };
+
   openExamplesTab = async () => {
     await this.builders.tab('Examples').click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.waitForLoad();

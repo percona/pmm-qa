@@ -10,6 +10,24 @@ const sessionsTableTestId = 'rta-sessions';
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly durationFilterParameter = 'overview.f.queryExecutionDurationMs';
+  readonly expectedTexts = {
+    agentTooOld: (serviceName: string, serviceId: string, agentVersion: string) =>
+      `Service ${serviceName} (id ${serviceId}) has pmm-agent with version ${agentVersion} not supporting Real-Time Analytics; pmm-agent 3.12.0 or later is required.`,
+    consumerRemedy: (consumer: string) =>
+      `UPDATE performance_schema.setup_consumers SET ENABLED='YES' WHERE NAME='${consumer}'`,
+    instrumentRemedy: (instrument: string) =>
+      `UPDATE performance_schema.setup_instruments SET ENABLED='YES', TIMED='YES' WHERE NAME='${instrument}'`,
+    performanceSchemaDisabled:
+      'Real-Time Analytics is not supported for this instance: performance_schema is disabled; it is required for Real-Time Analytics',
+    sessionError: (serviceName: string, reason: string) =>
+      `Real-Time Analytics could not start for ${serviceName}: ${reason}`,
+    sessionWarningsIntro: 'The session is running, but some details cannot be collected from this instance:',
+    statementsConsumerDisabled:
+      'The events_statements_current consumer is disabled, so statement latency, lock time, row counts, temporary table counts and full-scan detection are not collected.',
+    truncatedTooltip:
+      'MySQL keeps only the first 1024 bytes of a statement by default, so this text is incomplete. To see up to 64 KiB, raise performance_schema_max_sql_text_length, restart MySQL, and turn on the events_statements_current consumer.',
+    unavailable: 'Unavailable',
+  };
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   readonly sessionsUrl = 'pmm-ui/rta/sessions';
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
@@ -41,6 +59,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
         .locator('tbody tr')
         .last()
         .getByTestId(/-host-cell$/),
+    hostForQueryByText: (queryText: string) =>
+      this.builders.rowByQueryText(queryText).getByTestId(/-host-cell$/),
     hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-host-cell$/),
     operationIdForRow: (rowIndex: string) =>
       this.builders.rowByIndex(rowIndex).getByTestId(/-operation-id-cell$/),
@@ -50,8 +70,34 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    rowByQueryTextAndHost: (queryText: string, host: string) =>
+      this.builders.rowByQueryText(queryText).filter({
+        has: this.page.getByTestId(/-host-cell$/).getByText(host, { exact: true }),
+      }),
     rowsPerPageOption: (pageSize: string) => this.page.getByRole('option', { exact: true, name: pageSize }),
     serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
+    serviceOptionInGroup: (technology: 'MongoDB' | 'MySQL', serviceId: string) =>
+      this.page
+        .getByRole('listbox')
+        .locator(':scope > li', { has: this.page.getByText(technology, { exact: true }) })
+        .getByTestId(`service-option-${serviceId}`),
+    // Material React Table names the button "Expand" whether the row is expanded or not.
+    sessionExpandButton: (sessionName: string) =>
+      this.builders.sessionRow(sessionName).getByRole('button', { exact: true, name: 'Expand' }),
+    sessionLink: (sessionName: string) =>
+      this.page.getByTestId(sessionsTableTestId).getByRole('link', { exact: true, name: sessionName }),
+    sessionRow: (sessionName: string) =>
+      this.page
+        .getByTestId(sessionsTableTestId)
+        .locator('tbody tr')
+        .filter({ has: this.page.getByRole('link', { exact: true, name: sessionName }) }),
+    sessionStatus: (sessionName: string) => this.builders.sessionRow(sessionName).getByRole('cell').nth(4),
+    sessionStatusIcon: (sessionName: string) =>
+      this.builders.sessionStatusMessage(sessionName).locator('svg'),
+    sessionStatusMessage: (sessionName: string) =>
+      this.builders.sessionRow(sessionName).getByTestId('session-status-message'),
+    sessionStopButton: (sessionName: string) =>
+      this.builders.sessionRow(sessionName).getByTestId('open-stop-modal'),
     technologyForSession: (sessionName: string) =>
       this.page
         .getByTestId(sessionsTableTestId)
@@ -66,6 +112,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
+    confirmStopSession: this.page.getByTestId('stop-session-modal-stop'),
     detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
     detailsRawDataTab: this.page.getByTestId('details-pane-raw-data-tab'),
@@ -96,10 +143,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
     detailsProgramName: this.page.getByTestId('program-name-value'),
+    detailsQueryText: this.page.getByTestId('query-details-pane').getByTestId('query-text'),
     detailsRawData: this.page.getByTestId('query-raw-data'),
     detailsRowsExamined: this.page.getByTestId('rows-examined-value'),
     detailsRowsSent: this.page.getByTestId('rows-sent-value'),
     detailsState: this.page.getByTestId('state-value'),
+    detailsTruncatedChip: this.page.getByTestId('query-text-truncated'),
     detailsUsername: this.page.getByTestId('username-value'),
     durationCells: this.page.getByTestId(realTimeTableTestId).getByTestId(/-elapsed-time-cell$/),
     elapsedTimeColumnHeader: this.page
@@ -127,6 +176,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     technologyColumnHeader: this.page
       .getByTestId(sessionsTableTestId)
       .getByText('Technology', { exact: true }),
+    tooltip: this.page.getByRole('tooltip'),
     userColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('User', { exact: true }),
   };
   inputs = {
@@ -245,6 +295,20 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.inputs.clusterService.click();
     await this.page.getByRole('option').first().click();
     await this.page.keyboard.press('Escape');
+  };
+
+  selectServiceOptions = async (serviceIds: string[]) => {
+    for (const serviceId of serviceIds) {
+      await this.builders.serviceOption(serviceId).click();
+    }
+
+    await this.page.keyboard.press('Escape');
+    await this.elements.servicesListbox.waitFor({ state: 'hidden' });
+  };
+
+  setQueryTextFilter = async (queryText: string) => {
+    await this.openFiltersIfHidden();
+    await this.inputs.filterByQueryText.fill(queryText);
   };
 
   showColumns = async (...columns: ('Database' | 'User')[]) => {

@@ -1,4 +1,4 @@
-import mysql, { Connection, ConnectionOptions } from 'mysql2/promise';
+import mysql, { Connection, ConnectionOptions, RowDataPacket } from 'mysql2/promise';
 import { Timeouts } from './timeouts';
 
 interface MySqlConfig {
@@ -44,12 +44,65 @@ export default class MySQLHelper {
     await admin.end();
   };
 
+  /** A connection that close() kills, for statements that must run in one session. */
+  connect = async () => {
+    const connection = await this.openConnection();
+
+    if (!connection) {
+      throw new Error('MySQLHelper is closed');
+    }
+
+    return connection;
+  };
+
+  query = async (sql: string, values: unknown[] = []) => {
+    const connection = await mysql.createConnection(this.config);
+
+    try {
+      const [rows] = await connection.query<RowDataPacket[]>(sql, values);
+
+      return rows;
+    } finally {
+      await connection.end();
+    }
+  };
+
   /**
-   * Runs `SELECT <queryLabel>, SLEEP(<delay>)` so the labelled statement stays in the processlist.
-   * Resolves when it finishes or close() kills it.
+   * Holds row 1 of rta_qa.lock_time_target for lockMs while a labelled statement waits for it; the
+   * statement then sleeps 30 seconds, so its lock time stays readable while it runs.
    */
-  simulateLongRunningQuery = async (options: { delayMs?: number; queryLabel?: string } = {}) => {
-    const { delayMs = Timeouts.TEN_SECONDS, queryLabel = 'rta-simulated-query' } = options;
+  simulateLockTime = async (queryLabel: string, lockMs: number) => {
+    const holder = await this.openConnection();
+    const waiter = await this.openConnection();
+
+    if (!holder || !waiter) {
+      throw new Error('MySQLHelper is closed');
+    }
+
+    await holder.query('CREATE DATABASE IF NOT EXISTS rta_qa');
+    await holder.query('CREATE TABLE IF NOT EXISTS rta_qa.lock_time_target (id INT PRIMARY KEY)');
+    await holder.query('INSERT IGNORE INTO rta_qa.lock_time_target VALUES (1)');
+    await holder.query('BEGIN');
+    await holder.query('SELECT id FROM rta_qa.lock_time_target WHERE id = 1 FOR UPDATE');
+    void waiter
+      .query('SELECT ?, SLEEP(30) FROM rta_qa.lock_time_target WHERE id = 1 FOR UPDATE', [queryLabel])
+      .catch(this.ignoreAfterClose);
+    await new Promise((resolve) => setTimeout(resolve, lockMs));
+    await holder.query('COMMIT');
+  };
+
+  /**
+   * Runs `SELECT <queryLabel>, SLEEP(<delay>)[, <trailing value>...]` so the labelled statement stays
+   * in the processlist. Resolves when it finishes or close() kills it.
+   */
+  simulateLongRunningQuery = async (
+    options: { delayMs?: number; queryLabel?: string; trailingValues?: string[] } = {},
+  ) => {
+    const {
+      delayMs = Timeouts.TEN_SECONDS,
+      queryLabel = 'rta-simulated-query',
+      trailingValues = [],
+    } = options;
     const connection = await this.openConnection();
 
     if (!connection) {
@@ -57,7 +110,11 @@ export default class MySQLHelper {
     }
 
     await connection
-      .query('SELECT ?, SLEEP(?)', [queryLabel, Math.max(1, Math.ceil(delayMs / 1_000))])
+      .query(`SELECT ?, SLEEP(?)${', ?'.repeat(trailingValues.length)}`, [
+        queryLabel,
+        Math.max(1, Math.ceil(delayMs / 1_000)),
+        ...trailingValues,
+      ])
       .catch(this.ignoreAfterClose);
   };
 
