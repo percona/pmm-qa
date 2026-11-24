@@ -216623,15 +216623,19 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-24T02:58:52Z",
         "suites": [
           "CLI Integration Compatibility"
-        ]
-      },
+        ],
+        "verdict": "test bug",
+        "summary": "PSMDB Replica 6.x/7.x/8.x on clients 3.8.0-3.10.0 (15 lanes): the same 8 tests as night 115 failed again (PMM-T2738-T2740 and PMM-T2788-T2792, 'pmm-admin: error: unexpected argument update'). Their fix, pmm-qa#1815, is still open, so this night ran main without it. No new cause.",
+        "link": "https://github.com/percona/pmm-qa/pull/1815",
+        "by": "Investigator routine",
+        "at": "2026-11-24T03:21:19Z"
+      }
+    ],
+    "claims": [
       {
         "by": "Investigator routine",
         "at": "2026-11-24T02:58:52Z",
