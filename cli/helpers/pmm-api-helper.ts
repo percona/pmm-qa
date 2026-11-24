@@ -54,44 +54,13 @@ export async function waitForServiceStatus(serviceName: string, status: 'STATUS_
  * @param   time            evaluate the query at this time, default now
  * @return  label sets of the returned series
  */
-export async function queryVictoriaMetricsSamples(
-  query: string,
-  adminPassword = process.env.ADMIN_PASSWORD || 'admin',
-  time?: Date,
-): Promise<{ metric: Record<string, string>; value: number }[]> {
+export async function queryVictoriaMetrics(query: string, adminPassword = process.env.ADMIN_PASSWORD || 'admin', time?: Date): Promise<Record<string, string>[]> {
   const at = time ? ` --data-urlencode 'time=${time.toISOString()}'` : '';
-  const output = await exec(
-    `docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'${at}`,
-  );
+  const output = await exec(`docker exec pmm-server curl -sSf -u ${shellQuote(`admin:${adminPassword}`)} -G http://127.0.0.1:8080/prometheus/api/v1/query --data-urlencode 'query=${query}'${at}`);
   await output.assertSuccess();
-  const response = JSON.parse(output.stdout) as {
-    data: {
-      result: { metric: Record<string, string>; value: [number, string] }[];
-    };
-  };
+  const response = JSON.parse(output.stdout) as { data: { result: { metric: Record<string, string> }[] } };
 
-  return response.data.result.map((series) => ({
-    metric: series.metric,
-    value: Number(series.value[1]),
-  }));
-}
-
-/**
- * Run an instant PromQL query against PMM Server's VictoriaMetrics
- *
- * @param   query           PromQL query; must not contain single quotes
- * @param   adminPassword   PMM Server admin password
- * @param   time            evaluate the query at this time, default now
- * @return  label sets of the returned series
- */
-export async function queryVictoriaMetrics(
-  query: string,
-  adminPassword = process.env.ADMIN_PASSWORD || 'admin',
-  time?: Date,
-): Promise<Record<string, string>[]> {
-  return (await queryVictoriaMetricsSamples(query, adminPassword, time)).map(
-    (series) => series.metric,
-  );
+  return response.data.result.map((series) => series.metric);
 }
 
 /**
@@ -266,18 +235,4 @@ export async function getQanExample(serviceName: string, queryId: string, from: 
   const [example] = response.query_examples ?? [];
 
   return { example: example?.example ?? '', isTruncated: example?.is_truncated === 1 };
-}
-
-/**
- * Resident memory of an exporter process as stored in PMM Server's VictoriaMetrics
- *
- * @param   agentId   exporter agent ID
- * @return  bytes, or undefined while no sample has arrived yet
- */
-export async function getExporterResidentMemoryBytes(agentId: string): Promise<number | undefined> {
-  const [response] = await queryVictoriaMetricsSamples(
-    `max(process_resident_memory_bytes{agent_id="${agentId}", job=~".*_hr"})`,
-  );
-
-  return response.value;
 }
