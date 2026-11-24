@@ -89,9 +89,6 @@ const remoteInstanceStatus = {
     gc_mysql80: {
       enabled: true,
     },
-    gc_pgsql_13: {
-      enabled: true,
-    },
   },
   aurora: {
     aurora2: {
@@ -407,18 +404,6 @@ module.exports = {
         password: secret(process.env.GCP_MYSQL84_PASSWORD),
         cluster: 'gc-mysql84',
         environment: 'gc-mysql84',
-      },
-      gc_pgsql_13: {
-        type: 'postgresql',
-        // using postgres in name makes sure both exporter and QAN agents are verified
-        serviceName: 'gc-postgres13',
-        port: '5432',
-        database: process.env.GCP_PGSQL13_USER,
-        host: secret(process.env.GCP_PGSQL13_HOST),
-        username: secret(process.env.GCP_PGSQL13_USER),
-        password: secret(process.env.GCP_PGSQL13_PASSWORD),
-        cluster: 'gc-pgsql13',
-        environment: 'gc-pgsql13',
       },
       gc_pgsql_14: {
         type: 'postgresql',

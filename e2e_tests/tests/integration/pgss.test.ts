@@ -26,15 +26,15 @@ pmmTest.beforeEach(async ({ cliHelper, grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest.afterEach(({ cliHelper }) => {
+pmmTest.afterEach(({ cliHelper, postgresqlHelper }) => {
   for (const service of [fallbackService, inventoryService]) {
     cliHelper.removeService(container, ServiceType.postgresql, service);
   }
 
-  cliHelper.queryPostgresql(container, `DROP DATABASE IF EXISTS ${database} WITH (FORCE);`);
+  postgresqlHelper.query(container, `DROP DATABASE IF EXISTS ${database} WITH (FORCE);`);
 
-  if (cliHelper.queryPostgresql(container, 'SHOW pg_stat_statements.max;') !== String(pgssMax)) {
-    cliHelper.setPgStatStatementsMax(container, pgssMax);
+  if (postgresqlHelper.query(container, 'SHOW pg_stat_statements.max;') !== String(pgssMax)) {
+    postgresqlHelper.setPgStatStatementsMax(container, pgssMax);
   }
 });
 
@@ -73,14 +73,10 @@ pmmTest(
 
 pmmTest(
   'PMM-T1312 - Adding Load to Postgres test database and verifying PMM-Agent and PG_STATEMENTS QAN agent is in running status @not-ui-pipeline @pgss-pmm-integration',
-  async ({ clickHouseHelper, cliHelper }) => {
-    cliHelper.queryPostgresql(container, `CREATE DATABASE ${database};`);
-    cliHelper.queryPostgresql(container, `ALTER DATABASE ${database} OWNER TO pmm;`);
-    cliHelper
-      .execute(
-        `docker exec -i ${container} psql -U postgres -d ${database} -v ON_ERROR_STOP=1 < testdata/pgsql/pgss_load.sql`,
-      )
-      .assertSuccess();
+  async ({ clickHouseHelper, cliHelper, postgresqlHelper }) => {
+    postgresqlHelper.query(container, `CREATE DATABASE ${database};`);
+    postgresqlHelper.query(container, `ALTER DATABASE ${database} OWNER TO pmm;`);
+    postgresqlHelper.loadFile(container, 'testdata/pgsql/pgss_load.sql', database);
 
     await expect
       .poll(() => clickHouseHelper.countQanRowsWhere('pmm-server', `database = '${database}'`), {
@@ -94,20 +90,16 @@ pmmTest(
 
 pmmTest(
   'PMM-T2037 - Verify QPS after changing pg_statements.max value @not-ui-pipeline @pgss-pmm-integration',
-  async ({ api, clickHouseHelper, cliHelper, qanStoredMetrics, urlHelper }) => {
+  async ({ api, clickHouseHelper, postgresqlHelper, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('^pgsql_pgss_pmm_\\d');
     const queryCount = qanStoredMetrics.builders.queryValue(0, 2);
 
     clickHouseHelper.query('pmm-server', 'TRUNCATE TABLE pmm.metrics');
-    cliHelper.queryPostgresql(container, 'ALTER SYSTEM SET max_locks_per_transaction = 1024;');
+    postgresqlHelper.query(container, 'ALTER SYSTEM SET max_locks_per_transaction = 1024;');
 
     for (const max of [20_000, pgssMax]) {
-      cliHelper.setPgStatStatementsMax(container, max);
-      cliHelper
-        .execute(
-          `docker exec -i ${container} psql -U postgres -v ON_ERROR_STOP=1 < testdata/pgsql/pgss_pmm_t2037.sql`,
-        )
-        .assertSuccess();
+      postgresqlHelper.setPgStatStatementsMax(container, max);
+      postgresqlHelper.loadFile(container, 'testdata/pgsql/pgss_pmm_t2037.sql');
     }
 
     const loadedAt = Math.floor(Date.now() / 1_000);

@@ -90,3 +90,20 @@ export async function waitForMongod(containerName: string, probe: string, timeou
     expect(output.code, `mongod is not serving. mongod journal:\n${journal}`).toEqual(0);
   }).toPass({ intervals: [5_000], timeout });
 }
+
+/**
+ * Manage a root user of the admin database, applying each change on the primary
+ *
+ * @param   containerName   docker container running mongod
+ * @param   mongoUri        connection string with directConnection=true
+ * @param   user            user name
+ */
+export function adminUser(containerName: string, mongoUri: string, user: string) {
+  const run = (js: string) => runOnPrimary(containerName, mongoUri, `db.getSiblingDB("admin").${js}`);
+
+  return {
+    create: (password: string) => run(`createUser({ user: "${user}", pwd: "${password}", roles: [{ role: "root", db: "admin" }] })`),
+    setPassword: (password: string) => run(`changeUserPassword("${user}", "${password}")`),
+    drop: () => run(`dropUser("${user}")`),
+  };
+}
