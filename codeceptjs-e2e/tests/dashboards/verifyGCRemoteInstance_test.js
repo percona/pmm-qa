@@ -19,6 +19,9 @@ function getInstance(key) {
   return remoteInstance[key];
 }
 
+const lowResolutionSeconds = 300;
+const addedAt = {};
+
 Before(async ({ I }) => {
   await I.Authorize();
 });
@@ -31,7 +34,7 @@ Scenario(
       metrics_resolutions: {
         hr: '60s',
         mr: '180s',
-        lr: '300s',
+        lr: `${lowResolutionSeconds}s`,
       },
       data_retention: '172800s',
     };
@@ -56,6 +59,7 @@ Data(instances).Scenario(
     remoteInstancesPage.openAddRemotePage(instanceType);
     await remoteInstancesPage.addRemoteDetails(instanceDetails);
     await remoteInstancesPage.clickAddInstanceAndWaitForSuccess();
+    addedAt[instance] = Date.now();
   },
 );
 
@@ -88,8 +92,11 @@ Data(instances).Scenario(
     } = current;
 
     const instanceDetails = getInstance(instance);
+    // Panels built on global variables stay empty until the first low-resolution scrape,
+    // which can land a full lr interval after the service is added.
+    const secondsSinceAdded = (Date.now() - (addedAt[instance] || 0)) / 1000;
 
-    I.wait(30);
+    I.wait(Math.max(30, Math.ceil(lowResolutionSeconds + 60 - secondsSinceAdded)));
     if (instanceType === 'mysql') {
       I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
         service_name: instanceDetails.serviceName,
