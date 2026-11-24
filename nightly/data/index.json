@@ -224754,6 +224754,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15962",
         "by": "Investigator routine",
         "at": "2026-11-24T21:37:00Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "product bug",
+        "summary": "Generic (ps,ENCRYPTED_CLIENT_CONFIG=true, pmm3-rc package): pmm-agent setup on ps_pmm_8_4_1 failed with 'unable to RSA-unwrap AES key', the open PMM-15968, as on nights 115 and 117. Recurrence added to the ticket.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15968",
+        "by": "Investigator routine",
+        "at": "2026-11-24T21:37:05Z"
       }
     ],
     "claims": [
