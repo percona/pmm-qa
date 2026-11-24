@@ -96,9 +96,9 @@ test.describe('PSMDB pmm-admin update', { tag: '@psmdb' }, () => {
   test('PMM-T2631 - Verify pmm-admin update mongodb keeps the metrics history of the Service', async ({}) => {
     const query = `mongodb_up{service_name="${serviceName}"}`;
 
-    await expect(async () => {
-      expect((await pmmApi.queryVictoriaMetrics(query)).length, `No ${query} series yet`).toBeGreaterThan(0);
-    }).toPass({ intervals: [5_000], timeout: 90_000 });
+    // An unpinned query reads 5 s back (-search.latencyOffset), possibly from before the previous test's exporter restart.
+    // A sample of the running exporter keeps beforeUpdate out of the gap that restart leaves.
+    await pmmApi.expectSampleSince(`mongodb_up{service_id="${serviceId}",agent_id="${exporterId}"}`, new Date());
     const beforeUpdate = new Date();
     const agentIds = await pmmAdmin.getServiceAgentIds(containerName, serviceId);
     const runningReports = await pmmCli.countAgentRunningReports(containerName, exporterId);

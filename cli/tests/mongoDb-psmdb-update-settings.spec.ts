@@ -238,7 +238,10 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
     const adminUser = mongo.adminUser(containerName, mongoUri, renameUser);
     let renameUserCreated = false;
 
-    test.afterEach(async ({}) => {
+    test.afterEach(async ({}, testInfo) => {
+      // A version-gated test is skipped after its fixtures ran, and afterEach still runs for it.
+      if (testInfo.status === 'skipped') return;
+
       await pmmCli.runEach([
         async () => {
           await update(`--agent-password=${agentPassword} --username=${mongoConnection.username} --password=${mongoConnection.password} --port=27017`);

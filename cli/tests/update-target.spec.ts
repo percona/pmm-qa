@@ -29,7 +29,10 @@ test.describe('PSMDB pmm-admin update target selection', { tag: '@psmdb' }, () =
     setupEnvironment = await environmentOf(setupService.service_id);
   });
 
-  test.afterEach(async ({}) => {
+  test.afterEach(async ({}, testInfo) => {
+    // A version-gated test is skipped after its fixtures ran, and afterEach still runs for it.
+    if (testInfo.status === 'skipped') return;
+
     await pmmCli.runEach([
       async () => {
         await (await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${ownServiceName} || true`)).assertSuccess();
