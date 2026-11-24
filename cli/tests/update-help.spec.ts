@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 
@@ -9,6 +10,7 @@ test.describe('PMM Client "update" help and validation', { tag: '@help-cli' }, (
   test.beforeAll(async ({}) => {
     const result = await cli.exec('sudo pmm-admin status');
     await result.outContains('Running', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');
+    await requirePmmClient('', pmmAdminUpdateVersion);
   });
 
   test('PMM-T2751 - Verify pmm-admin update is listed in help with its subcommands and flags', async ({}) => {

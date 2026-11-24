@@ -1,4 +1,5 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
+import { pmmAdminUpdateVersion } from '@helpers/versionGates';
 import * as cli from '@helpers/cli-helper';
 import * as pmmAdmin from '@helpers/pmm-admin';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -9,9 +10,7 @@ const PGSQL_PASSWORD = 'pass+this';
 const ipPort = '127.0.0.1:5432';
 
 test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', { tag: '@pdpgsql' }, () => {
-  // containerName is discovered in beforeAll, so it is read when each test starts.
   let containerName: string;
-  test.use({ pmmClientContainer: async ({}, use) => use(containerName) });
 
   const serviceName = 'pgsql_update_settings_cli';
   const database = 'pmm_qa_update_database';
@@ -38,6 +37,7 @@ test.describe('Percona Distribution for PostgreSQL pmm-admin update settings', {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pmm_\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
     containerName = result.stdout.trim();
+    await requirePmmClient(containerName, pmmAdminUpdateVersion);
   });
 
   test.afterEach(async ({}) => {
