@@ -14,8 +14,11 @@ pmmTest.afterEach(async ({ grafanaHelper }) => {
   if (!nonAdminId) return;
 
   await grafanaHelper.authorize();
-  await grafanaHelper.deleteUser(nonAdminId);
+
+  const response = await grafanaHelper.deleteUser(nonAdminId);
+
   nonAdminId = undefined;
+  expect(response.status(), 'Delete the non-admin user').toEqual(200);
 });
 
 pmmTest(
