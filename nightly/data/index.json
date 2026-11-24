@@ -212621,16 +212621,19 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15968",
         "by": "Investigator routine",
         "at": "2026-11-24T01:04:47Z"
+      },
+      {
+        "suites": [
+          "HA, OpenShift & GSSAPI"
+        ],
+        "verdict": "product bug",
+        "summary": "ha #187 (OpenShift, 3.11.0-rc): PMM-T2289 'Metrics without data: PostgreSQL Pods'. pmm-managed.log shows the sidecar's AddService calls failing while PMM's own pg-db switched primaries (20:59:02-04), the open PMM-15794. Its fix, percona/pmm#6263, is unmerged and the RC ships without it. Diagnosed from artifacts, recurrence added to the ticket.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+        "by": "Investigator routine",
+        "at": "2026-11-24T01:04:52Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-23T23:07:24Z",
-        "suites": [
-          "HA, OpenShift & GSSAPI"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-23T23:07:24Z",
