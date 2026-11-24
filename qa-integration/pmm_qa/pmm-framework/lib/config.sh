@@ -98,6 +98,16 @@ register_database SSL_PSMDB \
   'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=latest-tarball' 'MINIO=false'
 
+# Its source and target replica sets run on the psmdb image; setup_pcsm
+# refuses the versions PCSM cannot sync. SOURCE=psmdb syncs a PSMDB setup's
+# replica set instead of starting rs-src.
+register_database PCSM \
+  '1.0.0' \
+  'CLIENT_VERSION SOURCE SOURCE_VERSION TARGET_VERSION NODES_COUNT INSTANCES HANDOVER' \
+  'DEFAULT_VERSION=1.0.0' \
+  'CLIENT_VERSION=latest-tarball' 'SOURCE=' 'SOURCE_VERSION=8.0' 'TARGET_VERSION=8.0' 'NODES_COUNT=1' \
+  'INSTANCES=2' 'HANDOVER=false'
+
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION ENCRYPTED_CLIENT_CONFIG' \

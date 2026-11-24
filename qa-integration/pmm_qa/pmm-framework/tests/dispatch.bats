@@ -2,6 +2,26 @@
 
 load helpers/test_helper
 
+# pcsm-1 holds the HA lease until it is stopped; a freed lease goes to the
+# lowest-numbered instance whose last pkill came before its last start.
+pcsm_lease_holder() {
+  local lease=$BATS_TEST_TMPDIR/pcsm.lease node
+  if [[ ! -s $lease ]]; then
+    printf pcsm-1
+  elif [[ $(<"$lease") == none ]]; then
+    for node in pcsm-1 pcsm-2 pcsm-3; do
+      if awk -v n="$node" '$0 == "exec --detach " n " sh -c exec pcsm >>/var/log/pcsm.log 2>&1" { up = 1 }
+        $0 == "exec " n " pkill -x pcsm" { up = 0 } END { exit !up }' "$DOCKER_CALLS"; then
+        printf '%s' "$node" >"$lease"
+        break
+      fi
+    done
+    cat "$lease"
+  else
+    cat "$lease"
+  fi
+}
+
 # Records every docker call and answers the readiness probes the setups poll,
 # so a setup runs end to end without a daemon.
 stub_prebaked_docker() {
@@ -53,6 +73,18 @@ stub_prebaked_docker() {
       *replication_group_members*) printf '3\n' ;;
       *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
       *'cluster info'*) printf 'cluster_state:ok\n' ;;
+      *'db.hello().setName + " " + db.version()'*)
+        [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
+        printf '%s\n' "${PSMDB_SOURCE_PROBE-rs 8.0.32-14}"
+        ;;
+      *'checkpoints.findOne({ _id: "pcsm" })'*) printf 'true\n' ;;
+      'exec pcsm-'[1-3]' pkill -x pcsm')
+        if [[ $2 == "$(pcsm_lease_holder)" ]]; then printf none >"$BATS_TEST_TMPDIR/pcsm.lease"; fi
+        ;;
+      'exec pcsm-'[1-3]' curl -fsS http://127.0.0.1:2242/metrics')
+        printf '%s\n' '# TYPE percona_clustersync_mongodb_ha_active gauge' \
+          "percona_clustersync_mongodb_ha_active $([[ $2 == "$(pcsm_lease_holder)" ]] && echo 1 || echo 0)"
+        ;;
       *information_schema.engines* | *'testdb.testdb WHERE'*) printf '1\n' ;;
     esac
   }
@@ -270,10 +302,12 @@ stub_prebaked_docker() {
 }
 
 @test "every build passes every ARG its Dockerfile declares, for every published tag" {
-  local engine tag call dockerfile arg
+  local engine tags tag call dockerfile arg
   stub_prebaked_docker
-  for engine in ps mysql pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql; do
-    for tag in $(image_tags "$engine"); do
+  for engine in ps mysql pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql pcsm; do
+    # Not `for tag in $(...)`: a failing image_tags there loops over nothing.
+    tags=$(image_tags "$engine")
+    for tag in $tags; do
       : >"$DOCKER_CALLS"
       "build_${engine//-/_}_image" "$tag"
       call=$(grep '^build ' "$DOCKER_CALLS")
@@ -436,7 +470,7 @@ stub_prebaked_docker() {
   [[ $(grep -c '>/etc/systemd/system/pmm-agent.service.d/pmm-qa.conf' "$DOCKER_CALLS") -eq 3 ]]
   grep -q '^exec rs101 pbm config --file /etc/pbm/minio.yaml$' "$DOCKER_CALLS"
   [[ $(grep -c 'tr -d - </proc/sys/kernel/random/uuid >/etc/machine-id' "$DOCKER_CALLS") -eq 3 ]]
-  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=rs102 -e PMM_AGENT_SETUP_NODE_NAME=rs102\._[0-9]+ rs102 pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml$' "$DOCKER_CALLS"
   # shellcheck disable=SC2016 # a literal $external
   grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
   grep -q '^exec rs101 mgodatagen -f /etc/datagen/replicaset.json' "$DOCKER_CALLS"
@@ -497,6 +531,7 @@ stub_prebaked_docker() {
   done
   grep -Fq 'sh.addShard("rs2/rs201:27017,rs202:27017,rs203:27017")' "$DOCKER_CALLS"
   grep -Eq '^exec rscfg02 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rscfg02_[0-9]+ --environment=mongo-sharded-dev --cluster=sharded --replication-set=rscfg --username=pmm --password=pmmpass --host=rscfg02 --port=27017$' "$DOCKER_CALLS"
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=mongos -e PMM_AGENT_SETUP_NODE_NAME=mongos_[0-9]+ mongos pmm-agent setup ' "$DOCKER_CALLS"
   grep -Eq '^exec mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass mongos_[0-9]+ --disable-collectors=indexstats --environment=mongo-sharded-dev --cluster=sharded --username=pmm --password=pmmpass 127\.0\.0\.1:27017$' "$DOCKER_CALLS"
   [[ $(grep -c 'systemctl restart pbm-agent$' "$DOCKER_CALLS") -eq 9 ]]
   [[ $(grep -c 'pbm config' "$DOCKER_CALLS") -eq 1 ]]
@@ -910,6 +945,142 @@ SPECS
   grep -q -- ' external_pmm container external_pmm-nightly-shard$' "$DOCKER_CALLS"
   grep -Eq '^exec external_pmm pmm-admin add external --listen-port=42200 --group=redis --service-name=redis_external_service_([0-9]+)$' "$DOCKER_CALLS"
   grep -Eq '^exec external_pmm pmm-admin add external --listen-port=9256 --group=processes --service-name=nodeprocess_service_[0-9]+$' "$DOCKER_CALLS"
+}
+
+@test "PCSM syncs rs-src to rs-tgt with an HA pair and registers every member and instance" {
+  local source_uri='mongodb://pcsm_source:pcsmpass@pcsm-src-1:27017/?replicaSet=rs-src'
+  local target_uri='mongodb://pcsm_target:pcsmpass@pcsm-tgt-1:27017/?replicaSet=rs-tgt'
+  stub_prebaked_docker
+  SHARD_NAME=nightly
+  parse_database_spec pcsm
+  dispatch_setup
+
+  grep -q '^image inspect pmm-qa/pcsm:1.0.0$' "$DOCKER_CALLS"
+  grep -q '^rm -fv pcsm-src-1 pcsm-src-2 pcsm-src-3 pcsm-tgt-1 pcsm-tgt-2 pcsm-tgt-3 pcsm-1 pcsm-2 pcsm-3$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pcsm-src-1 --hostname pcsm-src-1 --label pmm-qa.engine=pcsm --network pmm-qa pmm-qa/psmdb:8.0-ol9 mongod --replSet rs-src --bind_ip_all --keyFile /etc/keyfile$' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pcsm-tgt-1 .* pmm-qa/psmdb:8.0-ol9 mongod --replSet rs-tgt ' "$DOCKER_CALLS"
+  [[ $(grep -c '^run --detach --name pcsm-src-2 ' "$DOCKER_CALLS") -eq 0 ]]
+  grep -Fq 'rs.initiate({ _id: "rs-src", members: [{ _id: 0, host: "pcsm-src-1:27017", priority: 2 }] })' "$DOCKER_CALLS"
+  grep -Fq 'createUser({ user: "pcsm_source", pwd: "pcsmpass", roles: ["backup", "clusterMonitor", "readAnyDatabase"] })' "$DOCKER_CALLS"
+  grep -Fq 'createUser({ user: "pcsm_target", pwd: "pcsmpass", roles: ["restore", "clusterMonitor", "clusterManager", "readWriteAnyDatabase"] })' "$DOCKER_CALLS"
+  grep -Fq -- "run --detach --name pcsm-2 --hostname pcsm-2 --label pmm-qa.engine=pcsm --network pmm-qa --env PCSM_SOURCE_URI=$source_uri --env PCSM_TARGET_URI=$target_uri --env PCSM_GROUP_NAME=pcsm-sync-1 pmm-qa/pcsm:1.0.0" "$DOCKER_CALLS"
+  [[ $(grep -c '^exec --detach pcsm-[12] sh -c exec pcsm >>/var/log/pcsm.log 2>&1$' "$DOCKER_CALLS") -eq 2 ]]
+  grep -q -- ' pcsm-tgt-1 container pcsm-tgt-1-nightly$' "$DOCKER_CALLS"
+  grep -q -- ' pcsm-2 container pcsm-2-nightly$' "$DOCKER_CALLS"
+  grep -q -- '^exec pcsm-src-1 pmm-admin add mongodb --enable-all-collectors --username=pmm --password=pmmpass --host=pcsm-src-1 --port=27017 --environment=pcsm-dev --cluster=rs-src --replication-set=rs-src pcsm-src-1$' "$DOCKER_CALLS"
+  grep -q -- '^exec pcsm-tgt-1 pmm-admin add mongodb .* --cluster=rs-tgt --replication-set=rs-tgt pcsm-tgt-1$' "$DOCKER_CALLS"
+  grep -q -- '^exec pcsm-2 pmm-admin add external --service-name=pcsm-2 --group=pcsm --cluster=pcsm-sync-1 --environment=pcsm-dev --listen-port=2242 --metrics-path=/metrics --scheme=http --metrics-mode=push$' "$DOCKER_CALLS"
+  grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
+  ! grep -q '^exec pcsm-2 pcsm start$' "$DOCKER_CALLS" || false
+  grep -q '^exec pcsm-1 sh -c pcsm status | jq -e ' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec pcsm-src-1 sh -c [ -f /tmp/pcsm-workload.pid ] && kill "$(cat /tmp/pcsm-workload.pid)" 2>/dev/null; rm -f /tmp/pcsm-workload.pid' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec --detach pcsm-src-1 sh -c echo $$ >/tmp/pcsm-workload.pid; exec mongo --quiet "$0" --eval "$1" mongodb://root:root@127.0.0.1:27017/admin const orders = db.getSiblingDB("pcsm_qa").orders; while (true)' "$DOCKER_CALLS"
+  ! grep -q 'pkill -x pcsm$' "$DOCKER_CALLS" || false
+}
+
+@test "PCSM with HANDOVER makes every instance ACTIVE in turn while the workload runs, then clones again" {
+  local start='sh -c exec pcsm >>/var/log/pcsm.log 2>&1'
+  local -a handover expected
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  sleep() { printf 'sleep %s\n' "$*" >>"$DOCKER_CALLS"; }
+  parse_database_spec 'pcsm,INSTANCES=3,HANDOVER=true'
+  dispatch_setup
+
+  mapfile -t handover < <(sed -n '/^exec --detach pcsm-src-1 sh -c echo .*while (true)/,$p' "$DOCKER_CALLS" |
+    grep -E '^(exec pcsm-[1-3] (pkill -x pcsm|pcsm reset|pcsm start)|exec --detach pcsm-[1-3] sh -c exec pcsm |sleep 60)|checkpoints\.findOne|dropDatabase' |
+    sed -e 's/^exec -i pcsm-tgt-1 mongo .*checkpoints\.findOne.*/checkpoint/' -e 's/^exec -i pcsm-tgt-1 mongo .*dropDatabase.*/drop/')
+  expected=(
+    'sleep 60' checkpoint
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-3 pkill -x pcsm' 'sleep 60' "exec --detach pcsm-1 $start" "exec --detach pcsm-3 $start"
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-2 pkill -x pcsm' 'sleep 60' "exec --detach pcsm-1 $start" "exec --detach pcsm-2 $start"
+    'exec pcsm-1 pkill -x pcsm' 'exec pcsm-2 pkill -x pcsm' 'exec pcsm-3 pkill -x pcsm' 'exec pcsm-1 pcsm reset' drop
+    "exec --detach pcsm-1 $start" "exec --detach pcsm-2 $start" "exec --detach pcsm-3 $start" 'exec pcsm-1 pcsm start'
+  )
+  [[ $(printf '%s\n' "${handover[@]}") == "$(printf '%s\n' "${expected[@]}")" ]]
+  grep -Fq 'db.adminCommand({ listDatabases: 1, nameOnly: true }).databases.map((d) => d.name).filter((n) => !["admin", "config", "local", "percona_clustersync_mongodb"].includes(n)).forEach((n) => db.getSiblingDB(n).dropDatabase())' "$DOCKER_CALLS"
+  [[ $(grep -c '^exec pcsm-1 sh -c pcsm status | jq -e ' "$DOCKER_CALLS") -eq 2 ]]
+
+  parse_database_spec 'pcsm,INSTANCES=1,HANDOVER=true'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM HANDOVER needs INSTANCES of 2 or 3.'* ]]
+}
+
+@test "PCSM honours NODES_COUNT, INSTANCES and a cross-version sync, and refuses one PCSM cannot run" {
+  stub_prebaked_docker
+  parse_database_spec 'pcsm,SOURCE_VERSION=7.0,TARGET_VERSION=8.0,NODES_COUNT=3,INSTANCES=1'
+  dispatch_setup
+
+  grep -q -- '^run --detach --name pcsm-src-3 .* pmm-qa/psmdb:7.0-ol9 mongod --replSet rs-src ' "$DOCKER_CALLS"
+  grep -q -- '^run --detach --name pcsm-tgt-3 .* pmm-qa/psmdb:8.0-ol9 mongod --replSet rs-tgt ' "$DOCKER_CALLS"
+  grep -Fq '{ _id: 2, host: "pcsm-src-3:27017", priority: 1 }' "$DOCKER_CALLS"
+  grep -Fq -- '--env PCSM_SOURCE_URI=mongodb://pcsm_source:pcsmpass@pcsm-src-1:27017,pcsm-src-2:27017,pcsm-src-3:27017/?replicaSet=rs-src ' "$DOCKER_CALLS"
+  [[ $(grep -c '^run --detach --name pcsm-[0-9] ' "$DOCKER_CALLS") -eq 1 ]]
+  grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'pcsm,SOURCE_VERSION=8.0,TARGET_VERSION=7.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM cannot sync PSMDB 8.0 to an older 7.0.'* ]]
+  parse_database_spec 'pcsm,SOURCE_VERSION=6.0,TARGET_VERSION=8.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM syncs PSMDB 6.0 only to the same or the next major, not 8.0.'* ]]
+  parse_database_spec 'pcsm,TARGET_VERSION=8.3'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM TARGET_VERSION '8.3': PCSM syncs PSMDB 6.0, 7.0 and 8.0."* ]]
+  parse_database_spec 'pcsm,INSTANCES=4'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM INSTANCES '4': use 1 to 3."* ]]
+  parse_database_spec 'pcsm,NODES_COUNT=0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM NODES_COUNT '0': use 1 to 3."* ]]
+  parse_database_spec 'pcsm,CLIENT_VERSION=pmm3-rc'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM installs PMM Client from a tarball (the pcsm image has no dnf): use a tarball CLIENT_VERSION, not 'pmm3-rc'."* ]]
+  [[ ! -s $DOCKER_CALLS ]]
+}
+
+@test "PCSM with SOURCE=psmdb migrates the PSMDB replica set and registers only the target and PCSM" {
+  local root_uri='mongodb://root:root@127.0.0.1:27017/admin?replicaSet=rs'
+  stub_prebaked_docker
+  parse_database_spec 'pcsm,SOURCE=psmdb'
+  dispatch_setup
+
+  ! grep -q '^run --detach --name pcsm-src-' "$DOCKER_CALLS" || false
+  grep -q -- '^run --detach --name pcsm-tgt-1 .* pmm-qa/psmdb:8.0-ol9 mongod --replSet rs-tgt ' "$DOCKER_CALLS"
+  grep -Fq "exec -i rs101 mongo --quiet $root_uri --eval const admin = db.getSiblingDB(\"admin\"); admin.getUser(\"pcsm_source\") || admin.createUser({ user: \"pcsm_source\"" "$DOCKER_CALLS"
+  grep -Fq "exec -i rs101 mongo --quiet $root_uri --eval const orders = db.getSiblingDB(\"pcsm_qa\").orders;" "$DOCKER_CALLS"
+  grep -Fq -- '--env PCSM_SOURCE_URI=mongodb://pcsm_source:pcsmpass@rs101:27017,rs102:27017,rs103:27017/?replicaSet=rs ' "$DOCKER_CALLS"
+  ! grep -q '^exec rs10[1-3] pmm-admin add' "$DOCKER_CALLS" || false
+  ! grep -q -- '--cluster=rs-src' "$DOCKER_CALLS" || false
+  grep -q -- '^exec pcsm-tgt-1 pmm-admin add mongodb .* --cluster=rs-tgt --replication-set=rs-tgt pcsm-tgt-1$' "$DOCKER_CALLS"
+  grep -q '^exec pcsm-1 pcsm start$' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal container-shell $ expansions
+  grep -Fq 'exec rs101 sh -c [ -f /tmp/pcsm-workload.pid ] && kill "$(cat /tmp/pcsm-workload.pid)" 2>/dev/null; rm -f /tmp/pcsm-workload.pid' "$DOCKER_CALLS"
+  grep -Fq "exec --detach rs101 sh -c echo \$\$ >/tmp/pcsm-workload.pid; exec mongo --quiet \"\$0\" --eval \"\$1\" $root_uri const orders = db.getSiblingDB(\"pcsm_qa\").orders; while (true)" "$DOCKER_CALLS"
+}
+
+@test "PCSM with SOURCE=psmdb refuses a source it cannot sync before starting a container" {
+  stub_prebaked_docker
+  parse_database_spec 'pcsm,SOURCE=psmdb'
+  PSMDB_SOURCE_PROBE=none run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM SOURCE=psmdb needs a running --database psmdb replica set (SETUP_TYPE=pss or psa).'* ]]
+  PSMDB_SOURCE_PROBE='rs1 8.0.32-14' run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM SOURCE=psmdb syncs replica set rs, but rs101 is in 'rs1'."* ]]
+  PSMDB_SOURCE_PROBE='rs 8.3.1-1' run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM source version '8.3': PCSM syncs PSMDB 6.0, 7.0 and 8.0."* ]]
+  parse_database_spec 'pcsm,SOURCE=psmdb,TARGET_VERSION=7.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *'PCSM cannot sync PSMDB 8.0 to an older 7.0.'* ]]
+  parse_database_spec 'pcsm,SOURCE=psmdb,SOURCE_VERSION=7.0'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PCSM SOURCE_VERSION does not apply to SOURCE=psmdb, which syncs the PSMDB setup's version."* ]]
+  parse_database_spec 'pcsm,SOURCE=atlas'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"Unsupported PCSM SOURCE 'atlas': leave it empty for rs-src, or use psmdb."* ]]
+  ! grep -q '^run ' "$DOCKER_CALLS" || false
 }
 
 @test "HAProxy runs on the prebaked image and registers as haproxy_setup.yml did" {
