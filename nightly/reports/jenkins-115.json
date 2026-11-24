@@ -4004,6 +4004,17 @@
       "link": "https://github.com/percona/pmm-qa/pull/1815",
       "by": "Investigator routine",
       "at": "2026-11-24T01:04:30Z"
+    },
+    {
+      "suites": [
+        "CLI Integration",
+        "Integrations"
+      ],
+      "verdict": "test bug",
+      "summary": "PMM-T2631 (CLI and GSSAPI OL8 PSMDB Replica 8.x, rc): 'No history before the update: []'. The precondition's unpinned query reads 5 s back (VictoriaMetrics latencyOffset), so it was satisfied before PMM-T2630's exporter restart. beforeUpdate then fell in the restart gap; the CI nginx log shows it. Did not reproduce on the VM; the fix waits for a sample of the running exporter first.",
+      "link": "https://github.com/percona/pmm-qa/pull/1815",
+      "by": "Investigator routine",
+      "at": "2026-11-24T01:04:36Z"
     }
   ],
   "claims": [
@@ -4012,13 +4023,6 @@
       "at": "2026-11-23T23:07:24Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-23T23:07:24Z",
-      "suites": [
-        "Integrations"
       ]
     },
     {
