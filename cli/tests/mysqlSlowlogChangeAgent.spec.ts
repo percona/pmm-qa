@@ -454,17 +454,9 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       }
     } finally {
       // The later tests change these agents and expect them running.
-      const enableUntilPersisted = (agentType: pmmAdmin.ChangeAgentType, agentId: string) => () => cli.execUntilPersisted(
-        [pmmAdmin.inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
-        [],
-        async () => {
-          expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
-        },
-      );
-
       await pmmCli.runEach([
-        enableUntilPersisted(pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId),
-        enableUntilPersisted(pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId),
+        () => pmmAdmin.enableUntilPersisted(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId),
+        () => pmmAdmin.enableUntilPersisted(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId),
       ]);
     }
   });

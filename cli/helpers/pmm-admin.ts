@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import * as pmmApi from '@helpers/pmm-api-helper';
 import { clientCredentialsFlags, psConnection } from '@helpers/constants';
 import ExecReturn from '@support/types/exec-return.class';
 
@@ -214,6 +215,23 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
  */
 export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
   return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
+}
+
+/**
+ * Enable an agent with "pmm-admin inventory change agent --enable", re-applying it until PMM Server stores it (PMM-15835)
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentType       agent or exporter to enable
+ * @param   agentId         ID of the agent
+ */
+export async function enableUntilPersisted(containerName: string, agentType: ChangeAgentType, agentId: string) {
+  await cli.execUntilPersisted(
+    [inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
+    [],
+    async () => {
+      expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
+    },
+  );
 }
 
 export type UpdateServiceType = 'mongodb' | 'mysql' | 'postgresql' | 'proxysql' | 'valkey' | 'haproxy' | 'external' | 'external-serverless';
