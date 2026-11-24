@@ -123,6 +123,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@ami-ovf-post-upgrade`
 - `@ami-ovf-pre-upgrade`
 - `@annotations`
+- `@aws`
 - `@bm-common`
 - `@bm-locations`
 - `@bm-mongo`
@@ -180,6 +181,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pre-upgrade`
 - `@pt-summary-nightly`
 - `@qan`
+- `@rbac`
 - `@rta`
 - `@service-account`
 - `@settings`
