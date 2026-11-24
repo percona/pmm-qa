@@ -17,51 +17,66 @@ const serviceIds: string[] = [];
 // The data directory is on tmpfs: initializing several servers at once on disk takes minutes.
 const mySqlContainerArgs = `--network pmm-qa --tmpfs /var/lib/mysql:mode=1777 --env MYSQL_ROOT_PASSWORD=${remoteMySqlPassword}`;
 
-// PMM Server's own agent monitors it by name over the pmm-qa network; the test reaches it on a published port.
-const addRemoteMySql = async (api: Api, cliHelper: CliHelper, serviceName: string, dockerArgs: string) => {
-  cliHelper.removeContainer(serviceName);
-  await api.inventoryApi.removeNodesByName([serviceName]);
-  containers.push(serviceName);
-  nodeNames.push(serviceName);
-  cliHelper
-    .execute(
-      `docker run --detach --quiet --name ${serviceName} --publish 127.0.0.1::3306 ${mySqlContainerArgs} ${dockerArgs}`,
-      Timeouts.FIVE_MINUTES,
-    )
-    .assertSuccess();
+// PMM Server's own agent monitors each by name over the pmm-qa network; the test reaches it on a published port.
+// Every container starts before any request is in flight: a docker run pulling its image blocks the test process.
+const addRemoteMySqls = async (api: Api, cliHelper: CliHelper, servers: Record<string, string>) => {
+  const serviceNames = Object.keys(servers);
 
-  const port = Number(
+  await api.inventoryApi.removeNodesByName(serviceNames);
+
+  for (const [serviceName, dockerArgs] of Object.entries(servers)) {
+    cliHelper.removeContainer(serviceName);
+    containers.push(serviceName);
+    nodeNames.push(serviceName);
     cliHelper
-      .execSilent(`docker port ${serviceName} 3306/tcp`)
-      .assertSuccess()
-      .stdout.trim()
-      .split(':')
-      .at(-1),
+      .execute(
+        `docker run --detach --quiet --name ${serviceName} --publish 127.0.0.1::3306 ${mySqlContainerArgs} ${dockerArgs}`,
+        Timeouts.FIVE_MINUTES,
+      )
+      .assertSuccess();
+  }
+
+  return Promise.all(
+    serviceNames.map(async (serviceName) => {
+      const port = Number(
+        cliHelper
+          .execSilent(`docker port ${serviceName} 3306/tcp`)
+          .assertSuccess()
+          .stdout.trim()
+          .split(':')
+          .at(-1),
+      );
+      const db = new MySQLHelper({
+        host: '127.0.0.1',
+        password: remoteMySqlPassword,
+        port,
+        username: 'root',
+      });
+
+      databases.push(db);
+      // The image initializes on a server without networking, so TCP answers only once the real server is up.
+      await expect(async () => {
+        await db.query('SELECT 1');
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+      const { mysql } = await api.managementApi.addService({
+        mysql: {
+          add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
+          address: serviceName,
+          password: remoteMySqlPassword,
+          pmm_agent_id: 'pmm-server',
+          port: 3_306,
+          qan_mysql_perfschema: true,
+          service_name: serviceName,
+          username: 'root',
+        },
+      });
+
+      if (!mysql) throw new Error(`Adding ${serviceName} returned no MySQL service`);
+
+      return { db, serviceId: mysql.service.service_id, serviceName };
+    }),
   );
-  const db = new MySQLHelper({ host: '127.0.0.1', password: remoteMySqlPassword, port, username: 'root' });
-
-  databases.push(db);
-  // The image initializes on a server without networking, so TCP answers only once the real server is up.
-  await expect(async () => {
-    await db.query('SELECT 1');
-  }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-
-  const { mysql } = await api.managementApi.addService({
-    mysql: {
-      add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
-      address: serviceName,
-      password: remoteMySqlPassword,
-      pmm_agent_id: 'pmm-server',
-      port: 3_306,
-      qan_mysql_perfschema: true,
-      service_name: serviceName,
-      username: 'root',
-    },
-  });
-
-  if (!mysql) throw new Error(`Adding ${serviceName} returned no MySQL service`);
-
-  return { db, serviceId: mysql.service.service_id, serviceName };
 };
 
 const startSessionFromSelection = async (queryAnalytics: QueryAnalyticsPage, serviceIds: string[]) => {
@@ -95,14 +110,14 @@ pmmTest(
   async ({ api, cliHelper, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
-    const remoteFlavors = await Promise.all([
-      addRemoteMySql(api, cliHelper, 'rta-ps-80', 'percona/percona-server:8.0'),
-      addRemoteMySql(api, cliHelper, 'rta-mysql-84', 'mysql:8.4'),
-      addRemoteMySql(api, cliHelper, 'rta-mysql-80', 'mysql:8.0'),
-      addRemoteMySql(api, cliHelper, 'rta-mysql-57', '--platform linux/amd64 mysql:5.7'),
+    const remoteFlavors = await addRemoteMySqls(api, cliHelper, {
       // RTA needs performance_schema, which MariaDB leaves off by default.
-      addRemoteMySql(api, cliHelper, 'rta-mariadb-118', 'mariadb:11.8 --performance-schema=ON'),
-    ]);
+      'rta-mariadb-118': 'mariadb:11.8 --performance-schema=ON',
+      'rta-mysql-57': '--platform linux/amd64 mysql:5.7',
+      'rta-mysql-80': 'mysql:8.0',
+      'rta-mysql-84': 'mysql:8.4',
+      'rta-ps-80': 'percona/percona-server:8.0',
+    });
     const flavors = [
       {
         db: mySqlDbHelper,
@@ -334,12 +349,9 @@ pmmTest(
   'Verify Real-Time Analytics explains why it cannot start for a MySQL server with Performance Schema off @rta',
   async ({ agentsPage, api, cliHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
-    const { serviceId, serviceName } = await addRemoteMySql(
-      api,
-      cliHelper,
-      'mysql-no-perfschema',
-      'mysql:8.4 --performance-schema=OFF',
-    );
+    const [{ serviceId, serviceName }] = await addRemoteMySqls(api, cliHelper, {
+      'mysql-no-perfschema': 'mysql:8.4 --performance-schema=OFF',
+    });
 
     await pmmTest.step('Start a session for the service and verify the view says why it failed', async () => {
       await page.goto(queryAnalytics.url);
@@ -555,12 +567,9 @@ pmmTest(
     const endMarker = 'rta-end-marker';
     const trailingValues = ['x'.repeat(1_900), endMarker];
     const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
-    const longSqlText = await addRemoteMySql(
-      api,
-      cliHelper,
-      'mysql-long-sql-text',
-      'mysql:8.4 --performance-schema-max-sql-text-length=4096',
-    );
+    const [longSqlText] = await addRemoteMySqls(api, cliHelper, {
+      'mysql-long-sql-text': 'mysql:8.4 --performance-schema-max-sql-text-length=4096',
+    });
 
     await pmmTest.step('Open the live query table of both services', async () => {
       for (const serviceId of [percona84.service_id, longSqlText.serviceId]) {
