@@ -425,24 +425,14 @@ test.describe('pmm-admin inventory change agent for MySQL perfschema', { tag: '@
       },
     ];
 
-    const agentIds = [mysqldExporterId, mysqldPerfschemaAgentId];
+    const agents = [
+      { type: pmmAdmin.ChangeAgentType.MysqldExporter, id: mysqldExporterId },
+      { type: pmmAdmin.ChangeAgentType.QanMysqlPerfschemaAgent, id: mysqldPerfschemaAgentId },
+    ];
 
     try {
       for (const enableCase of enableCases) {
-        await cli.execUntilPersisted(
-          [
-            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlPerfschemaAgent, mysqldPerfschemaAgentId, enableCase.flag),
-          ],
-          [enableCase.response],
-          async () => {
-            for (const agentId of agentIds) {
-              expect((await pmmApi.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!enableCase.running);
-            }
-          },
-        );
-
-        await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
+        await pmmAdmin.setEnabledUntilPersisted(containerName, agents, enableCase.flag, enableCase.response, enableCase.running);
       }
     } finally {
       // The later tests change these agents and expect them running.

@@ -218,6 +218,38 @@ export function inventoryChangeAgent(containerName: string, agentType: ChangeAge
 }
 
 /**
+ * Enable or disable agents with "pmm-admin inventory change agent", re-applying the change until PMM Server stores it
+ * and the agents reach that state. A status report can revert a change even after it was stored (PMM-15835),
+ * so the runtime check is part of the retry.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agents          agents to change
+ * @param   flag            --enable flag to pass, such as --enable=false
+ * @param   response        output every change command must contain
+ * @param   running         true when the flag enables the agents
+ */
+export async function setEnabledUntilPersisted(
+  containerName: string,
+  agents: { type: ChangeAgentType, id: string }[],
+  flag: string,
+  response: string,
+  running: boolean,
+) {
+  await cli.execUntilPersisted(
+    agents.map(({ type, id }) => inventoryChangeAgent(containerName, type, id, flag)),
+    [response],
+    async () => {
+      for (const { id } of agents) {
+        expect((await pmmApi.getServerAgent(id)).disabled, `Disabled was not persisted on ${id}`).toBe(!running);
+      }
+
+      await expectAgentsRunning(containerName, agents.map(({ id }) => id), running, 45_000);
+    },
+    120_000,
+  );
+}
+
+/**
  * Enable an agent with "pmm-admin inventory change agent --enable", re-applying it until PMM Server stores it (PMM-15835)
  *
  * @param   containerName   docker container running pmm-agent
