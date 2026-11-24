@@ -224744,16 +224744,19 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15835",
         "by": "Investigator routine",
         "at": "2026-11-24T21:36:54Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "product bug",
+        "summary": "PSMDB Replica 6.x: PMM-T2792 waited 60 s for mongodb_exporter Running after pmm-admin update restored the port; PMM Server kept 'Starting' (74 passed). That is the open PMM-15962, as on night 117. Diagnosed from the job log; recurrence added to the ticket.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15962",
+        "by": "Investigator routine",
+        "at": "2026-11-24T21:37:00Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-24T20:52:48Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-24T20:52:48Z",
