@@ -26,6 +26,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import PostgresqlHelper from '@helpers/postgresql.helper';
 import PcsmHelper from '@helpers/pcsm.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
@@ -95,6 +96,7 @@ const pmmTest = base.extend<{
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
+  postgresqlHelper: PostgresqlHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -232,6 +234,7 @@ const pmmTest = base.extend<{
 
     await use(portalRemoval);
   },
+  postgresqlHelper: async ({ cliHelper }, use) => await use(new PostgresqlHelper(cliHelper)),
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);
 
