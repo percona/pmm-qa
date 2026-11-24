@@ -131,6 +131,15 @@ export default class CliHelper {
     return value;
   };
 
+  getPmmAdminServiceAgents = (container: string, serviceId: string) =>
+    (
+      JSON.parse(
+        this.execSilent(`docker exec ${container} pmm-admin list --json`).assertSuccess().stdout,
+      ) as {
+        agent: { agent_type: string; service_id?: string; status: string }[];
+      }
+    ).agent.filter((agent) => agent.service_id === serviceId);
+
   getPmmAdminStatusField = (container: string, field: string): string =>
     this.getPmmAdminField(
       this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
@@ -149,6 +158,38 @@ export default class CliHelper {
         agents_info: { agent_type: string; process_exec_path?: string }[];
       }
     ).agents_info;
+  };
+
+  queryMysql = (container: string, user: { password: string; username: string }, query: string) =>
+    this.execute(
+      `docker exec ${container} mysql -u${user.username} -p${user.password} --batch --skip-column-names mysql -e "${query}"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
+
+  readMongodbTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /mongodb_certs/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca-certs.pem'), key: read('client.pem') };
+  };
+
+  readMysqlTlsCertificates = (container: string) => {
+    // mysqld's auto-generated PEM files end in a NUL byte.
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat /var/lib/mysql/${file}`)
+        .assertSuccess()
+        .stdout.replace(/\0+$/, '')
+        .trim();
+
+    return { ca: read('ca.pem'), cert: read('client-cert.pem'), key: read('client-key.pem') };
+  };
+
+  readTlsCertificates = (container: string) => {
+    const read = (file: string) =>
+      this.execSilent(`docker exec ${container} cat certificates/${file}`).assertSuccess().stdout.trim();
+
+    return { ca: read('ca.crt'), cert: read('client.crt'), key: read('client.pem') };
   };
 
   /**
@@ -181,6 +222,13 @@ export default class CliHelper {
 
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
+
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+
+  tailContainerFile = (container: string, file: string) =>
+    this.execSilent(`docker exec ${container} tail -n100 ${file}`).assertSuccess().stdout;
 
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;

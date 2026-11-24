@@ -1,7 +1,7 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import * as zipHelper from '@helpers/zip-helper';
-import { getPmmAdminMinorVersion } from '@root/helpers/pmm-admin';
+import { ChangeAgentType, getPmmAdminMinorVersion, inventoryChangeAgent } from '@root/helpers/pmm-admin';
 
 const PXC_USER = 'admin';
 const PXC_PASSWORD = 'admin';
@@ -146,7 +146,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${agentId.stdout} --connection-timeout=4s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.ProxysqlExporter, agentId.stdout, '--connection-timeout=4s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 2');
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep timeout=4`);
@@ -159,7 +159,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${agentId.stdout} --connection-timeout=0s`);
+    const chaneAgent = await cli.exec(inventoryChangeAgent(containerName, ChangeAgentType.ProxysqlExporter, agentId.stdout, '--connection-timeout=0s'));
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 2');
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep timeout=2`);

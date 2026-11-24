@@ -35,13 +35,13 @@ const severityBands: Record<AlertSeverity, string> = {
   [AlertSeverity.Notice]: 'Info',
   [AlertSeverity.Warning]: 'Warning',
 };
-const viewer = { password: 'password', username: 'test_viewer' };
-const editor = { password: 'password', username: 'test_editor' };
+const viewer = { password: 'Password-123', username: 'test_viewer' };
+const editor = { password: 'Password-123', username: 'test_editor' };
 const createdUserIds: number[] = [];
 
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
-  const api = new Api(page, page.request);
+  const api = new Api(page.request);
   const grafanaHelper = new GrafanaHelper(page);
 
   await api.settingsApi.updateSettings({ enable_alerting: true });
@@ -74,7 +74,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   const grafanaHelper = new GrafanaHelper(page);
-  const api = new Api(page, page.request);
+  const api = new Api(page.request);
 
   await api.alertingApi.removeAllAlertRules();
   await api.alertingApi.setEmptyReceiverIntegrations([]);

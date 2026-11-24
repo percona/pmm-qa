@@ -133,12 +133,12 @@ wait_pmm_agent() {
   retry 60 "pmm-agent on $1 to connect" pmm_agent_connected "$1" >/dev/null
 }
 
-# Retries while a freshly set up agent is not connected yet.
+# Retries while a fresh agent is not connected or a starting database times out.
 # Usage: pmm_register NODE pmm-admin add TYPE ARGS...
 pmm_register() {
   local node=$1
   shift
-  retry_on 'pmm-agent is not connected|context deadline exceeded' 60 "registering on $node" \
+  retry_on 'pmm-agent is not connected|context deadline exceeded|i/o timeout' 60 "registering on $node" \
     docker exec "$node" "$@" >/dev/null
 }
 

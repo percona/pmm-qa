@@ -1,14 +1,12 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
+import { ScrapeTarget } from '@interfaces/prometheus';
 
 export default class GrafanaApi {
-  constructor(
-    private readonly page: Page,
-    private request: APIRequestContext,
-  ) {}
+  constructor(private request: APIRequestContext) {}
 
   changePassword = async (currentPassword: string, newPassword: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken('admin', currentPassword)}` };
@@ -23,11 +21,15 @@ export default class GrafanaApi {
     ).toEqual(200);
   };
 
-  createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
+  createDashboard = async (
+    title: string,
+    panelTitle: string,
+    panel: Record<string, unknown> = { type: 'timeseries' },
+  ): Promise<GrafanaDashboard> => {
     const response = await this.request.post(apiEndpoints.grafana.dashboards, {
       data: {
         dashboard: {
-          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, type: 'timeseries' }],
+          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, ...panel }],
           schemaVersion: 39,
           title,
         },
@@ -108,7 +110,10 @@ export default class GrafanaApi {
     expect(response.status(), await response.text()).toEqual(200);
   };
 
-  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+  getActiveTargetByExternalGroup = async (externalGroup: string) =>
+    (await this.getActiveTargets()).find(({ labels }) => labels.external_group === externalGroup);
+
+  getActiveTargets = async (): Promise<ScrapeTarget[]> => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
 
@@ -117,11 +122,7 @@ export default class GrafanaApi {
       `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
 
-    const body = await response.json();
-
-    return body.data.activeTargets.find(
-      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
-    );
+    return (await response.json()).data.activeTargets;
   };
 
   getDataSourceByName = async (name = 'Metrics') => {
@@ -202,24 +203,12 @@ export default class GrafanaApi {
   };
 
   waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    const deadline = Date.now() + timeout;
-
-    while (true) {
-      const metric = await this.getMetric(metricName);
-
-      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
-
-      // Against the wall clock, not a count of sleeps, which leaves the time spent in
-      // getMetric outside the budget.
-      const remaining = deadline - Date.now();
-
-      if (remaining <= 0) {
-        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-      }
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
-      await this.page.waitForTimeout(Math.min(Timeouts.ONE_SECOND, remaining));
-    }
+    await expect
+      .poll(async () => (await this.getMetric(metricName)).results.A.frames[0].data.values.length, {
+        message: `Timed out waiting for metric data for metric: ${metricName}`,
+        timeout,
+      })
+      .not.toBe(0);
   };
 
   waitForMetricAbsent = async (metricName: string, from: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
