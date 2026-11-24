@@ -1,4 +1,4 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { mongoEval } from '@helpers/mongo';
 import * as pbm from '@helpers/pbm';
@@ -61,7 +61,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics in a sharded cluster',
     test.setTimeout(15 * 60_000);
     const result = await cli.exec(`docker ps | grep ${pbmHost} | awk '{print $NF}'`);
     await result.outContains(pbmHost, 'PSMDB rscfg01 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=sharding');
-    await pbm.skipBelowClient(pbmHost, '3.11.0');
+    await requirePmmClient(pbmHost, '3.11.0');
     await pbm.setExternalCron(pbmHost, 'stop');
     await pbm.setAgents(dataMembers, 'start');
     await pbm.expectAgentsOk(pbmHost);

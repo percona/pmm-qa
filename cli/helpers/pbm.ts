@@ -1,9 +1,6 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import { runOnPrimary } from '@helpers/mongo';
-import { getPmmAdminVersion } from '@helpers/pmm-admin';
-import { versionBelow } from '@helpers/versionGates';
 
 export const exporterPassword = 'mypass';
 export const exporterPath = '/usr/local/percona/pmm/exporters/mongodb_exporter';
@@ -182,13 +179,6 @@ export async function ensureBaselineExporter(containers: string[]) {
   }
 }
 
-/**
- * Skip every test of the describe block the call is made in when the pmm-client is older than a version
- */
-export async function skipBelowClient(container: string, minVersion: string) {
-  test.skip(versionBelow(await getPmmAdminVersion(container), minVersion), `Requires pmm-client ${minVersion}+`);
-}
-
 export const pbm = async (container: string, args: string) => cli.exec(`docker exec ${container} pbm ${args}`);
 
 export async function pbmConfigValue(container: string, key: string): Promise<string> {
@@ -334,16 +324,14 @@ export async function backupStatus(container: string, name: string): Promise<str
  */
 export async function takeBackup(container: string, type: 'logical' | 'physical' = 'logical'): Promise<string> {
   const name = await startOperation(container, `backup --type=${type}`);
-  const deadline = Date.now() + (type === 'physical' ? 600_000 : 300_000);
   let meta: { status: string, error?: string } = { status: 'not found' };
 
-  while (!['done', 'error'].includes(meta.status) && Date.now() < deadline) {
-    await sleep(5_000);
+  await expect.poll(async () => {
     meta = await pbmJson<typeof meta>(container, `describe-backup ${name}`).catch(() => ({ status: 'not found' }));
-  }
-  if (meta.status !== 'done') {
-    expect(meta.status, `status of backup ${name}: ${meta.error ?? ''}\n${(await pbm(container, 'logs --tail=40')).stdout}`).toEqual('done');
-  }
+
+    return meta.status;
+  }, { intervals: [5_000], timeout: type === 'physical' ? 600_000 : 300_000 }).toMatch(/^(done|error)$/);
+  expect(meta.status, `status of backup ${name}: ${meta.error ?? ''}\n${(await pbm(container, 'logs --tail=40')).stdout}`).toEqual('done');
 
   return name;
 }

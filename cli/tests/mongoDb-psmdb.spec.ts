@@ -1,4 +1,4 @@
-import { test, expect } from '@helpers/test';
+import { expect, requirePmmClient, test } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { runOnPrimary } from '@helpers/mongo';
 import * as pbm from '@helpers/pbm';
@@ -378,7 +378,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
   test.beforeAll(async ({}) => {
     const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
     await result.outContains(containerName, 'PSMDB rs101 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=pss');
-    await pbm.skipBelowClient(containerName, '3.11.0');
+    await requirePmmClient(containerName, '3.11.0');
     bucket = await pbm.pbmConfigValue(pbmHost, 'storage.s3.bucket');
     await pbm.setExternalCron(pbmHost, 'stop');
   });
@@ -472,6 +472,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
           'rs102:27017': 'H',
           'rs103:27017': 'D',
         });
+        const nodes = (await pbm.pbmStatus(pbmHost)).cluster.flatMap((replset) => replset.nodes);
 
         for (const member of members) {
           await expect(async () => {
@@ -482,7 +483,7 @@ test.describe('Percona Server MongoDB (PSMDB) PBM metrics', { tag: ['@psmdb', '@
             expect(versions[0].labels).toMatchObject({
               host: `${member}:27017`,
               self: '1',
-              version: '2.9.1',
+              version: nodes.find((node) => node.host === `${member}:27017`)?.agent.replace(/^v/, ''),
             });
             expect(pbm.seriesValue(series, 'mongodb_pbm_agent_status', { host: `${member}:27017` }), `${member}: agent status`).toEqual(0);
           }).toPass({ intervals: [5_000], timeout: 120_000 });

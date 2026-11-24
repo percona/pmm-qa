@@ -13,7 +13,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2857 - Verify MongoDB Backup Details shows backups taken by an external PBM that PMM did not start',
+  'PMM-T2857 - Verify MongoDB Backup Details shows backups taken by an external PBM that PMM did not start @pbm-external',
   async ({ api, cliHelper, dashboard, page, urlHelper }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 

@@ -8,7 +8,6 @@ import { expect } from '@playwright/test';
 pmmTest.describe.configure({ mode: 'serial' });
 
 const members = ['rs101', 'rs102', 'rs103'];
-const rootUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
 const ruleGroup = 'pbm-alerts';
 let folderUid = '';
 
@@ -79,17 +78,11 @@ pmmTest(
 
 pmmTest(
   'PMM-T2856 - Verify the PBM backup failed alert fires for a backup that fails once it is running @pbm-alerting',
-  async ({ api, cliHelper }) => {
+  async ({ api, cliHelper, mongoDbHelper }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 
     const ruleName = 'pbm-backup-failed';
-    const latestBackup = (field: string) =>
-      cliHelper
-        .execute(
-          `docker exec rs101 mongo "${rootUri}" --quiet --eval 'const backup = db.getSiblingDB("admin").pbmBackups.find().sort({ start_ts: -1 }).limit(1).toArray()[0]; backup ? backup.${field} : "none"'`,
-        )
-        .assertSuccess()
-        .stdout.trim();
+    const latestBackup = (field: string) => mongoDbHelper.getLatestPbmBackupField('rs101', field);
 
     await pmmTest.step('Create a rule from the PBM backup failed template', async () => {
       await createRuleFromTemplate(api, 'pmm_mongodb_pbm_backup_failed', ruleName);

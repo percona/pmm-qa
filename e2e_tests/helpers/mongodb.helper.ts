@@ -104,6 +104,20 @@ export default class MongoDBHelper {
     this.client.db(dbName).collection(collectionName);
 
   /**
+   * A field of the newest backup record in admin.pbmBackups, or "none" when there is no backup.
+   *
+   * @param   container   a PSMDB container whose mongod runs on port 27017
+   * @param   field       pbmBackups document field to read, e.g. status or name
+   */
+  getLatestPbmBackupField = (container: string, field: string) =>
+    new CliHelper()
+      .execute(
+        `docker exec ${container} mongo "mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true" --quiet --eval 'const backup = db.getSiblingDB("admin").pbmBackups.find().sort({ start_ts: -1 }).limit(1).toArray()[0]; backup ? backup.${field} : "none"'`,
+      )
+      .assertSuccess()
+      .stdout.trim();
+
+  /**
    * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
    *
    * @param   container   a PSMDB container with the pbm CLI configured
