@@ -3984,20 +3984,24 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "3.10.0 · MySQL 8.0: PMM-T2661 disabled mysqld_exporter but PMM Server kept it Running (the PMM-15835 lost update). The perfschema spec (#1777) predates the PMM-T2528 fixes #1778/#1801: it sent each change once, left the agents disabled, and the worker restart read the perfschema agent ID as '(disabled)', so PMM-T2662-T2668 failed too (8 failed). On a CHAOS VM a forced revert reproduced CI's chain on main; the fix (execUntilPersisted, finally re-enable, IDs from --json) passed under it, and the full tag passed 26/26.",
+      "link": "https://github.com/percona/pmm-qa/pull/1824",
+      "by": "Investigator routine",
+      "at": "2026-11-24T21:36:48Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-24T20:52:48Z",
       "suites": [
         "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-24T20:52:48Z",
-      "suites": [
-        "CLI Integration Compatibility"
       ]
     },
     {
