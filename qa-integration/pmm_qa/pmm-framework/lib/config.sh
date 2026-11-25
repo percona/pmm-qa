@@ -122,6 +122,13 @@ register_database PS \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
+# Single node only: MariaDB has its own GTIDs and no group replication.
+register_database MARIADB \
+  '12.3' \
+  'QUERY_SOURCE CLIENT_VERSION ENCRYPTED_CLIENT_CONFIG' \
+  'DEFAULT_VERSION=12.3' \
+  'QUERY_SOURCE=perfschema' 'CLIENT_VERSION=latest-tarball' 'ENCRYPTED_CLIENT_CONFIG=false'
+
 # Runs on the ps image, so it offers the same versions.
 register_database SSL_MYSQL \
   "${DB_VERSIONS[PS]}" \

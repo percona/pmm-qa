@@ -111,6 +111,12 @@ case $engine in
     done
     docker exec probe sysbench --version
     ;;
+  mariadb)
+    boot
+    docker exec probe sh -ceu 'mariadb-install-db --user=mysql --skip-test-db >/dev/null; systemctl start mariadb'
+    docker exec probe mysql -uroot -e 'SELECT VERSION(); SELECT @@performance_schema'
+    docker exec probe sh -c 'sysbench --version && mysqladmin --version && mariadb-backup --version'
+    ;;
   ps)
     boot
     docker exec probe sh -ceu 'mysqld --initialize-insecure --user=mysql; systemctl start mysqld'

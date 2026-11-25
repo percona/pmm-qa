@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034  # each_node and the mysql_* helpers read these arrays by name; shellcheck sees one file at a time.
 #
-# images/mysql/setup.sh -- PS, MYSQL and SSL_MYSQL, on the prebaked ps and mysql images.
+# images/mysql/setup.sh -- PS, MYSQL, MARIADB and SSL_MYSQL, on the prebaked ps, mysql and mariadb images.
 
 readonly MYSQL_ROOT_PASSWORD=GRgrO9301RuF
 
@@ -12,6 +12,12 @@ setup_ps() {
 # Unlike PS: no NODES_COUNT, MY_ROCKS or BACKUP.
 setup_mysql() {
   setup_mysql_family mysql MYSQL MS_VERSION
+}
+
+# Single node only, and Performance Schema on: MariaDB ships it off, and Query
+# Analytics and Real-Time Analytics read it.
+setup_mariadb() {
+  setup_mysql_family mariadb MARIADB MARIADB_VERSION
 }
 
 # SETUP_TYPE selects the topology ('' single, replication, gr); the node count
@@ -84,7 +90,11 @@ setup_mysql_family() {
   step 'Register MySQL with PMM' each_node names mysql_register cluster
   # On every node: tests write through whichever container
   # `docker ps` lists first, which can be a group-replication secondary.
-  step 'Clear read-only' each_node names mysql_sql 'SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;'
+  if [[ $engine == mariadb ]]; then
+    step 'Clear read-only' each_node names mysql_sql 'SET GLOBAL read_only=OFF;'
+  else
+    step 'Clear read-only' each_node names mysql_sql 'SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;'
+  fi
   step 'Run workload' each_node targets mysql_workload "$engine"
   report_agent_status "${names[@]}"
 }
@@ -173,6 +183,9 @@ mysql_start_node() {
   if [[ ${c[engine]} == ps ]]; then
     flags+=(--userstat=1)
   fi
+  if [[ ${c[engine]} == mariadb ]]; then
+    flags+=(--performance_schema=ON --log-error=/var/log/mysqld.log)
+  fi
   # Native password auth is needed below 9.x; only 8.4 ships it off.
   if [[ ${c[version]} == 8.4 ]]; then
     flags+=(--mysql-native-password=ON)
@@ -187,7 +200,7 @@ mysql_start_node() {
     must "${run[@]}" "pmm-qa/mysql:5.7" "${flags[@]}" >/dev/null
   else
     must "${run[@]}" "${SYSTEMD_RUN[@]}" "pmm-qa/${c[engine]}:${c[version]}" >/dev/null
-    mysql_systemd_start "$name" "${c[my_rocks]}" "${flags[@]}"
+    mysql_systemd_start "$name" "${c[engine]}" "${c[my_rocks]}" "${flags[@]}"
   fi
   if ! (retry 60 "$name to accept MySQL connections" docker exec "$name" mysqladmin ping \
     --host=127.0.0.1 --protocol=tcp -uroot "-p$MYSQL_ROOT_PASSWORD" --silent >/dev/null); then
@@ -197,11 +210,14 @@ mysql_start_node() {
 }
 
 # Root's password is set outside the binlog, so replicas and group members start without GTIDs.
-# Usage: mysql_systemd_start NODE MY_ROCKS FLAGS...
+# Usage: mysql_systemd_start NODE ENGINE MY_ROCKS FLAGS...
 mysql_systemd_start() {
-  local name=$1 my_rocks=$2 flag socket=''
+  local name=$1 my_rocks=$3 flag socket='' init='mysqld --initialize-insecure --user=mysql' unit=mysqld
   local -a cnf=('[mysqld]')
-  shift 2
+  if [[ $2 == mariadb ]]; then
+    init='mariadb-install-db --user=mysql --skip-test-db' unit=mariadb
+  fi
+  shift 3
   for flag; do
     cnf+=("${flag#--}")
     if [[ $flag == --socket=* ]]; then
@@ -213,7 +229,7 @@ mysql_systemd_start() {
   fi
   printf '%s\n' "${cnf[@]}" | docker exec -i "$name" sh -c 'cat >/etc/my.cnf.d/zz-pmm-qa.cnf' ||
     die "Writing the mysqld options of $name failed."
-  if ! docker exec "$name" sh -ceu 'mysqld --initialize-insecure --user=mysql; systemctl enable -q --now mysqld' >/dev/null; then
+  if ! docker exec "$name" sh -ceu "$init; systemctl enable -q --now $unit" >/dev/null; then
     docker exec "$name" tail -40 /var/log/mysqld.log >&2 || true
     die "mysqld did not start on $name."
   fi
@@ -476,12 +492,12 @@ mysql_register() {
 }
 
 # sysbench runs detached, so the setup does not wait out its run (30 s for PS,
-# 60 s for MySQL); the rc check at the end only catches a
+# 60 s for MySQL and MariaDB); the rc check at the end only catches a
 # workload that already failed.
 # Usage: mysql_workload NODE ENGINE
 mysql_workload() {
   local seconds=30
-  if [[ $2 == mysql ]]; then
+  if [[ $2 != ps ]]; then
     seconds=60
   fi
   local sysbench='sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1
@@ -548,7 +564,7 @@ ssl_mysql_start() {
   must docker run --detach --name "$container" --hostname "$container" --user root --label pmm-qa.engine=ssl_mysql \
     --network "${container}_network" "${SYSTEMD_RUN[@]}" "pmm-qa/ps:$version" >/dev/null
   must docker network connect pmm-qa "$container"
-  mysql_systemd_start "$container" false "${args[@]}"
+  mysql_systemd_start "$container" ps false "${args[@]}"
   ssl_mysql_wait "$container"
   mysql_sql "$container" "CREATE USER pmm@'%' IDENTIFIED BY 'pmm'; GRANT ALL ON *.* TO pmm@'%'; CREATE USER 'pmm_tls'@'%' REQUIRE X509;"
 }

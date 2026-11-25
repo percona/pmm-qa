@@ -79,7 +79,7 @@ jobs:
                 jq -R --arg e "$engine" '{engine: $e, version: ., arches: (if . == "5.7" then ["amd64"] else ["amd64", "arm64"] end)}'
             done | jq -sc .
           }
-          all='["ps","mysql","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql","pcsm"]'
+          all='["ps","mysql","mariadb","pxc-proxysql","psmdb","haproxy","kerberos","external","valkey","pdpgsql","pgsql","ssl-pdpgsql","pcsm"]'
           if [ -n "$ENGINES" ]; then
             engines=$(jq -Rc 'split(",") | map(gsub(" "; "")) | map(select(. != ""))' <<<"$ENGINES")
             if [ "$engines" = '[]' ]; then
@@ -115,6 +115,7 @@ jobs:
               pick() { if grep -qE "$2" <<<"$changed"; then picked+=("\"$1\""); fi; }
               pick ps "^$images/ps/"
               pick mysql "^$images/mysql/Dockerfile$"
+              pick mariadb "^$images/mariadb/Dockerfile$"
               pick pxc-proxysql "^$images/pxc-proxysql/(Dockerfile|pmm_pxc)$"
               pick psmdb "^($images/psmdb/Dockerfile|qa-integration/pmm_psmdb-pbm_setup/(keyfile|conf/(sysconfig|krb)/|conf/mongos/mongos\.service))"
               pick haproxy "^$images/haproxy/Dockerfile$"

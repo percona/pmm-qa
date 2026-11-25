@@ -43,6 +43,11 @@ build_mysql_image() {
     --build-arg "MYSQL_VERSION=$version" --build-arg "SYSBENCH_VERSION=$SYSBENCH_VERSION"
 }
 
+build_mariadb_image() {
+  has_image MARIADB "$1"
+  build_image "mariadb:$1" mariadb --build-arg "BASE_OS=$BASE_OS" --build-arg "MARIADB_VERSION=$1"
+}
+
 # 8.4 dropped mysql_native_password, which Percona's proxysql2 needs, so 8.4+
 # gets upstream ProxySQL 3. A TARBALL gets its own tag so a pre-release never
 # replaces the packaged image.
@@ -119,7 +124,7 @@ build_pgsql_image() {
 image_tags() {
   local type version
   case $1 in
-    ps | mysql | pgsql | pdpgsql | valkey | pcsm) type=${1^^} ;;
+    ps | mysql | mariadb | pgsql | pdpgsql | valkey | pcsm) type=${1^^} ;;
     pxc-proxysql) type=PXC ;;
     ssl-pdpgsql) type=SSL_PDPGSQL ;;
     psmdb)

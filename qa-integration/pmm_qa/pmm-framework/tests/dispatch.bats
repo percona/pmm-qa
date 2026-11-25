@@ -304,7 +304,7 @@ stub_prebaked_docker() {
 @test "every build passes every ARG its Dockerfile declares, for every published tag" {
   local engine tags tag call dockerfile arg
   stub_prebaked_docker
-  for engine in ps mysql pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql pcsm; do
+  for engine in ps mysql mariadb pxc-proxysql psmdb haproxy kerberos external valkey pdpgsql ssl-pdpgsql pgsql pcsm; do
     # Not `for tag in $(...)`: a failing image_tags there loops over nothing.
     tags=$(image_tags "$engine")
     for tag in $tags; do
@@ -361,6 +361,38 @@ stub_prebaked_docker() {
   grep -q -- "^build --target mysql-57 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=5.7 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:5.7 $FRAMEWORK_DIR/images/mysql$" "$DOCKER_CALLS"
   build_mysql_image 8.0
   grep -q -- "--target mysql-el9 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=8.0 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 " "$DOCKER_CALLS"
+}
+
+@test "MariaDB runs its unit on the mariadb image with Performance Schema on and registers as MySQL" {
+  local database_run
+  stub_prebaked_docker
+  parse_database_spec 'mariadb=12.3'
+  dispatch_setup
+
+  database_run=$(grep '^run --detach --name mariadb_pmm_12_3_1 ' "$DOCKER_CALLS")
+  [[ $database_run == *'--label pmm-qa.engine=mariadb '*'--publish 3306:3306 --cgroupns=host '*' pmm-qa/mariadb:12.3' ]]
+  [[ $database_run != *mysql-sockets* ]]
+  grep -qx 'performance_schema=ON' "$BATS_TEST_TMPDIR/stdin/mariadb_pmm_12_3_1"
+  grep -q -- '^exec mariadb_pmm_12_3_1 sh -ceu mariadb-install-db --user=mysql .*systemctl enable -q --now mariadb' "$DOCKER_CALLS"
+  [[ $(grep -c -- '--userstat\|mysql-native-password\|log_slow_rate_limit\|super_read_only' "$DOCKER_CALLS") -eq 0 ]]
+  grep -q 'SET GLOBAL read_only=OFF;' "$DOCKER_CALLS"
+  grep -Eq -- 'pmm-admin add mysql --query-source=perfschema .*--environment=mariadb-dev --cluster=mariadb-single-dev-cluster --debug mariadb_pmm_12_3_1_[0-9]+ 127.0.0.1:3306' "$DOCKER_CALLS"
+  grep -q -- '--time=60 run' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  build_mariadb_image 12.3
+  grep -q -- "^build --build-arg BASE_OS=oraclelinux:9 --build-arg MARIADB_VERSION=12.3 --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mariadb:12.3 $FRAMEWORK_DIR/images/mariadb$" "$DOCKER_CALLS"
+}
+
+@test "MariaDB rejects a topology or a version it cannot provision before touching docker" {
+  local spec
+  stub_prebaked_docker
+  parse_database_spec 'mariadb=12.3'
+  for spec in 'mariadb=12.3,SETUP_TYPE=replication' 'mariadb=12.3,NODES_COUNT=2' 'mariadb=10.1'; do
+    run parse_database_spec "$spec"
+    [[ $status -ne 0 ]] || { echo "accepted $spec"; return 1; }
+  done
+  [[ ! -s $DOCKER_CALLS ]]
 }
 
 @test "single PGSQL boots the prebaked node under systemd and registers it as pgsql_pgss_setup.yml did" {
