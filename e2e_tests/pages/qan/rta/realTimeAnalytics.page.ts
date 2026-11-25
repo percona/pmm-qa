@@ -11,8 +11,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly durationFilterParameter = 'overview.f.queryExecutionDurationMs';
   readonly expectedTexts = {
-    agentTooOld: (serviceName: string, serviceId: string, agentVersion: string) =>
-      `Service ${serviceName} (id ${serviceId}) has pmm-agent with version ${agentVersion} not supporting Real-Time Analytics; pmm-agent 3.12.0 or later is required.`,
     consumerRemedy: (consumer: string) =>
       `UPDATE performance_schema.setup_consumers SET ENABLED='YES' WHERE NAME='${consumer}'`,
     instrumentRemedy: (instrument: string) =>
