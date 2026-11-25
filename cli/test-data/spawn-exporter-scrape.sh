@@ -21,11 +21,28 @@ if [[ -n ${EXPORTER_USER:-} ]]; then
 fi
 mapfile -t flags < <(tr '\0' '\n' </proc/"$pid"/cmdline | tail -n +2 | grep -v -e '^--web\.listen-address=' -e '^--web\.config=')
 
-spawn_port=$((agent_port + 2000))
 log=$(mktemp)
-MONGODB_URI=$uri "$binary" "${flags[@]}" "--web.listen-address=127.0.0.1:${spawn_port}" >"$log" 2>&1 &
-exporter=$!
+exporter=''
 trap 'kill "$exporter" 2>/dev/null; rm -f "$log"' EXIT
+
+# Returns 1 only when the exporter could not bind its port; one that is just slow is left to the scrape loop to report.
+listening() {
+  for _ in $(seq 1 30); do
+    curl -s -o /dev/null --max-time 5 "http://127.0.0.1:${spawn_port}/" && return 0
+    grep -q 'address already in use' "$log" && return 1
+    sleep 1
+  done
+  return 0
+}
+
+# A port in pmm-agent's range can already be the local end of an outgoing connection in the container, so try the next one.
+for spawn_port in $(seq $((agent_port + 2000)) $((agent_port + 2009))); do
+  MONGODB_URI=$uri "$binary" "${flags[@]}" "--web.listen-address=127.0.0.1:${spawn_port}" >"$log" 2>&1 &
+  exporter=$!
+  listening && break
+  kill "$exporter" 2>/dev/null
+  wait "$exporter" 2>/dev/null
+done
 
 for i in $(seq 1 "$scrapes"); do
   echo "---SCRAPE ${i}---"
