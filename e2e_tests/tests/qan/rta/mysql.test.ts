@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
 
 let mySqlServiceId: string;
@@ -9,7 +8,8 @@ let mySqlServiceId: string;
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  const [service] = await api.inventoryApi.getServicesByType(ServiceType.mysql);
+  // mySqlDbHelper connects to Percona Server; the @rta job also sets up MariaDB, another MySQL service.
+  const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
 
   mySqlServiceId = service.service_id;
   await api.realTimeAnalyticsApi.startRealTimeAnalytics(mySqlServiceId);
@@ -24,7 +24,7 @@ pmmTest(
   'Verify RTA overview shows running MySQL queries with database and user @rta',
   async ({ api, mySqlDbHelper, queryAnalytics }) => {
     const queryLabel = 'rta-mysql-overview';
-    const [service] = await api.inventoryApi.getServicesByType(ServiceType.mysql);
+    const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
 
     await pmmTest.step('Simulate long running MySQL query', async () => {
       void mySqlDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
