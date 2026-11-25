@@ -33,7 +33,7 @@ pmmTest.afterEach(({ cliHelper }) => {
 });
 
 pmmTest(
-  'PMM-TXXXX - Verify Home dashboard loads promptly when PMM Server cannot reach the Percona version service @docker-configuration',
+  'PMM-T2862 - Verify Home dashboard loads promptly when PMM Server cannot reach the Percona version service @docker-configuration',
   async ({ dashboard, page, updatesPage }) => {
     await pmmTest.step('Open the Home dashboard once, so the browser has the UI cached', async () => {
       await page.goto(dashboard.home.url);
