@@ -17,9 +17,12 @@ interface BackupArtifactsResponse {
   artifacts?: BackupArtifact[];
 }
 
+export type S3LocationConfig = typeof s3StorageConnection;
+
 interface BackupLocation {
   location_id: string;
   name: string;
+  s3_config?: S3LocationConfig;
 }
 
 interface BackupLocationsResponse {
@@ -67,9 +70,13 @@ export default class BackupsApi {
     return ((await response.json()) as { location_id: string }).location_id;
   };
 
-  addS3Location = async (name: string, description: string) => {
+  addS3Location = async (
+    name: string,
+    description: string,
+    s3Config: S3LocationConfig = s3StorageConnection,
+  ) => {
     const response = await this.request.post(apiEndpoints.backups.locations, {
-      data: { description, name, s3_config: s3StorageConnection },
+      data: { description, name, s3_config: s3Config },
       headers: GrafanaHelper.getAuthHeader(),
     });
 
@@ -230,6 +237,14 @@ export default class BackupsApi {
 
       expect(response.status(), response.statusText()).toEqual(200);
     }
+  };
+
+  removeLocation = async (locationId: string) => {
+    const response = await this.request.delete(`${apiEndpoints.backups.locations}/${locationId}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
   };
 
   startBackup = async (
