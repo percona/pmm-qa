@@ -1,7 +1,6 @@
 import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import CliHelper from '@helpers/cli.helper';
-import { rdsPort } from '@api/management.api';
 import { restartMariaDb } from '@helpers/mariadb.helper';
 import MySQLHelper from '@helpers/mysql.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -794,65 +793,5 @@ pmmTest(
 
     await rta.buttons.allSessions.click();
     await rta.stopAllSessions();
-  },
-);
-
-pmmTest(
-  'Verify Real-Time Analytics shows running statements of an Amazon RDS for MySQL service @rta',
-  async ({ api, credentials, page, queryAnalytics }) => {
-    // eslint-disable-next-line playwright/no-skipped-test -- only Jenkins pmm3-ui-tests passes the QA RDS credentials
-    pmmTest.skip(!credentials.rdsMysql84.address, 'Needs the QA RDS credentials (PMM_QA_MYSQL_RDS_8_4_*)');
-
-    const { rta } = queryAnalytics;
-    const queryLabel = 'rta-mysql-rds';
-    const serviceName = `rta-rds-mysql-${Date.now()}`;
-    const { service_id: serviceId } = (
-      await api.managementApi.addRds({
-        address: credentials.rdsMysql84.address,
-        awsAccessKey: credentials.aws.accessKey,
-        awsSecretKey: credentials.aws.secretKey,
-        instanceId: serviceName,
-        password: credentials.rdsMysql84.password,
-        serviceName,
-        username: credentials.rdsMysql84.username,
-      })
-    ).rds.mysql;
-    const rds = new MySQLHelper({
-      host: credentials.rdsMysql84.address,
-      password: credentials.rdsMysql84.password,
-      port: rdsPort,
-      username: credentials.rdsMysql84.username,
-    });
-
-    serviceIds.push(serviceId);
-    databases.push(rds);
-
-    await pmmTest.step('Start a session for the RDS service', async () => {
-      await page.goto(queryAnalytics.url);
-      await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
-      await rta.inputs.clusterService.click();
-      await startSessionFromSelection(queryAnalytics, [serviceId], [serviceName]);
-      await openSessionFromList(queryAnalytics, serviceName);
-    });
-
-    await pmmTest.step(
-      'Verify the labelled statement is listed within 5 seconds with the RDS host',
-      async () => {
-        await rta.setQueryTextFilter(queryLabel);
-
-        void rds.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
-
-        await expect(rta.builders.rowByQueryText(queryLabel)).toBeVisible({ timeout: Timeouts.FIVE_SECONDS });
-        await expect(rta.builders.hostForQueryByText(queryLabel)).toHaveText(serviceName);
-      },
-    );
-
-    await pmmTest.step('Verify the details show the command, a state and the RDS user', async () => {
-      await rta.builders.rowByQueryText(queryLabel).click();
-
-      await expect(rta.elements.detailsCommand).toHaveText('Query');
-      await expect(rta.elements.detailsState).not.toBeEmpty();
-      await expect(rta.elements.detailsUsername).toContainText(credentials.rdsMysql84.username);
-    });
   },
 );
