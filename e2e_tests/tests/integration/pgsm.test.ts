@@ -517,7 +517,6 @@ pmmTest(
           serviceName: disableExamplesService,
           username: 'postgres',
         });
-        await addInstancePage.buttons.skipTlsVerify.check({ timeout: Timeouts.THIRTY_SECONDS });
         await addInstancePage.buttons.disableQueryExamples.click();
         expect((await addInstancePage.addService()).status()).toEqual(200);
       },
