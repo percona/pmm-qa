@@ -4,11 +4,20 @@ import { serviceConnections, testUser } from '@helpers/serviceConnection.helper'
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
-import { externalExporter, haproxy, remoteDatabases } from '@testdata/remoteInstances';
+import * as remoteInstances from '@testdata/remoteInstances';
 
 const { pdpgsql, perconaServer, psmdb } = new Credentials();
-const frameworkDatabases = remoteDatabases.map((database) => ({
+const externalExporter = {
+  ...remoteInstances.externalExporter,
+  serviceName: `${remoteInstances.externalExporter.serviceName}_fb_instances`,
+};
+const haproxy = {
+  ...remoteInstances.haproxy,
+  serviceName: `${remoteInstances.haproxy.serviceName}_fb_instances`,
+};
+const frameworkDatabases = remoteInstances.remoteDatabases.map((database) => ({
   ...database,
+  serviceName: `${database.serviceName}_fb_instances`,
   ...{
     mongodb: { container: '^rs101$', password: psmdb.password, username: psmdb.username },
     mysql: { container: '^ps_pmm_[0-9]+_[0-9]+_1$', ...perconaServer.ps_84 },
