@@ -43,10 +43,11 @@ pmmTest(
     });
 
     // The iframe's body carries the Home dashboard class before Grafana renders any route, so wait for a panel.
+    // A fixed server renders it in 4-6 s; an unfixed one holds every route until the update check fails, 30 s or more.
     await pmmTest.step('Reload the Home dashboard: it renders before the update check gives up', async () => {
       await page.reload();
       await expect(dashboard.home.elements.monitoredServicesPanel).toBeVisible({
-        timeout: Timeouts.FIVE_SECONDS,
+        timeout: Timeouts.FIFTEEN_SECONDS,
       });
     });
 
