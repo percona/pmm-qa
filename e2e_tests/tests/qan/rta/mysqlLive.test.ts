@@ -2,6 +2,7 @@ import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
 import CliHelper from '@helpers/cli.helper';
 import { rdsPort } from '@api/management.api';
+import { restartMariaDb } from '@helpers/mariadb.helper';
 import MySQLHelper from '@helpers/mysql.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
@@ -82,15 +83,6 @@ const addRemoteMySqls = async (api: Api, cliHelper: CliHelper, servers: Record<s
 };
 
 // Start session lands on the sessions list, for MySQL and MongoDB alike.
-// Performance Schema is read only at startup, so changing it restarts the server, which pmm-framework runs under systemd.
-const restartMariaDb = async (cliHelper: CliHelper, container: string, setup: string) => {
-  cliHelper.execute(`docker exec ${container} sh -c "${setup} && systemctl restart mariadb"`).assertSuccess();
-
-  await expect(() => {
-    cliHelper.execSilent(`docker exec ${container} mariadb-admin ping`).assertSuccess();
-  }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.ONE_MINUTE });
-};
-
 const startSessionFromSelection = async (
   queryAnalytics: QueryAnalyticsPage,
   serviceIds: string[],
@@ -135,7 +127,7 @@ pmmTest.afterEach(async ({ api, cliHelper, mySqlDbHelper }) => {
   await api.realTimeAnalyticsApi.stopAllSessions();
 
   for (const [container, setup] of mariaDbRestores.splice(0)) {
-    await restartMariaDb(cliHelper, container, setup);
+    await restartMariaDb(container, setup);
   }
 
   for (const sql of mySqlRestores.splice(0)) await mySqlDbHelper.query(sql);
@@ -282,7 +274,7 @@ pmmTest(
 
 pmmTest(
   'Verify Real-Time Analytics explains why it cannot start for a MySQL server with Performance Schema off @rta',
-  async ({ agentsPage, api, cliHelper, page, queryAnalytics }) => {
+  async ({ agentsPage, api, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     // pmm-framework's MariaDB: no other test here depends on its Performance Schema.
     const mariaDb = await api.inventoryApi.getServiceDetailsByRegex('^mariadb_pmm_');
@@ -292,11 +284,7 @@ pmmTest(
 
     await pmmTest.step('Restart MariaDB with Performance Schema off', async () => {
       mariaDbRestores.push([container, `rm -f ${overrideFile}`]);
-      await restartMariaDb(
-        cliHelper,
-        container,
-        `printf '[mysqld]\\nperformance_schema=OFF\\n' > ${overrideFile}`,
-      );
+      await restartMariaDb(container, `printf '[mysqld]\\nperformance_schema=OFF\\n' > ${overrideFile}`);
     });
 
     await pmmTest.step('Start a session for the service and verify the view says why it failed', async () => {
