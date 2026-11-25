@@ -86,10 +86,10 @@ list_databases() {
 
 register_database PSMDB \
   '6.0 7.0 8.0 8.3' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO QUERY_SOURCE' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES OL_VERSION GSSAPI STORAGE_ENGINE MINIO QUERY_SOURCE EXTERNAL_PBM' \
   'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=latest-tarball' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' \
-  'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true' 'QUERY_SOURCE=profiler'
+  'OL_VERSION=9' 'GSSAPI=false' 'STORAGE_ENGINE=wiredTiger' 'MINIO=true' 'QUERY_SOURCE=profiler' 'EXTERNAL_PBM=false'
 
 # Runs on the psmdb image, so it offers the same versions.
 register_database SSL_PSMDB \
@@ -121,6 +121,13 @@ register_database PS \
   'DEFAULT_VERSION=8.4' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=latest-tarball' \
   'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
+
+# Single node only: MariaDB has its own GTIDs and no group replication.
+register_database MARIADB \
+  '12.3' \
+  'QUERY_SOURCE CLIENT_VERSION ENCRYPTED_CLIENT_CONFIG' \
+  'DEFAULT_VERSION=12.3' \
+  'QUERY_SOURCE=perfschema' 'CLIENT_VERSION=latest-tarball' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 # Runs on the ps image, so it offers the same versions.
 register_database SSL_MYSQL \

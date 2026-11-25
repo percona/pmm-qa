@@ -24,9 +24,10 @@ hub() {
 }
 
 # Stdout: the newest VERSION among PACKAGE[-_]VERSION SUFFIX files in the
-# directory listing URL. SUFFIX is an extended regex; '~' marks a snapshot.
+# directory listing URL, following redirects to a mirror. SUFFIX is an
+# extended regex; '~' marks a snapshot.
 newest() {
-  curl -fsS "$1" | grep -oE "$2[-_][0-9][^\"<~]*$3" | sed -E "s/^$2[-_]//; s/$3\$//" | sort -uV | tail -1
+  curl -fsSL "$1" | grep -oE "$2[-_][0-9][^\"<~]*$3" | sed -E "s/^$2[-_]//; s/$3\$//" | sort -uV | tail -1
 }
 
 # Stdout: the newest EL9 PACKAGE in Percona repository REPO.
@@ -56,6 +57,9 @@ case $engine in
     else
       newest "https://repo.mysql.com/yum/mysql-$tag-community/el/9/x86_64/" mysql-community-server '\.el9\.x86_64\.rpm'
     fi
+    ;;
+  mariadb)
+    newest "https://rpm.mariadb.org/$tag/rhel/9/x86_64/rpms/" MariaDB-server '-1\.el9\.x86_64\.rpm'
     ;;
   pxc-proxysql)
     if [[ $tag == 5.7 ]]; then

@@ -36,6 +36,8 @@ preflight_run() {
   [[ $WARNINGS == *'PS and MYSQL setups (both publish host ports from 3306)'* ]]
   [[ $(parallel_decision mysql ps) == false ]]
   [[ $(parallel_decision 'ps,SETUP_TYPE=replication' 'ps,SETUP_TYPE=gr') == false ]]
+  [[ $(parallel_decision mariadb ps) == false && $(parallel_decision mysql mariadb) == false ]]
+  [[ $(parallel_decision mariadb psmdb) == true ]]
 }
 
 @test "PSMDB and SSL PSMDB run in parallel" {
@@ -65,6 +67,20 @@ preflight_run() {
   preflight_run 'psmdb,SETUP_TYPE=sharding' 'psmdb,SETUP_TYPE=shards'
   [[ $status -eq 1 ]]
   [[ $output == *'two PSMDB setups'* ]]
+}
+
+@test "a standalone_no_pbm PSMDB shares a host and a run with a replica set or sharded cluster" {
+  for other in psmdb 'psmdb,SETUP_TYPE=psa' 'psmdb,SETUP_TYPE=sharding'; do
+    [[ $(parallel_decision "$other" 'psmdb,SETUP_TYPE=standalone_no_pbm') == true ]]
+    [[ $(parallel_decision 'psmdb,SETUP_TYPE=standalone_no_pbm' "$other") == true ]]
+  done
+}
+
+@test "two standalone_no_pbm PSMDB setups cannot share a host" {
+  preflight_run 'psmdb,SETUP_TYPE=standalone_no_pbm' psmdb 'psmdb,SETUP_TYPE=Standalone_No_PBM'
+  [[ $status -eq 1 ]]
+  [[ $output == *'two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'* ]]
+  [[ $output == *'separate machines'* ]]
 }
 
 @test "a PSMDB host conflict is caught behind an unrelated spec" {
