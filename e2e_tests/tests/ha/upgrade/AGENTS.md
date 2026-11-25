@@ -15,11 +15,11 @@ The upgrade itself is **not** done by these tests. Every helm step is
 | # | Phase | Tag | What the test proves |
 |---|---|---|---|
 | 1 | `install_pmm_ha.sh` installs the **released** image from the **published** chart | — | — |
-| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader, UI renders. **Records the baseline.** |
+| 2 | | `@pmm-helm-pre-upgrade` | HA is enabled, every pod runs the released image, one leader. **Seeds a stray `pmm` ClickHouse database on the third ClickHouse server** (PMM-15785), then **records the baseline.** |
 | 3 | `--charts deps --chart-branch <branch>` upgrades the operators | — | — |
 | 4 | | `@pmm-helm-mid-upgrade` | the dependencies release moved and the `pmm-ha` release did **not**: same revision, same pods, same version, still serving |
 | 5 | `--charts pmm-ha --chart-branch <branch> --image <target>` upgrades the server | — | — |
-| 6 | | `@pmm-helm-post-upgrade` | revision advanced, every pod runs the target image and serves a version no older than the baseline, one leader, UI renders |
+| 6 | | `@pmm-helm-post-upgrade` | revision advanced, every pod runs the target image and serves a version no older than the baseline, one leader, UI renders, and within 15 minutes every ClickHouse server holds one `pmm` UUID again, not the stray one, with the same `pmm.metrics` rows |
 | 7 | | `@pmm-ha` | the ordinary HA suite - failover, leader metrics, node inventory - run last on the upgraded cluster. A failure here is an HA regression, not a broken upgrade |
 
 ## The baseline file
@@ -32,6 +32,7 @@ so nothing survives in memory. Phase 2 writes what phases 4 and 6 compare agains
   "images": ["reg-19jf01na.percona.com/dockerhub-cache/percona/pmm-server:3.9.1"],
   "podNames": ["pmm-ha-0", "pmm-ha-1", "pmm-ha-2"],
   "revision": 1,
+  "strayUuid": "0b6f2c1e-5d4a-4c1f-9a63-2f1e7d8c4b90",
   "version": "3.9.1"
 }
 ```
@@ -42,6 +43,7 @@ so nothing survives in memory. Phase 2 writes what phases 4 and 6 compare agains
 | `podNames` | pod names, sorted | mid and post: **unchanged** - a StatefulSet rolling upgrade reuses names, and both compare this against `/v1/ha/nodes` to prove every pod rejoined |
 | `version` | `/v1/version` from the cluster API | mid: **identical**. post: **not older** (`serverVersionBelow`) - a dev build can report the same version as the release it was cut from, so equality is not required |
 | `images` | deduped `spec.containers[].image` | evidence only; the image assertions compare against the env vars below |
+| `strayUuid` | the UUID of the stray `pmm` copy pre seeds on the third ClickHouse server | post: the one UUID every server ends up with must **not** be this one - the repair keeps the copy holding QAN data |
 
 Path: `$HA_UPGRADE_BASELINE`, defaulting to `output/ha-upgrade-baseline.json`
 relative to `e2e_tests/`. Only the pre-upgrade test writes it; mid and post read it
@@ -60,6 +62,10 @@ and **fail** when it is missing rather than skipping their comparisons.
 
 ## Rules that have already cost a run
 
+- **No UI in pre and mid.** They run against the released server, and the page
+  objects on `main` follow the server being built: the Nodes page object moved to
+  `pmm-ui/inventory/nodes`, which 3.10.0 does not serve. Check through the API,
+  `kubectl` and `helm` there; only post may use the UI.
 - **Never tag these `@pmm-ha`.** `--grep "@pmm-ha"` matches a nested tag by
   substring, and these mutate the cluster they run on - the whole HA suite would
   drag them in.

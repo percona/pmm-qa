@@ -6,6 +6,7 @@
 # Env:   CLIENT_UPGRADE_REPOSITORY  pmm3-client repository to upgrade from (optional)
 #        CLIENT_INSTALL_VERSION  without CLIENT_UPGRADE_REPOSITORY, pmm3-rc upgrades from experimental, anything else from testing
 #        CLIENT_TARBALL_UPGRADE  tarball URL to upgrade from instead of the repository (optional)
+#        CLIENT_UPGRADE_PARALLEL  containers upgraded at once (default 4)
 set -uo pipefail
 
 want="${1:?usage: $0 <expected-version>}"
@@ -90,17 +91,22 @@ upgrade_client() {
   echo "== upgrade succeeded in $c =="
 }
 
+# Every dnf here solves the full OL9 metadata; all 13 at once starve PMM Server of memory.
+parallel="${CLIENT_UPGRADE_PARALLEL:-4}"
+
 # Each container writes its own output so per-container logs stay contiguous when printed.
 outdir=$(mktemp -d)
-pids=()
 for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container|chunk-churn|external_pmm|nginx)$'); do
-  upgrade_client "$c" >"$outdir/$c.out" 2>&1 &
-  pids+=("$!")
+  while [ "$(jobs -pr | wc -l)" -ge "$parallel" ]; do wait -n; done
+  { upgrade_client "$c" >"$outdir/$c.out" 2>&1; echo "$?" >"$outdir/$c.rc"; } &
 done
+wait
 
 rc=0
-for pid in "${pids[@]}"; do
-  wait "$pid" || rc=1
+# A job killed before writing its .rc leaves only its .out, and counts as a failure.
+for f in "$outdir"/*.out; do
+  [ -e "$f" ] || continue
+  [ "$(cat "${f%.out}.rc" 2>/dev/null)" = 0 ] || rc=1
 done
 
 for f in "$outdir"/*.out; do

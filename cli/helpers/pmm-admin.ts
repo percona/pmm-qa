@@ -1,35 +1,56 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { clientCredentialsFlags } from '@helpers/constants';
+import { clientCredentialsFlags, psConnection } from '@helpers/constants';
+import ExecReturn from '@support/types/exec-return.class';
 
-export const removePGService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove postgresql "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove postgresql ${serviceName}`);
+/**
+ * Agent subcommands of "pmm-admin inventory change agent"
+ */
+export enum ChangeAgentType {
+  NodeExporter = 'node-exporter',
+  MysqldExporter = 'mysqld-exporter',
+  MongodbExporter = 'mongodb-exporter',
+  PostgresExporter = 'postgres-exporter',
+  ProxysqlExporter = 'proxysql-exporter',
+  ExternalExporter = 'external-exporter',
+  RdsExporter = 'rds-exporter',
+  AzureDatabaseExporter = 'azure-database-exporter',
+  ValkeyExporter = 'valkey-exporter',
+  NomadAgent = 'nomad-agent',
+  QanMysqlPerfschemaAgent = 'qan-mysql-perfschema-agent',
+  QanMysqlSlowlogAgent = 'qan-mysql-slowlog-agent',
+  QanMongodbProfilerAgent = 'qan-mongodb-profiler-agent',
+  QanMongodbMongologAgent = 'qan-mongodb-mongolog-agent',
+  QanPostgresqlPgstatementsAgent = 'qan-postgresql-pgstatements-agent',
+  QanPostgresqlPgstatmonitorAgent = 'qan-postgresql-pgstatmonitor-agent',
+  RtaMongodbAgent = 'rta-mongodb-agent',
+}
+
+/**
+ * Remove a service with "pmm-admin remove"
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     pmm-admin service type, e.g. mongodb, mysql, postgresql, proxysql, valkey, haproxy, external
+ * @param   serviceName     service name
+ */
+export const removeService = async (containerName: string, serviceType: string, serviceName: string) => {
+  await test.step(`remove ${serviceType} "${serviceName}" service`, async () => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove ${serviceType} ${serviceName}`);
     await output.assertSuccess();
     await output.outContains('Service removed.');
   });
 };
 
-export const removeMySQLService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove mysql "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName}`);
-    await output.assertSuccess();
-    await output.outContains('Service removed.');
-  });
-};
+export const removePGService = (containerName: string, serviceName: string) => removeService(containerName, 'postgresql', serviceName);
 
-export const removeMongoService = async (containerName: string, serviceName: string) => {
-  await test.step(`remove mongodb "${serviceName}" service`, async () => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin remove mongodb ${serviceName}`);
-    await output.assertSuccess();
-    await output.outContains('Service removed.');
-  });
-};
+export const removeMySQLService = (containerName: string, serviceName: string) => removeService(containerName, 'mysql', serviceName);
+
+export const removeMongoService = (containerName: string, serviceName: string) => removeService(containerName, 'mongodb', serviceName);
 
 export const getPmmAdminVersion = async (containerName: string): Promise<string> => {
   return test.step('get pmm admin full version', async () => {
-    const prefix = containerName ? `docker exec ${containerName} ` : '';
-    const output: { Version: string } = JSON.parse((await cli.exec(`${prefix}pmm-admin --version --json`)).stdout);
+    const pmmAdmin = containerName ? `docker exec ${containerName} pmm-admin` : 'sudo pmm-admin';
+    const output: { Version: string } = JSON.parse((await cli.exec(`${pmmAdmin} --version --json`)).stdout);
 
     return output.Version.split('-')[0];
   });
@@ -76,6 +97,19 @@ export async function listAgents(containerName: string): Promise<ListAgent[]> {
 }
 
 /**
+ * IDs of a MySQL service's mysqld_exporter and QAN slowlog agent from "pmm-admin list --json", empty when absent
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the MySQL service
+ */
+export async function mysqlAgentIds(containerName: string, serviceId: string) {
+  const agents = (await listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
+  const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type)?.agent_id ?? '';
+
+  return { exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'), slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT') };
+}
+
+/**
  * Listen port of an agent from "pmm-admin list --json" in a client container
  *
  * @param   containerName   docker container running pmm-agent
@@ -108,68 +142,34 @@ export async function addMongoServiceAgents(containerName: string, addFlags: str
 }
 
 /**
- * Build a "pmm-admin inventory change agent mongodb-exporter" command
+ * Add the MySQL service of the Percona Server setup, replacing one of the same name
  *
  * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_exporter agent ID
- * @param   flags           flags to change
+ * @param   serviceName     service name
+ * @param   querySource     value of --query-source
+ * @param   onAdded         called once the service exists, so the caller can remember to remove it
+ * @param   flags           more flags of pmm-admin add mysql
+ * @return  ID of the service
  */
-export function changeMongoExporter(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent mongodb-exporter ${agentId} ${flags}`;
+export async function addMySQLService(containerName: string, serviceName: string, querySource: string, onAdded: () => void, flags = ''): Promise<string> {
+  await (await cli.exec(`docker exec ${containerName} pmm-admin remove mysql ${serviceName} || true`)).assertSuccess();
+  const output = await cli.exec(
+    `docker exec ${containerName} pmm-admin add mysql --query-source=${querySource} ${flags} --username=${psConnection.username} --password=${psConnection.password} ${serviceName} ${psConnection.address}`,
+  );
+  await output.assertSuccess();
+  onAdded();
+
+  return getServiceId(containerName, serviceName);
 }
 
 /**
- * Build a "pmm-admin inventory change agent qan-mongodb-profiler-agent" command
+ * Run the mysql client as the root user of the Percona Server setup
  *
- * @param   containerName   docker container running pmm-agent
- * @param   agentId         mongodb_profiler_agent agent ID
- * @param   flags           flags to change
+ * @param   containerName   docker container running mysqld
+ * @param   args            arguments of the mysql client
  */
-export function changeMongoProfiler(containerName: string, agentId: string, flags: string): string {
-  return `docker exec ${containerName} pmm-admin inventory change agent qan-mongodb-profiler-agent ${agentId} ${flags}`;
-}
-
-/**
- * Build the change agent commands applying the same flags to a mongodb_exporter and a QAN profiler agent
- *
- * @param   containerName   docker container running pmm-agent
- * @param   exporterId      mongodb_exporter agent ID
- * @param   profilerId      mongodb_profiler_agent agent ID
- * @param   flags           flags to change
- */
-export function changeMongoAgents(containerName: string, exporterId: string, profilerId: string, flags: string): string[] {
-  return [changeMongoExporter(containerName, exporterId, flags), changeMongoProfiler(containerName, profilerId, flags)];
-}
-
-/**
- * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
- * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
- * so a change that succeeded can be silently reverted (PMM-15835).
- * Each retry restarts the agent, so an assertion on runtime state must wait for the restart within itself.
- *
- * @param   commands          change agent commands to run
- * @param   expectedOutput    strings every command's output must contain
- * @param   persisted         assertion on the stored state; throws while the change is missing
- * @param   timeout           milliseconds to keep re-applying
- */
-export async function changeAgentsUntilPersisted(
-  commands: string[],
-  expectedOutput: string[],
-  persisted: () => Promise<void>,
-  timeout = 60_000,
-) {
-  await expect(async () => {
-    for (const command of commands) {
-      const output = await cli.exec(command);
-      await output.assertSuccess();
-
-      for (const value of expectedOutput) {
-        await output.outContains(value);
-      }
-    }
-
-    await persisted();
-  }).toPass({ intervals: [5_000], timeout });
+export async function runMySQL(containerName: string, args: string): Promise<ExecReturn> {
+  return cli.exec(`docker exec ${containerName} mysql -u${psConnection.username} -p${psConnection.password} ${args}`);
 }
 
 /**
@@ -198,4 +198,185 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
         .toContain(localStatus);
     }
   }).toPass({ intervals: [5_000], timeout });
+}
+
+/**
+ * Build a "pmm-admin inventory change agent" command
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentType       agent or exporter to change
+ * @param   agentId         ID of the agent
+ * @param   flags           flags to change
+ */
+export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
+  return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
+}
+
+export type UpdateServiceType = 'mongodb' | 'mysql' | 'postgresql' | 'proxysql' | 'valkey' | 'haproxy' | 'external' | 'external-serverless';
+
+export interface UpdateResult {
+  service_id: string;
+  service_name: string;
+  dry_run: boolean;
+  changed: boolean;
+  changes: { flag: string, before: string, after: string }[];
+  settings: { flag: string, value: string }[];
+  warning?: string;
+}
+
+export interface ListService {
+  service_id: string;
+  service_name: string;
+  service_type: string;
+  address_port: string;
+  external_group: string;
+}
+
+/**
+ * Build a "pmm-admin update" command
+ *
+ * @param   containerName   docker container running pmm-agent; empty for the pmm-admin of the host
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ * @param   json            true for the JSON output
+ */
+export function updateServiceCommand(containerName: string, serviceType: UpdateServiceType, args: string, json = false): string {
+  const pmmAdmin = containerName ? `docker exec ${containerName} pmm-admin` : 'sudo pmm-admin';
+
+  return `${pmmAdmin} ${json ? '--json ' : ''}update ${serviceType} ${args}`;
+}
+
+/**
+ * Run "pmm-admin update" and return its result, which may be a failure
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ */
+export async function updateService(containerName: string, serviceType: UpdateServiceType, args: string): Promise<ExecReturn> {
+  return cli.exec(updateServiceCommand(containerName, serviceType, args));
+}
+
+/**
+ * Run "pmm-admin update" that has to succeed, and return its text output
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ */
+export async function updateServiceOk(containerName: string, serviceType: UpdateServiceType, args: string): Promise<ExecReturn> {
+  const output = await updateService(containerName, serviceType, args);
+  await output.assertSuccess();
+
+  return output;
+}
+
+/**
+ * Run "pmm-admin --json update" that has to succeed, and parse its result
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ */
+export async function updateServiceJson(containerName: string, serviceType: UpdateServiceType, args: string): Promise<UpdateResult> {
+  const output = await cli.exec(updateServiceCommand(containerName, serviceType, args, true));
+  await output.assertSuccess();
+
+  return JSON.parse(output.stdout) as UpdateResult;
+}
+
+const settingsAfter = (stdout: string, header: string): string[] => {
+  const lines = stdout.split('\n');
+  const start = lines.findIndex((line) => line.trim() === header);
+  if (start < 0) return [];
+  const end = lines.findIndex((line, index) => index > start && line.trim() === '');
+
+  return lines.slice(start + 1, end < 0 ? undefined : end).map((line) => line.trim());
+};
+
+/**
+ * Settings listed under "Changed settings:", or "Settings the update would change:" for a dry run
+ *
+ * @param   output   result of pmm-admin update
+ */
+export function getChangedSettings(output: ExecReturn): string[] {
+  return [
+    ...settingsAfter(output.stdout, 'Changed settings:'),
+    ...settingsAfter(output.stdout, 'Settings the update would change:'),
+  ];
+}
+
+/**
+ * Value of a setting in the JSON result of pmm-admin update
+ *
+ * @param   result   result of pmm-admin --json update
+ * @param   flag     flag of the setting, e.g. --environment
+ */
+export function getSettingValue(result: UpdateResult, flag: string): string | undefined {
+  return result.settings.find((setting) => setting.flag === flag)?.value;
+}
+
+/**
+ * Settings listed under "Current settings:"
+ *
+ * @param   output   result of pmm-admin update
+ */
+export function getCurrentSettings(output: ExecReturn): string[] {
+  return settingsAfter(output.stdout, 'Current settings:');
+}
+
+/**
+ * List Services from "pmm-admin list --json" in a client container
+ *
+ * @param   containerName   docker container running pmm-agent
+ */
+export async function listServices(containerName: string): Promise<ListService[]> {
+  return (JSON.parse((await cli.exec(`docker exec ${containerName} pmm-admin list --json`)).stdout) as { service: ListService[] }).service;
+}
+
+/**
+ * ID of a Service found by name in "pmm-admin list"
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceName     service name
+ */
+export async function getServiceId(containerName: string, serviceName: string): Promise<string> {
+  const service = (await listServices(containerName)).find((item) => item.service_name === serviceName);
+  expect(service, `Service ${serviceName} not found in pmm-admin list`).toBeTruthy();
+
+  return service!.service_id;
+}
+
+/**
+ * Sorted IDs of the Agents that monitor a Service, as the Service's identity across an update
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the Service
+ */
+export async function getServiceAgentIds(containerName: string, serviceId: string): Promise<string[]> {
+  return (await listAgents(containerName)).filter((agent) => agent.service_id === serviceId).map((agent) => agent.agent_id).sort();
+}
+
+/**
+ * Agent of a type that monitors a Service
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the Service
+ * @param   agentType       agent type as "pmm-admin list --json" shows it, e.g. AGENT_TYPE_MONGODB_EXPORTER
+ * @return  the agent, or undefined when the Service has none
+ */
+export async function findServiceAgent(containerName: string, serviceId: string, agentType: string): Promise<ListAgent | undefined> {
+  return (await listAgents(containerName)).find((agent) => agent.service_id === serviceId && agent.agent_type === agentType);
+}
+
+/**
+ * ID of the agent of a type that monitors a Service
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceId       ID of the Service
+ * @param   agentType       agent type as "pmm-admin list --json" shows it, e.g. AGENT_TYPE_MONGODB_EXPORTER
+ * @return  the agent ID, or undefined when the Service has none
+ */
+export async function findServiceAgentId(containerName: string, serviceId: string, agentType: string): Promise<string | undefined> {
+  return (await findServiceAgent(containerName, serviceId, agentType))?.agent_id;
 }
