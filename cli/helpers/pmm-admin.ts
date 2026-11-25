@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import * as pmmApi from '@helpers/pmm-api-helper';
 import { clientCredentialsFlags, psConnection } from '@helpers/constants';
 import ExecReturn from '@support/types/exec-return.class';
 
@@ -97,7 +98,7 @@ export async function listAgents(containerName: string): Promise<ListAgent[]> {
 }
 
 /**
- * IDs of a MySQL service's mysqld_exporter and QAN slowlog agent from "pmm-admin list --json", empty when absent
+ * IDs of a MySQL service's mysqld_exporter and QAN slowlog and perfschema agents from "pmm-admin list --json", empty when absent
  *
  * @param   containerName   docker container running pmm-agent
  * @param   serviceId       ID of the MySQL service
@@ -106,7 +107,11 @@ export async function mysqlAgentIds(containerName: string, serviceId: string) {
   const agents = (await listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
   const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type)?.agent_id ?? '';
 
-  return { exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'), slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT') };
+  return {
+    exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'),
+    slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT'),
+    perfschemaId: agentOfType('AGENT_TYPE_QAN_MYSQL_PERFSCHEMA_AGENT'),
+  };
 }
 
 /**
@@ -210,6 +215,55 @@ export async function expectAgentsRunning(containerName: string, agentIds: strin
  */
 export function inventoryChangeAgent(containerName: string, agentType: ChangeAgentType, agentId: string, flags: string): string {
   return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
+}
+
+/**
+ * Enable or disable agents with "pmm-admin inventory change agent", re-applying the change until PMM Server stores it
+ * and the agents reach that state. A status report can revert a change even after it was stored (PMM-15835),
+ * so the runtime check is part of the retry.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agents          agents to change
+ * @param   flag            --enable flag to pass, such as --enable=false
+ * @param   response        output every change command must contain
+ * @param   running         true when the flag enables the agents
+ */
+export async function setEnabledUntilPersisted(
+  containerName: string,
+  agents: { type: ChangeAgentType, id: string }[],
+  flag: string,
+  response: string,
+  running: boolean,
+) {
+  await cli.execUntilPersisted(
+    agents.map(({ type, id }) => inventoryChangeAgent(containerName, type, id, flag)),
+    [response],
+    async () => {
+      for (const { id } of agents) {
+        expect((await pmmApi.getServerAgent(id)).disabled, `Disabled was not persisted on ${id}`).toBe(!running);
+      }
+
+      await expectAgentsRunning(containerName, agents.map(({ id }) => id), running, 45_000);
+    },
+    120_000,
+  );
+}
+
+/**
+ * Enable an agent with "pmm-admin inventory change agent --enable", re-applying it until PMM Server stores it (PMM-15835)
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentType       agent or exporter to enable
+ * @param   agentId         ID of the agent
+ */
+export async function enableUntilPersisted(containerName: string, agentType: ChangeAgentType, agentId: string) {
+  await cli.execUntilPersisted(
+    [inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
+    [],
+    async () => {
+      expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
+    },
+  );
 }
 
 export type UpdateServiceType = 'mongodb' | 'mysql' | 'postgresql' | 'proxysql' | 'valkey' | 'haproxy' | 'external' | 'external-serverless';
