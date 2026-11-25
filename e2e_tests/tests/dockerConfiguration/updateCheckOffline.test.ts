@@ -37,14 +37,15 @@ pmmTest(
   async ({ dashboard, page, updatesPage }) => {
     await pmmTest.step('Open the Home dashboard once, so the browser has the UI cached', async () => {
       await page.goto(dashboard.home.url);
-      await expect(dashboard.home.elements.homeDashboardLocator).toBeVisible({
+      await expect(dashboard.home.elements.monitoredServicesPanel).toBeVisible({
         timeout: Timeouts.TWO_MINUTES,
       });
     });
 
+    // The iframe's body carries the Home dashboard class before Grafana renders any route, so wait for a panel.
     await pmmTest.step('Reload the Home dashboard: it renders before the update check gives up', async () => {
       await page.reload();
-      await expect(dashboard.home.elements.homeDashboardLocator).toBeVisible({
+      await expect(dashboard.home.elements.monitoredServicesPanel).toBeVisible({
         timeout: Timeouts.FIVE_SECONDS,
       });
     });
