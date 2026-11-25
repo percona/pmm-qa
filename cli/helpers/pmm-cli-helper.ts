@@ -103,7 +103,10 @@ export async function restartContainerWithPmmAgent(containerName: string, config
  * @param   since           keep the lines timed at or after this
  */
 export async function logLinesSince(containerName: string, files: string, pattern: string, since: Date): Promise<string[]> {
-  const output = await exec(`docker exec ${containerName} sh -c "grep -hE '${pattern}' ${files} | cut -c1-1000"`);
+  const output = await exec(`docker exec ${containerName} sh -c "{ grep -hE '${pattern}' ${files}; echo grep_rc=\\$?; } | cut -c1-1000"`);
+  const grepRc = output.stdout.match(/grep_rc=(\d+)/)?.[1];
+
+  expect(output.code === 0 && (grepRc === '0' || grepRc === '1'), `Could not read ${files} in ${containerName}: ${output.stderr.text}`).toBeTruthy();
 
   return output.getStdOutLines().filter((line) => {
     const time = line.match(/time="([^"]+)"/)?.[1];

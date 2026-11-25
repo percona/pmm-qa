@@ -10,9 +10,9 @@ const replIpPort = 'rs101:27017';
 const mongoUri = 'mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true';
 const database = 'pmm_qa_grpc_limit';
 const serverErrors = 'failed to send CollectRequest to QAN|received message larger than max|ResourceExhausted';
-const agentReconnects = 'Failed to send QanCollect request|Connection closed|Establishing two-way communication channel';
+const agentReconnects = 'msg=.(Failed to send QanCollect request|Connection closed|Establishing two-way communication channel).* component=client';
 
-test.describe('PSMDB QAN keeps every query of a minute larger than the gRPC message limits', () => {
+test.describe('PSMDB QAN keeps every query of a minute larger than the gRPC message limits', { tag: '@psmdb' }, () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ pmmClientContainer: containerName });
   test.skip(gssapi.enabled === 'true', 'The QAN message size does not depend on the authentication mechanism');
@@ -48,7 +48,7 @@ test.describe('PSMDB QAN keeps every query of a minute larger than the gRPC mess
       .toEqual(Math.floor(start.getTime() / 60_000));
 
     await expect(async () => {
-      expect(await pmmApi.getQanTotalQueries(service, new Date(Date.now() - 15 * 60_000)), `QAN query classes of ${service}`).toBeGreaterThanOrEqual(queries);
+      expect(await pmmApi.getQanTotalQueries(service, new Date(Math.floor(since.getTime() / 60_000) * 60_000)), `QAN query classes of ${service}`).toBeGreaterThanOrEqual(queries);
     }).toPass({ intervals: [10_000], timeout: 4 * 60_000 });
 
     expect(await pmmCli.logLinesSince('pmm-server', '/srv/logs/pmm-managed.log* /srv/logs/qan-api2.log*', serverErrors, since), 'PMM Server rejected a QAN message').toEqual([]);
@@ -56,13 +56,13 @@ test.describe('PSMDB QAN keeps every query of a minute larger than the gRPC mess
     return since;
   };
 
-  test('PMM-T2860 - Verify QAN keeps every query when one minute of collected queries exceeds 20 MB @psmdb', async ({}) => {
+  test('PMM-T2860 - Verify QAN keeps every query when one minute of collected queries exceeds 20 MB', async ({}) => {
     test.setTimeout(8 * 60_000);
 
     await runBurstAndExpectEveryQueryInQan('mongo_grpc_limit_20mb', 1500);
   });
 
-  test('PMM-T2861 - Verify QAN keeps every query and PMM Client stays connected when one minute of collected queries exceeds 100 MB @psmdb', async ({}) => {
+  test('PMM-T2861 - Verify QAN keeps every query and PMM Client stays connected when one minute of collected queries exceeds 100 MB', async ({}) => {
     test.setTimeout(8 * 60_000);
 
     const since = await runBurstAndExpectEveryQueryInQan('mongo_grpc_limit_100mb', 3000);
