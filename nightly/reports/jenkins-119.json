@@ -3976,5 +3976,14 @@
       "duration_s": null
     }
   ],
-  "investigations": []
+  "investigations": [],
+  "claims": [
+    {
+      "by": "Investigator routine",
+      "at": "2026-11-25T02:59:24Z",
+      "suites": [
+        "Package AMD"
+      ]
+    }
+  ]
 }
