@@ -228756,15 +228756,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
-    "claims": [
+    "investigations": [
       {
-        "by": "Investigator routine",
-        "at": "2026-11-25T02:59:24Z",
         "suites": [
           "Package AMD"
-        ]
+        ],
+        "verdict": "unstable",
+        "summary": "9 amd64 package cells (debian12 x6, debian13, ubuntu2204, ubuntu2404) failed 'Update apt repo' on both attempts with 'File has unexpected size ... Mirror sync in progress?': repo.percona.com republished pmm3-client/apt experimental InRelease at 00:58:40-00:59:08 UTC and mirror 15.204.182.114 kept serving the old binary-amd64 Packages.gz until about 01:14, so only cells that ran apt-get update in that window failed (arm64 and cells after 01:15 were clean, 3 cells retrying across 01:13 recovered); the same 11 cells re-run on main at 03:05 all passed (debian12 run linked; ubuntu2204 45537494994, debian13 45537498860, ubuntu2404 45537503551). The repo publishes no Acquire-By-Hash, which would remove this race.",
+        "link": "https://github.com/percona/pmm-qa/actions/runs/45537490564",
+        "by": "Investigator routine",
+        "at": "2026-11-25T03:11:28Z"
       }
-    ]
+    ],
+    "claims": []
   }
 ]
