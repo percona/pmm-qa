@@ -353,22 +353,34 @@ export async function expectRestoreStatus(container: string, name: string, statu
   }).toPass({ intervals: [2_000], timeout });
 }
 
-const resyncOutcome = /^(\S+Z) (?:I .*\[resync\] succeed|E .*\[resync\] resync:)/;
+interface PbmLogEntry {
+  node: string;
+  opid: string;
+  msg: string;
+  s: number;
+}
+
+const resyncLog = async (container: string) => (await pbmJson<PbmLogEntry[] | null>(container, 'logs --event=resync --tail=30')) ?? [];
 
 /**
- * Wait until a resync has ended since a time, whether it succeeded or failed, which PBM's log tells and its status does not:
- * a restore that was interrupted by stopping its agents stays listed as running there for good.
+ * Run a pbm command that starts a resync and wait until that resync has ended, whether it succeeded or failed, which PBM's log tells and
+ * its status does not: a restore that was interrupted by stopping its agents stays listed as running there for good.
+ * The resync is told apart from earlier ones by its operation ID. A timestamp cannot do it: the log has second precision, and a resync
+ * that ended a moment before the command matched, so a backup started next ran into the lock of the one still running and never began.
  */
-async function expectResyncEnded(container: string, since: number) {
+async function resyncWith(container: string, args: string) {
+  const earlier = new Set((await resyncLog(container)).map((entry) => entry.opid));
+
   await expect(async () => {
-    const logs = await pbm(container, 'logs --event=resync --tail=30');
-    const ended = logs.stdout.split('\n').some((line) => {
-      const logged = line.match(resyncOutcome)?.[1];
+    await (await pbm(container, args)).assertSuccess();
+  }).toPass({ intervals: [3_000], timeout: 120_000 });
+  await expect(async () => {
+    const entries = (await resyncLog(container)).filter((entry) => !earlier.has(entry.opid));
+    const runners = new Set(entries.filter((entry) => entry.msg === 'started').map((entry) => `${entry.opid} ${entry.node}`));
+    // An agent logs an error, severity 1 or 0, only for a resync it has started; succeed comes just before its lock is released.
+    const ended = entries.some((entry) => entry.msg === 'succeed' || (entry.s <= 1 && runners.has(`${entry.opid} ${entry.node}`)));
 
-      return logged !== undefined && Date.parse(logged) >= since;
-    });
-
-    expect(ended, 'no resync has ended since it was requested').toBeTruthy();
+    expect(ended, `no resync has ended since pbm ${args}`).toBeTruthy();
   }).toPass({ intervals: [2_000], timeout: 120_000 });
 }
 
@@ -376,33 +388,18 @@ async function expectResyncEnded(container: string, since: number) {
  * Resync the PBM metadata with the storage, which drops the records of backups that are not in it, such as failed ones.
  * Waiting with the CLI is not an option: it waits for good when the resync ended before it began to watch.
  */
-export async function resync(container: string) {
-  const startedAt = Date.now() - 2_000;
-
-  await expect(async () => {
-    await (await pbm(container, 'config --force-resync')).assertSuccess();
-  }).toPass({ intervals: [3_000], timeout: 120_000 });
-  await expectResyncEnded(container, startedAt);
-}
+export const resync = async (container: string) => resyncWith(container, 'config --force-resync');
 
 /**
  * Point the PBM storage at a bucket that does not exist, which makes every backup fail at once
  */
-export async function breakStorage(container: string) {
-  const startedAt = Date.now() - 2_000;
-
-  await (await pbm(container, 'config --set storage.s3.bucket=pbm-metrics-missing-bucket')).assertSuccess();
-  await expectResyncEnded(container, startedAt);
-}
+export const breakStorage = async (container: string) => resyncWith(container, 'config --set storage.s3.bucket=pbm-metrics-missing-bucket');
 
 /**
  * Point the PBM storage back at its bucket and resync
  */
 export async function fixStorage(container: string, bucket: string) {
-  const startedAt = Date.now() - 2_000;
-
-  await (await pbm(container, `config --set storage.s3.bucket=${bucket}`)).assertSuccess();
-  await expectResyncEnded(container, startedAt);
+  await resyncWith(container, `config --set storage.s3.bucket=${bucket}`);
   await resync(container);
   await expectAgentsOk(container);
 }
