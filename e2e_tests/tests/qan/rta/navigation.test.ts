@@ -23,7 +23,7 @@ pmmTest(
   async ({ page, queryAnalytics }) => {
     await pmmTest.step('Switch to Real-Time tab and verify title', async () => {
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
-      await expect(queryAnalytics.elements.pageTitle.first()).toBeVisible();
+      await expect(queryAnalytics.elements.realTimePageTitle.first()).toBeVisible();
       await expect(page).toHaveURL(queryAnalytics.rtaUrlPattern);
     });
 
