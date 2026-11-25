@@ -13,8 +13,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
   readonly expectedTexts = {
     consumerRemedy: (consumer: string) =>
       `UPDATE performance_schema.setup_consumers SET ENABLED='YES' WHERE NAME='${consumer}'`,
-    instrumentRemedy: (instrument: string) =>
-      `UPDATE performance_schema.setup_instruments SET ENABLED='YES', TIMED='YES' WHERE NAME='${instrument}'`,
     performanceSchemaDisabled:
       'Real-Time Analytics is not supported for this instance: performance_schema is disabled; it is required for Real-Time Analytics',
     sessionError: (serviceName: string, reason: string) =>

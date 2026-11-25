@@ -107,26 +107,44 @@ pmmTest.afterEach(async ({ api, cliHelper, mySqlDbHelper }) => {
 
 pmmTest(
   'Verify a running statement on each MySQL flavor shows in Real-Time Analytics within 5 seconds @rta',
-  async ({ api, cliHelper, mySqlDbHelper, page, queryAnalytics }) => {
+  async ({ api, cliHelper, credentials, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
-    const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
-    const remoteFlavors = await addRemoteMySqls(api, cliHelper, {
-      // RTA needs performance_schema, which MariaDB leaves off by default.
-      'rta-mariadb-118': 'mariadb:11.8 --performance-schema=ON',
-      'rta-mysql-57': '--platform linux/amd64 mysql:5.7',
-      'rta-mysql-80': 'mysql:8.0',
-      'rta-mysql-84': 'mysql:8.4',
-      'rta-ps-80': 'percona/percona-server:8.0',
+    // The services pmm-framework connects through PMM Client; the FB @rta job sets up ps=8.4 and mariadb.
+    const services = await api.inventoryApi.getAllServiceDetailsByRegex('^(ps|mysql|mariadb)_pmm_');
+    const flavors = services.map((service) => {
+      // pmm-framework names each client node after its database container.
+      const port = Number(
+        cliHelper
+          .execSilent(`docker port ${service.node_name} 3306/tcp`)
+          .assertSuccess()
+          .stdout.trim()
+          .split('\n')[0]
+          .split(':')
+          .at(-1),
+      );
+      const db = new MySQLHelper({
+        host: '127.0.0.1',
+        password: credentials.perconaServer.password,
+        port,
+        username: 'root',
+      });
+
+      databases.push(db);
+
+      return {
+        db,
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        sessionName: service.cluster || service.service_name,
+      };
     });
-    const flavors = [
-      {
-        db: mySqlDbHelper,
-        serviceId: percona84.service_id,
-        serviceName: percona84.service_name,
-        sessionName: percona84.cluster || percona84.service_name,
-      },
-      ...remoteFlavors.map((flavor) => ({ ...flavor, sessionName: flavor.serviceName })),
-    ];
+    const mariaDb = flavors.find(({ serviceName }) => serviceName.startsWith('mariadb_pmm_'));
+
+    if (!mariaDb) {
+      throw new Error('pmm-framework set up no MariaDB service; the @rta job runs --database mariadb');
+    }
+
+    expect(flavors.length, 'pmm-framework set up a MySQL service besides MariaDB').toBeGreaterThan(1);
 
     await pmmTest.step('Open the Real-Time tab of Query Analytics', async () => {
       await page.goto(queryAnalytics.url);
@@ -149,7 +167,7 @@ pmmTest(
       },
     );
 
-    await pmmTest.step('Start a session for the six MySQL services', async () => {
+    await pmmTest.step('Start a session for every MySQL service', async () => {
       await startSessionFromSelection(
         queryAnalytics,
         flavors.map(({ serviceId }) => serviceId),
@@ -174,7 +192,7 @@ pmmTest(
       },
     );
 
-    await pmmTest.step('Verify six running MySQL sessions are listed', async () => {
+    await pmmTest.step('Verify a running MySQL session is listed for each service', async () => {
       await rta.buttons.allSessions.click();
 
       await expect(rta.elements.sessionRows).toHaveCount(flavors.length);
@@ -185,36 +203,15 @@ pmmTest(
       }
     });
 
-    await pmmTest.step(
-      'Verify the MySQL 5.7 session names the consumer and instrument it misses',
-      async () => {
-        await rta.builders.sessionStatusMessage('rta-mysql-57').hover();
-
-        await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-          rta.expectedTexts.sessionWarningsIntro,
-        );
-        await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-          'The events_transactions_current consumer and the transaction instrument are disabled',
-        );
-        await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-          rta.expectedTexts.consumerRemedy('events_transactions_current'),
-        );
-        await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-          'The wait/lock/metadata/sql/mdl instrument is disabled',
-        );
-        await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-          rta.expectedTexts.instrumentRemedy('wait/lock/metadata/sql/mdl'),
-        );
-      },
-    );
-
     await pmmTest.step('Verify the MariaDB session names the disabled statements consumer', async () => {
-      await page.mouse.move(0, 0);
+      const { serviceName, sessionName } = mariaDb;
 
-      await expect(rta.elements.sessionStatusMessageTooltip).toBeHidden();
+      await rta.builders.sessionExpandButton(sessionName).click();
+      await rta.builders.sessionStatusMessage(serviceName).hover();
 
-      await rta.builders.sessionStatusMessage('rta-mariadb-118').hover();
-
+      await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
+        rta.expectedTexts.sessionWarningsIntro,
+      );
       await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
         rta.expectedTexts.statementsConsumerDisabled,
       );
