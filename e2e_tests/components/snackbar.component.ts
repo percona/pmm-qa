@@ -11,6 +11,12 @@ export default class SnackbarComponent {
 
   constructor(protected page: Page) {}
 
+  alert = (title: string): Locator =>
+    this.elements
+      .grafanaIframe()
+      .getByRole('status', { exact: true, name: title })
+      .or(this.elements.grafanaIframe().getByRole('alert', { exact: true, name: title }));
+
   verifySuccessMessage = async (message: string) => {
     await expect(this.elements.successGrafanaMessage()).toHaveText(message);
   };

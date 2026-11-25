@@ -36,6 +36,9 @@ export const minPmmClientVersion: Record<string, string> = {
   'PMM-T2534': '3.9.0',
   'PMM-T2663': '3.9.0',
   'PMM-T2452': '3.10.0',
+  'PMM-T2826': '3.11.0',
+  'PMM-T2853': '3.11.0',
+  'PMM-T2854': '3.11.0',
 };
 
 // First pmm-client with pmm-admin update; the update specs require it for their whole group.

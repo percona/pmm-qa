@@ -433,38 +433,20 @@ test.describe('pmm-admin inventory change agent for MySQL slowlog', { tag: '@ps-
       },
     ];
 
-    const agentIds = [mysqldExporterId, mysqldSlowlogAgentId];
+    const agents = [
+      { type: pmmAdmin.ChangeAgentType.MysqldExporter, id: mysqldExporterId },
+      { type: pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, id: mysqldSlowlogAgentId },
+    ];
 
     try {
       for (const enableCase of enableCases) {
-        await cli.execUntilPersisted(
-          [
-            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId, enableCase.flag),
-            pmmAdmin.inventoryChangeAgent(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId, enableCase.flag),
-          ],
-          [enableCase.response],
-          async () => {
-            for (const agentId of agentIds) {
-              expect((await pmmApi.getServerAgent(agentId)).disabled, `Disabled was not persisted on ${agentId}`).toBe(!enableCase.running);
-            }
-          },
-        );
-
-        await pmmAdmin.expectAgentsRunning(containerName, agentIds, enableCase.running);
+        await pmmAdmin.setEnabledUntilPersisted(containerName, agents, enableCase.flag, enableCase.response, enableCase.running);
       }
     } finally {
       // The later tests change these agents and expect them running.
-      const enableUntilPersisted = (agentType: pmmAdmin.ChangeAgentType, agentId: string) => () => cli.execUntilPersisted(
-        [pmmAdmin.inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
-        [],
-        async () => {
-          expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
-        },
-      );
-
       await pmmCli.runEach([
-        enableUntilPersisted(pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId),
-        enableUntilPersisted(pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId),
+        () => pmmAdmin.enableUntilPersisted(containerName, pmmAdmin.ChangeAgentType.MysqldExporter, mysqldExporterId),
+        () => pmmAdmin.enableUntilPersisted(containerName, pmmAdmin.ChangeAgentType.QanMysqlSlowlogAgent, mysqldSlowlogAgentId),
       ]);
     }
   });

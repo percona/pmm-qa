@@ -161,8 +161,8 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
-    tooltip: this.grafanaIframe().getByTestId('data-testid tooltip'),
     timePickerOpenButton: this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
+    tooltip: this.grafanaIframe().getByTestId('data-testid tooltip'),
     variableOptions: this.grafanaIframe().getByTestId('data-testid Select option'),
   };
   inputs = {};
@@ -644,6 +644,20 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPanelsWithDataInViewAtMost = async (url: string, maxPanelsWithData: number) => {
+    await this.page.goto(url);
+    await this.waitForPanelsInView();
+    await expect
+      .poll(
+        async () => (await this.elements.panelName.count()) - (await this.elements.noDataPanelName.count()),
+        {
+          message: `${url} should show at most ${maxPanelsWithData} panels with data`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
+      )
+      .toBeLessThanOrEqual(maxPanelsWithData);
+  };
+
   verifyPanelTextAfterRefresh = async (panelName: string, expected: string | RegExp, timeout: Timeouts) => {
     const panelContent = this.builders.panelContentByExactName(panelName);
 
@@ -804,12 +818,13 @@ export default class Dashboards extends BasePage {
     url: string,
     maxNoDataPanels: number,
     timeout = Timeouts.FIVE_MINUTES,
+    loadPanels = this.loadAllPanels,
   ) => {
     await expect
       .poll(
         async () => {
           await this.page.goto(url);
-          await this.loadAllPanels();
+          await loadPanels();
 
           return this.elements.noDataPanelName.count();
         },
@@ -820,6 +835,12 @@ export default class Dashboards extends BasePage {
         },
       )
       .toBeLessThanOrEqual(maxNoDataPanels);
+  };
+
+  waitForPanelsInView = async () => {
+    await this.waitForDashboardToLoad();
+    await expect(this.elements.panelName).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   };
 
   private changeRow = async (locator: Locator, error: string) => {
