@@ -40,7 +40,12 @@ TOPOLOGY = {
     "PDPGSQL": {"default_topology": "single node", "setup_type": {"replication": "primary/replica", "patroni": "Patroni setup"}},
     "PSMDB": {
         "default_topology": "pss replica set",
-        "setup_type": {"psa": "PSA replica set", "shards": "sharded setup", "sharding": "sharded setup"},
+        "setup_type": {
+            "psa": "PSA replica set",
+            "shards": "sharded setup",
+            "sharding": "sharded setup",
+            "standalone_no_pbm": "standalone mongod without PBM",
+        },
     },
     "VALKEY": {"default_topology": "cluster", "setup_type": {"sentinel": "sentinel setup", "sentinels": "sentinel setup"}},
     "HAPROXY": {"default_topology": "fixed HAProxy setup", "setup_type": {}},

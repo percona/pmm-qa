@@ -1,4 +1,5 @@
 import { Document, MongoClient } from 'mongodb';
+import { expect } from '@playwright/test';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from './timeouts';
 
@@ -104,6 +105,20 @@ export default class MongoDBHelper {
     this.client.db(dbName).collection(collectionName);
 
   /**
+   * A field of the newest backup record in admin.pbmBackups, or "none" when there is no backup.
+   *
+   * @param   container   a PSMDB container whose mongod runs on port 27017
+   * @param   field       pbmBackups document field to read, e.g. status or name
+   */
+  getLatestPbmBackupField = (container: string, field: string) =>
+    new CliHelper()
+      .execute(
+        `docker exec ${container} mongo "mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true" --quiet --eval 'const backup = db.getSiblingDB("admin").pbmBackups.find().sort({ start_ts: -1 }).limit(1).toArray()[0]; backup ? backup.${field} : "none"'`,
+      )
+      .assertSuccess()
+      .stdout.trim();
+
+  /**
    * Errors that `pbm status` reports for each data-bearing PBM agent that is not OK, by host.
    *
    * @param   container   a PSMDB container with the pbm CLI configured
@@ -175,6 +190,38 @@ export default class MongoDBHelper {
       'const admin = db.getSiblingDB("admin"), copy = db.getSiblingDB("pmm_qa_auth"); copy.dropDatabase();' +
         ' for (const name of ["roles", "users"]) copy.getCollection(name).insertMany(admin.getCollection("system." + name).find().toArray());',
     );
+
+  /**
+   * Starts or stops crond in the pbm-external container of EXTERNAL_PBM=true, whose job takes a logical backup
+   * every 15 minutes. Stopping also waits until PBM runs no operation.
+   *
+   * @param   pbmUri   replica set URI the external PBM connects with
+   * @param   action   whether to start or stop crond
+   */
+  setExternalPbmCron = async (pbmUri: string, action: 'start' | 'stop') => {
+    const cli = new CliHelper();
+
+    cli.execute(`docker exec pbm-external systemctl ${action} crond`).assertSuccess();
+
+    if (action === 'start') return;
+
+    const runningOperation = () => {
+      const { stdout } = cli
+        .execute(`docker exec -e PBM_MONGODB_URI='${pbmUri}' pbm-external pbm status -s running -o json`)
+        .assertSuccess();
+
+      return (JSON.parse(stdout) as { running?: { type?: string } }).running?.type;
+    };
+
+    // Stopping crond leaves a backup it has just started running, and PBM refuses any other operation until that one ends.
+    await expect
+      .poll(runningOperation, {
+        intervals: [Timeouts.THREE_SECONDS],
+        message: 'operation PBM is running',
+        timeout: Timeouts.TWO_MINUTES,
+      })
+      .toBeUndefined();
+  };
 
   /**
    * Simulates a long-running query by splitting delay across many documents.
