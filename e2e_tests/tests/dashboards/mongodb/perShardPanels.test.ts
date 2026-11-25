@@ -142,6 +142,9 @@ for (const panelName of [
         async () => {
           const services = await api.inventoryApi.getAllServicesByReplicationSet('sharded', shard);
 
+          await expect(dashboard.builders.dashboardTitle(replSetSummary.name)).not.toHaveCount(0, {
+            timeout: Timeouts.ONE_MINUTE,
+          });
           await expect(dashboard.builders.selectedVariableValues('Replica Set')).toHaveText([shard]);
           await expect(dashboard.builders.selectedVariableValues('Cluster')).toHaveText(['sharded']);
           await expect(dashboard.builders.selectedVariableValues('Environment')).toHaveText([
