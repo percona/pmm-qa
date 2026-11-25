@@ -7,6 +7,14 @@ export interface AccessRole {
   title: string;
 }
 
+export interface AccessRoleForm {
+  description: string;
+  label: string;
+  operator: '!=' | '!~' | '=' | '=~';
+  title: string;
+  value: string;
+}
+
 export interface AccessRoleDetails extends AccessRole {
   role_id: number | string;
 }

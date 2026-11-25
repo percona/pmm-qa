@@ -32,6 +32,7 @@ export default class AddInstancePage extends BasePage {
   buttons = {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add service' }),
     azure: this.grafanaIframe().getByTestId('azure-instance'),
+    disableQueryExamples: this.grafanaIframe().getByTestId('disable_query_examples-field-label'),
     discover: this.grafanaIframe().getByRole('button', { exact: true, name: 'Discover' }),
     mongodbProfiler: this.grafanaIframe().getByTestId('qan_mongodb_profiler-field-label'),
     mysql: this.grafanaIframe().getByTestId('mysql-instance'),
@@ -43,6 +44,7 @@ export default class AddInstancePage extends BasePage {
   elements = {
     nodes: this.grafanaIframe().getByTestId('nodes-selectbox'),
     pgStatMonitor: this.grafanaIframe().getByRole('radio', { name: 'PG Stat Monitor' }),
+    rdsHeading: this.grafanaIframe().getByTestId('rds-instance').getByRole('heading'),
     trackingState: this.grafanaIframe().getByTestId('tracking-radio-state'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
   };
