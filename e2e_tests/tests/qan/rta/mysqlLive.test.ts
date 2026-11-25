@@ -79,11 +79,40 @@ const addRemoteMySqls = async (api: Api, cliHelper: CliHelper, servers: Record<s
   );
 };
 
-const startSessionFromSelection = async (queryAnalytics: QueryAnalyticsPage, serviceIds: string[]) => {
-  await queryAnalytics.rta.selectServiceOptions(serviceIds);
+// Start session lands on the sessions list, for MySQL and MongoDB alike.
+const startSessionFromSelection = async (
+  queryAnalytics: QueryAnalyticsPage,
+  serviceIds: string[],
+  sessionNames: string[],
+) => {
+  const { rta } = queryAnalytics;
+
+  await rta.selectServiceOptions(serviceIds);
   await queryAnalytics.buttons.startSessionButton.click();
 
-  await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
+  await expect(rta.elements.sessionsTable).toBeVisible();
+
+  for (const sessionName of sessionNames) {
+    await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
+  }
+};
+
+// A session name opens the live view of its own services; the view's picker adds the others.
+const openSessionFromList = async (
+  queryAnalytics: QueryAnalyticsPage,
+  sessionName: string,
+  otherServiceIds: string[] = [],
+) => {
+  const { rta } = queryAnalytics;
+
+  await rta.builders.sessionLink(sessionName).click();
+
+  await expect(rta.elements.realTimeTable).toBeVisible();
+
+  if (otherServiceIds.length > 0) {
+    await rta.inputs.clusterService.click();
+    await rta.selectServiceOptions(otherServiceIds);
+  }
 };
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
@@ -167,12 +196,23 @@ pmmTest(
       },
     );
 
-    await pmmTest.step('Start a session for every MySQL service', async () => {
-      await startSessionFromSelection(
-        queryAnalytics,
-        flavors.map(({ serviceId }) => serviceId),
-      );
-    });
+    await pmmTest.step(
+      'Start a session for every MySQL service and open them from the sessions list',
+      async () => {
+        const [first, ...others] = flavors;
+
+        await startSessionFromSelection(
+          queryAnalytics,
+          flavors.map(({ serviceId }) => serviceId),
+          flavors.map(({ sessionName }) => sessionName),
+        );
+        await openSessionFromList(
+          queryAnalytics,
+          first.sessionName,
+          others.map(({ serviceId }) => serviceId),
+        );
+      },
+    );
 
     await pmmTest.step(
       'Verify each labelled statement is listed within 5 seconds with its host',
@@ -237,7 +277,8 @@ pmmTest(
       await page.goto(queryAnalytics.url);
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
       await rta.inputs.clusterService.click();
-      await startSessionFromSelection(queryAnalytics, [serviceId]);
+      await startSessionFromSelection(queryAnalytics, [serviceId], [serviceName]);
+      await openSessionFromList(queryAnalytics, serviceName);
 
       await expect(rta.elements.realTimeTableRow).toHaveText(
         rta.expectedTexts.sessionError(serviceName, rta.expectedTexts.performanceSchemaDisabled),
@@ -288,7 +329,11 @@ pmmTest(
       await page.goto(queryAnalytics.url);
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
       await rta.inputs.clusterService.click();
-      await startSessionFromSelection(queryAnalytics, [percona84.service_id]);
+
+      const sessionName = percona84.cluster || percona84.service_name;
+
+      await startSessionFromSelection(queryAnalytics, [percona84.service_id], [sessionName]);
+      await openSessionFromList(queryAnalytics, sessionName);
     });
 
     await pmmTest.step('Verify the statement is listed with an elapsed time in whole seconds', async () => {
@@ -574,10 +619,15 @@ pmmTest(
       await page.goto(queryAnalytics.url);
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
       await rta.inputs.clusterService.click();
+
+      const sessionNames = [perfSchema, slowLog].map(({ cluster, service_name }) => cluster || service_name);
+
       await startSessionFromSelection(
         queryAnalytics,
         [perfSchema, slowLog].map((service) => service.service_id),
+        sessionNames,
       );
+      await openSessionFromList(queryAnalytics, sessionNames[0], [slowLog.service_id]);
     });
 
     // Query Analytics stores a minute per bucket: from the next minute on, every SLEEP example is this test's.
@@ -766,7 +816,8 @@ pmmTest(
       await page.goto(queryAnalytics.url);
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
       await rta.inputs.clusterService.click();
-      await startSessionFromSelection(queryAnalytics, [serviceId]);
+      await startSessionFromSelection(queryAnalytics, [serviceId], [serviceName]);
+      await openSessionFromList(queryAnalytics, serviceName);
     });
 
     await pmmTest.step(
