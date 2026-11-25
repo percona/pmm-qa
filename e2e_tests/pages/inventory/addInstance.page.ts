@@ -44,6 +44,7 @@ export default class AddInstancePage extends BasePage {
   elements = {
     nodes: this.grafanaIframe().getByTestId('nodes-selectbox'),
     pgStatMonitor: this.grafanaIframe().getByRole('radio', { name: 'PG Stat Monitor' }),
+    rdsHeading: this.grafanaIframe().getByTestId('rds-instance').getByRole('heading'),
     trackingState: this.grafanaIframe().getByTestId('tracking-radio-state'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
   };
