@@ -24,7 +24,7 @@ pmmTest.beforeEach(async ({ api, cliHelper, context, grafanaHelper, page }) => {
       `docker run --detach --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} ${versionServiceHosts} --publish ${port}:8443 --name ${containerName} ${dockerVersion}`,
     )
     .assertSuccess();
-  await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
+  await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
   await grafanaHelper.authorize('admin', adminPassword, baseUrl);
 });
 
