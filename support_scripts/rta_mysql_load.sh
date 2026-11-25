@@ -62,22 +62,26 @@ for s in "${SCENARIOS[@]}"; do
   [[ " ${ALL_SCENARIOS[*]} " == *" $s "* ]] || { echo "Unknown scenario: $s" >&2; exit 2; }
 done
 
-# sql USER: reads SQL from stdin. USER "admin" is the connection user; any other is a load user.
+# sql USER: reads SQL from stdin. USER "admin" is the connection user; any other is a load user,
+# connected to its own database (rta_user_a to rta_load_a, rta_user_b to rta_load_b) so RTA shows one.
 # --comments keeps the /* rta-load-... */ labels, which the client strips by default.
 sql() {
-  local user=$1
+  local user=$1 db=rta_load_${1##*_}
   if [ -n "$CONTAINER" ]; then
     if [ "$user" = admin ]; then
       docker exec -i "$CONTAINER" sh -c \
         'export MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-$MARIADB_ROOT_PASSWORD}"; exec "$(command -v mysql || command -v mariadb)" --comments --batch -uroot' 2>&1
     else
       docker exec -i -e MYSQL_PWD="$LOAD_PASS" "$CONTAINER" sh -c \
-        'exec "$(command -v mysql || command -v mariadb)" --comments --batch -h127.0.0.1 -u"$0"' "$user" 2>&1
+        'exec "$(command -v mysql || command -v mariadb)" --comments --batch -h127.0.0.1 -u"$0" -D"$1"' "$user" "$db" 2>&1
     fi
   else
     local pass=$LOAD_PASS
-    [ "$user" = admin ] && { user=$ADMIN_USER; pass=$ADMIN_PASS; }
-    MYSQL_PWD=$pass mysql --comments --batch -h"$HOST" -P"$PORT" -u"$user" 2>&1
+    if [ "$user" = admin ]; then
+      MYSQL_PWD=$ADMIN_PASS mysql --comments --batch -h"$HOST" -P"$PORT" -u"$ADMIN_USER" 2>&1
+    else
+      MYSQL_PWD=$pass mysql --comments --batch -h"$HOST" -P"$PORT" -u"$user" -D"$db" 2>&1
+    fi
   fi
 }
 
@@ -139,12 +143,12 @@ bg() {
 }
 
 scenario_sleep() {
-  bg rta_user_a "USE rta_load_a; SELECT 'rta-load-sleep-a', SLEEP($DURATION);"
-  bg rta_user_b "USE rta_load_b; SELECT 'rta-load-sleep-b', SLEEP($((DURATION / 2)));"
+  bg rta_user_a "SELECT 'rta-load-sleep-a', SLEEP($DURATION);"
+  bg rta_user_b "SELECT 'rta-load-sleep-b', SLEEP($((DURATION / 2)));"
   bg rta_user_b "USE rta_load_a; SELECT 'rta-load-sleep-b-in-a', SLEEP($((DURATION / 3)));"
   local i loop=''
   for i in $(seq $((DURATION / 4))); do loop+="SELECT 'rta-load-short', SLEEP(2); DO SLEEP(2);"$'\n'; done
-  bg rta_user_a "USE rta_load_a; $loop"
+  bg rta_user_a "$loop"
 }
 
 # Root blocker idles in its transaction; waiter 2 holds row 2 and waits for row 1; waiter 3 waits for row 2.
