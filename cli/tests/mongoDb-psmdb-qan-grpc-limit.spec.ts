@@ -20,8 +20,9 @@ test.describe('PSMDB QAN keeps every query of a minute larger than the gRPC mess
   let serviceName = '';
 
   test.beforeEach(async ({}) => {
+    // The profiler agent's tailable cursor on an empty system.profile is dead and never reopened, so one query is profiled first.
     await mongo.runOnPrimary(containerName, mongoUri, `const d = db.getSiblingDB("${database}"); d.seed.insertOne({ x: 1 }); d.setProfilingLevel(0); d.system.profile.drop();`
-      + ' d.createCollection("system.profile", { capped: true, size: 256 * 1024 * 1024 }); d.setProfilingLevel(2, { slowms: 0 });');
+      + ' d.createCollection("system.profile", { capped: true, size: 256 * 1024 * 1024 }); d.setProfilingLevel(2, { slowms: 0 }); d.seed.findOne();');
   });
 
   test.afterEach(async ({}) => {
