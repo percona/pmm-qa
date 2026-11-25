@@ -6,8 +6,8 @@
 # shard, so no other shard sees it.
 #
 # LOAD=write: insert, update and delete by _id on hot_<shard>.writes, with w:1 so
-# one loop keeps the shard busy. It sends no client reads, though the secondaries'
-# oplog getMores on the shard's primary still rise with it.
+# one loop keeps the shard busy. It sends no find, so the shard's reads stay at
+# what monitoring sends.
 # LOAD=scan: queries an unindexed field of hot_<shard>.scans, SCAN_DOCS documents
 # seeded once, so each query examines every document and returns one.
 #

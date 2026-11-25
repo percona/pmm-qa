@@ -17,13 +17,13 @@ pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(shardedClusterSummary.url, {
         cluster: 'sharded',
-        from: 'now-10m',
+        from: 'now-15m',
         set: shard,
         to: 'now',
       }),
     );
     await dashboard.loadAllPanels();
-    // Operations counts every opcounter but command: query+getmore (reads) and insert+update+delete (writes).
+    // Operations is find commands (Reads) plus insert, update and delete commands (Writes).
     await dashboard.verifyLegendCalcIsSum(panelName, ['Reads Per Shard', 'Writes Per Shard'], shard);
     await dashboard.pinGraphTooltip(panelName);
     await dashboard.verifyPinnedGraphTooltip([shard, /ops\/s/], [replSetLink]);
@@ -68,7 +68,8 @@ pmmTest(
       await dashboard.verifyLegendSeries(panelName, ['rs1', 'rs2']);
     }
 
-    // HOT_SHARD=rs1 runs a write-only load through mongos that only rs1 takes.
+    // HOT_SHARD=rs1 runs insertOne, updateOne and deleteOne through mongos that only rs1 takes. They send
+    // no find, so the reads rs1 shows are monitoring's few finds: well below its writes, never zero.
     await pmmTest.step(
       'Verify rs1 is the hot shard for writes and its write load adds no reads',
       async () => {
@@ -175,7 +176,8 @@ pmmTest(
     await dashboard.verifyLegendSeries('Documents Scanned Per Shard', ['rs1', 'rs2']);
     await dashboard.verifyLegendSeries('Query Targeting Per Shard', ['rs1', 'rs2']);
 
-    // SCAN_SHARD=rs2 queries an unindexed field of 20,000 documents on rs2, returning one per query.
+    // SCAN_SHARD=rs2 queries an unindexed field of 20,000 documents on rs2, returning one per query, so
+    // Query Targeting (documents scanned per document returned) on rs2 nears 20,000.
     await pmmTest.step('Verify rs2 scans the most and has the worst query targeting', async () => {
       const rs1Scanned = await dashboard.getLegendCalc('Documents Scanned Per Shard', 'rs1');
       const rs2Scanned = await dashboard.getLegendCalc('Documents Scanned Per Shard', 'rs2');
