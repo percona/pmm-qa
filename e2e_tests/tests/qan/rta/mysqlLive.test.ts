@@ -315,16 +315,17 @@ pmmTest(
     });
 
     await pmmTest.step('Run the statement again and verify its details are measured', async () => {
+      // Its own label: the first run's row can stay listed for up to a minute after it ends.
+      const measuredLabel = `${queryLabel}-measured`;
+
       await rta.builders.sessionLink(percona84.service_name).click();
-      await rta.setQueryTextFilter(queryLabel);
+      await rta.setQueryTextFilter(measuredLabel);
 
-      // The first run may still be sleeping; one row keeps the click unambiguous.
-      await expect(rta.builders.rowByQueryText(queryLabel)).toHaveCount(0, {
-        timeout: Timeouts.THIRTY_SECONDS,
+      void mySqlDbHelper.simulateLongRunningQuery({
+        delayMs: Timeouts.THIRTY_SECONDS,
+        queryLabel: measuredLabel,
       });
-
-      void mySqlDbHelper.simulateLongRunningQuery({ delayMs: Timeouts.THIRTY_SECONDS, queryLabel });
-      await rta.builders.rowByQueryText(queryLabel).click({ timeout: Timeouts.TEN_SECONDS });
+      await rta.builders.rowByQueryText(measuredLabel).click({ timeout: Timeouts.TEN_SECONDS });
 
       await expect(rta.elements.detailsRowsExamined).toHaveText(/^\d+$/);
       await expect(rta.elements.detailsRowsSent).toHaveText(/^\d+$/);
