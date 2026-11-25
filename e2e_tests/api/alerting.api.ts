@@ -175,17 +175,20 @@ export default class AlertingApi {
   };
 
   getTemplate = async (name: string): Promise<AlertTemplate> => {
-    const response = await this.listTemplates(GrafanaHelper.getAuthHeader());
-
-    expect(response.status(), await response.text()).toEqual(200);
-
-    const template = ((await response.json()) as { templates: AlertTemplate[] }).templates.find(
-      (t) => t.name === name,
-    );
+    const template = (await this.getTemplates()).find((t) => t.name === name);
 
     if (!template) throw new Error(`Template ${name} is not listed`);
 
     return template;
+  };
+
+  // Unpaged, in the server's name order that the Alert templates table pages through.
+  getTemplates = async (): Promise<AlertTemplate[]> => {
+    const response = await this.listTemplates(GrafanaHelper.getAuthHeader());
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return ((await response.json()) as { templates: AlertTemplate[] }).templates;
   };
 
   listFolders = async (headers?: Headers): Promise<GrafanaFolder[]> => {
