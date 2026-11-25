@@ -39,6 +39,10 @@ export default class AddInstancePage extends BasePage {
   elements = {
     nodes: this.page.getByTestId('select-node-id-button'),
     pgStatMonitor: this.page.getByRole('radio', { exact: true, name: 'PG Stat Monitor' }),
+    rdsHeading: this.page.getByTestId('rds-instance').getByRole('heading'),
+    trackingState: this.page
+      .getByRole('radiogroup')
+      .filter({ has: this.page.getByRole('radio', { exact: true, name: 'PG Stat Monitor' }) }),
     unauthorized: this.page.getByTestId('unauthorized'),
   };
   inputs = {

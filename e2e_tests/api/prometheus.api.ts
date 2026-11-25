@@ -182,6 +182,26 @@ export default class PrometheusApi {
       .toBeGreaterThan(0);
   };
 
+  /** Waits until `expression` resolves to as many series at the last 5-minute boundary as it does now. */
+  waitForSeriesAtFiveMinuteBoundary = async (expression: string) => {
+    await expect
+      .poll(
+        async () => {
+          const seriesNow = (await this.instantQuery(expression)).length;
+          const boundary = String(Math.floor(Date.now() / 300_000) * 300);
+          const seriesAtBoundary = (await this.instantQuery(expression, { time: boundary })).length;
+
+          return seriesNow > 0 && seriesAtBoundary >= seriesNow;
+        },
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: `${expression} resolves to fewer series at the last 5-minute boundary than now`,
+          timeout: Timeouts.TEN_MINUTES,
+        },
+      )
+      .toBe(true);
+  };
+
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
   waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
     let serverTime = 0;

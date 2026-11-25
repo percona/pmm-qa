@@ -91,6 +91,8 @@ of the MySQL family (PS/MySQL), fall back to sequential execution with a
 warning, so every requested setup still runs. Three pairs cannot share a host
 at all, and preflight refuses them: two PSMDB setups, EXTERNAL with VALKEY, and
 PDPGSQL patroni with PGSQL replication. Provision those on separate machines.
+A `PSMDB` with `SETUP_TYPE=standalone_no_pbm` is the exception to the PSMDB rule: it runs
+beside a replica set or sharded cluster, but not beside another `standalone_no_pbm`.
 
 `--database` values use this grammar:
 
@@ -146,7 +148,15 @@ Versions, options and their defaults are registered in
 type's default and supported versions, without needing Docker. `VERSION`
 `latest` means the type's default, in a spec and in a `<TYPE>_VERSION`
 variable. `shards`/`sharding` are aliases for PSMDB, and `sentinel`/`sentinels`
-for Valkey. A version or option not registered there is refused, so a typo
+for Valkey. `PSMDB` takes `SETUP_TYPE` `pss` (default), `psa`, `sharding` or
+`standalone_no_pbm`: one authenticated mongod in the container `psmdb-standalone`, with
+no replica set, its `pbm-agent` masked, and no host port published. `PSMDB` also takes
+`EXTERNAL_PBM=true` (default `false`) to run PBM the way a customer who drives it from a host of their own does,
+not through PMM Backup Management: an empty `pbm-external` container on the setups' base, with PBM installed
+from the Percona repository, runs one `pbm-agent` per member over the network (the members' own are masked),
+turns PITR on (`pitr.oplogSpanMin=1`) and takes a logical backup every 15 minutes from cron, after a first one at setup.
+Agents reach mongod over the network, so only logical backups work. It needs `MINIO=true` and a setup with PBM, so not
+`standalone_no_pbm`, and does not support the `extra` compose profile. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
 Configuration precedence is:
