@@ -1,128 +1,23 @@
-import Api from '@api/api';
 import pmmTest from '@fixtures/pmmTest';
-import CliHelper from '@helpers/cli.helper';
 import { restartMariaDb } from '@helpers/mariadb.helper';
-import MySQLHelper from '@helpers/mysql.helper';
+import MySQLHelper, { addRemoteMySqls, removeRemoteMySqls } from '@helpers/mysql.helper';
+import { openSessionFromList, startSessionFromSelection } from '@helpers/rta.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
-import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
 import { expect } from '@playwright/test';
 
-const remoteMySqlPassword = 'rta-QA-mysql-1';
-const containers: string[] = [];
 const databases: MySQLHelper[] = [];
 const mySqlRestores: string[] = [];
 // [container, shell command] pairs that put a restarted MariaDB back as pmm-framework set it up.
 const mariaDbRestores: [string, string][] = [];
-const nodeNames: string[] = [];
 const serviceIds: string[] = [];
-// The data directory is on tmpfs: initializing several servers at once on disk takes minutes.
-const mySqlContainerArgs = `--network pmm-qa --tmpfs /var/lib/mysql:mode=1777 --env MYSQL_ROOT_PASSWORD=${remoteMySqlPassword}`;
-
-// PMM Server's own agent monitors each by name over the pmm-qa network; the test reaches it on a published port.
-// Every container starts before any request is in flight: a docker run pulling its image blocks the test process.
-const addRemoteMySqls = async (api: Api, cliHelper: CliHelper, servers: Record<string, string>) => {
-  const serviceNames = Object.keys(servers);
-
-  await api.inventoryApi.removeNodesByName(serviceNames);
-
-  for (const [serviceName, dockerArgs] of Object.entries(servers)) {
-    cliHelper.removeContainer(serviceName);
-    containers.push(serviceName);
-    nodeNames.push(serviceName);
-    cliHelper
-      .execute(
-        `docker run --detach --quiet --name ${serviceName} --publish 127.0.0.1::3306 ${mySqlContainerArgs} ${dockerArgs}`,
-        Timeouts.FIVE_MINUTES,
-      )
-      .assertSuccess();
-  }
-
-  return Promise.all(
-    serviceNames.map(async (serviceName) => {
-      const port = Number(
-        cliHelper
-          .execSilent(`docker port ${serviceName} 3306/tcp`)
-          .assertSuccess()
-          .stdout.trim()
-          .split(':')
-          .at(-1),
-      );
-      const db = new MySQLHelper({
-        host: '127.0.0.1',
-        password: remoteMySqlPassword,
-        port,
-        username: 'root',
-      });
-
-      databases.push(db);
-      // The image initializes on a server without networking, so TCP answers only once the real server is up.
-      await expect(async () => {
-        await db.query('SELECT 1');
-      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-
-      const { mysql } = await api.managementApi.addService({
-        mysql: {
-          add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
-          address: serviceName,
-          password: remoteMySqlPassword,
-          pmm_agent_id: 'pmm-server',
-          port: 3_306,
-          qan_mysql_perfschema: true,
-          service_name: serviceName,
-          username: 'root',
-        },
-      });
-
-      if (!mysql) throw new Error(`Adding ${serviceName} returned no MySQL service`);
-
-      return { db, serviceId: mysql.service.service_id, serviceName };
-    }),
-  );
-};
-
-// Start session lands on the sessions list, for MySQL and MongoDB alike.
-const startSessionFromSelection = async (
-  queryAnalytics: QueryAnalyticsPage,
-  serviceIds: string[],
-  sessionNames: string[],
-) => {
-  const { rta } = queryAnalytics;
-
-  await rta.selectServiceOptions(serviceIds);
-  await queryAnalytics.buttons.startSessionButton.click();
-
-  await expect(rta.elements.sessionsTable).toBeVisible();
-
-  for (const sessionName of sessionNames) {
-    await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
-  }
-};
-
-// A session name opens the live view of its own services; the view's picker adds the others.
-const openSessionFromList = async (
-  queryAnalytics: QueryAnalyticsPage,
-  sessionName: string,
-  otherServiceIds: string[] = [],
-) => {
-  const { rta } = queryAnalytics;
-
-  await rta.builders.sessionLink(sessionName).click();
-
-  await expect(rta.elements.realTimeTable).toBeVisible();
-
-  if (otherServiceIds.length > 0) {
-    await rta.inputs.clusterService.click();
-    await rta.selectServiceOptions(otherServiceIds);
-  }
-};
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
   await api.realTimeAnalyticsApi.stopAllSessions();
 });
 
-pmmTest.afterEach(async ({ api, cliHelper, mySqlDbHelper }) => {
+pmmTest.afterEach(async ({ api, mySqlDbHelper }) => {
   await api.realTimeAnalyticsApi.stopAllSessions();
 
   for (const [container, setup] of mariaDbRestores.splice(0)) {
@@ -135,9 +30,7 @@ pmmTest.afterEach(async ({ api, cliHelper, mySqlDbHelper }) => {
 
   for (const serviceId of serviceIds.splice(0)) await api.managementApi.removeService(serviceId);
 
-  await api.inventoryApi.removeNodesByName(nodeNames.splice(0));
-
-  for (const container of containers.splice(0)) cliHelper.removeContainer(container);
+  await removeRemoteMySqls(api);
 });
 
 pmmTest(
@@ -501,12 +394,12 @@ pmmTest(
 
 pmmTest(
   'Verify a MySQL statement cut short by MySQL is marked Truncated with a tooltip naming the setting to raise @rta',
-  async ({ api, cliHelper, mySqlDbHelper, page, queryAnalytics }) => {
+  async ({ api, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const endMarker = 'rta-end-marker';
     const trailingValues = ['x'.repeat(1_900), endMarker];
     const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
-    const [longSqlText] = await addRemoteMySqls(api, cliHelper, {
+    const [longSqlText] = await addRemoteMySqls(api, {
       'mysql-long-sql-text': 'mysql:8.4 --performance-schema-max-sql-text-length=4096',
     });
 
