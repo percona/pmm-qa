@@ -14,8 +14,10 @@ setup_mysql() {
   setup_mysql_family mysql MYSQL MS_VERSION
 }
 
-# Single node only, and Performance Schema on: MariaDB ships it off, and Query
-# Analytics and Real-Time Analytics read it.
+# Single node only, with Performance Schema and its events_statements_current
+# consumer on: MariaDB ships both off, Query Analytics and Real-Time Analytics
+# read Performance Schema, and RTA takes statement latency, lock time, row
+# counts and full scans from that consumer.
 setup_mariadb() {
   setup_mysql_family mariadb MARIADB MARIADB_VERSION
 }
@@ -184,7 +186,8 @@ mysql_start_node() {
     flags+=(--userstat=1)
   fi
   if [[ ${c[engine]} == mariadb ]]; then
-    flags+=(--performance_schema=ON --log-error=/var/log/mysqld.log)
+    flags+=(--performance_schema=ON --performance_schema_consumer_events_statements_current=ON
+      --log-error=/var/log/mysqld.log)
   fi
   # Native password auth is needed below 9.x; only 8.4 ships it off.
   if [[ ${c[version]} == 8.4 ]]; then

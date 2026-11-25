@@ -65,7 +65,7 @@ flowchart TB
 | --- | --- | --- |
 | `ps/` | — (Dockerfile only) | `pmm-qa/ps` |
 | `mysql/` | `PS`, `MYSQL`, `MARIADB`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`, MariaDB on `pmm-qa/mariadb`) |
-| `mariadb/` | — (Dockerfile only) | `pmm-qa/mariadb`: MariaDB from its own EL9 repository, single node, Performance Schema on |
+| `mariadb/` | — (Dockerfile only) | `pmm-qa/mariadb`: MariaDB from its own EL9 repository, single node, Performance Schema and its `events_statements_current` consumer on |
 | `pxc-proxysql/` | `PXC` | `pmm-qa/pxc-proxysql`: three nodes and ProxySQL in one container, driven by `pmm_pxc` |
 | `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged; the replica set also runs `pmm-qa/kerberos`, tagged `kerberos/local`; `SETUP_TYPE=standalone_no_pbm` runs the image by name with `docker run`, so it needs no tag |
 | `pdpgsql/` | `PDPGSQL`, `SSL_PDPGSQL` | `pmm-qa/pdpgsql`; SSL PDPGSQL runs on `pmm-qa/ssl-pdpgsql` |

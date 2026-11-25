@@ -203,7 +203,8 @@ pmmTest(
       }
     });
 
-    await pmmTest.step('Verify the MariaDB session names the disabled statements consumer', async () => {
+    // pmm-framework turns MariaDB's statements consumer on; its transaction and metadata lock switches stay off.
+    await pmmTest.step('Verify the MariaDB session warns only about the switches still off', async () => {
       const { serviceName, sessionName } = mariaDb;
 
       await rta.builders.sessionExpandButton(sessionName).click();
@@ -213,10 +214,10 @@ pmmTest(
         rta.expectedTexts.sessionWarningsIntro,
       );
       await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-        rta.expectedTexts.statementsConsumerDisabled,
+        'The events_transactions_current consumer and the transaction instrument are disabled',
       );
-      await expect(rta.elements.sessionStatusMessageTooltip).toContainText(
-        rta.expectedTexts.consumerRemedy('events_statements_current'),
+      await expect(rta.elements.sessionStatusMessageTooltip).not.toContainText(
+        rta.expectedTexts.statementsConsumerDisabled,
       );
     });
 

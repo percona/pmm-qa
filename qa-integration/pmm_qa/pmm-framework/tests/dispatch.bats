@@ -363,7 +363,7 @@ stub_prebaked_docker() {
   grep -q -- "--target mysql-el9 --build-arg BASE_OS=oraclelinux:9 --build-arg MYSQL_VERSION=8.0 --build-arg SYSBENCH_VERSION=$SYSBENCH_VERSION --label org.opencontainers.image.source=https://github.com/percona/pmm-qa -t pmm-qa/mysql:8.0 " "$DOCKER_CALLS"
 }
 
-@test "MariaDB runs its unit on the mariadb image with Performance Schema on and registers as MySQL" {
+@test "MariaDB runs its unit on the mariadb image with Performance Schema and its statements consumer on" {
   local database_run
   stub_prebaked_docker
   parse_database_spec 'mariadb=12.3'
@@ -373,6 +373,7 @@ stub_prebaked_docker() {
   [[ $database_run == *'--label pmm-qa.engine=mariadb '*'--publish 3306:3306 --cgroupns=host '*' pmm-qa/mariadb:12.3' ]]
   [[ $database_run != *mysql-sockets* ]]
   grep -qx 'performance_schema=ON' "$BATS_TEST_TMPDIR/stdin/mariadb_pmm_12_3_1"
+  grep -qx 'performance_schema_consumer_events_statements_current=ON' "$BATS_TEST_TMPDIR/stdin/mariadb_pmm_12_3_1"
   grep -q -- '^exec mariadb_pmm_12_3_1 sh -ceu mariadb-install-db --user=mysql .*systemctl enable -q --now mariadb' "$DOCKER_CALLS"
   [[ $(grep -c -- '--userstat\|mysql-native-password\|log_slow_rate_limit\|super_read_only' "$DOCKER_CALLS") -eq 0 ]]
   grep -q 'SET GLOBAL read_only=OFF;' "$DOCKER_CALLS"
