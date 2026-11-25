@@ -260,15 +260,15 @@ function render(d) {
   const files = d.files || d.rows;
   const byRow = Object.fromEntries(files.map((f) => [f.row, f]));
   const count = (s) => files.filter((f) => f.status === s).length;
-  const scope = files.filter((f) => f.status !== 'retired').length;
+  const scope = files.filter((f) => f.status !== 'retired' && f.status !== 'needs-decision').length;
   const done = count('done');
   const ccJobs = d.jobs.filter((j) => (j.codecept_tests ?? 0) > 0);
   $('meta').textContent = `Data from ${d.generated_at.replace('T', ' ').replace(':00Z', ' UTC').replace(/:\d\dZ$/, ' UTC')}: main ${d.sources.main}, tracker ${d.sources.tracker}.`;
 
   $('kpis').innerHTML = [
-    ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope`],
-    ['Test files left', count('pending') + count('in-progress') + count('blocked-infra') + count('needs-decision'), `${count('pending') + count('in-progress')} in the queue, ${count('needs-decision')} awaiting a decision, ${count('blocked-infra')} blocked on infra`],
-    ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files`],
+    ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope; ${count('needs-decision')} awaiting a decision are not counted`],
+    ['Test files left', count('pending') + count('in-progress') + count('blocked-infra'), `${count('pending') + count('in-progress')} in the queue, ${count('blocked-infra')} blocked on infra`],
+    ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files; ${d.awaiting_decision?.tests ?? 0} more in ${d.awaiting_decision?.files ?? 0} files awaiting a decision`],
     ['Nightly jobs on CodeceptJS', `${ccJobs.length}<small> / ${d.jobs.length}</small>`, 'jobs whose grep still selects a CodeceptJS test'],
   ].map(([l, v, s]) => `<div class="panel kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
 
@@ -308,8 +308,8 @@ function render(d) {
     }
     const n = document.createElement('div');
     n.className = 'n';
-    const inScope = bf.filter((f) => f.status !== 'retired').length;
-    n.textContent = inScope ? `${bf.filter((f) => f.status === 'done').length}/${inScope}` : 'retired';
+    const inScope = bf.filter((f) => f.status !== 'retired' && f.status !== 'needs-decision').length;
+    n.textContent = inScope ? `${bf.filter((f) => f.status === 'done').length}/${inScope}` : bf.some((f) => f.status === 'needs-decision') ? 'to decide' : 'retired';
     $('buckets').append(name, bb, n);
   }
 
