@@ -93,3 +93,21 @@ export async function restartContainerWithPmmAgent(containerName: string, config
     `docker exec -d ${containerName} sh -c "test -f /etc/systemd/system/pmm-agent.service || exec pmm-agent --config-file=${configFile} >>${logFile} 2>&1"`,
   )).assertSuccess();
 }
+
+/**
+ * Log lines matching a pattern that are timed at or after a point in time, read across the rotated files of the logs
+ *
+ * @param   containerName   docker container writing the logs
+ * @param   files           log files, as a shell glob
+ * @param   pattern         extended regular expression; must not contain quotes
+ * @param   since           keep the lines timed at or after this
+ */
+export async function logLinesSince(containerName: string, files: string, pattern: string, since: Date): Promise<string[]> {
+  const output = await exec(`docker exec ${containerName} sh -c "grep -hE '${pattern}' ${files} | cut -c1-1000"`);
+
+  return output.getStdOutLines().filter((line) => {
+    const time = line.match(/time="([^"]+)"/)?.[1];
+
+    return time !== undefined && Date.parse(time) >= since.getTime();
+  });
+}
