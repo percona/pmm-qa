@@ -13,7 +13,7 @@ export interface UpdateInfo {
 
 export default class UpdatesPage extends BasePage {
   url = '/pmm-ui/updates';
-  homeUrl = '/pmm-ui/graph/';
+  homeUrl = '/pmm-ui/graph/d/pmm-home/home-dashboard';
   builders = {};
   buttons = {
     checkUpdatesNow: this.page.getByRole('button', { name: 'Check Updates Now' }),
