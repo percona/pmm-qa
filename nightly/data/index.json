@@ -232924,7 +232924,18 @@
         "duration_s": null
       }
     ],
-    "investigations": [],
+    "investigations": [
+      {
+        "suites": [
+          "Integrations"
+        ],
+        "verdict": "test bug",
+        "summary": "GSSAPI OL8 PSMDB Replica 6.x/7.x/8.x: PMM-T2843 and PMM-T2832 (new in #1800) kill pbm-agent with 'systemctl kill --kill-whom=main', and OL8's systemd 239 rejects it ('unrecognized option'); the option was renamed only in systemd 252, so OL9 lanes pass. Reproduced on a CHAOS VM on OL8 (main failed 2/2 with CI's error); --kill-who passed 2/2 on OL8 and on OL9 (systemd 252).",
+        "link": "https://github.com/percona/pmm-qa/pull/1833",
+        "by": "Investigator routine",
+        "at": "2026-11-26T03:18:45Z"
+      }
+    ],
     "claims": [
       {
         "by": "Investigator routine",
@@ -232938,13 +232949,6 @@
         "at": "2026-11-26T02:49:06Z",
         "suites": [
           "HA, OpenShift & GSSAPI"
-        ]
-      },
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-26T02:49:06Z",
-        "suites": [
-          "Integrations"
         ]
       }
     ]
