@@ -236,3 +236,23 @@ export async function getQanExample(serviceName: string, queryId: string, from: 
 
   return { example: example?.example ?? '', isTruncated: example?.is_truncated === 1 };
 }
+
+/**
+ * Number of QAN query classes of a service in a period: the total the QAN pagination bar shows
+ *
+ * @param   serviceName     service the queries ran on
+ * @param   from            start of the period
+ * @param   to              end of the period
+ */
+export async function getQanTotalQueries(serviceName: string, from: Date, to = new Date()): Promise<number> {
+  const report = await pmmServerApi('POST', '/v1/qan/metrics:getReport', {
+    period_start_from: from.toISOString(),
+    period_start_to: to.toISOString(),
+    group_by: 'queryid',
+    columns: ['num_queries'],
+    limit: 25,
+    labels: [{ key: 'service_name', value: [serviceName] }],
+  }) as { total_rows?: number };
+
+  return report.total_rows ?? 0;
+}

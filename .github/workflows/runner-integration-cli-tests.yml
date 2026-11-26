@@ -133,7 +133,7 @@ jobs:
         id: test_name_processed
         with:
           script: |
-            return `${process.env.TEST_NAME.replaceAll(' ', '-')}`
+            return process.env.TEST_NAME.replace(/[\s":<>|*?\\/]/g, '-')
           result-encoding: string
 
       - name: Prepare launchable

@@ -67,4 +67,9 @@ export default class AgentsPage extends BasePage {
       ).toHaveText(expectedStatus);
     }).toPass({ timeout: timeout });
   };
+
+  verifyRunningAgents = async (serviceId: string, count: number) => {
+    await this.page.goto(this.serviceAgentsUrl(serviceId));
+    await expect(this.elements.runningStatuses).toHaveCount(count, { timeout: Timeouts.TWO_MINUTES });
+  };
 }

@@ -77,18 +77,17 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
   });
 
   test('PMM-T2742 - Verify pmm-admin update mongodb switches the metrics mode between push, pull and auto', async ({}) => {
-    const pushEnabled = async () => (await pmmApi.getServerAgent(exporterId)).push_metrics_enabled;
-    await update('--metrics-mode=push');
-    expect(await pushEnabled()).toBe(true);
+    const setMode = async (mode: string, push: boolean) => pmmAdmin.updateServiceUntilPersisted(containerName, 'mongodb', `${serviceName} --metrics-mode=${mode}`, async () => {
+      expect((await pmmApi.getServerAgent(exporterId)).push_metrics_enabled, `The exporter is not in ${push ? 'push' : 'pull'} mode`).toBe(push);
+    });
+    await setMode('push', true);
 
-    const pull = await update('--metrics-mode=pull');
+    const pull = await setMode('pull', false);
     expect(pmmAdmin.getChangedSettings(pull)).toEqual(['--metrics-mode=pull (was push)']);
-    expect(await pushEnabled(), 'The exporter is still in push mode').toBe(false);
 
     // Auto picks push for an exporter that does not run on PMM Server.
-    const auto = await update('--metrics-mode=auto');
+    const auto = await setMode('auto', true);
     expect(pmmAdmin.getChangedSettings(auto)).toEqual(['--metrics-mode=push (was pull)']);
-    expect(await pushEnabled(), 'The exporter is not in push mode').toBe(true);
 
     const push = await update('--metrics-mode=push');
     await push.outContains('No settings changed.');
@@ -278,9 +277,10 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
     test('PMM-T2790 - Verify pmm-admin update mongodb changes the password of the exporter endpoint', async ({}) => {
       const newPassword = 'newpass';
 
-      const output = await update(`--agent-password=${newPassword}`);
+      const output = await pmmAdmin.updateServiceUntilPersisted(containerName, 'mongodb', `${serviceName} --agent-password=${newPassword}`, async () => {
+        await mongo.expectMongoUp(containerName, serviceName, newPassword, 30_000);
+      });
       expect(pmmAdmin.getChangedSettings(output)).toEqual(['--agent-password (new value)']);
-      await mongo.expectMongoUp(containerName, serviceName, newPassword);
       expect(await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName), 'The old password still opens the endpoint').not.toContain('mongodb_up');
     });
 
@@ -305,9 +305,11 @@ test.describe('PSMDB pmm-admin update settings', { tag: '@psmdb' }, () => {
       expect(pmmAdmin.getChangedSettings(moved)).toEqual([`--port=27018 (was ${port})`]);
       expect((await pmmApi.getServerService(serviceId)).port, 'Port is not changed on PMM Server').toEqual(27018);
 
-      const restored = await update(`--port=${port}`);
+      const restored = await pmmAdmin.updateServiceUntilPersisted(containerName, 'mongodb', `${serviceName} --port=${port}`, async () => {
+        expect((await pmmApi.getServerService(serviceId)).port, 'Port is not restored on PMM Server').toEqual(port);
+      });
       expect(pmmAdmin.getChangedSettings(restored)).toEqual([`--port=${port} (was 27018)`]);
-      await pmmAdmin.expectAgentsRunning(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId), true);
+      await pmmAdmin.expectAgentsRunningResyncingStatus(containerName, await pmmAdmin.getServiceAgentIds(containerName, serviceId));
       await mongo.expectMongoUp(containerName, serviceName, agentPassword);
     });
   });

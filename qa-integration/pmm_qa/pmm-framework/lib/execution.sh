@@ -7,7 +7,7 @@
 # Same-type or PS+MYSQL pairs only lose concurrency; pairs that hold the same
 # container name or host port while up are refused.
 preflight_database_setups() {
-  local spec
+  local spec kind
   local mysql_data_owner='' conflict='' host_conflict='' setup_type
   local patroni_seen=false pgsql_replication_seen=false
   local external_seen=false valkey_seen=false psmdb_setup_type='' pcsm_source pcsm_from_psmdb=false
@@ -17,6 +17,15 @@ preflight_database_setups() {
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
+
+    # A standalone_no_pbm PSMDB is its own kind: one container of its own name, no host port.
+    kind=$DB_TYPE
+    if [[ $DB_TYPE == PSMDB ]]; then
+      setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
+      if [[ ${setup_type,,} == standalone_no_pbm ]]; then
+        kind=PSMDB_STANDALONE
+      fi
+    fi
 
     # SOURCE=psmdb syncs the replica set of a PSMDB setup, so it runs after one in this run.
     # Checked for every PCSM spec, a second one included.
@@ -35,9 +44,11 @@ preflight_database_setups() {
 
     # Separate compose projects do not isolate PSMDB: both stacks pin
     # container_name rs101..rs203 and host port 27027.
-    if [[ -v "seen_types[$DB_TYPE]" ]]; then
-      if [[ $DB_TYPE == PSMDB ]]; then
+    if [[ -v "seen_types[$kind]" ]]; then
+      if [[ $kind == PSMDB ]]; then
         host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
+      elif [[ $kind == PSMDB_STANDALONE ]]; then
+        host_conflict='two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'
       else
         conflict="two $DB_TYPE setups"
       fi
@@ -72,7 +83,7 @@ preflight_database_setups() {
       valkey_seen=true
       [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
-    seen_types["$DB_TYPE"]=1
+    seen_types["$kind"]=1
   done
 
   if [[ -n $host_conflict ]]; then

@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { ChangeAgentType, inventoryChangeAgent } from '@helpers/pmm-admin';
 import { expect } from '@playwright/test';
 import * as cli from './cli-helper';
@@ -106,4 +109,52 @@ export function adminUser(containerName: string, mongoUri: string, user: string)
     setPassword: (password: string) => run(`changeUserPassword("${user}", "${password}")`),
     drop: () => run(`dropUser("${user}")`),
   };
+}
+
+/**
+ * Run distinct find queries, each on its own collection and filtering on its own long field name, in parallel mongo
+ * shells that all start at the next minute, so the profiler records them in one QAN minute.
+ *
+ * @param   containerName   docker container running mongod
+ * @param   mongoUri        connection string with directConnection=true to the primary
+ * @param   database        database to query; its profiler has to record every operation
+ * @param   queries         number of distinct queries
+ * @param   fieldLength     characters in each field name
+ * @param   workers         mongo shells running the queries in parallel
+ * @return  when the first shell started and the last one finished
+ */
+export async function runQueryBurstInOneMinute(containerName: string, mongoUri: string, database: string, queries: number, fieldLength = 20_000, workers = 4) {
+  const startAt = Math.ceil((Date.now() + 15_000) / 60_000) * 60_000;
+  const dir = mkdtempSync(join(tmpdir(), 'pmm-qa-burst-'));
+  const containerDir = `/tmp/${basename(dir)}`;
+
+  try {
+    for (let worker = 0; worker < workers; worker++) {
+      const from = Math.floor((worker * queries) / workers);
+      const to = Math.floor(((worker + 1) * queries) / workers);
+
+      writeFileSync(join(dir, `${worker}.js`), `
+        const pad = "A".repeat(${fieldLength});
+        const d = db.getSiblingDB("${database}");
+        while (Date.now() < ${startAt}) sleep(20);
+        const start = new Date();
+        for (let i = ${from}; i < ${to}; i++) d["c_" + i].find({ [pad + "_" + i]: 1 }).toArray();
+        print(JSON.stringify({ start, end: new Date(), queries: ${to - from} }));
+      `);
+    }
+
+    await (await cli.exec(`docker cp ${dir} ${containerName}:${containerDir}`)).assertSuccess();
+    const output = await cli.exec(`docker exec ${containerName} sh -c 'for f in ${containerDir}/*.js; do mongo "${mongoUri}" --quiet "$f" & done; wait'`);
+    const results = output.getStdOutLines().filter((line) => line.startsWith('{')).map((line) => JSON.parse(line) as { start: string, end: string, queries: number });
+
+    expect(results.reduce((sum, result) => sum + result.queries, 0), `Not every mongo shell finished its queries: ${output.stdout}${output.stderr.text}`).toEqual(queries);
+
+    return {
+      start: new Date(Math.min(...results.map((result) => Date.parse(result.start)))),
+      end: new Date(Math.max(...results.map((result) => Date.parse(result.end)))),
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    await cli.exec(`docker exec ${containerName} rm -rf ${containerDir}`);
+  }
 }
