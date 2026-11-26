@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { normalizeTemplate, readTemplateFile } from '@helpers/alertTemplate.helper';
+import { normalizeTemplate, paginationTemplates, readTemplateFile } from '@helpers/alertTemplate.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AlertSeverity } from '@interfaces/alerting';
@@ -19,18 +19,6 @@ const uiSource = 'User Created (UI)';
 const editor = { password: 'Password-123', username: 'test_editor' };
 const users = [{ password: undefined, username: 'admin' }, editor];
 let createdEditorId: number | undefined;
-const paginationTemplates = (count: number) =>
-  `templates:\n${Array.from({ length: count }, (_, i) => {
-    const id = String(i + 1).padStart(2, '0');
-
-    return `  - name: zz_pmm_14745_${id}
-    version: 1
-    summary: PMM-14745 pagination ${id}
-    expr: up == 0
-    for: 1m
-    severity: warning
-`;
-  }).join('')}`;
 
 pmmTest.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
@@ -443,7 +431,7 @@ pmmTest(
     const pageSize = 25;
     const builtIn = (await api.alertingApi.getTemplates()).length;
     const minimum = Math.max(2 * pageSize + 1, builtIn + 1);
-    // The "zz_" names sort after every built-in template, and the total leaves one template alone on the last page.
+    // The added templates sort last, and the total leaves one of them alone on the last page.
     const total = minimum + ((pageSize + 1 - (minimum % pageSize)) % pageSize);
     const pages = Math.ceil(total / pageSize);
 

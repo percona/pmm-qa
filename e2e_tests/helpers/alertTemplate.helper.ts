@@ -2,6 +2,20 @@ import fs from 'node:fs';
 
 export const normalizeTemplate = (yaml: string) => yaml.replaceAll(/ +(?= )/g, '');
 
+// Names start with "zz_" so the server lists them after every built-in template.
+export const paginationTemplates = (count: number) =>
+  `templates:\n${Array.from({ length: count }, (_, i) => {
+    const id = String(i + 1).padStart(2, '0');
+
+    return `  - name: zz_pmm_14745_${id}
+    version: 1
+    summary: PMM-14745 pagination ${id}
+    expr: up == 0
+    for: 1m
+    severity: warning
+`;
+  }).join('')}`;
+
 export const readTemplateFile = (path: string) => {
   const content = fs.readFileSync(path, 'utf8');
   const templates = content
