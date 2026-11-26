@@ -232934,16 +232934,19 @@
         "link": "https://github.com/percona/pmm-qa/pull/1833",
         "by": "Investigator routine",
         "at": "2026-11-26T03:18:45Z"
+      },
+      {
+        "suites": [
+          "CLI Integration"
+        ],
+        "verdict": "test bug",
+        "summary": "CLI PSMDB Replica 6.x/7.x: PMM-T2837's beforeAll takeBackup waited 5 min on a backup PBM reported 'not found': the resync helper returns on the earlier resync's log line, so pbm backup is sent while the forced resync still holds PBM's lock. Already fixed by the open pmm-qa#1831 (reproduced on a CHAOS VM there); no new cause.",
+        "link": "https://github.com/percona/pmm-qa/pull/1831",
+        "by": "Investigator routine",
+        "at": "2026-11-26T03:18:58Z"
       }
     ],
     "claims": [
-      {
-        "by": "Investigator routine",
-        "at": "2026-11-26T02:49:06Z",
-        "suites": [
-          "CLI Integration"
-        ]
-      },
       {
         "by": "Investigator routine",
         "at": "2026-11-26T02:49:06Z",
