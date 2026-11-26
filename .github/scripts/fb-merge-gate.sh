@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # Sets the "FB merge gate" commit status on every open pmm-qa PR into main.
-# A PR waits for the product PRs of the FBs that build its branch, and for every PR its body
-# names after "do not merge", "blocked-on" or "depends on" at the start of a line or sentence.
-# FB PRs named there are skipped: they close without merging, and ci.yml already pairs them.
 #
 # Environment:
 #   GH_TOKEN      required; statuses:write on QA_REPO, read on the product repos
@@ -31,7 +28,7 @@ query($qaOwner: String!, $qaName: String!, $fbOwner: String!, $fbName: String!,
   qa: repository(owner: $qaOwner, name: $qaName) @include(if: $first) {
     pullRequests(states: OPEN, baseRefName: "main", first: 100) {
       nodes {
-        number headRefName headRefOid body
+        number headRefName headRefOid
         headRepository { nameWithOwner }
         commits(last: 1) { nodes { commit { status { context(name: $context) { state description } } } } }
       }
@@ -50,8 +47,7 @@ query($qaOwner: String!, $qaName: String!, $fbOwner: String!, $fbName: String!,
   }
 }'
 
-# sha<TAB>pr<TAB>head_ref<TAB>head_repo<TAB>body_deps<TAB>current_state<TAB>current_description
-# body_deps: space-separated owner/repo#number entries, or "-"; a tab-split read drops empty fields.
+# sha<TAB>pr<TAB>head_ref<TAB>head_repo<TAB>current_state<TAB>current_description
 qa_list="${work}/qa.tsv"
 # number<TAB>state of the FB PRs
 fb_list="${work}/fb.tsv"
@@ -66,13 +62,7 @@ while :; do
   if [[ "${first}" = true ]]; then
     jq -r '.data.qa.pullRequests.nodes[]
       | (.commits.nodes[0].commit.status.context // {}) as $s
-      | ([(.body // "") | split("\n")[]
-          | scan("(?:^|[·;.]\\s)\\s*(?:[-*>]\\s*)?(?:\\*\\*)?(?:do not merge|blocked[- ]on|depends on)([^·;]*)"; "i")[0]
-          | scan("(?:https://github\\.com/)?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?:/pull/|#)([0-9]+)")
-          | "\(.[0] | ascii_downcase)#\(.[1])"
-          | select(startswith("percona-lab/pmm-submodules#") | not)] | unique | join(" ")) as $deps
       | [.headRefOid, .number, .headRefName, ((.headRepository.nameWithOwner // "") | ascii_downcase),
-         (if $deps == "" then "-" else $deps end),
          (($s.state // "") | ascii_downcase), ($s.description // "")] | @tsv' <<<"${page}" >"${qa_list}"
     jq -r '.data.closed.pullRequests.nodes[] | [.number, "closed"] | @tsv' <<<"${page}" >"${fb_list}"
   fi
@@ -137,41 +127,10 @@ pairs_for() {
   awk -F'\t' -v b="$1" '($1 "") == (b "")' "${pairs}"
 }
 
-# The PRs named in QA PR bodies, read in one query. A PR that cannot be read stays unmerged.
-declare -A dep_state
-deps=()
-while IFS=$'\t' read -r _ _ _ _ body_deps _ _; do
-  [[ "${body_deps}" = - ]] && continue
-  for dep in ${body_deps}; do
-    [[ -n "${dep_state[${dep}]+x}" ]] && continue
-    dep_state[${dep}]=unknown
-    deps+=("${dep}")
-  done
-done <"${qa_list}"
-
-if (( ${#deps[@]} )); then
-  vars=""
-  fields=""
-  args=()
-  for i in "${!deps[@]}"; do
-    repo="${deps[${i}]%#*}"
-    vars+=" \$o${i}: String! \$n${i}: String! \$m${i}: Int!"
-    fields+=" d${i}: repository(owner: \$o${i}, name: \$n${i}) { pullRequest(number: \$m${i}) { state } }"
-    args+=(-f "o${i}=${repo%%/*}" -f "n${i}=${repo#*/}" -F "m${i}=${deps[${i}]##*#}")
-  done
-  # A missing repository or PR fails the query but still returns data for the others.
-  dep_page="$(gh api graphql -f query="query(${vars}) {${fields} }" "${args[@]}" 2>/dev/null)" || true
-  [[ -n "${dep_page}" ]] || dep_page='{}'
-  for i in "${!deps[@]}"; do
-    state="$(jq -r --arg k "d${i}" '.data[$k].pullRequest.state // empty' <<<"${dep_page}" 2>/dev/null || true)"
-    [[ -n "${state}" ]] && dep_state[${deps[${i}]}]="${state,,}"
-  done
-fi
-
 # The product branches of FBs that pair with an open QA PR, read in one query.
 declare -A pr_state
 keys=()
-while IFS=$'\t' read -r _ _ head_ref head_repo _ _ _; do
+while IFS=$'\t' read -r _ _ head_ref head_repo _ _; do
   [[ "${head_repo}" = "${QA_REPO}" ]] || continue
   while IFS=$'\t' read -r _ _ _ products; do
     for product in ${products}; do
@@ -252,24 +211,8 @@ evaluate() {
 # sha<TAB>state<TAB>description<TAB>pr<TAB>current_state<TAB>current_description
 results="${work}/results.tsv"
 : >"${results}"
-while IFS=$'\t' read -r sha number head_ref head_repo body_deps cur_state cur_desc; do
-  waiting_dep=""
-  if [[ "${body_deps}" != - ]]; then
-    for dep in ${body_deps}; do
-      if [[ "${dep_state[${dep}]}" != merged ]]; then
-        waiting_dep="${dep}"
-        break
-      fi
-    done
-  fi
-  if [[ -n "${waiting_dep}" ]]; then
-    gate_state=pending
-    if [[ "${dep_state[${waiting_dep}]}" = closed ]]; then
-      gate_desc="${waiting_dep} was closed without merging; update the PR body"
-    else
-      gate_desc="Waiting for ${waiting_dep} to merge (named in the PR body)"
-    fi
-  elif [[ "${head_repo}" = "${QA_REPO}" ]]; then
+while IFS=$'\t' read -r sha number head_ref head_repo cur_state cur_desc; do
+  if [[ "${head_repo}" = "${QA_REPO}" ]]; then
     evaluate "${head_ref}"
   else
     gate_state=success
