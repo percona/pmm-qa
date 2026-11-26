@@ -31,9 +31,7 @@ pmmTest(
 
     await pmmTest.step('Add the PS replication source as a remote MySQL instance', async () => {
       await page.goto(addInstancePage.url);
-      await addInstancePage.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
-      await addInstancePage.selectNode('pmm-server');
-      await addInstancePage.fillRemoteFields({
+      await addInstancePage.fillRemoteDatabase('mysql', 'pmm-server', {
         cluster: 'ps_remote_cluster',
         environment: 'ps_remote_cluster',
         host: container,
@@ -57,8 +55,7 @@ pmmTest(
 
     const { service_id } = await api.inventoryApi.getServiceDetailsByPartialName(remoteServiceName);
 
-    await page.goto(agentsPage.serviceAgentsUrl(service_id));
-    await expect(agentsPage.elements.runningStatuses).toHaveCount(2, { timeout: Timeouts.ONE_MINUTE });
+    await agentsPage.verifyRunningAgents(service_id, 2);
   },
 );
 

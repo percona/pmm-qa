@@ -14,6 +14,7 @@ export const haHealthOverviewPanels = {
   overallSystemHealth: 'Overall System Health',
   pmmPods: 'PMM Pods',
   podsWithRestarts: 'Pods with Restarts',
+  postgresqlPods: 'PostgreSQL Pods',
   postgresqlPrimary: 'PostgreSQL Primary',
 };
 
@@ -39,7 +40,7 @@ export default class HaHealthOverviewDashboard extends BasePage implements Dashb
     { name: 'VictoriaMetrics Storage', type: 'gauge' },
     { name: 'Service Availability by Component', type: 'timeSeries' },
     { name: haHealthOverviewPanels.pmmPods, type: 'table' },
-    { name: 'PostgreSQL Pods', type: 'table' },
+    { name: haHealthOverviewPanels.postgresqlPods, type: 'table' },
     { name: 'ClickHouse Pods', type: 'table' },
     { name: 'VictoriaMetrics Pods', type: 'table' },
     { name: 'HAProxy Instances', type: 'table' },

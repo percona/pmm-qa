@@ -253,7 +253,8 @@ const pmmTest = base.extend<{
 
     await use(portalRemoval);
   },
-  postgresqlHelper: async ({ cliHelper }, use) => await use(new PostgresqlHelper(cliHelper)),
+  postgresqlHelper: async ({ cliHelper, dockerHelper }, use) =>
+    await use(new PostgresqlHelper(cliHelper, dockerHelper)),
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);
 
