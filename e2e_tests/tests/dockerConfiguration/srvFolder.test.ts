@@ -112,7 +112,7 @@ for (const configuration of srvConfigurations) {
 
 pmmTest.describe('Test PMM server with an empty data container', () => {
   const containerName = 'pmm-server-empty-data-container';
-  const volumeName = 'srvFolder';
+  const volumeName = `srvFolder-${Date.now()}`;
   const baseUrl = 'https://127.0.0.1:454/';
   const runArgs = `--restart always -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_ENABLE_TELEMETRY=0 --publish 454:8443 --volume ${volumeName}:/srv ${dockerVersion}`;
 
