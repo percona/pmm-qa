@@ -114,8 +114,7 @@ class PmmServerComponents(unittest.TestCase):
     def test_victoria_metrics_alert_status(self):
         if test_mode != "post":
             self.skipTest(POST_UPGRADE)
-        if expected_pmm_minor_version >= 11:
-            # PMM-15182: vmalert was removed in 3.11.0.
+        if (expected_pmm_major_version, expected_pmm_minor_version) >= (3, 11):
             self.assertEqual('0', server_command("sh -c 'supervisorctl status | grep -c vmalert || true'"))
             return
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
@@ -148,6 +147,7 @@ class PmmServerComponents(unittest.TestCase):
 if __name__ == '__main__':
     args = parse_args()
     expected_pmm_version = args.version
+    expected_pmm_major_version = int(args.version.split('.')[0])
     expected_pmm_minor_version = int(args.version.split('.')[1])
     test_mode = args.pre_post
     is_ami = args.env in "ami"
