@@ -1,3 +1,4 @@
+import AdmZip from 'adm-zip';
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -29,6 +30,21 @@ export default class ServerApi {
     expect(response.status()).toEqual(200);
 
     return ((await response.json()) as ServerVersionResponse).distribution_method;
+  };
+
+  /** One log file from the PMM Server logs archive, the same one the Help menu downloads. */
+  getLog = async (fileName: string): Promise<string> => {
+    const response = await this.request.get(apiEndpoints.server.logs, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), `Download of ${apiEndpoints.server.logs}`).toEqual(200);
+
+    const entry = new AdmZip(await response.body()).getEntry(fileName);
+
+    if (!entry) throw new Error(`${fileName} is not in ${apiEndpoints.server.logs}`);
+
+    return entry.getData().toString('utf8');
   };
 
   getPmmVersion = async (): Promise<PmmVersion> => {

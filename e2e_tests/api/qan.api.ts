@@ -11,6 +11,7 @@ import {
   QanPlanBody,
   QanReportBody,
   QanResponse,
+  QanTotalsBody,
 } from '@interfaces/qan';
 
 const byQueryId = (queryId: string, period: QanPeriod) => ({
@@ -33,6 +34,9 @@ export default class QanApi {
       ...byQueryId(queryId, period),
       limit: 5,
     });
+
+  getFilters = async (user: ProxyUser | undefined, period: QanPeriod) =>
+    await this.send('POST', apiEndpoints.qan.getFilters, user, { ...period, main_metric_name: 'load' });
 
   getHistogram = async (user: ProxyUser | undefined, queryId: string, period: QanPeriod) =>
     await this.send<QanHistogramBody>('POST', apiEndpoints.qan.getHistogram, user, {
@@ -59,27 +63,34 @@ export default class QanApi {
 
   /** Query ids of a service whose fingerprint contains the search text, read as Admin. */
   getQueryIds = async (serviceName: string, search: string, period: QanPeriod): Promise<string[]> => {
-    const { body, status, text } = await this.send<QanReportBody>(
-      'POST',
-      apiEndpoints.qan.getReport,
-      undefined,
-      {
-        ...period,
-        columns: ['load', 'num_queries'],
-        group_by: 'queryid',
-        labels: [{ key: 'service_name', value: [serviceName] }],
-        limit: 25,
-        main_metric: 'load',
-        offset: 0,
-        order_by: '-load',
-        search,
-      },
-    );
+    const { body, status, text } = await this.getReport(undefined, period, {
+      labels: [{ key: 'service_name', value: [serviceName] }],
+      search,
+    });
 
     if (status !== 200) throw new Error(`QAN report for ${serviceName} failed with ${status}: ${text}`);
 
     return (body.rows ?? []).flatMap(({ dimension }) => (dimension ? [dimension] : []));
   };
+
+  getReport = async (user: ProxyUser | undefined, period: QanPeriod, options: Record<string, unknown> = {}) =>
+    await this.send<QanReportBody>('POST', apiEndpoints.qan.getReport, user, {
+      ...period,
+      columns: ['load', 'num_queries'],
+      group_by: 'queryid',
+      limit: 25,
+      main_metric: 'load',
+      offset: 0,
+      order_by: '-load',
+      ...options,
+    });
+
+  getTotals = async (user: ProxyUser | undefined, period: QanPeriod) =>
+    await this.send<QanTotalsBody>('POST', apiEndpoints.qan.getMetrics, user, {
+      ...period,
+      group_by: 'queryid',
+      totals: true,
+    });
 
   static period = (hours: number): QanPeriod => {
     const to = new Date();

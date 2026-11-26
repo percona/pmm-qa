@@ -82,6 +82,7 @@ const apiEndpoints = {
   qan: {
     explainFingerprint: '/v1/qan:explainFingerprint',
     getExample: '/v1/qan/query:getExample',
+    getFilters: '/v1/qan/metrics:getFilters',
     getHistogram: '/v1/qan:getHistogram',
     getLabels: '/v1/qan:getLabels',
     getMetrics: '/v1/qan:getMetrics',

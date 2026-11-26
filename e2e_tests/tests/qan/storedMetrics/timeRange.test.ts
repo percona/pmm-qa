@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import QanApi from '@api/qan.api';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
@@ -255,5 +256,100 @@ pmmTest(
     await expect(storedMetrics.builders.columnHeader(columnName)).toBeVisible({
       timeout: Timeouts.THIRTY_SECONDS,
     });
+  },
+);
+
+pmmTest(
+  'PMM-T2897 - Verify Query Analytics loads queries and query details for a time range inside one minute @qan',
+  async ({ api, leftNavigation, page, qanStoredMetrics }) => {
+    const minute = await pmmTest.step('Find a minute about 5 minutes ago that holds queries', async () => {
+      const now = Date.now();
+      const { body, status, text } = await api.qanApi.getTotals(undefined, {
+        period_start_from: new Date(now - Timeouts.FIFTEEN_MINUTES).toISOString(),
+        period_start_to: new Date(now).toISOString(),
+      });
+
+      expect(status, text).toBe(200);
+
+      const timestamp = (body.sparkline ?? [])
+        .filter(({ load }) => load)
+        .map(({ timestamp }) => Date.parse(timestamp))
+        .filter((time) => time <= now - Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE)
+        .sort((a, b) => b - a)[0];
+
+      expect(timestamp, 'A minute 4 to 15 minutes ago must hold queries').toBeDefined();
+
+      return new Date(timestamp).toISOString().slice(0, 16);
+    });
+
+    await pmmTest.step('Set the time zone to UTC', async () => {
+      await leftNavigation.selectTimeZone('Coordinated Universal Time');
+      await expect(leftNavigation.elements.timePickerOpenButton).toContainText('UTC');
+    });
+
+    await pmmTest.step('Set a time range from second 0 to second 50 of that minute', async () => {
+      await leftNavigation.setAbsoluteTimeRange(
+        `${minute.replace('T', ' ')}:00`,
+        `${minute.replace('T', ' ')}:50`,
+      );
+      await expect(page).toHaveURL(
+        (url) =>
+          url.searchParams.get('from') === `${minute}:00.000Z` &&
+          url.searchParams.get('to') === `${minute}:50.000Z`,
+      );
+      await qanStoredMetrics.waitForLoad();
+      await expect(qanStoredMetrics.builders.queryRow(0)).toContainText('TOTAL');
+      await expect(qanStoredMetrics.elements.firstRow).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(qanStoredMetrics.elements.noData).toBeHidden();
+      await expect(qanStoredMetrics.messages.notification).toBeHidden();
+    });
+
+    await pmmTest.step('Select the first query and read its Query Count', async () => {
+      await qanStoredMetrics.selectRow(1);
+      await expect(qanStoredMetrics.builders.detailMetricValue('Query Count', 3)).toHaveText(/\d/, {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+    });
+
+    expect(await api.serverApi.getLog('qan-api2.log')).not.toContain('integer divide by zero');
+  },
+);
+
+pmmTest(
+  'PMM-T2898 - Verify Query Analytics refuses a time range that ends before it starts @qan',
+  async ({ api }) => {
+    const minute = new Date(Date.now() - Timeouts.FIVE_MINUTES).toISOString().slice(0, 16);
+    const reversedMinute = { period_start_from: `${minute}:50Z`, period_start_to: `${minute}:10Z` };
+    const reversedError = 'cannot be later then to-date';
+    const { body: report } = await api.qanApi.getReport(undefined, QanApi.period(1));
+    const queryId = (report.rows ?? []).find(({ dimension }) => dimension)?.dimension;
+
+    expect(queryId, 'The last hour must hold at least one query').toBeDefined();
+
+    const reversedReport = await api.qanApi.getReport(undefined, reversedMinute, {
+      columns: ['load'],
+      limit: 10,
+    });
+
+    expect(reversedReport.status, reversedReport.text).toBe(400);
+    expect(reversedReport.text).toContain(reversedError);
+
+    const reversedDetails = await api.qanApi.getMetrics(undefined, queryId ?? '', reversedMinute);
+
+    expect(reversedDetails.status, reversedDetails.text).toBe(400);
+
+    const now = Date.now();
+    const reversedHour = await api.qanApi.getTotals(undefined, {
+      period_start_from: new Date(now).toISOString(),
+      period_start_to: new Date(now - Timeouts.SIXTY_MINUTES).toISOString(),
+    });
+
+    expect(reversedHour.status, reversedHour.text).toBe(400);
+    expect(reversedHour.body, 'A refused request must return no data point').not.toHaveProperty('sparkline');
+
+    const reversedFilters = await api.qanApi.getFilters(undefined, reversedMinute);
+
+    expect(reversedFilters.status, reversedFilters.text).toBe(400);
+    expect(await api.serverApi.getLog('qan-api2.log')).not.toContain('integer divide by zero');
   },
 );
