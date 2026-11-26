@@ -509,9 +509,7 @@ pmmTest(
       'Add the pdpgsql node as a remote PostgreSQL instance with query examples disabled',
       async () => {
         await page.goto(addInstancePage.url);
-        await addInstancePage.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
-        await addInstancePage.selectNode('pmm-server');
-        await addInstancePage.fillRemoteFields({
+        await addInstancePage.fillRemoteDatabase('postgresql', 'pmm-server', {
           host: container,
           password: 'pass+this',
           serviceName: disableExamplesService,
