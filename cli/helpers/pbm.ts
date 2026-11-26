@@ -385,6 +385,9 @@ async function resyncWith(container: string, args: string) {
 
     expect(ended, `no resync has ended since pbm ${args}; PBM logged for it:\n${entries.map(formatLogEntry).join('\n') || 'nothing'}`).toBeTruthy();
   }).toPass({ intervals: [2_000], timeout: 120_000 });
+  // pbm-agent drops, without a word in its log, a command of the same type stamped with the same second as the one it took last,
+  // and a resync often ends within the second it was sent in, so the next one waits for the next second.
+  await new Promise((resolve) => { setTimeout(resolve, 1_000 - (Date.now() % 1_000)); });
 }
 
 /**
