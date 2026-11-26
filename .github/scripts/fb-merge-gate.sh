@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Sets the "FB merge gate" commit status on every open pmm-qa PR into main.
 # A PR waits for the product PRs of the FBs that build its branch, and for every PR its body
-# names on a "do not merge", "blocked-on" or "depends on" line. FB PRs named there are skipped:
-# they close without merging, and their ci.yml already pairs the branch.
+# names after "do not merge", "blocked-on" or "depends on" at the start of a line or sentence.
+# FB PRs named there are skipped: they close without merging, and ci.yml already pairs them.
 #
 # Environment:
 #   GH_TOKEN      required; statuses:write on QA_REPO, read on the product repos
@@ -66,7 +66,8 @@ while :; do
   if [[ "${first}" = true ]]; then
     jq -r '.data.qa.pullRequests.nodes[]
       | (.commits.nodes[0].commit.status.context // {}) as $s
-      | ([(.body // "") | split("\n")[] | select(test("do not merge|blocked[- ]on|depends on"; "i"))
+      | ([(.body // "") | split("\n")[]
+          | scan("(?:^|[·;.]\\s)\\s*(?:[-*>]\\s*)?(?:\\*\\*)?(?:do not merge|blocked[- ]on|depends on)([^·;]*)"; "i")[0]
           | scan("(?:https://github\\.com/)?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?:/pull/|#)([0-9]+)")
           | "\(.[0] | ascii_downcase)#\(.[1])"
           | select(startswith("percona-lab/pmm-submodules#") | not)] | unique | join(" ")) as $deps
