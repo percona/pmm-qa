@@ -48,6 +48,23 @@ export default class QueryAnalyticsPage extends BasePage {
     await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
+  // A session name opens the live view of its own services; the view's picker adds the others.
+  openSessionFromList = async (sessionName: string, otherServiceIds: string[] = []) => {
+    await this.rta.builders.sessionLink(sessionName).click();
+    await this.rta.elements.realTimeTable.waitFor();
+
+    if (otherServiceIds.length > 0) {
+      await this.rta.inputs.clusterService.click();
+      await this.rta.selectServiceOptions(otherServiceIds);
+    }
+  };
+
+  // Start session lands on the sessions list, for MySQL and MongoDB alike.
+  startSessionFromSelection = async (serviceIds: string[]) => {
+    await this.rta.selectServiceOptions(serviceIds);
+    await this.buttons.startSessionButton.click();
+  };
+
   switchTab = async (tabName: TabNames) => {
     const tab = this.getTab(tabName);
     const urlPattern = tabName === this.tabNames.realTime ? this.rtaUrlPattern : this.storedMetricsUrlPattern;

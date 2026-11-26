@@ -1,4 +1,3 @@
-import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
 import { expect } from '@playwright/test';
 import mysql, { Connection, ConnectionOptions, RowDataPacket } from 'mysql2/promise';
@@ -49,11 +48,15 @@ export default class MySQLHelper {
 
   /** A connection that close() kills, for statements that must run in one session. */
   connect = async () => {
-    const connection = await this.openConnection();
+    const connection = await mysql.createConnection(this.config);
 
-    if (!connection) {
+    if (this.closed) {
+      connection.destroy();
+
       throw new Error('MySQLHelper is closed');
     }
+
+    this.openConnections.push(connection);
 
     return connection;
   };
@@ -75,12 +78,8 @@ export default class MySQLHelper {
    * statement then sleeps 30 seconds, so its lock time stays readable while it runs.
    */
   simulateLockTime = async (queryLabel: string, lockMs: number) => {
-    const holder = await this.openConnection();
-    const waiter = await this.openConnection();
-
-    if (!holder || !waiter) {
-      throw new Error('MySQLHelper is closed');
-    }
+    const holder = await this.connect();
+    const waiter = await this.connect();
 
     await holder.query('CREATE DATABASE IF NOT EXISTS rta_qa');
     await holder.query('CREATE TABLE IF NOT EXISTS rta_qa.lock_time_target (id INT PRIMARY KEY)');
@@ -106,7 +105,7 @@ export default class MySQLHelper {
       queryLabel = 'rta-simulated-query',
       trailingValues = [],
     } = options;
-    const connection = await this.openConnection();
+    const connection = await this.connect().catch(this.ignoreAfterClose);
 
     if (!connection) {
       return;
@@ -126,12 +125,8 @@ export default class MySQLHelper {
    * Returns the connection id of the lock holder.
    */
   simulateRowLockWait = async (queryLabel: string) => {
-    const holder = await this.openConnection();
-    const waiter = await this.openConnection();
-
-    if (!holder || !waiter) {
-      throw new Error('MySQLHelper is closed');
-    }
+    const holder = await this.connect();
+    const waiter = await this.connect();
 
     await holder.query('CREATE DATABASE IF NOT EXISTS rta_qa');
     await holder.query('CREATE TABLE IF NOT EXISTS rta_qa.lock_target (id INT PRIMARY KEY)');
@@ -151,101 +146,18 @@ export default class MySQLHelper {
       throw error;
     }
   };
-
-  private openConnection = async () => {
-    const connection = await mysql.createConnection(this.config);
-
-    if (this.closed) {
-      connection.destroy();
-
-      return undefined;
-    }
-
-    this.openConnections.push(connection);
-
-    return connection;
-  };
 }
 
 const cliHelper = new CliHelper();
-const remoteMySqlPassword = 'rta-QA-mysql-1';
-// The data directory is on tmpfs: initializing several servers at once on disk takes minutes.
-const remoteMySqlArgs = `--network pmm-qa --tmpfs /var/lib/mysql:mode=1777 --env MYSQL_ROOT_PASSWORD=${remoteMySqlPassword}`;
-const remoteMySqls: { db?: MySQLHelper; name: string }[] = [];
 
 /**
- * Starts each server as a Docker container named after its key and adds it as a remote MySQL service.
- * PMM Server's own agent monitors it by name over the pmm-qa network; the test reaches it on a published port.
- * Every container starts before any request is in flight: a docker run pulling its image blocks the test process.
+ * Runs SETUP in the pmm-framework MariaDB CONTAINER, then restarts MariaDB under systemd and waits until it answers.
+ * Performance Schema is read only at startup, so changing it needs the restart.
  */
-export const addRemoteMySqls = async (api: Api, servers: Record<string, string>) => {
-  const serviceNames = Object.keys(servers);
+export const restartMariaDb = async (container: string, setup: string) => {
+  cliHelper.execute(`docker exec ${container} sh -c "${setup} && systemctl restart mariadb"`).assertSuccess();
 
-  await api.inventoryApi.removeNodesByName(serviceNames);
-
-  for (const [serviceName, dockerArgs] of Object.entries(servers)) {
-    cliHelper.removeContainer(serviceName);
-    remoteMySqls.push({ name: serviceName });
-    cliHelper
-      .execute(
-        `docker run --detach --quiet --name ${serviceName} --publish 127.0.0.1::3306 ${remoteMySqlArgs} ${dockerArgs}`,
-        Timeouts.FIVE_MINUTES,
-      )
-      .assertSuccess();
-  }
-
-  return Promise.all(
-    serviceNames.map(async (serviceName) => {
-      const port = Number(
-        cliHelper
-          .execSilent(`docker port ${serviceName} 3306/tcp`)
-          .assertSuccess()
-          .stdout.trim()
-          .split(':')
-          .at(-1),
-      );
-      const db = new MySQLHelper({
-        host: '127.0.0.1',
-        password: remoteMySqlPassword,
-        port,
-        username: 'root',
-      });
-      const server = remoteMySqls.find(({ name }) => name === serviceName);
-
-      if (server) server.db = db;
-
-      // The image initializes on a server without networking, so TCP answers only once the real server is up.
-      await expect(async () => {
-        await db.query('SELECT 1');
-      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-
-      const { mysql } = await api.managementApi.addService({
-        mysql: {
-          add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
-          address: serviceName,
-          password: remoteMySqlPassword,
-          pmm_agent_id: 'pmm-server',
-          port: 3_306,
-          qan_mysql_perfschema: true,
-          service_name: serviceName,
-          username: 'root',
-        },
-      });
-
-      if (!mysql) throw new Error(`Adding ${serviceName} returned no MySQL service`);
-
-      return { db, serviceId: mysql.service.service_id, serviceName };
-    }),
-  );
-};
-
-// Removes every server addRemoteMySqls started: its connections, its node with the service, and its container.
-export const removeRemoteMySqls = async (api: Api) => {
-  const servers = remoteMySqls.splice(0);
-
-  for (const { db } of servers) await db?.close();
-
-  await api.inventoryApi.removeNodesByName(servers.map(({ name }) => name));
-
-  for (const { name } of servers) cliHelper.removeContainer(name);
+  await expect(() => {
+    cliHelper.execSilent(`docker exec ${container} mariadb-admin ping`).assertSuccess();
+  }).toPass({ intervals: [Timeouts.ONE_SECOND], timeout: Timeouts.ONE_MINUTE });
 };

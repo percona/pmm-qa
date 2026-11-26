@@ -1,5 +1,6 @@
 import { expect, Locator } from '@playwright/test';
 import { AccessServiceType } from '@interfaces/accessControl';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 
@@ -305,7 +306,7 @@ export default class StoredMetricsPage extends BasePage {
 
   openAndWaitForReport = async (url: string) => {
     const report = this.page.waitForResponse((response) =>
-      response.url().includes('/v1/qan/metrics:getReport'),
+      response.url().includes(apiEndpoints.qan.getReport),
     );
 
     await this.page.goto(url);

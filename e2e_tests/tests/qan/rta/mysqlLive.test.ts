@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
-import { restartMariaDb } from '@helpers/mariadb.helper';
-import MySQLHelper, { addRemoteMySqls, removeRemoteMySqls } from '@helpers/mysql.helper';
-import { openSessionFromList, startSessionFromSelection } from '@helpers/rta.helper';
+import MySQLHelper, { restartMariaDb } from '@helpers/mysql.helper';
+import { remoteDatabasePassword, remoteMysql } from '@helpers/remoteDatabases.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { ServiceType } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
@@ -29,31 +28,20 @@ pmmTest.afterEach(async ({ api, mySqlDbHelper }) => {
   for (const db of databases.splice(0)) await db.close();
 
   for (const serviceId of serviceIds.splice(0)) await api.managementApi.removeService(serviceId);
-
-  await removeRemoteMySqls(api);
 });
 
 pmmTest(
   'Verify a running statement on each MySQL flavor shows in Real-Time Analytics within 5 seconds @rta',
-  async ({ api, cliHelper, credentials, page, queryAnalytics }) => {
+  async ({ api, credentials, dockerHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     // The services pmm-framework connects through PMM Client; the FB @rta job sets up ps=8.4 and mariadb.
     const services = await api.inventoryApi.getAllServiceDetailsByRegex('^(ps|mysql|mariadb)_pmm_');
     const flavors = services.map((service) => {
       // pmm-framework names each client node after its database container.
-      const port = Number(
-        cliHelper
-          .execSilent(`docker port ${service.node_name} 3306/tcp`)
-          .assertSuccess()
-          .stdout.trim()
-          .split('\n')[0]
-          .split(':')
-          .at(-1),
-      );
       const db = new MySQLHelper({
         host: '127.0.0.1',
         password: credentials.perconaServer.password,
-        port,
+        port: dockerHelper.getPublishedPort(service.node_name, 3_306),
         username: 'root',
       });
 
@@ -100,13 +88,13 @@ pmmTest(
       async () => {
         const [first, ...others] = flavors;
 
-        await startSessionFromSelection(
-          queryAnalytics,
-          flavors.map(({ serviceId }) => serviceId),
-          flavors.map(({ sessionName }) => sessionName),
-        );
-        await openSessionFromList(
-          queryAnalytics,
+        await queryAnalytics.startSessionFromSelection(flavors.map(({ serviceId }) => serviceId));
+
+        for (const { sessionName } of flavors) {
+          await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
+        }
+
+        await queryAnalytics.openSessionFromList(
           first.sessionName,
           others.map(({ serviceId }) => serviceId),
         );
@@ -183,8 +171,11 @@ pmmTest(
       await page.goto(queryAnalytics.url);
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
       await rta.inputs.clusterService.click();
-      await startSessionFromSelection(queryAnalytics, [serviceId], [sessionName]);
-      await openSessionFromList(queryAnalytics, sessionName);
+      await queryAnalytics.startSessionFromSelection([serviceId]);
+
+      await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
+
+      await queryAnalytics.openSessionFromList(sessionName);
 
       await expect(rta.elements.realTimeTableRow).toHaveText(
         rta.expectedTexts.sessionError(serviceName, rta.expectedTexts.performanceSchemaDisabled),
@@ -239,8 +230,11 @@ pmmTest(
 
       const sessionName = percona84.cluster || percona84.service_name;
 
-      await startSessionFromSelection(queryAnalytics, [percona84.service_id], [sessionName]);
-      await openSessionFromList(queryAnalytics, sessionName);
+      await queryAnalytics.startSessionFromSelection([percona84.service_id]);
+
+      await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
+
+      await queryAnalytics.openSessionFromList(sessionName);
     });
 
     await pmmTest.step('Verify the statement is listed with an elapsed time in whole seconds', async () => {
@@ -295,8 +289,6 @@ pmmTest(
 
       // With no session left, the Real-Time tab is back on the selection page.
       await expect(page).toHaveURL(queryAnalytics.rtaSelectionUrl);
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- a start within about a second of the stop leaves the session Down for good (MongoDB too); a person is never that fast
-      await page.waitForTimeout(Timeouts.THREE_SECONDS);
       await rta.inputs.clusterService.click();
       await rta.selectServiceOptions([percona84.service_id]);
       await queryAnalytics.buttons.startSessionButton.click();
@@ -395,14 +387,23 @@ pmmTest(
 
 pmmTest(
   'Verify a MySQL statement cut short by MySQL is marked Truncated with a tooltip naming the setting to raise @rta',
-  async ({ api, mySqlDbHelper, page, queryAnalytics }) => {
+  async ({ api, dockerHelper, mySqlDbHelper, page, queryAnalytics, remoteDatabasesHelper }) => {
     const { rta } = queryAnalytics;
     const endMarker = 'rta-end-marker';
     const trailingValues = ['x'.repeat(1_900), endMarker];
     const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
-    const [longSqlText] = await addRemoteMySqls(api, {
-      'mysql-long-sql-text': 'mysql:8.4 --performance-schema-max-sql-text-length=4096',
+    const { longSqlText } = await remoteDatabasesHelper.add({
+      longSqlText: remoteMysql(
+        '--publish 127.0.0.1::3306 mysql:8.4 --performance-schema-max-sql-text-length=4096',
+      ),
     });
+    const longSqlTextDb = new MySQLHelper({
+      password: remoteDatabasePassword,
+      port: dockerHelper.getPublishedPort(longSqlText.name, 3_306),
+      username: 'root',
+    });
+
+    databases.push(longSqlTextDb);
 
     await pmmTest.step('Open the live query table of both services', async () => {
       for (const serviceId of [percona84.service_id, longSqlText.serviceId]) {
@@ -462,7 +463,7 @@ pmmTest(
     await pmmTest.step(
       'Verify the same statement on a server with a raised limit is shown whole',
       async () => {
-        void longSqlText.db.simulateLongRunningQuery({
+        void longSqlTextDb.simulateLongRunningQuery({
           delayMs: Timeouts.THIRTY_SECONDS,
           queryLabel: 'rta-mysql-not-truncated',
           trailingValues,
@@ -530,12 +531,15 @@ pmmTest(
 
       const sessionNames = [perfSchema, slowLog].map(({ cluster, service_name }) => cluster || service_name);
 
-      await startSessionFromSelection(
-        queryAnalytics,
+      await queryAnalytics.startSessionFromSelection(
         [perfSchema, slowLog].map((service) => service.service_id),
-        sessionNames,
       );
-      await openSessionFromList(queryAnalytics, sessionNames[0], [slowLog.service_id]);
+
+      for (const sessionName of sessionNames) {
+        await expect(rta.builders.sessionRow(sessionName)).toBeVisible();
+      }
+
+      await queryAnalytics.openSessionFromList(sessionNames[0], [slowLog.service_id]);
     });
 
     // Query Analytics stores a minute per bucket: from the next minute on, every SLEEP example is this test's.

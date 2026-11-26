@@ -15,7 +15,7 @@ export interface MonitoredDatabase {
   serviceId: string;
 }
 
-const password = 'qa-advisors';
+export const remoteDatabasePassword = 'qa-advisors';
 
 export const remoteMongodb = (dockerArgs: string): RemoteDatabase => ({
   dockerArgs,
@@ -27,15 +27,15 @@ export const remoteMysql = (
   dockerArgs: string,
   passwordVariable = 'MYSQL_ROOT_PASSWORD',
 ): RemoteDatabase => ({
-  credentials: { password, username: 'root' },
-  dockerArgs: `-e ${passwordVariable}=${password} ${dockerArgs}`,
+  credentials: { password: remoteDatabasePassword, username: 'root' },
+  dockerArgs: `-e ${passwordVariable}=${remoteDatabasePassword} ${dockerArgs}`,
   port: 3_306,
   type: 'mysql',
 });
 
 export const remotePostgresql = (image: string): RemoteDatabase => ({
-  credentials: { password, username: 'postgres' },
-  dockerArgs: `-e POSTGRES_PASSWORD=${password} ${image}`,
+  credentials: { password: remoteDatabasePassword, username: 'postgres' },
+  dockerArgs: `-e POSTGRES_PASSWORD=${remoteDatabasePassword} ${image}`,
   port: 5_432,
   type: 'postgresql',
 });

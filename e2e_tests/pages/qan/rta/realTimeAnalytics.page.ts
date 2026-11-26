@@ -25,7 +25,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
     unavailable: 'Unavailable',
   };
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
-  readonly sessionsUrl = 'pmm-ui/rta/sessions';
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   toggles = {
     blockedOnly: this.page.getByTestId('overview-table-blocked-only-toggle'),
@@ -95,10 +94,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     sessionStopButton: (sessionName: string) =>
       this.builders.sessionRow(sessionName).getByTestId('open-stop-modal'),
     technologyForSession: (sessionName: string) =>
-      this.page
-        .getByTestId(sessionsTableTestId)
-        .locator('tr', { hasText: sessionName })
-        .getByTestId('technology'),
+      this.builders.sessionRow(sessionName).getByTestId('technology'),
     technologyGroupHeader: (technology: string) =>
       this.page.getByRole('listbox').locator('.MuiAutocomplete-groupLabel', { hasText: technology }),
     truncatedChipForQuery: (queryText: string) =>

@@ -17,7 +17,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
 });
 
 pmmTest.afterEach(async ({ api }) => {
-  await api.realTimeAnalyticsApi.stopRealTimeAnalytics(mySqlServiceId);
+  await api.realTimeAnalyticsApi.stopAllSessions();
 });
 
 pmmTest(
@@ -440,7 +440,7 @@ pmmTest(
       { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE' },
       { serviceId: 'mock-mongo-service', serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' },
     ]);
-    await page.goto(queryAnalytics.rta.sessionsUrl);
+    await page.goto(queryAnalytics.rtaSessionsUrl);
 
     await expect(queryAnalytics.rta.elements.technologyColumnHeader).toBeVisible({
       timeout: Timeouts.TEN_SECONDS,
@@ -460,7 +460,7 @@ pmmTest(
     await mocks.mockRealTimeAnalyticsSessionsOf([
       { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE', statusMessage },
     ]);
-    await page.goto(queryAnalytics.rta.sessionsUrl);
+    await page.goto(queryAnalytics.rtaSessionsUrl);
     await queryAnalytics.rta.elements.sessionStatusMessage.hover();
 
     await expect(queryAnalytics.rta.elements.sessionStatusMessageTooltip).toContainText(
