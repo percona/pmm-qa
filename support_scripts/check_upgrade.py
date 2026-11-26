@@ -115,7 +115,9 @@ class PmmServerComponents(unittest.TestCase):
         if test_mode != "post":
             self.skipTest(POST_UPGRADE)
         if (expected_pmm_major_version, expected_pmm_minor_version) >= (3, 11):
-            self.assertEqual('0', server_command("sh -c 'supervisorctl status | grep -c vmalert || true'"))
+            status = server_command("sh -c 'supervisorctl status || true'")
+            self.assertRegex(status, r'pmm-managed\s+RUNNING', NOT_RUNNING_MSG)
+            self.assertNotIn('vmalert', status)
             return
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
 
