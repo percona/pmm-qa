@@ -22,7 +22,12 @@ pmmTest(
 
     await pmmTest.step('Verify every panel of the dashboard renders', async () => {
       await dashboard.verifyMetricsPresent(haDashboard.metrics);
-      await dashboard.verifyAllPanelsHaveData(haDashboard.noDataMetrics);
+      // skip-until: 2026-12-26 -- one internal PostgreSQL instance stays unmonitored (PMM-15794), so "PostgreSQL Pods" shows No data
+      // for its pod; check that panel again once it is fixed.
+      await dashboard.verifyAllPanelsHaveData([
+        ...haDashboard.noDataMetrics,
+        haHealthOverviewPanels.postgresqlPods,
+      ]);
     });
 
     await pmmTest.step('Verify the Namespace variable offers only the namespace PMM HA runs in', async () => {

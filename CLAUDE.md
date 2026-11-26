@@ -20,4 +20,10 @@ This section is the single global lever for cross-cutting preferences — it loa
 - **Kill by pid, not by pattern.** `pkill -f <pattern>` matches your own command line, so it kills the calling shell and takes the rest of the compound command with it. `pgrep` first, then `kill -9 <pid>`.
 - **Never run a hook by hand as a check.** The harness invokes it with a JSON payload on stdin, so a manual run reads `/dev/null`, reports success having linted nothing, or hangs on stdin. Call the underlying tool instead (`support_scripts/lint/lint-changed.sh <files>`) and let the gate fire on `git commit`.
 - **Poll a harness background task on its exit marker**, `[exited with code`, as well as on any content string — and prefer the completion notification the harness delivers on its own to an interval poll of the output file. A loop matching only content ran twenty 30-second iterations after the work had already finished.
+- **A PR that needs an unmerged product PR goes into its feature build, not into a "do not merge" note.** No automation reads
+  "do not merge until" or "depends on" in a body, so the merge is not held. Add the PR's branch as the `pmm-qa` entry of `ci.yml` in
+  the Percona-Lab/pmm-submodules FB that builds the product branch, and push only that change; the `FB merge gate` then holds the
+  merge until the product PRs land, and FB Tests runs the new tests. The entry shape and the case where `ci.yml` already lists another
+  pmm-qa branch are in pmm-ai `plugins/pmm-qa/skills/fb-tests/references/paired-fix.md`. No FB builds the product branch yet: open one
+  with `pmm-dev:pmm-feature-build`. Do it when the PR opens, and again when the branch or the FB changes.
 - **Only a 🔵 review finding is optional.** Fix a valid 🟡 or 🔴 one before resolving its thread, not in a later push; reply to a wrong one with the reason.

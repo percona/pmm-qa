@@ -18,6 +18,7 @@ export default class UpdatesPage extends BasePage {
   buttons = {
     checkUpdatesNow: this.page.getByRole('button', { name: 'Check Updates Now' }),
     lastCheck: this.grafanaIframe().getByTestId('update-last-check-button'),
+    remindMeLater: this.page.getByTestId('update-modal-remind-me-button'),
     updateNow: this.page.getByRole('button', { name: 'Update now' }),
     upgradeTo: this.grafanaIframe().getByRole('button', { name: /^Upgrade to / }),
     whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
@@ -63,6 +64,10 @@ export default class UpdatesPage extends BasePage {
 
   openHomeForWhatsNew = async (): Promise<void> =>
     await pmmTest.step('Open home page', async () => {
+      // The "Update to PMM X.Y.Z" modal opens over the home page whenever an update is available.
+      await this.page.addLocatorHandler(this.buttons.remindMeLater, async () => {
+        await this.buttons.remindMeLater.click();
+      });
       await this.page.goto(this.homeUrl);
       await expect(this.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     });
