@@ -4182,15 +4182,17 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-15835",
       "by": "Investigator routine",
       "at": "2026-11-26T03:19:04Z"
-    }
-  ],
-  "claims": [
+    },
     {
-      "by": "Investigator routine",
-      "at": "2026-11-26T02:49:06Z",
       "suites": [
         "HA, OpenShift & GSSAPI"
-      ]
+      ],
+      "verdict": "product bug",
+      "summary": "ha #192 (OpenShift) and ha backup-restore #69 (on the restored cluster): PMM-T2289 failed with 'Metrics without data are: PostgreSQL Pods', the open PMM-15794, as on nights 115-118. Diagnosed from the Jenkins test reports; recurrence added to the ticket.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-15794",
+      "by": "Investigator routine",
+      "at": "2026-11-26T03:19:10Z"
     }
-  ]
+  ],
+  "claims": []
 }
