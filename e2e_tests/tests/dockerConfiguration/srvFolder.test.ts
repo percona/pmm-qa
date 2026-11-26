@@ -120,12 +120,14 @@ pmmTest.describe('Test PMM server with an empty data container', () => {
 
   pmmTest.afterEach(async ({ cliHelper }) => {
     cliHelper.removeContainer(containerName);
-    cliHelper.execSilent(`docker volume rm ${volumeName} || true`);
+    cliHelper.execSilent(`docker volume rm --force ${volumeName}`).assertSuccess();
   });
 
   pmmTest(
     'PMM-T1244 - Verify PMM Server with empty data container @docker-configuration',
     async ({ api, cliHelper, dashboard, dockerHelper, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
+      let recreatedAt = 0;
+
       await pmmTest.step('Start PMM Server on an empty data volume', async () => {
         cliHelper.execSilent(`docker volume create ${volumeName}`).assertSuccess();
         dockerHelper.startContainer(containerName, runArgs);
@@ -144,6 +146,7 @@ pmmTest.describe('Test PMM server with an empty data container', () => {
       });
 
       await pmmTest.step('Recreate the container on the same data volume', async () => {
+        recreatedAt = Date.now();
         cliHelper.removeContainer(containerName);
         dockerHelper.startContainer(containerName, runArgs);
         await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
@@ -158,7 +161,10 @@ pmmTest.describe('Test PMM server with an empty data container', () => {
 
       await pmmTest.step('Verify Query Analytics and Node Summary keep data after the recreate', async () => {
         await page.goto(
-          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-12h', to: 'now-1m' }),
+          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
+            from: 'now-12h',
+            to: String(recreatedAt),
+          }),
         );
         await qanStoredMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, { refresh: '30s' }));
