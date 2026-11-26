@@ -109,3 +109,70 @@ for (const configuration of srvConfigurations) {
     );
   });
 }
+
+pmmTest.describe('Test PMM server with an empty data container', () => {
+  const containerName = 'pmm-server-empty-data-container';
+  const volumeName = `srvFolder-${Date.now()}`;
+  const baseUrl = 'https://127.0.0.1:454/';
+  const runArgs = `--restart always -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_ENABLE_TELEMETRY=0 --publish 454:8443 --volume ${volumeName}:/srv ${dockerVersion}`;
+
+  pmmTest.use({ baseURL: baseUrl });
+
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    cliHelper.removeContainer(containerName);
+    cliHelper.execSilent(`docker volume rm --force ${volumeName}`).assertSuccess();
+  });
+
+  pmmTest(
+    'PMM-T1244 - Verify PMM Server with empty data container @docker-configuration',
+    async ({ api, cliHelper, dashboard, dockerHelper, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
+      let recreatedAt = 0;
+
+      await pmmTest.step('Start PMM Server on an empty data volume', async () => {
+        cliHelper.execSilent(`docker volume create ${volumeName}`).assertSuccess();
+        dockerHelper.startContainer(containerName, runArgs);
+        await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
+        await grafanaHelper.authorize('admin', 'admin', baseUrl);
+      });
+
+      await pmmTest.step('Verify Query Analytics and Node Summary have data', async () => {
+        await page.goto(qanStoredMetrics.url);
+        await qanStoredMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.FIVE_MINUTES);
+        await page.goto(urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, { refresh: '30s' }));
+        await dashboard.verifyAllPanelsHaveData(
+          dashboard.os.nodeSummary.noDataMetrics,
+          Timeouts.FIVE_MINUTES,
+        );
+      });
+
+      await pmmTest.step('Recreate the container on the same data volume', async () => {
+        recreatedAt = Date.now();
+        cliHelper.removeContainer(containerName);
+        dockerHelper.startContainer(containerName, runArgs);
+        await api.serverApi.waitForReady(Timeouts.TWO_MINUTES);
+
+        const logs = cliHelper.execSilent(`docker logs ${containerName} 2>&1`).stdout;
+
+        expect(logs, 'PMM Server container logs should have been read').toContain("spawned: 'pmm-managed'");
+        expect(logs, 'Recreated PMM Server should find its supervisord log directory').not.toContain(
+          'Error: The directory named as part of the path /srv/logs/supervisord.log does not exist',
+        );
+      });
+
+      await pmmTest.step('Verify Query Analytics and Node Summary keep data after the recreate', async () => {
+        await page.goto(
+          urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
+            from: 'now-12h',
+            to: String(recreatedAt),
+          }),
+        );
+        await qanStoredMetrics.waitUntilQanStoredMetricsLoaded(Timeouts.ONE_MINUTE);
+        await page.goto(urlHelper.buildUrlWithParameters(dashboard.os.nodeSummary.url, { refresh: '30s' }));
+        await dashboard.verifyAllPanelsHaveData(
+          dashboard.os.nodeSummary.noDataMetrics,
+          Timeouts.FIVE_MINUTES,
+        );
+      });
+    },
+  );
+});
