@@ -87,10 +87,8 @@ pmmTest('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ a
     .toBe(dumpSuccess);
   await page.goto(dumpPage.url);
 
-  await pmmTest.step('Verify Download is enabled in the row menu', async () => {
-    await dumpPage.builders.rowMenu(dumpId).click();
-    await expect(dumpPage.builders.menuItem('Download')).toBeVisible();
-    await page.keyboard.press('Escape');
+  await pmmTest.step('Verify Download is enabled in the row', async () => {
+    await expect(dumpPage.builders.rowDownload(dumpId)).toBeEnabled();
   });
 
   await pmmTest.step('Verify Send to Support is enabled in the row menu', async () => {
@@ -173,7 +171,7 @@ pmmTest('PMM-T1835 - Verify Dump extraction logs are visible @dump', async ({ ap
   await page.goto(dumpPage.url);
   await dumpPage.builders.rowMenu(dumpId).click();
   await dumpPage.builders.menuItem('View logs').click();
-  await expect(dumpPage.elements.logsDialog).toContainText(`Logs for ${dumpId}`);
+  await expect(dumpPage.elements.logsDialog).toContainText('Dataset logs');
 });
 
 pmmTest('PMM-T1835 - Verify details of Dump based on Service Name @dump', async ({ api, dumpPage, page }) => {
@@ -182,8 +180,7 @@ pmmTest('PMM-T1835 - Verify details of Dump based on Service Name @dump', async 
     .poll(async () => (await api.dumpApi.getDump(dumpId))?.status, { timeout: Timeouts.ONE_MINUTE })
     .toBe(dumpSuccess);
   await page.goto(dumpPage.url);
-  await dumpPage.builders.rowDetails(dumpId).click();
-  await expect(dumpPage.builders.serviceName('pmm-server-postgresql')).toBeVisible({
+  await expect(dumpPage.builders.serviceChip(dumpId, 'pmm-server-postgresql')).toBeVisible({
     timeout: Timeouts.ONE_MINUTE,
   });
 });

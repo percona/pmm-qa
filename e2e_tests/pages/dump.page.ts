@@ -6,9 +6,9 @@ export default class DumpPage extends BasePage {
   builders = {
     menuItem: (name: string) => this.page.getByRole('menuitem', { name }),
     row: (dumpId: string) => this.page.getByTestId(`dump-row-${dumpId}`),
-    rowDetails: (dumpId: string) => this.builders.row(dumpId).getByRole('button', { name: 'Expand' }),
+    rowDownload: (dumpId: string) => this.builders.row(dumpId).getByRole('button', { name: 'Download' }),
     rowMenu: (dumpId: string) => this.builders.row(dumpId).getByRole('button', { name: 'Row Actions' }),
-    serviceName: (name: string) => this.page.getByText(name, { exact: true }),
+    serviceChip: (dumpId: string, name: string) => this.builders.row(dumpId).getByText(name, { exact: true }),
   };
   buttons = {
     createDataset: this.page.getByTestId('create-dataset'),
@@ -19,7 +19,7 @@ export default class DumpPage extends BasePage {
   };
   elements = {
     logsDialog: this.page.getByTestId('dump-logs-modal'),
-    sendToSupportHeading: this.page.getByRole('heading', { name: 'Send to Support' }),
+    sendToSupportHeading: this.page.getByRole('heading', { name: 'Send this dataset to Percona Support' }),
   };
   inputs = {
     address: this.page.getByTestId('dump-support-address'),
