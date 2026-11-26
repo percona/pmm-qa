@@ -300,8 +300,9 @@ pmmTest(
 
       await rta.builders.sessionExpandButton(percona84.cluster).click();
 
+      // A restarted agent can stay Down for about 16 s before it reports Running.
       await expect(rta.builders.sessionStatus(percona84.service_name)).toHaveText(/^Running for /, {
-        timeout: Timeouts.FIFTEEN_SECONDS,
+        timeout: Timeouts.THIRTY_SECONDS,
       });
       await expect(rta.builders.sessionStatusMessage(percona84.service_name)).toHaveCount(0, {
         timeout: Timeouts.FIFTEEN_SECONDS,
