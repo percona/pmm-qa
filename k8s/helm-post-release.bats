@@ -17,6 +17,9 @@ setup() {
     source "$PROJECT_ROOT/k8s_helper.sh"
     source "$PROJECT_ROOT/pmm_helper.sh"
     export PMM_CHART_BRANCH=latest
+    # The chart's generated password (randAscii) can start or end with a space, which PMM 3.11 strips,
+    # so pmm-secret then no longer holds the admin password.
+    PMM_PASSWORD_ARGS=(--set secret.pmm_password=post-release-admin)
 
     if [[ -z "${PMM_SERVER_LATEST:-}" ]]; then
         fail "PMM_SERVER_LATEST must name the released PMM version, e.g. 3.10.0"
@@ -48,7 +51,7 @@ teardown() {
 }
 
 @test "PMM-T1320 - install the released chart and check it serves the released version" {
-    install_pmm_chart pmm-fresh --wait --timeout 10m
+    install_pmm_chart pmm-fresh "${PMM_PASSWORD_ARGS[@]}" --wait --timeout 10m
     wait_for_pmm
 
     assert_equal "$(pmm_pod_image)" "percona/pmm-server:${PMM_SERVER_LATEST}"
@@ -71,7 +74,7 @@ teardown() {
     fi
     echo "Upgrading chart ${prev_chart} (PMM ${PMM_SERVER_PREVIOUS}) -> ${latest_chart} (PMM ${PMM_SERVER_LATEST})"
 
-    helm install pmm-upgrade percona/pmm --version "$prev_chart" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
+    helm install pmm-upgrade percona/pmm --version "$prev_chart" "${PMM_PASSWORD_ARGS[@]}" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
     wait_for_pmm
     assert_equal "$(pmm_pod_image)" "percona/pmm-server:${PMM_SERVER_PREVIOUS}"
     # helm upgrade deletes pmm-secret: the chart renders it only on install.
