@@ -51,6 +51,12 @@ export default class DockerHelper {
     return container[0];
   };
 
+  getContainerHostname = (container: string) =>
+    this.cliHelper
+      .execSilent(`docker inspect -f '{{.Config.Hostname}}' ${container}`)
+      .assertSuccess()
+      .stdout.trim();
+
   getContainerName = (namePattern: string) => {
     const [container] = this.cliHelper
       .execSilent(`docker ps --filter 'name=${namePattern}' --format '{{.Names}}'`)

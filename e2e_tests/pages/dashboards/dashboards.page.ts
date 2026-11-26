@@ -78,6 +78,14 @@ export default class Dashboards extends BasePage {
       this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
     panelLegendSeries: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator('button[class*="LegendLabel"]'),
+    panelLegendSeriesByName: (panelName: string, seriesName: string) =>
+      this.builders.panelLegendSeries(panelName).getByText(seriesName, { exact: true }),
+    panelLegendSeriesIcon: (panelName: string, seriesName: string) =>
+      this.builders
+        .panelByExactName(panelName)
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('button', { exact: true, name: seriesName }) })
+        .getByTestId('series-icon'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -100,12 +108,16 @@ export default class Dashboards extends BasePage {
         .tableRows(panelName)
         .nth(rowIndex)
         .locator(`[role="gridcell"][aria-colindex="${columnIndex + 1}"]`),
+    tableCellByText: (panelName: string, text: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('gridcell', { exact: true, name: text }),
     tableCellFilterForValue: (panelName: string, rowIndex: number, columnIndex: number) =>
       this.builders
         .tableCell(panelName, rowIndex, columnIndex)
         .getByRole('button', { name: 'Filter for value' }),
     tableCellLink: (panelName: string, rowIndex: number, columnIndex: number) =>
       this.builders.tableCell(panelName, rowIndex, columnIndex).getByRole('link'),
+    tableColumnHeaders: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('columnheader'),
     tableRows: (panelName: string) =>
       this.builders.panelContentByExactName(panelName).locator('[role="row"]:has([role="gridcell"])'),
     templateVariableCombobox: (variableName: DropdownName) =>
@@ -260,6 +272,38 @@ export default class Dashboards extends BasePage {
     );
 
     return seconds ? Number(seconds[1]) : NaN;
+  };
+
+  // Median canvas row of the pixels drawn in a series' legend colour: a smaller value is higher on the graph.
+  getSeriesMedianY = async (panelName: string, seriesName: string): Promise<number> => {
+    const color = await this.builders
+      .panelLegendSeriesIcon(panelName, seriesName)
+      .evaluate((icon) => getComputedStyle(icon).backgroundColor);
+
+    return this.builders
+      .panelCanvasByExactName(panelName)
+      .first()
+      .evaluate((canvas: HTMLCanvasElement, rgb) => {
+        const [red, green, blue] = (rgb.match(/\d+/g) ?? []).map(Number);
+        const context = canvas.getContext('2d');
+
+        if (!context) return Number.NaN;
+
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        const rows: number[] = [];
+
+        for (let i = 0; i < data.length; i += 4) {
+          if (
+            Math.abs(data[i] - red) <= 8 &&
+            Math.abs(data[i + 1] - green) <= 8 &&
+            Math.abs(data[i + 2] - blue) <= 8
+          ) {
+            rows.push(Math.floor(i / 4 / canvas.width));
+          }
+        }
+
+        return rows.length > 0 ? rows[Math.floor(rows.length / 2)] : Number.NaN;
+      }, color);
   };
 
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
