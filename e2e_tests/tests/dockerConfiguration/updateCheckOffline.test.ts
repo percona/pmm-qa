@@ -1,12 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
+import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 const containerName = 'pmm-server-update-check-offline';
-const port = 452;
+const port = 456;
 const baseUrl = `https://127.0.0.1:${port}/`;
 // TEST-NET-1 is never routed, so a connection to the version service hangs as it does without Internet access.
 const versionServiceHosts = ['check.percona.com', 'check-dev.percona.com']
@@ -21,7 +22,7 @@ pmmTest.beforeEach(async ({ api, cliHelper, context, grafanaHelper, page }) => {
   await context.unroute(apiEndpoints.server.updates);
   cliHelper
     .execSilent(
-      `docker run --detach --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} ${versionServiceHosts} --publish ${port}:8443 --name ${containerName} ${dockerVersion}`,
+      `docker run --detach --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_PASSWORD=${CliHelper.shellQuote(adminPassword)} ${versionServiceHosts} --publish ${port}:8443 --name ${containerName} ${dockerVersion}`,
     )
     .assertSuccess();
   await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
@@ -29,7 +30,7 @@ pmmTest.beforeEach(async ({ api, cliHelper, context, grafanaHelper, page }) => {
 });
 
 pmmTest.afterEach(({ cliHelper }) => {
-  cliHelper.execSilent(`docker rm -f ${containerName}`);
+  cliHelper.removeContainer(containerName);
 });
 
 pmmTest(
