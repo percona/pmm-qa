@@ -136,7 +136,7 @@
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .b-done, .b-playwright { color: var(--pass); background: var(--pass-bg); }
-  .b-in-progress, .b-needs-decision, .b-codeceptjs, .b-mixed { color: var(--warn); background: var(--warn-bg); }
+  .b-in-progress, .b-codeceptjs, .b-mixed { color: var(--warn); background: var(--warn-bg); }
   .b-pending { color: var(--queue); background: var(--queue-bg); }
   .b-blocked-infra { color: var(--fail); background: var(--fail-bg); }
   .b-retired, .b-other { color: var(--idle); background: var(--idle-bg); }
@@ -218,7 +218,6 @@
 const STATUS = [
   ['done', 'Done', '--pass'], ['pending', 'Pending', '--queue'], ['in-progress', 'In progress', '--warn'],
   ['retired', 'Retired', '--retired'], ['blocked-infra', 'Blocked (infra)', '--fail'],
-  ['needs-decision', 'Needs decision', '--warn'],
 ];
 const FW = { playwright: 'Playwright', codeceptjs: 'CodeceptJS', mixed: 'CodeceptJS + Playwright', other: 'No CodeceptJS' };
 const REPO = 'https://github.com/percona/pmm-qa';
@@ -260,15 +259,15 @@ function render(d) {
   const files = d.files || d.rows;
   const byRow = Object.fromEntries(files.map((f) => [f.row, f]));
   const count = (s) => files.filter((f) => f.status === s).length;
-  const scope = files.filter((f) => f.status !== 'retired' && f.status !== 'needs-decision').length;
+  const scope = files.filter((f) => f.status !== 'retired').length;
   const done = count('done');
   const ccJobs = d.jobs.filter((j) => (j.codecept_tests ?? 0) > 0);
   $('meta').textContent = `Data from ${d.generated_at.replace('T', ' ').replace(':00Z', ' UTC').replace(/:\d\dZ$/, ' UTC')}: main ${d.sources.main}, tracker ${d.sources.tracker}.`;
 
   $('kpis').innerHTML = [
-    ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope; ${count('needs-decision')} awaiting a decision are not counted`],
+    ['Test files migrated', `${done}<small> / ${scope}</small>`, `${Math.round((100 * done) / scope)}% of the files still in scope`],
     ['Test files left', count('pending') + count('in-progress') + count('blocked-infra'), `${count('pending') + count('in-progress')} in the queue, ${count('blocked-infra')} blocked on infra`],
-    ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files; ${d.awaiting_decision?.tests ?? 0} more in ${d.awaiting_decision?.files ?? 0} files awaiting a decision`],
+    ['CodeceptJS tests left', d.codecept_remaining.tests, `in ${d.codecept_remaining.files} test files`],
     ['Nightly jobs on CodeceptJS', `${ccJobs.length}<small> / ${d.jobs.length}</small>`, 'jobs whose grep still selects a CodeceptJS test'],
   ].map(([l, v, s]) => `<div class="panel kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join('');
 
@@ -308,8 +307,8 @@ function render(d) {
     }
     const n = document.createElement('div');
     n.className = 'n';
-    const inScope = bf.filter((f) => f.status !== 'retired' && f.status !== 'needs-decision').length;
-    n.textContent = inScope ? `${bf.filter((f) => f.status === 'done').length}/${inScope}` : bf.some((f) => f.status === 'needs-decision') ? 'to decide' : 'retired';
+    const inScope = bf.filter((f) => f.status !== 'retired').length;
+    n.textContent = inScope ? `${bf.filter((f) => f.status === 'done').length}/${inScope}` : 'retired';
     $('buckets').append(name, bb, n);
   }
 
@@ -426,7 +425,7 @@ function showFile(f) {
 }
 
 function renderFiles(files) {
-  const tabs = [['pending', 'Queue'], ['done', 'Migrated'], ['needs-decision', 'To decide'], ['blocked-infra', 'Blocked'], ['retired', 'Retired'], ['all', 'All']];
+  const tabs = [['pending', 'Queue'], ['done', 'Migrated'], ['blocked-infra', 'Blocked'], ['retired', 'Retired'], ['all', 'All']];
   let tab = 'pending', page = 0;
   const tEl = $('fileTabs');
   const n = (k) => (k === 'all' ? files.length : k === 'pending' ? files.filter((f) => f.status === 'pending' || f.status === 'in-progress').length : files.filter((f) => f.status === k).length);

@@ -225,10 +225,7 @@ def main():
             if j['framework'] in ('playwright', 'mixed') and j.get('expr') in counts:
                 j['playwright_tests'] = counts[j['expr']]
 
-    undecided = {r['source'] for r in rows if r['status'] == 'needs-decision'}
-    active = [t for t in tests if not t['skipped']]
-    remaining = [t for t in active if t['file'] not in undecided]
-    awaiting = [t for t in active if t['file'] in undecided]
+    remaining = [t for t in tests if not t['skipped']]
     out = {
         'generated_at': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         'sources': {'main': git(a.main, 'rev-parse', '--short', 'origin/main'),
@@ -236,7 +233,6 @@ def main():
                     'jenkins': jenkins_sha},
         'codecept_remaining': {'tests': len(remaining), 'files': len({t['file'] for t in remaining}),
                                'retired_files': len(glob.glob(f'{a.main}/codeceptjs-e2e/tests/**/*_migrated.js', recursive=True))},
-        'awaiting_decision': {'tests': len(awaiting), 'files': len({t['file'] for t in awaiting})},
         'files': rows,
         'jobs': jobs,
     }
