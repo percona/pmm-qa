@@ -277,7 +277,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   });
 
   pmmTest(
-    'PMM-TXXXX - Verify Valkey TLS certificate and key are encrypted at rest while the CA stays readable @fb-encryption',
+    'PMM-T2889 - Verify Valkey TLS certificate and key are encrypted at rest while the CA stays readable @fb-encryption',
     async ({ api, encryptionHelper }) => {
       const serviceName = `valkey_tls_encryption_${Math.floor(Math.random() * 99) + 1}`;
       const service = await api.managementApi.addRemoteValkeyTls(serviceName, valkeyContainer, valkeyTls);
@@ -296,7 +296,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify S3 backup location access and secret keys are encrypted at rest and returned decrypted by the API @fb-encryption',
+    'PMM-T2890 - Verify S3 backup location access and secret keys are encrypted at rest and returned decrypted by the API @fb-encryption',
     async ({ api, encryptionHelper }) => {
       locationId = await api.backupsApi.addS3Location(
         `s3_encryption_${Math.floor(Math.random() * 99) + 1}`,
@@ -320,7 +320,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify changing S3 backup location keys stores the new keys encrypted @fb-encryption',
+    'PMM-T2891 - Verify changing S3 backup location keys stores the new keys encrypted @fb-encryption',
     async ({ api, encryptionHelper }) => {
       const name = `s3_change_${Math.floor(Math.random() * 99) + 1}`;
 
@@ -343,7 +343,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify changing the Valkey exporter TLS certificate and key stores the new ones encrypted @fb-encryption',
+    'PMM-T2892 - Verify changing the Valkey exporter TLS certificate and key stores the new ones encrypted @fb-encryption',
     async ({ api, encryptionHelper, tlsHelper }) => {
       const serviceName = `valkey_tls_change_${Math.floor(Math.random() * 99) + 1}`;
       // Valkey refuses a client certificate its CA did not sign, so only the changed one can connect.
@@ -377,7 +377,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify encryption key rotation re-encrypts Valkey TLS and S3 location secrets @fb-encryption',
+    'PMM-T2893 - Verify encryption key rotation re-encrypts Valkey TLS and S3 location secrets @fb-encryption',
     async ({ api, cliHelper, dockerHelper, encryptionHelper }) => {
       const serviceName = `valkey_tls_rotation_${Math.floor(Math.random() * 99) + 1}`;
       const service = await api.managementApi.addRemoteValkeyTls(serviceName, valkeyContainer, valkeyTls);
@@ -440,7 +440,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify a MySQL backup to an S3 location with encrypted keys succeeds after encryption key rotation @fb-encryption',
+    'PMM-T2894 - Verify a MySQL backup to an S3 location with encrypted keys succeeds after encryption key rotation @fb-encryption',
     async ({ api, cliHelper }) => {
       const { service_id: serviceId } = await api.inventoryApi.getServiceDetailsByTypeAndPartialName(
         ServiceType.mysql,
@@ -475,7 +475,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify PMM Server logs do not contain S3 location keys or the Valkey TLS key @fb-encryption',
+    'PMM-T2895 - Verify PMM Server logs do not contain S3 location keys or the Valkey TLS key @fb-encryption',
     async ({ api, encryptionHelper }) => {
       const locationName = `s3_logs_${Math.floor(Math.random() * 99) + 1}`;
       const serviceName = `valkey_tls_logs_${Math.floor(Math.random() * 99) + 1}`;
@@ -515,7 +515,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   );
 
   pmmTest(
-    'PMM-TXXXX - Verify upgrade encrypts Valkey TLS and S3 location secrets an older PMM stored as plaintext @fb-encryption',
+    'PMM-T2896 - Verify upgrade encrypts Valkey TLS and S3 location secrets an older PMM stored as plaintext @fb-encryption',
     async ({ cliHelper, encryptionHelper }) => {
       const serviceName = `valkey_tls_upgrade_${Math.floor(Math.random() * 99) + 1}`;
       const targetImage = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
