@@ -18,6 +18,17 @@ const slowQueries: Partial<Record<string, string>> = {
 export default class DockerHelper {
   constructor(private readonly cliHelper: CliHelper) {}
 
+  getContainerAddress = (container: string) => {
+    const address = this.cliHelper
+      .execSilent(`docker inspect -f '{{(index .NetworkSettings.Networks "pmm-qa").IPAddress}}' ${container}`)
+      .assertSuccess()
+      .stdout.trim();
+
+    if (!address) throw new Error(`Container ${container} has no address on network pmm-qa`);
+
+    return address;
+  };
+
   // pmm-agent registers a node under its container name, or under its IP when set up with one.
   getContainerByAddress = (address: string): string => {
     const cached = containersByAddress.get(address);
@@ -38,6 +49,17 @@ export default class DockerHelper {
     containersByAddress.set(address, container[0]);
 
     return container[0];
+  };
+
+  getContainerName = (namePattern: string) => {
+    const [container] = this.cliHelper
+      .execSilent(`docker ps --filter 'name=${namePattern}' --format '{{.Names}}'`)
+      .assertSuccess()
+      .getStdOutLines();
+
+    if (!container) throw new Error(`No running container matches ${namePattern}`);
+
+    return container;
   };
 
   // 000 when nothing answers on the address, as for an exporter listening only on its own host's 127.0.0.1.

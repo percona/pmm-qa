@@ -1,7 +1,13 @@
 import CliHelper from '@helpers/cli.helper';
+import DockerHelper from '@helpers/docker.helper';
+import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 export default class PostgresqlHelper {
-  constructor(private readonly cliHelper: CliHelper) {}
+  constructor(
+    private readonly cliHelper: CliHelper,
+    private readonly dockerHelper: DockerHelper,
+  ) {}
 
   // bool_and is NULL with no matching connection, so 't' cannot come back with no agent connected.
   allConnectionsUseTls = (container: string, user: string) =>
@@ -51,5 +57,28 @@ export default class PostgresqlHelper {
   setPgStatStatementsMax = (container: string, max: number) => {
     this.query(container, `ALTER SYSTEM SET pg_stat_statements.max = ${max};`);
     this.cliHelper.execute(`docker exec ${container} service postgresql restart`).assertSuccess();
+  };
+
+  // The entrypoint's init server listens on the socket only, so a TCP answer means the final server is up.
+  startWithoutDefaultDatabase = async (
+    container: string,
+    { database, password, username }: { database: string; password: string; username: string },
+  ) => {
+    const psql = `docker exec -e PGPASSWORD='${password}' ${container} psql -h 127.0.0.1 -U ${username} -d ${database}`;
+
+    this.cliHelper.removeContainer(container);
+    this.dockerHelper.startContainer(
+      container,
+      `-e POSTGRES_PASSWORD='${password}' -e POSTGRES_USER=${username} -e POSTGRES_DB=${database} perconalab/percona-distribution-postgresql:15`,
+    );
+    await expect
+      .poll(() => this.cliHelper.execSilent(`${psql} -tAc 'SELECT 1'`).stdout.trim(), {
+        message: `PostgreSQL in ${container} accepts TCP connections`,
+        timeout: Timeouts.TWO_MINUTES,
+      })
+      .toBe('1');
+    this.cliHelper
+      .execute(`${psql} -v ON_ERROR_STOP=1 -c 'DROP DATABASE postgres WITH (FORCE)'`)
+      .assertSuccess();
   };
 }

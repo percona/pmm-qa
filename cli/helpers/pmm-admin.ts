@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -323,6 +324,63 @@ export async function updateServiceOk(containerName: string, serviceType: Update
   await output.assertSuccess();
 
   return output;
+}
+
+/**
+ * Run "pmm-admin update" that has to succeed, re-applying it until PMM Server keeps the change, and return the first output.
+ * A status report pmm-agent sends while the agent restarts can revert a change PMM Server has just stored (PMM-15835);
+ * re-applying a change that did stick prints "No settings changed." and restarts nothing. The check has to pass twice, a few
+ * seconds apart, so a revert that lands just after the first check is caught too.
+ * skip-until: 2026-12-26 -- drop the re-apply once PMM-15835 is fixed.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ * @param   persisted       assertion on the stored or runtime state; throws while the change is missing
+ * @param   timeout         milliseconds to keep re-applying
+ */
+export async function updateServiceUntilPersisted(
+  containerName: string,
+  serviceType: UpdateServiceType,
+  args: string,
+  persisted: () => Promise<void>,
+  timeout = 120_000,
+): Promise<ExecReturn> {
+  const output = await updateServiceOk(containerName, serviceType, args);
+  let reapply = false;
+
+  await expect(async () => {
+    if (reapply) await updateServiceOk(containerName, serviceType, args);
+    reapply = true;
+    await persisted();
+    await sleep(3_000);
+    await persisted();
+  }).toPass({ intervals: [5_000], timeout });
+
+  return output;
+}
+
+/**
+ * Wait until both PMM Server and pmm-agent report the agents Running, restarting pmm-agent once when PMM Server keeps a stale
+ * status for agents pmm-agent already runs. A status report lost to a concurrent change is never resent (PMM-15835, PMM-15962),
+ * and pmm-agent reports every agent again when it reconnects.
+ * skip-until: 2026-12-26 -- use expectAgentsRunning again once PMM-15835 and PMM-15962 are fixed.
+ *
+ * @param   containerName   docker container running pmm-agent under systemd
+ * @param   agentIds        IDs of the agents to check
+ * @param   timeout         milliseconds to wait before and after the restart
+ */
+export async function expectAgentsRunningResyncingStatus(containerName: string, agentIds: string[], timeout = 60_000) {
+  try {
+    await expectAgentsRunning(containerName, agentIds, true, timeout);
+  } catch (error) {
+    const localLines = (await cli.exec(`docker exec ${containerName} pmm-admin status`)).getStdOutLines();
+    const runningLocally = agentIds.every((id) => localLines.find((line) => line.includes(id))?.includes('Running'));
+    if (!runningLocally) throw error;
+
+    await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
+    await expectAgentsRunning(containerName, agentIds, true, timeout);
+  }
 }
 
 /**
