@@ -263,21 +263,24 @@ pmmTest(
   'PMM-T2897 - Verify Query Analytics loads queries and query details for a time range inside one minute @qan',
   async ({ api, leftNavigation, page, qanStoredMetrics }) => {
     const minute = await pmmTest.step('Find a minute about 5 minutes ago that holds queries', async () => {
-      const now = Date.now();
-      const { body, status, text } = await api.qanApi.getTotals(undefined, {
-        period_start_from: new Date(now - Timeouts.FIFTEEN_MINUTES).toISOString(),
-        period_start_to: new Date(now).toISOString(),
-      });
+      let timestamp = 0;
 
-      expect(status, text).toBe(200);
+      await expect(async () => {
+        const now = Date.now();
+        const { body, status, text } = await api.qanApi.getTotals(undefined, {
+          period_start_from: new Date(now - Timeouts.FIFTEEN_MINUTES).toISOString(),
+          period_start_to: new Date(now).toISOString(),
+        });
 
-      const timestamp = (body.sparkline ?? [])
-        .filter(({ load }) => load)
-        .map(({ timestamp }) => Date.parse(timestamp))
-        .filter((time) => time <= now - Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE)
-        .sort((a, b) => b - a)[0];
-
-      expect(timestamp, 'A minute 4 to 15 minutes ago must hold queries').toBeDefined();
+        expect(status, text).toBe(200);
+        timestamp =
+          (body.sparkline ?? [])
+            .filter(({ load }) => load)
+            .map(({ timestamp }) => Date.parse(timestamp))
+            .filter((time) => time <= now - Timeouts.FIVE_MINUTES + Timeouts.ONE_MINUTE)
+            .sort((a, b) => b - a)[0] ?? 0;
+        expect(timestamp, 'A minute 4 to 15 minutes ago must hold queries').toBeGreaterThan(0);
+      }).toPass({ intervals: [Timeouts.THIRTY_SECONDS], timeout: Timeouts.FIVE_MINUTES });
 
       return new Date(timestamp).toISOString().slice(0, 16);
     });
@@ -321,10 +324,14 @@ pmmTest(
     const minute = new Date(Date.now() - Timeouts.FIVE_MINUTES).toISOString().slice(0, 16);
     const reversedMinute = { period_start_from: `${minute}:50Z`, period_start_to: `${minute}:10Z` };
     const reversedError = 'cannot be later then to-date';
-    const { body: report } = await api.qanApi.getReport(undefined, QanApi.period(1));
-    const queryId = (report.rows ?? []).find(({ dimension }) => dimension)?.dimension;
+    let queryId = '';
 
-    expect(queryId, 'The last hour must hold at least one query').toBeDefined();
+    await expect(async () => {
+      const { body } = await api.qanApi.getReport(undefined, QanApi.period(1));
+
+      queryId = (body.rows ?? []).find(({ dimension }) => dimension)?.dimension ?? '';
+      expect(queryId, 'The last hour must hold at least one query').not.toBe('');
+    }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
 
     const reversedReport = await api.qanApi.getReport(undefined, reversedMinute, {
       columns: ['load'],
@@ -334,7 +341,7 @@ pmmTest(
     expect(reversedReport.status, reversedReport.text).toBe(400);
     expect(reversedReport.text).toContain(reversedError);
 
-    const reversedDetails = await api.qanApi.getMetrics(undefined, queryId ?? '', reversedMinute);
+    const reversedDetails = await api.qanApi.getMetrics(undefined, queryId, reversedMinute);
 
     expect(reversedDetails.status, reversedDetails.text).toBe(400);
 
