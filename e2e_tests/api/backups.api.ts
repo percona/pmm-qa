@@ -85,6 +85,20 @@ export default class BackupsApi {
     return ((await response.json()) as { location_id: string }).location_id;
   };
 
+  changeLocation = async (
+    locationId: string,
+    name: string,
+    description: string,
+    s3Config: S3LocationConfig,
+  ) => {
+    const response = await this.request.put(`${apiEndpoints.backups.locations}/${locationId}`, {
+      data: { description, name, s3_config: s3Config },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+  };
+
   createScheduledBackup = async (schedule: {
     cron_expression: string;
     data_model: DataModel;
@@ -239,9 +253,28 @@ export default class BackupsApi {
     }
   };
 
-  removeLocation = async (locationId: string) => {
+  removeArtifact = async (artifactId: string) => {
+    await this.waitForRunningBackups();
+
+    const response = await this.request.delete(`${apiEndpoints.backups.artifacts}/${artifactId}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+      params: { remove_files: true },
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+    await expect
+      .poll(async () => (await this.getArtifacts()).some(({ artifact_id }) => artifact_id === artifactId), {
+        intervals: [Timeouts.FIVE_SECONDS],
+        message: `Removed backup artifact ${artifactId} should be gone`,
+        timeout: Timeouts.FIVE_MINUTES,
+      })
+      .toBe(false);
+  };
+
+  removeLocation = async (locationId: string, force = false) => {
     const response = await this.request.delete(`${apiEndpoints.backups.locations}/${locationId}`, {
       headers: GrafanaHelper.getAuthHeader(),
+      params: { force },
     });
 
     expect(response.status(), await response.text()).toEqual(200);

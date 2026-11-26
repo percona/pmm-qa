@@ -69,6 +69,30 @@ export default class ManagementApi {
     return service;
   };
 
+  addRemoteValkeyTls = async (
+    serviceName: string,
+    address: string,
+    tls: { ca: string; cert: string; key: string },
+  ) => {
+    const { valkey } = await this.addService({
+      valkey: {
+        add_node: { node_name: serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
+        address,
+        pmm_agent_id: 'pmm-server',
+        port: 6_379,
+        service_name: serviceName,
+        tls: true,
+        tls_ca: tls.ca,
+        tls_cert: tls.cert,
+        tls_key: tls.key,
+      },
+    });
+
+    if (!valkey) throw new Error(`Adding Valkey service "${serviceName}" returned no service`);
+
+    return valkey.service;
+  };
+
   addService = async (service: object): Promise<AddServiceResponse> => {
     const response = await this.request.post(apiEndpoints.management.services, {
       data: service,
