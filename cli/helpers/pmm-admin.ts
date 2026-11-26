@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import * as pmmApi from '@helpers/pmm-api-helper';
@@ -328,7 +329,8 @@ export async function updateServiceOk(containerName: string, serviceType: Update
 /**
  * Run "pmm-admin update" that has to succeed, re-applying it until PMM Server keeps the change, and return the first output.
  * A status report pmm-agent sends while the agent restarts can revert a change PMM Server has just stored (PMM-15835);
- * re-applying a change that did stick prints "No settings changed." and restarts nothing.
+ * re-applying a change that did stick prints "No settings changed." and restarts nothing. The check has to pass twice, a few
+ * seconds apart, so a revert that lands just after the first check is caught too.
  * skip-until: 2026-12-26 -- drop the re-apply once PMM-15835 is fixed.
  *
  * @param   containerName   docker container running pmm-agent
@@ -350,6 +352,8 @@ export async function updateServiceUntilPersisted(
   await expect(async () => {
     if (reapply) await updateServiceOk(containerName, serviceType, args);
     reapply = true;
+    await persisted();
+    await sleep(3_000);
     await persisted();
   }).toPass({ intervals: [5_000], timeout });
 
