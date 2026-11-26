@@ -21,6 +21,7 @@ import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import EditServicePage from '@pages/inventory/editService.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import PluginsPage from '@pages/plugins.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
@@ -113,6 +114,7 @@ const pmmTest = base.extend<{
   leftNavigation: LeftNavigation;
   pageNotFoundPage: PageNotFoundPage;
   pcsmHelper: PcsmHelper;
+  pluginsPage: PluginsPage;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -234,6 +236,7 @@ const pmmTest = base.extend<{
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
   pcsmHelper: async ({ cliHelper }, use) => await use(new PcsmHelper(cliHelper)),
+  pluginsPage: async ({ page }, use) => await use(new PluginsPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
