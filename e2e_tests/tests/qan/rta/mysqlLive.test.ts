@@ -209,7 +209,8 @@ pmmTest(
   'PMM-T2883 - Verify MySQL statement details that MySQL does not measure show as Unavailable and the session says why @rta',
   async ({ api, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
-    const queryLabel = 'rta-mysql-unmeasured';
+    // Its own label per run: a retry would otherwise also list the previous run's statement.
+    const queryLabel = `rta-mysql-unmeasured-${Date.now()}`;
     const percona84 = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
     const consumerState = (enabled: string) =>
       `UPDATE performance_schema.setup_consumers SET ENABLED='${enabled}' WHERE NAME='events_statements_current'`;
@@ -289,13 +290,14 @@ pmmTest(
 
       // With no session left, the Real-Time tab is back on the selection page.
       await expect(page).toHaveURL(queryAnalytics.rtaSelectionUrl);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- a start before pmm-agent reports the stop (about 1.5 s) is lost: pmm-managed writes its stale disabled agent row back
+      await page.waitForTimeout(Timeouts.THREE_SECONDS);
       await rta.inputs.clusterService.click();
       await rta.selectServiceOptions([percona84.service_id]);
       await queryAnalytics.buttons.startSessionButton.click();
 
-      await expect(page).not.toHaveURL(queryAnalytics.rtaSelectionUrl);
+      await expect(rta.builders.sessionRow(percona84.cluster)).toBeVisible();
 
-      await page.goto(queryAnalytics.rtaSessionsUrl);
       await rta.builders.sessionExpandButton(percona84.cluster).click();
 
       await expect(rta.builders.sessionStatus(percona84.service_name)).toHaveText(/^Running for /, {
