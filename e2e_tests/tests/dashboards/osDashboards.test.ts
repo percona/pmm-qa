@@ -177,13 +177,15 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
         `docker exec ${container} mysql -uadmin -padmin -h127.0.0.1 -P6032 -N -e "SELECT port FROM runtime_mysql_servers WHERE status = 'ONLINE' AND hostgroup_id = (SELECT writer_hostgroup FROM runtime_mysql_galera_hostgroups)"`,
       )
       .stdout.trim();
+  // A second mysqld on the same datadir crashes the running one, so start it only when none runs.
+  // The path goes through $f so that pgrep does not match this shell's own command line.
+  const startNode = (container: string) =>
+    `docker exec --detach ${container} sh -c 'f=/var/lib/pxc/node${pxcNode}.cnf; pgrep -f "defaults-file=[/]var/lib/pxc/node${pxcNode}[.]cnf" || exec mysqld --defaults-file=$f'`;
   let pxcContainer = '';
   let writer = '';
 
   pmmTest.afterEach(async ({ cliHelper }) => {
-    cliHelper
-      .execute(`docker exec --detach ${pxcContainer} mysqld --defaults-file=/var/lib/pxc/node${pxcNode}.cnf`)
-      .assertSuccess();
+    cliHelper.execute(startNode(pxcContainer)).assertSuccess();
     await expect
       .poll(() => writerPort(cliHelper, pxcContainer), {
         message: `ProxySQL should write to port ${writer} again`,
@@ -242,6 +244,13 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
         [...(await dashboard.getTableRowsAfterRefresh(typesPanel))].sort((a, b) =>
           a.Type.localeCompare(b.Type),
         );
+      // toPass, not poll: a refresh that is still loading throws, and that has to be retried too.
+      const verifyRows = async (read: () => Promise<unknown>, expected: unknown, timeout: Timeouts) =>
+        expect(async () => expect(await read()).toEqual(expected)).toPass({
+          intervals: [Timeouts.TEN_SECONDS],
+          timeout,
+        });
+      const sortedServices = async () => sortedRows(await dashboard.getTableRowsAfterRefresh(servicesPanel));
 
       pxcContainer = pxc.container;
       writer = writerPort(cliHelper, pxc.container);
@@ -264,14 +273,8 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
 
         await pmmTest.step(`Verify every service of ${node.nodeName} is UP in green`, async () => {
           await dashboard.selectVariableValue('Node Name', node.nodeName);
-          await expect
-            .poll(sortedTypes, { timeout: Timeouts.ONE_MINUTE })
-            .toEqual(typeRows(node.service.node_id));
-          await expect
-            .poll(async () => sortedRows(await dashboard.getTableRowsAfterRefresh(servicesPanel)), {
-              timeout: Timeouts.ONE_MINUTE,
-            })
-            .toEqual(expectedRows);
+          await verifyRows(sortedTypes, typeRows(node.service.node_id), Timeouts.TWO_MINUTES);
+          await verifyRows(sortedServices, expectedRows, Timeouts.TWO_MINUTES);
 
           for (let row = 0; row < expectedRows.length; row++) {
             await expect(dashboard.builders.tableCell(servicesPanel, row, 2)).toHaveCSS(
@@ -294,37 +297,28 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
           )
           .assertSuccess();
         await dashboard.selectVariableValue('Node Name', pxc.nodeName);
-        await expect
-          .poll(
-            async () => {
-              const [first, ...rest] = await dashboard.getTableRowsAfterRefresh(servicesPanel);
+        await verifyRows(
+          async () => {
+            const [first, ...rest] = await dashboard.getTableRowsAfterRefresh(servicesPanel);
 
-              return { first, rest: sortedRows(rest) };
-            },
-            { intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES },
-          )
-          .toEqual({
-            first: { Service: downService, Status: nodeSummary.services.down, Type: 'MySQL' },
-            rest: upRows,
-          });
+            return { first, rest: sortedRows(rest) };
+          },
+          { first: { Service: downService, Status: nodeSummary.services.down, Type: 'MySQL' }, rest: upRows },
+          Timeouts.TWO_MINUTES,
+        );
         await expect(dashboard.builders.tableCell(servicesPanel, 0, 2)).toHaveCSS('color', statusColors.DOWN);
         await expect(dashboard.builders.tableCell(servicesPanel, 1, 2)).toHaveCSS('color', statusColors.UP);
       });
 
-      await expect.poll(sortedTypes, { timeout: Timeouts.ONE_MINUTE }).toEqual(typeRows(pxc.service.node_id));
+      await verifyRows(sortedTypes, typeRows(pxc.service.node_id), Timeouts.TWO_MINUTES);
 
       await pmmTest.step(`Start PXC node ${pxcNode} and see every service UP again`, async () => {
-        cliHelper
-          .execute(
-            `docker exec --detach ${pxc.container} mysqld --defaults-file=/var/lib/pxc/node${pxcNode}.cnf`,
-          )
-          .assertSuccess();
-        await expect
-          .poll(async () => sortedRows(await dashboard.getTableRowsAfterRefresh(servicesPanel)), {
-            intervals: [Timeouts.TEN_SECONDS],
-            timeout: Timeouts.FIVE_MINUTES,
-          })
-          .toEqual(serviceRows(pxc.service.node_id, nodeSummary.services.up));
+        cliHelper.execute(startNode(pxc.container)).assertSuccess();
+        await verifyRows(
+          sortedServices,
+          serviceRows(pxc.service.node_id, nodeSummary.services.up),
+          Timeouts.FIVE_MINUTES,
+        );
       });
     },
   );
