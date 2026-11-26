@@ -1,9 +1,6 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
-import {
-  ChangeAgentType, getPmmAdminMinorVersion, getPmmAdminVersion, inventoryChangeAgent, removeMySQLService,
-} from '@root/helpers/pmm-admin';
-import { versionBelow } from '@helpers/versionGates';
+import { ChangeAgentType, getPmmAdminMinorVersion, inventoryChangeAgent, removeMySQLService } from '@root/helpers/pmm-admin';
 
 const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
@@ -237,9 +234,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     ).toBeGreaterThan(5_000);
   });
 
-  test('Verify adding, changing and removing MySQL RTA Agent in pmm-admin CLI', async ({ }) => {
-    test.skip(versionBelow(await getPmmAdminVersion(containerName), '3.11.0'), 'Requires pmm-client 3.11.0+');
-
+  test('PMM-T2863 - Verify adding, changing and removing MySQL RTA Agent in pmm-admin CLI', async ({ }) => {
     const serviceName = 'rta_mysql_service';
 
     await test.step('add MySQL service for the RTA agent', async () => {

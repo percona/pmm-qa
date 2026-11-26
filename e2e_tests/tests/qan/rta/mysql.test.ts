@@ -21,7 +21,7 @@ pmmTest.afterEach(async ({ api }) => {
 });
 
 pmmTest(
-  'Verify RTA overview shows running MySQL queries with database and user @rta',
+  'PMM-T2864 - Verify RTA overview shows running MySQL queries with database and user @rta',
   async ({ api, mySqlDbHelper, queryAnalytics }) => {
     const queryLabel = 'rta-mysql-overview';
     const service = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_8_4_');
@@ -51,7 +51,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify MySQL query details pane shows MySQL-specific attributes and raw data @rta',
+  'PMM-T2865 - Verify MySQL query details pane shows MySQL-specific attributes and raw data @rta',
   async ({ mySqlDbHelper, queryAnalytics }) => {
     const queryLabel = 'rta-mysql-details';
 
@@ -89,7 +89,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify a MySQL row-lock wait shows the Blocked by chip and panel @rta',
+  'PMM-T2866 - Verify a MySQL row-lock wait shows the Blocked by chip and panel @rta',
   async ({ mySqlDbHelper, queryAnalytics }) => {
     const queryLabel = 'rta-mysql-row-lock';
     const holderId = await mySqlDbHelper.simulateRowLockWait(queryLabel);
@@ -117,7 +117,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Blocked only toggle keeps blocked and undecided statements @rta',
+  'PMM-T2867 - Verify Blocked only toggle keeps blocked and undecided statements @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await pmmTest.step('Mock a blocked, a running and an unattributed statement', async () => {
       await mocks.mockRealTimeAnalyticsQueries([
@@ -187,7 +187,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Blocked only toggle reads Blocked unknown when lock information is missing @rta',
+  'PMM-T2868 - Verify Blocked only toggle reads Blocked unknown when lock information is missing @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsQueries([
       {
@@ -207,7 +207,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the Truncated chip marks a cut-off MySQL statement @rta',
+  'PMM-T2869 - Verify the Truncated chip marks a cut-off MySQL statement @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsQueries([
       {
@@ -230,7 +230,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Hide transaction control toggle filters transaction-control statements @rta',
+  'PMM-T2870 - Verify Hide transaction control toggle filters transaction-control statements @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await pmmTest.step('Mock BEGIN, COMMIT and SELECT statements', async () => {
       await mocks.mockRealTimeAnalyticsQueries([
@@ -263,7 +263,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Database and User text filters support comma-separated lazy matching @rta',
+  'PMM-T2871 - Verify Database and User text filters support comma-separated lazy matching @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await pmmTest.step('Mock queries from three databases', async () => {
       await mocks.mockRealTimeAnalyticsQueries([
@@ -320,7 +320,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Database and User columns are hidden by default and can be revealed @rta',
+  'PMM-T2872 - Verify Database and User columns are hidden by default and can be revealed @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsQueries([
       { queryId: '501', queryText: 'SELECT c FROM sbtest1 WHERE id=21' },
@@ -350,7 +350,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Elapsed time stays pinned and no column can be pinned by hand @rta',
+  'PMM-T2873 - Verify Elapsed time stays pinned and no column can be pinned by hand @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsQueries([
       { queryId: '701', queryText: 'SELECT c FROM sbtest1 WHERE id=55' },
@@ -372,7 +372,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify elapsed time is rendered with milliseconds and a unit @rta',
+  'PMM-T2874 - Verify elapsed time is rendered with milliseconds and a unit @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsQueries([
       { duration: '1.5s', queryId: '601', queryText: 'SELECT c FROM sbtest1 WHERE id=34' },
@@ -386,7 +386,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the overview picker refuses to mix technologies @rta',
+  'PMM-T2875 - Verify the overview picker refuses to mix technologies @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsSessionsOf([
       { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE' },
@@ -409,7 +409,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Database, User and the MySQL toggles are not offered for MongoDB @rta',
+  'PMM-T2876 - Verify Database, User and the MySQL toggles are not offered for MongoDB @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsSessionsOf([
       { serviceId: 'mock-mongo-service', serviceType: 'SERVICE_TYPE_MONGODB_SERVICE' },
@@ -434,7 +434,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the sessions list names the technology of every session @rta',
+  'PMM-T2877 - Verify the sessions list names the technology of every session @rta',
   async ({ mocks, page, queryAnalytics }) => {
     await mocks.mockRealTimeAnalyticsSessionsOf([
       { serviceId: 'mock-mysql-service', serviceType: 'SERVICE_TYPE_MYSQL_SERVICE' },
@@ -453,7 +453,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify a running session with a status message explains it in a tooltip @rta',
+  'PMM-T2878 - Verify a running session with a status message explains it in a tooltip @rta',
   async ({ mocks, page, queryAnalytics }) => {
     const statusMessage = 'Metadata locks cannot be read: performance_schema.metadata_locks is not enabled.';
 
@@ -471,7 +471,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify RTA CSV export of MySQL queries is named for MySQL and has its columns @rta',
+  'PMM-T2880 - Verify RTA CSV export of MySQL queries is named for MySQL and has its columns @rta',
   async ({ mocks, page, queryAnalytics }, testInfo) => {
     await mocks.mockRealTimeAnalyticsQueries([
       { queryId: '401', queryText: 'SELECT c FROM sbtest1 WHERE id=13' },

@@ -31,7 +31,7 @@ pmmTest.afterEach(async ({ api, mySqlDbHelper }) => {
 });
 
 pmmTest(
-  'Verify a running statement on each MySQL flavor shows in Real-Time Analytics within 5 seconds @rta',
+  'PMM-T2881 - Verify a running statement on each MySQL flavor shows in Real-Time Analytics within 5 seconds @rta',
   async ({ api, credentials, dockerHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     // The services pmm-framework connects through PMM Client; the FB @rta job sets up ps=8.4 and mariadb.
@@ -153,7 +153,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Real-Time Analytics explains why it cannot start for a MySQL server with Performance Schema off @rta',
+  'PMM-T2882 - Verify Real-Time Analytics explains why it cannot start for a MySQL server with Performance Schema off @rta',
   async ({ agentsPage, api, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     // pmm-framework's MariaDB: no other test here depends on its Performance Schema.
@@ -206,7 +206,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify MySQL statement details that MySQL does not measure show as Unavailable and the session says why @rta',
+  'PMM-T2883 - Verify MySQL statement details that MySQL does not measure show as Unavailable and the session says why @rta',
   async ({ api, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const queryLabel = 'rta-mysql-unmeasured';
@@ -328,7 +328,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify the Lock time of a running MySQL statement is shown in milliseconds @rta',
+  'PMM-T2884 - Verify the Lock time of a running MySQL statement is shown in milliseconds @rta',
   async ({ api, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const queryLabel = 'rta-mysql-lock-time';
@@ -386,7 +386,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify a MySQL statement cut short by MySQL is marked Truncated with a tooltip naming the setting to raise @rta',
+  'PMM-T2885 - Verify a MySQL statement cut short by MySQL is marked Truncated with a tooltip naming the setting to raise @rta',
   async ({ api, dockerHelper, mySqlDbHelper, page, queryAnalytics, remoteDatabasesHelper }) => {
     const { rta } = queryAnalytics;
     const endMarker = 'rta-end-marker';
@@ -484,7 +484,7 @@ pmmTest(
 );
 
 pmmTest(
-  "Verify Query Analytics keeps a MySQL service's queries but not Real-Time Analytics' own polling @rta",
+  "PMM-T2886 - Verify Query Analytics keeps a MySQL service's queries but not Real-Time Analytics' own polling @rta",
   async ({
     agentsPage,
     api,
@@ -624,7 +624,7 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify MongoDB and MySQL sessions run side by side and each overview shows only its own technology @rta',
+  'PMM-T2887 - Verify MongoDB and MySQL sessions run side by side and each overview shows only its own technology @rta',
   async ({ api, mongoDbHelper, mySqlDbHelper, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const queryLabel = 'rta-side-by-side';
