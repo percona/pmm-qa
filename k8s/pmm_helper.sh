@@ -142,14 +142,14 @@ pmm_pod_image() {
 
 assert_pmm_version() {
     local expected=$1
-    local pmm_address admin_pass version=""
+    local admin_pass=${2:-}
+    local pmm_address version=""
 
     pmm_address=$(get_pmm_addr)
-    admin_pass=$(get_pmm_pswd)
+    [[ -n "$admin_pass" ]] || admin_pass=$(get_pmm_pswd)
 
     for _ in $(seq 1 60); do
-        version=$(curl -sk --user "admin:${admin_pass}" "https://${pmm_address}/v1/server/version" | jq -r '.version // empty' || true)
-        version=${version%%-*}
+        version=$(curl -sk --connect-timeout 5 --max-time 15 --user "admin:${admin_pass}" "https://${pmm_address}/v1/server/version" | jq -r '.version // empty' || true)
         if [[ "$version" == "$expected" ]]; then
             echo "PMM Server reports ${version}"
             return 0

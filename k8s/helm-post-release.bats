@@ -74,8 +74,11 @@ teardown() {
     helm install pmm-upgrade percona/pmm --version "$prev_chart" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
     wait_for_pmm
     assert_equal "$(pmm_pod_image)" "percona/pmm-server:${PMM_SERVER_PREVIOUS}"
+    # helm upgrade deletes pmm-secret: the chart renders it only on install.
+    local admin_pass
+    admin_pass=$(get_pmm_pswd)
     start_port_forward
-    assert_pmm_version "$PMM_SERVER_PREVIOUS"
+    assert_pmm_version "$PMM_SERVER_PREVIOUS" "$admin_pass"
     stop_port_forward
 
     helm upgrade pmm-upgrade percona/pmm --version "$latest_chart" -f "$PMM_TELEMETRY_VALUES" --wait --timeout 10m
@@ -85,5 +88,5 @@ teardown() {
     assert_equal "$(pmm_pod_image)" "percona/pmm-server:${PMM_SERVER_LATEST}"
 
     start_port_forward
-    assert_pmm_version "$PMM_SERVER_LATEST"
+    assert_pmm_version "$PMM_SERVER_LATEST" "$admin_pass"
 }
