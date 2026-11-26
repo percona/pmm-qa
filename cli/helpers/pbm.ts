@@ -355,7 +355,6 @@ export async function expectRestoreStatus(container: string, name: string, statu
 }
 
 interface PbmLogEntry {
-  node: string;
   opid: string;
   msg: string;
   s: number;
@@ -366,8 +365,7 @@ const resyncLog = async (container: string) => (await pbmJson<PbmLogEntry[] | nu
 /**
  * Run a pbm command that starts a resync and wait until that resync has ended, whether it succeeded or failed, which PBM's log tells and
  * its status does not: a restore that was interrupted by stopping its agents stays listed as running there for good.
- * The resync is told apart from earlier ones by its operation ID. A timestamp cannot do it: the log has second precision, and a resync
- * that ended a moment before the command matched, so a backup started next ran into the lock of the one still running and never began.
+ * The resync is told apart from earlier ones by its operation ID.
  */
 async function resyncWith(container: string, args: string) {
   const earlier = new Set((await resyncLog(container)).map((entry) => entry.opid));
@@ -377,9 +375,8 @@ async function resyncWith(container: string, args: string) {
   }).toPass({ intervals: [3_000], timeout: 120_000 });
   await expect(async () => {
     const entries = (await resyncLog(container)).filter((entry) => !earlier.has(entry.opid));
-    const runners = new Set(entries.filter((entry) => entry.msg === 'started').map((entry) => `${entry.opid} ${entry.node}`));
-    // An agent logs an error, severity 1 or 0, only for a resync it has started; succeed comes just before its lock is released.
-    const ended = entries.some((entry) => entry.msg === 'succeed' || (entry.s <= 1 && runners.has(`${entry.opid} ${entry.node}`)));
+    // A resync logs other errors and goes on (an unreadable backup's metadata); only the agent's "resync: ..." ends it.
+    const ended = entries.some((entry) => entry.msg === 'succeed' || (entry.s <= 1 && entry.msg.startsWith('resync: ')));
 
     expect(ended, `no resync has ended since pbm ${args}`).toBeTruthy();
   }).toPass({ intervals: [2_000], timeout: 120_000 });
