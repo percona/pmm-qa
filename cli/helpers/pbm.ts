@@ -247,7 +247,8 @@ export async function setAgents(containers: string[], action: 'start' | 'stop' |
 
   for (const container of containers) {
     // Only the main process: signalling the rest of the unit's cgroup fails with an I/O error on some Docker hosts, Docker Desktop among them.
-    const command = action === 'kill' ? 'systemctl kill --kill-whom=main --signal=SIGKILL' : `systemctl ${action}`;
+    // --kill-who is the name systemd 239 on Oracle Linux 8 knows; systemd 252+ renamed it --kill-whom and still takes it as an abbreviation.
+    const command = action === 'kill' ? 'systemctl kill --kill-who=main --signal=SIGKILL' : `systemctl ${action}`;
     const output = await cli.exec(
       external
         ? `docker exec ${externalPbmContainer} ${command} pbm-agent@${container}`
