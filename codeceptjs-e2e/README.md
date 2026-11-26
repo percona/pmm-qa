@@ -86,16 +86,13 @@ Execute command in the Project Root folder
     @not-ovf                Tests with this tag are excluded from execution for OVF image tests
     @nightly                executed on a nightly Job, mostly related to Dashboards. Includes tests 
                                 to verify Metrics, Custom Filters and Navigation between Dashboards.
-    @pmm-demo               Performs basic Sanity on PMM-Demo, ensures all expected Services are still running 
     @pmm-upgrade         upgrade testing Scenarios to verify UI Upgrade for docker based PMM Server
     @pre-upgrade         upgrade testing Scenarios to verify Docker way Upgrade. Executed BEFORE the upgrade
     @post-upgrade         upgrade testing Scenarios to verify Docker way Upgrade. Executed AFTER the upgrade
     @post-client-upgrade    executed in the "pmm-upgrade" Job after"pmm-client" has been updated
     @qan                 Query Analytics(QAN) functionality tests
     @settings               PMM Settings functionality tests
-    @perf-testing           UI performance tests for PMM
     @docker-configuration  Tests containing different docker configuration (env variables, ports, volumes etc.)
-    @pmm-ami                legacy/deprecated
     @not-ui-pipeline        legacy/deprecated
     @not-pr-pipeline        legacy/deprecated
     @cli                    cli related tests
