@@ -1,6 +1,7 @@
 import { test, expect } from '@helpers/test';
 import * as cli from '@helpers/cli-helper';
 import { removeMongoService } from '@root/helpers/pmm-admin';
+import * as pbm from '@helpers/pbm';
 
 const containerName = 'rs103';
 const serviceName = 'arbiter_by_localhost';
@@ -28,5 +29,33 @@ test.describe('Percona Server MongoDB (PSMDB) arbiter CLI tests', { tag: '@arbit
     }).toPass({ intervals: [2_000], timeout: 60_000 });
 
     await removeMongoService(containerName, serviceName);
+  });
+
+  test('PMM-T2853 - Verify the arbiter has no pbm agent version series while each data-bearing member has one for its own agent', { tag: '@pbm-arbiter-external' }, async ({}) => {
+    const nodes = (await pbm.pbmStatus('rs101')).cluster.flatMap((replset) => replset.nodes);
+
+    for (const member of ['rs101', 'rs102']) {
+      const host = `${member}:27017`;
+      const version = nodes.find((node) => node.host === host)?.agent.replace(/^v/, '');
+
+      await expect(async () => {
+        const versions = pbm.selectSeries(await pbm.scrapePbm(member), 'mongodb_pbm_agent_version_info');
+
+        expect(versions.map((item) => item.labels), `${member}: agent version series`).toEqual([
+          {
+            host,
+            replica_set: 'rs',
+            self: '1',
+            version,
+          },
+        ]);
+      }).toPass({ intervals: [3_000], timeout: 120_000 });
+    }
+
+    await expect(async () => {
+      const versions = pbm.selectSeries(await pbm.scrapePbm(containerName), 'mongodb_pbm_agent_version_info');
+
+      expect(pbm.seriesTexts(versions), 'agent version series of the arbiter').toEqual([]);
+    }).toPass({ intervals: [3_000], timeout: 60_000 });
   });
 });

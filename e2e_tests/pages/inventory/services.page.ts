@@ -46,6 +46,7 @@ export default class ServicesPage extends BasePage {
     showFilters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
   };
   elements = {
+    agentsLink: this.page.getByTestId('service-details').getByTestId('agents-status-chip').getByRole('link'),
     serviceDetails: this.page.getByTestId('service-details'),
     serviceNames: this.page.locator(tableDataRows).locator('td:nth-child(4)'),
     serviceRows: this.page.locator(tableDataRows),
@@ -119,6 +120,11 @@ export default class ServicesPage extends BasePage {
   };
 
   getServiceNames = async () => (await this.elements.serviceNames.allTextContents()).toSorted();
+
+  openServiceAgents = async (serviceName: string) => {
+    await this.builders.serviceDetailsToggle(serviceName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.elements.agentsLink.click({ timeout: Timeouts.THIRTY_SECONDS });
+  };
 
   verifyEditedServiceLabels = async (
     serviceName: string,

@@ -1,5 +1,7 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import * as pmmApi from '@helpers/pmm-api-helper';
 import { clientCredentialsFlags, psConnection } from '@helpers/constants';
 import ExecReturn from '@support/types/exec-return.class';
 
@@ -97,7 +99,7 @@ export async function listAgents(containerName: string): Promise<ListAgent[]> {
 }
 
 /**
- * IDs of a MySQL service's mysqld_exporter and QAN slowlog agent from "pmm-admin list --json", empty when absent
+ * IDs of a MySQL service's mysqld_exporter and QAN slowlog and perfschema agents from "pmm-admin list --json", empty when absent
  *
  * @param   containerName   docker container running pmm-agent
  * @param   serviceId       ID of the MySQL service
@@ -106,7 +108,11 @@ export async function mysqlAgentIds(containerName: string, serviceId: string) {
   const agents = (await listAgents(containerName)).filter((agent) => agent.service_id === serviceId);
   const agentOfType = (type: string) => agents.find((agent) => agent.agent_type === type)?.agent_id ?? '';
 
-  return { exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'), slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT') };
+  return {
+    exporterId: agentOfType('AGENT_TYPE_MYSQLD_EXPORTER'),
+    slowlogId: agentOfType('AGENT_TYPE_QAN_MYSQL_SLOWLOG_AGENT'),
+    perfschemaId: agentOfType('AGENT_TYPE_QAN_MYSQL_PERFSCHEMA_AGENT'),
+  };
 }
 
 /**
@@ -212,6 +218,55 @@ export function inventoryChangeAgent(containerName: string, agentType: ChangeAge
   return `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`;
 }
 
+/**
+ * Enable or disable agents with "pmm-admin inventory change agent", re-applying the change until PMM Server stores it
+ * and the agents reach that state. A status report can revert a change even after it was stored (PMM-15835),
+ * so the runtime check is part of the retry.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agents          agents to change
+ * @param   flag            --enable flag to pass, such as --enable=false
+ * @param   response        output every change command must contain
+ * @param   running         true when the flag enables the agents
+ */
+export async function setEnabledUntilPersisted(
+  containerName: string,
+  agents: { type: ChangeAgentType, id: string }[],
+  flag: string,
+  response: string,
+  running: boolean,
+) {
+  await cli.execUntilPersisted(
+    agents.map(({ type, id }) => inventoryChangeAgent(containerName, type, id, flag)),
+    [response],
+    async () => {
+      for (const { id } of agents) {
+        expect((await pmmApi.getServerAgent(id)).disabled, `Disabled was not persisted on ${id}`).toBe(!running);
+      }
+
+      await expectAgentsRunning(containerName, agents.map(({ id }) => id), running, 45_000);
+    },
+    120_000,
+  );
+}
+
+/**
+ * Enable an agent with "pmm-admin inventory change agent --enable", re-applying it until PMM Server stores it (PMM-15835)
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   agentType       agent or exporter to enable
+ * @param   agentId         ID of the agent
+ */
+export async function enableUntilPersisted(containerName: string, agentType: ChangeAgentType, agentId: string) {
+  await cli.execUntilPersisted(
+    [inventoryChangeAgent(containerName, agentType, agentId, '--enable')],
+    [],
+    async () => {
+      expect((await pmmApi.getServerAgent(agentId)).disabled, `${agentId} is still disabled`).toBeFalsy();
+    },
+  );
+}
+
 export type UpdateServiceType = 'mongodb' | 'mysql' | 'postgresql' | 'proxysql' | 'valkey' | 'haproxy' | 'external' | 'external-serverless';
 
 export interface UpdateResult {
@@ -269,6 +324,63 @@ export async function updateServiceOk(containerName: string, serviceType: Update
   await output.assertSuccess();
 
   return output;
+}
+
+/**
+ * Run "pmm-admin update" that has to succeed, re-applying it until PMM Server keeps the change, and return the first output.
+ * A status report pmm-agent sends while the agent restarts can revert a change PMM Server has just stored (PMM-15835);
+ * re-applying a change that did stick prints "No settings changed." and restarts nothing. The check has to pass twice, a few
+ * seconds apart, so a revert that lands just after the first check is caught too.
+ * skip-until: 2026-12-26 -- drop the re-apply once PMM-15835 is fixed.
+ *
+ * @param   containerName   docker container running pmm-agent
+ * @param   serviceType     type of the Service to update
+ * @param   args            Service name and flags
+ * @param   persisted       assertion on the stored or runtime state; throws while the change is missing
+ * @param   timeout         milliseconds to keep re-applying
+ */
+export async function updateServiceUntilPersisted(
+  containerName: string,
+  serviceType: UpdateServiceType,
+  args: string,
+  persisted: () => Promise<void>,
+  timeout = 120_000,
+): Promise<ExecReturn> {
+  const output = await updateServiceOk(containerName, serviceType, args);
+  let reapply = false;
+
+  await expect(async () => {
+    if (reapply) await updateServiceOk(containerName, serviceType, args);
+    reapply = true;
+    await persisted();
+    await sleep(3_000);
+    await persisted();
+  }).toPass({ intervals: [5_000], timeout });
+
+  return output;
+}
+
+/**
+ * Wait until both PMM Server and pmm-agent report the agents Running, restarting pmm-agent once when PMM Server keeps a stale
+ * status for agents pmm-agent already runs. A status report lost to a concurrent change is never resent (PMM-15835, PMM-15962),
+ * and pmm-agent reports every agent again when it reconnects.
+ * skip-until: 2026-12-26 -- use expectAgentsRunning again once PMM-15835 and PMM-15962 are fixed.
+ *
+ * @param   containerName   docker container running pmm-agent under systemd
+ * @param   agentIds        IDs of the agents to check
+ * @param   timeout         milliseconds to wait before and after the restart
+ */
+export async function expectAgentsRunningResyncingStatus(containerName: string, agentIds: string[], timeout = 60_000) {
+  try {
+    await expectAgentsRunning(containerName, agentIds, true, timeout);
+  } catch (error) {
+    const localLines = (await cli.exec(`docker exec ${containerName} pmm-admin status`)).getStdOutLines();
+    const runningLocally = agentIds.every((id) => localLines.find((line) => line.includes(id))?.includes('Running'));
+    if (!runningLocally) throw error;
+
+    await (await cli.exec(`docker exec ${containerName} systemctl restart pmm-agent`)).assertSuccess();
+    await expectAgentsRunning(containerName, agentIds, true, timeout);
+  }
 }
 
 /**
