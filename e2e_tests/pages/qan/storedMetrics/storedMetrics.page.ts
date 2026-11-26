@@ -80,6 +80,10 @@ export default class StoredMetricsPage extends BasePage {
         .nth(columnNumber - 1),
     sortingValue: (columnNumber: number) => this.builders.sortControl(columnNumber).locator('span'),
     tab: (tabName: string) => this.grafanaIframe().getByRole('tab', { name: tabName }),
+    workloadRowStartingWith: (queryStart: string) =>
+      this.grafanaIframe()
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { name: new RegExp(`^${queryStart}`, 'i') }) }),
     workloadRowsWithoutText: (text: string) =>
       this.grafanaIframe().locator(workloadRows).filter({ hasNotText: text }),
   };
@@ -106,6 +110,7 @@ export default class StoredMetricsPage extends BasePage {
     codeBlock: this.grafanaIframe()
       .getByTestId('highlight-code')
       .or(this.grafanaIframe().locator('.pretty-json-container')),
+    detailsNoData: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('table-no-data'),
     emptyPlan: this.grafanaIframe().locator('pre').filter({ hasText: 'No plan found' }),
     explainError: this.grafanaIframe().getByTestId('json-explain-error'),
     filterCheckboxes: this.grafanaIframe().getByTestId(/filter-checkbox/),
@@ -115,6 +120,7 @@ export default class StoredMetricsPage extends BasePage {
       .locator(workloadRows)
       .filter({ hasNot: this.page.getByRole('cell', { name: /^explain\b/i }) })
       .first(),
+    histograms: this.grafanaIframe().getByTestId('histogram-collapse-container'),
     iframe: this.page.locator('iframe').first(),
     latencyChart: this.grafanaIframe().locator('.latency-chart-container'),
     metricTooltip: this.grafanaIframe().locator('.ant-tooltip-content'),
@@ -129,6 +135,7 @@ export default class StoredMetricsPage extends BasePage {
       .locator('pre')
       .filter({ hasText: 'No table info from example nor explain' }),
     overviewColumnTooltip: this.grafanaIframe().locator('.overview-column-tooltip'),
+    overviewNoData: this.grafanaIframe().getByRole('rowgroup').getByTestId('table-no-data'),
     pageProgressBar: this.page.getByRole('progressbar'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
     planInfoIcon: this.grafanaIframe().getByTestId('query-analytics-details').getByTestId('icon-info-circle'),
@@ -152,14 +159,18 @@ export default class StoredMetricsPage extends BasePage {
       .getByRole('tablist')
       .filter({ hasNot: this.page.getByRole('tab', { exact: true, name: 'Details' }) })
       .getByRole('tab'),
+    topQuery: this.grafanaIframe().getByTestId('top-query'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
+    workloadRows: this.grafanaIframe().locator(workloadRows),
   };
   inputs = {
     addColumn: this.grafanaIframe().locator('.add-columns-selector input'),
     filterBy: this.grafanaIframe().getByTestId('filters-search-field'),
     search: this.grafanaIframe().locator('input[name="search"]'),
   };
-  messages = {};
+  messages = {
+    notification: this.grafanaIframe().getByRole('alert').or(this.grafanaIframe().getByRole('status')),
+  };
 
   addColumn = async (columnName: string) => {
     await this.inputs.addColumn.fill(columnName, { timeout: Timeouts.THIRTY_SECONDS });
@@ -174,6 +185,19 @@ export default class StoredMetricsPage extends BasePage {
   changeMainMetric = async (metricName: string) => {
     await this.buttons.mainMetric.click();
     await this.builders.mainMetricOption(metricName).click();
+  };
+
+  countHistograms = async (firstRow: number) => {
+    const rowCount = await this.elements.workloadRows.count();
+    let histograms = 0;
+
+    for (let row = firstRow; row <= rowCount; row++) {
+      await this.selectRow(row);
+      await this.buttons.closeDetails.waitFor({ timeout: Timeouts.THIRTY_SECONDS });
+      histograms += await this.elements.histograms.visible().count();
+    }
+
+    return histograms;
   };
 
   expandFilterGroup = async (groupName: string) => {
@@ -192,6 +216,26 @@ export default class StoredMetricsPage extends BasePage {
 
       return parseFloat(value) * (magnitudes[value.slice(-1)] ?? 1) * (timeUnits[unit] ?? 1);
     });
+
+  /** Rate, sum and per-query values of each metric in the Details tab, without the share of the total. */
+  getDetailMetricValues = async (metricNames: string[]) => {
+    const values: Record<string, string[]> = {};
+
+    for (const metricName of metricNames) {
+      await expect(this.builders.detailMetricValue(metricName, 3)).not.toBeEmpty({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      values[metricName] = [];
+
+      for (const columnNumber of [2, 3, 4]) {
+        values[metricName].push(
+          ((await this.builders.detailMetricValue(metricName, columnNumber).textContent()) ?? '').trim(),
+        );
+      }
+    }
+
+    return values;
+  };
 
   getPlanId = async () => {
     await this.elements.planInfoIcon.hover();
@@ -257,6 +301,31 @@ export default class StoredMetricsPage extends BasePage {
   hoverQueryInfo = async (rowNumber: number) => {
     await this.builders.queryInfoIcon(rowNumber).hover();
     await expect(this.elements.queryTooltipText).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  };
+
+  openDetailsTab = async (tabName: 'Examples' | 'Explain' | 'Tables') => {
+    const {
+      classicExplainError,
+      codeBlock,
+      explainError,
+      noClassicExplain,
+      noExamples,
+      noJsonExplain,
+      noTable,
+    } = this.elements;
+
+    await this.builders.tab(tabName).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.waitForLoad();
+    await expect(
+      codeBlock
+        .or(noExamples)
+        .or(noClassicExplain)
+        .or(noJsonExplain)
+        .or(explainError)
+        .or(classicExplainError)
+        .or(noTable)
+        .first(),
+    ).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
   openExamplesTab = async () => {
@@ -363,6 +432,12 @@ export default class StoredMetricsPage extends BasePage {
 
   selectRow = async (rowNumber: number) => {
     await this.builders.queryRow(rowNumber).click({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForLoad();
+    await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+  };
+
+  selectRowByQueryStart = async (queryStart: string) => {
+    await this.builders.workloadRowStartingWith(queryStart).click({ timeout: Timeouts.ONE_MINUTE });
     await this.waitForLoad();
     await expect(this.elements.selectedRow).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
   };

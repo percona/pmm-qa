@@ -49,8 +49,8 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
     const expectedScrapeUrl = 'http://external_pmm:42200/metrics';
 
     expect(
-      target.scrapeUrl,
-      `Active Target for external service Post Upgrade has wrong Address value, found ${target.scrapeUrl}`,
+      target?.scrapeUrl,
+      `Active Target for external service Post Upgrade has wrong Address value, found ${target?.scrapeUrl}`,
     ).toEqual(expectedScrapeUrl);
     await expect
       .poll(async () => (await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote'))?.health, {

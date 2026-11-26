@@ -6,9 +6,12 @@ import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import AccessControlHelper from '@helpers/accessControl.helper';
+import AccessRolesPage from '@pages/accessRoles.page';
+import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
+import TlsHelper from '@helpers/tls.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
@@ -16,14 +19,19 @@ import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
+import EditServicePage from '@pages/inventory/editService.page';
 import PortalRemoval from '@pages/portalRemoval.page';
 import PageNotFoundPage from '@pages/pageNotFound.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import RemoteDatabasesHelper from '@helpers/remoteDatabases.helper';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import PostgresqlHelper from '@helpers/postgresql.helper';
+import PcsmHelper from '@helpers/pcsm.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaBackupHelper from '@helpers/haBackup.helper';
+import HaClickHouseHelper from '@helpers/haClickHouse.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
 import HelmHelper from '@helpers/helm.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
@@ -40,6 +48,7 @@ import ChangePasswordPage from '@pages/changePassword.page';
 import ServerApi from '@api/server.api';
 import SearchDashboardsPage from '@pages/searchDashboards.page';
 import ServiceAccountsPage from '@pages/serviceAccounts.page';
+import UsersPage from '@pages/users.page';
 import AlertingPage from '@pages/alerting.page';
 import DumpPage from '@pages/dump.page';
 import AddInstancePage from '@pages/inventory/addInstance.page';
@@ -58,6 +67,7 @@ import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   accessControlHelper: AccessControlHelper;
+  accessRolesPage: AccessRolesPage;
   advisorInsightsPage: AdvisorInsightsPage;
   advisorRunsPage: AdvisorRunsPage;
   advisorSchedulerPage: AdvisorSchedulerPage;
@@ -67,6 +77,7 @@ const pmmTest = base.extend<{
   alertStatusPage: AlertStatusPage;
   alertThresholdsPage: AlertThresholdsPage;
   agentsPage: AgentsPage;
+  argoCdHelper: ArgoCdHelper;
   alertingPage: AlertingPage;
   backupInventoryPage: BackupInventoryPage;
   changePasswordPage: ChangePasswordPage;
@@ -78,14 +89,17 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   dataSourcesPage: DataSourcesPage;
   dumpPage: DumpPage;
+  editServicePage: EditServicePage;
   externalPostgresHelper: ExternalPostgresHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
+  haClickHouseHelper: HaClickHouseHelper;
   haClusterHelper: HaClusterHelper;
   helmHelper: HelmHelper;
   highAvailabilityPage: HighAvailabilityPage;
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
+  postgresqlHelper: PostgresqlHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   scheduledBackupsPage: ScheduledBackupsPage;
@@ -98,21 +112,26 @@ const pmmTest = base.extend<{
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   pageNotFoundPage: PageNotFoundPage;
+  pcsmHelper: PcsmHelper;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  remoteDatabasesHelper: RemoteDatabasesHelper;
   serverAdminSettingsPage: ServerAdminSettingsPage;
   statsAndLicensePage: StatsAndLicensePage;
   storageLocationsPage: StorageLocationsPage;
   vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
+  usersPage: UsersPage;
   downloadsPage: DownloadsPage;
   testState: TestState;
+  tlsHelper: TlsHelper;
 }>({
   accessControlHelper: async ({ api, cliHelper, grafanaHelper }, use) =>
     await use(new AccessControlHelper(api, cliHelper, grafanaHelper)),
+  accessRolesPage: async ({ page }, use) => await use(new AccessRolesPage(page)),
   addInstancePage: async ({ page }, use) => await use(new AddInstancePage(page)),
   advisorInsightsPage: async ({ page }, use) => await use(new AdvisorInsightsPage(page)),
   advisorRunsPage: async ({ page }, use) => await use(new AdvisorRunsPage(page)),
@@ -123,6 +142,7 @@ const pmmTest = base.extend<{
   alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   alertThresholdsPage: async ({ page }, use) => await use(new AlertThresholdsPage(page)),
   api: async ({ request }, use) => await use(new Api(request)),
+  argoCdHelper: async ({}, use) => await use(new ArgoCdHelper()),
   backupInventoryPage: async ({ page }, use) => await use(new BackupInventoryPage(page)),
   changePasswordPage: async ({ page }, use) => await use(new ChangePasswordPage(page)),
   clickHouseHelper: async ({ cliHelper }, use) => await use(new ClickHouseHelper(cliHelper)),
@@ -172,6 +192,7 @@ const pmmTest = base.extend<{
   dockerHelper: async ({ cliHelper }, use) => await use(new DockerHelper(cliHelper)),
   downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
+  editServicePage: async ({ page }, use) => await use(new EditServicePage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
@@ -179,6 +200,7 @@ const pmmTest = base.extend<{
     await use(grafanaHelper);
   },
   haBackupHelper: async ({ k8sHelper }, use) => await use(new HaBackupHelper(k8sHelper)),
+  haClickHouseHelper: async ({ k8sHelper }, use) => await use(new HaClickHouseHelper(k8sHelper)),
   haClusterHelper: async ({ k8sHelper }, use) => await use(new HaClusterHelper(k8sHelper)),
   helmHelper: async ({}, use) => await use(new HelmHelper()),
   helpPage: async ({ page }, use) => {
@@ -211,11 +233,14 @@ const pmmTest = base.extend<{
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   pageNotFoundPage: async ({ page }, use) => await use(new PageNotFoundPage(page)),
+  pcsmHelper: async ({ cliHelper }, use) => await use(new PcsmHelper(cliHelper)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
     await use(portalRemoval);
   },
+  postgresqlHelper: async ({ cliHelper, dockerHelper }, use) =>
+    await use(new PostgresqlHelper(cliHelper, dockerHelper)),
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);
 
@@ -227,6 +252,12 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  remoteDatabasesHelper: async ({ api, cliHelper, dockerHelper }, use) => {
+    const remoteDatabasesHelper = new RemoteDatabasesHelper(api, cliHelper, dockerHelper);
+
+    await use(remoteDatabasesHelper);
+    await remoteDatabasesHelper.removeAll();
+  },
   scheduledBackupsPage: async ({ page }, use) => await use(new ScheduledBackupsPage(page)),
   searchDashboardsPage: async ({ page }, use) => await use(new SearchDashboardsPage(page)),
   serverAdminSettingsPage: async ({ page }, use) => await use(new ServerAdminSettingsPage(page)),
@@ -236,6 +267,7 @@ const pmmTest = base.extend<{
   statsAndLicensePage: async ({ page }, use) => await use(new StatsAndLicensePage(page)),
   storageLocationsPage: async ({ page }, use) => await use(new StorageLocationsPage(page)),
   testState: async ({}, use) => await use(new TestState()),
+  tlsHelper: async ({ cliHelper }, use) => await use(new TlsHelper(cliHelper)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
@@ -247,6 +279,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  usersPage: async ({ page }, use) => await use(new UsersPage(page)),
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   // Registering this as a beforeEach hook would only gate the first spec file that imports this
   // module, since the module is evaluated once and the hook attaches to the file loading at that

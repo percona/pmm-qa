@@ -36,6 +36,7 @@ interface RestoresResponse {
 }
 
 interface ScheduledBackup {
+  last_run?: string;
   name: string;
   scheduled_backup_id: string;
   service_id?: string;
@@ -82,6 +83,7 @@ export default class BackupsApi {
     data_model: DataModel;
     description: string;
     enabled: boolean;
+    folder?: string;
     location_id: string;
     mode: BackupMode;
     name: string;

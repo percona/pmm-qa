@@ -11,6 +11,7 @@ import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import { PostgresqlDashboards, PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
+import HaHealthOverviewDashboard from '@pages/dashboards/ha/haHealthOverview';
 import InsightDashboards, { InsightDashboardsType } from '@pages/dashboards/insight';
 import PmmHealthDashboard from '@pages/dashboards/pmmHealth';
 import pmmTest from '@fixtures/pmmTest';
@@ -29,6 +30,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
+  readonly haHealthOverview = new HaHealthOverviewDashboard(this.page, () => this.loadAllPanels());
   readonly home = new HomeDashboard(this.page);
   readonly insight: InsightDashboardsType = InsightDashboards;
   readonly mongo: MongoDashboardsType = MongoDashboards;
@@ -49,6 +51,17 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(
         `//button[@data-testid="data-testid dashboard-row-title-${rowName}" and starts-with(@aria-label, "Expand row")]`,
       ),
+    // Third cell of the series row: the Max column of a table legend whose calcs are mean, max, min.
+    legendMaxValue: (panelName: string, seriesName: string) =>
+      this.grafanaIframe()
+        .getByRole('cell')
+        .nth(2)
+        .within(
+          this.builders
+            .panelByExactName(panelName)
+            .getByRole('row')
+            .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
+        ),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -63,6 +76,8 @@ export default class Dashboards extends BasePage {
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelInfoIconByName: (panelName: string) =>
       this.builders.panelHeaderByName(panelName).getByTestId('icon-info-circle'),
+    panelLegendSeries: (panelName: string) =>
+      this.builders.panelByExactName(panelName).locator('button[class*="LegendLabel"]'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -73,6 +88,8 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('button', { name: 'Remove' }),
+    rowTitle: (rowName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid dashboard-row-title-${rowName}`),
     selectedVariableValues: (dropDownName: string) =>
       this.grafanaIframe()
         .getByTestId('data-testid template variable')
@@ -96,6 +113,7 @@ export default class Dashboards extends BasePage {
         .getByTestId('data-testid template variable')
         .filter({ hasText: variableName })
         .getByRole('combobox'),
+    textInDashboard: (text: string) => this.grafanaIframe().getByText(text, { exact: true }),
   };
   buttons = {
     imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
@@ -231,6 +249,18 @@ export default class Dashboards extends BasePage {
         .panelContentByExactName('Feature Compatibility Version')
         .innerText({ timeout: Timeouts.THIRTY_SECONDS }),
     );
+
+  getLegendMaxSeconds = async (panelName: string, seriesName: string) => {
+    const cell = this.builders.legendMaxValue(panelName, seriesName);
+
+    if (!(await cell.isVisible())) return NaN;
+
+    const seconds = /^(\d+(?:\.\d+)?) s$/.exec(
+      (await cell.innerText({ timeout: Timeouts.FIVE_SECONDS })).trim(),
+    );
+
+    return seconds ? Number(seconds[1]) : NaN;
+  };
 
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {
     // The previous rows stay rendered until the loading bar shows, so wait for the refresh's own query.
@@ -466,6 +496,20 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyPanelsWithDataInViewAtMost = async (url: string, maxPanelsWithData: number) => {
+    await this.page.goto(url);
+    await this.waitForPanelsInView();
+    await expect
+      .poll(
+        async () => (await this.elements.panelName.count()) - (await this.elements.noDataPanelName.count()),
+        {
+          message: `${url} should show at most ${maxPanelsWithData} panels with data`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        },
+      )
+      .toBeLessThanOrEqual(maxPanelsWithData);
+  };
+
   verifyPanelTextAfterRefresh = async (panelName: string, expected: string | RegExp, timeout: Timeouts) => {
     const panelContent = this.builders.panelContentByExactName(panelName);
 
@@ -598,12 +642,13 @@ export default class Dashboards extends BasePage {
     url: string,
     maxNoDataPanels: number,
     timeout = Timeouts.FIVE_MINUTES,
+    loadPanels = this.loadAllPanels,
   ) => {
     await expect
       .poll(
         async () => {
           await this.page.goto(url);
-          await this.loadAllPanels();
+          await loadPanels();
 
           return this.elements.noDataPanelName.count();
         },
@@ -614,6 +659,12 @@ export default class Dashboards extends BasePage {
         },
       )
       .toBeLessThanOrEqual(maxNoDataPanels);
+  };
+
+  waitForPanelsInView = async () => {
+    await this.waitForDashboardToLoad();
+    await expect(this.elements.panelName).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+    await expect(this.elements.loadingBar).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
   };
 
   private changeRow = async (locator: Locator, error: string) => {

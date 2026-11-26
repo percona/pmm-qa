@@ -33,8 +33,16 @@ export const minPmmClientVersion: Record<string, string> = {
   'PMM-T2436': '3.9.0',
   'PMM-T2445': '3.9.0',
   'PMM-T2446': '3.9.0',
+  'PMM-T2534': '3.9.0',
+  'PMM-T2663': '3.9.0',
   'PMM-T2452': '3.10.0',
+  'PMM-T2826': '3.11.0',
+  'PMM-T2853': '3.11.0',
+  'PMM-T2854': '3.11.0',
 };
+
+// First pmm-client with pmm-admin update; the update specs require it for their whole group.
+export const pmmAdminUpdateVersion = '3.11.0';
 
 export const versionBelow = (version: string, minVersion: string): boolean => {
   const [major, minor, patch] = version.split('.').map(Number);

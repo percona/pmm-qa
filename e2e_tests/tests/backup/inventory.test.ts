@@ -17,6 +17,7 @@ let backupManagementEnabled: boolean;
 let localLocationId: string;
 let s3LocationId: string;
 let serviceId: string;
+let usersAndRolesSaved = false;
 
 pmmTest.describe.configure({ mode: 'default' });
 
@@ -53,9 +54,14 @@ pmmTest.beforeEach(async ({ api, backupInventoryPage, grafanaHelper, mongoDbHelp
   await backupInventoryPage.open();
 });
 
-pmmTest.afterEach(async ({ api, cliHelper }) => {
+pmmTest.afterEach(async ({ api, cliHelper, mongoDbHelper }) => {
   for (const member of replicaSetMembers) {
     cliHelper.execute(`docker exec ${member} systemctl start mongod`).assertSuccess();
+  }
+
+  if (usersAndRolesSaved) {
+    mongoDbHelper.restoreUsersAndRoles('rs', replicaSetMembers);
+    usersAndRolesSaved = false;
   }
 
   await api.backupsApi.removeAllScheduledBackups();
@@ -434,13 +440,15 @@ pmmTest(
 
 pmmTest(
   'PMM-T1562 - Verify Mongo restore error logs when replica primary down @bm-mongo',
-  async ({ api, backupInventoryPage, cliHelper }) => {
+  async ({ api, backupInventoryPage, cliHelper, mongoDbHelper }) => {
     const backupName = 'mongo_error_logs';
 
     await api.backupsApi.verifyBackupSuccess(
       await api.backupsApi.startBackup(backupName, serviceId, s3LocationId),
     );
     await backupInventoryPage.verifyBackupStatus(backupName, 'BACKUP_STATUS_SUCCESS');
+    usersAndRolesSaved = true;
+    mongoDbHelper.saveUsersAndRoles('rs', replicaSetMembers);
 
     await pmmTest.step('Stop the primary while the restore runs', async () => {
       const restoreId = await backupInventoryPage.startRestore(backupName);

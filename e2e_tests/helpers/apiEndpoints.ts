@@ -6,6 +6,7 @@ const apiEndpoints = {
   advisors: {
     batchChange: '/v1/advisors/checks:batchChange',
     checks: '/v1/advisors/checks',
+    emailInsights: '/v1/advisors/insights:email',
     insights: '/v1/advisors/insights',
     notificationSettings: '/v1/advisors/notificationSettings',
     runs: '/v1/advisors/runs',
@@ -65,6 +66,7 @@ const apiEndpoints = {
     services: '/v1/inventory/services',
   },
   management: {
+    agents: '/v1/management/agents',
     annotations: '/v1/management/annotations',
     nodes: '/v1/management/nodes',
     services: '/v1/management/services',
@@ -76,6 +78,15 @@ const apiEndpoints = {
     // PMM's /prometheus route 500s on HA, so PrometheusApi uses the Grafana datasource proxy.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
     query: '/prometheus/api/v1/query',
+  },
+  qan: {
+    explainFingerprint: '/v1/qan:explainFingerprint',
+    getExample: '/v1/qan/query:getExample',
+    getHistogram: '/v1/qan:getHistogram',
+    getLabels: '/v1/qan:getLabels',
+    getMetrics: '/v1/qan:getMetrics',
+    getReport: '/v1/qan/metrics:getReport',
+    query: '/v1/qan/query',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',

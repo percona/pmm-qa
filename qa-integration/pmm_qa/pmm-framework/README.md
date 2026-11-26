@@ -91,6 +91,8 @@ of the MySQL family (PS/MySQL), fall back to sequential execution with a
 warning, so every requested setup still runs. Three pairs cannot share a host
 at all, and preflight refuses them: two PSMDB setups, EXTERNAL with VALKEY, and
 PDPGSQL patroni with PGSQL replication. Provision those on separate machines.
+A `PSMDB` with `SETUP_TYPE=standalone_no_pbm` is the exception to the PSMDB rule: it runs
+beside a replica set or sharded cluster, but not beside another `standalone_no_pbm`.
 
 `--database` values use this grammar:
 
@@ -102,15 +104,59 @@ Names and option keys are case-insensitive. Supported setup keys are:
 
 - `PS`, `MYSQL`, `SSL_MYSQL`, `PXC`
 - `PGSQL`, `PDPGSQL`, `SSL_PDPGSQL`
-- `PSMDB`, `SSL_PSMDB`
+- `PSMDB`, `SSL_PSMDB`, `PCSM`
 - `HAPROXY`, `EXTERNAL`, `VALKEY`
+
+`PCSM` syncs PSMDB replica set `rs-src` (containers `pcsm-src-N`) to `rs-tgt`
+(`pcsm-tgt-N`) with an HA group of Percona ClusterSync for MongoDB instances
+(`pcsm-N`), registered as external services with `--metrics-mode=push`.
+`SOURCE_VERSION` and `TARGET_VERSION` pick the PSMDB versions (6.0, 7.0 or 8.0;
+the target the source's major or the next one), `NODES_COUNT` the members per replica
+set and `INSTANCES` the PCSM processes, each 1 to 3:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database pcsm,SOURCE_VERSION=7.0,TARGET_VERSION=8.0,NODES_COUNT=3
+```
+
+`SOURCE=psmdb` migrates a PSMDB setup's replica set `rs` (`rs101`–`rs103`, cluster
+`replicaset` in PMM) instead of starting `rs-src`. It adds the same ~100 MB
+`pcsm_qa` database to it and keeps writing there. List the PSMDB setup first;
+the two then run one after the other, even with `--parallel`:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database psmdb,SETUP_TYPE=pss --database pcsm,SOURCE=psmdb
+```
+
+PCSM's HTTP port has no authentication and also serves `/start` and
+`/finalize`, so it stays on `localhost` and PMM Client runs in each `pcsm-N`.
+A failover test stops an instance with `docker exec pcsm-N pkill -x pcsm`,
+which leaves its PMM Client reporting it down, and starts it again with
+`docker exec --detach pcsm-N sh -c 'exec pcsm >>/var/log/pcsm.log 2>&1'`.
+
+`HANDOVER=true` (default `false`, needs `INSTANCES` of 2 or 3) makes every
+instance ACTIVE for 60 s while the workload runs, so each one's
+replication-worker panels have data. To give the lease to an instance, PCSM
+stops on every other one, which restarts as STANDBY. PCSM counts the clone only
+in the process that ran it, so the setup then stops every instance, runs
+`pcsm reset`, drops the migrated databases on the target and starts a fresh
+sync, which clones again into whichever instance is ACTIVE.
 
 Versions, options and their defaults are registered in
 [`lib/config.sh`](lib/config.sh). `pmm-framework --list-databases` prints each
 type's default and supported versions, without needing Docker. `VERSION`
 `latest` means the type's default, in a spec and in a `<TYPE>_VERSION`
 variable. `shards`/`sharding` are aliases for PSMDB, and `sentinel`/`sentinels`
-for Valkey. A version or option not registered there is refused, so a typo
+for Valkey. `PSMDB` takes `SETUP_TYPE` `pss` (default), `psa`, `sharding` or
+`standalone_no_pbm`: one authenticated mongod in the container `psmdb-standalone`, with
+no replica set, its `pbm-agent` masked, and no host port published. `PSMDB` also takes
+`EXTERNAL_PBM=true` (default `false`) to run PBM the way a customer who drives it from a host of their own does,
+not through PMM Backup Management: an empty `pbm-external` container on the setups' base, with PBM installed
+from the Percona repository, runs one `pbm-agent` per member over the network (the members' own are masked),
+turns PITR on (`pitr.oplogSpanMin=1`) and takes a logical backup every 15 minutes from cron, after a first one at setup.
+Agents reach mongod over the network, so only logical backups work. It needs `MINIO=true` and a setup with PBM, so not
+`standalone_no_pbm`, and does not support the `extra` compose profile. A version or option not registered there is refused, so a typo
 cannot quietly run a different setup.
 
 Configuration precedence is:

@@ -1,3 +1,4 @@
+import CliHelper from '@helpers/cli.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
@@ -21,10 +22,7 @@ export const defaultReplicas = 3;
 export const clickHouseKeeperReplicas = 3;
 // /v1/version needs credentials even from inside the pod.
 const adminPassword = (): string => process.env.ADMIN_PASSWORD || 'admin';
-// POSIX single-quote escaping, so a password containing a quote cannot end the
-// quoted string: close, escape the quote, reopen.
-const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
-const curlCredentials = (): string => shellQuote(`admin:${adminPassword()}`);
+const curlCredentials = (): string => CliHelper.shellQuote(`admin:${adminPassword()}`);
 
 /** The `version` field, or undefined when the body is not the JSON we expect. */
 const parseVersion = (body: string): unknown => {
@@ -224,7 +222,9 @@ export default class HaClusterHelper {
     endpoint: string,
     body?: object,
   ): { body: string; status: number } => {
-    const data = body ? ` -H 'Content-Type: application/json' -d ${shellQuote(JSON.stringify(body))}` : '';
+    const data = body
+      ? ` -H 'Content-Type: application/json' -d ${CliHelper.shellQuote(JSON.stringify(body))}`
+      : '';
     const lines = this.k8sHelper
       .execInPod(
         podName,

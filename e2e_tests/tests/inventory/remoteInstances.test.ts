@@ -22,9 +22,9 @@ const remoteNodeNames = [
   rdsMysql57.serviceName,
   auroraInstanceId,
 ];
-type QanRemoteDatabase = Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }>;
 const qanRemoteDatabases = remoteDatabases.filter(
-  (database): database is QanRemoteDatabase => database.type === 'mysql' || database.type === 'mongodb',
+  (database): database is Extract<(typeof remoteDatabases)[number], { type: 'mongodb' | 'mysql' }> =>
+    database.type === 'mysql' || database.type === 'mongodb',
 );
 const qanFilters = [
   ...qanRemoteDatabases.map(({ environment }) => environment),
@@ -61,9 +61,7 @@ for (const database of remoteDatabases) {
       const labels = editedLabels(database.serviceName, database);
 
       await page.goto(addInstancePage.url);
-      await addInstancePage.builders.instanceType(database.type).click({ timeout: Timeouts.THIRTY_SECONDS });
-      await addInstancePage.selectNode('pmm-server');
-      await addInstancePage.fillRemoteFields(database);
+      await addInstancePage.fillRemoteDatabase(database.type, 'pmm-server', database);
 
       if (database.type === 'postgresql') await addInstancePage.verifyPgStatMonitorIsDefault();
 
@@ -132,6 +130,25 @@ pmmTest(
     });
     await servicesPage.editServiceLabels(haproxy.serviceName, labels);
     await servicesPage.verifyEditedServiceLabels(haproxy.serviceName, labels);
+  },
+);
+
+pmmTest(
+  'PMM-T590 - Verify parsing URL on adding External service page @instances',
+  async ({ addInstancePage, page }) => {
+    const host = process.env.MONITORING_HOST ?? '';
+    const port = process.env.EXTERNAL_EXPORTER_PORT ?? '';
+
+    expect(host, 'MONITORING_HOST must be set').not.toBe('');
+    expect(port, 'EXTERNAL_EXPORTER_PORT must be set').not.toBe('');
+    await page.goto(addInstancePage.url);
+    await addInstancePage.builders.instanceType('external').click({ timeout: Timeouts.THIRTY_SECONDS });
+    await addInstancePage.parseUrl(`https://something:something@${host}:${port}/metrics2`);
+    await expect(addInstancePage.inputs.host).toHaveValue(host);
+    await expect(addInstancePage.inputs.metricsPath).toHaveValue('/metrics2');
+    await expect(addInstancePage.inputs.port).toHaveValue(port);
+    await expect(addInstancePage.inputs.username).toHaveValue('something');
+    await expect(addInstancePage.elements.schemaState).toHaveValue('https');
   },
 );
 

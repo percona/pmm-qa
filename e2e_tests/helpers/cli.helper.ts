@@ -131,6 +131,15 @@ export default class CliHelper {
     return value;
   };
 
+  getPmmAdminServiceAgents = (container: string, serviceId: string) =>
+    (
+      JSON.parse(
+        this.execSilent(`docker exec ${container} pmm-admin list --json`).assertSuccess().stdout,
+      ) as {
+        agent: { agent_type: string; service_id?: string; status: string }[];
+      }
+    ).agent.filter((agent) => agent.service_id === serviceId);
+
   getPmmAdminStatusField = (container: string, field: string): string =>
     this.getPmmAdminField(
       this.execSilent(`docker exec ${container} pmm-admin status`).assertSuccess().stdout,
@@ -150,6 +159,13 @@ export default class CliHelper {
       }
     ).agents_info;
   };
+
+  queryMysql = (container: string, user: { password: string; username: string }, query: string) =>
+    this.execute(
+      `docker exec ${container} mysql -u${user.username} -p${user.password} --batch --skip-column-names mysql -e "${query}"`,
+    )
+      .assertSuccess()
+      .stdout.trim();
 
   readMongodbTlsCertificates = (container: string) => {
     const read = (file: string) =>
@@ -207,6 +223,13 @@ export default class CliHelper {
     if (!removal.stdout.includes(`Service with name "${serviceName}" not found.`)) removal.assertSuccess();
   };
 
+  // POSIX single-quote escaping, so a value containing a quote cannot end the
+  // quoted string: close, escape the quote, reopen.
+  static shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
+
+  tailContainerFile = (container: string, file: string) =>
+    this.execSilent(`docker exec ${container} tail -n100 ${file}`).assertSuccess().stdout;
+
   verifyAgentsHealthy = async (containers: string[], timeout = Timeouts.ONE_MINUTE) => {
     const badStatus = /Waiting|Done|Unknown|Initialization Error|Stopping/;
 
@@ -223,16 +246,5 @@ export default class CliHelper {
         }
       }
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
-  };
-
-  // bool_and is NULL with no matching connection, so this cannot pass with no agent connected.
-  verifyPostgresqlConnectionsUseTls = (container: string, user: string) => {
-    const allTls = this.execSilent(
-      `docker exec ${container} psql -U postgres -tAc "SELECT bool_and(s.ssl) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '${user}'"`,
-    )
-      .assertSuccess()
-      .stdout.trim();
-
-    expect(allTls, `every ${user} connection to ${container} uses TLS`).toEqual('t');
   };
 }

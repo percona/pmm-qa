@@ -7,10 +7,10 @@
 # Same-type or PS+MYSQL pairs only lose concurrency; pairs that hold the same
 # container name or host port while up are refused.
 preflight_database_setups() {
-  local spec
+  local spec kind
   local mysql_data_owner='' conflict='' host_conflict='' setup_type
   local patroni_seen=false pgsql_replication_seen=false
-  local external_seen=false valkey_seen=false
+  local external_seen=false valkey_seen=false psmdb_setup_type='' pcsm_source pcsm_from_psmdb=false
   local redis_port_conflict='EXTERNAL and VALKEY setups (both publish host port 6379)'
   local pg_port_conflict='PDPGSQL (patroni) and PGSQL (replication) setups (both publish host port 6432)'
   declare -A seen_types=()
@@ -18,11 +18,37 @@ preflight_database_setups() {
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
 
+    # A standalone_no_pbm PSMDB is its own kind: one container of its own name, no host port.
+    kind=$DB_TYPE
+    if [[ $DB_TYPE == PSMDB ]]; then
+      setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
+      if [[ ${setup_type,,} == standalone_no_pbm ]]; then
+        kind=PSMDB_STANDALONE
+      fi
+    fi
+
+    # SOURCE=psmdb syncs the replica set of a PSMDB setup, so it runs after one in this run.
+    # Checked for every PCSM spec, a second one included.
+    if [[ $DB_TYPE == PCSM ]]; then
+      pcsm_source=$(resolve_value PCSM SOURCE DB_CONFIG)
+      if [[ ${pcsm_source,,} == psmdb ]]; then
+        pcsm_from_psmdb=true
+        if [[ -n $psmdb_setup_type && $psmdb_setup_type != ps? ]]; then
+          die 'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'
+        fi
+        if [[ -n $psmdb_setup_type ]]; then
+          conflict='PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set)'
+        fi
+      fi
+    fi
+
     # Separate compose projects do not isolate PSMDB: both stacks pin
     # container_name rs101..rs203 and host port 27027.
-    if [[ -v "seen_types[$DB_TYPE]" ]]; then
-      if [[ $DB_TYPE == PSMDB ]]; then
+    if [[ -v "seen_types[$kind]" ]]; then
+      if [[ $kind == PSMDB ]]; then
         host_conflict='two PSMDB setups (both compose stacks pin container names rs101..rs203 and host port 27027)'
+      elif [[ $kind == PSMDB_STANDALONE ]]; then
+        host_conflict='two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'
       else
         conflict="two $DB_TYPE setups"
       fi
@@ -31,6 +57,12 @@ preflight_database_setups() {
         conflict="$mysql_data_owner and $DB_TYPE setups (both publish host ports from 3306)"
       fi
       mysql_data_owner=$DB_TYPE
+    elif [[ $DB_TYPE == PSMDB ]]; then
+      psmdb_setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
+      psmdb_setup_type=${psmdb_setup_type,,}
+      if [[ $pcsm_from_psmdb == true ]]; then
+        die 'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'
+      fi
     elif [[ $DB_TYPE == PDPGSQL ]]; then
       setup_type=$(resolve_value PDPGSQL SETUP_TYPE DB_CONFIG)
       if [[ ${setup_type,,} == patroni ]]; then
@@ -51,7 +83,7 @@ preflight_database_setups() {
       valkey_seen=true
       [[ $external_seen == true ]] && host_conflict=$redis_port_conflict
     fi
-    seen_types["$DB_TYPE"]=1
+    seen_types["$kind"]=1
   done
 
   if [[ -n $host_conflict ]]; then
