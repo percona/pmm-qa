@@ -168,28 +168,40 @@ pmmTest(
 
 pmmTest.describe('Node Summary with a stopped PXC node', () => {
   const pxcNode = 3;
-  // pmm-framework's read-write load, which ends when it loses its connection to the stopped node.
+  // pmm-framework's load. It ends when ProxySQL moves the writer, which a stopped and restarted node can do.
   const sysbench =
-    'sysbench --mysql-db=sbtest --mysql-user=proxysql_user --mysql-password=passw0rd --mysql-host=127.0.0.1 --mysql-port=6033 --db-driver=mysql --threads=1 --tables=10 --table-size=1000 /usr/share/sysbench/oltp_read_write.lua --time=0 run';
+    'sysbench --mysql-db=sbtest --mysql-user=proxysql_user --mysql-password=passw0rd --mysql-host=127.0.0.1 --mysql-port=6033 --db-driver=mysql --threads=1 --tables=10 --table-size=1000 /usr/share/sysbench';
+  const writerPort = (cliHelper: CliHelper, container: string) =>
+    cliHelper
+      .execSilent(
+        `docker exec ${container} mysql -uadmin -padmin -h127.0.0.1 -P6032 -N -e "SELECT port FROM runtime_mysql_servers WHERE status = 'ONLINE' AND hostgroup_id = (SELECT writer_hostgroup FROM runtime_mysql_galera_hostgroups)"`,
+      )
+      .stdout.trim();
   let pxcContainer = '';
+  let writer = '';
 
   pmmTest.afterEach(async ({ cliHelper }) => {
     cliHelper
       .execute(`docker exec --detach ${pxcContainer} mysqld --defaults-file=/var/lib/pxc/node${pxcNode}.cnf`)
       .assertSuccess();
     await expect
-      .poll(
-        () =>
-          cliHelper.execSilent(
-            `docker exec ${pxcContainer} mysqladmin -uroot -S /var/lib/pxc/node${pxcNode}/mysql.sock ping`,
-          ).code,
-        { message: `PXC node ${pxcNode} should be running`, timeout: Timeouts.FIVE_MINUTES },
-      )
-      .toBe(0);
-    cliHelper.execute(`docker exec ${pxcContainer} pkill -f "[o]ltp_read_write"`);
-    cliHelper
-      .execute(`docker exec --detach ${pxcContainer} sh -c "${sysbench} > /tmp/workload-read-write.log 2>&1"`)
-      .assertSuccess();
+      .poll(() => writerPort(cliHelper, pxcContainer), {
+        message: `ProxySQL should write to port ${writer} again`,
+        timeout: Timeouts.FIVE_MINUTES,
+      })
+      .toEqual(writer);
+    cliHelper.execute(`docker exec ${pxcContainer} pkill -f "[o]ltp_read_"`);
+
+    for (const [lua, log] of [
+      ['oltp_read_only.lua --time=12000', 'read-only'],
+      ['oltp_read_write.lua --time=0', 'read-write'],
+    ]) {
+      cliHelper
+        .execute(
+          `docker exec --detach ${pxcContainer} sh -c "${sysbench}/${lua} run > /tmp/workload-${log}.log 2>&1"`,
+        )
+        .assertSuccess();
+    }
   });
 
   pmmTest(
@@ -232,6 +244,8 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
         );
 
       pxcContainer = pxc.container;
+      writer = writerPort(cliHelper, pxc.container);
+      expect(writer).toMatch(/^\d+$/);
       expect(typeRows(pxc.service.node_id)).toEqual([
         { Amount: '3', Type: 'MySQL' },
         { Amount: '1', Type: 'ProxySQL' },
