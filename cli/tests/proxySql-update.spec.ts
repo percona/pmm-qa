@@ -109,15 +109,17 @@ test.describe('ProxySQL pmm-admin update', { tag: '@proxysql' }, () => {
         const exporterId = (await pmmAdmin.findServiceAgentId(containerName, serviceId, 'AGENT_TYPE_PROXYSQL_EXPORTER'))!;
         const since = new Date();
 
-        const on = await pmmAdmin.updateServiceOk(containerName, 'proxysql', `${serviceName} --tls --tls-skip-verify`);
+        const setTls = async (flags: string, tls: boolean) => pmmAdmin.updateServiceUntilPersisted(containerName, 'proxysql', `${serviceName} ${flags}`, async () => {
+          expect((await pmmApi.getServerAgent(exporterId)).tls, `TLS is not turned ${tls ? 'on' : 'off'} on PMM Server`).toBe(tls);
+        });
+
+        const on = await setTls('--tls --tls-skip-verify', true);
         expect(pmmAdmin.getChangedSettings(on).sort()).toEqual(['--tls (was --no-tls)', '--tls-skip-verify (was --no-tls-skip-verify)']);
-        expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned on on PMM Server').toBe(true);
         await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
         await pmmApi.expectSampleSince(`proxysql_up{service_name="${serviceName}"}`, since);
 
-        const off = await pmmAdmin.updateServiceOk(containerName, 'proxysql', `${serviceName} --no-tls --no-tls-skip-verify`);
+        const off = await setTls('--no-tls --no-tls-skip-verify', false);
         expect(pmmAdmin.getChangedSettings(off).sort()).toEqual(['--no-tls (was --tls)', '--no-tls-skip-verify (was --tls-skip-verify)']);
-        expect((await pmmApi.getServerAgent(exporterId)).tls, 'TLS is not turned off on PMM Server').toBe(false);
         await pmmAdmin.expectAgentsRunning(containerName, [exporterId], true);
       });
     });

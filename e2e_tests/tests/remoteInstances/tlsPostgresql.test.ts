@@ -139,9 +139,10 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
     async ({ addInstancePage, api, cliHelper, page, postgresqlHelper, servicesPage }) => {
       await pmmTest.step('Add the SSL PostgreSQL server as a remote instance', async () => {
         await page.goto(addInstancePage.url);
-        await addInstancePage.builders.instanceType('postgresql').click({ timeout: Timeouts.THIRTY_SECONDS });
-        await addInstancePage.selectNode('pmm-server');
-        await addInstancePage.fillRemoteFields({ ...remoteFields, serviceName: uiServiceName });
+        await addInstancePage.fillRemoteDatabase('postgresql', 'pmm-server', {
+          ...remoteFields,
+          serviceName: uiServiceName,
+        });
         await addInstancePage.verifyTlsFieldsHidden();
         await addInstancePage.fillTlsCertificates(cliHelper.readTlsCertificates(container));
         await addInstancePage.buttons.pgStatStatements.click();
@@ -220,11 +221,10 @@ pmmTest.describe('SSL PostgreSQL options checked on their own services', () => {
         `Add the SSL PostgreSQL server remotely with Max Query Length ${maxQueryLength}`,
         async () => {
           await page.goto(addInstancePage.url);
-          await addInstancePage.builders
-            .instanceType('postgresql')
-            .click({ timeout: Timeouts.THIRTY_SECONDS });
-          await addInstancePage.selectNode('pmm-server');
-          await addInstancePage.fillRemoteFields({ ...remoteFields, serviceName: maxQueryLengthServiceName });
+          await addInstancePage.fillRemoteDatabase('postgresql', 'pmm-server', {
+            ...remoteFields,
+            serviceName: maxQueryLengthServiceName,
+          });
           await addInstancePage.verifyTlsFieldsHidden();
           await addInstancePage.fillTlsCertificates(cliHelper.readTlsCertificates(container));
           await addInstancePage.buttons.pgStatStatements.click();

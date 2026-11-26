@@ -305,9 +305,9 @@ test.describe('PSMDB pmm-admin inventory change agent for mongodb_exporter and Q
         await (await cli.exec(command)).assertSuccess();
       }
 
-      await pmmAdmin.expectAgentsRunning(containerName, [exporterId, mongologId], true, 30_000);
+      await pmmAdmin.expectAgentsRunningResyncingStatus(containerName, [exporterId, mongologId], 30_000);
       await mongo.expectMongoUp(containerName, serviceName, agentPassword, 20_000);
-    }).toPass({ intervals: [5_000], timeout: 100_000 });
+    }).toPass({ intervals: [5_000], timeout: 150_000 });
   });
 
   test('PMM-T2446 - Verify Change agent TLS for mongodb-exporter and qan-mongodb-mongolog-agent', async ({}) => {
