@@ -426,7 +426,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-14745 - Verify Alert templates table pages by Rows per page @fb-alerting @grafana-pr',
+  'PMM-T2899 - Verify Alert templates table pages by Rows per page @fb-alerting @grafana-pr',
   async ({ alertingPage, api, page }) => {
     const pageSize = 25;
     const builtIn = (await api.alertingApi.getTemplates()).length;
