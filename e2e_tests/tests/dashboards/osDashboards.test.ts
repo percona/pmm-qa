@@ -121,7 +121,7 @@ const sortedRows = (rows: Record<string, string>[]) =>
   [...rows].sort((a, b) => a.Service.localeCompare(b.Service));
 
 pmmTest(
-  'PMM-15901 - System Summary shows the selected node @node-summary',
+  'PMM-T2901 - System Summary shows the selected node @node-summary',
   async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
     const pxc = await frameworkNode(api, dockerHelper, '^pxc_node__1_');
@@ -207,7 +207,7 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
   });
 
   pmmTest(
-    'PMM-15901 - Services panels list every service with health @node-summary',
+    'PMM-T2903 - Services panels list every service with health @node-summary',
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const { panelName: servicesPanel, statusColors } = nodeSummary.services;
@@ -336,7 +336,7 @@ pmmTest.describe('Node Summary disk panels under load', () => {
   });
 
   pmmTest(
-    'PMM-15901 - Disk panels match the host @node-summary',
+    'PMM-T2904 - Disk panels match the host @node-summary',
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const { panelName: operationsPanel, read, write } = nodeSummary.diskOperations;
@@ -439,7 +439,7 @@ pmmTest.describe('Node Summary with a kernel file limit', () => {
   });
 
   pmmTest(
-    'PMM-15901 - File descriptors with no limit @node-summary',
+    'PMM-T2905 - File descriptors with no limit @node-summary',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const { fileDescriptors, url } = dashboard.os.nodeSummary;
       const nodeName = await api.haApi.getPmmServerNodeName();
@@ -488,7 +488,7 @@ pmmTest.describe('Node Summary with a kernel file limit', () => {
 });
 
 pmmTest(
-  'PMM-15901 - All panels show data, new Disk panels included @node-summary',
+  'PMM-T2906 - All panels show data, new Disk panels included @node-summary',
   async ({ api, dashboard, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
 
@@ -525,7 +525,7 @@ pmmTest.describe('Node Summary after re-registering a node', () => {
   });
 
   pmmTest(
-    'PMM-15901 - System Summary after re-registering a node @node-summary',
+    'PMM-T2902 - System Summary after re-registering a node @node-summary',
     async ({ api, cliHelper, dashboard, dockerHelper, nodesPage, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const summaryUrl = () =>
