@@ -28,40 +28,60 @@ export default class AddInstancePage extends BasePage {
       this.grafanaIframe().getByTestId(`${instanceType}-instance`),
     nodeOption: (nodeName: string) =>
       this.grafanaIframe().getByRole('option', { exact: true, name: nodeName }),
+    popUp: (message: string) =>
+      this.grafanaIframe()
+        .getByRole('status')
+        .or(this.grafanaIframe().getByRole('alert'))
+        .filter({ hasText: message }),
+    radioLabel: (label: "Don't track" | 'Custom' | 'Default' | 'PG Stat Monitor' | 'PG Stat Statements') =>
+      this.grafanaIframe().getByText(label, { exact: true }),
   };
   buttons = {
     addService: this.grafanaIframe().getByRole('button', { name: 'Add service' }),
     azure: this.grafanaIframe().getByTestId('azure-instance'),
+    disableQueryExamples: this.grafanaIframe().getByTestId('disable_query_examples-field-label'),
     discover: this.grafanaIframe().getByRole('button', { exact: true, name: 'Discover' }),
     mongodbProfiler: this.grafanaIframe().getByTestId('qan_mongodb_profiler-field-label'),
     mysql: this.grafanaIframe().getByTestId('mysql-instance'),
+    parseFromUrl: this.grafanaIframe().getByText('Parse from URL string', { exact: true }),
     pgStatStatements: this.grafanaIframe().getByText('PG Stat Statements', { exact: true }),
     rds: this.grafanaIframe().getByTestId('rds-instance'),
+    setManually: this.grafanaIframe().getByText('Set manually', { exact: true }),
+    skipConnectionCheck: this.grafanaIframe().getByTestId('skip_connection_check-field-label'),
     skipTlsVerify: this.grafanaIframe().getByTestId('tls_skip_verify-field-label'),
     useTls: this.grafanaIframe().getByTestId('tls-field-label'),
   };
   elements = {
+    disableCollectorsLabel: this.grafanaIframe().getByTestId('disable_collectors-field-label'),
     nodes: this.grafanaIframe().getByTestId('nodes-selectbox'),
     pgStatMonitor: this.grafanaIframe().getByRole('radio', { name: 'PG Stat Monitor' }),
+    rdsHeading: this.grafanaIframe().getByTestId('rds-instance').getByRole('heading'),
+    schemaState: this.grafanaIframe().getByTestId('schema-radio-state'),
     trackingState: this.grafanaIframe().getByTestId('tracking-radio-state'),
     unauthorized: this.grafanaIframe().getByTestId('unauthorized'),
   };
   inputs = {
     accessKey: this.grafanaIframe().getByTestId('aws_access_key-text-input'),
+    availabilityZone: this.grafanaIframe().getByTestId('az-text-input'),
     azureClientId: this.grafanaIframe().getByTestId('azure_client_id-text-input'),
     azureClientSecret: this.grafanaIframe().getByTestId('azure_client_secret-password-input'),
     azureSubscriptionId: this.grafanaIframe().getByTestId('azure_subscription_id-text-input'),
     azureTenantId: this.grafanaIframe().getByTestId('azure_tenant_id-text-input'),
     cluster: this.grafanaIframe().getByTestId('cluster-text-input'),
+    customLabels: this.grafanaIframe().getByTestId('custom_labels-textarea-input'),
+    database: this.grafanaIframe().getByTestId('database-text-input'),
+    disableCollectors: this.grafanaIframe().getByTestId('disable_collectors-text-input'),
     environment: this.grafanaIframe().getByTestId('environment-text-input'),
     host: this.grafanaIframe().getByTestId('address-text-input'),
     maxQueryLength: this.grafanaIframe().getByTestId('maxQueryLength-text-input'),
     metricsPath: this.grafanaIframe().getByTestId('metrics_path-text-input'),
     password: this.grafanaIframe().getByTestId('password-password-input'),
     port: this.grafanaIframe().getByTestId('port-text-input'),
+    region: this.grafanaIframe().getByTestId('region-text-input'),
     replicationSet: this.grafanaIframe().getByTestId('replication_set-text-input'),
     secretKey: this.grafanaIframe().getByTestId('aws_secret_key-password-input'),
     serviceName: this.grafanaIframe().getByTestId('serviceName-text-input'),
+    tablestatsGroupTableLimit: this.grafanaIframe().getByTestId('tablestats_group_table_limit-number-input'),
     tlsCa: this.grafanaIframe().getByTestId('tls_ca-textarea-input'),
     tlsCert: this.grafanaIframe().getByTestId('tls_cert-textarea-input'),
     tlsCertificateFilePassword: this.grafanaIframe().getByTestId(
@@ -69,10 +89,13 @@ export default class AddInstancePage extends BasePage {
     ),
     tlsCertificateKey: this.grafanaIframe().getByTestId('tls_certificate_key-textarea-input'),
     tlsKey: this.grafanaIframe().getByTestId('tls_key-textarea-input'),
+    url: this.grafanaIframe().getByTestId('url-text-input'),
     username: this.grafanaIframe().getByTestId('username-text-input'),
   };
   messages = {
+    hostRequired: this.grafanaIframe().getByTestId('address-field-error-message'),
     maxQueryLengthError: this.grafanaIframe().getByTestId('maxQueryLength-field-error-message'),
+    portRequired: this.grafanaIframe().getByTestId('port-field-error-message'),
   };
 
   addRemoteTlsMongodb = async (
@@ -80,9 +103,7 @@ export default class AddInstancePage extends BasePage {
     host: string,
     certificates: { ca: string; key: string },
   ) => {
-    await this.builders.instanceType('mongodb').click({ timeout: Timeouts.THIRTY_SECONDS });
-    await this.selectNode('pmm-server');
-    await this.fillRemoteFields({
+    await this.fillRemoteDatabase('mongodb', 'pmm-server', {
       cluster: 'mongodb_remote_cluster',
       environment: 'mongodb_remote_cluster',
       host,
@@ -105,9 +126,7 @@ export default class AddInstancePage extends BasePage {
     host: string,
     certificates: { ca: string; cert: string; key: string },
   ) => {
-    await this.builders.instanceType('mysql').click({ timeout: Timeouts.THIRTY_SECONDS });
-    await this.selectNode('pmm-server');
-    await this.fillRemoteFields({
+    await this.fillRemoteDatabase('mysql', 'pmm-server', {
       cluster: 'mysql_remote_cluster',
       environment: 'mysql_remote_cluster',
       host,
@@ -172,6 +191,16 @@ export default class AddInstancePage extends BasePage {
     await this.inputs.replicationSet.fill(fields.replicationSet);
   };
 
+  fillRemoteDatabase = async (
+    instanceType: RemoteInstanceType,
+    nodeName: string,
+    fields: RemoteInstanceFields,
+  ) => {
+    await this.builders.instanceType(instanceType).click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.selectNode(nodeName);
+    await this.fillRemoteFields(fields);
+  };
+
   fillRemoteFields = async (fields: RemoteInstanceFields) => {
     await this.inputs.host.fill(fields.host, { timeout: Timeouts.ONE_MINUTE });
 
@@ -193,6 +222,13 @@ export default class AddInstancePage extends BasePage {
     await this.inputs.tlsKey.fill(certificates.key);
   };
 
+  parseUrl = async (url: string) => {
+    await this.buttons.parseFromUrl.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.inputs.url.fill(url, { timeout: Timeouts.THIRTY_SECONDS });
+    await this.buttons.parseFromUrl.click();
+    await this.buttons.setManually.click();
+  };
+
   selectNode = async (nodeName: string) => {
     await this.elements.nodes.click({ timeout: Timeouts.ONE_MINUTE });
     await this.builders.nodeOption(nodeName).click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -201,6 +237,25 @@ export default class AddInstancePage extends BasePage {
   verifyPgStatMonitorIsDefault = async () => {
     await expect(this.elements.trackingState).toHaveAttribute('value', 'qan_postgresql_pgstatmonitor_agent');
     await expect(this.elements.pgStatMonitor).toBeChecked();
+  };
+
+  verifyRemoteFormFields = async (timeout = Timeouts.THIRTY_SECONDS) => {
+    for (const field of [
+      this.inputs.host,
+      this.inputs.serviceName,
+      this.inputs.port,
+      this.inputs.username,
+      this.inputs.password,
+      this.inputs.environment,
+      this.inputs.region,
+      this.inputs.availabilityZone,
+      this.inputs.replicationSet,
+      this.inputs.cluster,
+      this.inputs.customLabels,
+      this.buttons.skipConnectionCheck,
+    ]) {
+      await expect(field).toBeVisible({ timeout });
+    }
   };
 
   verifyTlsFieldsHidden = async (inputs = [this.inputs.tlsCa, this.inputs.tlsCert, this.inputs.tlsKey]) => {

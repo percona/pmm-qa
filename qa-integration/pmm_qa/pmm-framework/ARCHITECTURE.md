@@ -66,12 +66,13 @@ flowchart TB
 | `ps/` | — (Dockerfile only) | `pmm-qa/ps` |
 | `mysql/` | `PS`, `MYSQL`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`) |
 | `pxc-proxysql/` | `PXC` | `pmm-qa/pxc-proxysql`: three nodes and ProxySQL in one container, driven by `pmm_pxc` |
-| `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged; the replica set also runs `pmm-qa/kerberos`, tagged `kerberos/local` |
+| `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged; the replica set also runs `pmm-qa/kerberos`, tagged `kerberos/local`; `SETUP_TYPE=standalone_no_pbm` runs the image by name with `docker run`, so it needs no tag |
 | `pdpgsql/` | `PDPGSQL`, `SSL_PDPGSQL` | `pmm-qa/pdpgsql`; SSL PDPGSQL runs on `pmm-qa/ssl-pdpgsql` |
 | `ssl-pdpgsql/` | — (Dockerfile only) | `pmm-qa/ssl-pdpgsql` |
 | `kerberos/` | — (Dockerfile only) | `pmm-qa/kerberos`, the KDC both PSMDB compose stacks run |
 | `pgsql/` | `PGSQL` | `pmm-qa/pgsql`, for both topologies |
 | `haproxy/`, `external/`, `valkey/` | `HAPROXY`, `EXTERNAL`, `VALKEY` | one image each |
+| `pcsm/` | `PCSM` | `pmm-qa/pcsm`, the official PCSM image with PMM Client installed at run time; its source and target replica sets run `pmm-qa/psmdb` and reuse `images/psmdb/setup.sh`'s `psmdb_*` helpers |
 
 Source order matters only because `lib/config.sh` runs `register_database`
 calls at source time, and they validate themselves with `lib/common.sh`'s
@@ -99,6 +100,7 @@ why:
 | `psmdb` | `oraclelinux:$OL_VERSION` (8 or 9) | GSSAPI tests the OS-specific dynamic client |
 | `kerberos` | `alpine` | A KDC; nothing is installed into it |
 | `valkey` | `$BASE_OS` plus Valkey's own binaries from `valkey/valkey:<v>-bookworm` | Valkey's own releases; AppStream has only an older 8.0 and no 7 |
+| `pcsm` | `percona/percona-clustersync-mongodb:<v>` | The official PCSM image, without systemd: `sleep infinity` is its entrypoint, `docker exec` starts PCSM and `pmm-agent`, and PMM Client installs from a tarball |
 
 Setups start containers with `SYSTEMD_RUN` (`lib/run_helpers.sh`): systemd
 runs unprivileged with the host cgroup namespace, `/sys/fs/cgroup` mounted
@@ -111,7 +113,7 @@ upgrade's own `systemctl restart pmm-agent` reaches the running agent; PXC
 An RPM that enables its own unit at boot (`mysqld`, PXC's `mysql`, `proxysql`,
 `percona-telemetry-agent`) is disabled in its Dockerfile.
 
-Every image but MySQL 5.7 (EL7, yum) and the Alpine KDC has dnf and runs systemd:
+Every image but MySQL 5.7 (EL7, yum), the Alpine KDC and PCSM has dnf and runs systemd:
 install PMM Client with `install_pmm_client` and upgrade it with
 `support_scripts/upgrade_clients.sh`. `BASE_OS` must be Oracle Linux 9: EPEL,
 Oracle MySQL, HAProxy and PGDG are EL9 repositories, `upstream_version` reads
@@ -176,6 +178,10 @@ WARNING: Running setups sequentially: two PS setups cannot run in parallel.
 
 CI passes `--parallel` unconditionally, so refusing would fail valid jobs.
 
+One pair depends on order: `PCSM` with `SOURCE=psmdb` syncs the replica set
+of a `PSMDB` setup, so it runs after the `PSMDB` setup it is listed after, not
+beside it. Listed before one, or after a sharded one, it is refused.
+
 Three pairs cannot share a **host** at all, because each holds the same
 container name or host port for as long as it is up:
 
@@ -189,6 +195,10 @@ These are refused in preflight, naming the collision:
 ```text
 ERROR: EXTERNAL and VALKEY setups (both publish host port 6379) cannot share a host; provision them on separate machines.
 ```
+
+A `PSMDB` with `SETUP_TYPE=standalone_no_pbm` is its own kind in preflight: one container,
+`psmdb-standalone`, and no host port. It runs beside a replica set or sharded
+cluster, and two of them are refused.
 
 ### Sequential vs parallel
 
@@ -294,8 +304,9 @@ Say you are adding `FOODB`:
    ```
 
 2. **Add `images/foodb/`** with its `Dockerfile` and `setup.sh`, and source the
-   `setup.sh` from `pmm-framework` and `tests/helpers/test_helper.bash`. Build
-   `setup_foodb` from the `lib/run_helpers.sh` and `lib/pmm_client.sh` helpers.
+   `setup.sh` from `pmm-framework`; `tests/helpers/test_helper.bash` sources
+   the same list. Build `setup_foodb` from the `lib/run_helpers.sh` and
+   `lib/pmm_client.sh` helpers.
 3. **Add `build_foodb_image`** to `lib/images.sh` (`build_image foodb:TAG foodb
    --build-arg ...`). The Dockerfile's `ARG`s take no defaults, and the builder
    passes every one of them; `tests/dispatch.bats` checks. Add the image to

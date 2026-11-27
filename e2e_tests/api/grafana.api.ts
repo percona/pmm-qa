@@ -3,6 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
+import { ScrapeTarget } from '@interfaces/prometheus';
 
 export default class GrafanaApi {
   constructor(private request: APIRequestContext) {}
@@ -20,11 +21,15 @@ export default class GrafanaApi {
     ).toEqual(200);
   };
 
-  createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
+  createDashboard = async (
+    title: string,
+    panelTitle: string,
+    panel: Record<string, unknown> = { type: 'timeseries' },
+  ): Promise<GrafanaDashboard> => {
     const response = await this.request.post(apiEndpoints.grafana.dashboards, {
       data: {
         dashboard: {
-          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, type: 'timeseries' }],
+          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, ...panel }],
           schemaVersion: 39,
           title,
         },
@@ -105,7 +110,10 @@ export default class GrafanaApi {
     expect(response.status(), await response.text()).toEqual(200);
   };
 
-  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+  getActiveTargetByExternalGroup = async (externalGroup: string) =>
+    (await this.getActiveTargets()).find(({ labels }) => labels.external_group === externalGroup);
+
+  getActiveTargets = async (): Promise<ScrapeTarget[]> => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const response = await this.request.get('prometheus/api/v1/targets', { headers });
 
@@ -114,11 +122,7 @@ export default class GrafanaApi {
       `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
 
-    const body = await response.json();
-
-    return body.data.activeTargets.find(
-      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
-    );
+    return (await response.json()).data.activeTargets;
   };
 
   getDataSourceByName = async (name = 'Metrics') => {

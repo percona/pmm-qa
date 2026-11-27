@@ -34,12 +34,13 @@ HEADLESS=true
 WORKERS=1
 ```
 
-| Variable         | Default             | Purpose                                                |
-| ---------------- | ------------------- | ------------------------------------------------------ |
-| `PMM_UI_URL`     | `http://localhost/` | PMM server base URL.                                   |
-| `ADMIN_PASSWORD` | `admin`             | Password used to authenticate as PMM `admin`.          |
-| `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
-| `WORKERS`        | `1`                 | Playwright worker count.                               |
+| Variable         | Default                 | Purpose                                                |
+| ---------------- | ----------------------- | ------------------------------------------------------ |
+| `PMM_UI_URL`     | `http://localhost/`     | PMM server base URL.                                   |
+| `ADMIN_PASSWORD` | `admin`                 | Password used to authenticate as PMM `admin`.          |
+| `HEADLESS`       | `true`                  | Browser visibility; use `false` for a visible browser. |
+| `WORKERS`        | `1`                     | Playwright worker count.                               |
+| `MAILPIT_URL`    | `http://127.0.0.1:8025` | Mailpit API the Advisors email tests read.             |
 
 `@pmm-ha` and `@ha-backup-restore` tests need `kubectl` on the runner and a `KUBECONFIG`
 pointing at the PMM HA cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
@@ -52,6 +53,24 @@ sets up; without them it fails on the missing backup-tools Deployment. It is kep
 PMM-T1482 (`@ia`) needs the `webhookd` container on the `pmm-qa` network beside PMM Server.
 It sits behind the `webhookd` compose profile, so a plain `docker compose up -d` skips it;
 start it by name from `e2e_tests/`: `docker compose up -d --no-deps webhookd`.
+
+The `@advisors` and `@advisor-scheduling` email tests read the mail PMM Server sends from the
+`mailpit` container, which `docker compose up -d` starts with PMM Server; PMM Server sends to it
+through its `GF_SMTP_*` variables. Open `http://localhost:8025` to see the messages.
+
+`@advisor-scheduling` tests create schedules due in the next minute and wait for them, and they stop
+and restart pmm-managed in the `pmm-server` container, so they run in their own CI job. Its tag must
+not start with `@advisors`, which `--grep` would also match.
+
+`@advisor-telemetry` tests start a second PMM Server, `pmm-server-advisor-telemetry` on port 460,
+with debug telemetry every 15 s, and read the reports it logs as "Telemetry captured". It monitors the
+`ps_pmm_*` container from `pmm-framework --database ps=8.4` twice, as two remote services.
+
+`@advisor-databases` tests start their own `mysql:5.7`, `mongo:8.2` and `postgres:17` containers on the
+`pmm-qa` network and add them as remote services that PMM Server's own agent monitors. `mysql:5.7` has no
+arm64 image, so their CI job runs on amd64 only. `@advisor-versions` tests do the same with pinned MySQL,
+Percona Server, MariaDB, MongoDB and PostgreSQL images, in a CI job of their own that also runs on amd64 only.
+That job also sets up `ps=8.0`, `psmdb=6.0` and `pgsql=14` with pmm-framework for PMM-T2622, which checks those agent-monitored services.
 
 ## Running Tests
 
@@ -95,11 +114,20 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
+- `@advisor-databases`
+- `@advisor-scheduling`
+- `@advisor-telemetry`
+- `@advisor-versions`
+- `@advisors`
 - `@alerting`
 - `@ami-ovf-post-upgrade`
 - `@ami-ovf-pre-upgrade`
 - `@annotations`
+- `@aws`
+- `@bm-common`
 - `@bm-locations`
+- `@bm-mongo`
+- `@bm-mysql`
 - `@dashboards`
 - `@disconnect`
 - `@docker-configuration`
@@ -112,13 +140,14 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-settings`
 - `@grafana-pr`
 - `@gssapi-nightly`
+- `@ha-argocd`
 - `@ha-backup-restore`
 - `@ia`
 - `@image-renderer`
 - `@instances`
 - `@inventory`
 - `@inventory-fb`
-- `@LBAC`
+- `@lbac`
 - `@max-length`
 - `@menu`
 - `@mongodb-exporter`
@@ -126,16 +155,24 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@nomad`
 - `@not-ui-pipeline`
+- `@pbm-alerting`
+- `@pbm-external`
 - `@pbm-nightly`
+- `@pdpgsql-pmm-integration`
 - `@permissions-nightly`
+- `@pgsm-pmm-integration`
+- `@pgss-pmm-integration`
 - `@pmm-ha`
 - `@pmm-helm-mid-upgrade`
 - `@pmm-helm-post-upgrade`
 - `@pmm-helm-pre-upgrade`
+- `@pmm-pcsm-psmdb-integration`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-ps-replica-integration`
+- `@pmm-psmdb-arbiter-integration`
 - `@pmm-psmdb-integration`
+- `@pmm-psmdb-replica-integration`
 - `@pmm-psmdb-sharding-integration`
 - `@pmm-pxc-integration`
 - `@pmm-upgrade`
@@ -146,6 +183,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pre-upgrade`
 - `@pt-summary-nightly`
 - `@qan`
+- `@rbac`
 - `@rta`
 - `@service-account`
 - `@settings`
