@@ -62,6 +62,19 @@ export default class DockerHelper {
     return container;
   };
 
+  getContainerVolume = (container: string, destination: string) => {
+    const volume = this.cliHelper
+      .execSilent(
+        `docker inspect -f '{{range .Mounts}}{{if eq .Destination "${destination}"}}{{.Name}}{{end}}{{end}}' ${container}`,
+      )
+      .assertSuccess()
+      .stdout.trim();
+
+    if (!volume) throw new Error(`Container ${container} has no volume on ${destination}`);
+
+    return volume;
+  };
+
   // 000 when nothing answers on the address, as for an exporter listening only on its own host's 127.0.0.1.
   getHttpStatus = (container: string, url: string) =>
     this.cliHelper

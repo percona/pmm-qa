@@ -2,8 +2,6 @@
 
 volumes:
   pmm-volume:
-  pmm-encryption-upgrade-volume:
-    name: pmm-encryption-upgrade-volume
 
 networks:
   pmm-network:
@@ -124,7 +122,7 @@ services:
       - PMM_ENABLE_TELEMETRY=0
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     volumes:
-      - pmm-encryption-upgrade-volume:/srv
+      - /srv
     networks:
       - pmm-qa
     healthcheck:

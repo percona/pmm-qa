@@ -229,6 +229,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
   let artifactId = '';
   let locationId = '';
   let upgradeRequest: APIRequestContext | undefined;
+  let upgradeVolume = '';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     cliHelper
@@ -268,12 +269,15 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
     if (upgradeRequest) {
       await upgradeRequest.dispose();
       cliHelper.execute(`${upgradeCompose} rm -sfv ${upgradeContainer}`).assertSuccess();
-      cliHelper.execute('docker volume rm -f pmm-encryption-upgrade-volume').assertSuccess();
+
+      // Once the upgrade recreates the container, it mounts the volume by name, so rm -v leaves it behind.
+      if (upgradeVolume) cliHelper.execute(`docker volume rm -f ${upgradeVolume}`).assertSuccess();
     }
 
     artifactId = '';
     locationId = '';
     upgradeRequest = undefined;
+    upgradeVolume = '';
   });
 
   pmmTest(
@@ -518,7 +522,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
 
   pmmTest(
     'PMM-T2896 - Verify upgrade encrypts Valkey TLS and S3 location secrets an older PMM stored as plaintext @fb-encryption',
-    async ({ cliHelper, encryptionHelper }) => {
+    async ({ cliHelper, dockerHelper, encryptionHelper }) => {
       const serviceName = `valkey_tls_upgrade_${Math.floor(Math.random() * 99) + 1}`;
       const targetImage = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 
@@ -530,6 +534,7 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
       const upgradeApi = new Api(upgradeRequest);
 
       cliHelper.execute(`${upgradeCompose} up -d --wait ${upgradeContainer}`).assertSuccess();
+      upgradeVolume = dockerHelper.getContainerVolume(upgradeContainer, '/srv');
       await expect(async () => {
         const { pmm_agent: pmmAgents } = await upgradeApi.inventoryApi.getAgents();
 
