@@ -1,4 +1,4 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import {
   AgentStatus,
@@ -26,9 +26,7 @@ export default class InventoryApi {
   };
 
   deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
-    const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
+    const response = await this.requestNodeUnregistration(nodeId, force);
 
     expect(
       response.status(),
@@ -246,6 +244,21 @@ export default class InventoryApi {
     }
   };
 
+  requestAgentRemoval = (agentId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.inventory.agents}/${agentId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+  requestNodeRemoval = (nodeId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.inventory.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+  requestNodeUnregistration = (nodeId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
   requestServiceUpdate = (
     serviceId: string,
     serviceType: string,
@@ -271,6 +284,17 @@ export default class InventoryApi {
           .every((agent) => agent.status === AgentStatus.running),
       )
       .catch(() => false);
+
+  verifyRequestRefused = async (
+    response: APIResponse,
+    expectedStatus: number,
+    message: string,
+  ): Promise<void> => {
+    const body = await response.text();
+
+    expect(response.status(), body).toEqual(expectedStatus);
+    expect(body).toContain(message);
+  };
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
