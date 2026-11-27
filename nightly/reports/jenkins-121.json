@@ -4141,15 +4141,19 @@
       "link": "https://perconadev.atlassian.net/browse/PMM-16001",
       "by": "Investigator routine",
       "at": "2026-11-27T04:30:49Z"
+    },
+    {
+      "suites": [
+        "CLI Integration",
+        "Integrations",
+        "CLI Integration Compatibility"
+      ],
+      "verdict": "test bug",
+      "summary": "PSMDB Replica 8.x (CLI, GSSAPI OL8/OL9, compat 3.11.0): all 98 tests passed, then the json reporter died with 'RangeError: Invalid string length'. cli.exec logs every /metrics scrape twice, and after PMM-T2860/T2861 mongod's top keeps 3000 namespaces, so an all-collectors scrape is 10 MB; the update and PBM specs poll them. On a CHAOS VM main logged 420 MB of test stdout (505 MB JSON, 94% of V8's limit); the fix logs only scrape sizes: 12.9 MB, results.json written.",
+      "link": "https://github.com/percona/pmm-qa/pull/1844",
+      "by": "Investigator routine",
+      "at": "2026-11-27T04:31:03Z"
     }
   ],
-  "claims": [
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-27T02:52:31Z",
-      "suites": [
-        "Integrations"
-      ]
-    }
-  ]
+  "claims": []
 }
