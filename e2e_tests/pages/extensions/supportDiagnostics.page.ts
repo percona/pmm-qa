@@ -26,8 +26,8 @@ export default class SupportDiagnosticsPage extends BasePage {
   };
   buttons = {
     choosePickerDate: this.page.getByRole('button', { name: 'Choose date' }),
-    executeBatch: this.page.getByRole('button', { name: 'Execute batch' }),
     pickerOk: this.page.getByRole('dialog').getByRole('button', { exact: true, name: 'OK' }),
+    runDiagnostics: this.page.getByRole('button', { exact: true, name: 'Run diagnostics' }),
   };
   elements = {
     collectHeading: this.page.getByRole('heading', { name: 'Collect' }),

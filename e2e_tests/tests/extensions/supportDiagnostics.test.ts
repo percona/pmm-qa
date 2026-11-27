@@ -136,8 +136,8 @@ pmmTest(
       await expect(inputs.issueTime).toHaveValue(supportDiagnosticsPage.getExpectedIssueTime());
     });
 
-    await pmmTest.step('Execute the batch and verify the run starts with the picked time', async () => {
-      await buttons.executeBatch.click();
+    await pmmTest.step('Run diagnostics and verify the run starts with the picked time', async () => {
+      await buttons.runDiagnostics.click();
 
       await expect(messages.startedOneScript).toBeVisible();
       await expect(builders.executionRow(supportDiagnosticsPage.logExtractorTitle)).toBeVisible();
