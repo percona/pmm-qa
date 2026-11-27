@@ -40,14 +40,14 @@ export default class PostgresqlHelper {
   pgbench = (container: string, args: string) =>
     this.cliHelper.execute(`docker exec ${container} pgbench ${args}`).assertSuccess();
 
-  query = (container: string, query: string) =>
+  query = (container: string, query: string, user = 'postgres') =>
     this.cliHelper
-      .execute(`docker exec ${container} psql -U postgres -tAc ${CliHelper.shellQuote(query)}`)
+      .execute(`docker exec ${container} psql -U ${user} -tAc ${CliHelper.shellQuote(query)}`)
       .assertSuccess()
       .stdout.trim();
 
-  queryRows = <T>(container: string, query: string) =>
-    JSON.parse(this.query(container, `SELECT coalesce(json_agg(t), '[]') FROM (${query}) t;`)) as T[];
+  queryRows = <T>(container: string, query: string, user = 'postgres') =>
+    JSON.parse(this.query(container, `SELECT coalesce(json_agg(t), '[]') FROM (${query}) t;`, user)) as T[];
 
   setPgStatMonitorBucketTime = (container: string, seconds: number) => {
     this.query(container, `ALTER SYSTEM SET pg_stat_monitor.pgsm_bucket_time = ${seconds};`);
