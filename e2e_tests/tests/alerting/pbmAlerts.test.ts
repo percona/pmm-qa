@@ -31,11 +31,14 @@ pmmTest.beforeEach(async ({ api }) => {
 });
 
 pmmTest.afterEach(async ({ api, cliHelper }) => {
-  if (cliHelper.execute("docker inspect -f '{{.State.Paused}}' minio").stdout.trim() === 'true') {
-    cliHelper.execute('docker unpause minio').assertSuccess();
-  }
+  const minioPaused = cliHelper
+    .execute("docker inspect -f '{{.State.Paused}}' minio")
+    .assertSuccess()
+    .stdout.trim();
 
-  cliHelper.execute('docker start minio');
+  if (minioPaused === 'true') cliHelper.execute('docker unpause minio').assertSuccess();
+
+  cliHelper.execute('docker start minio').assertSuccess();
 
   for (const member of members) {
     cliHelper.execute(`docker exec ${member} systemctl start pbm-agent`);
