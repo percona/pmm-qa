@@ -115,7 +115,7 @@ const frameworkNode = async (api: Api, dockerHelper: DockerHelper, serviceRegex:
 };
 
 pmmTest(
-  'PMM-T2901 - System Summary shows the selected node @node-summary',
+  'PMM-T2901 - System Summary shows the selected node @matrix-dashboards',
   async ({ api, dashboard, dockerHelper, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
     const pxc = await frameworkNode(api, dockerHelper, '^pxc_node__1_');
@@ -198,7 +198,7 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
   });
 
   pmmTest(
-    'PMM-T2903 - Services panels list every service with health @node-summary',
+    'PMM-T2903 - Services panels list every service with health @matrix-dashboards',
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const { panelName: servicesPanel, statusColors } = nodeSummary.services;
@@ -328,7 +328,7 @@ pmmTest.describe('Node Summary disk panels under load', () => {
   });
 
   pmmTest(
-    'PMM-T2904 - Disk panels match the host @node-summary',
+    'PMM-T2904 - Disk panels match the host @matrix-dashboards',
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const { panelName: operationsPanel, read, write } = nodeSummary.diskOperations;
@@ -431,7 +431,7 @@ pmmTest.describe('Node Summary with a kernel file limit', () => {
   });
 
   pmmTest(
-    'PMM-T2905 - File descriptors with no limit @node-summary',
+    'PMM-T2905 - File descriptors with no limit @matrix-dashboards',
     async ({ api, cliHelper, dashboard, page, urlHelper }) => {
       const { fileDescriptors, url } = dashboard.os.nodeSummary;
       const nodeName = await api.haApi.getPmmServerNodeName();
@@ -480,7 +480,7 @@ pmmTest.describe('Node Summary with a kernel file limit', () => {
 });
 
 pmmTest(
-  'PMM-T2906 - All panels show data, new Disk panels included @node-summary',
+  'PMM-T2906 - All panels show data, new Disk panels included @matrix-dashboards',
   async ({ api, dashboard, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
 
@@ -517,7 +517,7 @@ pmmTest.describe('Node Summary after re-registering a node', () => {
   });
 
   pmmTest(
-    'PMM-T2902 - System Summary after re-registering a node @node-summary',
+    'PMM-T2902 - System Summary after re-registering a node @matrix-dashboards',
     async ({ api, cliHelper, dashboard, dockerHelper, nodesPage, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const summaryUrl = () =>

@@ -166,6 +166,19 @@ jobs:
       setup_services: '--database psmdb,SETUP_TYPE=psa'
       pmm_test_flag: '@pmm-psmdb-integration'
 
+  dashboards:
+    name: Dashboards tests
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      arch: ${{ inputs.arch }}
+      setup_services: '--database pxc --database psmdb,SETUP_TYPE=psa --database valkey'
+      pmm_test_flag: '@matrix-dashboards'
+
   new-navigation:
     name: New Navigation UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
