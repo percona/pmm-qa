@@ -101,16 +101,14 @@ pmmTest.describe('External ClickHouse', () => {
     'PMM-T2019 - Verify pmm managed logs do not contain errors about clickhouse @docker-configuration',
     async ({ cliHelper }) => {
       const pmmManagedLogs = cliHelper
-        .execSilent(
-          `docker exec ${pmmServerContainer} sh -c 'grep clickhouse /srv/logs/pmm-managed.log; [ $? -le 1 ]'`,
-        )
+        .execSilent(`docker exec ${pmmServerContainer} cat /srv/logs/pmm-managed.log`)
         .assertSuccess().stdout;
       const qanLogs = cliHelper
-        .execSilent(
-          `docker exec ${pmmServerContainer} sh -c 'grep clickhouse /srv/logs/qan-api2.log; [ $? -le 1 ]'`,
-        )
+        .execSilent(`docker exec ${pmmServerContainer} cat /srv/logs/qan-api2.log`)
         .assertSuccess().stdout;
 
+      expect(pmmManagedLogs).not.toHaveLength(0);
+      expect(qanLogs).not.toHaveLength(0);
       expect(pmmManagedLogs, 'PMM managed logs should not contain error about clickhouse.').not.toContain(
         'ClickHouse DB is not reachable',
       );
