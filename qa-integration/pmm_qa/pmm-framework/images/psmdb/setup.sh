@@ -12,8 +12,9 @@
 # one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster; 'standalone_no_pbm'
 # is one mongod in its own container, with no replica set and no PBM.
 # QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
+# OPERATIONS=true prepares every node for Operations for MongoDB scans.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio query_source external_pbm tarball='' suffix
+  local version ol client setup_type profile gssapi minio query_source external_pbm operations tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -25,6 +26,7 @@ setup_psmdb() {
   query_source=$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)
   query_source=${query_source,,}
   external_pbm=$(bool_string "$(resolve_value PSMDB EXTERNAL_PBM DB_CONFIG)")
+  operations=$(bool_string "$(resolve_value PSMDB OPERATIONS DB_CONFIG)")
   suffix=$RANDOM
 
   case $setup_type in
@@ -44,6 +46,9 @@ setup_psmdb() {
       die 'PSMDB EXTERNAL_PBM=true needs PBM, which SETUP_TYPE=standalone_no_pbm does not run.'
     [[ $minio == true ]] || die 'PSMDB EXTERNAL_PBM=true needs MINIO=true: the backups go to its storage.'
     [[ $profile != extra ]] || die 'PSMDB EXTERNAL_PBM=true does not support the extra compose profile.'
+  fi
+  if [[ $operations == true && $setup_type == standalone_no_pbm ]]; then
+    die 'PSMDB OPERATIONS=true needs the writable cgroups of the replica set or sharded containers, which SETUP_TYPE=standalone_no_pbm does not give.'
   fi
   step "Prepare image pmm-qa/psmdb:$version-ol$ol" ensure_image psmdb "$version-ol$ol"
   # The standalone runs the image by name: retagging would clobber the replica set running beside it.
@@ -152,6 +157,22 @@ psmdb_pbm_agent() {
 
 psmdb_mask_pbm_agent() {
   must docker exec "$1" systemctl mask --now pbm-agent
+}
+
+# An Operations for MongoDB scan runs in a venv that Nomad builds with the node's python3, and logs
+# in as the user in root's .mongodb_uri. An arbiter holds no users, so it gets no file.
+# Usage: psmdb_operations_node NODE [ARBITER...]
+psmdb_operations_node() {
+  local node=$1 arbiter
+  shift
+  retry_on "$PMM_REPO_ERRORS|metadata_lock" 3 "the Operations for MongoDB packages on $node" \
+    docker exec --user root "$node" dnf install -y python3 python3-pip iproute >/dev/null
+  docker exec --user root "$node" sh -ceu 'python3 -m venv --copies /tmp/pmm-qa-venv-check; rm -rf /tmp/pmm-qa-venv-check' >/dev/null ||
+    die "python3 on $node cannot build the venv an Operations for MongoDB scan runs in."
+  for arbiter; do
+    [[ $node != "$arbiter" ]] || return 0
+  done
+  must docker exec --user root "$node" sh -ceu "umask 077; echo mongodb://pmm:pmmpass@$node:27017 >/root/.mongodb_uri"
 }
 
 # Usage: psmdb_pbm_uri REPLICA_SET NODE...
@@ -316,6 +337,9 @@ psmdb_replica_set() {
   fi
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node nodes psmdb_client
+  if [[ $operations == true ]]; then
+    step 'Prepare the nodes for Operations for MongoDB' each_node nodes psmdb_operations_node "$arbiter" "${arbiter/103/203}"
+  fi
   if [[ $external_pbm == true ]]; then
     local -a members=(rs101 rs102 rs103)
     if [[ -n $arbiter ]]; then
@@ -412,6 +436,9 @@ psmdb_sharded() {
   done
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node clients psmdb_client
+  if [[ $operations == true ]]; then
+    step 'Prepare the nodes for Operations for MongoDB' each_node clients psmdb_operations_node
+  fi
   if [[ $external_pbm == true ]]; then
     step 'Disable the members pbm-agent' each_node nodes psmdb_mask_pbm_agent
     psmdb_external_pbm "$(psmdb_pbm_uri rscfg rscfg01 rscfg02 rscfg03)" "${nodes[@]}"

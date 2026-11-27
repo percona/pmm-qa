@@ -615,7 +615,7 @@ recorded_config_dir() {
 @test "PSMDB sharding with QUERY_SOURCE=mongolog gives every mongod and mongos a file log" {
   stub_prebaked_docker
   record_compose_config_dirs
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { :; }
   TMPDIR=$BATS_TEST_TMPDIR
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
@@ -771,6 +771,49 @@ psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true,MINIO=false|PSMDB EXTERNAL_PBM=true n
 psmdb=8.0,SETUP_TYPE=standalone_no_pbm,EXTERNAL_PBM=true|PSMDB EXTERNAL_PBM=true needs PBM, which SETUP_TYPE=standalone_no_pbm does not run.
 psmdb=8.0,SETUP_TYPE=pss,EXTERNAL_PBM=true,COMPOSE_PROFILES=extra|PSMDB EXTERNAL_PBM=true does not support the extra compose profile.
 SPECS
+}
+
+@test "PSMDB OPERATIONS prepares every node for Operations for MongoDB scans, and the default does not" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss,MINIO=false'
+  dispatch_setup
+  ! grep -Eq 'python3|mongodb_uri|iproute' "$DOCKER_CALLS" || false
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false,OPERATIONS=true'
+  dispatch_setup
+  [[ $(grep -c '^exec --user root rs[12]0[123] dnf install -y python3 python3-pip iproute$' "$DOCKER_CALLS") -eq 6 ]]
+  [[ $(grep -c '^exec --user root rs[12]0[123] sh -ceu python3 -m venv --copies /tmp/pmm-qa-venv-check' "$DOCKER_CALLS") -eq 6 ]]
+  grep -Fq 'exec --user root rs102 sh -ceu umask 077; echo mongodb://pmm:pmmpass@rs102:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
+  [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 4 ]]
+  ! grep -Eq '^exec --user root rs[12]03 .*mongodb_uri' "$DOCKER_CALLS" || false
+  [[ $(grep -n 'mongodb_uri' "$DOCKER_CALLS" | head -1 | cut -d: -f1) -gt $(grep -n 'createUser({ user: "pmm"' "$DOCKER_CALLS" | head -1 | cut -d: -f1) ]]
+
+  : >"$DOCKER_CALLS"
+  # shellcheck disable=SC2329,SC2317
+  psmdb_traffic() { :; }
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,OPERATIONS=true'
+  dispatch_setup
+  [[ $(grep -c 'dnf install -y python3 python3-pip iproute$' "$DOCKER_CALLS") -eq 10 ]]
+  [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 10 ]]
+  grep -Fq 'exec --user root mongos sh -ceu umask 077; echo mongodb://pmm:pmmpass@mongos:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=standalone_no_pbm,OPERATIONS=true'
+  run dispatch_setup
+  [[ $status -ne 0 ]]
+  [[ $output == *'PSMDB OPERATIONS=true needs the writable cgroups of the replica set or sharded containers, which SETUP_TYPE=standalone_no_pbm does not give.'* ]]
+  ! grep -Eq '^(run|compose|tag) ' "$DOCKER_CALLS" || false
+}
+
+@test "an Operations node fails its setup when python3 cannot build the venv a scan runs in" {
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    [[ $* != *'python3 -m venv'* ]] || { printf 'The virtual environment was not created successfully because ensurepip is not available.\n' >&2; return 1; }
+  }
+  run psmdb_operations_node rs101
+  [[ $status -ne 0 ]]
+  [[ $output == *'python3 on rs101 cannot build the venv an Operations for MongoDB scan runs in.'* ]]
 }
 
 @test "PSMDB passes QUERY_SOURCE=none through and rejects an unknown query source" {

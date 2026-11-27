@@ -56,6 +56,20 @@ on:
         type: boolean
         default: false
         required: false
+      enable_extensions:
+        description: 'Start PMM Extensions beside PMM Server (amd64 only)'
+        type: boolean
+        default: false
+        required: false
+      enable_mongodb_operations:
+        description: 'Start PMM Server with Operations for MongoDB on (PMM_ENABLE_OM=1); implies enable_extensions'
+        type: boolean
+        default: false
+        required: false
+      pmm_extensions_image:
+        description: 'PMM Extensions image (default: the pmm-server release or RC tag, else percona/pmm-extensions:3)'
+        type: string
+        required: false
 
   workflow_call:
     inputs:
@@ -94,6 +108,17 @@ on:
         type: boolean
         required: false
         default: false
+      enable_extensions:
+        type: boolean
+        required: false
+        default: false
+      enable_mongodb_operations:
+        type: boolean
+        required: false
+        default: false
+      pmm_extensions_image:
+        type: string
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -123,6 +148,9 @@ jobs:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'PMM3testuser!'
       PMM_ENABLE_NOMAD: ${{ inputs.enable_nomad && '1' || '0' }}
+      ENABLE_EXTENSIONS: ${{ (inputs.enable_extensions || inputs.enable_mongodb_operations) && 'true' || 'false' }}
+      ENABLE_MONGODB_OPERATIONS: ${{ inputs.enable_mongodb_operations && 'true' || 'false' }}
+      PMM_EXTENSIONS_IMAGE: ${{ inputs.pmm_extensions_image || '' }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       SUBSET_FILE_NAME: 'launchable-subset.txt'
@@ -214,16 +242,46 @@ jobs:
           ls
           docker network create pmm-qa
           docker volume create pmm-volume
+          compose=(docker compose -f docker-compose.yml)
+          if [[ $ENABLE_EXTENSIONS == true ]]; then
+            if [[ $(uname -m) != x86_64 ]]; then
+              echo "PMM Extensions images are published for amd64 only, not $(uname -m)." >&2
+              exit 1
+            fi
+            compose+=(-f docker-compose-extensions.yml)
+            # The two images must carry the same version; dev and FB servers have no extensions image of their own.
+            if [[ -z $PMM_EXTENSIONS_IMAGE ]]; then
+              case $DOCKER_VERSION in
+                percona/pmm-server:* | perconalab/pmm-server:*-rc*) PMM_EXTENSIONS_IMAGE=${DOCKER_VERSION/pmm-server/pmm-extensions} ;;
+                *) PMM_EXTENSIONS_IMAGE=percona/pmm-extensions:3 ;;
+              esac
+            fi
+            export PMM_EXTENSIONS_IMAGE
+            echo "PMM Extensions image: $PMM_EXTENSIONS_IMAGE"
+            if [[ $ENABLE_MONGODB_OPERATIONS == true ]]; then
+              export PMM_ENABLE_OM=1
+            fi
+            # The runner's own PMM Client reaches Nomad and the task scripts by these names.
+            echo '127.0.0.1 pmm-server pmm-extensions' | sudo tee -a /etc/hosts
+          fi
           for attempt in 1 2 3; do
-            PWD=$(pwd) docker compose -f docker-compose.yml pull --quiet && break
+            PWD=$(pwd) "${compose[@]}" pull --quiet && break
             echo "docker compose pull failed (attempt $attempt/3); retrying in 15s..."
             sleep 15
           done
-          PWD=$(pwd) docker compose -f docker-compose.yml up -d
+          PWD=$(pwd) "${compose[@]}" up -d
           # shellcheck disable=SC2016
           # Deliberately unexpanded: the inner bash -c does the expanding, and
           # curl's %{http_code} must reach curl literally.
           timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
+          if [[ $ENABLE_EXTENSIONS == true ]]; then
+            # shellcheck disable=SC2016
+            # As above: curl's %{http_code} must reach curl literally.
+            if ! timeout 300 bash -c 'until [ "$(curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/extensions/health)" = "200" ]; do sleep 5; done'; then
+              docker logs --tail 100 pmm-extensions
+              exit 1
+            fi
+          fi
 
       - name: Setup PMM-Client
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

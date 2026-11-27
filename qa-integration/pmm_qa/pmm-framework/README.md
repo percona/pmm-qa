@@ -156,8 +156,22 @@ not through PMM Backup Management: an empty `pbm-external` container on the setu
 from the Percona repository, runs one `pbm-agent` per member over the network (the members' own are masked),
 turns PITR on (`pitr.oplogSpanMin=1`) and takes a logical backup every 15 minutes from cron, after a first one at setup.
 Agents reach mongod over the network, so only logical backups work. It needs `MINIO=true` and a setup with PBM, so not
-`standalone_no_pbm`, and does not support the `extra` compose profile. A version or option not registered there is refused, so a typo
-cannot quietly run a different setup.
+`standalone_no_pbm`, and does not support the `extra` compose profile.
+
+`PSMDB` takes `OPERATIONS=true` (default `false`) to prepare its nodes for Operations for MongoDB scans. Every
+member and `mongos` gets `python3`, `python3-pip` and `iproute`, and the setup fails when `python3 -m venv`
+cannot build the venv a scan runs in. Every member but an arbiter gets `/root/.mongodb_uri`, mode 600, with the
+`pmm` user, which holds `clusterMonitor`. The replica set and sharded containers already give Nomad writable
+cgroups and run `pmm-agent` as root. `standalone_no_pbm` runs unprivileged, so it refuses the option. PMM
+Server needs PMM Extensions and `PMM_ENABLE_OM=1`: see
+[`e2e_tests/docker-compose-extensions.yml`](../../../e2e_tests/docker-compose-extensions.yml).
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database psmdb,SETUP_TYPE=pss,OPERATIONS=true
+```
+
+A version or option not registered in `lib/config.sh` is refused, so a typo cannot quietly run a different setup.
 
 Configuration precedence is:
 

@@ -72,6 +72,26 @@ arm64 image, so their CI job runs on amd64 only. `@advisor-versions` tests do th
 Percona Server, MariaDB, MongoDB and PostgreSQL images, in a CI job of their own that also runs on amd64 only.
 That job also sets up `ps=8.0`, `psmdb=6.0` and `pgsql=14` with pmm-framework for PMM-T2622, which checks those agent-monitored services.
 
+Tests of PMM Extensions apps and of Operations for MongoDB need PMM Server started with
+[`docker-compose-extensions.yml`](./docker-compose-extensions.yml) beside `docker-compose.yml`. It adds the
+`pmm-extensions` container and starts PMM Server with `PMM_ENABLE_EXTENSIONS=1`, `PMM_ENABLE_NOMAD=1`,
+`PMM_PUBLIC_ADDRESS=pmm-server` and port 4647. `PMM_ENABLE_OM=1` in the environment also turns on Operations
+for MongoDB. Left unset, it stays unset in the container: any value there, `0` included, locks the setting in
+the UI. The images are amd64 only. `PMM_EXTENSIONS_IMAGE` picks the PMM Extensions image (default
+`percona/pmm-extensions:3`); keep it on PMM Server's version, or the app pages warn about the mismatch.
+
+```bash
+PMM_ENABLE_OM=1 docker compose -f docker-compose.yml -f docker-compose-extensions.yml up -d
+curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1/extensions/health   # 200 once it is up
+```
+
+In CI, `runner-e2e-tests-playwright.yml` does the same with its `enable_extensions`, `enable_mongodb_operations`
+and `pmm_extensions_image` inputs. Without `pmm_extensions_image` it runs the PMM Extensions image of a
+`percona/pmm-server` tag or a `perconalab/pmm-server` RC tag, and `percona/pmm-extensions:3` beside a dev or FB
+server, which have no image of their own. It also maps `pmm-server` and `pmm-extensions` to `127.0.0.1` on the
+runner, so the PMM Client the runner installs reaches Nomad and the task scripts too. Monitored MongoDB nodes
+that Operations for MongoDB can scan come from `pmm-framework --database psmdb,OPERATIONS=true`.
+
 ## Running Tests
 
 Run commands from `e2e_tests/`.

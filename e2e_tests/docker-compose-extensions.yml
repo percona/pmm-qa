@@ -1,0 +1,48 @@
+---
+# PMM Extensions beside the pmm-server of docker-compose.yml, as "Deploy PMM Extensions
+# with Docker" in the PMM docs sets it up. Give both files to every compose command:
+#   docker compose -f docker-compose.yml -f docker-compose-extensions.yml up -d
+# PMM_ENABLE_OM=1 in the environment also turns on Operations for MongoDB.
+
+volumes:
+  pmm-extensions:
+  pmm-extensions-state:
+
+services:
+  pmm-server:
+    ports:
+      - "4647:4647"
+    environment:
+      - PMM_ENABLE_EXTENSIONS=1
+      - PMM_ENABLE_NOMAD=1
+      # Nomad clients dial the address the server advertises, so it has to resolve on pmm-qa.
+      - PMM_PUBLIC_ADDRESS=pmm-server
+      # Passed only when set: any value, 0 included, locks the setting in the UI.
+      - PMM_ENABLE_OM
+    volumes:
+      - pmm-extensions:/srv/extensions
+
+  # PMM Server routes /extensions/ to this container name.
+  pmm-extensions:
+    image: ${PMM_EXTENSIONS_IMAGE:-percona/pmm-extensions:3}
+    container_name: pmm-extensions
+    depends_on:
+      - pmm-server
+    # PMM Server writes the secrets as group 0.
+    group_add:
+      - "0"
+    environment:
+      - SECRETS_DIR=/run/secrets/extensions
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      # Task executors download their scripts from here: the pmm-qa containers by name,
+      # a client on the host through the published port and an /etc/hosts entry.
+      - BASE_URL=http://pmm-extensions:9000/extensions
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - pmm-extensions:/run/secrets/extensions:ro
+      - pmm-extensions-state:/home/extensions/state
+    networks:
+      - pmm-network
+      - pmm-qa
