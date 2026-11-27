@@ -1,0 +1,30 @@
+<clickhouse>
+    <profiles>
+        <!-- The Grafana ClickHouse plugin sets max_execution_time on every query, so that one
+             setting has to stay changeable under readonly=1. -->
+        <datasource>
+            <readonly>1</readonly>
+            <constraints>
+                <max_execution_time>
+                    <changeable_in_readonly/>
+                </max_execution_time>
+            </constraints>
+        </datasource>
+    </profiles>
+
+    <users>
+        <!-- Read-only user the PMM Grafana ClickHouse data source connects as, mirroring the one
+             the built-in ClickHouse ships with. Password is the sha256 of 'grafana'. -->
+        <grafana>
+            <password_sha256_hex>cace491b69555e8d0f77747d47ae54e31ce4cc322fe51a7bdcf64402f3676ebf</password_sha256_hex>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>datasource</profile>
+            <quota>default</quota>
+            <grants>
+                <query>GRANT SELECT ON pmm.*</query>
+            </grants>
+        </grafana>
+    </users>
+</clickhouse>
