@@ -335,8 +335,7 @@ pmmTest.describe('Node Summary disk panels under load', () => {
     cliHelper.execute(`sudo rm -f ${backingFile}`).assertSuccess();
   });
 
-  // eslint-disable-next-line playwright/no-skipped-test -- PMM-15999: Disk IO Utilization goes above 100% on a saturated disk; unskip once PMM-15999 is fixed.
-  pmmTest.skip(
+  pmmTest(
     'PMM-15901 - Disk panels match the host @node-summary',
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
