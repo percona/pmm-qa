@@ -145,7 +145,7 @@ export async function spawnScrape(
   const credentials = options.user ? `-e EXPORTER_USER=${options.user} -e EXPORTER_PASSWORD=${options.password}` : '';
 
   await (await cli.exec(`docker cp ./test-data/spawn-exporter-scrape.sh ${container}:/tmp/spawn-exporter-scrape.sh`)).assertSuccess();
-  const output = await cli.exec(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
+  const output = await cli.execSilent(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
   await output.assertSuccess();
 
   const [scrapeText, log] = output.stdout.split('---LOG---\n');
@@ -385,6 +385,9 @@ async function resyncWith(container: string, args: string) {
 
     expect(ended, `no resync has ended since pbm ${args}; PBM logged for it:\n${entries.map(formatLogEntry).join('\n') || 'nothing'}`).toBeTruthy();
   }).toPass({ intervals: [2_000], timeout: 120_000 });
+  // pbm-agent drops, without a word in its log, a command of the same type stamped with the same second as the one it took last,
+  // and a resync often ends within the second it was sent in, so the next one waits for the next second.
+  await new Promise((resolve) => { setTimeout(resolve, 1_000 - (Date.now() % 1_000)); });
 }
 
 /**

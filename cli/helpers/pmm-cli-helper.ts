@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
-import { exec } from '@helpers/cli-helper';
+import { exec, execSilent } from '@helpers/cli-helper';
 import { getAgentPort } from '@helpers/pmm-admin';
 
 /**
@@ -44,7 +44,7 @@ export async function createSelfSignedCertificate(containerName: string, name: s
  * @param   agentPassword   password of the exporter's /metrics endpoint
  */
 export async function scrapeExporterFromPmmServer(containerName: string, agentId: string, agentPassword: string): Promise<ExecReturn> {
-  return exec(`docker exec pmm-server curl -sSf -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
+  return execSilent(`docker exec pmm-server curl -sSf -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
 }
 
 /**
@@ -92,4 +92,26 @@ export async function restartContainerWithPmmAgent(containerName: string, config
   await (await exec(
     `docker exec -d ${containerName} sh -c "test -f /etc/systemd/system/pmm-agent.service || exec pmm-agent --config-file=${configFile} >>${logFile} 2>&1"`,
   )).assertSuccess();
+}
+
+/**
+ * Log lines matching a pattern that are timed at or after a point in time, read across the rotated files of the logs
+ *
+ * @param   containerName   docker container writing the logs
+ * @param   files           log files, as a shell glob
+ * @param   pattern         extended regular expression; must not contain quotes
+ * @param   since           keep the lines timed at or after this
+ */
+export async function logLinesSince(containerName: string, files: string, pattern: string, since: Date): Promise<string[]> {
+  const output = await exec(`docker exec ${containerName} sh -c "{ grep -hE '${pattern}' ${files}; echo grep_rc=\\$?; } | cut -c1-1000"`);
+  const lines = output.getStdOutLines();
+  const grepRc = lines.pop()?.match(/^grep_rc=(\d+)$/)?.[1];
+
+  expect(output.code === 0 && (grepRc === '0' || grepRc === '1'), `Could not read ${files} in ${containerName}: ${output.stderr.text}`).toBeTruthy();
+
+  return lines.filter((line) => {
+    const time = line.match(/time="([^"]+)"/)?.[1];
+
+    return time !== undefined && Date.parse(time) >= since.getTime();
+  });
 }
