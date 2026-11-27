@@ -31,6 +31,7 @@ pmmTest.beforeEach(async ({ api }) => {
 });
 
 pmmTest.afterEach(async ({ api, cliHelper }) => {
+  cliHelper.execute('docker unpause minio');
   cliHelper.execute('docker start minio');
 
   for (const member of members) {
@@ -92,10 +93,12 @@ pmmTest(
       // The resync of the previous test can still hold PBM's lock, which makes the backup command fail.
       await expect(async () => {
         cliHelper.execute('docker exec -d rs101 pbm backup').assertSuccess();
-        await expect(async () => {
-          expect(latestBackup('status')).toEqual('running');
-        }).toPass({ intervals: [Timeouts.TWO_SECONDS], timeout: Timeouts.THIRTY_SECONDS });
+        expect(
+          mongoDbHelper.waitForLatestPbmBackupStatus('rs101', 'running', Timeouts.THIRTY_SECONDS),
+        ).toEqual('running');
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+      // The test data set takes PBM seconds to back up: pausing freezes the storage at once, before the backup can finish.
+      cliHelper.execute('docker pause minio').assertSuccess();
       cliHelper.execute('docker stop minio').assertSuccess();
       await expect(async () => {
         expect(latestBackup('status')).toEqual('error');

@@ -279,4 +279,20 @@ export default class MongoDBHelper {
       return [];
     }
   };
+
+  /**
+   * Wait until the newest backup record in admin.pbmBackups has a status, and return the last status seen.
+   * One mongo shell polls every 100 ms: a status can last less than the time it takes to start a shell for each poll.
+   *
+   * @param   container   a PSMDB container whose mongod runs on port 27017
+   * @param   status      pbmBackups status to wait for, e.g. running
+   * @param   timeout     ms to wait before giving up
+   */
+  waitForLatestPbmBackupStatus = (container: string, status: string, timeout: number) =>
+    new CliHelper()
+      .execute(
+        `docker exec ${container} mongo "mongodb://root:root@localhost:27017/?authSource=admin&directConnection=true" --quiet --eval 'const deadline = Date.now() + ${timeout}; let status = "none"; while (Date.now() < deadline) { const backup = db.getSiblingDB("admin").pbmBackups.find().sort({ start_ts: -1 }).limit(1).toArray()[0]; status = backup ? backup.status : "none"; if (status === "${status}") break; sleep(100); } status'`,
+      )
+      .assertSuccess()
+      .stdout.trim();
 }
