@@ -145,7 +145,7 @@ export async function spawnScrape(
   const credentials = options.user ? `-e EXPORTER_USER=${options.user} -e EXPORTER_PASSWORD=${options.password}` : '';
 
   await (await cli.exec(`docker cp ./test-data/spawn-exporter-scrape.sh ${container}:/tmp/spawn-exporter-scrape.sh`)).assertSuccess();
-  const output = await cli.exec(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
+  const output = await cli.execSilent(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
   await output.assertSuccess();
 
   const [scrapeText, log] = output.stdout.split('---LOG---\n');
