@@ -237098,6 +237098,43 @@
         "duration_s": null
       }
     ],
-    "investigations": []
+    "investigations": [],
+    "claims": [
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-27T02:52:31Z",
+        "suites": [
+          "CLI Integration"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-27T02:52:31Z",
+        "suites": [
+          "CLI Integration Compatibility"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-27T02:52:31Z",
+        "suites": [
+          "Integrations"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-27T02:52:31Z",
+        "suites": [
+          "Package AMD"
+        ]
+      },
+      {
+        "by": "Investigator routine",
+        "at": "2026-11-27T02:52:31Z",
+        "suites": [
+          "Package ARM"
+        ]
+      }
+    ]
   }
 ]
