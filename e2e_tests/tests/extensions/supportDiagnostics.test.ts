@@ -86,6 +86,11 @@ pmmTest(
       await expect(elements.resultsHeading).toBeVisible();
     });
 
+    page.on('console', (message) => {
+      if (['error', 'warning'].includes(message.type())) consoleProblems.push(message.text());
+    });
+    page.on('pageerror', (error) => consoleProblems.push(error.message));
+
     await pmmTest.step('Select the MongoDB Log Extractor script and verify its form', async () => {
       await supportDiagnosticsPage.selectScript('MongoDB', supportDiagnosticsPage.logExtractorTitle);
 
@@ -101,11 +106,6 @@ pmmTest(
 
       await expect(inputs.executionHost).toHaveValue(supportDiagnosticsPage.host);
     });
-
-    page.on('console', (message) => {
-      if (['error', 'warning'].includes(message.type())) consoleProblems.push(message.text());
-    });
-    page.on('pageerror', (error) => consoleProblems.push(error.message));
 
     await pmmTest.step('Open the Issue Time picker and verify its content', async () => {
       await supportDiagnosticsPage.openIssueTimePicker();

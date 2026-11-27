@@ -4,6 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 
 let rs101ServiceId: string;
 let rs102ServiceId: string;
+let servicesToRestore: string[] = [];
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -13,6 +14,16 @@ pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
 
   rs101ServiceId = service1.service_id;
   rs102ServiceId = service2.service_id;
+});
+
+pmmTest.afterEach(async ({ api }) => {
+  for (const serviceId of servicesToRestore) {
+    const response = await api.realTimeAnalyticsApi.startRealTimeAnalytics(serviceId);
+
+    expect(response.ok()).toBeTruthy();
+  }
+
+  servicesToRestore = [];
 });
 
 pmmTest(
@@ -92,7 +103,12 @@ pmmTest(
     const { service_id: rs103ServiceId } = await api.inventoryApi.getServiceDetailsByRegex('^rs103_');
 
     await pmmTest.step('Stop the sessions and open the service selection', async () => {
-      for (const serviceId of [rs101ServiceId, rs102ServiceId, rs103ServiceId]) {
+      const serviceIds = [rs101ServiceId, rs102ServiceId, rs103ServiceId];
+      const runningServiceIds = await api.realTimeAnalyticsApi.getRunningServiceIds();
+
+      servicesToRestore = serviceIds.filter((serviceId) => runningServiceIds.includes(serviceId));
+
+      for (const serviceId of serviceIds) {
         await api.realTimeAnalyticsApi.stopRealTimeAnalytics(serviceId);
       }
 
