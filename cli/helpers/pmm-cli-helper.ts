@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
-import { exec } from '@helpers/cli-helper';
+import { exec, execSilent } from '@helpers/cli-helper';
 import { getAgentPort } from '@helpers/pmm-admin';
 
 /**
@@ -44,7 +44,7 @@ export async function createSelfSignedCertificate(containerName: string, name: s
  * @param   agentPassword   password of the exporter's /metrics endpoint
  */
 export async function scrapeExporterFromPmmServer(containerName: string, agentId: string, agentPassword: string): Promise<ExecReturn> {
-  return exec(`docker exec pmm-server curl -sSf -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
+  return execSilent(`docker exec pmm-server curl -sSf -m 5 -u pmm:${agentPassword} http://${containerName}:${await getAgentPort(containerName, agentId)}/metrics`);
 }
 
 /**
