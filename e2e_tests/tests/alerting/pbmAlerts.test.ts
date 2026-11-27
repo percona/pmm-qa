@@ -31,7 +31,10 @@ pmmTest.beforeEach(async ({ api }) => {
 });
 
 pmmTest.afterEach(async ({ api, cliHelper }) => {
-  cliHelper.execute('docker unpause minio');
+  if (cliHelper.execute("docker inspect -f '{{.State.Paused}}' minio").stdout.trim() === 'true') {
+    cliHelper.execute('docker unpause minio').assertSuccess();
+  }
+
   cliHelper.execute('docker start minio');
 
   for (const member of members) {
