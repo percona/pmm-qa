@@ -237133,6 +237133,16 @@
         "link": "https://perconadev.atlassian.net/browse/PMM-15835",
         "by": "Investigator routine",
         "at": "2026-11-27T04:31:09Z"
+      },
+      {
+        "suites": [
+          "Package ARM"
+        ],
+        "verdict": "unstable",
+        "summary": "debian12-arm64 / pmm3-client_integration_auth_register: both attempts failed to start PMM Server with 'listen tcp4 :443: bind: address already in use' on one GitHub-hosted ubuntu-22.04-arm runner, as on night 117; the other debian12-arm64 auth cells passed, and re-running only that job on a fresh runner passed (failed=0).",
+        "link": "https://github.com/percona/pmm-qa/actions/runs/45916727676/job/140284218141",
+        "by": "Investigator routine",
+        "at": "2026-11-27T04:31:15Z"
       }
     ],
     "claims": []
