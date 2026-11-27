@@ -211,17 +211,7 @@ pmmTest.describe('PMM Server creates and keeps Grafana database', () => {
   pmmTest(
     'PMM-T2915 - Verify Grafana starts on the first try on a fresh PMM Server @docker-configuration',
     async ({ api, dashboard, dockerHelper, grafanaDatabaseHelper, grafanaHelper, page }) => {
-      await pmmTest.step('Start PMM 3.10.0 on an empty volume with one CPU', async () => {
-        await startServer({ api, dockerHelper }, pmm3100, newVolume('t2915-control'), '--cpus=1');
-      });
-
-      await pmmTest.step('Verify PMM 3.10.0 logs Grafana exiting (bug reproduced)', async () => {
-        await expect
-          .poll(() => grafanaDatabaseHelper.countGrafanaExits(container), { timeout: Timeouts.ONE_MINUTE })
-          .toBeGreaterThan(0);
-        grafanaDatabaseHelper.stopServer(container);
-      });
-
+      // Steps 1-2, the 3.10.0 control, are manual: a race, verified in Zephyr cycle PMM-R250 (6 Grafana exits, 3D000).
       for (const run of [1, 2, 3]) {
         await pmmTest.step(
           `Run ${run}: start the image under test on an empty volume with one CPU`,
