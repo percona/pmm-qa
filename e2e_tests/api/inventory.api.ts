@@ -285,10 +285,14 @@ export default class InventoryApi {
       )
       .catch(() => false);
 
-  verifyRequestRefused = async (response: APIResponse, message: string): Promise<void> => {
+  verifyRequestRefused = async (
+    response: APIResponse,
+    expectedStatus: number,
+    message: string,
+  ): Promise<void> => {
     const body = await response.text();
 
-    expect(response.status(), body).toEqual(400);
+    expect(response.status(), body).toEqual(expectedStatus);
     expect(body).toContain(message);
   };
 

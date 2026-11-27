@@ -57,14 +57,17 @@ pmmTest(
 
         await inventoryApi.verifyRequestRefused(
           await inventoryApi.requestNodeRemoval(nodeId, true),
+          400,
           nodeRefusal,
         );
         await inventoryApi.verifyRequestRefused(
           await inventoryApi.requestNodeUnregistration(nodeId, true),
+          400,
           nodeRefusal,
         );
         await inventoryApi.verifyRequestRefused(
           await inventoryApi.requestAgentRemoval(pmmAgentId, true),
+          400,
           `pmm-agent runs on Node '${nodeName}', which is managed by this PMM deployment`,
         );
       });
