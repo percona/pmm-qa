@@ -10,12 +10,17 @@ volumes:
 
 services:
   pmm-server:
+    # Nomad advertises the IP PMM_PUBLIC_ADDRESS resolves to inside pmm-server. The hostname and the
+    # priority resolve it on pmm-qa, which the pmm-framework containers share, not on pmm-network.
+    hostname: pmm-server
+    networks:
+      pmm-qa:
+        priority: 100
     ports:
       - "4647:4647"
     environment:
       - PMM_ENABLE_EXTENSIONS=1
       - PMM_ENABLE_NOMAD=1
-      # Nomad clients dial the address the server advertises, so it has to resolve on pmm-qa.
       - PMM_PUBLIC_ADDRESS=pmm-server
       # Passed only when set: any value, 0 included, locks the setting in the UI.
       - PMM_ENABLE_OM
@@ -36,7 +41,7 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Task executors download their scripts from here: the pmm-qa containers by name,
-      # a client on the host through the published port and an /etc/hosts entry.
+      # a PMM Client on the host through the published port and an /etc/hosts entry.
       - BASE_URL=http://pmm-extensions:9000/extensions
     ports:
       - "127.0.0.1:9000:9000"

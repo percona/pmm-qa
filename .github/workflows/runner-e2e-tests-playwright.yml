@@ -261,8 +261,8 @@ jobs:
             if [[ $ENABLE_MONGODB_OPERATIONS == true ]]; then
               export PMM_ENABLE_OM=1
             fi
-            # The runner's own PMM Client reaches Nomad and the task scripts by these names.
-            echo '127.0.0.1 pmm-server pmm-extensions' | sudo tee -a /etc/hosts
+            # The task scripts of the runner's own PMM Client come from BASE_URL, through the published port.
+            echo '127.0.0.1 pmm-extensions' | sudo tee -a /etc/hosts
           fi
           for attempt in 1 2 3; do
             PWD=$(pwd) "${compose[@]}" pull --quiet && break

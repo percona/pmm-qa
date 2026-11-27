@@ -88,8 +88,8 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1/extensions/health   
 In CI, `runner-e2e-tests-playwright.yml` does the same with its `enable_extensions`, `enable_mongodb_operations`
 and `pmm_extensions_image` inputs. Without `pmm_extensions_image` it runs the PMM Extensions image of a
 `percona/pmm-server` tag or a `perconalab/pmm-server` RC tag, and `percona/pmm-extensions:3` beside a dev or FB
-server, which have no image of their own. It also maps `pmm-server` and `pmm-extensions` to `127.0.0.1` on the
-runner, so the PMM Client the runner installs reaches Nomad and the task scripts too. Monitored MongoDB nodes
+server, which have no image of their own. It also maps `pmm-extensions` to `127.0.0.1` on the runner, so the
+PMM Client the runner installs can fetch task scripts too. Monitored MongoDB nodes
 that Operations for MongoDB can scan come from `pmm-framework --database psmdb,OPERATIONS=true`.
 
 ## Running Tests
