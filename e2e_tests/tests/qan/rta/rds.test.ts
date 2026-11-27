@@ -16,7 +16,7 @@ pmmTest.afterEach(async ({ api }) => {
 });
 
 pmmTest(
-  'PMM-T2888 - Verify Real-Time Analytics shows running statements of an Amazon RDS for MySQL service @aws',
+  'PMM-T2888 - Verify Real-Time Analytics shows running statements of an Amazon RDS for MySQL service @instances',
   async ({ api, credentials, grafanaHelper, page, queryAnalytics }) => {
     const { address, password, username } = credentials.rdsMysql84;
     const { rta } = queryAnalytics;
