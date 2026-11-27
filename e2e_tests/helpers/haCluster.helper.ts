@@ -16,6 +16,7 @@ const pmmManagedLog = '/srv/logs/pmm-managed.log';
 const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
+export const pmmClientPodSelector = 'app.kubernetes.io/component=pmm-client';
 /** The `pmm-ha` chart default. */
 export const defaultReplicas = 3;
 /** The `pmm-ha` chart default for `clickhouse.keeper.replicasCount`. */
@@ -39,6 +40,13 @@ const parseVersion = (body: string): unknown => {
  */
 export default class HaClusterHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
+
+  /** The chart registers each PMM Client pod as the Node `<namespace>-<pod name>`. */
+  clientNodeNames = (): string[] =>
+    this.k8sHelper
+      .getPodNames(pmmClientPodSelector)
+      .map((podName) => `${this.k8sHelper.namespace}-${podName}`)
+      .sort();
 
   /**
    * The chart's `dataRetentionDays`, read from what it rendered rather than from the settings API:

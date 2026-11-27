@@ -1,4 +1,4 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import {
   AgentStatus,
@@ -26,9 +26,7 @@ export default class InventoryApi {
   };
 
   deleteNode = async (nodeId: string, force: boolean): Promise<void> => {
-    const response = await this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
+    const response = await this.requestNodeUnregistration(nodeId, force);
 
     expect(
       response.status(),
@@ -245,6 +243,21 @@ export default class InventoryApi {
       await this.deleteNode(node_id, true);
     }
   };
+
+  requestAgentRemoval = (agentId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.inventory.agents}/${agentId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+  requestNodeRemoval = (nodeId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.inventory.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+  requestNodeUnregistration = (nodeId: string, force: boolean): Promise<APIResponse> =>
+    this.request.delete(`${apiEndpoints.management.nodes}/${nodeId}?force=${force}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
   requestServiceUpdate = (
     serviceId: string,
