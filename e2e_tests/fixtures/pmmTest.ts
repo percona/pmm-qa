@@ -11,6 +11,7 @@ import ArgoCdHelper from '@helpers/argocd.helper';
 import ClickHouseHelper from '@helpers/clickhouse.helper';
 import Credentials from '@helpers/credentials.helper';
 import ExternalPostgresHelper from '@helpers/externalPostgres.helper';
+import GrafanaDatabaseHelper from '@helpers/grafanaDatabase.helper';
 import TlsHelper from '@helpers/tls.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
@@ -91,6 +92,7 @@ const pmmTest = base.extend<{
   dumpPage: DumpPage;
   editServicePage: EditServicePage;
   externalPostgresHelper: ExternalPostgresHelper;
+  grafanaDatabaseHelper: GrafanaDatabaseHelper;
   grafanaHelper: GrafanaHelper;
   haBackupHelper: HaBackupHelper;
   haClickHouseHelper: HaClickHouseHelper;
@@ -194,6 +196,7 @@ const pmmTest = base.extend<{
   dumpPage: async ({ page }, use) => await use(new DumpPage(page)),
   editServicePage: async ({ page }, use) => await use(new EditServicePage(page)),
   externalPostgresHelper: async ({ cliHelper }, use) => await use(new ExternalPostgresHelper(cliHelper)),
+  grafanaDatabaseHelper: async ({ cliHelper }, use) => await use(new GrafanaDatabaseHelper(cliHelper)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 

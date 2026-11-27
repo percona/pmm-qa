@@ -10,6 +10,11 @@ export default class UsersPage extends BasePage {
         .filter({ has: this.page.getByRole('cell', { exact: true, name: username }) })
         .getByRole('combobox', { name: 'Access Roles' }),
     option: (name: string) => this.grafanaIframe().getByRole('option', { exact: true, name }),
+    // Login, email and name can all hold the username, so match the row.
+    userRow: (username: string) =>
+      this.grafanaIframe()
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { exact: true, name: username }) }),
   };
   buttons = {
     allUsers: this.grafanaIframe().getByTestId('data-testid all-users-tab'),
