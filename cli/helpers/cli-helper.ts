@@ -24,14 +24,15 @@ export async function createFile(pathToFile: string, content: string, stepTitle:
  * returns handy {@link ExecReturn} object.
  *
  * @param       command   sh command to execute
+ * @param       logOutput false logs only the size of stdout: every logged byte is kept in the test report
  * @return      {@link ExecReturnClass} instance
  */
-export function execute(command: string): ExecReturn {
+export function execute(command: string, logOutput = true): ExecReturn {
   console.log(`exec: "${command}"`);
   const start = performance.now();
-  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: !logOutput });
   const durationMs = performance.now() - start;
-  if (stdout.length > 0) console.log(`Out: "${stdout}"`);
+  if (stdout.length > 0) console.log(logOutput ? `Out: "${stdout}"` : `Out: ${stdout.length} characters, not logged`);
   if (stderr.length > 0) console.log(`Error: "${stderr}"`);
   return new ExecReturn(command, code, stdout, stderr, durationMs);
 }
@@ -56,11 +57,7 @@ export async function exec(command: string): Promise<ExecReturn> {
  * @return      {@link ExecReturnClass} instance
  */
 export async function execSilent(command: string): Promise<ExecReturn> {
-  const { stdout, stderr, code } = await test.step(`Run "${command}" command`, async () => {
-    return shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
-  });
-
-  return new ExecReturn(command, code, stdout, stderr);
+  return test.step(`Run "${command}" command`, async () => execute(command, false));
 }
 
 /**
@@ -102,7 +99,7 @@ export async function getMetrics(
         throw new Error(`Failed to find port of '${serviceId}' exporter is in pmm-admin list output:\n${adminList}`);
       }
 
-      return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`);
+      return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`, false);
     },
   );
 

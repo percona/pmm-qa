@@ -145,7 +145,7 @@ export async function spawnScrape(
   const credentials = options.user ? `-e EXPORTER_USER=${options.user} -e EXPORTER_PASSWORD=${options.password}` : '';
 
   await (await cli.exec(`docker cp ./test-data/spawn-exporter-scrape.sh ${container}:/tmp/spawn-exporter-scrape.sh`)).assertSuccess();
-  const output = await cli.exec(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
+  const output = await cli.execSilent(`docker exec ${credentials} ${container} bash /tmp/spawn-exporter-scrape.sh ${binary} ${port} ${options.scrapes ?? 1}`);
   await output.assertSuccess();
 
   const [scrapeText, log] = output.stdout.split('---LOG---\n');
@@ -355,12 +355,17 @@ export async function expectRestoreStatus(container: string, name: string, statu
 }
 
 interface PbmLogEntry {
+  ts: number;
+  node: string;
   opid: string;
   msg: string;
   s: number;
 }
 
-const resyncLog = async (container: string) => (await pbmJson<PbmLogEntry[] | null>(container, 'logs --event=resync --tail=30')) ?? [];
+// Debug too: an agent that cannot take PBM's lock drops the resync, and says so only at Debug ("lock not acquired").
+const resyncLog = async (container: string) => (await pbmJson<PbmLogEntry[] | null>(container, 'logs --event=resync -s D --tail=200')) ?? [];
+
+const formatLogEntry = (entry: PbmLogEntry) => `${new Date(entry.ts * 1000).toISOString()} ${entry.node} ${'FEWID'[entry.s] ?? entry.s} ${entry.msg}`;
 
 /**
  * Run a pbm command that starts a resync and wait until that resync has ended, whether it succeeded or failed, which PBM's log tells and
@@ -378,8 +383,11 @@ async function resyncWith(container: string, args: string) {
     // A resync logs other errors and goes on (an unreadable backup's metadata); only the agent's "resync: ..." ends it.
     const ended = entries.some((entry) => entry.msg === 'succeed' || (entry.s <= 1 && entry.msg.startsWith('resync: ')));
 
-    expect(ended, `no resync has ended since pbm ${args}`).toBeTruthy();
+    expect(ended, `no resync has ended since pbm ${args}; PBM logged for it:\n${entries.map(formatLogEntry).join('\n') || 'nothing'}`).toBeTruthy();
   }).toPass({ intervals: [2_000], timeout: 120_000 });
+  // pbm-agent drops, without a word in its log, a command of the same type stamped with the same second as the one it took last,
+  // and a resync often ends within the second it was sent in, so the next one waits for the next second.
+  await new Promise((resolve) => { setTimeout(resolve, 1_000 - (Date.now() % 1_000)); });
 }
 
 /**
