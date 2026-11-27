@@ -4128,41 +4128,27 @@
       "duration_s": null
     }
   ],
-  "investigations": [],
+  "investigations": [
+    {
+      "suites": [
+        "CLI Integration",
+        "CLI Integration Compatibility",
+        "Package AMD",
+        "Package ARM"
+      ],
+      "verdict": "product bug",
+      "summary": "Generic PMM-T2227 (6 lanes) and 24 deb client upgrade lanes: dev builds still carry 3.11.0 after the 3.11.0 release (Percona-Lab/pmm-submodules v3 VERSION not bumped), so the dev tarball is not newer than 3.11.0 and dpkg ranks every experimental 3.11.0-1.<ts> deb below the released 3.11.0-1 — apt upgrades nothing and pmm-agent is never restarted. RPM sorts the other way, so only deb fails. Reproduced on a CHAOS VM in a debian:12 container.",
+      "link": "https://perconadev.atlassian.net/browse/PMM-16001",
+      "by": "Investigator routine",
+      "at": "2026-11-27T04:30:49Z"
+    }
+  ],
   "claims": [
     {
       "by": "Investigator routine",
       "at": "2026-11-27T02:52:31Z",
       "suites": [
-        "CLI Integration"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-27T02:52:31Z",
-      "suites": [
-        "CLI Integration Compatibility"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-27T02:52:31Z",
-      "suites": [
         "Integrations"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-27T02:52:31Z",
-      "suites": [
-        "Package AMD"
-      ]
-    },
-    {
-      "by": "Investigator routine",
-      "at": "2026-11-27T02:52:31Z",
-      "suites": [
-        "Package ARM"
       ]
     }
   ]
