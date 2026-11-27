@@ -51,6 +51,12 @@ export default class DockerHelper {
     return container[0];
   };
 
+  getContainerHostname = (container: string) =>
+    this.cliHelper
+      .execSilent(`docker inspect -f '{{.Config.Hostname}}' ${container}`)
+      .assertSuccess()
+      .stdout.trim();
+
   getContainerName = (namePattern: string) => {
     const [container] = this.cliHelper
       .execSilent(`docker ps --filter 'name=${namePattern}' --format '{{.Names}}'`)
@@ -60,6 +66,22 @@ export default class DockerHelper {
     if (!container) throw new Error(`No running container matches ${namePattern}`);
 
     return container;
+  };
+
+  // A pmm-framework service's node, with the container it runs in and that container's hostname.
+  getFrameworkNode = async (api: Api, serviceRegex: string) => {
+    const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
+
+    if (!service) throw new Error(`No service matches ${serviceRegex}`);
+
+    const container = await this.getServiceContainer(api, service);
+
+    return {
+      container,
+      hostname: this.getContainerHostname(container),
+      nodeName: service.node_name,
+      service,
+    };
   };
 
   // 000 when nothing answers on the address, as for an exporter listening only on its own host's 127.0.0.1.

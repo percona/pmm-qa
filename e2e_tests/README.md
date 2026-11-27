@@ -148,6 +148,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@inventory`
 - `@inventory-fb`
 - `@lbac`
+- `@matrix-dashboards`
 - `@max-length`
 - `@menu`
 - `@mongodb-exporter`
