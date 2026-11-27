@@ -36,7 +36,7 @@ pmmTest.afterEach(({ cliHelper }) => {
 pmmTest(
   'PMM-T2862 - Verify Home dashboard loads promptly when PMM Server cannot reach the Percona version service @docker-configuration',
   async ({ dashboard, page, updatesPage }) => {
-    await pmmTest.step('Open the Home dashboard once, so the browser has the UI cached', async () => {
+    await pmmTest.step('Open the Home dashboard once and wait for the Monitored DB Services panel', async () => {
       await page.goto(dashboard.home.url);
       await expect(dashboard.home.elements.monitoredServicesPanel).toBeVisible({
         timeout: Timeouts.TWO_MINUTES,
@@ -46,9 +46,11 @@ pmmTest(
     // The iframe's body carries the Home dashboard class before Grafana renders any route, so wait for a panel.
     // A fixed server renders it in 4-6 s; an unfixed one holds every route until the update check fails, 30 s or more.
     await pmmTest.step('Reload the Home dashboard: it renders before the update check gives up', async () => {
+      const deadline = Date.now() + Timeouts.FIFTEEN_SECONDS;
+
       await page.reload();
       await expect(dashboard.home.elements.monitoredServicesPanel).toBeVisible({
-        timeout: Timeouts.FIFTEEN_SECONDS,
+        timeout: Math.max(deadline - Date.now(), 1),
       });
     });
 
