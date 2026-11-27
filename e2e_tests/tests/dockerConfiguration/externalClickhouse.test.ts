@@ -4,7 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 
 const baseUrl = 'http://127.0.0.1:8081/';
 const compose = 'docker compose -f docker-compose-clickhouse.yml';
-const pmmServerContainer = 'pmm-server-external-clickhouse';
+const pmmServerContainer = 'pmm-server-ext-clickhouse-qan';
 
 pmmTest.describe('External ClickHouse', () => {
   pmmTest.describe.configure({ mode: 'default' });
@@ -33,7 +33,7 @@ pmmTest.describe('External ClickHouse', () => {
   });
 
   pmmTest(
-    'PMM-T1218 - Verify PMM with external Clickhouse @docker-configuration @cli',
+    'PMM-T1218 - Verify PMM with external Clickhouse @docker-configuration',
     async ({ dataSourcesPage, page, qanStoredMetrics, urlHelper }) => {
       const qanUrl = urlHelper.buildUrlWithParameters(qanStoredMetrics.url, { from: 'now-5m', to: 'now' });
 

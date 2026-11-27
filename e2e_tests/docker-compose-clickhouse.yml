@@ -4,7 +4,7 @@ name: pmm-external-clickhouse
 services:
   pmm-server-external-clickhouse:
     image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
-    container_name: pmm-server-external-clickhouse
+    container_name: pmm-server-ext-clickhouse-qan
     depends_on:
       external-clickhouse:
         condition: service_healthy
@@ -54,7 +54,7 @@ services:
     restart: on-failure
 
   ps8:
-    container_name: ps8
+    container_name: ps8-ext-clickhouse
     image: percona/percona-server:8.0
     command: --default-authentication-plugin=mysql_native_password
     restart: always
