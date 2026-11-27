@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import Api from '@api/api';
 import CliHelper from '@helpers/cli.helper';
 import DockerHelper from '@helpers/docker.helper';
 import { ServiceType } from '@interfaces/inventory';
@@ -99,28 +98,14 @@ pmmTest(
 // Runs on the host of `pmm-framework --database pxc --database psmdb,SETUP_TYPE=psa --database valkey`:
 // the tests change the PXC and Valkey containers and the host's kernel settings.
 // rs103 is the arbiter, and pxc_node__3 is PXC node 3 in the pxc_proxysql_pmm_<version> container.
-const frameworkNode = async (api: Api, dockerHelper: DockerHelper, serviceRegex: string) => {
-  const service = await api.inventoryApi.getServiceDetailsByRegex(serviceRegex);
-
-  if (!service) throw new Error(`No service matches ${serviceRegex}`);
-
-  const container = await dockerHelper.getServiceContainer(api, service);
-
-  return {
-    container,
-    hostname: dockerHelper.getContainerHostname(container),
-    nodeName: service.node_name,
-    service,
-  };
-};
 
 pmmTest(
   'PMM-T2901 - System Summary shows the selected node @matrix-dashboards',
   async ({ api, dashboard, dockerHelper, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
-    const pxc = await frameworkNode(api, dockerHelper, '^pxc_node__1_');
-    const arbiter = await frameworkNode(api, dockerHelper, '^rs103_');
-    const valkey = await frameworkNode(api, dockerHelper, '^valkey-primary-1-svc$');
+    const pxc = await dockerHelper.getFrameworkNode(api, '^pxc_node__1_');
+    const arbiter = await dockerHelper.getFrameworkNode(api, '^rs103_');
+    const valkey = await dockerHelper.getFrameworkNode(api, '^valkey-primary-1-svc$');
     const pmmServerNodeName = await api.haApi.getPmmServerNodeName();
 
     await pmmTest.step('Open Node Summary from a link that names only the PXC node', async () => {
@@ -203,11 +188,11 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
       const { nodeSummary } = dashboard.os;
       const { panelName: servicesPanel, statusColors } = nodeSummary.services;
       const typesPanel = nodeSummary.serviceTypes.panelName;
-      const pxc = await frameworkNode(api, dockerHelper, `^pxc_node__${pxcNode}_`);
+      const pxc = await dockerHelper.getFrameworkNode(api, `^pxc_node__${pxcNode}_`);
       const nodes = [
         pxc,
-        await frameworkNode(api, dockerHelper, '^rs103_'),
-        await frameworkNode(api, dockerHelper, '^valkey-primary-1-svc$'),
+        await dockerHelper.getFrameworkNode(api, '^rs103_'),
+        await dockerHelper.getFrameworkNode(api, '^valkey-primary-1-svc$'),
       ];
       const { services } = await api.inventoryApi.getServices();
       const serviceRows = (nodeId: string, status: string) =>
@@ -332,7 +317,7 @@ pmmTest.describe('Node Summary disk panels under load', () => {
     async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
       const { nodeSummary } = dashboard.os;
       const { panelName: operationsPanel, read, write } = nodeSummary.diskOperations;
-      const pxc = await frameworkNode(api, dockerHelper, '^pxc_node__1_');
+      const pxc = await dockerHelper.getFrameworkNode(api, '^pxc_node__1_');
       const url = urlHelper.buildUrlWithParameters(nodeSummary.url, {
         from: 'now-15m',
         nodeName: pxc.nodeName,
@@ -500,7 +485,7 @@ pmmTest(
 );
 
 pmmTest.describe('Node Summary after re-registering a node', () => {
-  let valkey: Awaited<ReturnType<typeof frameworkNode>>;
+  let valkey: Awaited<ReturnType<DockerHelper['getFrameworkNode']>>;
 
   pmmTest.afterEach(async ({ cliHelper, credentials }) => {
     const { address, cluster, custom_labels, environment, port, service_name } = valkey.service;
@@ -527,7 +512,7 @@ pmmTest.describe('Node Summary after re-registering a node', () => {
           to: 'now',
         });
 
-      valkey = await frameworkNode(api, dockerHelper, '^valkey-primary-1-svc$');
+      valkey = await dockerHelper.getFrameworkNode(api, '^valkey-primary-1-svc$');
 
       await pmmTest.step('Open Node Summary for the Valkey node', async () => {
         await page.goto(summaryUrl());
