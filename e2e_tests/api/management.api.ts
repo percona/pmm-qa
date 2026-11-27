@@ -73,6 +73,7 @@ export default class ManagementApi {
     serviceName: string,
     address: string,
     tls: { ca: string; cert: string; key: string },
+    { skipConnectionCheck = false }: { skipConnectionCheck?: boolean } = {},
   ) => {
     const { valkey } = await this.addService({
       valkey: {
@@ -81,6 +82,7 @@ export default class ManagementApi {
         pmm_agent_id: 'pmm-server',
         port: 6_379,
         service_name: serviceName,
+        skip_connection_check: skipConnectionCheck,
         tls: true,
         tls_ca: tls.ca,
         tls_cert: tls.cert,

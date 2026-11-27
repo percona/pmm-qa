@@ -347,10 +347,12 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
     async ({ api, encryptionHelper, tlsHelper }) => {
       const serviceName = `valkey_tls_change_${Math.floor(Math.random() * 99) + 1}`;
       // Valkey refuses a client certificate its CA did not sign, so only the changed one can connect.
-      const service = await api.managementApi.addRemoteValkeyTls(serviceName, valkeyContainer, {
-        ...valkeyTls,
-        ...tlsHelper.generateSelfSignedCertificate('pmm-encryption-untrusted'),
-      });
+      const service = await api.managementApi.addRemoteValkeyTls(
+        serviceName,
+        valkeyContainer,
+        { ...valkeyTls, ...tlsHelper.generateSelfSignedCertificate('pmm-encryption-untrusted') },
+        { skipConnectionCheck: true },
+      );
 
       nodeId = service.node_id;
       await api.prometheusApi.waitForNewValue(`redis_up{service_name="${serviceName}"}`, 0);
