@@ -13,18 +13,25 @@ export interface UpdateInfo {
 
 export default class UpdatesPage extends BasePage {
   url = '/pmm-ui/updates';
-  homeUrl = '/pmm-ui/graph/';
+  homeUrl = '/pmm-ui/graph/d/pmm-home/home-dashboard';
   builders = {};
   buttons = {
     checkUpdatesNow: this.page.getByRole('button', { name: 'Check Updates Now' }),
+    lastCheck: this.grafanaIframe().getByTestId('update-last-check-button'),
+    remindMeLater: this.page.getByTestId('update-modal-remind-me-button'),
     updateNow: this.page.getByRole('button', { name: 'Update now' }),
+    upgradeTo: this.grafanaIframe().getByRole('button', { name: /^Upgrade to / }),
     whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
+    installedVersion: this.grafanaIframe().getByTestId('update-installed-version'),
+    lastCheckLabel: this.grafanaIframe().getByText('Last check:'),
+    latestVersion: this.grafanaIframe().getByTestId('update-latest-version'),
     newVersionLine: this.page.getByText('New version:'),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
     updateSuccess: this.page.getByText('PMM Server installation complete!'),
+    upToDate: this.grafanaIframe().getByText('You are up to date'),
   };
   inputs = {};
   messages = {};
@@ -54,6 +61,10 @@ export default class UpdatesPage extends BasePage {
 
   openHomeForWhatsNew = async (): Promise<void> =>
     await pmmTest.step('Open home page', async () => {
+      // The "Update to PMM X.Y.Z" modal opens over the home page whenever an update is available.
+      await this.page.addLocatorHandler(this.buttons.remindMeLater, async () => {
+        await this.buttons.remindMeLater.click();
+      });
       await this.page.goto(this.homeUrl);
       await expect(this.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     });
@@ -69,5 +80,15 @@ export default class UpdatesPage extends BasePage {
 
       await this.buttons.updateNow.click();
       await expect(this.elements.updateSuccess).toBeVisible({ timeout: Timeouts.FIVE_MINUTES });
+    });
+
+  verifyPreUpdateWidget = async (): Promise<void> =>
+    await pmmTest.step('Verify the home page update widget offers an upgrade', async () => {
+      await expect(this.buttons.upgradeTo).toBeVisible({ timeout: Timeouts.FIVE_MINUTES });
+      await expect(this.elements.installedVersion).toBeVisible({ timeout: Timeouts.FIVE_MINUTES });
+      await expect(this.elements.latestVersion).toBeVisible();
+      await expect(this.elements.upToDate).toBeHidden();
+      await expect(this.buttons.lastCheck).toBeVisible();
+      await expect(this.elements.lastCheckLabel).toBeVisible();
     });
 }

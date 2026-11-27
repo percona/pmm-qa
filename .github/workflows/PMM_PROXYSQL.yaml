@@ -72,7 +72,7 @@ jobs:
           fi
 
       - name: Run the PMM Server container
-        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
+        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server -e PMM_ENABLE_TELEMETRY=0 ${{ env.PMM_SERVER_IMAGE }}
 
       - name: Checkout pmm-qa
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -92,11 +92,11 @@ jobs:
             --database "PXC=${PXC_MAJOR}${PXC_TARBALL_PATH:+,TARBALL=$PXC_TARBALL_PATH}"
 
       - name: Install npx dependencies
-        working-directory: codeceptjs-e2e
-        run: npm ci && npx playwright install --with-deps && npx codeceptjs def pr.codecept.js
+        working-directory: e2e_tests
+        run: npm ci && npx playwright install --with-deps chromium
 
       - name: Run the Integration tests of PXC
-        working-directory: codeceptjs-e2e
-        run: |
-          export PMM_UI_URL="http://127.0.0.1:8081/"
-          npx codeceptjs run -c pr.codecept.js tests/qa-integration/pmm_pxc_integration_test.js
+        working-directory: e2e_tests
+        env:
+          PMM_UI_URL: 'http://127.0.0.1:8081/'
+        run: npx playwright test --grep '@pmm-pxc-integration'

@@ -19,6 +19,13 @@ export default class LeftNavigation extends BasePage {
       profile: { locator: this.page.getByTestId('navitem-profile') },
       signOut: { locator: this.page.getByTestId('navitem-sign-out') },
     },
+    advisors: {
+      catalog: { locator: this.page.getByTestId('navitem-advisors-checks') },
+      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
+      locator: this.page.getByTestId('navitem-advisors'),
+      runHistory: { locator: this.page.getByTestId('navitem-advisors-runs') },
+      scheduler: { locator: this.page.getByTestId('navitem-advisors-scheduler') },
+    },
     alerts: {
       alertGroups: { locator: this.page.getByTestId('navitem-alerts-groups') },
       alertRules: { locator: this.page.getByTestId('navitem-alerts-rules') },
@@ -71,6 +78,7 @@ export default class LeftNavigation extends BasePage {
     },
     mongodb: {
       backupStatus: { locator: this.page.getByTestId('navitem-mongo-backup-details-list-item') },
+      clusterSync: { locator: this.page.getByTestId('navitem-mongo-clustersync-details') },
       collections: { locator: this.page.getByTestId('navitem-mongo-collections-overview') },
       ha: {
         cluster: { locator: this.page.getByTestId('navitem-mongo-cluster-summary') },
@@ -157,6 +165,8 @@ export default class LeftNavigation extends BasePage {
     },
   };
   elements: Record<string, Locator> = {
+    advisorsMenu: (this.buttons.advisors as NestedLocators).locator as Locator,
+    alertsMenuItems: this.page.getByTestId(/^navitem-alerts-.+-list-item$/),
     applyTimeRangeButton: this.grafanaIframe().getByTestId('data-testid TimePicker submit button'),
     changeTimeSettingsButton: this.grafanaIframe().getByTestId(
       'data-testid Time zone picker Change time settings button',

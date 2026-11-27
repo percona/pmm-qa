@@ -5,6 +5,7 @@ import { expect } from '@playwright/test';
 import { pmmServerPodSelector } from '@helpers/haCluster.helper';
 import { KubernetesPod } from '@interfaces/kubernetes';
 import { serverVersionBelow } from '@helpers/version.helper';
+import { Timeouts } from '@helpers/timeouts';
 
 const pmmHaChart = 'pmm-ha';
 const dependenciesChart = 'pmm-ha-dependencies';
@@ -44,6 +45,8 @@ interface Baseline {
   images: string[];
   podNames: string[];
   revision: number;
+  services: string[];
+  strayUuid: string;
   version: string;
 }
 
@@ -62,6 +65,7 @@ const readBaseline = (): Baseline => {
 const writeBaseline = (baseline: Baseline): void => {
   mkdirSync(dirname(baselineFile), { recursive: true });
   writeFileSync(baselineFile, JSON.stringify(baseline, undefined, 2));
+  console.log(`Baseline: ${JSON.stringify(baseline)}`);
 };
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
@@ -72,11 +76,11 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 // Deliberately not tagged @pmm-ha: these two run either side of an upgrade of the
 // cluster they run on, and `--grep "@pmm-ha"` matches a nested tag by substring.
 pmmTest(
-  'PMM-T2229 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
-  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation }) => {
+  'PMM-T2229 + PMM-T2776 - Verify a PMM HA cluster installed from the released Helm chart is healthy before the upgrade @pmm-helm-pre-upgrade',
+  async ({ api, haClickHouseHelper, haClusterHelper, helmHelper, k8sHelper }) => {
     await haClusterHelper.verifyHaEnabled(api.haApi);
 
-    const baseline = await pmmTest.step('Baseline the release, images and version in place', async () => {
+    const baseline = await pmmTest.step('Baseline the release, images, version and services', async () => {
       helmHelper.assertAvailable();
 
       expect(targetImage, `"${targetImage}" must be a repository:tag pair`).toContain(':');
@@ -98,29 +102,48 @@ pmmTest(
         repositoryAndTag(releaseImage),
       ]);
 
+      const services = await haClusterHelper.waitForRunningServicesReporting(
+        api,
+        (await api.prometheusApi.waitForServerTime()) - 120,
+      );
+
       return {
         images,
         podNames: pods.map((pod) => pod.name).sort(),
         revision: Number(release.revision),
+        services,
         version: (await api.serverApi.getPmmVersion()).version,
       };
     });
 
-    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
+    await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
 
-    const leader = await haClusterHelper.verifySingleLeader(api.haApi, baseline.podNames);
+    const strayUuid = await pmmTest.step(
+      'Split the QAN database with a stray copy on one ClickHouse server',
+      async () => {
+        const clickHousePods = haClickHouseHelper.pods();
+        const [, , serverTwo] = clickHousePods;
 
-    await highAvailabilityPage.verifyLeaderBadge(leader);
+        haClickHouseHelper.createStrayPmm(serverTwo);
+
+        // The released build can already be split at install, so only the stray copy made here is asserted.
+        const [zero, one, two] = haClickHouseHelper.pmmCopies(clickHousePods).map((copy) => copy.uuid);
+
+        expect([zero, one], `"${serverTwo}" must hold a pmm database of its own`).not.toContain(two);
+
+        return two;
+      },
+    );
 
     await pmmTest.step(`Record the baseline in "${baselineFile}"`, async () => {
-      writeBaseline(baseline);
+      writeBaseline({ ...baseline, strayUuid });
     });
   },
 );
 
 pmmTest(
   'PMM-T2229 - Verify a PMM HA cluster keeps serving while its dependencies are upgraded @pmm-helm-mid-upgrade',
-  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation }) => {
+  async ({ api, haClusterHelper, helmHelper, k8sHelper }) => {
     const before = readBaseline();
 
     await haClusterHelper.verifyHaEnabled(api.haApi);
@@ -172,19 +195,17 @@ pmmTest(
       }
     });
 
-    await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
-
-    const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
-
-    await highAvailabilityPage.verifyLeaderBadge(leader);
+    await haClusterHelper.verifyServicesReportAgain(api, before.services);
+    await haClusterHelper.verifySingleLeader(api.haApi, podNames);
   },
 );
 
 pmmTest(
-  'PMM-T2229 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
+  'PMM-T2229 + PMM-T2776 - Verify a PMM HA cluster upgraded to a new server image is healthy on it @pmm-helm-post-upgrade',
   async ({
     api,
     grafanaHelper,
+    haClickHouseHelper,
     haClusterHelper,
     helmHelper,
     highAvailabilityPage,
@@ -193,6 +214,8 @@ pmmTest(
     nodesPage,
     page,
   }) => {
+    pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
+
     const before = readBaseline();
 
     await haClusterHelper.verifyHaEnabled(api.haApi);
@@ -238,11 +261,34 @@ pmmTest(
       }
     });
 
+    await haClusterHelper.verifyServicesReportAgain(api, before.services);
+
     const leader = await haClusterHelper.verifySingleLeader(api.haApi, podNames);
 
     await grafanaHelper.authorize();
     await leftNavigation.verifyUiRenders(highAvailabilityPage.url);
     await page.goto(nodesPage.url);
     await nodesPage.verifyHaNodeRoles(podNames, leader);
+
+    await pmmTest.step('Verify the stray QAN database copy made before the upgrade is repaired', async () => {
+      const clickHousePods = haClickHouseHelper.pods();
+
+      expect(clickHousePods, 'PMM HA runs three ClickHouse servers').toHaveLength(3);
+      expect(
+        await haClickHouseHelper.waitForOnePmm(clickHousePods, Timeouts.FIFTEEN_MINUTES),
+        'The repair must keep the copy holding QAN data, not the empty stray one',
+      ).not.toEqual(before.strayUuid);
+
+      const rowsBefore = new Date(Date.now() - Timeouts.FIVE_MINUTES);
+
+      await expect(async () => {
+        const rows = haClickHouseHelper.syncedRowsBefore(clickHousePods, rowsBefore);
+
+        expect(
+          new Set(rows).size,
+          `Rows before ${rowsBefore.toISOString()} per server: ${rows.join(', ')}`,
+        ).toEqual(1);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    });
   },
 );

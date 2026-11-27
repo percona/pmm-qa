@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from 'node:perf_hooks';
@@ -24,14 +24,15 @@ export async function createFile(pathToFile: string, content: string, stepTitle:
  * returns handy {@link ExecReturn} object.
  *
  * @param       command   sh command to execute
+ * @param       logOutput false logs only the size of stdout: every logged byte is kept in the test report
  * @return      {@link ExecReturnClass} instance
  */
-export function execute(command: string): ExecReturn {
+export function execute(command: string, logOutput = true): ExecReturn {
   console.log(`exec: "${command}"`);
   const start = performance.now();
-  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: !logOutput });
   const durationMs = performance.now() - start;
-  if (stdout.length > 0) console.log(`Out: "${stdout}"`);
+  if (stdout.length > 0) console.log(logOutput ? `Out: "${stdout}"` : `Out: ${stdout.length} characters, not logged`);
   if (stderr.length > 0) console.log(`Error: "${stderr}"`);
   return new ExecReturn(command, code, stdout, stderr, durationMs);
 }
@@ -56,11 +57,7 @@ export async function exec(command: string): Promise<ExecReturn> {
  * @return      {@link ExecReturnClass} instance
  */
 export async function execSilent(command: string): Promise<ExecReturn> {
-  const { stdout, stderr, code } = await test.step(`Run "${command}" command`, async () => {
-    return shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
-  });
-
-  return new ExecReturn(command, code, stdout, stderr);
+  return test.step(`Run "${command}" command`, async () => execute(command, false));
 }
 
 /**
@@ -102,7 +99,7 @@ export async function getMetrics(
         throw new Error(`Failed to find port of '${serviceId}' exporter is in pmm-admin list output:\n${adminList}`);
       }
 
-      return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`);
+      return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`, false);
     },
   );
 
@@ -110,6 +107,7 @@ export async function getMetrics(
   // TODO: parse into map(k => v) or json
   return output.stdout;
 }
+
 /**
  * Execute command and verify output contains expected content
  * Wrapper around {@link execute} that automatically asserts success and optionally verifies output
@@ -131,4 +129,55 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     }
     return output.stdout;
   });
+}
+
+/**
+ * Assert a command failed and its stdout or stderr contains the expected message
+ *
+ * @param   output    result of the failed command
+ * @param   message   expected error message
+ */
+export async function expectFailure(output: ExecReturn, message: string) {
+  expect(output.code, `"${output.command}" should fail`).not.toEqual(0);
+  expect(`${output.stdout}${output.stderr.text}`).toContain(message);
+}
+
+/**
+ * Quote a value as one shell word, so spaces, $, & or ' in it reach the command unchanged
+ *
+ * @param   value   value to quote
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Run change agent commands, then assert what PMM Server stored, re-applying the change until it sticks.
+ * A status report that pmm-agent sends while an agent restarts can overwrite a change saved at the same moment,
+ * so a change that succeeded can be silently reverted (PMM-15835).
+ * Each retry restarts the agent, so an assertion on runtime state must wait for the restart within itself.
+ *
+ * @param   commands          change agent commands to run
+ * @param   expectedOutput    strings every command's output must contain
+ * @param   persisted         assertion on the stored state; throws while the change is missing
+ * @param   timeout           milliseconds to keep re-applying
+ */
+export async function execUntilPersisted(
+  commands: string[],
+  expectedOutput: string[],
+  persisted: () => Promise<void>,
+  timeout = 60_000,
+) {
+  await expect(async () => {
+    for (const command of commands) {
+      const output = await exec(command);
+      await output.assertSuccess();
+
+      for (const value of expectedOutput) {
+        await output.outContains(value);
+      }
+    }
+
+    await persisted();
+  }).toPass({ intervals: [5_000], timeout });
 }

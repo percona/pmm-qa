@@ -1,9 +1,22 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import SnackbarComponent from '@components/snackbar.component';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 export type DropdownName =
-  'Service Name' | 'Node Name' | 'Environment' | 'ProxySQL Instance' | 'Node Namegroup';
+  | 'Service Name'
+  | 'Node Name'
+  | 'Environment'
+  | 'ProxySQL Instance'
+  | 'Node Namegroup'
+  | 'Cluster'
+  | 'Node'
+  | 'Replication Set'
+  | 'Namespace'
+  | 'Source Cluster'
+  | 'Target Cluster'
+  | 'ClusterSync Cluster'
+  | 'ClusterSync Instance';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
@@ -26,6 +39,9 @@ export default abstract class BasePage {
     this.snackBar = new SnackbarComponent(this.page);
   }
 
+  protected alertWithText = (text: string | RegExp) =>
+    this.page.getByRole('alert', { includeHidden: true }).filter({ hasText: text });
+
   duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();
     const newPage = await this.page.context().newPage();
@@ -42,7 +58,8 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
+    // The wrapper's centre lands on its label when the selected value is short, which does not open the menu.
+    await combobox.click({ timeout: Timeouts.THIRTY_SECONDS });
 
     const options = frame.getByRole('option');
 
@@ -59,6 +76,16 @@ export default abstract class BasePage {
   };
 
   protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
+
+  protected menuOption = (name: string) => this.page.getByRole('option', { exact: true, name });
+
+  // A click fired while the options menu is still closing is swallowed by its backdrop.
+  selectMenuOption = async (select: Locator, option: string) => {
+    await select.click();
+    await this.menuOption(option).click();
+    await expect(this.page.getByRole('listbox')).toBeHidden();
+    await expect(select).toHaveText(option);
+  };
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
     await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
@@ -107,6 +134,23 @@ export default abstract class BasePage {
     await expect(combobox).toHaveAttribute('aria-expanded', 'false', { timeout: Timeouts.THIRTY_SECONDS });
 
     return selectedOption;
+  };
+
+  startRun = async (control: Locator): Promise<{ names: string[]; runId: string }> => {
+    const started = this.page.waitForResponse((response) =>
+      response.url().includes(apiEndpoints.advisors.start),
+    );
+
+    await control.click();
+
+    const response = await started;
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return {
+      names: (response.request().postDataJSON() as { names: string[] }).names,
+      runId: ((await response.json()) as { run_id: string }).run_id,
+    };
   };
 
   switchPage = (page: Page) => {

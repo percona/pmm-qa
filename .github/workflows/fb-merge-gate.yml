@@ -1,0 +1,31 @@
+name: FB merge gate
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: fb-merge-gate
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Update statuses
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Set FB merge gate status on open PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/fb-merge-gate.sh

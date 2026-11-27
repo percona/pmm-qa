@@ -14,6 +14,7 @@ services:
       - "1443:8443"
     environment:
       - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
       interval: 5s
@@ -55,6 +56,7 @@ services:
       - "2443:8443"
     environment:
       - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
       - PMM_PROMSCRAPE_MAX_SCRAPE_SIZE=128MiB
       - VMAGENT_remoteWrite_maxDiskUsagePerURL=52428800
     depends_on:

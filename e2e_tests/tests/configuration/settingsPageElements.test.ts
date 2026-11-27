@@ -293,15 +293,7 @@ pmmTest(
       await settingsPage.applyAdvancedChanges();
     });
 
-    await pmmTest.step('Verify scheduled backups are available', async () => {
-      await page.goto(scheduledBackupsPage.url);
-      await expect(scheduledBackupsPage.buttons.createScheduledBackup).toContainText(
-        'Create scheduled backup',
-        {
-          timeout: Timeouts.THIRTY_SECONDS,
-        },
-      );
-    });
+    await scheduledBackupsPage.open();
   },
 );
 

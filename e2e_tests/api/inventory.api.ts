@@ -1,6 +1,14 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import {
+  AgentStatus,
+  GetAgents,
+  GetNode,
+  GetService,
+  GetServices,
+  QanAgentType,
+  ServiceType,
+} from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
@@ -26,6 +34,19 @@ export default class InventoryApi {
       response.status(),
       `Delete node API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
     ).toEqual(200);
+  };
+
+  getAgents = async (): Promise<GetAgents> => {
+    const response = await this.request.get(apiEndpoints.inventory.agents, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get agents API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    return (await response.json()) as GetAgents;
   };
 
   getAllNodes = async (): Promise<GetNode[]> => {
@@ -64,6 +85,14 @@ export default class InventoryApi {
     return filteredServices;
   };
 
+  getNodeAddress = async (nodeId: string): Promise<string> => {
+    const node = (await this.getAllNodes()).find(({ node_id }) => node_id === nodeId);
+
+    if (!node?.address) throw new Error(`Node ${nodeId} has no address`);
+
+    return node.address;
+  };
+
   getNodeWithMysqlService = async (nodeName: string) => {
     const nodes = (await this.getAllNodes()).filter((node) => node.node_name === nodeName);
 
@@ -80,6 +109,38 @@ export default class InventoryApi {
       serviceId: services[0].service_id,
       serviceName: services[0].service_name,
     };
+  };
+
+  getQanService = async (agentType: QanAgentType): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ agents }) =>
+      agents?.some((agent) => agent.agent_type === agentType && !agent.disabled),
+    );
+
+    if (!service) throw new Error(`No service has an enabled ${agentType}`);
+
+    return service;
+  };
+
+  getServiceAgent = async (serviceType: ServiceType, partialServiceName: string, agentType: string) => {
+    const { agents } = await this.getServiceDetailsByTypeAndPartialName(serviceType, partialServiceName);
+    const agent = agents.find((serviceAgent) => serviceAgent.agent_type === agentType);
+
+    if (!agent) throw new Error(`Agent ${agentType} of service ${partialServiceName} is not present`);
+
+    return agent;
+  };
+
+  getServiceAgents = async (serviceId: string) =>
+    Object.values(await this.getAgents())
+      .flat()
+      .filter((agent) => agent.service_id === serviceId);
+
+  getServiceById = async (serviceId: string): Promise<GetService> => {
+    const service = (await this.getServices()).services.find(({ service_id }) => service_id === serviceId);
+
+    if (!service) throw new Error(`Service ${serviceId} is not present`);
+
+    return service;
   };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
@@ -133,6 +194,16 @@ export default class InventoryApi {
     return service;
   };
 
+  getServiceExporter = async (serviceId: string, exporterType: string) => {
+    const exporter = (await this.getServiceById(serviceId)).agents.find(
+      ({ agent_type }) => agent_type === exporterType,
+    );
+
+    if (!exporter) throw new Error(`${exporterType} of service ${serviceId} is not present`);
+
+    return exporter;
+  };
+
   getServices = async (): Promise<GetServices> => {
     const authToken = GrafanaHelper.getToken();
     const services = await this.request.get(apiEndpoints.management.services, {
@@ -165,6 +236,31 @@ export default class InventoryApi {
     expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
+  };
+
+  removeNodesByName = async (names: string[]): Promise<void> => {
+    for (const { node_id } of (await this.getAllNodes()).filter(({ node_name }) =>
+      names.includes(node_name),
+    )) {
+      await this.deleteNode(node_id, true);
+    }
+  };
+
+  requestServiceUpdate = (
+    serviceId: string,
+    serviceType: string,
+    changes: Record<string, unknown>,
+    headers = GrafanaHelper.getAuthHeader(),
+  ) =>
+    this.request.put(`${apiEndpoints.management.services}/${serviceId}`, {
+      data: { [serviceType]: changes },
+      headers,
+    });
+
+  updateService = async (serviceId: string, serviceType: string, changes: Record<string, unknown>) => {
+    const response = await this.requestServiceUpdate(serviceId, serviceType, changes);
+
+    expect(response.status(), await response.text()).toEqual(200);
   };
 
   verifyAgentsAreRunning = async (serviceName: string) =>

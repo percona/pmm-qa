@@ -25,7 +25,7 @@ E2E_TAGS_START = "<!-- E2E-TAGS-START -->"
 E2E_TAGS_END = "<!-- E2E-TAGS-END -->"
 CLI_TAGS_START = "<!-- CLI-TAGS-START -->"
 CLI_TAGS_END = "<!-- CLI-TAGS-END -->"
-TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
+TAG_PATTERN = re.compile(r"(?<![\w@])@[A-Za-z0-9][A-Za-z0-9_-]*\b(?![/.])")
 TEST_ID_PATTERN = re.compile(r"@PMM-T\d+", re.IGNORECASE)
 PLAYWRIGHT_TAG_PATTERN = re.compile(
     r"tag\s*:\s*(?:'(?P<single>@[A-Za-z0-9][A-Za-z0-9_-]*)'|\"(?P<double>@[A-Za-z0-9][A-Za-z0-9_-]*)\"|\[(?P<array>.*?)\])",
@@ -40,7 +40,12 @@ TOPOLOGY = {
     "PDPGSQL": {"default_topology": "single node", "setup_type": {"replication": "primary/replica", "patroni": "Patroni setup"}},
     "PSMDB": {
         "default_topology": "pss replica set",
-        "setup_type": {"psa": "PSA replica set", "shards": "sharded setup", "sharding": "sharded setup"},
+        "setup_type": {
+            "psa": "PSA replica set",
+            "shards": "sharded setup",
+            "sharding": "sharded setup",
+            "standalone_no_pbm": "standalone mongod without PBM",
+        },
     },
     "VALKEY": {"default_topology": "cluster", "setup_type": {"sentinel": "sentinel setup", "sentinels": "sentinel setup"}},
     "HAPROXY": {"default_topology": "fixed HAProxy setup", "setup_type": {}},

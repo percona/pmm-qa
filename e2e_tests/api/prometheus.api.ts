@@ -17,6 +17,17 @@ export default class PrometheusApi {
 
   constructor(private request: APIRequestContext) {}
 
+  getActiveClusterSyncInstance = async (): Promise<PrometheusSample> => {
+    const active = await this.getActiveClusterSyncInstances();
+
+    expect(active, 'Exactly one PCSM instance must hold the HA lease').toHaveLength(1);
+
+    return active[0];
+  };
+
+  getActiveClusterSyncInstances = async (): Promise<PrometheusSample[]> =>
+    await this.instantQuery(`percona_clustersync_mongodb_ha_active == 1`);
+
   /** Looked up rather than hardcoded - the UID is generated per deployment. */
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
@@ -110,6 +121,33 @@ export default class PrometheusApi {
     );
   };
 
+  /** For a series that already exists, waits for a sample newer than the server's time now. */
+  waitForNewSample = async (selector: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    await expect
+      .poll(async () => (await this.instantQueryValue(`max(timestamp(${selector}))`)) ?? 0, {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} has no sample after ${since}`,
+        timeout,
+      })
+      .toBeGreaterThan(since);
+  };
+
+  /** Waits until the series of `selector` with a sample newer than the server's time now equal `value`. */
+  waitForNewValue = async (selector: string, value: number, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
+    const since = await this.waitForServerTime();
+
+    // One query, so the freshness and the value come from the same series.
+    await expect
+      .poll(() => this.instantQueryValue(`max(${selector} and (timestamp(${selector}) > ${since}))`), {
+        intervals: [Timeouts.ONE_SECOND],
+        message: `${selector} after ${since}`,
+        timeout,
+      })
+      .toEqual(value);
+  };
+
   waitForQueryValue = async (
     baseUrl: string,
     query: string,
@@ -142,6 +180,26 @@ export default class PrometheusApi {
         },
       )
       .toBeGreaterThan(0);
+  };
+
+  /** Waits until `expression` resolves to as many series at the last 5-minute boundary as it does now. */
+  waitForSeriesAtFiveMinuteBoundary = async (expression: string) => {
+    await expect
+      .poll(
+        async () => {
+          const seriesNow = (await this.instantQuery(expression)).length;
+          const boundary = String(Math.floor(Date.now() / 300_000) * 300);
+          const seriesAtBoundary = (await this.instantQuery(expression, { time: boundary })).length;
+
+          return seriesNow > 0 && seriesAtBoundary >= seriesNow;
+        },
+        {
+          intervals: [Timeouts.FIVE_SECONDS],
+          message: `${expression} resolves to fewer series at the last 5-minute boundary than now`,
+          timeout: Timeouts.TEN_MINUTES,
+        },
+      )
+      .toBe(true);
   };
 
   /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */

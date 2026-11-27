@@ -27,8 +27,37 @@ export interface AlertRulesResponse {
   };
 }
 
+export interface AlertTemplate {
+  condition?: string;
+  expressions?: { expression: string; reducer?: string; ref_id: string; type: string }[];
+  name: string;
+  params?: {
+    float?: { default: number; max: number; min: number };
+    name: string;
+    overridable?: boolean;
+    type: string;
+    unit: string;
+  }[];
+  queries?: { datasource: string; expr: string; ref_id: string }[];
+  source: string;
+  summary: string;
+}
+
 export interface ProvisionedAlertRule {
-  data: { model: { expression?: string }; refId: string }[];
+  data: {
+    datasourceUid: string;
+    model: {
+      editorType?: string;
+      expression?: string;
+      intervalMs?: number;
+      queryType?: string;
+      rawSql?: string;
+      reducer?: string;
+      settings?: { mode?: string };
+    };
+    refId: string;
+    relativeTimeRange?: { from: number; to: number };
+  }[];
   folderUID: string;
   for: string;
   labels?: Record<string, string>;
@@ -39,10 +68,20 @@ export interface ProvisionedAlertRule {
 
 export type RulerRulesResponse = Record<
   string,
-  { name: string; rules: { grafana_alert: { namespace_uid: string; provenance?: string; uid: string } }[] }[]
+  {
+    name: string;
+    rules: { grafana_alert: { namespace_uid: string; provenance?: string; title: string; uid: string } }[];
+  }[]
 >;
 
+export interface AlertRuleFilter {
+  label: string;
+  regexp: string;
+  type: 'FILTER_TYPE_MATCH' | 'FILTER_TYPE_MISMATCH';
+}
+
 export interface TemplatedAlertRule {
+  filters?: AlertRuleFilter[];
   folderUid: string;
   group: string;
   interval?: string;

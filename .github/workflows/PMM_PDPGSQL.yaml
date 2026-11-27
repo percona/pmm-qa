@@ -51,7 +51,7 @@ jobs:
 
     steps:
       - name: Run the PMM Server container
-        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
+        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server -e PMM_ENABLE_TELEMETRY=0 ${{ env.PMM_SERVER_IMAGE }}
 
       - name: Checkout pmm-qa
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,12 +69,13 @@ jobs:
           chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
 
-      - name: Setup npm modules for CodeceptJS
-        working-directory: codeceptjs-e2e
-        run: npm ci && npx playwright install --with-deps && npx codeceptjs def pr.codecept.js
+      - name: Install npx dependencies
+        working-directory: e2e_tests
+        run: npm ci && npx playwright install --with-deps chromium
 
       - name: Run the Integration tests of PDPGSQL
-        working-directory: codeceptjs-e2e
-        run: |
-          export PMM_UI_URL="http://127.0.0.1:8081/"
-          npx codeceptjs run -c pr.codecept.js tests/qa-integration/pmm_pdpgsql_integration_test.js
+        working-directory: e2e_tests
+        env:
+          PMM_UI_URL: 'http://127.0.0.1:8081/'
+          PMM_TEST_FLAG: '@pdpgsql-pmm-integration'
+        run: npx playwright test --grep "$PMM_TEST_FLAG"

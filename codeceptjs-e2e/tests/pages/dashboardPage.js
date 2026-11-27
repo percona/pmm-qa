@@ -1114,8 +1114,8 @@ module.exports = {
     },
     annotationMarker: I.useDataQA('data-testid annotation-marker'),
     clearSelection: '//a[@ng-click="vm.clearSelections()"]',
-    collapsedDashboardRow: '//button[@aria-label="Expand row"]',
-    collapsedDashboardRowByName: (rowName) => `//*[@aria-label="Expand row" and contains(@data-testid, "${rowName}")]`,
+    collapsedDashboardRow: '//button[starts-with(@aria-label, "Expand row")]',
+    collapsedDashboardRowByName: (rowName) => `//*[starts-with(@aria-label, "Expand row") and contains(@data-testid, "${rowName}")]`,
     dataLinkForRoot: '//div[contains(text(), "Data links")]/..//a',
     Last2Days: '//span[contains(text(), "Last 2 days")]',
     metricTitle: '$header-container',
@@ -1132,7 +1132,7 @@ module.exports = {
     reportTitle: locate('$header-container').inside(locate('[class*="panel-container"]')),
     reportTitleWithNA: locate('$header-container').inside(
       locate('[class*="panel-container"]').withDescendant(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+        '//*[(text()="No data") or starts-with(text(), "No data.") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
       ),
     ),
     reportTitleWithNoData: locate('$header-container').inside(

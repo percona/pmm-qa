@@ -3,6 +3,20 @@ const apiEndpoints = {
     roles: '/v1/accesscontrol/roles',
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
+  advisors: {
+    batchChange: '/v1/advisors/checks:batchChange',
+    checks: '/v1/advisors/checks',
+    emailInsights: '/v1/advisors/insights:email',
+    insights: '/v1/advisors/insights',
+    notificationSettings: '/v1/advisors/notificationSettings',
+    runs: '/v1/advisors/runs',
+    schedules: '/v1/advisors/schedules',
+    services: '/v1/advisors/services',
+    start: '/v1/advisors/checks:start',
+    test: '/v1/advisors/checks:test',
+    testNotification: '/v1/advisors/notifications:test',
+    testTargets: '/v1/advisors/checks:testTargets',
+  },
   alerting: {
     folders: 'graph/api/folders',
     listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
@@ -12,10 +26,14 @@ const apiEndpoints = {
   },
   backups: {
     artifacts: '/v1/backups/artifacts',
+    changeScheduled: '/v1/backups:changeScheduled',
     locations: '/v1/backups/locations',
     removeScheduled: '/v1/backups',
+    restores: '/v1/backups/restores',
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
+    startBackup: '/v1/backups:start',
+    startRestore: '/v1/backups/restores:start',
   },
   dumps: {
     batchDelete: '/v1/dumps:batchDelete',
@@ -43,10 +61,12 @@ const apiEndpoints = {
     status: '/v1/ha/status',
   },
   inventory: {
+    agents: '/v1/inventory/agents',
     nodes: '/v1/inventory/nodes',
     services: '/v1/inventory/services',
   },
   management: {
+    agents: '/v1/management/agents',
     annotations: '/v1/management/annotations',
     nodes: '/v1/management/nodes',
     services: '/v1/management/services',
@@ -58,6 +78,15 @@ const apiEndpoints = {
     // PMM's /prometheus route 500s on HA, so PrometheusApi uses the Grafana datasource proxy.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
     query: '/prometheus/api/v1/query',
+  },
+  qan: {
+    explainFingerprint: '/v1/qan:explainFingerprint',
+    getExample: '/v1/qan/query:getExample',
+    getHistogram: '/v1/qan:getHistogram',
+    getLabels: '/v1/qan:getLabels',
+    getMetrics: '/v1/qan:getMetrics',
+    getReport: '/v1/qan/metrics:getReport',
+    query: '/v1/qan/query',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
