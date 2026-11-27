@@ -40,8 +40,11 @@ export default class DataSourcesPage extends BasePage {
     testResult: this.grafanaIframe().getByTestId('data-testid Data source settings page Alert'),
   };
   inputs = {
-    clickHouseServerAddress: this.grafanaIframe().getByLabel('Server address', { exact: true }),
-    clickHouseServerPort: this.grafanaIframe().getByLabel('Server port', { exact: true }),
+    clickHouseServerAddress: this.grafanaIframe().getByRole('textbox', {
+      exact: true,
+      name: 'Server address',
+    }),
+    clickHouseServerPort: this.grafanaIframe().getByRole('spinbutton', { exact: true, name: 'Server port' }),
     database: this.grafanaIframe().getByPlaceholder('Database', { exact: true }),
     exploreDataSourcePicker: this.grafanaIframe().getByTestId('data-testid Select a data source'),
     exploreSqlEditor: this.grafanaIframe()
