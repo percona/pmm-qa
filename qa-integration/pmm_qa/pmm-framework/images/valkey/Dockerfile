@@ -9,7 +9,7 @@ FROM valkey/valkey:${VALKEY_VERSION}-bookworm AS valkey
 
 FROM ${BASE_OS}
 RUN dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm && \
-    dnf install -y systemd sudo iproute procps-ng findutils gzip openssl tar && \
+    dnf install -y systemd sudo iproute procps-ng findutils gzip openssl tar perl-interpreter && \
     dnf clean all && rm -rf /var/cache/dnf
 COPY --from=valkey /usr/local/bin/valkey-* /usr/local/bin/
 RUN valkey-server --version && valkey-cli --version

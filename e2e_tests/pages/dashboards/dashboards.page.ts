@@ -432,6 +432,9 @@ export default class Dashboards extends BasePage {
     });
   };
 
+  sortTableRows = (rows: Record<string, string>[], column: string) =>
+    [...rows].sort((a, b) => a[column].localeCompare(b[column]));
+
   unselectVariableValue = async (variableName: DropdownName) => {
     await this.builders.removeSelectedVariableValue(variableName).click({ timeout: Timeouts.TEN_SECONDS });
     await this.page.keyboard.press('Escape');

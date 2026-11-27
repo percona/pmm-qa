@@ -114,23 +114,14 @@ const frameworkNode = async (api: Api, dockerHelper: DockerHelper, serviceRegex:
   };
 };
 
-// pt-summary is a perl script, and the psmdb and valkey images come without perl.
-const installPerl = (cliHelper: CliHelper, container: string) =>
-  cliHelper.execute(`docker exec ${container} dnf install -y -q perl-interpreter`).assertSuccess();
-const sortedRows = (rows: Record<string, string>[]) =>
-  [...rows].sort((a, b) => a.Service.localeCompare(b.Service));
-
 pmmTest(
   'PMM-T2901 - System Summary shows the selected node @node-summary',
-  async ({ api, cliHelper, dashboard, dockerHelper, page, urlHelper }) => {
+  async ({ api, dashboard, dockerHelper, page, urlHelper }) => {
     const { nodeSummary } = dashboard.os;
     const pxc = await frameworkNode(api, dockerHelper, '^pxc_node__1_');
     const arbiter = await frameworkNode(api, dockerHelper, '^rs103_');
     const valkey = await frameworkNode(api, dockerHelper, '^valkey-primary-1-svc$');
     const pmmServerNodeName = await api.haApi.getPmmServerNodeName();
-
-    installPerl(cliHelper, arbiter.container);
-    installPerl(cliHelper, valkey.container);
 
     await pmmTest.step('Open Node Summary from a link that names only the PXC node', async () => {
       await page.goto(urlHelper.buildUrlWithParameters(nodeSummary.url, { nodeName: pxc.nodeName }));
@@ -220,7 +211,7 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
       ];
       const { services } = await api.inventoryApi.getServices();
       const serviceRows = (nodeId: string, status: string) =>
-        sortedRows(
+        dashboard.sortTableRows(
           services
             .filter(({ node_id }) => node_id === nodeId)
             .map(({ service_name, service_type }) => ({
@@ -228,6 +219,7 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
               Status: status,
               Type: nodeSummary.serviceTypes.names[service_type],
             })),
+          'Service',
         );
 
       const typeRows = (nodeId: string) => {
@@ -235,22 +227,22 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
 
         for (const { Type } of serviceRows(nodeId, '')) amounts.set(Type, (amounts.get(Type) ?? 0) + 1);
 
-        return [...amounts]
-          .map(([Type, amount]) => ({ Amount: String(amount), Type }))
-          .sort((a, b) => a.Type.localeCompare(b.Type));
+        return dashboard.sortTableRows(
+          [...amounts].map(([Type, amount]) => ({ Amount: String(amount), Type })),
+          'Type',
+        );
       };
 
       const sortedTypes = async () =>
-        [...(await dashboard.getTableRowsAfterRefresh(typesPanel))].sort((a, b) =>
-          a.Type.localeCompare(b.Type),
-        );
+        dashboard.sortTableRows(await dashboard.getTableRowsAfterRefresh(typesPanel), 'Type');
       // toPass, not poll: a refresh that is still loading throws, and that has to be retried too.
       const verifyRows = async (read: () => Promise<unknown>, expected: unknown, timeout: Timeouts) =>
         expect(async () => expect(await read()).toEqual(expected)).toPass({
           intervals: [Timeouts.TEN_SECONDS],
           timeout,
         });
-      const sortedServices = async () => sortedRows(await dashboard.getTableRowsAfterRefresh(servicesPanel));
+      const sortedServices = async () =>
+        dashboard.sortTableRows(await dashboard.getTableRowsAfterRefresh(servicesPanel), 'Service');
 
       pxcContainer = pxc.container;
       writer = writerPort(cliHelper, pxc.container);
@@ -301,7 +293,7 @@ pmmTest.describe('Node Summary with a stopped PXC node', () => {
           async () => {
             const [first, ...rest] = await dashboard.getTableRowsAfterRefresh(servicesPanel);
 
-            return { first, rest: sortedRows(rest) };
+            return { first, rest: dashboard.sortTableRows(rest, 'Service') };
           },
           { first: { Service: downService, Status: nodeSummary.services.down, Type: 'MySQL' }, rest: upRows },
           Timeouts.TWO_MINUTES,
@@ -536,7 +528,6 @@ pmmTest.describe('Node Summary after re-registering a node', () => {
         });
 
       valkey = await frameworkNode(api, dockerHelper, '^valkey-primary-1-svc$');
-      installPerl(cliHelper, valkey.container);
 
       await pmmTest.step('Open Node Summary for the Valkey node', async () => {
         await page.goto(summaryUrl());

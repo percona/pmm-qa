@@ -26,7 +26,7 @@ RUN set -eux; \
     : "${MGODATAGEN_VERSION:?MGODATAGEN_VERSION build-arg is required}"; \
     major=$(echo "$PSMDB_VERSION" | cut -d. -f1-2); \
     case $PSMDB_VERSION in *-*) pin="-${PSMDB_VERSION}.el${OL_VERSION}" ;; *) pin='' ;; esac; \
-    dnf install -y curl findutils gzip openssl tar krb5-workstation; \
+    dnf install -y curl findutils gzip openssl tar krb5-workstation perl-interpreter; \
     rpm -Uvh https://repo.percona.com/yum/percona-release-latest.noarch.rpm; \
     percona-release enable "psmdb-${major/./}" release; \
     percona-release enable pbm release; \
