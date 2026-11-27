@@ -237123,6 +237123,16 @@
         "link": "https://github.com/percona/pmm-qa/pull/1844",
         "by": "Investigator routine",
         "at": "2026-11-27T04:31:03Z"
+      },
+      {
+        "suites": [
+          "CLI Integration Compatibility"
+        ],
+        "verdict": "product bug",
+        "summary": "3.11.0 · TLS PSMDB 8.0: PMM-T2794 ran pmm-admin update mongodb --tls; pmm-admin printed the change but GetAgent right after returned tls false, with a status report saved inside the 32 ms UpdateService call. That is the open PMM-15835 lost update; the pmm-qa#1834 re-apply workaround covers PMM-T2812 but not PMM-T2794. Diagnosed from the job artifact, not reproduced; recurrence added to the ticket.",
+        "link": "https://perconadev.atlassian.net/browse/PMM-15835",
+        "by": "Investigator routine",
+        "at": "2026-11-27T04:31:09Z"
       }
     ],
     "claims": []
