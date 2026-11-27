@@ -782,7 +782,8 @@ SPECS
   stub_prebaked_docker
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=pss,MINIO=false'
   dispatch_setup
-  ! grep -Eq 'python3|mongodb_uri|iproute' "$DOCKER_CALLS" || false
+  ! grep -Eq 'python3|mongodb_uri|iproute|PMM_AGENT_SETUP_FORCE' "$DOCKER_CALLS" || false
+  grep -Eq '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=rs101 -e PMM_AGENT_SETUP_NODE_NAME=rs101\._[0-9]+ rs101 pmm-agent setup ' "$DOCKER_CALLS"
 
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false,OPERATIONS=true'
@@ -790,6 +791,8 @@ SPECS
   ! grep -q 'dnf install' "$DOCKER_CALLS" || false
   [[ $(grep -c '^exec --user root rs[12]0[123] sh -c command -v ip && python3 -m venv --copies /tmp/pmm-qa-venv-check' "$DOCKER_CALLS") -eq 6 ]]
   grep -Fq 'exec --user root rs102 sh -ceu umask 077; echo mongodb://pmm:pmmpass@rs102:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
+  # A scan connects to the node name, so it is the container's.
+  [[ $(grep -cE '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=(rs[12]0[123]) -e PMM_AGENT_SETUP_NODE_NAME=\1 -e PMM_AGENT_SETUP_FORCE=1 \1 pmm-agent setup ' "$DOCKER_CALLS") -eq 6 ]]
   [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 4 ]]
   ! grep -Eq '^exec --user root rs[12]03 .*mongodb_uri' "$DOCKER_CALLS" || false
   [[ $(grep -n 'mongodb_uri' "$DOCKER_CALLS" | head -1 | cut -d: -f1) -gt $(grep -n 'createUser({ user: "pmm"' "$DOCKER_CALLS" | head -1 | cut -d: -f1) ]]
@@ -803,6 +806,7 @@ SPECS
   [[ $(grep -c "^exec --user root [a-z0-9]* dnf install -y --disablerepo=\* --enablerepo=ol8_baseos_latest --enablerepo=ol8_appstream python3 python3-pip iproute\$" "$DOCKER_CALLS") -eq 10 ]]
   [[ $(grep -c 'python3 -m venv' "$DOCKER_CALLS") -eq 20 ]]
   [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 10 ]]
+  grep -q '^exec -e PMM_AGENT_SETUP_NODE_ADDRESS=mongos -e PMM_AGENT_SETUP_NODE_NAME=mongos -e PMM_AGENT_SETUP_FORCE=1 mongos pmm-agent setup ' "$DOCKER_CALLS"
   grep -Fq 'exec --user root mongos sh -ceu umask 077; echo mongodb://pmm:pmmpass@mongos:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
 
   : >"$DOCKER_CALLS"

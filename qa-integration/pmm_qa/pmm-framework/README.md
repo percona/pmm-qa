@@ -162,7 +162,9 @@ Agents reach mongod over the network, so only logical backups work. It needs `MI
 member and `mongos` needs `ip` and a `python3` that builds the venv a scan runs in. The OL9 image has both;
 elsewhere, OL8 included, the setup installs `python3`, `python3-pip` and `iproute` from the OS repositories,
 and fails when the venv still does not build. Every member but an arbiter gets `/root/.mongodb_uri`, mode 600, with the
-`pmm` user, which holds `clusterMonitor`. The replica set and sharded containers already give Nomad writable
+`pmm` user, which holds `clusterMonitor`. A scan connects to a service at its node's name, so each node is
+registered under its container name (`rs101`, `mongos`), which every container on `pmm-qa` resolves, rather
+than the usual `rs101._<random>`, replacing any node of that name. The replica set and sharded containers already give Nomad writable
 cgroups and run `pmm-agent` as root. `standalone_no_pbm` runs unprivileged, so it refuses the option. PMM
 Server needs PMM Extensions and `PMM_ENABLE_OM=1`: see
 [`e2e_tests/docker-compose-extensions.yml`](../../../e2e_tests/docker-compose-extensions.yml).

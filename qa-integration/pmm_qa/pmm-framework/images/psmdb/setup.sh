@@ -249,8 +249,14 @@ psmdb_client() {
 # Usage: psmdb_register NODE NODE_NAME SERVICE_NAME PMM_ADMIN_ADD_ARGS...
 psmdb_register() {
   local node=$1 node_name=$2 service=$3
-  local -a debug=() query=()
+  local -a debug=() query=() force=()
   shift 3
+  # An Operations for MongoDB scan connects to a service at its node's name, so the node takes the
+  # container's, which resolves on pmm-qa. Forced: a node of that name may outlive an earlier run.
+  if [[ $operations == true ]]; then
+    node_name=$node
+    force=(-e PMM_AGENT_SETUP_FORCE=1)
+  fi
   if [[ $query_source != profiler ]]; then
       if [[ $query_source != profiler && ! ( $setup_type == psa && $node == rs103 ) ]]; then
         query=("--query-source=$query_source")
@@ -262,7 +268,7 @@ psmdb_register() {
   # The containers join PSMDB_NETWORKS, and the address pmm-agent would detect can be on one PMM Server
   # is not on, which breaks pull mode. The container name resolves on pmm-qa, which both share.
   retry_on "$PMM_TRANSIENT_ERRORS" 10 "pmm-agent setup on $node" \
-    docker exec -e "PMM_AGENT_SETUP_NODE_ADDRESS=$node" -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "$node" pmm-agent setup \
+    docker exec -e "PMM_AGENT_SETUP_NODE_ADDRESS=$node" -e "PMM_AGENT_SETUP_NODE_NAME=$node_name" "${force[@]}" "$node" pmm-agent setup \
     --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml "${debug[@]}" >/dev/null
   # Started only now: `pmm-agent setup` skips the reload of an agent not yet listening,
   # and needs --config-file when none is running.
