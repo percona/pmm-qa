@@ -168,7 +168,10 @@ const prepareOlderVolume = async (
         `docker exec -e PGOPTIONS='-c pg_stat_statements.track_utility=off' ${container} psql -U postgres -d postgres -c "alter role grafana password '${password}'"`,
       )
       .assertSuccess();
-    cliHelper.execSilent(`docker exec ${container} supervisorctl restart grafana`).assertSuccess();
+    // PMM's initialization can still be loading the supervisord programs, which reports grafana as no such process.
+    await expect(() => {
+      cliHelper.execSilent(`docker exec ${container} supervisorctl restart grafana`).assertSuccess();
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
     await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
   }
 
