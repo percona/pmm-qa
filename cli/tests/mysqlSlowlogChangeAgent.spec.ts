@@ -19,7 +19,8 @@ test.beforeAll(async ({}) => {
 });
 
 // The @percona-server specs run next in the same container, so give them back pmm-agent on its default port and a mysqld
-// without require_secure_transport. A restart clears the latter.
+// without require_secure_transport. A restart clears the latter, and also the slow log pmm-framework turns on with SET GLOBAL:
+// once PMM-T2538's 100 MB limit has rotated the slow log away, their slowlog Agents wait for a file nothing creates.
 test.afterAll(async ({}) => {
   await (await cli.exec(`docker exec ${containerName} sed -i 's/listen-port: 7778/listen-port: 7777/' ${pmmAgentConfig}`)).assertSuccess();
   await pmmCli.restartContainerWithPmmAgent(containerName, pmmAgentConfig, pmmAgentLog);
@@ -28,6 +29,7 @@ test.afterAll(async ({}) => {
     await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SELECT 1;"`)).assertSuccess();
     await (await cli.exec(`docker exec ${containerName} pmm-admin status`)).assertSuccess();
   }).toPass({ intervals: [5_000], timeout: 120_000 });
+  await (await cli.exec(`docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "SET GLOBAL slow_query_log=ON; SET GLOBAL long_query_time=0;"`)).assertSuccess();
 });
 
 test.describe('pmm-admin inventory change agent effects on mysqld_exporter and QAN slowlog agent', { tag: '@ps-slowlog-change-agent' }, () => {
