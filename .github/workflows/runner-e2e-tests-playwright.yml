@@ -260,6 +260,12 @@ jobs:
             echo "PMM Extensions image: $PMM_EXTENSIONS_IMAGE"
             if [[ $ENABLE_MONGODB_OPERATIONS == true ]]; then
               export PMM_ENABLE_OM=1
+              # Operations for MongoDB also scans the runner's own PMM Client node, in a venv of its python3.
+              if ! python3 -m venv --copies /tmp/pmm-qa-venv-check >/dev/null 2>&1; then
+                sudo apt-get update -qq
+                sudo apt-get install -y -qq python3-venv
+              fi
+              rm -rf /tmp/pmm-qa-venv-check
             fi
             # The task scripts of the runner's own PMM Client come from BASE_URL, through the published port.
             echo '127.0.0.1 pmm-extensions' | sudo tee -a /etc/hosts

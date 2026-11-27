@@ -159,8 +159,9 @@ Agents reach mongod over the network, so only logical backups work. It needs `MI
 `standalone_no_pbm`, and does not support the `extra` compose profile.
 
 `PSMDB` takes `OPERATIONS=true` (default `false`) to prepare its nodes for Operations for MongoDB scans. Every
-member and `mongos` gets `python3`, `python3-pip` and `iproute`, and the setup fails when `python3 -m venv`
-cannot build the venv a scan runs in. Every member but an arbiter gets `/root/.mongodb_uri`, mode 600, with the
+member and `mongos` needs `ip` and a `python3` that builds the venv a scan runs in. The OL9 image has both;
+elsewhere, OL8 included, the setup installs `python3`, `python3-pip` and `iproute` from the OS repositories,
+and fails when the venv still does not build. Every member but an arbiter gets `/root/.mongodb_uri`, mode 600, with the
 `pmm` user, which holds `clusterMonitor`. The replica set and sharded containers already give Nomad writable
 cgroups and run `pmm-agent` as root. `standalone_no_pbm` runs unprivileged, so it refuses the option. PMM
 Server needs PMM Extensions and `PMM_ENABLE_OM=1`: see

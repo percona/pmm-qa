@@ -161,18 +161,27 @@ psmdb_mask_pbm_agent() {
 
 # An Operations for MongoDB scan runs in a venv that Nomad builds with the node's python3, and logs
 # in as the user in root's .mongodb_uri. An arbiter holds no users, so it gets no file.
-# Usage: psmdb_operations_node NODE [ARBITER...]
+# Usage: psmdb_operations_node NODE OL_VERSION [ARBITER...]
 psmdb_operations_node() {
-  local node=$1 arbiter
-  shift
-  retry_on "$PMM_REPO_ERRORS|metadata_lock" 3 "the Operations for MongoDB packages on $node" \
-    docker exec --user root "$node" dnf install -y python3 python3-pip iproute >/dev/null
-  docker exec --user root "$node" sh -ceu 'python3 -m venv --copies /tmp/pmm-qa-venv-check; rm -rf /tmp/pmm-qa-venv-check' >/dev/null ||
-    die "python3 on $node cannot build the venv an Operations for MongoDB scan runs in."
+  local node=$1 ol=$2 arbiter
+  shift 2
+  # Only an image that lacks them (OL8 has no python3) installs them: dnf refreshes every
+  # repository it reads first, minutes per node, so it reads the OS ones alone.
+  if ! psmdb_operations_ready "$node"; then
+    retry_on "$PMM_REPO_ERRORS|metadata_lock" 3 "the Operations for MongoDB packages on $node" \
+      docker exec --user root "$node" dnf install -y '--disablerepo=*' "--enablerepo=ol${ol}_baseos_latest" \
+      "--enablerepo=ol${ol}_appstream" python3 python3-pip iproute >/dev/null
+    psmdb_operations_ready "$node" ||
+      die "python3 on $node cannot build the venv an Operations for MongoDB scan runs in."
+  fi
   for arbiter; do
     [[ $node != "$arbiter" ]] || return 0
   done
   must docker exec --user root "$node" sh -ceu "umask 077; echo mongodb://pmm:pmmpass@$node:27017 >/root/.mongodb_uri"
+}
+
+psmdb_operations_ready() {
+  docker exec --user root "$1" sh -c 'command -v ip && python3 -m venv --copies /tmp/pmm-qa-venv-check && rm -rf /tmp/pmm-qa-venv-check' >/dev/null 2>&1
 }
 
 # Usage: psmdb_pbm_uri REPLICA_SET NODE...
@@ -338,7 +347,7 @@ psmdb_replica_set() {
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node nodes psmdb_client
   if [[ $operations == true ]]; then
-    step 'Prepare the nodes for Operations for MongoDB' each_node nodes psmdb_operations_node "$arbiter" "${arbiter/103/203}"
+    step 'Prepare the nodes for Operations for MongoDB' each_node nodes psmdb_operations_node "$ol" "$arbiter" "${arbiter/103/203}"
   fi
   if [[ $external_pbm == true ]]; then
     local -a members=(rs101 rs102 rs103)
@@ -437,7 +446,7 @@ psmdb_sharded() {
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node clients psmdb_client
   if [[ $operations == true ]]; then
-    step 'Prepare the nodes for Operations for MongoDB' each_node clients psmdb_operations_node
+    step 'Prepare the nodes for Operations for MongoDB' each_node clients psmdb_operations_node "$ol"
   fi
   if [[ $external_pbm == true ]]; then
     step 'Disable the members pbm-agent' each_node nodes psmdb_mask_pbm_agent

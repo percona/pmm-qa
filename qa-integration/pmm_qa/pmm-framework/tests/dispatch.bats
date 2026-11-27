@@ -73,6 +73,11 @@ stub_prebaked_docker() {
       *replication_group_members*) printf '3\n' ;;
       *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
       *'cluster info'*) printf 'cluster_state:ok\n' ;;
+      # A node whose image lacks python3 builds a venv only once dnf has installed it.
+      *'python3 -m venv'*)
+        [[ ${OPERATIONS_PYTHON:-present} == present ]] || grep -q "^exec --user root $4 dnf install" "$DOCKER_CALLS"
+        return
+        ;;
       *'db.hello().setName + " " + db.version()'*)
         [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
         printf '%s\n' "${PSMDB_SOURCE_PROBE-rs 8.0.32-14}"
@@ -782,8 +787,8 @@ SPECS
   : >"$DOCKER_CALLS"
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=psa,COMPOSE_PROFILES=extra,MINIO=false,OPERATIONS=true'
   dispatch_setup
-  [[ $(grep -c '^exec --user root rs[12]0[123] dnf install -y python3 python3-pip iproute$' "$DOCKER_CALLS") -eq 6 ]]
-  [[ $(grep -c '^exec --user root rs[12]0[123] sh -ceu python3 -m venv --copies /tmp/pmm-qa-venv-check' "$DOCKER_CALLS") -eq 6 ]]
+  ! grep -q 'dnf install' "$DOCKER_CALLS" || false
+  [[ $(grep -c '^exec --user root rs[12]0[123] sh -c command -v ip && python3 -m venv --copies /tmp/pmm-qa-venv-check' "$DOCKER_CALLS") -eq 6 ]]
   grep -Fq 'exec --user root rs102 sh -ceu umask 077; echo mongodb://pmm:pmmpass@rs102:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
   [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 4 ]]
   ! grep -Eq '^exec --user root rs[12]03 .*mongodb_uri' "$DOCKER_CALLS" || false
@@ -792,9 +797,11 @@ SPECS
   : >"$DOCKER_CALLS"
   # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { :; }
-  parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,OPERATIONS=true'
+  OPERATIONS_PYTHON=missing
+  parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,OL_VERSION=8,OPERATIONS=true'
   dispatch_setup
-  [[ $(grep -c 'dnf install -y python3 python3-pip iproute$' "$DOCKER_CALLS") -eq 10 ]]
+  [[ $(grep -c "^exec --user root [a-z0-9]* dnf install -y --disablerepo=\* --enablerepo=ol8_baseos_latest --enablerepo=ol8_appstream python3 python3-pip iproute\$" "$DOCKER_CALLS") -eq 10 ]]
+  [[ $(grep -c 'python3 -m venv' "$DOCKER_CALLS") -eq 20 ]]
   [[ $(grep -c 'mongodb_uri' "$DOCKER_CALLS") -eq 10 ]]
   grep -Fq 'exec --user root mongos sh -ceu umask 077; echo mongodb://pmm:pmmpass@mongos:27017 >/root/.mongodb_uri' "$DOCKER_CALLS"
 
@@ -811,7 +818,7 @@ SPECS
   docker() {
     [[ $* != *'python3 -m venv'* ]] || { printf 'The virtual environment was not created successfully because ensurepip is not available.\n' >&2; return 1; }
   }
-  run psmdb_operations_node rs101
+  run psmdb_operations_node rs101 9
   [[ $status -ne 0 ]]
   [[ $output == *'python3 on rs101 cannot build the venv an Operations for MongoDB scan runs in.'* ]]
 }
