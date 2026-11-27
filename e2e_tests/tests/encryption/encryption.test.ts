@@ -533,7 +533,10 @@ pmmTest.describe('Valkey TLS and S3 location secrets', () => {
 
       const upgradeApi = new Api(upgradeRequest);
 
-      cliHelper.execute(`${upgradeCompose} up -d --wait ${upgradeContainer}`).assertSuccess();
+      // A container an interrupted run left behind would hand over its /srv, so this run gets a volume of its own.
+      cliHelper
+        .execute(`${upgradeCompose} up -d --wait --force-recreate --renew-anon-volumes ${upgradeContainer}`)
+        .assertSuccess();
       upgradeVolume = dockerHelper.getContainerVolume(upgradeContainer, '/srv');
       await expect(async () => {
         const { pmm_agent: pmmAgents } = await upgradeApi.inventoryApi.getAgents();
