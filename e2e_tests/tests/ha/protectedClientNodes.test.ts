@@ -1,18 +1,11 @@
 import pmmTest from '@fixtures/pmmTest';
-import { APIResponse, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
   await haClusterHelper.ensureServing(api.haApi);
 });
-
-const expectRefused = async (response: APIResponse, message: string): Promise<void> => {
-  const body = await response.text();
-
-  expect(response.status(), body).toEqual(400);
-  expect(body).toContain(message);
-};
 
 pmmTest(
   'PMM-T2914 - Verify the Nodes of the pmm-ha-client pods cannot be deleted from the UI or the API @pmm-ha',
@@ -59,12 +52,19 @@ pmmTest(
 
     for (const { nodeId, nodeName, pmmAgentId } of clientNodes) {
       await pmmTest.step(`Verify the API refuses to remove "${nodeName}"`, async () => {
+        const { inventoryApi } = api;
         const nodeRefusal = `Node '${nodeName}' is managed by this PMM deployment`;
 
-        await expectRefused(await api.inventoryApi.requestNodeRemoval(nodeId, true), nodeRefusal);
-        await expectRefused(await api.inventoryApi.requestNodeUnregistration(nodeId, true), nodeRefusal);
-        await expectRefused(
-          await api.inventoryApi.requestAgentRemoval(pmmAgentId, true),
+        await inventoryApi.verifyRequestRefused(
+          await inventoryApi.requestNodeRemoval(nodeId, true),
+          nodeRefusal,
+        );
+        await inventoryApi.verifyRequestRefused(
+          await inventoryApi.requestNodeUnregistration(nodeId, true),
+          nodeRefusal,
+        );
+        await inventoryApi.verifyRequestRefused(
+          await inventoryApi.requestAgentRemoval(pmmAgentId, true),
           `pmm-agent runs on Node '${nodeName}', which is managed by this PMM deployment`,
         );
       });

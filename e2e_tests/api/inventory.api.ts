@@ -285,6 +285,13 @@ export default class InventoryApi {
       )
       .catch(() => false);
 
+  verifyRequestRefused = async (response: APIResponse, message: string): Promise<void> => {
+    const body = await response.text();
+
+    expect(response.status(), body).toEqual(400);
+    expect(body).toContain(message);
+  };
+
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
 
