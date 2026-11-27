@@ -28,7 +28,7 @@ export interface KubernetesJobResource {
 }
 
 export interface KubernetesPodResource {
-  metadata: { deletionTimestamp?: string; name: string };
+  metadata: { deletionTimestamp?: string; name: string; ownerReferences?: { kind: string }[]; uid: string };
   spec?: { containers?: { image: string }[] };
   status?: {
     conditions?: { status: string; type: string }[];

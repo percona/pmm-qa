@@ -42,21 +42,31 @@ Run commands from `cli/`.
 
 - `@arbiter-psmdb`
 - `@client-docker`
+- `@external`
 - `@generic`
 - `@haproxy`
 - `@help-cli`
 - `@mongoDb`
 - `@mysql`
 - `@mysql-conf-file`
+- `@mysql-perfschema-change-agent`
+- `@pbm-arbiter-external`
+- `@pbm-external`
+- `@pbm-metrics-shard`
 - `@pdpgsql`
 - `@percona-server`
 - `@pgsql`
+- `@pgsql-pgss`
 - `@proxysql`
+- `@ps-slowlog-change-agent`
 - `@psmdb`
 - `@server-docker-generic`
 - `@server-only`
 - `@service-removal`
 - `@shard-psmdb`
+- `@ssl-pdpgsql`
+- `@ssl-psmdb`
+- `@standalone-psmdb`
 - `@unregister`
 - `@valkey`
 

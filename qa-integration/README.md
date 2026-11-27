@@ -56,7 +56,8 @@ The setups below are the QA integration environments registered in [`pmm_qa/pmm-
     "setup_type": {
       "psa": "PSA replica set",
       "shards": "sharded setup",
-      "sharding": "sharded setup"
+      "sharding": "sharded setup",
+      "standalone_no_pbm": "standalone mongod without PBM"
     }
   },
   "VALKEY": {

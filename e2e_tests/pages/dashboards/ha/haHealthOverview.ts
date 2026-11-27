@@ -1,0 +1,161 @@
+import BasePage from '@pages/base.page';
+import DashboardInterface from '@interfaces/dashboard';
+import pmmTest from '@fixtures/pmmTest';
+import { expect, Page } from '@playwright/test';
+import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import { Timeouts } from '@helpers/timeouts';
+
+const leaderRole = /\bLeader\b/;
+const followerRole = /\bFollower\b/;
+const percentage = /(\d+(?:\.\d+)?)\s*%/;
+
+export const haHealthOverviewPanels = {
+  leaderPmmInstance: 'Leader PMM Instance',
+  overallSystemHealth: 'Overall System Health',
+  pmmPods: 'PMM Pods',
+  podsWithRestarts: 'Pods with Restarts',
+  postgresqlPods: 'PostgreSQL Pods',
+  postgresqlPrimary: 'PostgreSQL Primary',
+};
+
+export default class HaHealthOverviewDashboard extends BasePage implements DashboardInterface {
+  url = 'graph/d/pmm-ha-health-overview/pmm-ha-health-overview';
+  metrics: GrafanaPanel[] = [
+    { name: 'PMM', type: 'stat' },
+    { name: 'PostgreSQL', type: 'stat' },
+    { name: 'ClickHouse', type: 'stat' },
+    { name: 'VictoriaMetrics', type: 'stat' },
+    { name: 'HAProxy', type: 'stat' },
+    { name: haHealthOverviewPanels.overallSystemHealth, type: 'gauge' },
+    { name: 'Pod Count', type: 'stat' },
+    { name: 'Pod Restarts', type: 'stat' },
+    { name: haHealthOverviewPanels.podsWithRestarts, type: 'table' },
+    { name: haHealthOverviewPanels.leaderPmmInstance, type: 'stat' },
+    { name: haHealthOverviewPanels.postgresqlPrimary, type: 'stat' },
+    { name: 'VictoriaMetrics Components', type: 'stat' },
+    { name: 'CPU Usage', type: 'timeSeries' },
+    { name: 'Memory Usage', type: 'timeSeries' },
+    { name: 'PostgreSQL Storage', type: 'gauge' },
+    { name: 'ClickHouse Storage', type: 'gauge' },
+    { name: 'VictoriaMetrics Storage', type: 'gauge' },
+    { name: 'Service Availability by Component', type: 'timeSeries' },
+    { name: haHealthOverviewPanels.pmmPods, type: 'table' },
+    { name: haHealthOverviewPanels.postgresqlPods, type: 'table' },
+    { name: 'ClickHouse Pods', type: 'table' },
+    { name: 'VictoriaMetrics Pods', type: 'table' },
+    { name: 'HAProxy Instances', type: 'table' },
+    { name: 'HAProxy Backend Servers', type: 'table' },
+  ];
+  // Empty on a cluster nothing has restarted within the dashboard's time range.
+  noDataMetrics: string[] = [haHealthOverviewPanels.podsWithRestarts];
+  builders = {};
+  buttons = {};
+  elements = {};
+  inputs = {};
+  messages = {};
+
+  constructor(
+    page: Page,
+    private readonly loadAllPanels: () => Promise<void>,
+  ) {
+    super(page);
+  }
+
+  /** The percentage the gauge renders, so the assertion is on the panel and not on its PromQL. */
+  overallSystemHealth = async (): Promise<number> => {
+    const text = await this.panelText(haHealthOverviewPanels.overallSystemHealth);
+    const value = percentage.exec(text)?.[1];
+
+    if (value === undefined) {
+      throw new Error(
+        `"${haHealthOverviewPanels.overallSystemHealth}" rendered no percentage, got: ${text.replace(/\n/g, ' | ')}`,
+      );
+    }
+
+    return Number(value);
+  };
+
+  /** The panel's rendered value, waited for: the dashboard never re-queries on its own. */
+  panelText = async (panelName: string, timeout: Timeouts = Timeouts.ONE_MINUTE): Promise<string> => {
+    const content = await this.mountPanel(panelName, timeout);
+
+    await expect(content, `Panel "${panelName}" rendered no value`).not.toBeEmpty({ timeout });
+
+    return await content.innerText();
+  };
+
+  /** One string per rendered row, e.g. `pmm-ha-0 UP Leader`: its pod, status and role together. */
+  tableRows = async (panelName: string, timeout: Timeouts = Timeouts.ONE_MINUTE): Promise<string[]> => {
+    const table = (await this.mountPanel(panelName, timeout)).getByRole('grid');
+
+    // The first cell, not the grid: the grid is in the DOM while its rows still load.
+    await table.getByRole('gridcell').first().waitFor({ state: 'visible', timeout });
+
+    const rows: string[] = [];
+
+    // Cell by cell, not the row's innerText: Grafana's data-grid table renders rows
+    // as `display: contents`, whose innerText is empty in Chromium.
+    for (const row of await table.getByRole('row').all()) {
+      const text = (await row.getByRole('gridcell').allTextContents()).join(' ').replace(/\s+/g, ' ').trim();
+
+      if (text.length > 0) rows.push(text);
+    }
+
+    if (rows.length === 0) throw new Error(`Table panel "${panelName}" rendered no rows`);
+
+    return rows;
+  };
+
+  verifyLeaderPmmInstance = async (leader: string): Promise<void> =>
+    await pmmTest.step(`Verify "${haHealthOverviewPanels.leaderPmmInstance}" names "${leader}"`, async () => {
+      // Reloaded, not just polled: the panel trails the pods by a scrape interval
+      // after an election, and this dashboard re-queries only on a page load.
+      await expect(async () => {
+        await this.page.reload();
+        expect(await this.panelText(haHealthOverviewPanels.leaderPmmInstance)).toContain(leader);
+      }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    });
+
+  /** Every pod present, `leader` the only Leader, every other pod a Follower. */
+  verifyPodRoles = async (leader: string, podNames: string[]): Promise<void> =>
+    await pmmTest.step(
+      `Verify "${haHealthOverviewPanels.pmmPods}" shows "${leader}" leading and the rest following`,
+      async () => {
+        await expect(async () => {
+          await this.page.reload();
+
+          const rows = await this.tableRows(haHealthOverviewPanels.pmmPods);
+
+          const rowFor = (podName: string): string => {
+            const row = rows.find((candidate) => candidate.startsWith(podName));
+
+            if (row === undefined) {
+              throw new Error(`"${podName}" has no row in the table, rows are: ${rows.join(' / ')}`);
+            }
+
+            return row;
+          };
+
+          expect(rowFor(leader), `"${leader}" must be the Leader`).toMatch(leaderRole);
+
+          for (const podName of podNames.filter((podName) => podName !== leader)) {
+            expect(rowFor(podName), `"${podName}" must be a Follower`).toMatch(followerRole);
+          }
+
+          expect(
+            rows.filter((row) => leaderRole.test(row)),
+            'Exactly one pod may be shown as Leader',
+          ).toHaveLength(1);
+        }).toPass({ intervals: [Timeouts.TEN_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+      },
+    );
+
+  private mountPanel = async (panelName: string, timeout: Timeouts) => {
+    const header = this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`);
+
+    await this.loadAllPanels();
+    await header.waitFor({ state: 'visible', timeout });
+
+    return header.getByTestId('data-testid panel content');
+  };
+}

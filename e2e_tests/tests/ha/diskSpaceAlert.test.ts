@@ -81,6 +81,7 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
     for (const pod of k8sHelper.getPodNames(clientPodSelector)) {
       k8sHelper.execInPod(pod, `rm -f ${client.dir}/${fillFile}`, {
         container: client.container,
+        retryIfKilled: true,
         silent: true,
       });
     }
@@ -105,11 +106,15 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
         expect(k8sHelper.getVolumeUsage(clientPod, client.dir, client.container).percentFull).toBeLessThan(
           80,
         );
-        expect(
-          await api.alertingApi.getRuleAlerts(diskRule.name, 'persistentvolumeclaim', clientClaim, {
-            activeOnly: true,
-          }),
-        ).toEqual([]);
+
+        // On a retry the previous attempt's alert is still pending until the rule next evaluates the freed volume.
+        await expect(async () => {
+          expect(
+            await api.alertingApi.getRuleAlerts(diskRule.name, 'persistentvolumeclaim', clientClaim, {
+              activeOnly: true,
+            }),
+          ).toEqual([]);
+        }).toPass({ intervals: [Timeouts.THIRTY_SECONDS], timeout: Timeouts.TEN_MINUTES });
       });
 
       await pmmTest.step(`Fill a volume in namespace "${otherNamespace}" to ${fillPercent}%`, async () => {
@@ -179,7 +184,10 @@ pmmTest.describe('PMM HA disk space alert on filled volumes', () => {
 
       await pmmTest.step(`Free "${clientClaim}" and verify its alert clears`, async () => {
         k8sHelper
-          .execInPod(clientPod, `rm -f ${client.dir}/${fillFile}`, { container: client.container })
+          .execInPod(clientPod, `rm -f ${client.dir}/${fillFile}`, {
+            container: client.container,
+            retryIfKilled: true,
+          })
           .assertSuccess();
 
         await expect(async () => {

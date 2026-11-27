@@ -5,6 +5,7 @@ export default class SearchDashboardsPage extends BasePage {
   builders = {
     collapseFolderButton: (folderName: string) =>
       this.grafanaIframe().getByRole('button', { name: `Collapse folder ${folderName}` }),
+    dashboardLink: (dashboardName: string) => this.builders.dashboardRow(dashboardName).getByRole('link'),
     // Grafana gives a folder row and a dashboard row the same test id; only a dashboard row carries icon-apps.
     dashboardRow: (dashboardName: string) =>
       this.grafanaIframe()

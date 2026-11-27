@@ -18,11 +18,8 @@ pmmTest(
   async ({ agentsPage, api, nodesPage, page }) => {
     await page.goto(nodesPage.url);
 
-    await pmmTest.step('Show 100 nodes per page', async () => {
-      await nodesPage.pagination.selectRowsPerPage('100');
-      await expect(nodesPage.pagination.rowsPerPageDropdown).toHaveText('100', {
-        timeout: Timeouts.THIRTY_SECONDS,
-      });
+    await pmmTest.step('Show all nodes', async () => {
+      await nodesPage.pagination.showAllRows();
     });
 
     await expect(nodesPage.elements.nodeRows).not.toHaveCount(0);

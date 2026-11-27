@@ -67,6 +67,20 @@ preflight_run() {
   [[ $output == *'two PSMDB setups'* ]]
 }
 
+@test "a standalone_no_pbm PSMDB shares a host and a run with a replica set or sharded cluster" {
+  for other in psmdb 'psmdb,SETUP_TYPE=psa' 'psmdb,SETUP_TYPE=sharding'; do
+    [[ $(parallel_decision "$other" 'psmdb,SETUP_TYPE=standalone_no_pbm') == true ]]
+    [[ $(parallel_decision 'psmdb,SETUP_TYPE=standalone_no_pbm' "$other") == true ]]
+  done
+}
+
+@test "two standalone_no_pbm PSMDB setups cannot share a host" {
+  preflight_run 'psmdb,SETUP_TYPE=standalone_no_pbm' psmdb 'psmdb,SETUP_TYPE=Standalone_No_PBM'
+  [[ $status -eq 1 ]]
+  [[ $output == *'two standalone_no_pbm PSMDB setups (both pin container name psmdb-standalone)'* ]]
+  [[ $output == *'separate machines'* ]]
+}
+
 @test "a PSMDB host conflict is caught behind an unrelated spec" {
   preflight_run ps psmdb valkey 'psmdb,SETUP_TYPE=sharding'
   [[ $status -eq 1 ]]
@@ -96,6 +110,30 @@ preflight_run() {
 
 @test "single-node PDPGSQL and PGSQL replication run in parallel" {
   [[ $(parallel_decision pdpgsql 'pgsql,SETUP_TYPE=replication') == true ]]
+}
+
+@test "PCSM runs in parallel with PSMDB, and two PCSM setups fall back to sequential" {
+  [[ $(parallel_decision 'psmdb,SETUP_TYPE=pss' pcsm) == true ]]
+  DATABASE_SPECS=(pcsm 'pcsm,INSTANCES=1')
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'two PCSM setups cannot run in parallel'* ]]
+}
+
+@test "PCSM SOURCE=psmdb runs after the PSMDB replica set it syncs, and is refused before one or with a sharded one" {
+  DATABASE_SPECS=('psmdb,SETUP_TYPE=pss' 'pcsm,SOURCE=psmdb')
+  PARALLEL=true
+  preflight_database_setups
+  [[ $PARALLEL == false ]]
+  [[ $WARNINGS == *'PSMDB and PCSM SOURCE=psmdb setups (PCSM syncs from the PSMDB replica set) cannot run in parallel'* ]]
+  [[ $(parallel_decision 'pcsm,SOURCE=psmdb' pgsql) == true ]]
+  preflight_run 'pcsm,SOURCE=psmdb' 'psmdb,SETUP_TYPE=pss'
+  [[ $status -ne 0 && $output == *'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'* ]]
+  preflight_run 'psmdb,SETUP_TYPE=sharding' 'pcsm,SOURCE=psmdb'
+  [[ $status -ne 0 && $output == *'PCSM SOURCE=psmdb needs a PSMDB replica set (SETUP_TYPE=pss or psa).'* ]]
+  preflight_run pcsm 'pcsm,SOURCE=psmdb' 'psmdb,SETUP_TYPE=pss'
+  [[ $status -ne 0 && $output == *'List --database psmdb before --database pcsm,SOURCE=psmdb: PCSM syncs from its replica set.'* ]]
 }
 
 @test "EXTERNAL and VALKEY each parallelize with other setups" {
