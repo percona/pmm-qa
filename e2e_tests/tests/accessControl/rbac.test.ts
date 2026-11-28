@@ -104,7 +104,7 @@ pmmTest(
     await pmmTest.step('Verify the MySQL role user sees MySQL metrics only', async () => {
       await grafanaHelper.unAuthorize();
       await grafanaHelper.authorize(users.ps, password);
-      await dashboard.waitForNoDataPanelsAtMost(
+      await dashboard.verifyNoDataPanelsAtMost(
         mysqlOverviewUrl,
         5,
         Timeouts.ONE_MINUTE,
@@ -117,7 +117,7 @@ pmmTest(
       await grafanaHelper.unAuthorize();
       await grafanaHelper.authorize(users.pg, password);
       await dashboard.verifyPanelsWithDataInViewAtMost(mysqlOverviewUrl, 2);
-      await dashboard.waitForNoDataPanelsAtMost(
+      await dashboard.verifyNoDataPanelsAtMost(
         postgresqlSummaryUrl,
         3,
         Timeouts.ONE_MINUTE,

@@ -131,7 +131,7 @@ pmmTest.describe('External ClickHouse', () => {
     'PMM-T2006 - Verify using ClickHouse Username and password variables for external databases @docker-configuration',
     async ({ dashboard, page, qanStoredMetrics, urlHelper }) => {
       await pmmTest.step('Verify MySQL Instances Overview has data', async () => {
-        await dashboard.waitForNoDataPanelsAtMost(
+        await dashboard.verifyNoDataPanelsAtMost(
           urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
             from: 'now-5m',
             to: 'now',
