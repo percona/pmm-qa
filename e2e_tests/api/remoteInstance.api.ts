@@ -131,7 +131,7 @@ export default class RemoteInstanceApi {
       environment: instance.environment,
       password: instance.password,
       pmm_agent_id: 'pmm-server',
-      port: instance.port ?? '27017',
+      port: instance.port ?? (instance.type === 'postgresql' ? '5432' : '27017'),
       service_name: instance.serviceName,
       tls_skip_verify: true,
       username: instance.username,
