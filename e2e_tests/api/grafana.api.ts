@@ -202,9 +202,9 @@ export default class GrafanaApi {
     return result.frames[0]?.data.values ?? [];
   };
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE, from = 'now-1m') => {
     await expect
-      .poll(async () => (await this.getMetric(metricName)).results.A.frames[0].data.values.length, {
+      .poll(async () => (await this.getMetric(metricName, from)).results.A.frames[0].data.values.length, {
         message: `Timed out waiting for metric data for metric: ${metricName}`,
         timeout,
       })

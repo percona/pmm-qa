@@ -6,6 +6,7 @@ export type RemoteInstanceType = 'external' | 'haproxy' | 'mongodb' | 'mysql' | 
 
 export interface RemoteInstanceFields {
   cluster?: string;
+  database?: string;
   environment?: string;
   host: string;
   metricsPath?: string;
@@ -181,7 +182,7 @@ export default class AddInstancePage extends BasePage {
   };
 
   fillDiscoveredInstanceFields = async (
-    fields: Required<Omit<RemoteInstanceFields, 'host' | 'metricsPath' | 'port'>>,
+    fields: Required<Omit<RemoteInstanceFields, 'database' | 'host' | 'metricsPath' | 'port'>>,
   ) => {
     await this.inputs.serviceName.fill(fields.serviceName);
     await this.inputs.username.fill(fields.username);
@@ -213,6 +214,7 @@ export default class AddInstancePage extends BasePage {
 
     if (fields.environment) await this.inputs.environment.fill(fields.environment);
     if (fields.cluster) await this.inputs.cluster.fill(fields.cluster);
+    if (fields.database) await this.inputs.database.fill(fields.database);
   };
 
   fillTlsCertificates = async (certificates: { ca: string; cert: string; key: string }) => {
