@@ -57,6 +57,29 @@ pmmTest(
   },
 );
 
+pmmTest(
+  'PMM-T1835 - Create Dump Archive from the new dataset form @dump',
+  async ({ api, dumpPage, page }) => {
+    // pmm-managed forwards both the Basic header and the session cookie to pmm-dump, which rejects more
+    // than one auth method, so drop the header authorize() adds and let the browser use the cookie alone.
+    await page.setExtraHTTPHeaders({});
+    await page.goto(dumpPage.url);
+    await dumpPage.buttons.createDataset.click();
+    await expect(page).toHaveURL(new RegExp(`${dumpPage.newUrl}$`));
+
+    const startResponse = page.waitForResponse('**/v1/dumps:start');
+
+    await dumpPage.buttons.submitDataset.click();
+    dumpId = (await (await startResponse).json()).dump_id;
+
+    await expect(page).toHaveURL(new RegExp(`${dumpPage.url}$`));
+    await expect(dumpPage.builders.row(dumpId)).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+    await expect
+      .poll(async () => (await api.dumpApi.getDump(dumpId))?.status, { timeout: Timeouts.ONE_MINUTE })
+      .toBe(dumpSuccess);
+  },
+);
+
 pmmTest('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ api, dumpPage, page }) => {
   dumpId = (await api.dumpApi.createDump()).dump_id;
   await expect
@@ -64,10 +87,8 @@ pmmTest('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ a
     .toBe(dumpSuccess);
   await page.goto(dumpPage.url);
 
-  await pmmTest.step('Verify Download is enabled in the row menu', async () => {
-    await dumpPage.builders.rowMenu(dumpId).click();
-    await expect(dumpPage.builders.menuItem('Download')).toBeVisible();
-    await page.keyboard.press('Escape');
+  await pmmTest.step('Verify Download is enabled in the row', async () => {
+    await expect(dumpPage.builders.rowDownload(dumpId)).toBeEnabled();
   });
 
   await pmmTest.step('Verify Send to Support is enabled in the row menu', async () => {
@@ -150,7 +171,7 @@ pmmTest('PMM-T1835 - Verify Dump extraction logs are visible @dump', async ({ ap
   await page.goto(dumpPage.url);
   await dumpPage.builders.rowMenu(dumpId).click();
   await dumpPage.builders.menuItem('View logs').click();
-  await expect(dumpPage.elements.modalHeader).toContainText(`Logs for ${dumpId}`);
+  await expect(dumpPage.elements.logsDialog).toContainText('Dataset logs');
 });
 
 pmmTest('PMM-T1835 - Verify details of Dump based on Service Name @dump', async ({ api, dumpPage, page }) => {
@@ -159,8 +180,7 @@ pmmTest('PMM-T1835 - Verify details of Dump based on Service Name @dump', async 
     .poll(async () => (await api.dumpApi.getDump(dumpId))?.status, { timeout: Timeouts.ONE_MINUTE })
     .toBe(dumpSuccess);
   await page.goto(dumpPage.url);
-  await dumpPage.builders.rowDetails(dumpId).click();
-  await expect(dumpPage.builders.serviceName('pmm-server-postgresql')).toBeVisible({
+  await expect(dumpPage.builders.serviceChip(dumpId, 'pmm-server-postgresql')).toBeVisible({
     timeout: Timeouts.ONE_MINUTE,
   });
 });

@@ -50,7 +50,7 @@ pmmTest('PMM-T2118 - Verify manage datasets button @new-navigation', async ({ he
 
     await expect(href).toHaveAttribute('href');
     await helpPage.buttons.manageDatasets.click();
-    expect(page.url()).toContain('/graph/pmm-dump');
+    expect(page.url()).toContain('/pmm-ui/pmm-dump');
   });
 });
 
