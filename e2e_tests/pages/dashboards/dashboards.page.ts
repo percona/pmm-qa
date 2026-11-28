@@ -456,6 +456,29 @@ export default class Dashboards extends BasePage {
     }
   };
 
+  verifyNoDataPanelsAtMost = async (
+    url: string,
+    maxNoDataPanels: number,
+    timeout = Timeouts.FIVE_MINUTES,
+    loadPanels = this.loadAllPanels,
+  ) => {
+    await expect
+      .poll(
+        async () => {
+          await this.page.goto(url);
+          await loadPanels();
+
+          return this.elements.noDataPanelName.count();
+        },
+        {
+          intervals: [Timeouts.TEN_SECONDS],
+          message: `${url} should show at most ${maxNoDataPanels} panels without data`,
+          timeout,
+        },
+      )
+      .toBeLessThanOrEqual(maxNoDataPanels);
+  };
+
   verifyPanelHasDataAfterRefresh = async (panelName: string, timeout: Timeouts) => {
     await expect(this.builders.panelByExactName(panelName)).toBeVisible({
       timeout: Timeouts.FIFTEEN_SECONDS,
@@ -636,29 +659,6 @@ export default class Dashboards extends BasePage {
       await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
       await expectPanel(this.elements.loadingText).toHaveCount(0);
     });
-  };
-
-  waitForNoDataPanelsAtMost = async (
-    url: string,
-    maxNoDataPanels: number,
-    timeout = Timeouts.FIVE_MINUTES,
-    loadPanels = this.loadAllPanels,
-  ) => {
-    await expect
-      .poll(
-        async () => {
-          await this.page.goto(url);
-          await loadPanels();
-
-          return this.elements.noDataPanelName.count();
-        },
-        {
-          intervals: [Timeouts.TEN_SECONDS],
-          message: `${url} should show at most ${maxNoDataPanels} panels without data`,
-          timeout,
-        },
-      )
-      .toBeLessThanOrEqual(maxNoDataPanels);
   };
 
   waitForPanelsInView = async () => {

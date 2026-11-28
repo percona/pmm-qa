@@ -30,12 +30,13 @@ export interface RemoteUpgradeInstance {
 
 export interface QanRemoteInstance {
   cluster: string;
+  database?: string;
   environment: string;
   host: string;
   password: string;
   port?: string;
   serviceName: string;
-  type: 'mongodb' | 'mysql';
+  type: 'mongodb' | 'mysql' | 'postgresql';
   username: string;
 }
 
@@ -45,6 +46,7 @@ interface RemoteInstanceBody {
   pmm_agent_id?: string;
   port?: string;
   cluster?: string;
+  database?: string;
   environment?: string;
   group?: string;
   listen_port?: string;
@@ -136,9 +138,13 @@ export default class RemoteInstanceApi {
     };
 
     await this.addRemoteInstance(
-      instance.type === 'mysql'
-        ? { mysql: { ...body, qan_mysql_perfschema: true } }
-        : { mongodb: { ...body, qan_mongodb_profiler: true } },
+      {
+        mongodb: { mongodb: { ...body, qan_mongodb_profiler: true } },
+        mysql: { mysql: { ...body, qan_mysql_perfschema: true } },
+        postgresql: {
+          postgresql: { ...body, database: instance.database, qan_postgresql_pgstatmonitor_agent: true },
+        },
+      }[instance.type],
     );
   };
 }

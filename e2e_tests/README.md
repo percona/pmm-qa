@@ -138,6 +138,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@fb-encryption`
 - `@fb-instances`
 - `@fb-settings`
+- `@gcp`
 - `@grafana-pr`
 - `@gssapi-nightly`
 - `@ha-argocd`
