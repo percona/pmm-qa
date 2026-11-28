@@ -114,6 +114,11 @@ class PmmServerComponents(unittest.TestCase):
     def test_victoria_metrics_alert_status(self):
         if test_mode != "post":
             self.skipTest(POST_UPGRADE)
+        if (expected_pmm_major_version, expected_pmm_minor_version) >= (3, 11):
+            status = server_command("sh -c 'supervisorctl status || true'")
+            self.assertRegex(status, r'pmm-managed\s+RUNNING', NOT_RUNNING_MSG)
+            self.assertNotIn('vmalert', status)
+            return
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
 
     def test_vertamedia_clickhouse_plugin_absent(self):
@@ -144,6 +149,7 @@ class PmmServerComponents(unittest.TestCase):
 if __name__ == '__main__':
     args = parse_args()
     expected_pmm_version = args.version
+    expected_pmm_major_version = int(args.version.split('.')[0])
     expected_pmm_minor_version = int(args.version.split('.')[1])
     test_mode = args.pre_post
     is_ami = args.env in "ami"
