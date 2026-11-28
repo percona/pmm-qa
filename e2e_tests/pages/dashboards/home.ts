@@ -21,6 +21,9 @@ export default class HomeDashboard extends BasePage implements DashboardInterfac
         .getByTestId('data-testid Panel header Monitored DB Services')
         .getByTestId('data-testid panel content')
         .locator('span'),
+      monitoredServicesPanel: this.grafanaIframe().getByTestId(
+        'data-testid Panel header Monitored DB Services',
+      ),
     };
   }
 

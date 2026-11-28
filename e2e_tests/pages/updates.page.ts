@@ -34,7 +34,10 @@ export default class UpdatesPage extends BasePage {
     upToDate: this.grafanaIframe().getByText('You are up to date'),
   };
   inputs = {};
-  messages = {};
+  messages = {
+    internalServerError: this.page.getByText('Internal server error'),
+    updateCheckFailed: this.page.getByText('Failed to check for PMM Server updates.'),
+  };
 
   clickReleaseNotes = async (link: Locator): Promise<{ href: string | null; newTab: Page }> =>
     await pmmTest.step('Click Release Notes link in update modal', async () => {
