@@ -21,15 +21,16 @@ export default class QueryAnalyticsPage extends BasePage {
   builders = {};
   buttons = {
     copyButton: this.grafanaIframe().getByTestId('copy-link-button'),
-    realTimeTab: this.page.getByTestId('qan-header-tabs-real-time-tab'),
+    realTimeTab: this.page.getByTestId('navitem-realtime-queries'),
     startSessionButton: this.page.getByTestId('start-realtime-session'),
-    storedMetricsTab: this.page.getByTestId('qan-header-tabs-historical-tab'),
+    storedMetricsTab: this.page.getByTestId('navitem-qan'),
   };
   elements = {
     documentationLink: this.page.getByRole('link', { name: 'Documentation' }),
     feedbackLink: this.page.getByRole('link', { name: 'Provide feedback' }),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
+    realTimePageTitle: this.page.getByRole('heading', { name: 'Real-time queries' }),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
   };
   inputs = {};
@@ -60,7 +61,7 @@ export default class QueryAnalyticsPage extends BasePage {
   verifyTabIsSelected = async (tabName: TabNames) => {
     const tab = this.getTab(tabName);
 
-    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(tab).toHaveAttribute('aria-current', 'page');
   };
 
   private getTab = (tabName: TabNames) =>
