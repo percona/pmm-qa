@@ -5,7 +5,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { AddRdsParameters, AddRdsResponse, AddServiceResponse, RdsExporter } from '@interfaces/inventory';
 
 // The Percona QA RDS instances listen on a non-default port, all in one region.
-const rdsPort = 42_001;
+export const rdsPort = 42_001;
 const rdsRegion = 'us-east-2';
 
 export default class ManagementApi {

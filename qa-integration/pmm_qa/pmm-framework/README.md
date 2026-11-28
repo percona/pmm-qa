@@ -102,7 +102,7 @@ NAME[=VERSION][,OPTION=VALUE...]
 
 Names and option keys are case-insensitive. Supported setup keys are:
 
-- `PS`, `MYSQL`, `SSL_MYSQL`, `PXC`
+- `PS`, `MYSQL`, `MARIADB`, `SSL_MYSQL`, `PXC`
 - `PGSQL`, `PDPGSQL`, `SSL_PDPGSQL`
 - `PSMDB`, `SSL_PSMDB`, `PCSM`
 - `HAPROXY`, `EXTERNAL`, `VALKEY`

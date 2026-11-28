@@ -36,6 +36,8 @@ preflight_run() {
   [[ $WARNINGS == *'PS and MYSQL setups (both publish host ports from 3306)'* ]]
   [[ $(parallel_decision mysql ps) == false ]]
   [[ $(parallel_decision 'ps,SETUP_TYPE=replication' 'ps,SETUP_TYPE=gr') == false ]]
+  [[ $(parallel_decision mariadb ps) == false && $(parallel_decision mysql mariadb) == false ]]
+  [[ $(parallel_decision mariadb psmdb) == true ]]
 }
 
 @test "PSMDB and SSL PSMDB run in parallel" {

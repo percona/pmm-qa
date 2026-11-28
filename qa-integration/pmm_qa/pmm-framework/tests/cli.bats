@@ -237,6 +237,7 @@ stub_docker_ps() {
   [[ $(image_tags external) == "$EXTERNAL_TAG" ]]
   [[ -n ${DB_VERSIONS[PCSM]-} && $(image_tags pcsm | paste -sd' ') == "${DB_VERSIONS[PCSM]}" ]]
   [[ $(image_tags kerberos) == latest ]]
+  [[ -n ${DB_VERSIONS[MARIADB]-} && $(image_tags mariadb | paste -sd' ') == "${DB_VERSIONS[MARIADB]}" ]]
   run image_tags nosuch
   [[ $status -ne 0 && $output == *"No prebaked image for 'nosuch'"* ]]
 }

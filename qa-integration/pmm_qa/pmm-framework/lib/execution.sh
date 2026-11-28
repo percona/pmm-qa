@@ -4,7 +4,7 @@
 # ARCHITECTURE.md §3 covers both strategies and the conflict rules.
 
 # Fails a bad request in seconds instead of halfway through provisioning.
-# Same-type or PS+MYSQL pairs only lose concurrency; pairs that hold the same
+# Same-type or MySQL-family (PS, MYSQL, MARIADB) pairs only lose concurrency; pairs that hold the same
 # container name or host port while up are refused.
 preflight_database_setups() {
   local spec kind
@@ -52,7 +52,7 @@ preflight_database_setups() {
       else
         conflict="two $DB_TYPE setups"
       fi
-    elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
+    elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL || $DB_TYPE == MARIADB ]]; then
       if [[ -n $mysql_data_owner ]]; then
         conflict="$mysql_data_owner and $DB_TYPE setups (both publish host ports from 3306)"
       fi

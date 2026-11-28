@@ -64,7 +64,8 @@ flowchart TB
 | `images/` folder | Types | Image |
 | --- | --- | --- |
 | `ps/` | — (Dockerfile only) | `pmm-qa/ps` |
-| `mysql/` | `PS`, `MYSQL`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`) |
+| `mysql/` | `PS`, `MYSQL`, `MARIADB`, `SSL_MYSQL` | `pmm-qa/mysql` (SSL MySQL runs on `pmm-qa/ps`, MariaDB on `pmm-qa/mariadb`) |
+| `mariadb/` | — (Dockerfile only) | `pmm-qa/mariadb`: MariaDB from its own EL9 repository, single node, Performance Schema and its `events_statements_current` consumer on |
 | `pxc-proxysql/` | `PXC` | `pmm-qa/pxc-proxysql`: three nodes and ProxySQL in one container, driven by `pmm_pxc` |
 | `psmdb/` | `PSMDB`, `SSL_PSMDB` | `pmm-qa/psmdb`, tagged `replica_member/local` so the `pmm_psmdb-pbm_setup` and `pmm_psmdb_diffauth_setup` compose files run it unchanged; the replica set also runs `pmm-qa/kerberos`, tagged `kerberos/local`; `SETUP_TYPE=standalone_no_pbm` runs the image by name with `docker run`, so it needs no tag |
 | `pdpgsql/` | `PDPGSQL`, `SSL_PDPGSQL` | `pmm-qa/pdpgsql`; SSL PDPGSQL runs on `pmm-qa/ssl-pdpgsql` |
@@ -106,7 +107,7 @@ Setups start containers with `SYSTEMD_RUN` (`lib/run_helpers.sh`): systemd
 runs unprivileged with the host cgroup namespace, `/sys/fs/cgroup` mounted
 read-write and `/run` on tmpfs; a private cgroup namespace does not boot.
 HAProxy and External add `--privileged` for the Nomad agent their `pmm-agent`
-runs. `mysqld`, `postgresql` and `valkey` run as units, and so does
+runs. `mysqld` (`mariadb` on MariaDB), `postgresql` and `valkey` run as units, and so does
 `pmm-agent`, from `/etc/systemd/system/pmm-agent.service`, so a package
 upgrade's own `systemctl restart pmm-agent` reaches the running agent; PXC
 (`pmm_pxc`), Patroni, etcd, HAProxy and the exporters are started by `docker exec`.
@@ -168,7 +169,7 @@ and applies the conflict rules below.
 ### The conflict rules
 
 Two setups of the **same type** reuse the same container names and host ports,
-and any two of the **MySQL family** (`PS`/`MYSQL`) both publish host ports from
+and any two of the **MySQL family** (`PS`/`MYSQL`/`MARIADB`) both publish host ports from
 3306. They cannot run at the same time. When `--parallel` is asked for, the
 framework keeps every setup and gives up only the concurrency:
 

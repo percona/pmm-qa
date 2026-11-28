@@ -8,6 +8,7 @@ export default class AgentsPage extends BasePage {
     agentDetailsLabel: (label: string) => this.elements.agentDetails.getByText(label, { exact: true }),
     agentRow: (agentType: string) =>
       this.elements.agentRows.filter({ has: this.page.getByRole('cell', { exact: true, name: agentType }) }),
+    agentStatus: (agentType: string) => this.builders.agentRow(agentType).getByTestId('agent-status-chip'),
     agentTypeCell: (agentType: string) => this.page.getByRole('cell', { exact: true, name: agentType }),
     selectAgentCheckbox: (agentType: string) =>
       this.builders.agentRow(agentType).getByRole('checkbox', { name: 'Toggle select row' }),

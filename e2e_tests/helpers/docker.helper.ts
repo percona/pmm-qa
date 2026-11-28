@@ -90,6 +90,17 @@ export default class DockerHelper {
       .getStdOutLines()
       .find((line) => matches.every((match) => line.includes(match)));
 
+  // The first line of `docker port` is the IPv4 binding, as 127.0.0.1:<port> or 0.0.0.0:<port>.
+  getPublishedPort = (container: string, port: number) =>
+    Number(
+      this.cliHelper
+        .execSilent(`docker port ${container} ${port}/tcp`)
+        .assertSuccess()
+        .getStdOutLines()[0]
+        .split(':')
+        .at(-1),
+    );
+
   getServiceContainer = async (api: Api, { node_id }: GetService) =>
     this.getContainerByAddress(await api.inventoryApi.getNodeAddress(node_id));
 
