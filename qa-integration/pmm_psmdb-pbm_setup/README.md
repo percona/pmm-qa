@@ -7,7 +7,10 @@ with PMM.
 
 - `docker-compose-rs.yaml`: a replica set (rs101-rs103), plus a second one
   (rs201-rs203) with `COMPOSE_PROFILES=extra`, the Kerberos KDC, MinIO and the
-  PBM agents.
+  PBM agents. With `MONGOT=true` (PSMDB 8.3+), the framework mounts
+  `conf/mongod-rs-mongot` and runs `mongot1`-`mongot3` from `conf/mongot`, one
+  in each data-bearing member's network namespace, registered as external
+  services with the member's labels.
 - `docker-compose-sharded.yaml`: two shards, a config replica set, `mongos`
   and the `chunk-churn` service that keeps chunks moving.
 - `docker-compose-pmm.yaml`: a PMM Server on 443, for

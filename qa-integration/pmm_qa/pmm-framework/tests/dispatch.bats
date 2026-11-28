@@ -71,7 +71,7 @@ stub_prebaked_docker() {
         ;;
       'ps --format {{.Ports}}') printf '%s\n' "${PUBLISHED_PORTS:-}" ;;
       *replication_group_members*) printf '3\n' ;;
-      *isWritablePrimary* | *'rs.status()'* | *ismaster*) printf 'true\n' ;;
+      *isWritablePrimary* | *'rs.status()'* | *ismaster* | *\$listSearchIndexes* | *\$vectorSearch*) printf 'true\n' ;;
       *'cluster info'*) printf 'cluster_state:ok\n' ;;
       *'db.hello().setName + " " + db.version()'*)
         [[ ${PSMDB_SOURCE_PROBE-rs 8.0.32-14} != none ]] || return 1
@@ -474,6 +474,7 @@ stub_prebaked_docker() {
   # shellcheck disable=SC2016 # a literal $external
   grep -Eq '^exec rs101 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass rs101_gssapi_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs --username=pmm@PERCONATEST.COM --password=password1 --authentication-mechanism=GSSAPI --authentication-database=\$external --host=rs101 --port=27017$' "$DOCKER_CALLS"
   grep -q '^exec rs101 mgodatagen -f /etc/datagen/replicaset.json' "$DOCKER_CALLS"
+  ! grep -q -e '--name mongot' -e 'add external' -e 'mongotUser' "$DOCKER_CALLS" || false
 }
 
 @test "PSMDB psa with the extra set registers the arbiters and the extra set as the scripts did" {
@@ -514,6 +515,49 @@ stub_prebaked_docker() {
   [[ $status -ne 0 ]]
   [[ $output == *'Could not read the pmm-admin version on rs103.'* ]]
   ! grep -q '^exec rs103 pmm-admin add mongodb' "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB MONGOT runs a mongot beside each data-bearing member and registers it as an external service" {
+  stub_prebaked_docker
+  eval "$(declare -f docker | sed '1s/^docker/prebaked_docker/')"
+  # shellcheck disable=SC2329,SC2317
+  docker() {
+    if [[ $1 == compose ]]; then
+      printf 'config-dir %s\n' "${MONGOD_RS_CONFIG_DIR-}" >>"$DOCKER_CALLS"
+    fi
+    prebaked_docker "$@"
+  }
+  parse_database_spec 'psmdb=8.3,SETUP_TYPE=psa,MONGOT=true,MINIO=false'
+  dispatch_setup
+
+  grep -q '^config-dir ./conf/mongod-rs-mongot$' "$DOCKER_CALLS"
+  [[ $(grep -n '^rm -fv mongot1 mongot2 mongot3$' "$DOCKER_CALLS" | cut -d: -f1) -lt \
+    $(grep -n '^compose -f docker-compose-rs.yaml down' "$DOCKER_CALLS" | cut -d: -f1) ]]
+  grep -Fq 'createUser({ user: "mongotUser", pwd: "mongotpass", roles: [{ role: "searchCoordinator", db: "admin" }] })' "$DOCKER_CALLS"
+  grep -q '^pull percona/percona-search-mongodb:1.70.5-3$' "$DOCKER_CALLS"
+  for i in 1 2; do
+    grep -q "^run --detach --name mongot$i --label pmm-qa.engine=psmdb --network container:rs10$i --volume $QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup/conf/mongot/mongot.yml:/etc/mongot/mongot.yml:ro --env MONGOT_PASSWORD=mongotpass --entrypoint sh percona/percona-search-mongodb:1.70.5-3 -c " "$DOCKER_CALLS"
+    grep -q "^exec rs10$i curl -fsS http://127.0.0.1:8080/health$" "$DOCKER_CALLS"
+    grep -Eq "^exec rs10$i pmm-admin add external --listen-port=9946 --service-name=mongot${i}_[0-9]+ --environment=psmdb-dev --cluster=replicaset --replication-set=rs$" "$DOCKER_CALLS"
+  done
+  ! grep -q -- '--name mongot3' "$DOCKER_CALLS" || false
+  ! grep -q '^exec rs103 pmm-admin add external' "$DOCKER_CALLS" || false
+  grep -Fq 'createSearchIndexes: "movies"' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016 # literal $search and $vectorSearch
+  grep -Fq '$search: { index: "default", text: { query: "space", path: "plot" } }' "$DOCKER_CALLS"
+  # shellcheck disable=SC2016
+  grep -Fq '$vectorSearch' "$DOCKER_CALLS"
+}
+
+@test "PSMDB MONGOT is refused below 8.3, on a sharded cluster and with inMemory" {
+  local spec
+  stub_prebaked_docker
+  for spec in 'psmdb=8.0,MONGOT=true' 'psmdb=8.3,SETUP_TYPE=shards,MONGOT=true' 'psmdb=8.3,MONGOT=true,STORAGE_ENGINE=inMemory'; do
+    parse_database_spec "$spec"
+    run dispatch_setup
+    [[ $status -ne 0 && $output == *'MONGOT needs PSMDB 8.3 or newer and a pss or psa replica set on wiredTiger'* ]]
+  done
+  [[ ! -s $DOCKER_CALLS ]]
 }
 
 @test "PSMDB sharding initiates three sets, adds both shards and registers mongos" {
@@ -609,6 +653,13 @@ recorded_config_dir() {
   dispatch_setup
   dir=$(recorded_config_dir rs)
   [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-inmemory.* ]]
+  assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb=8.3,SETUP_TYPE=pss,QUERY_SOURCE=mongolog,MONGOT=true,MINIO=false'
+  dispatch_setup
+  dir=$(recorded_config_dir rs)
+  [[ $dir == "$BATS_TEST_TMPDIR"/pmm-framework-psmdb-mongolog.mongod-rs-mongot.* ]]
   assert_file_log "$dir/mongod.conf" /var/log/mongo/mongod.log
 }
 

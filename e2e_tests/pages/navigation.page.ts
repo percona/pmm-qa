@@ -4,6 +4,19 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class LeftNavigation extends BasePage {
+  mongoHaMenu = ['Cluster', 'ReplSet', 'Router'];
+  mongoMenu = [
+    'Overview',
+    'Summary',
+    'High availability',
+    'Backup status',
+    'Collections',
+    'Unused indexes',
+    'Oplog',
+    'Search health',
+    'Search details',
+    'Other dashboards',
+  ];
   builders = {
     selectedTimeZone: (timeZone: string): Locator =>
       this.grafanaIframe().getByRole('region', { name: 'Time zone selection' }).getByText(timeZone),
@@ -90,6 +103,8 @@ export default class LeftNavigation extends BasePage {
       oplog: { locator: this.page.getByTestId('navitem-mongo-oplog-details') },
       otherDashboards: { locator: this.page.getByTestId('navitem-mongo-other-dashboards') },
       overview: { locator: this.page.getByTestId('navitem-mongo-overview') },
+      searchDetails: { locator: this.page.getByTestId('navitem-mongo-search-details') },
+      searchHealth: { locator: this.page.getByTestId('navitem-mongo-search-health') },
       summary: { locator: this.page.getByTestId('navitem-mongo-summary') },
       unusedIndexes: { locator: this.page.getByTestId('navitem-mongo-unused-indexes') },
     },
@@ -178,6 +193,12 @@ export default class LeftNavigation extends BasePage {
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     inventoryMenuItem: this.page.getByTestId('navitem-inventory'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
+    mongoHaItems: this.page
+      .getByTestId('navitem-mongo-high-availability-collapse')
+      .locator('[data-navlevel="2"]'),
+    mongoHaToggle: this.page.getByTestId('navitem-mongo-high-availability-toggle'),
+    mongoItems: this.page.getByTestId('navitem-mongo-collapse').locator('[data-navlevel="1"]'),
+    mongoToggle: this.page.getByTestId('navitem-mongo-toggle'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
     refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
@@ -311,12 +332,12 @@ export default class LeftNavigation extends BasePage {
 
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
-  verifyAllMenuItems = async (): Promise<void> => {
+  verifyAllMenuItems = async (skippedPaths: string[] = []): Promise<void> => {
     const paths: string[] = [];
 
     this.collectTraversePaths(this.buttons, '', paths);
 
-    for (const path of paths) {
+    for (const path of paths.filter((menuPath) => !skippedPaths.includes(menuPath))) {
       await pmmTest.step(`Verify menu item: ${path}`, async () => {
         await this.selectMenuItem(path);
 

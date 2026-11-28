@@ -62,6 +62,8 @@ export default class Dashboards extends BasePage {
             .getByRole('row')
             .filter({ has: this.page.getByRole('button', { name: seriesName }) }),
         ),
+    legendSeries: (panelName: string) =>
+      this.builders.panelContentByExactName(panelName).locator('tbody').getByRole('button'),
     noDataMarkerInPanel: (panelName: string) =>
       this.builders.panelByExactName(panelName).locator(noDataMarkerXPath),
     panelByExactName: (panelName: string) =>
@@ -106,6 +108,14 @@ export default class Dashboards extends BasePage {
         .getByRole('button', { name: 'Filter for value' }),
     tableCellLink: (panelName: string, rowIndex: number, columnIndex: number) =>
       this.builders.tableCell(panelName, rowIndex, columnIndex).getByRole('link'),
+    tableLink: (panelName: string, linkText: string) =>
+      this.builders.panelContentByExactName(panelName).getByRole('link', { exact: true, name: linkText }),
+    tableRow: (panelName: string, rowText: string) =>
+      this.builders.tableRows(panelName).filter({ hasText: rowText }),
+    tableRowCell: (panelName: string, rowText: string, columnIndex: number) =>
+      this.builders
+        .tableRow(panelName, rowText)
+        .locator(`[role="gridcell"][aria-colindex="${columnIndex + 1}"]`),
     tableRows: (panelName: string) =>
       this.builders.panelContentByExactName(panelName).locator('[role="row"]:has([role="gridcell"])'),
     templateVariableCombobox: (variableName: DropdownName) =>
@@ -260,6 +270,23 @@ export default class Dashboards extends BasePage {
     );
 
     return seconds ? Number(seconds[1]) : NaN;
+  };
+
+  getStatColor = async (panelName: string): Promise<'green' | 'orange' | 'red'> => {
+    const background = await this.builders
+      .panelContentByExactName(panelName)
+      .locator('[style*="background"]')
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
+    const color = /rgba?\((\d+), (\d+)/.exec(background);
+
+    if (!color) throw new Error(`${panelName} has no background color: ${background}`);
+
+    const [red, green] = [Number(color[1]), Number(color[2])];
+
+    if (green > red) return 'green';
+
+    return green >= 100 ? 'orange' : 'red';
   };
 
   getTableRowsAfterRefresh = async (panelName: string): Promise<Record<string, string>[]> => {

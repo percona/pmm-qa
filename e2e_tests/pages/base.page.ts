@@ -16,7 +16,8 @@ export type DropdownName =
   | 'Source Cluster'
   | 'Target Cluster'
   | 'ClusterSync Cluster'
-  | 'ClusterSync Instance';
+  | 'ClusterSync Instance'
+  | 'Search Service';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
