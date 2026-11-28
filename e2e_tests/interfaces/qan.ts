@@ -13,6 +13,10 @@ export interface QanMetricsBody {
   metrics?: Record<string, { avg?: number; cnt?: number; sum?: number }>;
 }
 
+export interface QanTotalsBody {
+  sparkline?: { load?: number; timestamp: string }[];
+}
+
 export interface QanLabelsBody {
   labels?: Record<string, { values?: string[] }>;
 }
