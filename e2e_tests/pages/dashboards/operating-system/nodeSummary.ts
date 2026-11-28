@@ -15,7 +15,7 @@ export default class NodeSummaryDashboard implements DashboardInterface {
     { name: 'Virtual Memory', type: 'stat' },
     { name: 'System Summary', type: 'summary' },
     { name: 'Service Types', type: 'table' },
-    { name: 'Services', type: 'polyStat' },
+    { name: 'Services', type: 'table' },
     { name: 'CPU Usage', type: 'timeSeries' },
     { name: 'CPU Saturation and Max Core Usage', type: 'timeSeries' },
     { name: 'Interrupts and Context Switches', type: 'timeSeries' },
