@@ -88,6 +88,46 @@ services:
     healthcheck:
       start_period: 2m
 
+  valkey-encryption:
+    image: valkey/valkey:8
+    profiles: [encryption]
+    container_name: valkey-encryption
+    command: >-
+      valkey-server --port 0 --tls-port 6379 --tls-auth-clients yes
+      --tls-cert-file /tls/server.crt --tls-key-file /tls/server.key --tls-ca-cert-file /tls/ca.crt
+    volumes:
+      - ./output/valkey-encryption-tls:/tls:ro
+    networks:
+      - pmm-qa
+
+  minio-encryption:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    profiles: [encryption]
+    container_name: minio-encryption
+    command: server /data
+    environment:
+      - MINIO_ROOT_USER=pmm-encryption-access
+      - MINIO_ROOT_PASSWORD=pmm-encryption-secret
+    networks:
+      - pmm-qa
+
+  pmm-server-encryption-upgrade:
+    image: ${ENCRYPTION_UPGRADE_IMAGE:-percona/pmm-server:3.10.0}
+    profiles: [encryption-upgrade]
+    container_name: pmm-server-encryption-upgrade
+    ports:
+      - "4443:8443"
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENABLE_TELEMETRY=0
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    volumes:
+      - /srv
+    networks:
+      - pmm-qa
+    healthcheck:
+      start_period: 2m
+
   postgres:
     image: perconalab/percona-distribution-postgresql:15
     profiles: [encryption]

@@ -48,11 +48,20 @@ for (const settings of serviceTlsSettings) {
           .toEqual(0);
       }
       if (restoreTlsOff) {
-        await api.inventoryApi.updateService(
-          service.service_id,
-          service.service_type,
-          tlsOffChanges(certificateFields),
-        );
+        // pmm-managed saves an Agent status change over the whole Agent row, so a status the exporter reported while
+        // TLS went off can write the old TLS settings back just after the change; read them once that has landed.
+        await expect(async () => {
+          await api.inventoryApi.updateService(
+            service.service_id,
+            service.service_type,
+            tlsOffChanges(certificateFields),
+          );
+          await new Promise((resolve) => setTimeout(resolve, Timeouts.TWO_SECONDS));
+
+          const { tls } = await api.inventoryApi.getServiceExporter(service.service_id, exporterType);
+
+          expect(!!tls, `${service.service_name} stays monitored without TLS`).toBe(false);
+        }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
       }
     });
 

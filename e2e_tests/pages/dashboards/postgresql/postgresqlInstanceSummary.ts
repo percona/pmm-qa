@@ -45,4 +45,8 @@ export default class PostgresqlInstanceSummary implements DashboardInterface {
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
   noDataMetrics: string[] = [];
+  serviceSummaryReport = {
+    databaseRow: (database: string) => new RegExp(`##### --- Databases --- ####[^#]*\\| ${database} +\\|`),
+    portAndDataDirectoryHeading: '##### --- Database Port and Data_Directory --- ####',
+  };
 }

@@ -7,6 +7,7 @@ export interface NodeAgent {
 
 export interface InventoryAgent {
   agent_id: string;
+  connected?: boolean;
   process_exec_path?: string;
   service_id?: string;
 }
@@ -153,6 +154,7 @@ export interface AddServiceResponse {
   mongodb?: { service: { node_id: string; service_id: string } };
   mysql?: { service: { node_id: string; service_id: string } };
   postgresql?: { service: { node_id: string; service_id: string } };
+  valkey?: { service: { node_id: string; service_id: string } };
 }
 
 export interface RdsExporter {
