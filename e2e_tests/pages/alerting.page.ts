@@ -111,6 +111,7 @@ export default class AlertingPage extends BasePage {
     editAlertRule: this.page.getByRole('menuitem', { name: 'Edit alert rule' }),
     editRule: this.grafanaIframe().getByRole('link', { exact: true, name: 'Edit' }),
     expandRow: this.grafanaIframe().getByRole('button', { name: 'Expand row' }),
+    lastPage: this.grafanaIframe().getByTestId('last-page-button'),
     newAlertRule: this.grafanaIframe().getByRole('link', { exact: true, name: 'New alert rule' }),
     newAlertRuleFromTemplate: this.grafanaIframe().getByRole('link', {
       exact: true,
@@ -122,6 +123,7 @@ export default class AlertingPage extends BasePage {
       'data-testid alert-rule new-evaluation-group-button',
     ),
     newSilence: this.grafanaIframe().getByRole('link', { name: /^(add|create) silence$/i }),
+    nextPage: this.grafanaIframe().getByTestId('next-page-button'),
     preview: this.grafanaIframe().getByRole('button', { exact: true, name: 'Preview' }),
     runQueries: this.grafanaIframe().getByRole('button', { exact: true, name: 'Run queries' }),
     save: this.grafanaIframe().getByRole('button', { exact: true, name: 'Save' }),
@@ -138,6 +140,7 @@ export default class AlertingPage extends BasePage {
     viewConfiguration: this.grafanaIframe().getByRole('button', { name: 'View configuration' }),
   };
   elements = {
+    activePage: this.grafanaIframe().getByTestId('page-button-active'),
     advancedToggle: this.grafanaIframe()
       .getByTestId('alert-rule-advanced-section')
       .getByTestId('collapse-clickable'),
@@ -146,8 +149,10 @@ export default class AlertingPage extends BasePage {
     deleteModalMessage: this.grafanaIframe().getByTestId('modal-content').getByRole('heading', { level: 4 }),
     dialog: this.grafanaIframe().getByRole('dialog'),
     dynamicBadges: this.grafanaIframe().getByTestId('table-tbody').getByText('Dynamic', { exact: true }),
+    emptyTable: this.grafanaIframe().getByTestId('table-no-data'),
     filterRows: this.grafanaIframe().getByTestId('filter-fields-row'),
     groupByContainer: this.grafanaIframe().getByTestId('group-by-container'),
+    itemsInterval: this.grafanaIframe().getByTestId('pagination-items-inverval'),
     labelSearch: this.grafanaIframe().getByTestId('search-query-input'),
     modalHeader: this.grafanaIframe().getByTestId('modal-header'),
     modalWarning: this.grafanaIframe().getByTestId('alert-rule-name-warning'),
@@ -317,8 +322,7 @@ export default class AlertingPage extends BasePage {
   openTemplates = async () => {
     await pmmTest.step('Open Alert templates with 100 rows per page', async () => {
       await this.page.goto(this.urls.templates);
-      await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
-      await this.builders.selectOption('100').click();
+      await this.selectRowsPerPage('100');
     });
   };
 
@@ -332,6 +336,11 @@ export default class AlertingPage extends BasePage {
       .filter((frame) => (frame.data?.values?.[0]?.length ?? 0) > 0).length;
   };
 
+  selectRowsPerPage = async (size: '25' | '50' | '100') => {
+    await this.inputs.rowsPerPage.click({ timeout: Timeouts.THIRTY_SECONDS });
+    await this.builders.selectOption(size).click();
+  };
+
   silenceAlert = async (alertName: string) => {
     await this.builders.rowActions(alertName).click();
     await this.buttons.silence.click();
@@ -342,6 +351,20 @@ export default class AlertingPage extends BasePage {
     await this.createTemplate(yaml);
     await expect(this.builders.alertMessage(message)).toContainText('Failed to parse rule template');
     await this.buttons.cancelTemplate.click();
+  };
+
+  // summaries holds every template in the server's order, which the table pages through.
+  verifyTemplatesPage = async (summaries: string[], index: number, size: number) => {
+    const shown = summaries.slice(index * size, (index + 1) * size);
+    const from = index * size + 1;
+
+    await expect(this.elements.itemsInterval).toHaveText(
+      `Showing ${from}-${from + shown.length - 1} of ${summaries.length} items`,
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+    await expect(this.elements.activePage).toHaveText(String(index + 1));
+    await expect(this.elements.templateNames).toHaveCount(shown.length, { timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.templateNames).toContainText(shown);
   };
 
   verifyTemplateText = async (templateName: string, text: RegExp | RegExp[]) => {

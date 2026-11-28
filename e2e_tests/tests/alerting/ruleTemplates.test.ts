@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { normalizeTemplate, readTemplateFile } from '@helpers/alertTemplate.helper';
+import { normalizeTemplate, paginationTemplates, readTemplateFile } from '@helpers/alertTemplate.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import { AlertSeverity } from '@interfaces/alerting';
@@ -422,5 +422,65 @@ pmmTest(
     await expect(alertingPage.elements.templatesTable).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await alertingPage.createTemplate(readTemplateFile(`${templatesDir}/templateWithTiers.yml`).content);
     await expect(alertingPage.messages.popUp).toContainText(added, { timeout: Timeouts.THIRTY_SECONDS });
+  },
+);
+
+pmmTest(
+  'PMM-T2899 - Verify Alert templates table pages by Rows per page @fb-alerting @grafana-pr',
+  async ({ alertingPage, api, page }) => {
+    const pageSize = 25;
+    const builtIn = (await api.alertingApi.getTemplates()).length;
+    const minimum = Math.max(2 * pageSize + 1, builtIn + 1);
+    // The added templates sort last, and the total leaves one of them alone on the last page.
+    const total = minimum + ((pageSize + 1 - (minimum % pageSize)) % pageSize);
+    const pages = Math.ceil(total / pageSize);
+
+    await api.alertingApi.uploadTemplate(paginationTemplates(total - builtIn));
+
+    const summaries = (await api.alertingApi.getTemplates()).map(({ summary }) => summary);
+    const lastSummary = summaries.at(-1) as string;
+
+    expect(summaries).toHaveLength(total);
+    expect(lastSummary).toMatch(/^PMM-14745 pagination/);
+
+    await pmmTest.step('The first page lists 25 templates by default', async () => {
+      await page.goto(alertingPage.urls.templates);
+      await expect(alertingPage.inputs.rowsPerPage).toContainText(String(pageSize), {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await alertingPage.verifyTemplatesPage(summaries, 0, pageSize);
+    });
+
+    await pmmTest.step('Next page lists the following 25 templates', async () => {
+      await alertingPage.buttons.nextPage.click();
+      await alertingPage.verifyTemplatesPage(summaries, 1, pageSize);
+    });
+
+    await pmmTest.step('The last page lists only the remaining template', async () => {
+      await alertingPage.buttons.lastPage.click();
+      await alertingPage.verifyTemplatesPage(summaries, pages - 1, pageSize);
+      await expect(alertingPage.buttons.nextPage).toBeDisabled();
+    });
+
+    await pmmTest.step('Deleting the only template on the last page goes back a page', async () => {
+      await alertingPage.deleteTemplate(lastSummary);
+      await alertingPage.verifyTemplatesPage(summaries.slice(0, -1), pages - 2, pageSize);
+      await expect(alertingPage.elements.emptyTable).toBeHidden();
+      await expect(alertingPage.buttons.nextPage).toBeDisabled();
+    });
+
+    await pmmTest.step('50 rows per page lists 50 templates', async () => {
+      await alertingPage.selectRowsPerPage('50');
+      await alertingPage.verifyTemplatesPage(summaries.slice(0, -1), 0, 50);
+    });
+
+    await pmmTest.step('Create alert rule still offers templates beyond the first page', async () => {
+      const summary = summaries.at(-2) as string;
+
+      await page.goto(alertingPage.urls.alertRuleFromTemplate);
+      await expect(alertingPage.elements.templatesLoader).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await alertingPage.chooseOption(alertingPage.inputs.templateSelect, summary);
+      await expect(alertingPage.inputs.templateSelect).toContainText(summary);
+    });
   },
 );
