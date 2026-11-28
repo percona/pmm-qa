@@ -615,7 +615,7 @@ recorded_config_dir() {
 @test "PSMDB sharding with QUERY_SOURCE=mongolog gives every mongod and mongos a file log" {
   stub_prebaked_docker
   record_compose_config_dirs
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   psmdb_traffic() { :; }
   TMPDIR=$BATS_TEST_TMPDIR
   parse_database_spec 'psmdb=8.0,SETUP_TYPE=sharding,QUERY_SOURCE=mongolog'
@@ -787,6 +787,105 @@ SPECS
   [[ $status -ne 0 ]]
   [[ $output == *"Unsupported PSMDB QUERY_SOURCE 'slowlog'."* ]]
   ! grep -q '^compose ' "$DOCKER_CALLS" || false
+}
+
+@test "PSMDB sharding with HOT_SHARD and SCAN_SHARD starts the single-shard loads before any member is added to PMM" {
+  stub_prebaked_docker
+  # shellcheck disable=SC2329,SC2317
+  psmdb_traffic() { printf 'traffic\n' >>"$DOCKER_CALLS"; }
+  # shellcheck disable=SC2329,SC2317,SC2154 # hot_shard is setup_psmdb's local
+  psmdb_hot_shard_traffic() { printf 'hot %s\n' "$hot_shard" >>"$DOCKER_CALLS"; }
+  # shellcheck disable=SC2329,SC2317,SC2154 # scan_shard is setup_psmdb's local
+  psmdb_scan_shard_traffic() { printf 'scan %s\n' "$scan_shard" >>"$DOCKER_CALLS"; }
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,HOT_SHARD=RS2,SCAN_SHARD=rs1'
+  dispatch_setup
+  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'hot rs2 scan rs1 traffic' ]]
+  # Every sample PMM records then carries the loads, and the scan seed's inserts are never scraped.
+  (($(grep -n '^scan rs1$' "$DOCKER_CALLS" | cut -d: -f1) < $(grep -n 'pmm-admin add mongodb' "$DOCKER_CALLS" | head -1 | cut -d: -f1)))
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,SCAN_SHARD=rs2'
+  dispatch_setup
+  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'scan rs2 traffic' ]]
+
+  : >"$DOCKER_CALLS"
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding'
+  dispatch_setup
+  [[ $(grep -E '^(traffic|hot|scan)' "$DOCKER_CALLS" | paste -sd ' ') == 'traffic' ]]
+}
+
+@test "PSMDB HOT_SHARD and SCAN_SHARD are refused off the sharded cluster and for an unknown shard, before anything starts" {
+  stub_prebaked_docker
+  parse_database_spec 'psmdb,SETUP_TYPE=pss,HOT_SHARD=rs1'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PSMDB HOT_SHARD needs SETUP_TYPE=sharding, got 'pss'."* ]]
+
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,HOT_SHARD=rs3'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PSMDB HOT_SHARD must be rs1 or rs2, got 'rs3'."* ]]
+
+  parse_database_spec 'psmdb,SETUP_TYPE=psa,SCAN_SHARD=rs2'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PSMDB SCAN_SHARD needs SETUP_TYPE=sharding, got 'psa'."* ]]
+
+  parse_database_spec 'psmdb,SETUP_TYPE=sharding,HOT_SHARD=rs1,SCAN_SHARD=rscfg'
+  run dispatch_setup
+  [[ $status -ne 0 && $output == *"PSMDB SCAN_SHARD must be rs1 or rs2, got 'rscfg'."* ]]
+  [[ ! -s $DOCKER_CALLS ]]
+}
+
+@test "generate_shard_write_traffic.sh pins the database to the shard and starts its write loop on mongos" {
+  local script=$QA_INTEGRATION_ROOT/pmm_psmdb-pbm_setup/generate_shard_write_traffic.sh
+  mkdir -p "$BATS_TEST_TMPDIR/bin"
+  cat >"$BATS_TEST_TMPDIR/bin/docker" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$CALLS"
+if [[ $1 == exec && $2 == -i ]]; then
+  cat >>"$CALLS"
+fi
+if [[ -n ${FAIL_ON:-} && $* == *"$FAIL_ON"* ]]; then
+  exit 1
+fi
+STUB
+  chmod +x "$BATS_TEST_TMPDIR/bin/docker"
+  export CALLS=$BATS_TEST_TMPDIR/calls PATH=$BATS_TEST_TMPDIR/bin:$PATH
+
+  TARGET_SHARD=rs1 run bash "$script"
+  [[ $status -eq 0 ]]
+  grep -Fq "const shard = 'rs1', name = 'hot_rs1'" "$CALLS"
+  grep -Fq 'db.adminCommand({ movePrimary: name, to: shard })' "$CALLS"
+  grep -Fq 'exec -i mongos sh -c cat >/tmp/shard_write_traffic_rs1.js' "$CALLS"
+  grep -Fq 'var LOAD = "write", CONTINUOUS = true, DURATION_MS = 300000, INTERVAL_MS = 20, DATABASE = "hot_rs1", SCAN_DOCS = 20000;' "$CALLS"
+  grep -Fq 'writes.insertOne({ _id: id, seq: i, ts: new Date(), payload: "w".repeat(256) }, W1);' "$CALLS"
+  ! grep -Fq 'scans.find(' "$CALLS" || false
+  grep -Fxq "exec -d mongos sh -c mongosh 'mongodb://root:root@localhost' --quiet /tmp/shard_write_traffic_rs1.js >>/tmp/shard_write_traffic_rs1.log 2>&1" "$CALLS"
+
+  : >"$CALLS"
+  TARGET_SHARD=rs2 FAIL_ON=movePrimary run bash "$script"
+  [[ $status -ne 0 ]]
+  ! grep -q '^exec -d' "$CALLS" || false
+
+  : >"$CALLS"
+  TARGET_SHARD=rs2 LOAD=scan run bash "$script"
+  [[ $status -eq 0 ]]
+  grep -Fq "const shard = 'rs2', name = 'hot_rs2', load = 'scan', docs = 20000" "$CALLS"
+  grep -Fq 'scans.insertMany(' "$CALLS"
+  grep -Fq 'exec -i mongos sh -c cat >/tmp/shard_scan_traffic_rs2.js' "$CALLS"
+  grep -Fq 'var LOAD = "scan", CONTINUOUS = true, DURATION_MS = 300000, INTERVAL_MS = 50, DATABASE = "hot_rs2", SCAN_DOCS = 20000;' "$CALLS"
+  grep -Fq 'scans.find({ seq: SCAN_DOCS - 1 }).itcount();' "$CALLS"
+  ! grep -Fq 'writes.insertOne' "$CALLS" || false
+  grep -Fxq "exec -d mongos sh -c mongosh 'mongodb://root:root@localhost' --quiet /tmp/shard_scan_traffic_rs2.js >>/tmp/shard_scan_traffic_rs2.log 2>&1" "$CALLS"
+
+  : >"$CALLS"
+  TARGET_SHARD='rs1; rm -rf /' run bash "$script"
+  [[ $status -eq 1 && $output == *'TARGET_SHARD must name a shard'* ]]
+  [[ ! -s $CALLS ]]
+
+  for bad in 'LOAD=read' 'SCAN_DOCS=0' 'SCAN_DOCS=1e4'; do
+    env "$bad" TARGET_SHARD=rs1 bash "$script" </dev/null >"$BATS_TEST_TMPDIR/out" 2>&1 && false
+    grep -Eq 'LOAD must be write or scan|SCAN_DOCS must be a whole number above 0' "$BATS_TEST_TMPDIR/out"
+  done
+  [[ ! -s $CALLS ]]
 }
 
 @test "SSL PSMDB runs the TLS stack on the prebaked image without writing the password to disk" {

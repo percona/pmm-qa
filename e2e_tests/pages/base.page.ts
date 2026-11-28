@@ -12,6 +12,7 @@ export type DropdownName =
   | 'Cluster'
   | 'Node'
   | 'Replication Set'
+  | 'Shard / Replica Set'
   | 'Namespace'
   | 'Source Cluster'
   | 'Target Cluster'

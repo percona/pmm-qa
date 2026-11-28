@@ -9,11 +9,13 @@
 # -- happens here, polling for readiness instead of sleeping 60 s per step.
 #
 # SETUP_TYPE pss/psa is the replica set (COMPOSE_PROFILES=extra adds a second
-# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster; 'standalone_no_pbm'
-# is one mongod in its own container, with no replica set and no PBM.
+# one, rs201-rs203); 'shards' and 'sharding' are the sharded cluster, where
+# HOT_SHARD=rs1 or rs2 adds a write load that only that shard takes, and
+# SCAN_SHARD=rs1 or rs2 a load of queries that examine many documents per one returned;
+# 'standalone_no_pbm' is one mongod in its own container, with no replica set and no PBM.
 # QUERY_SOURCE=mongolog makes every mongod and mongos log to a file for QAN to read.
 setup_psmdb() {
-  local version ol client setup_type profile gssapi minio query_source external_pbm tarball='' suffix
+  local version ol client setup_type profile gssapi minio hot_shard scan_shard option query_source external_pbm tarball='' suffix
   version=$(resolved_version PSMDB_VERSION PSMDB "$DB_VERSION")
   ol=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
   client=$(resolved_client_version PSMDB DB_CONFIG)
@@ -22,6 +24,10 @@ setup_psmdb() {
   profile=$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)
   gssapi=$(resolve_value PSMDB GSSAPI DB_CONFIG)
   minio=$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")
+  hot_shard=$(resolve_value PSMDB HOT_SHARD DB_CONFIG)
+  hot_shard=${hot_shard,,}
+  scan_shard=$(resolve_value PSMDB SCAN_SHARD DB_CONFIG)
+  scan_shard=${scan_shard,,}
   query_source=$(resolve_value PSMDB QUERY_SOURCE DB_CONFIG)
   query_source=${query_source,,}
   external_pbm=$(bool_string "$(resolve_value PSMDB EXTERNAL_PBM DB_CONFIG)")
@@ -35,6 +41,13 @@ setup_psmdb() {
     profiler | mongolog | none) ;;
     *) die "Unsupported PSMDB QUERY_SOURCE '$query_source'." ;;
   esac
+  for option in "HOT_SHARD=$hot_shard" "SCAN_SHARD=$scan_shard"; do
+    case ${option#*=}:$setup_type in
+      :* | rs[12]:shards | rs[12]:sharding) ;;
+      *:shards | *:sharding) die "PSMDB ${option%%=*} must be rs1 or rs2, got '${option#*=}'." ;;
+      *) die "PSMDB ${option%%=*} needs SETUP_TYPE=sharding, got '$setup_type'." ;;
+    esac
+  done
   if [[ $setup_type == standalone_no_pbm && ($(bool_string "$gssapi") == true || $profile == extra ||
     $(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG) == [iI][nN][mM][eE][mM][oO][rR][yY]) ]]; then
     die 'PSMDB SETUP_TYPE=standalone_no_pbm does not support GSSAPI, the extra compose profile or the inMemory STORAGE_ENGINE.'
@@ -410,6 +423,14 @@ psmdb_sharded() {
   for shard in 'rs1/rs101:27017,rs102:27017,rs103:27017' 'rs2/rs201:27017,rs202:27017,rs203:27017'; do
     step "Add shard ${shard%%/*}" psmdb_add_shard "$shard"
   done
+  # Started before any member is added to PMM, so every sample PMM records already carries them,
+  # and the scan collection's seed inserts are never scraped as writes.
+  if [[ -n $hot_shard ]]; then
+    step "Start the write load on shard $hot_shard" psmdb_hot_shard_traffic
+  fi
+  if [[ -n $scan_shard ]]; then
+    step "Start the scan load on shard $scan_shard" psmdb_scan_shard_traffic
+  fi
   step 'Wait for PMM Server' wait_pmm_server_ready
   step 'Install PMM Client' each_node clients psmdb_client
   if [[ $external_pbm == true ]]; then
@@ -450,6 +471,14 @@ psmdb_sharded() {
 
 psmdb_traffic() {
   COMPOSE_FILE=docker-compose-sharded.yaml must bash ./generate_opcountersrepl_traffic.sh >/dev/null
+}
+
+psmdb_hot_shard_traffic() {
+  TARGET_SHARD=$hot_shard must bash ./generate_shard_write_traffic.sh >/dev/null
+}
+
+psmdb_scan_shard_traffic() {
+  TARGET_SHARD=$scan_shard LOAD=scan must bash ./generate_shard_write_traffic.sh >/dev/null
 }
 
 # One mongod with authentication and no replica set. Its pbm-agent is masked, so
